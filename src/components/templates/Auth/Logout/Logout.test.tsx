@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => {
   const authState = {
     hasHydrated: true,
     session: {} as object | null,
-    sessionExport: null as string | null,
+    sessionReference: null as string | null,
     isLoggingOut: false,
     setIsLoggingOut: vi.fn((value: boolean) => {
       authState.isLoggingOut = value;
@@ -139,14 +139,14 @@ describe('Logout', () => {
     mocks.onboardingState.hasHydrated = true;
     mocks.authState.hasHydrated = true;
     mocks.authState.session = {};
-    mocks.authState.sessionExport = null;
+    mocks.authState.sessionReference = null;
     mocks.authState.isLoggingOut = false;
   });
 
   it('shows a loading state first and then the success state for authenticated visits', async () => {
     mocks.mockLogout.mockImplementation(async () => {
       mocks.authState.session = null;
-      mocks.authState.sessionExport = null;
+      mocks.authState.sessionReference = null;
     });
 
     render(<Logout />);
@@ -167,7 +167,7 @@ describe('Logout', () => {
 
   it('shows the success state immediately when the user is already signed out', async () => {
     mocks.authState.session = null;
-    mocks.authState.sessionExport = null;
+    mocks.authState.sessionReference = null;
     mocks.authState.isLoggingOut = true;
 
     render(<Logout />);
@@ -183,13 +183,13 @@ describe('Logout', () => {
   it('does not show the success state before a persisted-session logout finishes', async () => {
     let resolveLogout: (() => void) | undefined;
     mocks.authState.session = null;
-    mocks.authState.sessionExport = 'session-export';
+    mocks.authState.sessionReference = 'session-export';
     mocks.mockLogout.mockImplementation(
       () =>
         new Promise<void>((resolve) => {
           resolveLogout = () => {
             mocks.authState.session = null;
-            mocks.authState.sessionExport = null;
+            mocks.authState.sessionReference = null;
             resolve();
           };
         }),
@@ -232,7 +232,7 @@ describe('Logout', () => {
   it('retries logout from the inline error state and can reach success', async () => {
     mocks.mockLogout.mockRejectedValueOnce(new Error('clear failed')).mockImplementationOnce(async () => {
       mocks.authState.session = null;
-      mocks.authState.sessionExport = null;
+      mocks.authState.sessionReference = null;
     });
 
     render(<Logout />);

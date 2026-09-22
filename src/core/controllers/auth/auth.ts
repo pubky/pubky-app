@@ -1,10 +1,15 @@
+import type { Capabilities, Session } from '@synonymdev/pubky';
+import { validateCapabilities } from '@synonymdev/pubky';
+import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
+import { APP_CAPABILITIES, LOCKS_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
+import { getDeployEnv, getHomeserver } from '@/config/network';
 import type {
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
@@ -14,8 +19,13 @@ import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { clearDatabase } from '@/database/franky/franky.helpers';
+import { createCanceledError } from '@/libs/auth/cancellation';
+import { hasCapabilities } from '@/libs/auth/capabilities';
+import type { PersistedAuth } from '@/libs/auth/session.types';
+import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { isAppError, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
+import { isAppError, isNotFound, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
@@ -25,6 +35,7 @@ import type { Pubky } from '@/models/models.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
+import type { GrantFlowRequest } from '@/services/homeserver/grant-flow';
 import type { TGenerateAuthUrlResult, THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -45,16 +56,93 @@ import { useSignInStore } from '@/stores/signIn/signIn.store';
  */
 const LOGOUT_TIMEOUT_MS = 5_000;
 
+/** Reset this tab without overwriting the new account's shared persisted stores. */
+function resetTabStore<T>(store: {
+  getState(): { reset(): void };
+  persist: {
+    getOptions(): { storage?: PersistStorage<T> };
+    setOptions(options: { storage?: PersistStorage<T> }): void;
+  };
+}): void {
+  const { storage } = store.persist.getOptions();
+  if (!storage) return;
+  store.persist.setOptions({ storage: { ...storage, setItem: () => {}, removeItem: () => {} } });
+  try {
+    store.getState().reset();
+  } finally {
+    store.persist.setOptions({ storage });
+  }
+}
+
 export class AuthController {
   private constructor() {} // Prevent instantiation
 
-  private static activeAuthFlow: { token: symbol; cancel: (() => void) | null } | null = null;
+  private static activeAuthFlow: {
+    key: string;
+    token: symbol;
+    result: Promise<TGenerateAuthUrlResult>;
+    cancel: (() => void) | null;
+  } | null = null;
+  private static epoch = 0;
+  private static restorePromise: Promise<boolean> | null = null;
+  private static signupPromise: Promise<void> | null = null;
+
+  private static async bounded<T>(task: Promise<T>, operation: string, milliseconds = 12_000): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        task,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () =>
+              reject(
+                Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Could not reach the homeserver. Try again.', {
+                  service: ErrorService.Homeserver,
+                  operation,
+                }),
+              ),
+            milliseconds,
+          );
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  private static isCurrentGeneration(generation: string): boolean {
+    try {
+      return (
+        useAuthStore.getState().generation === generation &&
+        (AuthApplication.readPersistedAuth()?.generation ?? '') === generation
+      );
+    } catch {
+      return false;
+    }
+  }
+
   private static moderationFollowAbortController: AbortController | null = null;
 
+  /** Permission preflight shared by feature hooks; cookie and grant sessions use the same scopes. */
+  static hasCapabilities(required: readonly string[]): boolean {
+    const state = useAuthStore.getState();
+    if (
+      state.retiringSession ||
+      state.isRestoringSession ||
+      state.restoreStatus === 'temporary-error' ||
+      state.restoreStatus === 'reauth-required'
+    )
+      return false;
+    const session = state.selectSession();
+    return session !== null && hasCapabilities(session.info.capabilities, required);
+  }
+
   static cancelActiveAuthFlow() {
+    this.epoch++;
     const cancel = this.activeAuthFlow?.cancel;
     this.activeAuthFlow = null;
     cancel?.();
+    AuthApplication.clearPendingAuthFlow();
   }
 
   /** Cancel detached moderation-follow work before account-local state changes ownership. */
@@ -105,33 +193,135 @@ export class AuthController {
   /**
    * Restores a persisted session from the auth store.
    * @returns true on success, false on failure
-   * @throws Wrong-environment homeserver errors after local cleanup so UI can show feedback
+   * @throws Wrong-environment homeserver errors while preserving the saved account for recovery
    */
   static async restorePersistedSession(): Promise<boolean> {
-    this.cancelModerationFollow();
-    const authStore = useAuthStore.getState();
-    try {
-      const result = await AuthApplication.restorePersistedSession({ authStore });
-      if (!result) {
-        await this.cleanupLocalState();
+    if (this.restorePromise) return this.restorePromise;
+    if (!useAuthStore.getState().sessionReference && useAuthStore.getState().restoreStatus === 'temporary-error') {
+      await useAuthStore.persist.rehydrate();
+      if (!useAuthStore.getState().sessionReference) return false;
+    }
+    const epoch = this.epoch;
+    const snapshot = useAuthStore.getState();
+    const generation = snapshot.generation;
+    const isCurrent = () => this.epoch === epoch && this.isCurrentGeneration(generation);
+    const task = (async () => {
+      snapshot.setRestoreStatus('restoring');
+      try {
+        const result = snapshot.session
+          ? { status: 'restored' as const, session: snapshot.session }
+          : await this.bounded(
+              AuthApplication.restorePersistedSession({
+                reference: snapshot.sessionReference,
+                expectedPubky: snapshot.currentUserPubky,
+              }),
+              'restoreSession',
+            );
+        if (!isCurrent()) return false;
+        if (result.status !== 'restored') {
+          useAuthStore.getState().setRestoreStatus(result.status === 'none' ? 'idle' : result.status);
+          return false;
+        }
+        const current = useAuthStore.getState();
+        current.init({
+          session: result.session,
+          currentUserPubky: snapshot.currentUserPubky,
+          hasProfile: current.hasProfile,
+          sessionReference: snapshot.sessionReference,
+          generation,
+          retiringSession: current.retiringSession,
+        });
+        useAuthStore.getState().setRestoreStatus('restoring');
+        await this.retrySessionRetirement();
+        if (!isCurrent()) return false;
+        if (useAuthStore.getState().hasProfile === null || useAuthStore.getState().needsAccountSync)
+          await this.bounded(this.finishProfileBootstrap(result.session, generation), 'restoreProfile');
+        if (isCurrent()) useAuthStore.getState().setRestoreStatus('ready');
+        return isCurrent();
+      } catch (error) {
+        if (isCurrent())
+          useAuthStore
+            .getState()
+            .setRestoreStatus(isWrongEnvironmentHomeserverError(error) ? 'reauth-required' : 'temporary-error');
+        if (isWrongEnvironmentHomeserverError(error)) throw error;
         return false;
       }
-      const { session } = result;
-      const initialState = {
-        session,
-        currentUserPubky: Identity.z32FromSession({ session }),
-        hasProfile: authStore.hasProfile,
-      };
-      authStore.init(initialState);
-      return true;
-    } catch (error) {
-      const appError = toAppError(error, ErrorService.Local, 'restorePersistedSession');
-      await this.cleanupLocalState();
-      if (isWrongEnvironmentHomeserverError(appError)) {
-        throw appError;
+    })();
+    this.restorePromise = task;
+    try {
+      return await task;
+    } finally {
+      if (this.restorePromise === task) this.restorePromise = null;
+      // A storage event may have happened before this tab installed its listener.
+      if (this.epoch === epoch && useAuthStore.getState().generation === generation) {
+        try {
+          if ((AuthApplication.readPersistedAuth()?.generation ?? '') !== generation) {
+            await this.syncSessionFromStorage();
+          }
+        } catch {
+          useAuthStore.getState().setRestoreStatus('temporary-error');
+        }
       }
-      return false;
     }
+  }
+
+  static async syncSessionFromStorage(): Promise<void> {
+    const incoming = AuthApplication.readPersistedAuth();
+    const previous = useAuthStore.getState();
+    if (incoming?.generation === previous.generation) {
+      await useAuthStore.persist.rehydrate();
+      if (previous.retiringSession && !incoming.retiringSession && previous.session) {
+        await this.restorePersistedSession();
+      }
+      return;
+    }
+    this.cancelActiveAuthFlow();
+    this.cancelModerationFollow();
+    const epoch = this.epoch;
+    const previousRestore = this.restorePromise;
+    await useAuthStore.persist.rehydrate();
+    if (epoch !== this.epoch) return;
+    if (!incoming) {
+      useAuthStore.getState().init({
+        session: null,
+        currentUserPubky: null,
+        hasProfile: null,
+        sessionReference: null,
+        generation: crypto.randomUUID(),
+        retiringSession: null,
+      });
+    }
+    const current = useAuthStore.getState();
+    if (previous.currentUserPubky !== current.currentUserPubky) {
+      clearAllQueryClients();
+      postStreamQueue.clear();
+      clearMuteSyncCursorSessionStorage();
+      useLocalFilesStore.getState().reset();
+      useSignInStore.getState().reset();
+      resetTabStore(useSettingsStore);
+      resetTabStore(useNotificationStore);
+      resetTabStore(useOnboardingStore);
+      resetTabStore(useHomeStore);
+      resetTabStore(useHotStore);
+      resetTabStore(useSearchStore);
+      current.setNeedsAccountSync(current.currentUserPubky !== null);
+      // Another tab may have just signed up and still need its recovery backup.
+      await useOnboardingStore.persist.rehydrate();
+      if (epoch !== this.epoch) return;
+      const onboarding = useOnboardingStore.getState();
+      let onboardingPubky = onboarding.signupAttempt?.pubky;
+      if (!onboardingPubky && onboarding.secretKey) {
+        try {
+          onboardingPubky = Identity.keypairFromSecretKey(onboarding.secretKey).publicKey.z32();
+        } catch {
+          // Corrupt legacy recovery material must not become another account's backup.
+        }
+      }
+      if (!current.currentUserPubky || onboardingPubky !== current.currentUserPubky) resetTabStore(useOnboardingStore);
+    }
+    if (previousRestore) await previousRestore.catch(() => false);
+    if (epoch !== this.epoch) return;
+    if (useAuthStore.getState().sessionReference) await this.restorePersistedSession();
   }
 
   /**
@@ -141,23 +331,17 @@ export class AuthController {
    * @returns Configured homeserver service instance
    */
   private static async signIn({ keypair }: TKeypairParams): Promise<boolean> {
-    this.cancelModerationFollow();
-    // Clear query clients to ensure no stale cache from previous session
-    clearAllQueryClients();
-    // Clear database before sign in to ensure clean state
-    await clearDatabase();
-    // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
-    useMigrationStore.getState().reset();
-    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
-    useSettingsStore.getState().reset();
-    const session = await AuthApplication.signIn({ keypair });
-    if (!session) {
-      Logger.error('Failed to sign in. Please try again.', { keypair });
-      return false;
-    }
-    // Environment guard already ran inside HomeserverService.signIn (before the
-    // session was created), so go straight to shared initialization.
-    await this.completeAuthenticatedSession(session);
+    this.cancelActiveAuthFlow();
+    const epoch = this.epoch;
+    await this.retrySessionRetirement();
+    const result = await AuthApplication.signIn({ keypair });
+    if (epoch !== this.epoch) throw createCanceledError();
+    if (!result) return false;
+    const state = useAuthStore.getState();
+    await this.completeAuthenticatedSession(result, {
+      epoch,
+      expectedPubky: state.restoreStatus === 'reauth-required' ? (state.currentUserPubky ?? undefined) : undefined,
+    });
     return true;
   }
 
@@ -219,63 +403,146 @@ export class AuthController {
   }
 
   /**
-   * Initializes the authenticated session and checks if the user is signed up (profile.json in homeserver).
-   *
-   * Runs the staging environment guard first: the session was approved externally
-   * (e.g. Pubky Ring), so this is its only checkpoint. Keypair flows skip the
-   * guard here — HomeserverService.signIn already ran it before creating the
-   * session, and re-asserting would duplicate the PKARR lookup and let a
-   * transient second lookup abort an already-verified sign-in.
-   * @param params - Object containing session data from authentication
-   * @param params.session - The user session data
-   */
-  static async initializeAuthenticatedSession({ session }: THomeserverSessionResult) {
-    try {
-      await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
-    } catch (error) {
-      // The just-approved session lives on the user's actual homeserver — sign it
-      // out instead of leaving it dangling, whether the key was rejected or the
-      // lookup failed. Best-effort: the failure must surface regardless.
-      await AuthApplication.logout({ session }).catch((logoutError) => {
-        Logger.warn('Failed to sign out session after environment check failure', { logoutError });
-      });
-      throw error;
-    }
-    await this.completeAuthenticatedSession({ session });
-  }
-
-  /**
    * Session initialization shared by all sign-in flows; assumes the environment
    * guard already passed for this session.
    */
-  private static async completeAuthenticatedSession({ session }: THomeserverSessionResult) {
-    this.cancelModerationFollow();
-    const signInStore = useSignInStore.getState();
-    signInStore.reset(); // Reset for fresh sign-in
-    signInStore.setAuthUrlResolved(true); // Step 1 complete (20%)
-
-    const authStore = useAuthStore.getState();
-
-    try {
-      this.cancelActiveAuthFlow();
-      const pubky = Identity.z32FromSession({ session });
-
-      authStore.init({ session, currentUserPubky: pubky, hasProfile: null });
-
-      const isSignedUp = await AuthApplication.userIsSignedUp({ pubky });
-      signInStore.setProfileChecked(true); // Step 2 complete (40%)
-
-      if (isSignedUp) {
-        await this.hydrateMeImAlive({ pubky });
+  private static async completeAuthenticatedSession(
+    { session }: THomeserverSessionResult,
+    {
+      epoch = this.epoch,
+      expectedPubky,
+      required = [APP_CAPABILITIES],
+      preserveContext = false,
+    }: {
+      epoch?: number;
+      expectedPubky?: string;
+      required?: readonly string[];
+      preserveContext?: boolean;
+    } = {},
+  ) {
+    const previous = useAuthStore.getState();
+    const pubky = Identity.z32FromSession({ session });
+    if (
+      (expectedPubky && pubky !== expectedPubky) ||
+      !hasCapabilities(session.info.capabilities, required) ||
+      !session.grant
+    ) {
+      throw Err.auth(AuthErrorCode.FORBIDDEN, 'The approved account or permissions do not match this request.', {
+        service: ErrorService.Homeserver,
+        operation: 'adoptGrant',
+      });
+    }
+    const reference = await AuthApplication.saveSession(session);
+    const discardUnusedRecord = async () => {
+      const current = AuthApplication.readPersistedAuth()?.sessionReference;
+      if (
+        reference.kind === 'grant' &&
+        !(current?.kind === 'grant' && current.sessionStoreId === reference.sessionStoreId)
+      ) {
+        await AuthApplication.removeUnusedSessionRecord(reference).catch(() => {});
       }
-
-      // Update hasProfile after bootstrap completes - triggers redirect via useAuthStatus
-      authStore.setHasProfile(isSignedUp);
+    };
+    if (epoch !== this.epoch || !this.isCurrentGeneration(previous.generation)) {
+      await discardUnusedRecord();
+      throw createCanceledError();
+    }
+    const sameAccount = previous.currentUserPubky === pubky;
+    const generation = crypto.randomUUID();
+    const retiringSession =
+      previous.sessionReference &&
+      !(
+        previous.sessionReference.kind === 'grant' &&
+        reference.kind === 'grant' &&
+        previous.sessionReference.grantId === reference.grantId
+      )
+        ? previous.sessionReference
+        : previous.retiringSession;
+    const record: PersistedAuth = {
+      currentUserPubky: pubky,
+      sessionReference: reference,
+      hasProfile: sameAccount ? previous.hasProfile : null,
+      generation,
+      retiringSession,
+    };
+    try {
+      await AuthApplication.commitPersistedAuth(record, previous.generation, () => epoch === this.epoch);
     } catch (error) {
-      authStore.reset();
-      signInStore.reset();
+      await discardUnusedRecord();
       throw error;
     }
+    if (AuthApplication.readPersistedAuth()?.generation !== generation) {
+      await this.syncSessionFromStorage();
+      throw createCanceledError();
+    }
+    // Once the reference is durable, this tab must adopt it even if UI cancellation arrives late.
+    previous.init({ ...record, session });
+    useAuthStore.getState().setRestoreStatus('restoring');
+    try {
+      if (!sameAccount) {
+        this.cancelModerationFollow();
+        clearAllQueryClients();
+        await clearDatabase();
+        useMigrationStore.getState().reset();
+        useSettingsStore.getState().reset();
+      }
+      await this.retrySessionRetirement(previous.sessionReference === retiringSession ? previous.session : null);
+      if ((!preserveContext && (!sameAccount || previous.hasProfile === null)) || previous.needsAccountSync)
+        await this.bounded(this.finishProfileBootstrap(session, generation), 'bootstrapProfile');
+      if (this.isCurrentGeneration(generation)) useAuthStore.getState().setRestoreStatus('ready');
+    } catch (error) {
+      // The replacement is already durable. Never resurrect the old cookie or erase this grant.
+      if (useAuthStore.getState().generation === generation)
+        useAuthStore.getState().setRestoreStatus('temporary-error');
+      throw error;
+    }
+  }
+
+  private static async finishProfileBootstrap(session: Session, generation: string): Promise<void> {
+    const signInStore = useSignInStore.getState();
+    signInStore.reset();
+    signInStore.setAuthUrlResolved(true);
+    const pubky = Identity.z32FromSession({ session });
+    const isSignedUp = await AuthApplication.userIsSignedUp({ pubky });
+    if (!this.isCurrentGeneration(generation)) throw createCanceledError();
+    signInStore.setProfileChecked(true);
+    if (isSignedUp) await this.hydrateMeImAlive({ pubky });
+    if (!this.isCurrentGeneration(generation)) throw createCanceledError();
+    useAuthStore.getState().setHasProfile(isSignedUp);
+    useAuthStore.getState().setNeedsAccountSync(false);
+  }
+
+  static async retrySessionRetirement(livePrevious?: Session | null): Promise<void> {
+    const snapshot = useAuthStore.getState();
+    const reference = snapshot.retiringSession;
+    if (!reference) return;
+    let previous = livePrevious;
+    if (!previous) {
+      try {
+        previous = await this.bounded(AuthApplication.restoreReference(reference), 'restoreRetiringSession');
+      } catch (error) {
+        // A rejected grant must not block adoption of its valid replacement.
+        const gone = isAppError(error) && error.code === AuthErrorCode.SESSION_EXPIRED;
+        const expired = reference.kind === 'grant' && reference.grantExpiresAt <= Date.now() / 1000;
+        const missingMaterial = isAppError(error) && error.context?.reason === 'missing_local_grant';
+        if (!gone && !expired && !missingMaterial) throw error;
+        if (missingMaterial || (gone && reference.kind === 'grant'))
+          Logger.warn('Previous grant credentials are unavailable; remote revocation could not be confirmed.');
+      }
+    }
+    if (previous) {
+      try {
+        await this.bounded(AuthApplication.logout({ session: previous }), 'retireSession');
+      } catch (error) {
+        if (reference.kind !== 'grant' || !isAppError(error) || error.code !== AuthErrorCode.SESSION_EXPIRED)
+          throw error;
+        // This may be a revoked grant or a rejected proof. Do not claim remote revocation succeeded.
+        Logger.warn('Previous grant was rejected; remote revocation could not be confirmed.');
+      }
+    }
+    if (!this.isCurrentGeneration(snapshot.generation)) throw createCanceledError();
+    await AuthApplication.removeSessionRecord(reference);
+    if (!this.isCurrentGeneration(snapshot.generation)) throw createCanceledError();
+    useAuthStore.getState().setRetiringSession(null);
   }
 
   /**
@@ -284,21 +551,46 @@ export class AuthController {
    * @param params.secretKey - The secret key for the user
    * @param params.signupToken - Invitation code for user registration
    */
-  static async signUp({ secretKey, signupToken }: TSignUpParams) {
-    this.cancelModerationFollow();
-    // Clear query clients to ensure no stale cache from previous session
-    clearAllQueryClients();
-    // Clear database before sign up to ensure clean state
-    await clearDatabase();
-    // Skip post-migration resync — new user has no homeserver data to resync
-    useMigrationStore.getState().reset();
-    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
-    useSettingsStore.getState().reset();
-    const keypair = Identity.keypairFromSecretKey(secretKey);
-    const { session } = await AuthApplication.signUp({ keypair, signupToken });
-    const authStore = useAuthStore.getState();
-    const initialState = { session, currentUserPubky: Identity.z32FromSession({ session }), hasProfile: false };
-    authStore.init(initialState);
+  static async signUp({ secretKey, signupToken }: TSignUpParams): Promise<void> {
+    if (this.signupPromise) return this.signupPromise;
+    this.cancelActiveAuthFlow();
+    const epoch = this.epoch;
+    const task = (async () => {
+      await this.retrySessionRetirement();
+      const keypair = Identity.keypairFromSecretKey(secretKey);
+      const pubky = keypair.publicKey.z32();
+      const onboarding = useOnboardingStore.getState();
+      const context = { pubky, homeserver: getHomeserver(), environment: getDeployEnv() };
+      const attempt = onboarding.signupAttempt;
+      const continuing =
+        attempt?.pubky === pubky &&
+        attempt.homeserver === context.homeserver &&
+        attempt.environment === context.environment;
+      let result: THomeserverSessionResult | undefined;
+      if (continuing) {
+        // The previous create response may have been lost after the invite was consumed.
+        try {
+          result = await AuthApplication.signInCreatedAccount({ keypair });
+        } catch (error) {
+          if (attempt.phase === 'created' || !isAppError(error) || !isNotFound(error)) throw error;
+        }
+      }
+      if (!result) {
+        onboarding.setSignupAttempt({ ...context, phase: 'creating' });
+        await AuthApplication.createAccount({ keypair, signupToken });
+        if (epoch !== this.epoch) throw createCanceledError();
+        onboarding.setSignupAttempt({ ...context, phase: 'created' });
+        result = await AuthApplication.signInCreatedAccount({ keypair });
+      }
+      if (epoch !== this.epoch) throw createCanceledError();
+      await this.completeAuthenticatedSession(result, { epoch });
+    })();
+    this.signupPromise = task;
+    try {
+      await task;
+    } finally {
+      if (this.signupPromise === task) this.signupPromise = null;
+    }
   }
 
   /**
@@ -325,47 +617,71 @@ export class AuthController {
   }
 
   /**
-   * Wraps auth URL generation with flow tracking so useAuthUrl can cancel on unmount
-   * and we detect stale requests (e.g. React StrictMode double-mount).
-   * @param generateFn - Async function that returns the auth URL result
+   * Owns a Ring flow across UI unmounts and shares it across Strict Mode subscribers.
+   * @param request - The bound authorization purpose, identity and scopes
    * @returns Promise resolving to the generated authentication URL with wrapped approval
    */
-  private static async wrapAuthFlow(
-    generateFn: () => Promise<TGenerateAuthUrlResult>,
-  ): Promise<TGenerateAuthUrlResult> {
-    this.cancelModerationFollow();
-    await clearDatabase();
-    // Skip post-migration resync — full bootstrap below covers all data
-    useMigrationStore.getState().reset();
-    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
-    useSettingsStore.getState().reset();
-    const token = Symbol('auth-flow');
-    this.cancelActiveAuthFlow();
-    this.activeAuthFlow = { token, cancel: null };
-    const { authorizationUrl, awaitApproval, cancelAuthFlow } = await generateFn();
-
-    if (!this.activeAuthFlow || this.activeAuthFlow.token !== token) {
-      cancelAuthFlow();
-      return { authorizationUrl, awaitApproval, cancelAuthFlow };
-    }
-
-    this.activeAuthFlow.cancel = cancelAuthFlow;
-
-    const wrappedAwaitApproval = awaitApproval.finally(() => {
-      if (this.activeAuthFlow?.token === token) {
-        this.activeAuthFlow = null;
+  private static async wrapAuthFlow(request: GrantFlowRequest): Promise<TGenerateAuthUrlResult> {
+    const key = JSON.stringify({ ...request, fresh: false });
+    if (!request.fresh && this.activeAuthFlow?.key === key) return this.activeAuthFlow.result;
+    // Preserve the pending serialization when resuming after page reload.
+    this.activeAuthFlow?.cancel?.();
+    const epoch = ++this.epoch;
+    const token = Symbol('grant-flow');
+    const result = (async () => {
+      const flow = await AuthApplication.startGrantFlow(request);
+      if (epoch !== this.epoch) {
+        void flow.awaitApproval.catch(() => {});
+        flow.cancelAuthFlow();
+        throw createCanceledError();
       }
-      cancelAuthFlow();
+      if (this.activeAuthFlow?.token === token) this.activeAuthFlow.cancel = flow.cancelAuthFlow;
+      const awaitApproval = flow.awaitApproval
+        .then(async (session) => {
+          if (epoch !== this.epoch) throw createCanceledError();
+          await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
+          if (epoch !== this.epoch) throw createCanceledError();
+          try {
+            await this.completeAuthenticatedSession(
+              { session },
+              {
+                epoch,
+                expectedPubky: request.expectedPubky,
+                required: request.capabilities.split(','),
+                preserveContext: request.purpose === 'upgrade',
+              },
+            );
+          } finally {
+            if (useAuthStore.getState().session === session) flow.completeAuthFlow?.();
+          }
+          return session;
+        })
+        .finally(() => {
+          if (this.activeAuthFlow?.token === token) this.activeAuthFlow = null;
+        });
+      // Consumers may unmount during Ring handoff. Adoption still runs; prevent an unhandled rejection.
+      void awaitApproval.catch(() => {});
+      return {
+        ...flow,
+        awaitApproval,
+        cancelAuthFlow: () => {
+          if (this.activeAuthFlow?.token === token) this.cancelActiveAuthFlow();
+          else flow.cancelAuthFlow();
+        },
+      };
+    })();
+    this.activeAuthFlow = { key, token, result, cancel: null };
+    void result.catch(() => {
+      if (this.activeAuthFlow?.token === token) this.activeAuthFlow = null;
     });
-
-    return { authorizationUrl, awaitApproval: wrappedAwaitApproval, cancelAuthFlow };
+    return result;
   }
 
   /**
    * Centralizes all local state cleanup: resets every Zustand store, clears cookies,
    * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
    * and mute-sync `sessionStorage` cursors.
-   * Used by both logout() and restorePersistedSession() on failure.
+   * Used after explicit logout. Failed restoration never clears account data.
    */
   private static async cleanupLocalState() {
     this.cancelModerationFollow();
@@ -410,85 +726,114 @@ export class AuthController {
    * Generates an authentication URL for external authentication flows.
    * @returns Promise resolving to the generated authentication URL
    */
-  static async getAuthUrl(): Promise<TGenerateAuthUrlResult> {
-    return this.wrapAuthFlow(() => AuthApplication.generateAuthUrl());
+  static async getAuthUrl(fresh = false): Promise<TGenerateAuthUrlResult> {
+    const state = useAuthStore.getState();
+    return this.wrapAuthFlow({
+      purpose: 'signin',
+      capabilities: APP_CAPABILITIES,
+      generation: state.generation,
+      fresh,
+      expectedPubky: state.restoreStatus === 'reauth-required' ? (state.currentUserPubky ?? undefined) : undefined,
+    });
   }
 
-  /**
-   * Generates a signup authentication URL for Pubky Ring authorization.
-   * Decorates a standard auth URL with homeserver address and invite code metadata.
-   * @param inviteCode - The invite code for signup
-   * @returns Promise resolving to the generated signup authentication URL
-   */
-  static async getSignupAuthUrl(inviteCode: string): Promise<TGenerateAuthUrlResult> {
-    return this.wrapAuthFlow(() => AuthApplication.generateSignupAuthUrl(inviteCode));
+  static async getSignupAuthUrl(inviteCode: string, fresh = false): Promise<TGenerateAuthUrlResult> {
+    return this.wrapAuthFlow({
+      purpose: 'signup',
+      capabilities: APP_CAPABILITIES,
+      generation: useAuthStore.getState().generation,
+      inviteCode,
+      fresh,
+    });
+  }
+
+  /** Feature UI displays the returned QR/deeplink and awaits approval before resuming its action. */
+  static async requestCapabilities(
+    required: readonly string[] = LOCKS_CAPABILITIES,
+  ): Promise<TGenerateAuthUrlResult | null> {
+    await this.retrySessionRetirement();
+    const state = useAuthStore.getState();
+    if (this.hasCapabilities(required)) return null;
+    if (!state.currentUserPubky)
+      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Sign in before requesting permissions.', {
+        service: ErrorService.Local,
+        operation: 'requestCapabilities',
+      });
+    const capabilities = validateCapabilities(
+      [APP_CAPABILITIES, ...(state.session?.info.capabilities ?? []), ...required].join(','),
+    ) as Capabilities;
+    return this.wrapAuthFlow({
+      purpose: 'upgrade',
+      capabilities,
+      generation: state.generation,
+      expectedPubky: state.currentUserPubky,
+    });
   }
 
   /**
    * Logs out the current user from both the homeserver and local application state.
    */
-  static async logout() {
+  static async logout(): Promise<void> {
+    this.cancelActiveAuthFlow();
     this.cancelModerationFollow();
-    let authStore = useAuthStore.getState();
-
-    // Set logging out flag immediately to prevent flash of weird states in UI
-    authStore.setIsLoggingOut(true);
-
-    let session = authStore.session;
-
-    // Fresh loads can still have a persisted session export before the live session is restored.
-    // Reuse the restore flow so /logout performs a real homeserver sign-out before local cleanup.
-    if (!session && authStore.sessionExport) {
-      try {
-        const didRestoreSession = await this.restorePersistedSession();
-        if (!didRestoreSession) {
-          return;
+    const snapshot = useAuthStore.getState();
+    snapshot.setIsLoggingOut(true);
+    const generation = crypto.randomUUID();
+    const record: PersistedAuth = {
+      currentUserPubky: null,
+      hasProfile: null,
+      sessionReference: null,
+      retiringSession: null,
+      generation,
+    };
+    await AuthApplication.commitPersistedAuth(record, snapshot.generation);
+    snapshot.init({ ...record, session: null });
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const remote = async () => {
+        const session =
+          snapshot.session ??
+          (snapshot.sessionReference ? await AuthApplication.restoreReference(snapshot.sessionReference) : null);
+        if (session) await AuthApplication.logout({ session });
+        if (snapshot.retiringSession) {
+          const retired = await AuthApplication.restoreReference(snapshot.retiringSession);
+          await AuthApplication.logout({ session: retired });
         }
-      } catch (error) {
-        // restorePersistedSession already cleaned up local state; a wrong-environment
-        // rejection needs no toast here — the user asked to log out anyway.
-        Logger.warn('Persisted session restore during logout failed; local state already cleaned up', { error });
-        return;
+      };
+      await Promise.race([
+        remote(),
+        new Promise<void>((_, reject) => {
+          timeoutId = setTimeout(
+            () =>
+              reject(
+                Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Remote sign-out could not be confirmed.', {
+                  service: ErrorService.Homeserver,
+                  operation: 'logout',
+                }),
+              ),
+            LOGOUT_TIMEOUT_MS,
+          );
+        }),
+      ]).catch(() => {
+        Logger.warn('Local sign-out completed; remote revocation could not be confirmed.');
+      });
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+      // No global SDK clearAll: another tab may have saved a new grant during the remote request.
+      for (const reference of [snapshot.sessionReference, snapshot.retiringSession]) {
+        const current = AuthApplication.readPersistedAuth()?.sessionReference;
+        if (
+          reference &&
+          !(
+            reference.kind === 'grant' &&
+            current?.kind === 'grant' &&
+            current.sessionStoreId === reference.sessionStoreId
+          )
+        )
+          await AuthApplication.removeSessionRecord(reference).catch(() => {});
       }
-      authStore = useAuthStore.getState();
-      session = authStore.session;
+      if (this.isCurrentGeneration(generation)) await this.cleanupLocalState();
     }
-
-    if (session) {
-      // Bound the sign-out. The SDK's session.signout() takes no timeout or AbortSignal, so a
-      // homeserver that accepts the connection and then never replies would hold logout open
-      // until the OS-level TCP timeout, leaving cookies and the local database in place.
-      // Local cleanup must always run; ending the server session is best-effort.
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      try {
-        const timeoutPromise = new Promise<boolean>((resolve) => {
-          timeoutId = setTimeout(() => resolve(true), LOGOUT_TIMEOUT_MS);
-        });
-
-        const timedOut = await Promise.race([
-          AuthApplication.logout({ session }).then(
-            () => false,
-            (error) => {
-              Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
-              return false;
-            },
-          ),
-          timeoutPromise,
-        ]);
-
-        if (timedOut) {
-          Logger.warn('Homeserver sign-out did not answer in time, clearing local state anyway', {
-            timeoutMs: LOGOUT_TIMEOUT_MS,
-          });
-        }
-      } finally {
-        if (timeoutId !== undefined) {
-          clearTimeout(timeoutId);
-        }
-      }
-    }
-
-    await this.cleanupLocalState();
   }
 
   /**

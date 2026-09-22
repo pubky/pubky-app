@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useMemo, useRef } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { isDynamicPublicRoute, matchesAllowedRoute, PUBLIC_ROUTES } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
@@ -14,9 +14,11 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { toast } from '@/molecules/Toaster/toast';
+import { SessionRecovery } from '@/organisms/SessionRecovery/SessionRecovery';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
+import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 
 // Migration resync timeout in milliseconds
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
@@ -46,7 +48,9 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const { status, isLoading } = useAuthStatus();
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const session = useAuthStore((state) => state.session);
-  const sessionExport = useAuthStore((state) => state.sessionExport);
+  const sessionReference = useAuthStore((state) => state.sessionReference);
+  const restoreStatus = useAuthStore((state) => state.restoreStatus);
+  const needsRecovery = restoreStatus === 'temporary-error' || restoreStatus === 'reauth-required';
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const wasDbReset = useMigrationStore((state) => state.wasDbReset);
 
@@ -57,7 +61,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   useEffect(() => {
     if (!hasHydrated) return;
     if (session) return;
-    if (!sessionExport) return;
+    if (!sessionReference || restoreStatus !== 'idle') return;
     AuthController.restorePersistedSession().catch((error) => {
       if (isWrongEnvironmentHomeserverError(error)) {
         toast({
@@ -68,7 +72,26 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
       }
       Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
     });
-  }, [hasHydrated, session, sessionExport]);
+  }, [hasHydrated, session, sessionReference, restoreStatus]);
+
+  useEffect(() => {
+    const synchronize = (event: StorageEvent) => {
+      if (event.key === AUTH_PERSIST_KEY || event.key === null)
+        void AuthController.syncSessionFromStorage().catch(() => {});
+    };
+    const recover = () => {
+      if (document.visibilityState === 'hidden' || useAuthStore.getState().restoreStatus !== 'temporary-error') return;
+      void AuthController.restorePersistedSession().catch(() => {});
+    };
+    window.addEventListener('storage', synchronize);
+    window.addEventListener('online', recover);
+    document.addEventListener('visibilitychange', recover);
+    return () => {
+      window.removeEventListener('storage', synchronize);
+      window.removeEventListener('online', recover);
+      document.removeEventListener('visibilitychange', recover);
+    };
+  }, []);
 
   // Post-migration re-sync: fetch critical homeserver data after DB recreation
   // TODO: Consider using BroadcastChannel to notify other browser tabs when DB was recreated / resync completed
@@ -77,10 +100,12 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (!hasHydrated) return; // No need to resync if the app has NOT hydrated
     if (isMigrationResyncRunningRef.current) return; // No need to resync if the resync is ALREADY running
     if (!currentUserPubky) {
+      if (needsRecovery || sessionReference) return;
       // No need to resync if the user is NOT logged in
       useMigrationStore.getState().reset();
       return;
     }
+    if (needsRecovery || !session) return;
 
     isMigrationResyncRunningRef.current = true;
 
@@ -119,10 +144,10 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     };
 
     runResync();
-  }, [wasDbReset, hasHydrated, currentUserPubky]);
+  }, [wasDbReset, hasHydrated, currentUserPubky, needsRecovery, session, sessionReference]);
 
   // Determine if the current route is accessible based on authentication status
-  const isRouteAccessible = useMemo(() => {
+  const isRouteAccessible = (() => {
     // Static public routes are ALWAYS accessible, even during loading
     if (PUBLIC_ROUTES.includes(pathname)) return true;
 
@@ -141,7 +166,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     return routeAccess.allowedRoutes.some((route) =>
       matchesAllowedRoute(pathname, route, { restrictExploreSubRoutes }),
     );
-  }, [isLoading, pathname, status]);
+  })();
 
   // Handle automatic redirects when user tries to access unauthorized routes
   useEffect(() => {
@@ -152,7 +177,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (isDynamicPublicRoute(pathname)) return;
 
     // Wait for authentication status to be determined for protected routes
-    if (isLoading) return;
+    if (isLoading || needsRecovery) return;
 
     // No redirect needed if user has access to current route
     if (isRouteAccessible) return;
@@ -173,12 +198,16 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (redirectTo && pathname !== redirectTo) {
       router.push(redirectTo);
     }
-  }, [status, pathname, router, isLoading, isRouteAccessible]);
+  }, [status, pathname, router, isLoading, isRouteAccessible, needsRecovery]);
 
   // Show loading spinner while:
   // 1. Authentication status is being determined (isLoading = true)
   // 2. Route access check has completed but user doesn't have access (will trigger redirect)
   // 3. Migration re-sync is in progress (wasDbReset = true)
+  if (needsRecovery && !PUBLIC_ROUTES.includes(pathname) && !isDynamicPublicRoute(pathname)) {
+    return <SessionRecovery needsAuthorization={restoreStatus === 'reauth-required'} />;
+  }
+
   if (!isRouteAccessible || wasDbReset) {
     return (
       <div className="flex min-h-screen items-center justify-center">

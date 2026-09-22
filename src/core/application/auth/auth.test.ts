@@ -2,19 +2,14 @@ import type { Keypair, Session } from '@synonymdev/pubky';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import type { THomeserverAuthenticateParams } from '@/application/auth/auth.types';
-import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
-import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
-import type { THomeserverSignUpParams } from '@/services/homeserver/homeserver.types';
 import { mockSession } from '@/test-utils/pubky';
-import { mockAuthStore } from '@/test-utils/stores';
 import { asOpaque } from '@/test-utils/type-assertions';
-
-const spyOnSleep = async () => vi.spyOn(await import('@/libs/utils/utils'), 'sleep').mockResolvedValue(undefined);
 
 vi.mock('pubky-app-specs', () => ({
   default: vi.fn(() => Promise.resolve()),
@@ -24,37 +19,6 @@ vi.mock('pubky-app-specs', () => ({
 describe('AuthApplication', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe('signUp', () => {
-    const createParams = (): THomeserverSignUpParams => ({
-      keypair: asOpaque<Keypair>({
-        publicKey: vi.fn(() => ({ z32: () => 'test-pubky' })),
-        secret: vi.fn(() => new Uint8Array([1, 2, 3])),
-      }),
-      signupToken: 'test-signup-token',
-    });
-
-    it('should sign up successfully', async () => {
-      const params = createParams();
-      const session = asOpaque<Session>({ token: 'test-token' });
-      const expectedResult = { session };
-
-      const signUpSpy = vi.spyOn(HomeserverService, 'signUp').mockResolvedValue(expectedResult);
-
-      const result = await AuthApplication.signUp(params);
-
-      expect(signUpSpy).toHaveBeenCalledWith({ keypair: params.keypair, signupToken: params.signupToken });
-      expect(result).toEqual(expectedResult);
-    });
-
-    it('should propagate error when signup fails', async () => {
-      const params = createParams();
-      const signUpSpy = vi.spyOn(HomeserverService, 'signUp').mockRejectedValue(new Error('Signup failed'));
-
-      await expect(AuthApplication.signUp(params)).rejects.toThrow('Signup failed');
-      expect(signUpSpy).toHaveBeenCalledOnce();
-    });
   });
 
   describe('signIn', () => {
@@ -95,34 +59,6 @@ describe('AuthApplication', () => {
 
       await expect(AuthApplication.signIn(params)).rejects.toThrow('Authentication failed');
       expect(signInSpy).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe('generateAuthUrl', () => {
-    it('should generate and return auth URL', async () => {
-      const session = asOpaque<Session>({ token: 'test-token' });
-      const cancelAuthFlow = vi.fn();
-      const expectedResult = {
-        authorizationUrl: 'https://example.com/auth?token=test-token',
-        awaitApproval: Promise.resolve(session),
-        cancelAuthFlow,
-      };
-
-      const generateAuthUrlSpy = vi.spyOn(HomeserverService, 'generateAuthUrl').mockResolvedValue(expectedResult);
-
-      const result = await AuthApplication.generateAuthUrl();
-
-      expect(generateAuthUrlSpy).toHaveBeenCalled();
-      expect(result).toEqual(expectedResult);
-    });
-
-    it('should propagate error when URL generation fails', async () => {
-      const generateAuthUrlSpy = vi
-        .spyOn(HomeserverService, 'generateAuthUrl')
-        .mockRejectedValue(new Error('Failed to generate auth URL'));
-
-      await expect(AuthApplication.generateAuthUrl()).rejects.toThrow('Failed to generate auth URL');
-      expect(generateAuthUrlSpy).toHaveBeenCalledOnce();
     });
   });
 
@@ -197,199 +133,77 @@ describe('AuthApplication', () => {
   });
 
   describe('restorePersistedSession', () => {
-    const createMockAuthStore = (sessionExport: string | null = 'mock-session-export') =>
-      mockAuthStore({
-        sessionExport,
-        isRestoringSession: false,
-        setIsRestoringSession: vi.fn(),
-        init: vi.fn(),
-      });
-
-    const createNetworkError = () =>
-      new AppError({
-        category: ErrorCategory.Network,
-        code: NetworkErrorCode.CONNECTION_FAILED,
-        message: 'ERR_NETWORK_CHANGED',
-        service: ErrorService.Homeserver,
-        operation: 'restoreSession',
-      });
-
-    const createAuthError = () =>
-      new AppError({
-        category: ErrorCategory.Auth,
-        code: AuthErrorCode.SESSION_EXPIRED,
-        message: 'Session expired',
-        service: ErrorService.Homeserver,
-        operation: 'restoreSession',
-      });
-
-    let sleepSpy: ReturnType<typeof vi.spyOn>;
-
-    beforeEach(async () => {
-      sleepSpy = await spyOnSleep();
-    });
-
-    it('should restore session successfully on first attempt', async () => {
-      const authStore = createMockAuthStore();
-      const publicKey = asOpaque({ z32: () => 'user-pubky' });
-      const session = asOpaque<Session>({ token: 'test-token', info: { publicKey } });
-      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession').mockResolvedValue(session);
-      const assertSpy = vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockResolvedValue(undefined);
-
-      const result = await AuthApplication.restorePersistedSession({ authStore });
-
-      expect(restoreSpy).toHaveBeenCalledOnce();
-      expect(assertSpy).toHaveBeenCalledWith({ publicKey });
-      expect(result).toEqual({ session });
-      // Ensure loading state is toggled: true on start, false on finish (prevents stuck spinner)
-      expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(true);
-      expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(false);
-      // Ensure no sleep calls during restoration because session is restored immediately
-      expect(sleepSpy).not.toHaveBeenCalled();
-    });
-
-    it('should return null when sessionExport is missing', async () => {
-      const authStore = createMockAuthStore(null);
-
-      const result = await AuthApplication.restorePersistedSession({ authStore });
-
-      expect(result).toBeNull();
-    });
-
-    it('should retry on retryable error and succeed on subsequent attempt', async () => {
-      const authStore = createMockAuthStore();
-      const publicKey = asOpaque({ z32: () => 'user-pubky' });
-      const session = asOpaque<Session>({ token: 'test-token', info: { publicKey } });
-      // Simulate: 1st call fails (network), 2nd call fails (network), 3rd call succeeds
-      const restoreSpy = vi
-        .spyOn(HomeserverService, 'restoreSession')
-        .mockRejectedValueOnce(createNetworkError())
-        .mockRejectedValueOnce(createNetworkError())
-        .mockResolvedValueOnce(session);
+    const reference = { kind: 'cookie' as const, sessionExport: 'old-cookie-export' };
+    const expectedPubky = 'user-pubky';
+    const session = asOpaque<Session>({ info: { publicKey: { z32: () => expectedPubky } } });
+    beforeEach(() => {
+      vi.spyOn(HomeserverService, 'restoreReference').mockResolvedValue(session);
       vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockResolvedValue(undefined);
-
-      const result = await AuthApplication.restorePersistedSession({ authStore });
-
-      expect(restoreSpy).toHaveBeenCalledTimes(3);
-      expect(sleepSpy).toHaveBeenCalledTimes(2);
-      expect(result).toEqual({ session });
     });
-
-    // Errors like expired session (Auth category) are permanent — retrying won't help.
-    // Only transient errors (Network, Timeout, Server) should trigger retries.
-    it('should not retry on non-retryable AppError', async () => {
-      const authStore = createMockAuthStore();
-      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession').mockRejectedValueOnce(createAuthError()); // Non-retryable error
-
-      const result = await AuthApplication.restorePersistedSession({ authStore });
-
-      expect(restoreSpy).toHaveBeenCalledOnce();
-      expect(sleepSpy).not.toHaveBeenCalled();
-      expect(result).toBeNull();
-    });
-
-    it('should not retry on non-AppError (plain Error)', async () => {
-      const authStore = createMockAuthStore();
-      const restoreSpy = vi
-        .spyOn(HomeserverService, 'restoreSession')
-        .mockRejectedValueOnce(new Error('Unknown error'));
-
-      const result = await AuthApplication.restorePersistedSession({ authStore });
-
-      expect(restoreSpy).toHaveBeenCalledOnce();
-      expect(sleepSpy).not.toHaveBeenCalled();
-      expect(result).toBeNull();
-    });
-
-    it('should return null after exhausting all retry attempts', async () => {
-      const authStore = createMockAuthStore();
-      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession').mockRejectedValue(createNetworkError());
-
-      const result = await AuthApplication.restorePersistedSession({ authStore });
-
-      // 10 attempts total (RESTORE_MAX_ATTEMPTS)
-      expect(restoreSpy).toHaveBeenCalledTimes(10);
-      // 10 attempts but only 9 sleeps: on the 10th attempt, `attempt < MAX` is false so it breaks instead of sleeping
-      expect(sleepSpy).toHaveBeenCalledTimes(9);
-      expect(result).toBeNull();
-      expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(false);
-    });
-
-    // Verifies the finally block always resets loading state, even when restoration fails.
-    // Without this, the UI would be stuck on a loading spinner after an error.
-    it('should always reset isRestoringSession to false even on failure', async () => {
-      const authStore = createMockAuthStore();
-      vi.spyOn(HomeserverService, 'restoreSession').mockRejectedValue(createAuthError());
-
-      await AuthApplication.restorePersistedSession({ authStore });
-
-      expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(true);
-      expect(authStore.setIsRestoringSession).toHaveBeenLastCalledWith(false);
-    });
-
-    it('should throw without retry when restored session fails staging homeserver check', async () => {
-      const authStore = createMockAuthStore();
-      const publicKey = asOpaque({ z32: () => 'user-pubky' });
-      const session = asOpaque<Session>({ token: 'test-token', info: { publicKey } });
-      vi.spyOn(HomeserverService, 'restoreSession').mockResolvedValue(session);
-      const logoutSpy = vi.spyOn(HomeserverService, 'logout').mockResolvedValue(undefined);
-      vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockRejectedValue(
-        Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'wrong env', {
-          service: ErrorService.Homeserver,
-          operation: 'assertUserHomeserverAllowed',
-        }),
-      );
-
-      await expect(AuthApplication.restorePersistedSession({ authStore })).rejects.toMatchObject({
-        code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+    it('restores a valid legacy cookie without creating a grant', async () => {
+      expect(await AuthApplication.restorePersistedSession({ reference, expectedPubky })).toEqual({
+        status: 'restored',
+        session,
       });
-      expect(sleepSpy).not.toHaveBeenCalled();
-      // The rejected session must not be left dangling on its own homeserver.
-      expect(logoutSpy).toHaveBeenCalledWith({ session });
-      expect(authStore.setIsRestoringSession).toHaveBeenLastCalledWith(false);
+      expect(HomeserverService.restoreReference).toHaveBeenCalledWith(reference);
     });
-
-    it('should still reject wrong environment when the best-effort signout fails', async () => {
-      const authStore = createMockAuthStore();
-      const publicKey = asOpaque({ z32: () => 'user-pubky' });
-      const session = asOpaque<Session>({ token: 'test-token', info: { publicKey } });
-      vi.spyOn(HomeserverService, 'restoreSession').mockResolvedValue(session);
-      vi.spyOn(HomeserverService, 'logout').mockRejectedValue(new Error('signout failed'));
-      vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockRejectedValue(
-        Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'wrong env', {
-          service: ErrorService.Homeserver,
-          operation: 'assertUserHomeserverAllowed',
-        }),
-      );
-
-      await expect(AuthApplication.restorePersistedSession({ authStore })).rejects.toMatchObject({
-        code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+    it('returns none without credentials', async () => {
+      expect(await AuthApplication.restorePersistedSession({ reference: null, expectedPubky })).toEqual({
+        status: 'none',
       });
-      expect(authStore.setIsRestoringSession).toHaveBeenLastCalledWith(false);
+      expect(HomeserverService.restoreReference).not.toHaveBeenCalled();
     });
-
-    it('should retry a transient environment-check failure like any other restore failure', async () => {
-      // A failed (non-mismatch) PKARR lookup goes through the shared
-      // retry-or-cleanup policy — special-casing it into a kept half-restored
-      // state would strand useAuthStatus in its loading branch with no retry.
-      const authStore = createMockAuthStore();
-      const publicKey = asOpaque({ z32: () => 'user-pubky' });
-      const session = asOpaque<Session>({ token: 'test-token', info: { publicKey } });
-      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession').mockResolvedValue(session);
-      const logoutSpy = vi.spyOn(HomeserverService, 'logout').mockResolvedValue(undefined);
-      vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed')
-        .mockRejectedValueOnce(createNetworkError())
-        .mockResolvedValueOnce(undefined);
-
-      const result = await AuthApplication.restorePersistedSession({ authStore });
-
-      expect(result).toEqual({ session });
-      expect(sleepSpy).toHaveBeenCalledOnce();
-      // The already-restored session is reused — only the failed check retries.
-      expect(restoreSpy).toHaveBeenCalledOnce();
-      // Only a definitive wrong-environment rejection signs the session out.
-      expect(logoutSpy).not.toHaveBeenCalled();
-      expect(authStore.setIsRestoringSession).toHaveBeenLastCalledWith(false);
+    it('preserves a temporary failure for an explicit retry', async () => {
+      const error = Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Offline', {
+        service: ErrorService.Homeserver,
+        operation: 'restore',
+      });
+      vi.mocked(HomeserverService.restoreReference).mockRejectedValue(error);
+      expect(await AuthApplication.restorePersistedSession({ reference, expectedPubky })).toEqual({
+        status: 'temporary-error',
+        error,
+      });
+      expect(HomeserverService.restoreReference).toHaveBeenCalledOnce();
+    });
+    it('requires reauthorization for a rejected exchange without deleting it', async () => {
+      const error = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Expired', {
+        service: ErrorService.Homeserver,
+        operation: 'restore',
+      });
+      vi.mocked(HomeserverService.restoreReference).mockRejectedValue(error);
+      expect(await AuthApplication.restorePersistedSession({ reference, expectedPubky })).toEqual({
+        status: 'reauth-required',
+        error,
+      });
+    });
+    it('rejects a restored account mismatch', async () => {
+      expect(await AuthApplication.restorePersistedSession({ reference, expectedPubky: 'another-user' })).toEqual({
+        status: 'reauth-required',
+      });
+    });
+    it('rejects an expired grant before contacting the SDK', async () => {
+      expect(
+        await AuthApplication.restorePersistedSession({
+          reference: {
+            kind: 'grant',
+            sessionStoreId: 'record',
+            clientId: 'staging.pubky.app',
+            grantId: 'grant',
+            grantExpiresAt: 1,
+            tokenExpiresAt: 1,
+          },
+          expectedPubky,
+        }),
+      ).toEqual({ status: 'reauth-required' });
+      expect(HomeserverService.restoreReference).not.toHaveBeenCalled();
+    });
+    it('surfaces the environment guard without discarding credentials', async () => {
+      const error = Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'Wrong environment', {
+        service: ErrorService.Homeserver,
+        operation: 'guard',
+      });
+      vi.mocked(HomeserverService.assertUserHomeserverAllowed).mockRejectedValue(error);
+      await expect(AuthApplication.restorePersistedSession({ reference, expectedPubky })).rejects.toBe(error);
     });
   });
 

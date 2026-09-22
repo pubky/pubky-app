@@ -1,24 +1,14 @@
-import {
-  Address,
-  AuthFlowKind,
-  Capabilities,
-  Client,
-  Keypair,
-  Pubky,
-  PublicKey,
-  resolvePubky,
-  Session,
-  Signer,
-} from '@synonymdev/pubky';
+import { Address, Client, Keypair, Pubky, PublicKey, resolvePubky, Session, Signer } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
+import { getAuthClientId } from '@/config/auth';
 import {
-  getDefaultHttpRelay,
   getHomeserver,
   getHomeserverUrl,
   getPkarrRelays,
   getTestnet,
   isStagingHomeserverDeploy,
 } from '@/config/network';
+import type { SessionReference } from '@/libs/auth/session.types';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -40,9 +30,10 @@ import type {
 } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { extractStatusCode, handleError } from './error.utils';
+import { type GrantFlowRequest, GrantFlowService } from './grant-flow';
 import type {
-  PubPath,
-  TGenerateSignupAuthUrlParams,
+  StoragePath,
+  THomeserverBytesResult,
   THomeserverFetchParams,
   THomeserverListAllParams,
   THomeserverListParams,
@@ -54,7 +45,7 @@ import type {
 } from './homeserver.types';
 import {
   assertOk,
-  createCancelableAuthApproval,
+  extractPubkyZ32,
   getOwnedResponse,
   isHttpUrl,
   parseResponseOrUndefined,
@@ -62,8 +53,7 @@ import {
   resolveOwnedSessionPath,
 } from './homeserver.utils';
 
-const CAPABILITIES = '/pub/pubky.app/:rw';
-const PUB_PATH_PREFIX = '/pub/' as const;
+const STORAGE_PATH_PREFIXES = ['/pub/', '/priv/'] as const;
 const DELETE_IDEMPOTENT_MAX_ATTEMPTS = 3;
 const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
 /** Default limit for list operations */
@@ -95,7 +85,7 @@ export class HomeserverService {
 
   private static resolveOwnedSessionPath(url: string): TOwnedSessionPath | null {
     const session = useAuthStore.getState().selectSession();
-    return resolveOwnedSessionPath({ url, session, pubPathPrefix: PUB_PATH_PREFIX });
+    return resolveOwnedSessionPath({ url, session, allowedPrefixes: STORAGE_PATH_PREFIXES });
   }
 
   /**
@@ -169,32 +159,6 @@ export class HomeserverService {
   }
 
   /**
-   * Signs up a new user in the homeserver
-   * @param keypair - The keypair to sign up with
-   * @param signupToken - The signup token to use
-   * @returns The session
-   */
-  static async signUp({ keypair, signupToken }: THomeserverSignUpParams): Promise<THomeserverSessionResult> {
-    try {
-      const homeserverPublicKey = PublicKey.from(getHomeserver());
-      const signer = this.getSigner(keypair);
-      // Cookie-backed session on purpose: the grant-auth migration is tracked separately.
-      const session = await signer.signupCookie(homeserverPublicKey, signupToken);
-
-      Logger.debug('Signup successful', { session });
-
-      return { session };
-    } catch (error) {
-      return handleError({
-        error,
-        additionalContext: { signupTokenProvided: Boolean(signupToken), operation: 'signUp' },
-        statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
-        alwaysUseHomeserverError: true,
-      });
-    }
-  }
-
-  /**
    * Verifies a signup token (invite code) against the homeserver.
    *
    * Performs a GET to the homeserver's `/signup_tokens/<token>` endpoint. This is a
@@ -261,9 +225,7 @@ export class HomeserverService {
       // Lookup-failure hardening: self-heal (republish) only a PROVABLY ABSENT
       // record (e.g. expired from the DHT). A failed lookup throws instead —
       // republishing on a transient error could overwrite an existing record
-      // that points at another homeserver. NOTE: the signin-failure branch
-      // below still republishes a PRESENT record (long-standing stale-record
-      // migration self-heal); narrowing that is a separate product decision.
+      // that points at another homeserver. A failed grant exchange never republishes it.
       const homeserverRecord = await this.resolveHomeserverRecord({ publicKey: keypair.publicKey });
       if (homeserverRecord === null) {
         return await this.republishConfiguredHomeserver({
@@ -275,12 +237,121 @@ export class HomeserverService {
     }
 
     try {
-      // Cookie-backed session on purpose: the grant-auth migration is tracked separately.
-      const session = await signer.signinCookie();
+      const session = await signer.signin(getAuthClientId());
       return { session };
     } catch (signinError) {
-      return await this.republishConfiguredHomeserver({ signer, keypair, originalError: signinError });
+      return handleError({ error: signinError, additionalContext: { operation: 'signIn' } });
     }
+  }
+
+  /** Account creation and session issuance are separate so retries cannot spend the invite twice. */
+  static async createAccount({ keypair, signupToken }: THomeserverSignUpParams): Promise<void> {
+    try {
+      await this.getSigner(keypair).signup(PublicKey.from(getHomeserver()), signupToken);
+    } catch (error) {
+      return handleError({ error, additionalContext: { operation: 'createAccount' } });
+    }
+  }
+
+  static async signInCreatedAccount({ keypair }: TKeypairParams): Promise<THomeserverSessionResult> {
+    try {
+      const signer = this.getSigner(keypair);
+      const record = await this.resolveHomeserverRecord({ publicKey: keypair.publicKey });
+      // Only this signup-specific path knows the generated key's intended homeserver.
+      // A lost create response can leave an account without its PKARR publication.
+      if (record === null) await signer.pkdns.publishHomeserverForce(PublicKey.from(getHomeserver()));
+      else if (record.z32() !== getHomeserver()) {
+        throw Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'This signup belongs to another homeserver.', {
+          service: ErrorService.Homeserver,
+          operation: 'signInCreatedAccount',
+        });
+      }
+      return { session: await signer.signin(getAuthClientId()) };
+    } catch (error) {
+      return handleError({ error, additionalContext: { operation: 'signInCreatedAccount' } });
+    }
+  }
+
+  static async saveSession(session: Session): Promise<SessionReference> {
+    try {
+      if (!session.grant) {
+        return { kind: 'cookie', sessionExport: session.cookie?.export() ?? session.export() };
+      }
+      const info = await session.grant.sessionInfo();
+      if (info.clientId !== getAuthClientId()) {
+        throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'The approved grant belongs to another application.', {
+          service: ErrorService.Homeserver,
+          operation: 'saveSession',
+        });
+      }
+      const saved = await this.getPubkySdk().browserSessionStore.save(session);
+      return {
+        kind: 'grant',
+        sessionStoreId: saved.id,
+        clientId: info.clientId,
+        grantId: info.grantId,
+        grantExpiresAt: info.grantExpiresAt,
+        tokenExpiresAt: info.tokenExpiresAt,
+      };
+    } catch (error) {
+      return handleError({ error, additionalContext: { operation: 'saveSession' } });
+    }
+  }
+
+  static async restoreReference(reference: SessionReference): Promise<Session> {
+    if (reference.kind === 'cookie') return this.restoreSession(reference);
+    const store = this.getPubkySdk().browserSessionStore;
+    try {
+      return await store.restore(reference.sessionStoreId);
+    } catch (error) {
+      if (this.isMissingSessionRecord(error, reference.sessionStoreId)) {
+        throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Authorize this account again to restore its session.', {
+          service: ErrorService.Homeserver,
+          operation: 'restoreGrant',
+          context: { reason: 'missing_local_grant' },
+        });
+      }
+      return handleError({ error, additionalContext: { operation: 'restoreGrant' } });
+    }
+  }
+
+  /** A canceled candidate may share its delegated key with a copied pending Ring flow. */
+  static async removeUnusedSessionRecord(reference: SessionReference): Promise<void> {
+    if (reference.kind !== 'grant') return;
+    try {
+      const records = await this.getPubkySdk().browserSessionStore.list();
+      const record = records.find((item) => item.id === reference.sessionStoreId);
+      // SDK 0.11 remove() deletes the key without reference counting. Retain it until the SDK
+      // can prove ownership; a different tab may still be using the pending authorization.
+      if (!record || record.storageMode === 'delegated') return;
+      await this.removeSessionRecord(reference);
+    } catch (error) {
+      return handleError({ error, additionalContext: { operation: 'removeUnusedSessionRecord' } });
+    }
+  }
+
+  static async removeSessionRecord(reference: SessionReference): Promise<void> {
+    if (reference.kind !== 'grant') return;
+    const store = this.getPubkySdk().browserSessionStore;
+    try {
+      await store.remove(reference.sessionStoreId);
+    } catch (error) {
+      if (this.isMissingSessionRecord(error, reference.sessionStoreId)) return;
+      return handleError({ error, additionalContext: { operation: 'removeSessionRecord' } });
+    }
+  }
+
+  private static isMissingSessionRecord(error: unknown, id: string): boolean {
+    // Pinned SDK 0.11 emits this only after a successful IndexedDB read finds no record.
+    // list() is unsuitable for checking absence: it also returns [] when IndexedDB fails.
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'name' in error &&
+      error.name === 'ClientStateError' &&
+      'message' in error &&
+      error.message === `Stored Pubky session not found: ${id}`
+    );
   }
 
   private static async republishConfiguredHomeserver({
@@ -310,59 +381,16 @@ export class HomeserverService {
     }
   }
 
-  /**
-   * Generates an authentication URL for the homeserver
-   * @param caps - The capabilities to use
-   * @returns The authentication URL and approval promise
-   */
-  static async generateAuthUrl(caps?: Capabilities): Promise<TGenerateAuthUrlResult> {
-    const capabilities: Capabilities = caps || CAPABILITIES;
-
+  static async startGrantFlow(request: GrantFlowRequest): Promise<TGenerateAuthUrlResult> {
     try {
-      const pubkySdk = this.getPubkySdk();
-      // Cookie auth flow on purpose: the grant-auth migration is tracked separately.
-      const flow = pubkySdk.startCookieAuthFlow(capabilities, AuthFlowKind.signin(), getDefaultHttpRelay());
-      const approval = createCancelableAuthApproval(flow);
-
-      return {
-        authorizationUrl: flow.authorizationUrl,
-        awaitApproval: approval.awaitApproval,
-        cancelAuthFlow: approval.cancel,
-      };
+      return await GrantFlowService.start(this.getPubkySdk(), request);
     } catch (error) {
-      return handleError({ error, additionalContext: { capabilities, relay: getDefaultHttpRelay() } });
+      return handleError({ error, additionalContext: { operation: 'startGrantFlow' } });
     }
   }
 
-  /**
-   * Generates an authentication signup URL for the homeserver.
-   *
-   * Temporary hack to create a signup deeplink from the signin url still using the old pubky sdk.
-   * The new sdk will handle the creation of the signup deeplink out of the box.
-   * But until then, we need to use this hack.
-   * @param inviteCode InviteCode to the homeserver
-   * @param caps - The capabilities to use
-   * @returns The authentication URL and approval promise
-   */
-  static async generateSignupAuthUrl({
-    inviteCode,
-    caps,
-  }: TGenerateSignupAuthUrlParams): Promise<TGenerateAuthUrlResult> {
-    const res = await this.generateAuthUrl(caps);
-    const url = URL.parse(res.authorizationUrl);
-    if (!url) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid authorization URL format', {
-        service: ErrorService.Homeserver,
-        operation: 'generateSignupAuthUrl',
-        context: { authorizationUrl: res.authorizationUrl },
-      });
-    }
-    url.host = 'signup';
-    url.pathname = '';
-    url.searchParams.set('hs', getHomeserver());
-    url.searchParams.set('st', inviteCode);
-    res.authorizationUrl = url.toString();
-    return res;
+  static clearPendingAuthFlow(): void {
+    GrantFlowService.clear();
   }
 
   /**
@@ -372,6 +400,14 @@ export class HomeserverService {
    */
   static async logout({ session }: THomeserverSessionResult) {
     try {
+      if (session.grant) {
+        // A permitted authenticated request triggers SDK renewal before signout.
+        // An anonymous public read or cached sessionInfo does not refresh the bearer.
+        const response = await session.storage.get('/pub/pubky.app/profile.json');
+        if (response.status !== HttpStatusCode.NOT_FOUND)
+          await assertOk({ response, url: '/pub/pubky.app/profile.json', operation: 'prepareSignout' });
+        await response.body?.cancel();
+      }
       await session.signout();
     } catch (error) {
       return handleError({ error, additionalContext: { url: 'signout' } });
@@ -434,10 +470,10 @@ export class HomeserverService {
     }
 
     // Non-owned: only GET allowed on non-HTTP URLs
-    if (method !== HttpMethod.GET && !isHttpUrl(url)) {
+    if (method !== HttpMethod.GET && (!isHttpUrl(url) || extractPubkyZ32(url) !== null)) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
-        `Authenticated writes must target an owned ${PUB_PATH_PREFIX}* path for the current session.`,
+        'Authenticated writes must target an owned /pub/* or /priv/* path for the current session.',
         {
           service: ErrorService.Homeserver,
           operation: 'request',
@@ -482,10 +518,10 @@ export class HomeserverService {
       }
     }
 
-    if (!isHttpUrl(url)) {
+    if (!isHttpUrl(url) || extractPubkyZ32(url) !== null) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
-        `Blob uploads must target an owned ${PUB_PATH_PREFIX}* path for the current session.`,
+        'Blob uploads must target an owned /pub/* or /priv/* path for the current session.',
         {
           service: ErrorService.Homeserver,
           operation: 'putBlob',
@@ -519,7 +555,7 @@ export class HomeserverService {
     try {
       const owned = this.resolveOwnedSessionPath(baseDirectory);
       if (owned) {
-        const dirPath = owned.path.endsWith('/') ? owned.path : (`${owned.path}/` as PubPath<string>);
+        const dirPath = owned.path.endsWith('/') ? owned.path : (`${owned.path}/` as StoragePath<string>);
         const files = await owned.session.storage.list(dirPath, cursor ?? null, reverse, limit, false);
         Logger.debug('List successful', { baseDirectory, filesCount: files.length });
         return files;
@@ -608,17 +644,57 @@ export class HomeserverService {
   static async get(url: string): Promise<Response> {
     const pubkySdk = this.getPubkySdk();
     try {
-      if (isHttpUrl(url)) {
-        return await pubkySdk.client.fetch(url);
-      }
-
       const owned = this.resolveOwnedSessionPath(url);
       if (owned) {
         return await getOwnedResponse({ session: owned.session, path: owned.path, url });
       }
 
+      if (isHttpUrl(url)) {
+        return await pubkySdk.client.fetch(url);
+      }
+
       return await pubkySdk.publicStorage.get(url as Address);
     } catch (error) {
+      return handleError({ error, additionalContext: { url, method: HttpMethod.GET } });
+    }
+  }
+
+  /** Read binary content, rejecting missing resources and failed HTTP responses. */
+  static async getBytes(url: string): Promise<Uint8Array> {
+    try {
+      const response = await this.get(url);
+      await assertOk({ response, url, operation: 'getBytes' });
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      return handleError({ error, additionalContext: { url, method: HttpMethod.GET, operation: 'getBytes' } });
+    }
+  }
+
+  /**
+   * Read an owned resource with its server modification time. Only a 404 means absence;
+   * missing authentication, insufficient permissions and transport failures reject.
+   */
+  static async getBytesIfExists(url: string): Promise<THomeserverBytesResult | null> {
+    const owned = this.resolveOwnedSessionPath(url);
+    if (!owned) {
+      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Reading owned storage requires a session for the resource owner.', {
+        service: ErrorService.Homeserver,
+        operation: 'getBytesIfExists',
+        context: { url },
+      });
+    }
+
+    try {
+      const response = await owned.session.storage.get(owned.path);
+      if (response.status === HttpStatusCode.NOT_FOUND) return null;
+      await assertOk({ response, url, operation: 'getBytesIfExists' });
+      const lastModified = Date.parse(response.headers.get('last-modified') ?? '');
+      return {
+        bytes: new Uint8Array(await response.arrayBuffer()),
+        modifiedAt: Number.isNaN(lastModified) ? null : lastModified,
+      };
+    } catch (error) {
+      if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return null;
       return handleError({ error, additionalContext: { url, method: HttpMethod.GET } });
     }
   }
@@ -631,6 +707,8 @@ export class HomeserverService {
     const pubkySdk = this.getPubkySdk();
 
     try {
+      const owned = this.resolveOwnedSessionPath(url);
+      if (owned) return await owned.session.storage.exists(owned.path);
       if (isHttpUrl(url)) {
         const response = await pubkySdk.client.fetch(url);
         if (response.status === HttpStatusCode.NOT_FOUND) return false;
@@ -638,10 +716,7 @@ export class HomeserverService {
         return true;
       }
 
-      const owned = this.resolveOwnedSessionPath(url);
-      return owned
-        ? await owned.session.storage.exists(owned.path)
-        : await pubkySdk.publicStorage.exists(url as Address);
+      return await pubkySdk.publicStorage.exists(url as Address);
     } catch (error) {
       return handleError({
         error,

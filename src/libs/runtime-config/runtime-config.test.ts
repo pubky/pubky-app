@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   escapeForInlineScript,
+  getAuthClientId,
   getRuntimeConfig,
   getSentryDsn,
   getSentryEnvironment,
@@ -259,6 +260,25 @@ describe('runtime-config resolver', () => {
       expect(serialized).not.toContain('sentryEnvironment');
       // Defaulted rates are always present so the client never re-derives them.
       expect(serialized).toContain('sentryTracesSampleRate');
+    });
+  });
+
+  describe('grant client identity', () => {
+    it.each([
+      ['production', 'pubky.app'],
+      ['staging', 'staging.pubky.app'],
+    ] as const)('uses a stable %s identity', (environment, clientId) => {
+      setAllRuntimeEnv();
+      process.env.PUBKY_RUNTIME_ENV = environment;
+      resetRuntimeConfigForTests();
+      expect(getAuthClientId()).toBe(clientId);
+    });
+    it('supports an explicit custom deployment identity', () => {
+      setAllRuntimeEnv();
+      process.env.PUBKY_RUNTIME_AUTH_CLIENT_ID = 'custom.example';
+      resetRuntimeConfigForTests();
+      expect(getAuthClientId()).toBe('custom.example');
+      expect(readServerConfig().authClientId).toBe('custom.example');
     });
   });
 

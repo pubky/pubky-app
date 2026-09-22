@@ -1,4 +1,5 @@
 import { type AuthFlow } from '@synonymdev/pubky';
+import { createCanceledError } from '@/libs/auth/cancellation';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -8,10 +9,10 @@ import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
-import { createCanceledError, extractStatusCode, handleError } from './error.utils';
+import { handleError } from './error.utils';
 import type {
   CancelableAuthApproval,
-  PubPath,
+  StoragePath,
   TAssertOkParams,
   TCheckSessionExpirationParams,
   TGetOwnedResponseParams,
@@ -153,7 +154,7 @@ export const parseResponseOrUndefined = async <T>({
  * @returns CancelableAuthApproval with awaitApproval promise and cancel function
  */
 export const createCancelableAuthApproval = (
-  flow: AuthFlow,
+  flow: Pick<AuthFlow, 'tryPollOnce' | 'free'>,
   options?: { pollIntervalMs?: number; maxPollAttempts?: number },
 ): CancelableAuthApproval => {
   const pollIntervalMs = options?.pollIntervalMs ?? AUTH_POLL_INTERVAL_MS;
@@ -189,22 +190,11 @@ export const createCancelableAuthApproval = (
 
       try {
         const maybeSession = await flow.tryPollOnce();
+        if (canceled) throw createCanceledError();
         if (maybeSession) return maybeSession;
       } catch (error) {
         if (canceled) throw createCanceledError();
-        // From the caller's view, tryPollOnce is one-shot: one call, one outcome
-        // (pubky SDK 0.8 — it doesn't loop or retry on our behalf). If it throws,
-        // we treat the flow as dead and fail fast — showing "session expired" now
-        // is better UX than letting the user wait minutes on a flow that may already be dead.
-        throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Auth flow polling failed', {
-          service: ErrorService.Homeserver,
-          operation: 'awaitApproval',
-          context: {
-            originalError: error instanceof Error ? error.message : String(error),
-            statusCode: extractStatusCode(error),
-          },
-          cause: error,
-        });
+        return handleError({ error, additionalContext: { operation: 'awaitApproval' } });
       }
 
       await sleep(pollIntervalMs);
@@ -218,24 +208,24 @@ export const createCancelableAuthApproval = (
 };
 
 /**
- * Resolves an owned session path from a URL.
- * Checks if the URL matches the current session's pubky and is a valid /pub/* path.
+ * Resolves an owned session path from a URL: the URL must belong to the current session's pubky and
+ * sit under one of the writable storage roots.
  *
  * @param url - The URL to resolve
  * @param session - The current session (or null if not authenticated)
- * @param pubPathPrefix - The pub path prefix constant (e.g., '/pub/')
+ * @param allowedPrefixes - Writable storage roots (`/pub/`, `/priv/`)
  * @returns Object with session and path if owned, null otherwise
  */
 export const resolveOwnedSessionPath = ({
   url,
   session,
-  pubPathPrefix,
+  allowedPrefixes,
 }: TResolveOwnedSessionPathParams): TOwnedSessionPath | null => {
   if (!session) return null;
 
   const pathname = toPathname(url);
-  if (!pathname || !pathname.startsWith(pubPathPrefix)) return null;
-  const path = pathname as PubPath<string>;
+  if (!pathname || !allowedPrefixes.some((prefix) => pathname.startsWith(prefix))) return null;
+  const path = pathname as StoragePath<string>;
 
   if (url.startsWith('/')) return { session, path };
 
