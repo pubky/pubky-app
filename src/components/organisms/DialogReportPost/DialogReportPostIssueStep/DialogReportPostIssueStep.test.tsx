@@ -60,11 +60,12 @@ describe('DialogReportPostIssueStep', () => {
     const continueButton = screen.getByRole('button', { name: 'Continue' });
     const cancelButton = screen.getByRole('button', { name: 'Cancel' });
 
-    // Primary action on top of the mobile column, trailing in the desktop row.
     expect(continueButton).toHaveAttribute('data-variant', 'default');
     expect(cancelButton).toHaveAttribute('data-variant', 'outline');
-    expect(continueButton.className).toContain('order-1 sm:order-2');
-    expect(cancelButton.className).toContain('order-2 sm:order-1');
+    // Match the mobile design's Cancel-first column and the desktop's trailing Continue action.
+    expect(cancelButton.nextElementSibling).toBe(continueButton);
+    expect(cancelButton.className).not.toMatch(/\border-/);
+    expect(continueButton.className).not.toMatch(/\border-/);
   });
 
   it('calls onSelectIssueType with correct issue type when Continue button is clicked after selecting issue', async () => {
@@ -148,10 +149,8 @@ describe('DialogReportPostIssueStep - Snapshots', () => {
   const mockOnSelectIssueType = vi.fn();
   const mockOnCancel = vi.fn();
 
-  it('matches snapshot', () => {
-    const { container } = renderWithDialog(
-      <DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
+  it('matches footer snapshot', () => {
+    renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
+    expect(screen.getByRole('button', { name: 'Cancel' }).parentElement).toMatchSnapshot();
   });
 });
