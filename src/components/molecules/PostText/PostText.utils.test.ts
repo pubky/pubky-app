@@ -1,12 +1,12 @@
 import type { Blockquote, Code, Emphasis, Heading, Link, List, Paragraph, Root, RootContent, Text } from 'mdast';
 import { describe, expect, it } from 'vitest';
 import { TAG_MAX_LENGTH } from '@/config/posts';
+import { remarkDisallowMarkdownLinks } from '@/libs/post/markdown';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { POST_TEXT_PREVIEW_MAX_LINES, TRUNCATION_LIMIT } from './PostText.constants';
 import {
   extractTextFromChildren,
   getCompactUrl,
-  remarkDisallowMarkdownLinks,
   remarkExtractFirstParagraph,
   remarkHashtags,
   remarkInlineShowMore,

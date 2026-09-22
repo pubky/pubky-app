@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { Logger } from '@/libs/logger/logger';
-import { truncateByGraphemes } from '@/libs/utils/truncate';
+import { resolveMentionSegmentsForMetadata } from '@/libs/post/postMetadata';
 import { resolveDisplayName } from '@/libs/utils/utils';
-import { OgAvatar, OgFrame } from './OgComponents';
+import { OgAvatar, OgFrame, OgText } from './OgComponents';
 import { OG_TOKENS, OG_TRUNCATE } from './ogConstants';
 import { buildAvatarUrl, fetchImageAsDataUri, fetchProfileForMetadata } from './ogData';
 import { PubkyMark, StickyNoteIcon, UsersRoundIcon } from './OgIcons';
 import { ogImageResponse } from './ogImageResponse';
+import { prepareOgText, prepareOgTextSegments } from './ogText';
 import { renderFallbackOg } from './renderFallbackOg';
 
 const compactNumber = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
@@ -32,9 +33,15 @@ export async function renderProfileOg({ pubky }: { pubky: string }): Promise<Res
     if (!result) return await renderFallbackOg();
 
     const { user, counts } = result;
-    const avatarSrc = await fetchImageAsDataUri(buildAvatarUrl(user));
-    const name = resolveDisplayName(user);
-    const bio = truncateByGraphemes(user.bio ?? '', OG_TRUNCATE.bio);
+    // Raw `pk:` / `pubky` mentions in the bio become brand-coloured display
+    // names, as the app renders them. Resolved alongside the avatar: independent
+    // round-trips.
+    const [avatarSrc, bioSegments] = await Promise.all([
+      fetchImageAsDataUri(buildAvatarUrl(user)),
+      resolveMentionSegmentsForMetadata(user.bio ?? '', OG_TRUNCATE.bio),
+    ]);
+    const name = prepareOgText(resolveDisplayName(user));
+    const bio = prepareOgTextSegments(bioSegments, OG_TRUNCATE.bio);
 
     return await ogImageResponse(
       <OgFrame
@@ -63,10 +70,10 @@ export async function renderProfileOg({ pubky }: { pubky: string }): Promise<Res
               >
                 {name}
               </div>
-              {bio ? (
-                <div
+              {bio.length > 0 ? (
+                <OgText
+                  segments={bio}
                   style={{
-                    display: 'flex',
                     overflow: 'hidden',
                     fontSize: 48,
                     fontWeight: 500,
@@ -77,9 +84,7 @@ export async function renderProfileOg({ pubky }: { pubky: string }): Promise<Res
                     // so a long / URL bio can't push the stats row down.
                     maxHeight: 180,
                   }}
-                >
-                  {bio}
-                </div>
+                />
               ) : null}
             </div>
             <div style={{ display: 'flex', gap: 48 }}>
