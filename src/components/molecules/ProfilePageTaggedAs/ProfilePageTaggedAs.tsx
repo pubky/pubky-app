@@ -59,6 +59,7 @@ export function ProfilePageTaggedAs({
               <TagInput
                 onTagAdd={onTagAdd}
                 existingTags={inputTags}
+                viewerTags={inputTags.filter((tag) => tag.relationship)}
                 showEmojiButton={false}
                 enableApiSuggestions
                 excludeFromApiSuggestions={inputTags.map((tag) => tag.label)}

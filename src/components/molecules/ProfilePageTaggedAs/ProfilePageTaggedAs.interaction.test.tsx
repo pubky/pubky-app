@@ -19,6 +19,7 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({ useTtlSubscrip
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({ requireAuth: (action: () => void) => action() }),
 }));
+vi.mock('@/hooks/useTagSuggestions/useTagSuggestions', () => ({ useTagSuggestions: () => ({ suggestions: [] }) }));
 vi.mock('@/hooks/useBulkUserAvatars/useBulkUserAvatars', () => ({
   useBulkUserAvatars: () => ({
     getUsersWithAvatars: (ids: string[]) => ids.map((id) => ({ id, name: id, avatarUrl: '' })),
@@ -37,6 +38,38 @@ const props = { tags, count: 1, variant: 'mobile' as const, onTagClick: vi.fn() 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(UserController.fetchTaggers).mockResolvedValue({ users: ['alice', 'bob'], relationship: false });
+});
+
+describe('ProfilePageTaggedAs tag input ownership', () => {
+  it('lets the viewer add an existing tag outside the preview', async () => {
+    const user = userEvent.setup();
+    const onTagAdd = vi.fn();
+    render(
+      <ProfilePageTaggedAs
+        {...props}
+        pubky="profile"
+        onTagAdd={onTagAdd}
+        allTags={[...tags, { label: 'outside', taggers: [], taggers_count: 1, relationship: false }]}
+      />,
+    );
+    await user.type(screen.getByRole('textbox'), 'outside{Enter}');
+    expect(onTagAdd).toHaveBeenCalledWith('outside');
+  });
+
+  it('does not add a duplicate tag already applied by the viewer', async () => {
+    const user = userEvent.setup();
+    const onTagAdd = vi.fn();
+    render(
+      <ProfilePageTaggedAs
+        {...props}
+        pubky="profile"
+        onTagAdd={onTagAdd}
+        allTags={[...tags, { label: 'mine', taggers: [], taggers_count: 1, relationship: true }]}
+      />,
+    );
+    await user.type(screen.getByRole('textbox'), 'mine{Enter}');
+    expect(onTagAdd).not.toHaveBeenCalled();
+  });
 });
 
 describe('ProfilePageTaggedAs tagger expansion', () => {
