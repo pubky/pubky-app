@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolvePostCoverPreloadUrl } from './postCoverPreload';
+import { POST_COVER_VARIANT } from './postCoverVariant';
 
 vi.mock('@/services/nexus/file/file.api', () => ({
   filesApi: {
@@ -19,14 +20,17 @@ describe('resolvePostCoverPreloadUrl', () => {
     vi.clearAllMocks();
   });
 
-  it('resolves the MAIN variant URL of slot 0 for an article with a cover', () => {
+  it('resolves the cover variant of slot 0, the same one the hero renders', () => {
     const url = resolvePostCoverPreloadUrl({
       kind: 'long',
       content: article('My name is John Carvalho.'),
       attachments: [ATTACHMENT],
     });
 
-    expect(url).toBe(`https://cdn.test/files/${AUTHOR}/0035R8SA18DE0/main`);
+    // Built from the shared constant, so the preload can never ask for a
+    // different file than the `<img>` in PostArticleDetail.
+    expect(POST_COVER_VARIANT).toBe('feed');
+    expect(url).toBe(`https://cdn.test/files/${AUTHOR}/0035R8SA18DE0/${POST_COVER_VARIANT}`);
   });
 
   it('returns null when the body references slot 0, which makes it an inline image', () => {
@@ -68,6 +72,6 @@ describe('resolvePostCoverPreloadUrl', () => {
       attachments: [ATTACHMENT, `pubky://${AUTHOR}/pub/pubky.app/files/0035R8SA18DE1`],
     });
 
-    expect(url).toBe(`https://cdn.test/files/${AUTHOR}/0035R8SA18DE0/main`);
+    expect(url).toBe(`https://cdn.test/files/${AUTHOR}/0035R8SA18DE0/${POST_COVER_VARIANT}`);
   });
 });

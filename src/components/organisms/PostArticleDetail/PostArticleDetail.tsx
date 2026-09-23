@@ -8,11 +8,11 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { POST_COVER_VARIANT } from '@/libs/post/postCoverVariant';
 import { cn } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostText } from '@/molecules/PostText/PostText';
-import { FileVariant } from '@/services/nexus/file/file.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -58,7 +58,8 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   const { title, body, coverImage, hasCover } = usePostArticle({
     content,
     attachments,
-    coverImageVariant: FileVariant.MAIN,
+    // Shared with the server-side preload, so both ask the CDN for the same file.
+    coverImageVariant: POST_COVER_VARIANT,
   });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();

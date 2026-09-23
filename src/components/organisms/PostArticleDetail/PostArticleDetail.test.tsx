@@ -2,6 +2,7 @@ import React, { type ElementType, forwardRef, type ReactNode, useImperativeHandl
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
+import { POST_COVER_VARIANT } from '@/libs/post/postCoverVariant';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -578,7 +579,7 @@ describe('PostArticleDetail', () => {
     expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-open', 'false');
   });
 
-  it('calls usePostArticle with the main cover image variant', () => {
+  it('asks for the shared cover variant, the same one the server preloads', () => {
     const propsWithAttachments = {
       ...defaultProps,
       attachments: ['pubky://user/pub/pubky.app/files/file-123'],
@@ -589,7 +590,7 @@ describe('PostArticleDetail', () => {
     expect(mockUsePostArticle).toHaveBeenCalledWith({
       content: defaultProps.content,
       attachments: propsWithAttachments.attachments,
-      coverImageVariant: 'main',
+      coverImageVariant: POST_COVER_VARIANT,
     });
   });
 

@@ -284,7 +284,7 @@ describe('PostPage (cover preload)', () => {
     expect(preload).toHaveAttribute('as', 'image');
     expect(preload).toHaveAttribute(
       'href',
-      `https://nexus.staging.pubky.app/static/files/${AUTHOR}/0035R8SA18DE0/main`,
+      `https://nexus.staging.pubky.app/static/files/${AUTHOR}/0035R8SA18DE0/feed`,
     );
     expect(preload).toHaveAttribute('fetchpriority', 'high');
   });

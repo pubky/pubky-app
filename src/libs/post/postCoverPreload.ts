@@ -1,8 +1,8 @@
-import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusPostDetails } from '@/services/nexus/nexus.types';
 import { isArticleContent, parseArticleContent } from './articleContent';
 import { articleHasInlineSlotZero } from './articleInlineImages';
 import { resolvePostAttachmentUrl } from './postAttachmentUrl';
+import { POST_COVER_VARIANT } from './postCoverVariant';
 
 /**
  * CDN URL of the image a post page renders as its cover ("hero"), or `null` when
@@ -12,8 +12,9 @@ import { resolvePostAttachmentUrl } from './postAttachmentUrl';
  * `PostArticleDetail`, which `SinglePostContent` picks for `kind: long` posts
  * whose content parses as an article. Slot 0 is the cover unless the body
  * references `attachment:0`, which makes it an inline image instead
- * (`articleHasInlineSlotZero`). The variant matches the one the detail page asks
- * for (`FileVariant.MAIN`).
+ * (`articleHasInlineSlotZero`). The variant is `POST_COVER_VARIANT`, the same
+ * constant the detail page renders from, so the preloaded URL is the one the
+ * `<img>` asks for and the browser does not fetch twice.
  *
  * Pure, no IO, safe in a Server Component: the post page uses it to emit a
  * `rel="preload"` for the image that would otherwise only be discovered after
@@ -34,5 +35,5 @@ export function resolvePostCoverPreloadUrl(
 
   if (articleHasInlineSlotZero(parseArticleContent(post.content)?.body ?? '')) return null;
 
-  return resolvePostAttachmentUrl(attachments[0], FileVariant.MAIN);
+  return resolvePostAttachmentUrl(attachments[0], POST_COVER_VARIANT);
 }
