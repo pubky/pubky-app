@@ -75,7 +75,7 @@ export const PostArticle = ({
             alt={finalCoverImage.alt}
             className={
               presentation === 'masonry'
-                ? 'order-first -mx-4 h-auto max-h-160 w-auto max-w-none object-contain'
+                ? 'order-first -mx-6 h-auto max-h-160 w-auto max-w-none object-contain'
                 : 'aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!'
             }
             width={presentation === 'masonry' ? finalCoverImage.width : 180}

@@ -14,6 +14,7 @@ interface PostTagToggleButtonProps {
   onToggle: (event: MouseEvent<HTMLButtonElement>) => void;
   disabled?: boolean;
   className?: string;
+  showCount?: boolean;
   /** Elevated `bg-card` treatment for CTAs on a `bg-muted` embed surface. */
   onMutedSurface?: boolean;
 }
@@ -24,19 +25,20 @@ export function PostTagToggleButton({
   onToggle,
   disabled,
   className,
+  showCount = true,
   onMutedSurface = false,
 }: PostTagToggleButtonProps) {
   const { postCounts, isLoading } = usePostCounts(postId);
   const tagCount = postCounts?.unique_tags ?? 0;
 
   if (isLoading) {
-    return <Skeleton data-cy="post-tag-btn-skeleton" className="h-8 w-12 rounded-full" />;
+    return <Skeleton data-cy="post-tag-btn-skeleton" className={cn('h-8 rounded-full', showCount ? 'w-12' : 'w-8')} />;
   }
 
   return (
     <Button
       variant="secondary"
-      size="sm"
+      size={showCount ? 'sm' : 'icon'}
       onClick={onToggle}
       disabled={disabled}
       aria-expanded={expanded}
@@ -49,13 +51,15 @@ export function PostTagToggleButton({
       )}
     >
       <Tag />
-      <Typography
-        as="span"
-        overrideDefaults
-        className={cn('text-xs leading-4 font-bold', onMutedSurface ? 'text-foreground' : 'text-muted-foreground')}
-      >
-        {tagCount}
-      </Typography>
+      {showCount && (
+        <Typography
+          as="span"
+          overrideDefaults
+          className={cn('text-xs leading-4 font-bold', onMutedSurface ? 'text-foreground' : 'text-muted-foreground')}
+        >
+          {tagCount}
+        </Typography>
+      )}
     </Button>
   );
 }

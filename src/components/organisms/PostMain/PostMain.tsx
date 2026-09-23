@@ -217,7 +217,7 @@ export function PostMain({
                   className={cn(
                     'flex min-w-0 flex-col',
                     !isMasonry && '@max-xl/grid:flex-1',
-                    isWideLayout || isListLayout ? 'p-0' : isMasonry ? 'gap-4 p-4' : 'gap-4 p-6',
+                    isWideLayout || isListLayout ? 'p-0' : isMasonry ? 'gap-6 p-6' : 'gap-4 p-6',
                   )}
                 >
                   {isListLayout ? (
@@ -285,9 +285,7 @@ export function PostMain({
                     </Container>
                   ) : (
                     <>
-                      {showDisplayedPostHeader && (
-                        <PostHeader postId={displayedPostId} {...(isMasonry ? { size: 'compact' as const } : {})} />
-                      )}
+                      {showDisplayedPostHeader && <PostHeader postId={displayedPostId} />}
                       <PostContent postId={displayedPostId} mediaVariant={isMasonry ? 'masonry' : 'default'} />
                       <PostInlineTagsActions
                         presentation={presentation}

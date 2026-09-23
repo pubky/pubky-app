@@ -18,8 +18,6 @@ const postActionsButtonVariants = cva('', {
   variants: {
     variant: {
       default: 'border-none shadow-xs',
-      masonry:
-        'border-none bg-transparent px-2 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground',
       visual: 'border-white/10 bg-black/40 text-white shadow-none hover:border-white/30 hover:bg-black/70',
     },
   },
@@ -31,7 +29,6 @@ const postActionsCountVariants = cva('text-xs leading-4 font-bold', {
   variants: {
     variant: {
       default: 'text-muted-foreground',
-      masonry: 'text-muted-foreground',
       visual: 'text-white/80',
     },
   },
@@ -96,14 +93,7 @@ export function PostActionsBar({
     </Button>
   );
   return (
-    <Container
-      overrideDefaults
-      className={cn(
-        'flex flex-wrap gap-2',
-        className,
-        variant === 'masonry' && 'w-full gap-1 border-t border-border pt-2',
-      )}
-    >
+    <Container overrideDefaults className={cn('flex flex-wrap gap-2', className)}>
       {actionButtons.map(
         ({ id, icon: Icon, count, onClick, ariaLabel, className: btnClassName, iconProps, disabled }) => (
           <Button

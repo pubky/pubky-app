@@ -31,7 +31,7 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
           data-testid="card"
         >
           <div
-            class="flex min-w-0 flex-col gap-4 p-4"
+            class="flex min-w-0 flex-col gap-6 p-6"
             data-slot="card-content"
           >
             <div
@@ -44,7 +44,7 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
                 <div
                   aria-expanded="false"
                   aria-haspopup="dialog"
-                  class="grid max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center w-fit gap-2"
+                  class="grid max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center w-fit gap-3"
                   data-as-child="true"
                   data-slot="popover-trigger"
                   data-state="closed"
@@ -56,7 +56,7 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
                     href="/profile/vrt000000000000000000000000000000000000000000alice01"
                   >
                     <span
-                      class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
+                      class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
                     >
                       <span
                         class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
@@ -148,7 +148,7 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
                       href="/profile/vrt000000000000000000000000000000000000000000alice01"
                     >
                       <p
-                        class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-sm leading-5"
+                        class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
                         data-testid="typography"
                       >
                         Alice Mercado
@@ -203,7 +203,7 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
               </div>
             </div>
             <div
-              class="mx-auto w-full flex-col flex gap-3 min-w-0"
+              class="mx-auto w-full flex-col flex gap-6 min-w-0"
               data-testid="container"
             >
               <div
@@ -221,12 +221,12 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
               data-testid="container"
             >
               <div
-                class="flex flex-wrap shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start! w-full gap-1 border-t border-border pt-2"
+                class="flex flex-wrap gap-2 w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
                 data-testid="container"
               >
                 <button
                   aria-label="Tag post (0)"
-                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border h-8 gap-1.5 has-[>svg]:px-3.5 border-none bg-transparent px-2 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
                   data-cy="post-tag-btn"
                   data-size="sm"
                   data-slot="button"
@@ -264,7 +264,7 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
                 </button>
                 <button
                   aria-label="Reply to post (2)"
-                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border h-8 gap-1.5 has-[>svg]:px-3.5 border-none bg-transparent px-2 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
                   data-cy="post-reply-btn"
                   data-size="sm"
                   data-slot="button"
@@ -296,7 +296,7 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
                 </button>
                 <button
                   aria-label="Repost (3)"
-                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border h-8 gap-1.5 has-[>svg]:px-3.5 border-none bg-transparent px-2 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
                   data-cy="post-repost-btn"
                   data-size="sm"
                   data-slot="button"
@@ -339,7 +339,7 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
                   aria-expanded="false"
                   aria-haspopup="dialog"
                   aria-label="Save post"
-                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border h-8 gap-1.5 has-[>svg]:px-3.5 border-none bg-transparent px-2 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground w-10"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs w-10"
                   data-cy="post-bookmark-btn"
                   data-size="sm"
                   data-slot="button"
@@ -415,7 +415,7 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
                   aria-expanded="false"
                   aria-haspopup="dialog"
                   aria-label="More options"
-                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border h-8 gap-1.5 has-[>svg]:px-3.5 border-none bg-transparent px-2 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
                   data-cy="post-more-btn"
                   data-size="sm"
                   data-slot="button"
@@ -494,7 +494,7 @@ exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Mason
           data-testid="card"
         >
           <div
-            class="flex min-w-0 flex-col gap-4 p-4"
+            class="flex min-w-0 flex-col gap-6 p-6"
             data-slot="card-content"
           >
             <div
@@ -507,7 +507,7 @@ exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Mason
                 <div
                   aria-expanded="false"
                   aria-haspopup="dialog"
-                  class="grid max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center w-fit gap-2"
+                  class="grid max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center w-fit gap-3"
                   data-as-child="true"
                   data-slot="popover-trigger"
                   data-state="closed"
@@ -519,7 +519,7 @@ exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Mason
                     href="/profile/vrt000000000000000000000000000000000000000000alice01"
                   >
                     <span
-                      class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
+                      class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
                     >
                       <span
                         class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
@@ -611,7 +611,7 @@ exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Mason
                       href="/profile/vrt000000000000000000000000000000000000000000alice01"
                     >
                       <p
-                        class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-sm leading-5"
+                        class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
                         data-testid="typography"
                       >
                         Alice Mercado
@@ -671,7 +671,7 @@ exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Mason
               </div>
             </div>
             <div
-              class="mx-auto w-full flex-col flex gap-3 min-w-0"
+              class="mx-auto w-full flex-col flex gap-6 min-w-0"
               data-testid="container"
             >
               <div
@@ -689,12 +689,12 @@ exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Mason
               data-testid="container"
             >
               <div
-                class="flex flex-wrap shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start! w-full gap-1 border-t border-border pt-2"
+                class="flex flex-wrap gap-2 w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
                 data-testid="container"
               >
                 <button
                   aria-label="Tag post (0)"
-                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border h-8 gap-1.5 has-[>svg]:px-3.5 border-none bg-transparent px-2 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
                   data-cy="post-tag-btn"
                   data-size="sm"
                   data-slot="button"
@@ -732,7 +732,7 @@ exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Mason
                 </button>
                 <button
                   aria-label="Reply to post (2)"
-                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border h-8 gap-1.5 has-[>svg]:px-3.5 border-none bg-transparent px-2 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
                   data-cy="post-reply-btn"
                   data-size="sm"
                   data-slot="button"
@@ -764,7 +764,7 @@ exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Mason
                 </button>
                 <button
                   aria-label="Repost (3)"
-                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border h-8 gap-1.5 has-[>svg]:px-3.5 border-none bg-transparent px-2 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
                   data-cy="post-repost-btn"
                   data-size="sm"
                   data-slot="button"
@@ -807,7 +807,7 @@ exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Mason
                   aria-expanded="false"
                   aria-haspopup="menu"
                   aria-label="Save post"
-                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border h-8 gap-1.5 has-[>svg]:px-3.5 border-none bg-transparent px-2 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground w-10"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs w-10"
                   data-cy="post-bookmark-btn"
                   data-size="sm"
                   data-slot="button"
@@ -884,7 +884,7 @@ exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Mason
                   aria-expanded="false"
                   aria-haspopup="menu"
                   aria-label="More options"
-                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border h-8 gap-1.5 has-[>svg]:px-3.5 border-none bg-transparent px-2 text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
                   data-cy="post-more-btn"
                   data-size="sm"
                   data-slot="button"

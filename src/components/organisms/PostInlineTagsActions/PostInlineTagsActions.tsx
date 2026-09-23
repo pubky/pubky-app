@@ -70,7 +70,6 @@ export function PostInlineTagsActions({
         />
       )}
       <PostActionsBar
-        variant={presentation === 'masonry' ? 'masonry' : 'default'}
         postId={postId}
         savePostId={savePostId}
         onTagClick={() => setTagsExpanded((prev) => !prev)}

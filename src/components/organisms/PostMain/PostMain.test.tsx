@@ -443,10 +443,10 @@ describe('PostMain', () => {
     });
   });
 
-  it('uses a compact author header and a natural-height body for Masonry', () => {
+  it('uses the default author header and a natural-height body for Masonry', () => {
     render(<PostMain postId="post-123" presentation="masonry" />);
-    expect(mockPostHeader).toHaveBeenCalledWith(expect.objectContaining({ postId: 'post-123', size: 'compact' }));
-    expect(screen.getByTestId('card-content')).toHaveAttribute('data-class-name', expect.stringContaining('gap-4 p-4'));
+    expect(mockPostHeader).toHaveBeenCalledWith(expect.objectContaining({ postId: 'post-123', size: undefined }));
+    expect(screen.getByTestId('card-content')).toHaveAttribute('data-class-name', expect.stringContaining('gap-6 p-6'));
     expect(screen.getByTestId('card-content').getAttribute('data-class-name')).not.toContain('flex-1');
   });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronDown, Grip, LayoutGrid, type LucideIcon, PanelsTopLeft, Rows4 } from 'lucide-react';
+import { Check, Grip, LayoutDashboard, LayoutGrid, type LucideIcon, Rows4 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -41,7 +41,7 @@ const COLLECTION_LAYOUT_PICKER_OPTIONS: Array<{
   icon: LucideIcon;
 }> = [
   { value: COLLECTION_LAYOUT.GRID, label: 'Grid', icon: Grip },
-  { value: 'masonry', label: 'Masonry', icon: PanelsTopLeft },
+  { value: 'masonry', label: 'Cards', icon: LayoutDashboard },
   { value: COLLECTION_LAYOUT.LIST, label: 'List', icon: Rows4 },
   { value: COLLECTION_LAYOUT.VISUAL, label: 'Visual', icon: LayoutGrid },
 ];
@@ -117,18 +117,8 @@ export function CollectionLayoutPicker({ layout, onLayoutChange, layouts }: Coll
   };
 
   const trigger = (
-    <Button
-      variant="secondary"
-      size="icon"
-      aria-label={`Layout: ${layoutLabel}`}
-      data-cy="collection-layout-menu"
-      className="h-8 w-auto gap-1.5 px-3.5 text-xs"
-    >
+    <Button variant="secondary" size="icon" aria-label={`Layout: ${layoutLabel}`} data-cy="collection-layout-menu">
       <ActiveIcon className="size-4" />
-      <Typography as="span" overrideDefaults className="inline">
-        {layoutLabel}
-      </Typography>
-      <ChevronDown className="size-3.5" />
     </Button>
   );
 

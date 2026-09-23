@@ -216,6 +216,7 @@ function CollectionHeroContent({
   const tagToggle = (
     <PostTagToggleButton
       postId={compositeId}
+      showCount={false}
       expanded={tagsExpanded}
       onToggle={() => setTagsExpanded((prev) => !prev)}
       disabled={isOwn && (isDeleting || isReorderActive)}
@@ -269,7 +270,7 @@ function CollectionHeroContent({
             className="min-w-0 flex-1 gap-3 lg:flex-none"
             profileHref={ownerProfileHref}
           />
-          <CollectionCountBadge count={itemCount} showLabelOnMobile tone={coverImage ? 'on-cover' : 'on-card'} />
+          <CollectionCountBadge count={itemCount} tone={coverImage ? 'on-cover' : 'on-card'} />
         </Container>
 
         {/* Description */}
@@ -323,12 +324,8 @@ function CollectionHeroContent({
                 disabled={isDeleting || isReorderActive}
                 aria-label="Copy link"
                 data-cy="collection-hero-copy-link-btn"
-                className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <Link className="size-4" />
-                <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {'Copy link'}
-                </Typography>
               </Button>
               {reorder &&
                 (isReorderActive ? (
@@ -370,12 +367,8 @@ function CollectionHeroContent({
                     disabled={isDeleting || itemCount < 2}
                     aria-label={'Reorder'}
                     data-cy="collection-hero-reorder-btn"
-                    className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
                   >
                     <Move className="size-4" />
-                    <Typography as="span" overrideDefaults className="hidden lg:inline">
-                      {'Reorder'}
-                    </Typography>
                   </Button>
                 ))}
               <Button
@@ -385,12 +378,8 @@ function CollectionHeroContent({
                 disabled={isDeleting || isReorderActive}
                 aria-label={'Edit'}
                 data-cy="collection-hero-edit-btn"
-                className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <Pencil className="size-4" />
-                <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {'Edit'}
-                </Typography>
               </Button>
               <Button
                 variant="secondary"
@@ -399,18 +388,14 @@ function CollectionHeroContent({
                 disabled={isDeleting || isReorderActive}
                 aria-label={'Delete'}
                 data-cy="collection-hero-delete-btn"
-                className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <Trash2 className="size-4" />
-                <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {'Delete'}
-                </Typography>
               </Button>
             </>
           ) : (
             <>
               <Button
-                variant={coverImage ? 'dark' : 'secondary'}
+                variant="secondary"
                 size="sm"
                 onClick={handleFollowToggle}
                 disabled={isBookmarkLoading || isToggling}
@@ -440,12 +425,8 @@ function CollectionHeroContent({
                 onClick={handleCopyLink}
                 aria-label="Copy link"
                 data-cy="collection-hero-copy-link-btn"
-                className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <Link className="size-4" />
-                <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {'Copy link'}
-                </Typography>
               </Button>
             </>
           )}

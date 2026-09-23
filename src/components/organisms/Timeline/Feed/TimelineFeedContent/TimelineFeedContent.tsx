@@ -12,6 +12,7 @@ import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFe
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { cn } from '@/libs/utils/utils';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { PullToRefreshIndicator } from '@/molecules/PullToRefreshIndicator/PullToRefreshIndicator';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
@@ -357,7 +358,10 @@ function TimelineFeedContent({
   return (
     <TimelineFeedContext.Provider value={contextValue}>
       <PostMainLayoutProvider tagsLayout={tagsLayout}>
-        <Container ref={containerRef} className={CONTENT_AREA_STACK_CLASS}>
+        <Container
+          ref={containerRef}
+          className={cn(CONTENT_AREA_STACK_CLASS, variant === TIMELINE_FEED_VARIANT.COLLECTION && 'gap-6')}
+        >
           {enablePullToRefresh && <PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
           {shouldRenderChildren ? children : null}
           {persistentHeader}

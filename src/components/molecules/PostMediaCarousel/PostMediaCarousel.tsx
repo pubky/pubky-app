@@ -59,7 +59,7 @@ export function PostMediaCarousel({ media, onOpenPreview, isPreviewOpen }: PostM
       setApi={setApi}
       opts={{ loop: media.length > 1 }}
       aria-label="Post media"
-      className="-mx-4 min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="-mx-6 min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
       onClick={(event) => event.stopPropagation()}
       onAuxClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
@@ -137,7 +137,7 @@ export function PostMediaCarousel({ media, onOpenPreview, isPreviewOpen }: PostM
         </CarouselContent>
       </Container>
       {media.length > 1 && (
-        <Container overrideDefaults className="flex items-center justify-between gap-2 px-4 pt-3">
+        <Container overrideDefaults className="flex items-center justify-between gap-2 px-6 pt-3">
           <CarouselPrevious className="static size-8 translate-y-0" />
           <Typography
             as="span"

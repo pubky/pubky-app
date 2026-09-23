@@ -134,7 +134,7 @@ describe('PostActionsBar', () => {
     });
   });
 
-  it('keeps every count and action in the quiet Masonry row, saving the feed entry', () => {
+  it('keeps every count and action in the standard row, saving the feed entry', () => {
     mockUsePostCounts.mockReturnValue({ postCounts: { unique_tags: 0, replies: 8, reposts: 3 }, isLoading: false });
     const onTagClick = vi.fn();
     const onReplyClick = vi.fn();
@@ -143,7 +143,6 @@ describe('PostActionsBar', () => {
       <PostActionsBar
         postId="author:original"
         savePostId="viewer:repost"
-        variant="masonry"
         onTagClick={onTagClick}
         onReplyClick={onReplyClick}
         onRepostClick={onRepostClick}

@@ -361,7 +361,7 @@ describe('CollectionHero', () => {
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
     const countBadge = screen.getByLabelText('2 posts');
     expect(countBadge).toBeInTheDocument(); // compact-formatted item count
-    expect(within(countBadge).getByText('posts', { exact: false })).toHaveClass('inline');
+    expect(within(countBadge).getByText('posts', { exact: false })).toHaveClass('hidden', 'sm:inline');
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
@@ -436,12 +436,11 @@ describe('CollectionHero', () => {
     expect(onLayoutChange).toHaveBeenCalledWith(COLLECTION_LAYOUT.LIST);
   });
 
-  it('keeps the tag action last in the viewer action row', () => {
+  it('places the tag action last in the viewer action row', () => {
     renderHero();
 
-    const layoutButton = screen.getByRole('button', { name: /Layout: Grid/ });
     const tagButton = screen.getByLabelText('Tag post (3)');
-    expect(layoutButton.compareDocumentPosition(tagButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tagButton.parentElement?.lastElementChild).toBe(tagButton);
   });
 
   it('shows the temporary layout override to the collection owner', () => {
@@ -529,13 +528,11 @@ describe('CollectionHero', () => {
       expect(screen.getByLabelText('Edit')).toBeInTheDocument();
       expect(screen.getByLabelText('Delete')).toBeInTheDocument();
       expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Delete').compareDocumentPosition(screen.getByLabelText('Tag post (3)')) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
+      const tagButton = screen.getByLabelText('Tag post (3)');
+      expect(tagButton.parentElement?.lastElementChild).toBe(tagButton);
       expect(screen.getByText('Share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
-      expect(screen.getByText('Edit', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
-      expect(screen.getByText('Delete', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
+      expect(screen.queryByText('Edit', { selector: 'span' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Delete', { selector: 'span' })).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Follow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Unfollow')).not.toBeInTheDocument();
     });
@@ -869,13 +866,14 @@ describe('CollectionHero', () => {
       Reflect.deleteProperty(window.navigator, 'canShare');
     });
 
-    it('sits right after Share for the owner and stays icon-only below lg', () => {
+    it('sits after Share for the owner and stays icon-only', () => {
       setAuthStore(AUTHOR_PUBKY);
 
       renderHero();
 
       const copyLink = screen.getByLabelText('Copy link');
-      expect(screen.getByText('Copy link', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
+      expect(copyLink).toHaveTextContent('');
+      expect(screen.queryByText('Copy link', { selector: 'span' })).not.toBeInTheDocument();
       expect(
         screen.getByLabelText('Share').compareDocumentPosition(copyLink) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();

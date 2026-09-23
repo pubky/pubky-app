@@ -785,10 +785,10 @@ describe('Single collection — visual layout — visual regression', () => {
     await renderSingleCollection('visual', VRT_VIEWPORT_MOBILE);
     await page.getByRole('button', { name: 'Layout: Grid', exact: true }).click();
     await expect.element(page.getByRole('menuitem', { name: 'Visual', exact: true })).not.toBeInTheDocument();
-    await page.getByRole('menuitem', { name: 'Masonry', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Cards', exact: true }).click();
     await expect.poll(() => document.querySelector('[data-cy="timeline-posts-masonry"]')).not.toBeNull();
     await page.viewport(VRT_VIEWPORT_DESKTOP.width, VRT_VIEWPORT_DESKTOP.height);
-    await page.getByRole('button', { name: 'Layout: Masonry', exact: true }).click();
+    await page.getByRole('button', { name: 'Layout: Cards', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Visual', exact: true }).click();
     const f = await fixtures;
     await expect.element(page.getByRole('button', { name: `Open post ${f.collectionItemIds[0]}` })).toBeVisible();
@@ -814,8 +814,8 @@ describe('Bookmarks collection — visual regression', () => {
 
 async function chooseMasonry() {
   await page.getByRole('button', { name: 'Layout: Grid', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Masonry', exact: true }).click();
-  await expect.element(page.getByRole('button', { name: 'Layout: Masonry', exact: true })).toBeVisible();
+  await page.getByRole('menuitem', { name: 'Cards', exact: true }).click();
+  await expect.element(page.getByRole('button', { name: 'Layout: Cards', exact: true })).toBeVisible();
   await expect.poll(() => document.querySelector('[data-cy="timeline-posts-masonry"]')).not.toBeNull();
 }
 

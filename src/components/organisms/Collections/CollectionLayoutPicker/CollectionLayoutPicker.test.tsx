@@ -91,8 +91,8 @@ describe('CollectionLayoutPicker - Mobile', () => {
     const { onLayoutChange } = renderPicker();
     openDesktopPicker();
     await screen.findByRole('menuitem', { name: 'Grid' });
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Grid', 'Masonry', 'List']);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Masonry' }));
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Grid', 'Cards', 'List']);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Cards' }));
     expect(onLayoutChange).toHaveBeenCalledExactlyOnceWith('masonry');
   });
 
@@ -128,15 +128,15 @@ describe('CollectionLayoutPicker Masonry', () => {
   it('reports a Masonry selection and closes the picker', async () => {
     const { onLayoutChange } = renderPicker();
     openDesktopPicker();
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Masonry' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Cards' }));
     expect(onLayoutChange).toHaveBeenCalledExactlyOnceWith('masonry');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('limits Bookmarks options to Grid and Masonry', async () => {
     render(<CollectionLayoutPicker layout="masonry" onLayoutChange={vi.fn()} layouts={['grid', 'masonry']} />);
-    fireEvent.pointerDown(screen.getByRole('button', { name: 'Layout: Masonry' }), { button: 0, ctrlKey: false });
-    await screen.findByRole('menuitem', { name: 'Masonry' });
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Grid', 'Masonry']);
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Layout: Cards' }), { button: 0, ctrlKey: false });
+    await screen.findByRole('menuitem', { name: 'Cards' });
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Grid', 'Cards']);
   });
 });

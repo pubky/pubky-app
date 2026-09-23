@@ -4,7 +4,7 @@ exports[`PostMediaCarousel - Snapshots > renders a portrait carousel with all na
 <div
   aria-label="Post media"
   aria-roledescription="carousel"
-  class="relative -mx-4 min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+  class="relative -mx-6 min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -85,7 +85,7 @@ exports[`PostMediaCarousel - Snapshots > renders a portrait carousel with all na
     </div>
   </div>
   <div
-    class="flex items-center justify-between gap-2 px-4 pt-3"
+    class="flex items-center justify-between gap-2 px-6 pt-3"
     data-testid="container"
   >
     <button
