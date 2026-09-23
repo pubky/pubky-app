@@ -1,16 +1,16 @@
-export interface MasonryPlacement {
+export interface CardsPlacement {
   columns: number;
   items: Array<{ id: string; column: number; top: number }>;
   height: number;
 }
 
 /** Preserve columns through appends/removals and height changes, repack on an explicit reorder. */
-export function placeMasonryItems(
+export function placeCardsItems(
   items: Array<{ id: string; height: number }>,
   columns: number,
   gap: number,
-  previous?: MasonryPlacement,
-): MasonryPlacement {
+  previous?: CardsPlacement,
+): CardsPlacement {
   const count = Math.max(1, columns);
   const ids = new Set(items.map(({ id }) => id));
   const previousIds = new Set(previous?.items.map(({ id }) => id));

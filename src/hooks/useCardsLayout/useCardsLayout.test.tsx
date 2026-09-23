@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useMasonryLayout } from './useMasonryLayout';
+import { useCardsLayout } from './useCardsLayout';
 
 const observers: Array<{
   notify: () => void;
@@ -21,10 +21,10 @@ function Harness({
   columns?: number;
   trailing?: boolean;
 }) {
-  const ref = useMasonryLayout(ids, trailing);
+  const ref = useCardsLayout(ids, trailing);
   return (
     <div
-      data-testid="masonry"
+      data-testid="cards"
       ref={ref}
       style={{ display: 'grid', gridTemplateColumns: Array(columns).fill('294px').join(' '), columnGap: 12 }}
     >
@@ -80,7 +80,7 @@ function flushMeasurements() {
   });
 }
 
-describe('useMasonryLayout', () => {
+describe('useCardsLayout', () => {
   it('uses one active observer and remeasures expanded cards once per frame without overlap', () => {
     const { rerender, unmount } = render(<Harness />);
     expect(observers.filter((observer) => observer.disconnect.mock.calls.length === 0)).toHaveLength(1);
@@ -93,7 +93,7 @@ describe('useMasonryLayout', () => {
     expect(frames.size).toBe(1);
     flushMeasurements();
     expect(screen.getByTestId('card-2')).toHaveStyle({ top: '312px', left: '0px' });
-    expect(screen.getByTestId('masonry')).toHaveStyle({ height: '392px' });
+    expect(screen.getByTestId('cards')).toHaveStyle({ height: '392px' });
     act(() => observers.at(-1)?.notify());
     unmount();
     expect(frames.size).toBe(0);
@@ -106,8 +106,8 @@ describe('useMasonryLayout', () => {
     expect(screen.getByTestId('card-2')).toHaveStyle({ top: '112px', left: '0px' });
     expect(screen.getByTestId('card-3')).toHaveStyle({ top: '204px', left: '0px' });
     expect(screen.getByTestId('trailing')).toHaveStyle({ top: '212px', left: '306px' });
-    expect(screen.getByTestId('masonry')).toHaveStyle({ height: '304px' });
-    expect(Array.from(screen.getByTestId('masonry').children).map((node) => node.textContent)).toEqual([
+    expect(screen.getByTestId('cards')).toHaveStyle({ height: '304px' });
+    expect(Array.from(screen.getByTestId('cards').children).map((node) => node.textContent)).toEqual([
       'Post 0',
       'Post 1',
       'Post 2',
@@ -120,7 +120,7 @@ describe('useMasonryLayout', () => {
     const { rerender } = render(<Harness />);
     rerender(<Harness columns={1} />);
     flushMeasurements();
-    expect(screen.getByTestId('masonry').style.height).toBe('');
+    expect(screen.getByTestId('cards').style.height).toBe('');
     expect(screen.getByTestId('card-2').style.position).toBe('');
     expect(screen.getByTestId('card-2').style.width).toBe('');
     rerender(<Harness columns={3} />);
@@ -135,7 +135,7 @@ describe('useMasonryLayout', () => {
     expect(screen.queryByTestId('card-0')).not.toBeInTheDocument();
     expect(screen.getByTestId('card-1')).toHaveStyle({ top: '0px', left: '306px' });
     expect(screen.getByTestId('card-2')).toHaveStyle({ top: '0px', left: '0px' });
-    expect(screen.getByTestId('masonry')).toHaveStyle({ height: '200px' });
+    expect(screen.getByTestId('cards')).toHaveStyle({ height: '200px' });
     expect(previousObserver.disconnect).toHaveBeenCalledOnce();
     expect(observers.at(-1)?.observe).toHaveBeenCalledTimes(3);
   });

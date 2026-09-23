@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Grid2X2, Grip, LayoutDashboard, type LucideIcon, Rows4 } from 'lucide-react';
+import { Check, Grid2X2, LayoutDashboard, type LucideIcon, Rows4 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -12,42 +12,40 @@ import {
 } from '@/atoms/DropdownMenu/DropdownMenu';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
-import { COLLECTION_LAYOUT, type CollectionViewLayout } from '@/config/collections';
+import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 interface CollectionLayoutPickerProps {
-  layout: CollectionViewLayout;
-  onLayoutChange: (layout: CollectionViewLayout) => void;
-  layouts?: readonly CollectionViewLayout[];
+  layout: CollectionLayout;
+  onLayoutChange: (layout: CollectionLayout) => void;
 }
 
 interface CollectionLayoutOptionProps {
-  value: CollectionViewLayout;
+  value: CollectionLayout;
   label: string;
   icon: LucideIcon;
   isSelected: boolean;
   dataCy: string;
-  onSelect: (layout: CollectionViewLayout) => void;
+  onSelect: (layout: CollectionLayout) => void;
 }
 
 interface CollectionLayoutPickerContentProps {
-  layouts?: readonly CollectionViewLayout[];
-  layout: CollectionViewLayout;
-  onSelect: (layout: CollectionViewLayout) => void;
+  layouts?: readonly CollectionLayout[];
+  layout: CollectionLayout;
+  onSelect: (layout: CollectionLayout) => void;
 }
 
 const COLLECTION_LAYOUT_PICKER_OPTIONS: Array<{
-  value: CollectionViewLayout;
+  value: CollectionLayout;
   label: string;
   icon: LucideIcon;
 }> = [
-  { value: COLLECTION_LAYOUT.GRID, label: 'Grid', icon: Grip },
-  { value: 'masonry', label: 'Cards', icon: LayoutDashboard },
+  { value: COLLECTION_LAYOUT.CARDS, label: 'Cards', icon: LayoutDashboard },
   { value: COLLECTION_LAYOUT.LIST, label: 'List', icon: Rows4 },
   { value: COLLECTION_LAYOUT.VISUAL, label: 'Visual', icon: Grid2X2 },
 ];
 
-function getPickerOption(layout: CollectionViewLayout) {
+function getPickerOption(layout: CollectionLayout) {
   return (
     COLLECTION_LAYOUT_PICKER_OPTIONS.find((option) => option.value === layout) ?? COLLECTION_LAYOUT_PICKER_OPTIONS[0]
   );
@@ -100,19 +98,19 @@ function CollectionLayoutPickerContent({ layout, onSelect, layouts }: Collection
   );
 }
 
-export function CollectionLayoutPicker({ layout, onLayoutChange, layouts }: CollectionLayoutPickerProps) {
+export function CollectionLayoutPicker({ layout, onLayoutChange }: CollectionLayoutPickerProps) {
   const [open, setOpen] = useState(false);
   const isPhoneViewport = useIsMobile({ breakpoint: 'md' });
-  // Visual falls back to Grid on phones; retain the viewer's preference for larger screens.
-  const displayedLayout = isPhoneViewport && layout === COLLECTION_LAYOUT.VISUAL ? COLLECTION_LAYOUT.GRID : layout;
+  // Visual falls back to Cards on phones; retain the viewer's preference for larger screens.
+  const displayedLayout = isPhoneViewport && layout === COLLECTION_LAYOUT.VISUAL ? COLLECTION_LAYOUT.CARDS : layout;
   const availableLayouts = COLLECTION_LAYOUT_PICKER_OPTIONS.map((option) => option.value).filter(
-    (value) => (!layouts || layouts.includes(value)) && (!isPhoneViewport || value !== COLLECTION_LAYOUT.VISUAL),
+    (value) => !isPhoneViewport || value !== COLLECTION_LAYOUT.VISUAL,
   );
   const activeOption = getPickerOption(displayedLayout);
   const layoutLabel = activeOption.label;
   const ActiveIcon = activeOption.icon;
 
-  const handleSelect = (nextLayout: CollectionViewLayout) => {
+  const handleSelect = (nextLayout: CollectionLayout) => {
     if (nextLayout !== layout) onLayoutChange(nextLayout);
     setOpen(false);
   };

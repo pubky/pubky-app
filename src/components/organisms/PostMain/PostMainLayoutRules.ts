@@ -6,7 +6,7 @@ import type { TagsLayout } from './PostMain.types';
  * Canonical mapping from app layout mode to post tags layout.
  * Surface entry points derive this once, then downstream post renderers inherit it.
  */
-export function getTagsLayoutForSurfaceLayout(layout: LayoutType | 'masonry'): TagsLayout {
+export function getTagsLayoutForSurfaceLayout(layout: LayoutType): TagsLayout {
   if (layout === LAYOUT.WIDE) {
     return 'side';
   }

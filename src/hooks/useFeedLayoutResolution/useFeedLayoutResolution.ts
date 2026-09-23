@@ -7,8 +7,7 @@ import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { pubkyLayoutToHomeLayout } from '@/utils/pubky-app-spec-feed-mappers';
 
-/** Includes the library-only, non-persisted Masonry view. */
-export type FeedViewLayout = LayoutType | 'masonry';
+export type FeedViewLayout = LayoutType;
 
 export interface FeedLayoutResolutionInput {
   requestedLayout: FeedViewLayout;
@@ -19,7 +18,7 @@ export interface FeedLayoutResolutionInput {
 export interface FeedLayoutResolution {
   requestedLayout: FeedViewLayout;
   effectiveLayout: FeedViewLayout;
-  isMasonryActive: boolean;
+  isCardsActive: boolean;
   isVisualRequested: boolean;
   isVisualActive: boolean;
   /**
@@ -43,19 +42,25 @@ export function resolveFeedLayout({
 }: FeedLayoutResolutionInput): FeedLayoutResolution {
   const isRichLayoutSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
   const isCollectionVariant = variant === TIMELINE_FEED_VARIANT.COLLECTION;
-  const isMasonryRequested = requestedLayout === 'masonry';
-  const isMasonrySupported = isCollectionVariant || variant === TIMELINE_FEED_VARIANT.BOOKMARKS;
+  const isCardsRequested = requestedLayout === LAYOUT.CARDS;
+  const isCardsSupported =
+    isCollectionVariant ||
+    variant === TIMELINE_FEED_VARIANT.BOOKMARKS ||
+    variant === TIMELINE_FEED_VARIANT.HOME ||
+    variant === TIMELINE_FEED_VARIANT.SEARCH;
   const isVisualRequested = requestedLayout === LAYOUT.VISUAL;
   const isVisualSupported = !isPhoneViewport && (isRichLayoutSupported || isCollectionVariant);
   const isWideRequested = requestedLayout === LAYOUT.WIDE;
   const isListRequested = requestedLayout === LAYOUT.LIST;
   const isListSupported = isRichLayoutSupported || isCollectionVariant;
   const effectiveLayout =
-    (isMasonryRequested && !isMasonrySupported) ||
+    (isCardsRequested && !isCardsSupported) ||
     (isVisualRequested && !isVisualSupported) ||
     (isWideRequested && !isRichLayoutSupported) ||
     (isListRequested && !isListSupported)
-      ? LAYOUT.COLUMNS
+      ? isCollectionVariant
+        ? LAYOUT.CARDS
+        : LAYOUT.COLUMNS
       : requestedLayout;
 
   return {
@@ -63,9 +68,9 @@ export function resolveFeedLayout({
     effectiveLayout,
     isVisualRequested,
     isVisualActive: effectiveLayout === LAYOUT.VISUAL,
-    isMasonryActive: effectiveLayout === 'masonry',
+    isCardsActive: effectiveLayout === LAYOUT.CARDS,
     isGridActive:
-      effectiveLayout !== 'masonry' &&
+      effectiveLayout !== LAYOUT.CARDS &&
       (GRID_LAYOUT_VARIANTS.has(variant) ||
         (variant === TIMELINE_FEED_VARIANT.COLLECTION && effectiveLayout === LAYOUT.COLUMNS)),
     isPhoneViewport,

@@ -49,7 +49,7 @@ describe('splitAttachmentsByMediaType', () => {
 });
 
 describe('attachment dimensions', () => {
-  it('passes through metadata dimensions for Masonry space reservation', () => {
+  it('passes through metadata dimensions for Cards space reservation', () => {
     const file = { ...meta('portrait', 'image/png'), metadata: { width: '600', height: '1200' } };
     expect(splitAttachmentsByMediaType([file]).imagesAndVideos[0]).toMatchObject({ width: 600, height: 1200 });
   });

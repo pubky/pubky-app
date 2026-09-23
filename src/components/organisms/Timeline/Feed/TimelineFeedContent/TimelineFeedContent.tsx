@@ -19,8 +19,8 @@ import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
+import { TimelineCardsPosts } from '../../Posts/CardsPosts/CardsPosts';
 import { TimelineGridPosts } from '../../Posts/GridPosts/GridPosts';
-import { TimelineMasonryPosts } from '../../Posts/MasonryPosts/MasonryPosts';
 import { TimelinePosts } from '../../Posts/Posts';
 import { NewPostsSection } from '../NewPostsSection/NewPostsSection';
 import type {
@@ -173,7 +173,7 @@ function TimelineFeedContent({
   const previousMutedUserIdSetRef = useRef<Set<string> | null>(null);
 
   const isVisualActive = layoutResolution?.isVisualActive ?? false;
-  const isMasonryActive = layoutResolution?.isMasonryActive ?? false;
+  const isCardsActive = layoutResolution?.isCardsActive ?? false;
   const isGridActive = layoutResolution?.isGridActive ?? false;
   const isCollectionFeed = variant === TIMELINE_FEED_VARIANT.COLLECTION;
   const {
@@ -374,8 +374,8 @@ function TimelineFeedContent({
             loading={loading}
             prependPosts={prependPosts}
           />
-          {isMasonryActive ? (
-            <TimelineMasonryPosts
+          {isCardsActive ? (
+            <TimelineCardsPosts
               postIds={postIds}
               loading={loading}
               loadingMore={loadingMore}

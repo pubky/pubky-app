@@ -1,21 +1,21 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`TimelineMasonryPosts - Mobile Snapshots > renders initial placeholders using the shared loading count on mobile 1`] = `
+exports[`TimelineCardsPosts - Mobile Snapshots > renders initial placeholders using the shared loading count on mobile 1`] = `
 <div
   class="grid items-start grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-6"
-  data-cy="masonry-skeleton"
+  data-cy="cards-skeleton"
   data-testid="container"
 >
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div
@@ -37,15 +37,15 @@ exports[`TimelineMasonryPosts - Mobile Snapshots > renders initial placeholders 
     />
   </div>
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div
@@ -67,15 +67,15 @@ exports[`TimelineMasonryPosts - Mobile Snapshots > renders initial placeholders 
     />
   </div>
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div
@@ -97,15 +97,15 @@ exports[`TimelineMasonryPosts - Mobile Snapshots > renders initial placeholders 
     />
   </div>
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div
@@ -127,15 +127,15 @@ exports[`TimelineMasonryPosts - Mobile Snapshots > renders initial placeholders 
     />
   </div>
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div
@@ -157,15 +157,15 @@ exports[`TimelineMasonryPosts - Mobile Snapshots > renders initial placeholders 
     />
   </div>
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div
@@ -189,22 +189,22 @@ exports[`TimelineMasonryPosts - Mobile Snapshots > renders initial placeholders 
 </div>
 `;
 
-exports[`TimelineMasonryPosts - Snapshots > renders initial placeholders using the shared loading count 1`] = `
+exports[`TimelineCardsPosts - Snapshots > renders initial placeholders using the shared loading count 1`] = `
 <div
   class="grid items-start grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-6"
-  data-cy="masonry-skeleton"
+  data-cy="cards-skeleton"
   data-testid="container"
 >
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div
@@ -226,15 +226,15 @@ exports[`TimelineMasonryPosts - Snapshots > renders initial placeholders using t
     />
   </div>
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div
@@ -256,15 +256,15 @@ exports[`TimelineMasonryPosts - Snapshots > renders initial placeholders using t
     />
   </div>
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div
@@ -286,15 +286,15 @@ exports[`TimelineMasonryPosts - Snapshots > renders initial placeholders using t
     />
   </div>
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div
@@ -316,15 +316,15 @@ exports[`TimelineMasonryPosts - Snapshots > renders initial placeholders using t
     />
   </div>
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div
@@ -346,15 +346,15 @@ exports[`TimelineMasonryPosts - Snapshots > renders initial placeholders using t
     />
   </div>
   <div
-    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    class="mx-auto w-full flex-col flex gap-6 rounded-md bg-card p-6"
     data-testid="container"
   >
     <div
-      class="flex items-center gap-2"
+      class="flex items-center gap-3"
       data-testid="container"
     >
       <div
-        class="animate-pulse bg-muted size-8 rounded-full"
+        class="animate-pulse bg-muted size-10 rounded-full"
         data-slot="skeleton"
       />
       <div

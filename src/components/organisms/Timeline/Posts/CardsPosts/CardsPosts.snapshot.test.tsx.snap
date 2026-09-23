@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same complete Masonry post on mobile 1`] = `
+exports[`TimelineCardsPosts composition - Mobile Snapshots > renders the same complete Cards post on mobile 1`] = `
 <div
   class="mx-auto w-full flex-col flex"
   data-cy="timeline-container"
@@ -8,7 +8,7 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
 >
   <div
     class="relative grid items-start gap-3 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
-    data-cy="timeline-posts-masonry"
+    data-cy="timeline-posts-cards"
     data-testid="container"
     role="feed"
   >
@@ -463,7 +463,7 @@ exports[`TimelineMasonryPosts composition - Mobile Snapshots > renders the same 
 </div>
 `;
 
-exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Masonry post 1`] = `
+exports[`TimelineCardsPosts composition - Snapshots > renders a complete Cards post 1`] = `
 <div
   class="mx-auto w-full flex-col flex"
   data-cy="timeline-container"
@@ -471,7 +471,7 @@ exports[`TimelineMasonryPosts composition - Snapshots > renders a complete Mason
 >
   <div
     class="relative grid items-start gap-3 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
-    data-cy="timeline-posts-masonry"
+    data-cy="timeline-posts-cards"
     data-testid="container"
     role="feed"
   >

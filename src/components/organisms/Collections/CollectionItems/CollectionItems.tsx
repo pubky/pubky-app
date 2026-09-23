@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
-import { COLLECTION_LAYOUT, type CollectionViewLayout, DEFAULT_COLLECTION_LAYOUT } from '@/config/collections';
+import { COLLECTION_LAYOUT, type CollectionLayout, DEFAULT_COLLECTION_LAYOUT } from '@/config/collections';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useReorderCollection } from '@/hooks/useReorderCollection/useReorderCollection';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
@@ -44,7 +44,7 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
   // here stays as a defensive fall-through to the feed's own empty/error state.
   const collection = postDetails ? parseCollectionContent(postDetails.content) : null;
   const creatorLayout = collection?.layout ?? DEFAULT_COLLECTION_LAYOUT;
-  const [viewerLayoutOverride, setViewerLayoutOverride] = useState<CollectionViewLayout | null>(null);
+  const [viewerLayoutOverride, setViewerLayoutOverride] = useState<CollectionLayout | null>(null);
   const viewerLayout = viewerLayoutOverride ?? creatorLayout;
 
   const reorder = useReorderCollection({
@@ -110,14 +110,7 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
   const emptyState = <CollectionItemsEmpty />;
   const isListLayout = viewerLayout === COLLECTION_LAYOUT.LIST;
   const isVisualLayout = viewerLayout === COLLECTION_LAYOUT.VISUAL;
-  const requestedLayout =
-    viewerLayout === 'masonry'
-      ? 'masonry'
-      : isListLayout
-        ? LAYOUT.LIST
-        : isVisualLayout
-          ? LAYOUT.VISUAL
-          : LAYOUT.COLUMNS;
+  const requestedLayout = isListLayout ? LAYOUT.LIST : isVisualLayout ? LAYOUT.VISUAL : LAYOUT.CARDS;
   const addContentVariant = isListLayout ? 'list' : isVisualLayout ? 'visual' : 'grid';
 
   if (!isOwn && isConfirmedEmpty) {

@@ -78,6 +78,22 @@ describe('FilterLayout', () => {
     expect(screen.getByText('Visual')).toBeInTheDocument();
   });
 
+  it('offers Cards only on supported surfaces and reports its selection', () => {
+    const onTabChange = vi.fn();
+    const { rerender } = render(<FilterLayout onTabChange={onTabChange} />);
+    expect(screen.queryByText('Cards')).not.toBeInTheDocument();
+    rerender(<FilterLayout onTabChange={onTabChange} showCards showVisual />);
+    fireEvent.click(screen.getByLabelText('Cards'));
+    expect(onTabChange).toHaveBeenCalledExactlyOnceWith(LAYOUT.CARDS);
+    expect(screen.getByLabelText('Cards').querySelector('.lucide-layout-dashboard')).toBeInTheDocument();
+    expect(screen.getByLabelText('Visual').querySelector('.lucide-grid-2x2')).toBeInTheDocument();
+  });
+
+  it('shows Columns when the saved Cards preference is unsupported on this surface', () => {
+    render(<FilterLayout selectedTab={LAYOUT.CARDS} />);
+    expect(screen.getByLabelText('Columns')).toHaveAttribute('aria-checked', 'true');
+  });
+
   it('preserves data-cy selectors for e2e tests', () => {
     render(<FilterLayout showVisual />);
 
@@ -106,6 +122,11 @@ describe('FilterLayout - Snapshots', () => {
 
   it('matches snapshot with Wide selected tab', () => {
     const { container } = render(<FilterLayout selectedTab={LAYOUT.WIDE} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches the Cards selection with all supported options', () => {
+    const { container } = render(<FilterLayout selectedTab={LAYOUT.CARDS} showCards showVisual />);
     expect(container.firstChild).toMatchSnapshot();
   });
 

@@ -87,7 +87,7 @@ vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
   useFeedLayoutResolution: vi.fn(() => ({
     requestedLayout: 'columns',
     effectiveLayout: 'columns',
-    isMasonryActive: false,
+    isCardsActive: false,
     isVisualRequested: false,
     isVisualActive: false,
     isGridActive: false,
@@ -244,7 +244,7 @@ const defaultPaginationResult = {
 const visualLayoutResolution = {
   requestedLayout: 'visual' as const,
   effectiveLayout: 'visual' as const,
-  isMasonryActive: false,
+  isCardsActive: false,
   isVisualRequested: true,
   isVisualActive: true,
   isGridActive: false,
@@ -254,7 +254,7 @@ const visualLayoutResolution = {
 const phoneColumnsLayoutResolution = {
   requestedLayout: 'visual' as const,
   effectiveLayout: 'columns' as const,
-  isMasonryActive: false,
+  isCardsActive: false,
   isVisualRequested: true,
   isVisualActive: false,
   isGridActive: false,
@@ -264,7 +264,7 @@ const phoneColumnsLayoutResolution = {
 const columnsLayoutResolution = {
   requestedLayout: 'columns' as const,
   effectiveLayout: 'columns' as const,
-  isMasonryActive: false,
+  isCardsActive: false,
   isVisualRequested: false,
   isVisualActive: false,
   isGridActive: false,
@@ -330,7 +330,7 @@ describe('TimelineFeed', () => {
     mockUseFeedLayoutResolution.mockReturnValue({
       requestedLayout: 'columns',
       effectiveLayout: 'columns',
-      isMasonryActive: false,
+      isCardsActive: false,
       isVisualRequested: false,
       isVisualActive: false,
       isGridActive: false,
@@ -378,7 +378,7 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
-        isMasonryActive: false,
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
         isGridActive: false,
@@ -395,7 +395,7 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'columns',
-        isMasonryActive: false,
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: false,
         isGridActive: false,
@@ -416,7 +416,7 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
-        isMasonryActive: false,
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
         isGridActive: false,
@@ -436,7 +436,7 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
-        isMasonryActive: false,
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
         isGridActive: false,
@@ -454,7 +454,7 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
-        isMasonryActive: false,
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
         isGridActive: false,
@@ -523,7 +523,7 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'columns',
         effectiveLayout: 'columns',
-        isMasonryActive: false,
+        isCardsActive: false,
         isVisualRequested: false,
         isVisualActive: false,
         isGridActive: true,
@@ -582,7 +582,7 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
-        isMasonryActive: false,
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
         isGridActive: false,

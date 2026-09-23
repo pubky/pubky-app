@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GRID_FEED_SKELETON_COUNT } from '@/config/feed';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
-import { TimelineMasonryPosts } from './MasonryPosts';
+import { TimelineCardsPosts } from './CardsPosts';
 
 vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({ useInfiniteScroll: vi.fn() }));
 vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => ({
@@ -35,14 +35,14 @@ beforeEach(() => {
   vi.mocked(useInfiniteScroll).mockReturnValue({ sentinelRef: vi.fn(), isStalled: false, resumeAutoLoad: resume });
 });
 
-describe('TimelineMasonryPosts', () => {
+describe('TimelineCardsPosts', () => {
   it('keeps accessible cards and keyboard navigation in source order', () => {
-    render(<TimelineMasonryPosts {...props} />);
+    render(<TimelineCardsPosts {...props} />);
     const cards = screen.getAllByRole('article');
     expect(cards.map((card) => card.textContent)).toEqual(props.postIds);
     expect(cards[1]).toHaveAttribute('aria-posinset', '2');
     expect(cards[1]).toHaveAttribute('aria-setsize', '3');
-    expect(cards[1].firstChild).toHaveAttribute('data-presentation', 'masonry');
+    expect(cards[1].firstChild).toHaveAttribute('data-presentation', 'cards');
     cards[0].focus();
     fireEvent.keyDown(cards[0], { key: 'ArrowDown' });
     expect(cards[1]).toHaveFocus();
@@ -51,18 +51,18 @@ describe('TimelineMasonryPosts', () => {
   });
 
   it('mounts the measured feed after initial loading resolves', () => {
-    const { container, rerender } = render(<TimelineMasonryPosts {...props} postIds={[]} loading />);
-    const skeleton = container.querySelector('[data-cy="masonry-skeleton"]');
+    const { container, rerender } = render(<TimelineCardsPosts {...props} postIds={[]} loading />);
+    const skeleton = container.querySelector('[data-cy="cards-skeleton"]');
     expect(skeleton?.children).toHaveLength(GRID_FEED_SKELETON_COUNT);
     expect(screen.queryByRole('feed')).not.toBeInTheDocument();
-    rerender(<TimelineMasonryPosts {...props} />);
+    rerender(<TimelineCardsPosts {...props} />);
     expect(screen.getByRole('feed')).toBeInTheDocument();
-    expect(container.querySelector('[data-cy="masonry-skeleton"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-cy="cards-skeleton"]')).not.toBeInTheDocument();
   });
 
   it('keeps empty copy and the Add Post tile available on an empty owner feed', () => {
     render(
-      <TimelineMasonryPosts
+      <TimelineCardsPosts
         {...props}
         postIds={[]}
         emptyState={<p>No saved posts</p>}
@@ -75,7 +75,7 @@ describe('TimelineMasonryPosts', () => {
 
   it('places loading and stalled-pagination controls outside the measured feed', () => {
     vi.mocked(useInfiniteScroll).mockReturnValue({ sentinelRef: vi.fn(), isStalled: true, resumeAutoLoad: resume });
-    render(<TimelineMasonryPosts {...props} hasMore error="Could not load more posts" />);
+    render(<TimelineCardsPosts {...props} hasMore error="Could not load more posts" />);
     const load = screen.getByRole('button', { name: 'Load more' });
     expect(screen.getByRole('feed')).not.toContainElement(load);
     fireEvent.click(load);
@@ -84,19 +84,19 @@ describe('TimelineMasonryPosts', () => {
   });
 });
 
-describe('TimelineMasonryPosts - Snapshots', () => {
+describe('TimelineCardsPosts - Snapshots', () => {
   it('renders initial placeholders using the shared loading count', () => {
-    const { container } = render(<TimelineMasonryPosts {...props} postIds={[]} loading />);
+    const { container } = render(<TimelineCardsPosts {...props} postIds={[]} loading />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
 
-describe('TimelineMasonryPosts - Mobile Snapshots', () => {
+describe('TimelineCardsPosts - Mobile Snapshots', () => {
   beforeEach(() => setMobileViewport());
   afterEach(() => resetViewport());
 
   it('renders initial placeholders using the shared loading count on mobile', () => {
-    const { container } = render(<TimelineMasonryPosts {...props} postIds={[]} loading />);
+    const { container } = render(<TimelineCardsPosts {...props} postIds={[]} loading />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

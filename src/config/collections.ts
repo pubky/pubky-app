@@ -11,19 +11,17 @@ import type { PubkyAppCollectionLayout } from 'pubky-app-specs';
 // layouts remain unsupported until their rendering and controls are added.
 export type CollectionLayout = Extract<PubkyAppCollectionLayout, 'grid' | 'list' | 'visual'>;
 
-/** Page-local viewing choices; Masonry is never serialized to collection settings. */
-export type CollectionViewLayout = CollectionLayout | 'masonry';
-
-export const COLLECTION_LAYOUT: Record<'GRID' | 'LIST' | 'VISUAL', CollectionLayout> = {
-  GRID: 'grid',
+export const COLLECTION_LAYOUT: Record<'CARDS' | 'LIST' | 'VISUAL', CollectionLayout> = {
+  // Keep the v0 wire value; Cards replaces the former Grid presentation.
+  CARDS: 'grid',
   LIST: 'list',
   VISUAL: 'visual',
 };
 
-export const DEFAULT_COLLECTION_LAYOUT: CollectionLayout = COLLECTION_LAYOUT.GRID;
+export const DEFAULT_COLLECTION_LAYOUT: CollectionLayout = COLLECTION_LAYOUT.CARDS;
 
 export function isCollectionLayout(value: unknown): value is CollectionLayout {
-  return value === COLLECTION_LAYOUT.GRID || value === COLLECTION_LAYOUT.LIST || value === COLLECTION_LAYOUT.VISUAL;
+  return value === COLLECTION_LAYOUT.CARDS || value === COLLECTION_LAYOUT.LIST || value === COLLECTION_LAYOUT.VISUAL;
 }
 
 /** Page size for each of the three sections (My / Followed / Discover). */

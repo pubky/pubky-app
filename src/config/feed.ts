@@ -88,7 +88,7 @@ export const GRID_FEED_COLUMNS_CLASS = 'grid-cols-1 md:grid-cols-2 xl:grid-cols-
  */
 export const GRID_FEED_GAP_CLASS = 'gap-3 lg:gap-6';
 
-/** Initial card placeholders shared by Grid and Masonry. */
+/** Initial card placeholders shared by Grid and Cards. */
 export const GRID_FEED_SKELETON_COUNT = 6;
 
 /**

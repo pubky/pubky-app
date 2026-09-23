@@ -17,7 +17,7 @@ import { Collections } from '@/templates/Collections/Collections';
 
 const routeState = vi.hoisted(() => ({
   pathname: '/collections',
-  masonryFixtures: false,
+  cardsFixtures: false,
   failedMedia: false,
   params: {} as { userId?: string; postId?: string },
 }));
@@ -194,7 +194,7 @@ vi.mock('@/stores/localFiles/localFiles.store', async () => {
   };
   return {
     useLocalFilesStore: <T,>(selector: (state: typeof empty) => T) =>
-      selector(routeState.masonryFixtures ? (routeState.failedMedia ? withFailedMedia : withMedia) : empty),
+      selector(routeState.cardsFixtures ? (routeState.failedMedia ? withFailedMedia : withMedia) : empty),
   };
 });
 
@@ -286,7 +286,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', async () => {
   return {
     usePostDetails: (compositeId: string | null) => {
       if (!compositeId) return EMPTY;
-      const cacheKey = `${routeState.masonryFixtures}:${compositeId}`;
+      const cacheKey = `${routeState.cardsFixtures}:${compositeId}`;
       const cached = cache.get(cacheKey);
       if (cached) return cached;
       const fixture = f.entitiesByCompositeId.get(compositeId);
@@ -297,7 +297,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', async () => {
       const result = {
         postDetails: {
           ...fixture.details,
-          ...(routeState.masonryFixtures && compositeId === f.collectionItemIds[5]
+          ...(routeState.cardsFixtures && compositeId === f.collectionItemIds[5]
             ? {
                 kind: 'long',
                 content: JSON.stringify({
@@ -307,7 +307,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', async () => {
                 attachments: ['pubky://fixture/pub/pubky.app/files/cover'],
               }
             : {}),
-          ...(routeState.masonryFixtures && compositeId === f.collectionItemIds[4]
+          ...(routeState.cardsFixtures && compositeId === f.collectionItemIds[4]
             ? { content: 'A longer notebook entry. '.repeat(50) }
             : {}),
           is_moderated: false,
@@ -684,7 +684,7 @@ async function expectCollectionsOverviewReady(screen: Awaited<ReturnType<typeof 
 }
 
 async function renderCollectionsOverview(viewport: { width: number; height: number }) {
-  routeState.masonryFixtures = false;
+  routeState.cardsFixtures = false;
   const f = await fixtures;
   routeState.pathname = '/collections';
   routeState.params = {};
@@ -698,9 +698,9 @@ async function renderCollectionsOverview(viewport: { width: number; height: numb
 async function renderSingleCollection(
   layout: keyof Awaited<typeof fixtures>['singleCollections'],
   viewport: { width: number; height: number },
-  masonry = false,
+  cards = false,
 ) {
-  routeState.masonryFixtures = masonry;
+  routeState.cardsFixtures = cards;
   routeState.failedMedia = false;
   const f = await fixtures;
   const collection = f.singleCollections[layout];
@@ -720,8 +720,8 @@ async function renderSingleCollection(
   return screen;
 }
 
-async function renderBookmarks(viewport: { width: number; height: number }, masonry = false) {
-  routeState.masonryFixtures = masonry;
+async function renderBookmarks(viewport: { width: number; height: number }, cards = false) {
+  routeState.cardsFixtures = cards;
   routeState.failedMedia = false;
   routeState.pathname = '/collections/bookmarks';
   routeState.params = {};
@@ -773,19 +773,19 @@ describe('Single collection — visual layout — visual regression', () => {
     await matchVrtFrameScreenshot('single-collection-visual-desktop');
   });
 
-  it('shows the phone Grid fallback and restores the Visual preference after resize', async () => {
+  it('shows the phone Cards fallback and restores the Visual preference after resize', async () => {
     await renderSingleCollection('visual', VRT_VIEWPORT_MOBILE);
-    await page.getByRole('button', { name: 'Layout: Grid', exact: true }).click();
+    await page.getByRole('button', { name: 'Layout: Cards', exact: true }).click();
     await expect.element(page.getByRole('menuitem', { name: 'Visual', exact: true })).not.toBeInTheDocument();
     await page.getByRole('menuitem', { name: 'Cards', exact: true }).click();
-    await expect.poll(() => document.querySelector('[data-cy="timeline-posts-masonry"]')).not.toBeNull();
+    await expect.poll(() => document.querySelector('[data-cy="timeline-posts-cards"]')).not.toBeNull();
     await page.viewport(VRT_VIEWPORT_DESKTOP.width, VRT_VIEWPORT_DESKTOP.height);
     await page.getByRole('button', { name: 'Layout: Cards', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Visual', exact: true }).click();
     const f = await fixtures;
     await expect.element(page.getByRole('button', { name: `Open post ${f.collectionItemIds[0]}` })).toBeVisible();
     await page.viewport(VRT_VIEWPORT_MOBILE.width, VRT_VIEWPORT_MOBILE.height);
-    await expect.element(page.getByRole('button', { name: 'Layout: Grid', exact: true })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'Layout: Cards', exact: true })).toBeVisible();
     await page.viewport(VRT_VIEWPORT_DESKTOP.width, VRT_VIEWPORT_DESKTOP.height);
     await expect.element(page.getByRole('button', { name: 'Layout: Visual', exact: true })).toBeVisible();
     await expect.element(page.getByRole('button', { name: `Open post ${f.collectionItemIds[0]}` })).toBeVisible();
@@ -804,15 +804,12 @@ describe('Bookmarks collection — visual regression', () => {
   });
 });
 
-async function chooseMasonry() {
-  await page.getByRole('button', { name: 'Layout: Grid', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Cards', exact: true }).click();
-  await expect.element(page.getByRole('button', { name: 'Layout: Cards', exact: true })).toBeVisible();
-  await expect.poll(() => document.querySelector('[data-cy="timeline-posts-masonry"]')).not.toBeNull();
+async function expectCards() {
+  await expect.poll(() => document.querySelector('[data-cy="timeline-posts-cards"]')).not.toBeNull();
 }
 
-function assertMasonryGeometry() {
-  const feed = document.querySelector<HTMLElement>('[data-cy="timeline-posts-masonry"]')!;
+function assertCardsGeometry() {
+  const feed = document.querySelector<HTMLElement>('[data-cy="timeline-posts-cards"]')!;
   const cards = Array.from(feed.children).map((node) => node.getBoundingClientRect());
   expect(cards.length).toBeGreaterThan(1);
   cards.forEach((card, index) => {
@@ -829,20 +826,20 @@ function assertMasonryGeometry() {
   expect(feed.getBoundingClientRect().bottom).toBeGreaterThanOrEqual(Math.max(...cards.map((card) => card.bottom)) - 1);
 }
 
-describe('Masonry — mixed content and interactions', () => {
+describe('Cards — mixed content and interactions', () => {
   it.each([
     ['desktop', VRT_VIEWPORT_DESKTOP],
     ['mobile', VRT_VIEWPORT_MOBILE],
   ] as const)('renders a collection on %s', async (name, viewport) => {
     await renderSingleCollection('grid', viewport, true);
-    await chooseMasonry();
+    await expectCards();
     await expect
       .poll(() => {
-        assertMasonryGeometry();
+        assertCardsGeometry();
         return true;
       })
       .toBe(true);
-    await matchVrtFrameScreenshot(`single-collection-masonry-${name}`);
+    await matchVrtFrameScreenshot(`single-collection-cards-${name}`);
   });
 
   it.each([
@@ -850,21 +847,21 @@ describe('Masonry — mixed content and interactions', () => {
     ['mobile', VRT_VIEWPORT_MOBILE],
   ] as const)('renders Bookmarks on %s', async (name, viewport) => {
     await renderBookmarks(viewport, true);
-    await chooseMasonry();
+    await expectCards();
     await expect
       .poll(() => {
-        assertMasonryGeometry();
+        assertCardsGeometry();
         return true;
       })
       .toBe(true);
-    await matchVrtFrameScreenshot(`bookmarks-masonry-${name}`);
+    await matchVrtFrameScreenshot(`bookmarks-cards-${name}`);
   });
 
   it('keeps its frame stable through carousel navigation and opens the selected media', async () => {
     await renderBookmarks(VRT_VIEWPORT_DESKTOP, true);
-    await chooseMasonry();
+    await expectCards();
     const carousel = page.getByRole('region', { name: 'Post media' }).first();
-    const frame = document.querySelector('[data-cy="timeline-posts-masonry"] [data-slot="carousel"]')!;
+    const frame = document.querySelector('[data-cy="timeline-posts-cards"] [data-slot="carousel"]')!;
     const height = frame.getBoundingClientRect().height;
     await carousel.getByRole('button', { name: 'Next slide' }).click();
     await expect.element(carousel.getByText('2 / 2', { exact: true })).toBeVisible();
@@ -872,21 +869,21 @@ describe('Masonry — mixed content and interactions', () => {
     await carousel.getByRole('button', { name: 'Open image 2 of 2: Collections on a desk' }).click();
     await expect.element(page.getByRole('dialog')).toBeVisible();
     await expect.element(page.getByRole('dialog').getByText('2/2', { exact: true })).toBeVisible();
-    assertMasonryGeometry();
+    assertCardsGeometry();
   });
 });
 
-async function renderMasonryCards(viewport: { width: number; height: number }, failedMedia = false) {
+async function renderCardsPosts(viewport: { width: number; height: number }, failedMedia = false) {
   const { PostMainLayoutProvider } = await import('@/organisms/PostMain/PostMainLayoutContext');
-  const { TimelineMasonryPosts } = await import('@/organisms/Timeline/Posts/MasonryPosts/MasonryPosts');
-  routeState.masonryFixtures = true;
+  const { TimelineCardsPosts } = await import('@/organisms/Timeline/Posts/CardsPosts/CardsPosts');
+  routeState.cardsFixtures = true;
   routeState.failedMedia = failedMedia;
   routeState.pathname = '/collections';
   const f = await fixtures;
   const cardIds = [0, 4, 5, 1, 2, 3].map((index) => f.collectionItemIds[index]);
   return renderForVRT(
     <PostMainLayoutProvider tagsLayout="inline">
-      <TimelineMasonryPosts
+      <TimelineCardsPosts
         postIds={cardIds}
         loading={false}
         loadingMore={false}
@@ -900,16 +897,16 @@ async function renderMasonryCards(viewport: { width: number; height: number }, f
   );
 }
 
-describe('Masonry cards — browser coverage', () => {
+describe('Cards cards — browser coverage', () => {
   it.each([
     ['desktop', VRT_VIEWPORT_DESKTOP],
     ['mobile', VRT_VIEWPORT_MOBILE],
-  ] as const)('loads three pages through the real Masonry sentinel on %s', async (_name, viewport) => {
+  ] as const)('loads three pages through the real Cards sentinel on %s', async (_name, viewport) => {
     const { useState } = await import('react');
     const { PostMainLayoutProvider } = await import('@/organisms/PostMain/PostMainLayoutContext');
-    const { TimelineMasonryPosts } = await import('@/organisms/Timeline/Posts/MasonryPosts/MasonryPosts');
+    const { TimelineCardsPosts } = await import('@/organisms/Timeline/Posts/CardsPosts/CardsPosts');
     const f = await fixtures;
-    routeState.masonryFixtures = true;
+    routeState.cardsFixtures = true;
     routeState.failedMedia = false;
     routeState.pathname = '/collections';
     const ids = [0, 4, 5, 1, 2, 3].map((index) => f.collectionItemIds[index]);
@@ -923,7 +920,7 @@ describe('Masonry cards — browser coverage', () => {
 
     // Only the page-data boundary is controlled. Both layout/scroll hooks,
     // observers, card content and pagination controls use their real implementations.
-    function PaginatedMasonry() {
+    function PaginatedCards() {
       const [postIds, setPostIds] = useState(ids.slice(0, 2));
       const [loadingMore, setLoadingMore] = useState(false);
       const [hasMore, setHasMore] = useState(true);
@@ -937,7 +934,7 @@ describe('Masonry cards — browser coverage', () => {
       return (
         <PostMainLayoutProvider tagsLayout="inline">
           <div aria-hidden="true" className="h-screen" />
-          <TimelineMasonryPosts
+          <TimelineCardsPosts
             postIds={postIds}
             loading={false}
             loadingMore={loadingMore}
@@ -950,7 +947,7 @@ describe('Masonry cards — browser coverage', () => {
       );
     }
 
-    const screen = await renderForVRT(<PaginatedMasonry />, { viewport });
+    const screen = await renderForVRT(<PaginatedCards />, { viewport });
     // The screenshot harness clips its root; make that root scrollable for this interaction test.
     const scroller = screen.getByTestId('vrt-root').element();
     scroller.style.overflowY = 'auto';
@@ -958,7 +955,7 @@ describe('Masonry cards — browser coverage', () => {
     const sentinel = feed.parentElement!.lastElementChild!;
     const cards = () => Array.from(feed.querySelectorAll<HTMLElement>(':scope > [role="article"]'));
     const assertSentinelPosition = () => {
-      assertMasonryGeometry();
+      assertCardsGeometry();
       expect(feed.contains(sentinel)).toBe(false);
       expect(sentinel.getBoundingClientRect().height).toBeGreaterThan(0);
       expect(sentinel.getBoundingClientRect().top).toBeGreaterThanOrEqual(
@@ -1006,7 +1003,7 @@ describe('Masonry cards — browser coverage', () => {
     await expect.poll(() => sentinel.isConnected).toBe(false);
     await expect
       .poll(() => {
-        assertMasonryGeometry();
+        assertCardsGeometry();
         return true;
       })
       .toBe(true);
@@ -1050,27 +1047,27 @@ describe('Masonry cards — browser coverage', () => {
     ['desktop', VRT_VIEWPORT_DESKTOP],
     ['mobile', VRT_VIEWPORT_MOBILE],
   ] as const)('captures the mixed card treatments on %s', async (name, viewport) => {
-    await renderMasonryCards(viewport);
+    await renderCardsPosts(viewport);
     await expect.element(page.getByText('Designing a useful collection')).toBeVisible();
     await expect
       .poll(() => {
-        assertMasonryGeometry();
+        assertCardsGeometry();
         return true;
       })
       .toBe(true);
-    await matchVrtFrameScreenshot(`masonry-cards-${name}`);
+    await matchVrtFrameScreenshot(`cards-posts-${name}`);
   });
 
   it('reflows expanded text without moving cards between columns', async () => {
-    await renderMasonryCards(VRT_VIEWPORT_DESKTOP);
+    await renderCardsPosts(VRT_VIEWPORT_DESKTOP);
     const cards = Array.from(
-      document.querySelectorAll<HTMLElement>('[data-cy="timeline-posts-masonry"] > [role="article"]'),
+      document.querySelectorAll<HTMLElement>('[data-cy="timeline-posts-cards"] > [role="article"]'),
     );
     const before = cards.map((card) => card.getBoundingClientRect().left);
     await page.getByRole('button', { name: 'Show full post content', exact: true }).click();
     await expect
       .poll(() => {
-        assertMasonryGeometry();
+        assertCardsGeometry();
         return true;
       })
       .toBe(true);
@@ -1078,11 +1075,11 @@ describe('Masonry cards — browser coverage', () => {
   });
 
   it('keeps failed media usable', async () => {
-    await renderMasonryCards(VRT_VIEWPORT_MOBILE, true);
+    await renderCardsPosts(VRT_VIEWPORT_MOBILE, true);
     await expect.element(page.getByRole('status')).toHaveTextContent('Media unavailable');
     await expect.element(page.getByRole('button', { name: 'Open original' })).toBeVisible();
     await expect.element(page.getByRole('button', { name: 'Reply to post (22)', exact: true })).toBeVisible();
     await expect.element(page.getByRole('button', { name: 'More options' }).first()).toBeVisible();
-    assertMasonryGeometry();
+    assertCardsGeometry();
   });
 });

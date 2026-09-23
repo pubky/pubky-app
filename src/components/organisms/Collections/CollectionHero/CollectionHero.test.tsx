@@ -278,7 +278,7 @@ function renderHero(overrides: Partial<CollectionHeroProps> = {}) {
     authorPubky: overrides.authorPubky ?? AUTHOR_PUBKY,
     postId: overrides.postId ?? POST_ID,
     postDetails: 'postDetails' in overrides ? overrides.postDetails : currentPostDetails,
-    layout: overrides.layout ?? COLLECTION_LAYOUT.GRID,
+    layout: overrides.layout ?? COLLECTION_LAYOUT.CARDS,
     onLayoutChange: overrides.onLayoutChange ?? vi.fn(),
   };
 
@@ -428,7 +428,7 @@ describe('CollectionHero', () => {
     const onLayoutChange = vi.fn();
     renderHero({ onLayoutChange });
 
-    fireEvent.pointerDown(screen.getByRole('button', { name: /Layout: Grid/ }), {
+    fireEvent.pointerDown(screen.getByRole('button', { name: /Layout: Cards/ }), {
       button: 0,
       ctrlKey: false,
     });
@@ -450,7 +450,7 @@ describe('CollectionHero', () => {
 
     renderHero();
 
-    expect(screen.queryByRole('button', { name: /Layout: Grid/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Layout: Cards/ })).toBeInTheDocument();
   });
 
   it('shows a skeleton (not the raw pubky) for the owner name while the profile is null', () => {
@@ -663,7 +663,7 @@ describe('CollectionHero', () => {
       ['Reorder', 'Reorder'],
       ['Edit', 'Edit'],
       ['Delete', 'Delete'],
-      ['Layout: Grid', 'Change layout'],
+      ['Layout: Cards', 'Change layout'],
       ['Tag post (3)', 'Show tags'],
     ])('shows a tooltip when %s receives keyboard focus', async (label, tooltip) => {
       setAuthStore(AUTHOR_PUBKY);

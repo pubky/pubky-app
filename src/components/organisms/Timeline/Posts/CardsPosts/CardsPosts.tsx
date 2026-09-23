@@ -2,8 +2,8 @@
 
 import { Container } from '@/atoms/Container/Container';
 import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS, TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
+import { useCardsLayout } from '@/hooks/useCardsLayout/useCardsLayout';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
-import { useMasonryLayout } from '@/hooks/useMasonryLayout/useMasonryLayout';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
@@ -17,9 +17,9 @@ import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { PostMain } from '@/organisms/PostMain/PostMain';
 import type { TimelineGridPostsProps } from '../GridPosts/GridPosts.types';
-import { MasonryPostsSkeleton } from './MasonryPosts.skeleton';
+import { CardsPostsSkeleton } from './CardsPosts.skeleton';
 
-function MasonryPost({
+function CardsPost({
   postId,
   index,
   totalCount,
@@ -44,12 +44,12 @@ function MasonryPost({
       onKeyDown={(e) => handlePostKeyDown(displayedPostId, e)}
       className="@container/grid min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <PostMain postId={postId} isReply={false} presentation="masonry" />
+      <PostMain postId={postId} isReply={false} presentation="cards" />
     </Container>
   );
 }
 
-export function TimelineMasonryPosts({
+export function TimelineCardsPosts({
   postIds,
   loading,
   loadingMore,
@@ -72,7 +72,7 @@ export function TimelineMasonryPosts({
     maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
   });
 
-  const masonryRef = useMasonryLayout(postIds, trailingSlot != null);
+  const cardsRef = useCardsLayout(postIds, trailingSlot != null);
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
   const hasGridContent = postIds.length > 0 || trailingSlot != null;
   const showEmptyMessageWithTrailingSlot = postIds.length === 0 && trailingSlot != null && emptyState != null;
@@ -84,7 +84,7 @@ export function TimelineMasonryPosts({
       hasItems={hasGridContent}
       hasMore={hasMore}
       stalled={isStalled}
-      loadingComponent={<MasonryPostsSkeleton />}
+      loadingComponent={<CardsPostsSkeleton />}
       emptyComponent={emptyState}
     >
       <Container
@@ -94,21 +94,15 @@ export function TimelineMasonryPosts({
       >
         {showEmptyMessageWithTrailingSlot ? emptyState : null}
         <Container
-          data-cy="timeline-posts-masonry"
-          ref={masonryRef}
+          data-cy="timeline-posts-cards"
+          ref={cardsRef}
           overrideDefaults
           role="feed"
           className={cn('relative grid items-start', GRID_FEED_GAP_CLASS, GRID_FEED_COLUMNS_CLASS)}
           onKeyDown={onListKeyDown}
         >
           {postIds.map((postId, index) => (
-            <MasonryPost
-              key={postId}
-              postId={postId}
-              index={index}
-              totalCount={postIds.length}
-              setCardRef={setCardRef}
-            />
+            <CardsPost key={postId} postId={postId} index={index} totalCount={postIds.length} setCardRef={setCardRef} />
           ))}
           {trailingSlot != null ? (
             <Container overrideDefaults className="@container/grid min-h-48 [&>*:first-child]:min-h-48">

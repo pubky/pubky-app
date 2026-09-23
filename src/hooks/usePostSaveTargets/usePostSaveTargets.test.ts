@@ -141,7 +141,7 @@ describe('usePostSaveTargets', () => {
       authorId: 'current-user',
       name: 'New collection',
       items: ['pubky://author/pub/pubky.app/posts/post1'],
-      layout: COLLECTION_LAYOUT.GRID,
+      layout: COLLECTION_LAYOUT.CARDS,
     });
   });
 });

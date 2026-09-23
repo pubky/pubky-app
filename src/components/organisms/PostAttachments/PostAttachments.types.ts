@@ -5,9 +5,9 @@ export type PostAttachmentsProps = {
   attachments: PostDetailsModel['attachments'];
   localAttachments: AttachmentConstructed[] | undefined;
   className?: string;
-  /** Masonry caption between visual media and audio/file attachments. */
+  /** Cards caption between visual media and audio/file attachments. */
   children?: ReactNode;
-  mediaVariant?: 'default' | 'list' | 'masonry';
+  mediaVariant?: 'default' | 'list' | 'cards';
 };
 
 export type AttachmentConstructed = {

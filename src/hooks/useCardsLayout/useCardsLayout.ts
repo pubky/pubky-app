@@ -1,13 +1,13 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState } from 'react';
-import { type MasonryPlacement, placeMasonryItems } from './useMasonryLayout.utils';
+import { type CardsPlacement, placeCardsItems } from './useCardsLayout.utils';
 
 /** One observer batches card and container changes; DOM order always remains the feed order. */
-export function useMasonryLayout(itemIds: string[], hasTrailing: boolean) {
+export function useCardsLayout(itemIds: string[], hasTrailing: boolean) {
   const containerRef = useRef<HTMLElement | null>(null);
   const [mounted, setMounted] = useState(false);
-  const previous = useRef<MasonryPlacement | undefined>(undefined);
+  const previous = useRef<CardsPlacement | undefined>(undefined);
   const itemKey = JSON.stringify(itemIds);
 
   useLayoutEffect(() => {
@@ -30,13 +30,13 @@ export function useMasonryLayout(itemIds: string[], hasTrailing: boolean) {
       const items = cards
         .slice(0, ids.length)
         .map((card, index) => ({ id: ids[index], height: card.getBoundingClientRect().height }));
-      const layout = placeMasonryItems(items, columns, gap, previous.current);
+      const layout = placeCardsItems(items, columns, gap, previous.current);
       previous.current = layout;
       // The Add Post tile is always placed last and never pins an appended page to its former column.
       const trailing = cards[ids.length];
       const withTrailing = trailing
-        ? placeMasonryItems(
-            [...items, { id: 'masonry-add-post', height: trailing.getBoundingClientRect().height }],
+        ? placeCardsItems(
+            [...items, { id: 'cards-add-post', height: trailing.getBoundingClientRect().height }],
             columns,
             gap,
             layout,

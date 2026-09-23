@@ -2,15 +2,11 @@
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import type { CollectionViewLayout } from '@/config/collections';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
-import { CollectionLayoutPicker } from '@/organisms/Collections/CollectionLayoutPicker/CollectionLayoutPicker';
 import { DialogAddContent } from '@/organisms/Collections/DialogAddContent/DialogAddContent';
 import { HeroOwner } from '@/organisms/HeroOwner/HeroOwner';
 
 interface BookmarksHeroProps {
-  layout?: CollectionViewLayout;
-  onLayoutChange?: (layout: CollectionViewLayout) => void;
   avatarName: string;
   avatarSeed: string;
   avatarUrl?: string;
@@ -19,8 +15,6 @@ interface BookmarksHeroProps {
 }
 
 export function BookmarksHero({
-  layout = 'grid',
-  onLayoutChange,
   avatarName,
   avatarSeed,
   avatarUrl,
@@ -64,9 +58,6 @@ export function BookmarksHero({
         </Typography>
 
         <Container overrideDefaults className="flex flex-wrap items-center gap-3">
-          {onLayoutChange && (
-            <CollectionLayoutPicker layout={layout} onLayoutChange={onLayoutChange} layouts={['grid', 'masonry']} />
-          )}
           <DialogAddContent target={{ type: 'bookmarks' }} dataCy="bookmarks-add-content" />
         </Container>
       </CardContent>

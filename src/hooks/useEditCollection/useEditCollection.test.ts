@@ -137,7 +137,7 @@ describe('useEditCollection', () => {
       name: 'New name',
       description: 'Top picks',
       coverImage: 'pubky://author/files/cover-1',
-      layout: COLLECTION_LAYOUT.GRID,
+      layout: COLLECTION_LAYOUT.CARDS,
     });
     // No new file picked → store should NOT be touched (CDN already has it).
     expect(mocks.setCollectionCover).not.toHaveBeenCalled();
@@ -350,11 +350,11 @@ describe('useEditCollection', () => {
     // wrote the page-load layout back into the form, and the prefill effect
     // never re-fired (its deps had already changed while the guard was armed) —
     // so reopening the dialog highlighted the old layout until a page refresh.
-    mocks.postDetails = { content: collectionContent({ layout: COLLECTION_LAYOUT.GRID }) };
+    mocks.postDetails = { content: collectionContent({ layout: COLLECTION_LAYOUT.CARDS }) };
     const { result, rerender } = renderHook(() => useEditCollection({ compositeCollectionId: COMPOSITE_ID }));
 
     await waitFor(() => {
-      expect(result.current.form.getValues()[CREATE_COLLECTION_FORM_FIELDS.LAYOUT]).toBe(COLLECTION_LAYOUT.GRID);
+      expect(result.current.form.getValues()[CREATE_COLLECTION_FORM_FIELDS.LAYOUT]).toBe(COLLECTION_LAYOUT.CARDS);
     });
 
     // Capture reset from the pre-save render — this is the closure the dialog's
@@ -393,7 +393,7 @@ describe('useEditCollection', () => {
       expect(result.current.form.getValues()).toEqual({
         [CREATE_COLLECTION_FORM_FIELDS.NAME]: 'Old name',
         [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: 'Old description',
-        [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.GRID,
+        [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.CARDS,
       });
     });
 
@@ -412,7 +412,7 @@ describe('useEditCollection', () => {
       expect(result.current.form.getValues()).toEqual({
         [CREATE_COLLECTION_FORM_FIELDS.NAME]: 'New name',
         [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: 'New description',
-        [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.GRID,
+        [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.CARDS,
       });
     });
   });

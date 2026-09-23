@@ -20,7 +20,7 @@ exports[`CollectionLayoutPicker > matches the open desktop picker snapshot 1`] =
       aria-controls="radix-normalized"
       aria-expanded="true"
       aria-haspopup="menu"
-      aria-label="Layout: Grid"
+      aria-label="Layout: Cards"
       class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9"
       data-cy="collection-layout-menu"
       data-radix-popper-align="end"
@@ -34,7 +34,7 @@ exports[`CollectionLayoutPicker > matches the open desktop picker snapshot 1`] =
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-grip size-4"
+        class="lucide lucide-layout-dashboard size-4"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -45,50 +45,33 @@ exports[`CollectionLayoutPicker > matches the open desktop picker snapshot 1`] =
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <circle
-          cx="12"
-          cy="5"
-          r="1"
+        <rect
+          height="9"
+          rx="1"
+          width="7"
+          x="3"
+          y="3"
         />
-        <circle
-          cx="19"
-          cy="5"
-          r="1"
+        <rect
+          height="5"
+          rx="1"
+          width="7"
+          x="14"
+          y="3"
         />
-        <circle
-          cx="5"
-          cy="5"
-          r="1"
+        <rect
+          height="9"
+          rx="1"
+          width="7"
+          x="14"
+          y="12"
         />
-        <circle
-          cx="12"
-          cy="12"
-          r="1"
-        />
-        <circle
-          cx="19"
-          cy="12"
-          r="1"
-        />
-        <circle
-          cx="5"
-          cy="12"
-          r="1"
-        />
-        <circle
-          cx="12"
-          cy="19"
-          r="1"
-        />
-        <circle
-          cx="19"
-          cy="19"
-          r="1"
-        />
-        <circle
-          cx="5"
-          cy="19"
-          r="1"
+        <rect
+          height="5"
+          rx="1"
+          width="7"
+          x="3"
+          y="16"
         />
       </svg>
     </button>
@@ -120,97 +103,6 @@ exports[`CollectionLayoutPicker > matches the open desktop picker snapshot 1`] =
         <div
           class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
           data-cy="collection-layout-grid"
-          data-orientation="vertical"
-          data-radix-collection-item=""
-          role="menuitem"
-          tabindex="-1"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-grip size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="12"
-              cy="5"
-              r="1"
-            />
-            <circle
-              cx="19"
-              cy="5"
-              r="1"
-            />
-            <circle
-              cx="5"
-              cy="5"
-              r="1"
-            />
-            <circle
-              cx="12"
-              cy="12"
-              r="1"
-            />
-            <circle
-              cx="19"
-              cy="12"
-              r="1"
-            />
-            <circle
-              cx="5"
-              cy="12"
-              r="1"
-            />
-            <circle
-              cx="12"
-              cy="19"
-              r="1"
-            />
-            <circle
-              cx="19"
-              cy="19"
-              r="1"
-            />
-            <circle
-              cx="5"
-              cy="19"
-              r="1"
-            />
-          </svg>
-          <span
-            class="min-w-0 flex-1 truncate"
-            data-testid="typography"
-          >
-            Grid
-          </span>
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-check size-4 text-brand"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M20 6 9 17l-5-5"
-            />
-          </svg>
-        </div>
-        <div
-          class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
-          data-cy="collection-layout-masonry"
           data-orientation="vertical"
           data-radix-collection-item=""
           role="menuitem"
@@ -264,6 +156,23 @@ exports[`CollectionLayoutPicker > matches the open desktop picker snapshot 1`] =
           >
             Cards
           </span>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-check size-4 text-brand"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20 6 9 17l-5-5"
+            />
+          </svg>
         </div>
         <div
           class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
@@ -385,7 +294,7 @@ exports[`CollectionLayoutPicker - Mobile Snapshots > matches the open mobile pic
       aria-controls="radix-normalized"
       aria-expanded="true"
       aria-haspopup="menu"
-      aria-label="Layout: Grid"
+      aria-label="Layout: Cards"
       class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9"
       data-cy="collection-layout-menu"
       data-radix-popper-align="end"
@@ -399,7 +308,7 @@ exports[`CollectionLayoutPicker - Mobile Snapshots > matches the open mobile pic
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-grip size-4"
+        class="lucide lucide-layout-dashboard size-4"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -410,50 +319,33 @@ exports[`CollectionLayoutPicker - Mobile Snapshots > matches the open mobile pic
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <circle
-          cx="12"
-          cy="5"
-          r="1"
+        <rect
+          height="9"
+          rx="1"
+          width="7"
+          x="3"
+          y="3"
         />
-        <circle
-          cx="19"
-          cy="5"
-          r="1"
+        <rect
+          height="5"
+          rx="1"
+          width="7"
+          x="14"
+          y="3"
         />
-        <circle
-          cx="5"
-          cy="5"
-          r="1"
+        <rect
+          height="9"
+          rx="1"
+          width="7"
+          x="14"
+          y="12"
         />
-        <circle
-          cx="12"
-          cy="12"
-          r="1"
-        />
-        <circle
-          cx="19"
-          cy="12"
-          r="1"
-        />
-        <circle
-          cx="5"
-          cy="12"
-          r="1"
-        />
-        <circle
-          cx="12"
-          cy="19"
-          r="1"
-        />
-        <circle
-          cx="19"
-          cy="19"
-          r="1"
-        />
-        <circle
-          cx="5"
-          cy="19"
-          r="1"
+        <rect
+          height="5"
+          rx="1"
+          width="7"
+          x="3"
+          y="16"
         />
       </svg>
     </button>
@@ -485,97 +377,6 @@ exports[`CollectionLayoutPicker - Mobile Snapshots > matches the open mobile pic
         <div
           class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
           data-cy="collection-layout-grid"
-          data-orientation="vertical"
-          data-radix-collection-item=""
-          role="menuitem"
-          tabindex="-1"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-grip size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="12"
-              cy="5"
-              r="1"
-            />
-            <circle
-              cx="19"
-              cy="5"
-              r="1"
-            />
-            <circle
-              cx="5"
-              cy="5"
-              r="1"
-            />
-            <circle
-              cx="12"
-              cy="12"
-              r="1"
-            />
-            <circle
-              cx="19"
-              cy="12"
-              r="1"
-            />
-            <circle
-              cx="5"
-              cy="12"
-              r="1"
-            />
-            <circle
-              cx="12"
-              cy="19"
-              r="1"
-            />
-            <circle
-              cx="19"
-              cy="19"
-              r="1"
-            />
-            <circle
-              cx="5"
-              cy="19"
-              r="1"
-            />
-          </svg>
-          <span
-            class="min-w-0 flex-1 truncate"
-            data-testid="typography"
-          >
-            Grid
-          </span>
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-check size-4 text-brand"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M20 6 9 17l-5-5"
-            />
-          </svg>
-        </div>
-        <div
-          class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
-          data-cy="collection-layout-masonry"
           data-orientation="vertical"
           data-radix-collection-item=""
           role="menuitem"
@@ -629,6 +430,23 @@ exports[`CollectionLayoutPicker - Mobile Snapshots > matches the open mobile pic
           >
             Cards
           </span>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-check size-4 text-brand"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20 6 9 17l-5-5"
+            />
+          </svg>
         </div>
         <div
           class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"

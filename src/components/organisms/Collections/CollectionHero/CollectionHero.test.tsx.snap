@@ -222,7 +222,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       <button
         aria-expanded="false"
         aria-haspopup="menu"
-        aria-label="Layout: Grid"
+        aria-label="Layout: Cards"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9"
         data-cy="collection-layout-menu"
         data-size="icon"
@@ -234,7 +234,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-grip size-4"
+          class="lucide lucide-layout-dashboard size-4"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -245,50 +245,33 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <circle
-            cx="12"
-            cy="5"
-            r="1"
+          <rect
+            height="9"
+            rx="1"
+            width="7"
+            x="3"
+            y="3"
           />
-          <circle
-            cx="19"
-            cy="5"
-            r="1"
+          <rect
+            height="5"
+            rx="1"
+            width="7"
+            x="14"
+            y="3"
           />
-          <circle
-            cx="5"
-            cy="5"
-            r="1"
+          <rect
+            height="9"
+            rx="1"
+            width="7"
+            x="14"
+            y="12"
           />
-          <circle
-            cx="12"
-            cy="12"
-            r="1"
-          />
-          <circle
-            cx="19"
-            cy="12"
-            r="1"
-          />
-          <circle
-            cx="5"
-            cy="12"
-            r="1"
-          />
-          <circle
-            cx="12"
-            cy="19"
-            r="1"
-          />
-          <circle
-            cx="19"
-            cy="19"
-            r="1"
-          />
-          <circle
-            cx="5"
-            cy="19"
-            r="1"
+          <rect
+            height="5"
+            rx="1"
+            width="7"
+            x="3"
+            y="16"
           />
         </svg>
       </button>
@@ -984,7 +967,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       <button
         aria-expanded="false"
         aria-haspopup="menu"
-        aria-label="Layout: Grid"
+        aria-label="Layout: Cards"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9"
         data-cy="collection-layout-menu"
         data-size="icon"
@@ -996,7 +979,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-grip size-4"
+          class="lucide lucide-layout-dashboard size-4"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -1007,50 +990,33 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <circle
-            cx="12"
-            cy="5"
-            r="1"
+          <rect
+            height="9"
+            rx="1"
+            width="7"
+            x="3"
+            y="3"
           />
-          <circle
-            cx="19"
-            cy="5"
-            r="1"
+          <rect
+            height="5"
+            rx="1"
+            width="7"
+            x="14"
+            y="3"
           />
-          <circle
-            cx="5"
-            cy="5"
-            r="1"
+          <rect
+            height="9"
+            rx="1"
+            width="7"
+            x="14"
+            y="12"
           />
-          <circle
-            cx="12"
-            cy="12"
-            r="1"
-          />
-          <circle
-            cx="19"
-            cy="12"
-            r="1"
-          />
-          <circle
-            cx="5"
-            cy="12"
-            r="1"
-          />
-          <circle
-            cx="12"
-            cy="19"
-            r="1"
-          />
-          <circle
-            cx="19"
-            cy="19"
-            r="1"
-          />
-          <circle
-            cx="5"
-            cy="19"
-            r="1"
+          <rect
+            height="5"
+            rx="1"
+            width="7"
+            x="3"
+            y="16"
           />
         </svg>
       </button>
@@ -1306,7 +1272,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
       <button
         aria-expanded="false"
         aria-haspopup="menu"
-        aria-label="Layout: Grid"
+        aria-label="Layout: Cards"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9"
         data-cy="collection-layout-menu"
         data-size="icon"
@@ -1318,7 +1284,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-grip size-4"
+          class="lucide lucide-layout-dashboard size-4"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -1329,50 +1295,33 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <circle
-            cx="12"
-            cy="5"
-            r="1"
+          <rect
+            height="9"
+            rx="1"
+            width="7"
+            x="3"
+            y="3"
           />
-          <circle
-            cx="19"
-            cy="5"
-            r="1"
+          <rect
+            height="5"
+            rx="1"
+            width="7"
+            x="14"
+            y="3"
           />
-          <circle
-            cx="5"
-            cy="5"
-            r="1"
+          <rect
+            height="9"
+            rx="1"
+            width="7"
+            x="14"
+            y="12"
           />
-          <circle
-            cx="12"
-            cy="12"
-            r="1"
-          />
-          <circle
-            cx="19"
-            cy="12"
-            r="1"
-          />
-          <circle
-            cx="5"
-            cy="12"
-            r="1"
-          />
-          <circle
-            cx="12"
-            cy="19"
-            r="1"
-          />
-          <circle
-            cx="19"
-            cy="19"
-            r="1"
-          />
-          <circle
-            cx="5"
-            cy="19"
-            r="1"
+          <rect
+            height="5"
+            rx="1"
+            width="7"
+            x="3"
+            y="16"
           />
         </svg>
       </button>

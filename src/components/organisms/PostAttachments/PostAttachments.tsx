@@ -69,13 +69,13 @@ export const PostAttachments = ({
   if (!imagesAndVideos.length && !audios.length && !genericFiles.length && !children) return null;
 
   return (
-    <Container ref={mediaContainerRef} className={cn(mediaVariant === 'masonry' ? 'gap-6' : 'gap-3', className)}>
+    <Container ref={mediaContainerRef} className={cn(mediaVariant === 'cards' ? 'gap-6' : 'gap-3', className)}>
       {imagesAndVideos.length ? (
         <PostAttachmentsImagesAndVideos
           imagesAndVideos={imagesAndVideos}
           {...(mediaVariant === 'list' ? { variant: mediaVariant } : {})}
           renderTrigger={
-            mediaVariant === 'masonry'
+            mediaVariant === 'cards'
               ? ({ imagesAndVideos, openPreview, isPreviewOpen }) => (
                   <PostMediaCarousel
                     key={imagesAndVideos.map((media) => media.urls.main).join(',')}

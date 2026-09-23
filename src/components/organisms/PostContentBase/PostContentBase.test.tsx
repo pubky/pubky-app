@@ -219,7 +219,7 @@ describe('PostContentBase', () => {
     );
   });
 
-  it.each(['default', 'masonry'] as const)('keeps moderated content hidden in %s', (mediaVariant) => {
+  it.each(['default', 'cards'] as const)('keeps moderated content hidden in %s', (mediaVariant) => {
     mockUsePostDetails.mockReturnValue({
       postDetails: createMockPostDetails({ content: 'Test content', is_blurred: true }),
       isLoading: false,

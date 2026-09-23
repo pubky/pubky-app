@@ -185,7 +185,7 @@ describe('resolveFeedLayout', () => {
       expect(result.isGridActive).toBe(false);
     });
 
-    it('keeps grid active independently of effectiveLayout (orthogonal to wide)', () => {
+    it('uses Cards as the collection fallback for unsupported layouts', () => {
       // The collection variant is not in the rich-layout set, so a WIDE request
       // falls back to COLUMNS; grid membership must still be derived from the variant.
       const result = resolveFeedLayout({
@@ -194,9 +194,10 @@ describe('resolveFeedLayout', () => {
         isPhoneViewport: false,
       });
 
-      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
+      expect(result.effectiveLayout).toBe(LAYOUT.CARDS);
       expect(result.isVisualActive).toBe(false);
-      expect(result.isGridActive).toBe(true);
+      expect(result.isGridActive).toBe(false);
+      expect(result.isCardsActive).toBe(true);
     });
   });
 
@@ -213,7 +214,7 @@ describe('resolveFeedLayout', () => {
       expect(result.isGridActive).toBe(false);
     });
 
-    it('falls back to the collection grid for visual layout on phones', () => {
+    it('falls back to the collection Cards for visual layout on phones', () => {
       const result = resolveFeedLayout({
         requestedLayout: LAYOUT.VISUAL,
         variant: TIMELINE_FEED_VARIANT.COLLECTION,
@@ -221,10 +222,11 @@ describe('resolveFeedLayout', () => {
       });
 
       expect(result.requestedLayout).toBe(LAYOUT.VISUAL);
-      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
+      expect(result.effectiveLayout).toBe(LAYOUT.CARDS);
       expect(result.isVisualRequested).toBe(true);
       expect(result.isVisualActive).toBe(false);
-      expect(result.isGridActive).toBe(true);
+      expect(result.isGridActive).toBe(false);
+      expect(result.isCardsActive).toBe(true);
     });
 
     it('still does not enable wide layout for the collection variant', () => {
@@ -234,23 +236,31 @@ describe('resolveFeedLayout', () => {
         isPhoneViewport: false,
       });
 
-      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
+      expect(result.effectiveLayout).toBe(LAYOUT.CARDS);
     });
   });
 });
 
-describe('Masonry scope', () => {
-  it('keeps Masonry out of the persisted collection layout validator', () => {
-    expect(isCollectionLayout('masonry')).toBe(false);
+describe('Cards scope', () => {
+  it('keeps Cards out of the persisted collection layout validator', () => {
+    expect(isCollectionLayout('cards')).toBe(false);
   });
-  it.each(Object.values(TIMELINE_FEED_VARIANT))('supports only Collections and Bookmarks: %s', (variant) => {
-    for (const isPhoneViewport of [false, true]) {
-      const result = resolveFeedLayout({ requestedLayout: 'masonry', variant, isPhoneViewport });
-      const supported = variant === TIMELINE_FEED_VARIANT.COLLECTION || variant === TIMELINE_FEED_VARIANT.BOOKMARKS;
-      expect(result.isMasonryActive).toBe(supported);
-      expect(result.effectiveLayout).toBe(supported ? 'masonry' : LAYOUT.COLUMNS);
-      expect(result.isGridActive).toBe(false);
-      expect(result.isVisualActive).toBe(false);
-    }
-  });
+  it.each(Object.values(TIMELINE_FEED_VARIANT))(
+    'supports Cards in Collections, Bookmarks, Home and Search: %s',
+    (variant) => {
+      for (const isPhoneViewport of [false, true]) {
+        const result = resolveFeedLayout({ requestedLayout: 'cards', variant, isPhoneViewport });
+        const supported = [
+          TIMELINE_FEED_VARIANT.COLLECTION,
+          TIMELINE_FEED_VARIANT.BOOKMARKS,
+          TIMELINE_FEED_VARIANT.HOME,
+          TIMELINE_FEED_VARIANT.SEARCH,
+        ].some((value) => value === variant);
+        expect(result.isCardsActive).toBe(supported);
+        expect(result.effectiveLayout).toBe(supported ? 'cards' : LAYOUT.COLUMNS);
+        expect(result.isGridActive).toBe(false);
+        expect(result.isVisualActive).toBe(false);
+      }
+    },
+  );
 });

@@ -1,5 +1,5 @@
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
-import type { CollectionViewLayout } from '@/config/collections';
+import type { CollectionLayout } from '@/config/collections';
 import type { UseTtlSubscriptionResult } from '@/hooks/useTtlSubscription/useTtlSubscription.types';
 import type { Pubky } from '@/models/models.types';
 
@@ -21,9 +21,9 @@ export interface CollectionHeroProps {
   /** Loaded collection envelope from the page shell (avoids a duplicate `usePostDetails` fetch). */
   postDetails: EnrichedPostDetails | null | undefined;
   /** Collection-scoped viewer layout selection. */
-  layout: CollectionViewLayout;
+  layout: CollectionLayout;
   /** Updates the temporary viewer selection without persisting it. */
-  onLayoutChange: (layout: CollectionViewLayout) => void;
+  onLayoutChange: (layout: CollectionLayout) => void;
   /** Reorder-mode bridge from the page (owner-only affordance; ignored otherwise). */
   reorder?: CollectionHeroReorderProps;
   className?: string;

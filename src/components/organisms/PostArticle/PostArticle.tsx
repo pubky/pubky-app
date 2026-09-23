@@ -18,7 +18,7 @@ interface PostArticleProps {
   attachments: PostDetailsModel['attachments'];
   localAttachments: AttachmentConstructed[] | undefined;
   className?: string;
-  presentation?: 'default' | 'masonry';
+  presentation?: 'default' | 'cards';
 }
 
 export const PostArticle = ({
@@ -54,7 +54,7 @@ export const PostArticle = ({
     <>
       <Container
         className={cn(
-          presentation === 'masonry' ? 'gap-3' : 'justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!',
+          presentation === 'cards' ? 'gap-3' : 'justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!',
           className,
         )}
       >
@@ -74,12 +74,12 @@ export const PostArticle = ({
             src={finalCoverImage.src}
             alt={finalCoverImage.alt}
             className={
-              presentation === 'masonry'
+              presentation === 'cards'
                 ? 'order-first -mx-6 h-auto max-h-160 w-auto max-w-none object-contain'
                 : 'aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!'
             }
-            width={presentation === 'masonry' ? finalCoverImage.width : 180}
-            height={presentation === 'masonry' ? finalCoverImage.height : 100}
+            width={presentation === 'cards' ? finalCoverImage.width : 180}
+            height={presentation === 'cards' ? finalCoverImage.height : 100}
           />
         )}
       </Container>

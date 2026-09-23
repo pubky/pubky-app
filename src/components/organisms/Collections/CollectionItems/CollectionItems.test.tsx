@@ -2,7 +2,7 @@ import { createRef, type ReactNode, type RefObject } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
-import { COLLECTION_LAYOUT, type CollectionViewLayout } from '@/config/collections';
+import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
 import { CollectionHeroSkeleton } from '@/organisms/Collections/CollectionHero/CollectionHero.skeleton';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -14,7 +14,7 @@ import { CollectionItems } from './CollectionItems';
 
 const mockUseAuthStore = vi.fn();
 const mockTimelineFeedProps = vi.hoisted(() => vi.fn());
-const heroSelection = vi.hoisted(() => ({ change: (_layout: CollectionViewLayout) => {} }));
+const heroSelection = vi.hoisted(() => ({ change: (_layout: CollectionLayout) => {} }));
 const mockReorderState = vi.hoisted(() => ({
   isReorderMode: false,
   isSaving: false,
@@ -58,8 +58,8 @@ vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
     authorPubky: string;
     postId: string;
     postDetails?: EnrichedPostDetails | null;
-    layout: CollectionViewLayout;
-    onLayoutChange: (layout: CollectionViewLayout) => void;
+    layout: CollectionLayout;
+    onLayoutChange: (layout: CollectionLayout) => void;
     reorder?: { isActive: boolean };
   }) => {
     heroSelection.change = onLayoutChange;
@@ -73,8 +73,8 @@ vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
         data-has-reorder={String(Boolean(reorder))}
         data-reorder-active={String(reorder?.isActive ?? false)}
       >
-        <button type="button" onClick={() => onLayoutChange(COLLECTION_LAYOUT.GRID)}>
-          Switch to Grid
+        <button type="button" onClick={() => onLayoutChange(COLLECTION_LAYOUT.CARDS)}>
+          Switch to Cards
         </button>
       </div>
     ) : (
@@ -233,6 +233,18 @@ describe('CollectionItems', () => {
     expect(screen.queryByTestId('collection-items-empty')).not.toBeInTheDocument();
   });
 
+  it.each(['grid', undefined, 'future-layout'])(
+    'renders legacy/default %s collections as Cards without changing the saved layout',
+    (layout) => {
+      const content = JSON.stringify({ name: 'Reading', items: ['pubky://author/pub/pubky.app/posts/a'], layout });
+      const postDetails = buildPostDetails(content);
+      renderCollectionItems({ postDetails });
+      expect(screen.getByTestId('collection-hero')).toHaveAttribute('data-layout', 'grid');
+      expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.CARDS);
+      expect(postDetails.content).toBe(content);
+    },
+  );
+
   it('uses the creator List default and lets the viewer override it locally', () => {
     renderCollectionItems({
       postDetails: buildPostDetails(
@@ -247,9 +259,9 @@ describe('CollectionItems', () => {
     expect(screen.getByTestId('collection-hero')).toHaveAttribute('data-layout', COLLECTION_LAYOUT.LIST);
     expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.LIST);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to Grid' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to Cards' }));
 
-    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.COLUMNS);
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.CARDS);
   });
 
   it('provides the collection empty state and owner CTA for an empty List collection', () => {
@@ -333,7 +345,7 @@ describe('CollectionItems', () => {
   it('passes the hidden-items notice to the feed regardless of the active layout', () => {
     renderCollectionItems();
 
-    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.COLUMNS);
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.CARDS);
     expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-visual-hidden-items-notice', 'true');
     expect(screen.getByRole('status')).toHaveAttribute('data-cy', 'collection-hidden-items-notice');
   });
@@ -493,23 +505,23 @@ describe('CollectionItems - Snapshots', () => {
   });
 });
 
-describe('Masonry viewer selection', () => {
+describe('Cards viewer selection', () => {
   it.each([AUTHOR_PUBKY, 'visitor', null])(
-    'allows %s to select Masonry through post updates and reorder mode',
+    'allows %s to select Cards through post updates and reorder mode',
     (viewer) => {
       setAuthStore(viewer);
       const details = buildPostDetails(COLLECTION_CONTENT);
       const { rerender } = renderCollectionItems({ postDetails: details });
-      act(() => heroSelection.change('masonry'));
-      expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', 'masonry');
+      act(() => heroSelection.change(COLLECTION_LAYOUT.CARDS));
+      expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', 'cards');
       rerender(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} postDetails={{ ...details }} />);
-      expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', 'masonry');
+      expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', 'cards');
       mockReorderState.isReorderMode = true;
       rerender(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} postDetails={details} />);
       expect(screen.getByTestId('collection-reorder-grid')).toBeInTheDocument();
       mockReorderState.isReorderMode = false;
       rerender(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} postDetails={details} />);
-      expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', 'masonry');
+      expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', 'cards');
       expect(mockReorderState.saveOrder).not.toHaveBeenCalled();
     },
   );

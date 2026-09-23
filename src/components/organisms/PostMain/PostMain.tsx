@@ -106,7 +106,7 @@ export function PostMain({
   showFullContentInListLayout = false,
   presentation = 'default',
 }: PostMainProps) {
-  const isMasonry = presentation === 'masonry';
+  const isCards = presentation === 'cards';
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
   const isListLayout = effectiveTagsLayout === 'list';
@@ -169,7 +169,7 @@ export function PostMain({
         onAuxClick={isNavigable ? (e) => handlePostAuxClick(displayedPostId, e) : undefined}
         className={cn(
           'relative flex min-w-0',
-          !isMasonry && '@max-xl/grid:h-full',
+          !isCards && '@max-xl/grid:h-full',
           isNavigable && 'cursor-pointer',
           isReply && 'pl-3',
         )}
@@ -216,8 +216,8 @@ export function PostMain({
                 <CardContent
                   className={cn(
                     'flex min-w-0 flex-col',
-                    !isMasonry && '@max-xl/grid:flex-1',
-                    isWideLayout || isListLayout ? 'p-0' : isMasonry ? 'gap-6 p-6' : 'gap-4 p-6',
+                    !isCards && '@max-xl/grid:flex-1',
+                    isWideLayout || isListLayout ? 'p-0' : isCards ? 'gap-6 p-6' : 'gap-4 p-6',
                   )}
                 >
                   {isListLayout ? (
@@ -286,7 +286,7 @@ export function PostMain({
                   ) : (
                     <>
                       {showDisplayedPostHeader && <PostHeader postId={displayedPostId} />}
-                      <PostContent postId={displayedPostId} mediaVariant={isMasonry ? 'masonry' : 'default'} />
+                      <PostContent postId={displayedPostId} mediaVariant={isCards ? 'cards' : 'default'} />
                       <PostInlineTagsActions
                         presentation={presentation}
                         postId={displayedPostId}

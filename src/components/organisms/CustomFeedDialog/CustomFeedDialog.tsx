@@ -7,9 +7,9 @@ import {
   Columns3,
   Download,
   Flame,
+  Grid2X2,
   Image,
   Layers,
-  LayoutGrid,
   Library,
   Link,
   Newspaper,
@@ -145,7 +145,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
     {
       value: PubkyAppFeedLayout.Visual,
       label: 'Visual',
-      icon: LayoutGrid,
+      icon: Grid2X2,
     },
     {
       value: PubkyAppFeedLayout.List,

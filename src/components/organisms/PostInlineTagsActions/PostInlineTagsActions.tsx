@@ -16,7 +16,7 @@ interface PostInlineTagsActionsProps {
   onReplyClick: () => void;
   onRepostClick: () => void;
   className?: string;
-  presentation?: 'default' | 'masonry';
+  presentation?: 'default' | 'cards';
   actionsClassName?: string;
 }
 
@@ -38,14 +38,14 @@ export function PostInlineTagsActions({
     <Container
       onClick={(event) => event.stopPropagation()}
       className={cn(
-        presentation === 'masonry'
+        presentation === 'cards'
           ? 'flex-col items-start gap-3'
           : 'flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4',
         // Grid-scoped (decision D4): inside a narrow grid cell keep tags + actions
         // stacked. `!` beats the still-active viewport `md:` row classes; inert off-grid.
-        presentation !== 'masonry' &&
+        presentation !== 'cards' &&
           '@max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3!',
-        presentation !== 'masonry' && (tagsExpanded ? 'md:items-end' : 'md:items-start'),
+        presentation !== 'cards' && (tagsExpanded ? 'md:items-end' : 'md:items-start'),
         className,
       )}
     >
@@ -65,7 +65,7 @@ export function PostInlineTagsActions({
           maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
           showCount={true}
           showInput={false}
-          showAddButton={presentation !== 'masonry'}
+          showAddButton={presentation !== 'cards'}
           addMode={true}
         />
       )}

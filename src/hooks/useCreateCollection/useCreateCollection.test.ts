@@ -60,7 +60,7 @@ describe('useCreateCollection', () => {
     expect(result.current.form.getValues()).toEqual({
       [CREATE_COLLECTION_FORM_FIELDS.NAME]: '',
       [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: '',
-      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.GRID,
+      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.CARDS,
     });
     expect(result.current.cover.file).toBeNull();
     expect(result.current.form.formState.isSubmitting).toBe(false);
@@ -304,7 +304,7 @@ describe('useCreateCollection', () => {
     expect(result.current.form.getValues()).toEqual({
       [CREATE_COLLECTION_FORM_FIELDS.NAME]: '',
       [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: '',
-      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.GRID,
+      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.CARDS,
     });
     expect(mocks.cover.reset).toHaveBeenCalledTimes(1);
   });

@@ -4,7 +4,7 @@ import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { VRT_FEED_POSTS } from '@/test/fixtures/feed/posts';
 import { VRT_AUTHOR_PROFILES } from '@/test/fixtures/feed/profiles';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
-import { TimelineMasonryPosts } from './MasonryPosts';
+import { TimelineCardsPosts } from './CardsPosts';
 
 // Keep the card, author, timestamp, tags, and actions real. Only data and side effects are mocked.
 vi.mock('next/navigation', () => ({
@@ -80,19 +80,19 @@ const props = {
   showEndMessage: false,
 };
 
-describe('TimelineMasonryPosts composition - Snapshots', () => {
-  it('renders a complete Masonry post', () => {
-    const { container } = render(<TimelineMasonryPosts {...props} />, { wrapper: TooltipProvider });
+describe('TimelineCardsPosts composition - Snapshots', () => {
+  it('renders a complete Cards post', () => {
+    const { container } = render(<TimelineCardsPosts {...props} />, { wrapper: TooltipProvider });
     expect(container.firstChild).toMatchSnapshot();
   });
 });
 
-describe('TimelineMasonryPosts composition - Mobile Snapshots', () => {
+describe('TimelineCardsPosts composition - Mobile Snapshots', () => {
   beforeEach(() => setMobileViewport());
   afterEach(() => resetViewport());
 
-  it('renders the same complete Masonry post on mobile', () => {
-    const { container } = render(<TimelineMasonryPosts {...props} />, { wrapper: TooltipProvider });
+  it('renders the same complete Cards post on mobile', () => {
+    const { container } = render(<TimelineCardsPosts {...props} />, { wrapper: TooltipProvider });
     expect(container.firstChild).toMatchSnapshot();
   });
 });
