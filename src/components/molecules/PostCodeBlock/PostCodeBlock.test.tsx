@@ -13,6 +13,22 @@ vi.mock('@/libs/utils/utils', async () => {
   };
 });
 
+// next/dynamic is mocked to hand back the real highlighter synchronously: the code split it
+// creates is a bundling concern, so the assertions below keep checking highlighted output while
+// the split itself is pinned by the recorded call. The record is a plain array because the call
+// happens at module import, before `vi.clearAllMocks()` runs in `beforeEach`.
+const { dynamicCalls } = vi.hoisted(() => ({ dynamicCalls: [] as unknown[][] }));
+
+vi.mock('next/dynamic', async () => {
+  const { PostCodeBlockHighlighter } = await import('./PostCodeBlockHighlighter');
+  return {
+    default: (...args: unknown[]) => {
+      dynamicCalls.push(args);
+      return PostCodeBlockHighlighter;
+    },
+  };
+});
+
 // Mock @/atoms
 vi.mock('@/atoms/Button/Button', () => {
   return {
@@ -123,6 +139,21 @@ describe('PostCodeBlock', () => {
       expect(codeElement?.textContent).toContain('const');
       expect(codeElement?.textContent).toContain('x');
       expect(codeElement?.textContent).toContain('1');
+    });
+
+    it('loads the syntax highlighter on demand so a post without code never fetches it', async () => {
+      render(<PostCodeBlock className="language-javascript">const x = 1;</PostCodeBlock>);
+
+      // ssr: false plus a loader: the chunk is fetched when a fenced block actually renders,
+      // never as part of the route's initial bundle.
+      const [loader, options] = dynamicCalls[0] as [() => Promise<unknown>, { ssr?: boolean }];
+      expect(loader).toBeTypeOf('function');
+      expect(options.ssr).toBe(false);
+
+      // The loader resolves to the real highlighter module, not a stub.
+      const loaded = await loader();
+      const { PostCodeBlockHighlighter } = await import('./PostCodeBlockHighlighter');
+      expect(loaded).toBe(PostCodeBlockHighlighter);
     });
 
     it('renders code block with container wrapper', () => {
