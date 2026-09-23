@@ -1,5 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { COLLECTION_LAYOUT, type CollectionViewLayout } from '@/config/collections';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { CollectionLayoutPicker } from './CollectionLayoutPicker';
@@ -140,3 +142,7 @@ describe('CollectionLayoutPicker Masonry', () => {
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Grid', 'Cards']);
   });
 });
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: TooltipProvider });
+}

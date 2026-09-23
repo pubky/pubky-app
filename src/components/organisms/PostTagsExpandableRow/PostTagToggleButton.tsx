@@ -4,6 +4,7 @@ import { type MouseEvent } from 'react';
 import { Tag } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { cn } from '@/libs/utils/utils';
@@ -35,7 +36,7 @@ export function PostTagToggleButton({
     return <Skeleton data-cy="post-tag-btn-skeleton" className={cn('h-8 rounded-full', showCount ? 'w-12' : 'w-8')} />;
   }
 
-  return (
+  const button = (
     <Button
       variant="secondary"
       size={showCount ? 'sm' : 'icon'}
@@ -61,5 +62,18 @@ export function PostTagToggleButton({
         </Typography>
       )}
     </Button>
+  );
+
+  if (showCount) return button;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipPortal>
+        <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
+          {expanded ? 'Hide tags' : 'Show tags'}
+        </TooltipContent>
+      </TooltipPortal>
+    </Tooltip>
   );
 }

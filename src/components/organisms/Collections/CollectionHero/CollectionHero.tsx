@@ -7,6 +7,7 @@ import { APP_ROUTES, getCollectionRoute, getUserProfileUrl } from '@/app/routes'
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { getDefaultUrl } from '@/config/metadata';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
@@ -317,16 +318,25 @@ function CollectionHeroContent({
                   {'Share'}
                 </Typography>
               </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={handleCopyLink}
-                disabled={isDeleting || isReorderActive}
-                aria-label="Copy link"
-                data-cy="collection-hero-copy-link-btn"
-              >
-                <Link className="size-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={handleCopyLink}
+                    disabled={isDeleting || isReorderActive}
+                    aria-label="Copy link"
+                    data-cy="collection-hero-copy-link-btn"
+                  >
+                    <Link className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
+                    Copy link
+                  </TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
               {reorder &&
                 (isReorderActive ? (
                   <>
@@ -360,37 +370,64 @@ function CollectionHeroContent({
                     </Button>
                   </>
                 ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        onClick={reorder.onEnter}
+                        disabled={isDeleting || itemCount < 2}
+                        aria-label={'Reorder'}
+                        data-cy="collection-hero-reorder-btn"
+                      >
+                        <Move className="size-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipPortal>
+                      <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
+                        Reorder
+                      </TooltipContent>
+                    </TooltipPortal>
+                  </Tooltip>
+                ))}
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
                     variant="secondary"
                     size="icon"
-                    onClick={reorder.onEnter}
-                    disabled={isDeleting || itemCount < 2}
-                    aria-label={'Reorder'}
-                    data-cy="collection-hero-reorder-btn"
+                    onClick={handleEdit}
+                    disabled={isDeleting || isReorderActive}
+                    aria-label={'Edit'}
+                    data-cy="collection-hero-edit-btn"
                   >
-                    <Move className="size-4" />
+                    <Pencil className="size-4" />
                   </Button>
-                ))}
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={handleEdit}
-                disabled={isDeleting || isReorderActive}
-                aria-label={'Edit'}
-                data-cy="collection-hero-edit-btn"
-              >
-                <Pencil className="size-4" />
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={handleDelete}
-                disabled={isDeleting || isReorderActive}
-                aria-label={'Delete'}
-                data-cy="collection-hero-delete-btn"
-              >
-                <Trash2 className="size-4" />
-              </Button>
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
+                    Edit
+                  </TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={handleDelete}
+                    disabled={isDeleting || isReorderActive}
+                    aria-label={'Delete'}
+                    data-cy="collection-hero-delete-btn"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
+                    Delete
+                  </TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
             </>
           ) : (
             <>
@@ -419,15 +456,24 @@ function CollectionHeroContent({
                   {'Share'}
                 </Typography>
               </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={handleCopyLink}
-                aria-label="Copy link"
-                data-cy="collection-hero-copy-link-btn"
-              >
-                <Link className="size-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={handleCopyLink}
+                    aria-label="Copy link"
+                    data-cy="collection-hero-copy-link-btn"
+                  >
+                    <Link className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
+                    Copy link
+                  </TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
             </>
           )}
           {!isReorderActive && <CollectionLayoutPicker layout={layout} onLayoutChange={onLayoutChange} />}

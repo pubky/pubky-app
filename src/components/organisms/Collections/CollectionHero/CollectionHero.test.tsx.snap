@@ -195,6 +195,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
         data-cy="collection-hero-copy-link-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
       >
         <svg
@@ -298,6 +299,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
         data-cy="post-tag-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
       >
         <svg
@@ -507,6 +509,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
         data-cy="collection-hero-copy-link-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
         disabled=""
       >
@@ -604,6 +607,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
         data-cy="collection-hero-edit-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
         disabled=""
       >
@@ -634,6 +638,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
         data-cy="collection-hero-delete-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
         disabled=""
       >
@@ -674,6 +679,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
         data-cy="post-tag-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
         disabled=""
       >
@@ -882,6 +888,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
         data-cy="collection-hero-copy-link-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
       >
         <svg
@@ -911,6 +918,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
         data-cy="collection-hero-edit-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
       >
         <svg
@@ -940,6 +948,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
         data-cy="collection-hero-delete-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
       >
         <svg
@@ -1052,6 +1061,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
         data-cy="post-tag-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
       >
         <svg
@@ -1269,6 +1279,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
         data-cy="collection-hero-copy-link-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
       >
         <svg
@@ -1372,6 +1383,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
         data-cy="post-tag-btn"
         data-size="icon"
         data-slot="button"
+        data-state="closed"
         data-variant="secondary"
       >
         <svg

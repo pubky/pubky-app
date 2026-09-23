@@ -1,7 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { COLLECTION_LAYOUT } from '@/config/collections';
 import { getDefaultUrl } from '@/config/metadata';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
@@ -656,6 +658,22 @@ describe('CollectionHero', () => {
   });
 
   describe('CTA — reorder', () => {
+    it.each([
+      ['Copy link', 'Copy link'],
+      ['Reorder', 'Reorder'],
+      ['Edit', 'Edit'],
+      ['Delete', 'Delete'],
+      ['Layout: Grid', 'Change layout'],
+      ['Tag post (3)', 'Show tags'],
+    ])('shows a tooltip when %s receives keyboard focus', async (label, tooltip) => {
+      setAuthStore(AUTHOR_PUBKY);
+      renderHero({ reorder: buildReorderProps() });
+
+      fireEvent.focus(screen.getByRole('button', { name: label }));
+
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(tooltip);
+    });
+
     function buildReorderProps(overrides: Partial<NonNullable<CollectionHeroProps['reorder']>> = {}) {
       return {
         isActive: false,
@@ -1011,3 +1029,7 @@ describe('CollectionHero - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 });
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: TooltipProvider });
+}

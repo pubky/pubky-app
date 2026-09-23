@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/atoms/DropdownMenu/DropdownMenu';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { COLLECTION_LAYOUT, type CollectionViewLayout } from '@/config/collections';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
@@ -124,7 +125,18 @@ export function CollectionLayoutPicker({ layout, onLayoutChange, layouts }: Coll
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <Tooltip>
+        <DropdownMenuTrigger asChild>
+          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+        </DropdownMenuTrigger>
+        <TooltipPortal>
+          {!open && (
+            <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
+              Change layout
+            </TooltipContent>
+          )}
+        </TooltipPortal>
+      </Tooltip>
       <DropdownMenuContent align="end" className="w-70">
         <CollectionLayoutPickerContent layout={displayedLayout} onSelect={handleSelect} layouts={availableLayouts} />
       </DropdownMenuContent>
