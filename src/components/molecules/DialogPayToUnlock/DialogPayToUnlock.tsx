@@ -19,7 +19,7 @@ import type { DialogPayToUnlockProps } from './DialogPayToUnlock.types';
 
 const FIELD_LABEL_CLASS = 'text-xs font-medium tracking-widest text-muted-foreground uppercase';
 
-const INSTALL_STEPS = ['Install Bitkit', 'Set up your profile with the same pubky', 'Fund your wallet'];
+const INSTALL_STEPS = ['Install Bitkit', 'Set up profile', 'Fund wallet'];
 const BITKIT_LOGO = { src: '/images/bitkit-logo.svg', alt: 'Bitkit', width: 110 };
 
 function CreatorAvatar({ authorId }: { authorId: string }) {
@@ -34,9 +34,10 @@ function CreatorAvatar({ authorId }: { authorId: string }) {
 /**
  * Pay to Unlock modal. Purely presentational — `usePayToUnlock` owns the state machine.
  *
- * Opening the modal starts the purchase automatically after the wallet gate. Closing during a
- * submission or `waiting` is allowed — the stored bundle id safely resumes it on reopen — but it
- * asks first, because a spinner vanishing on its own reads as a lost payment.
+ * Opening the modal starts the purchase automatically once the reader has a wallet. Closing during a
+ * submission or `waiting` is allowed — the stored bundle id safely resumes it on reopen — but it asks
+ * first, because a spinner vanishing on its own reads as a lost payment. The install screen is the
+ * exception: nothing has been submitted there, so that close goes through without asking.
  */
 export function DialogPayToUnlock({
   open,
@@ -53,10 +54,12 @@ export function DialogPayToUnlock({
   onRecheck,
   onViewContent,
 }: DialogPayToUnlockProps) {
-  // Screen 1 of the design: no wallet yet, or a wallet with no Noise link to this creator.
-  const showQr = Boolean(handshakePubky) && (stage === 'install' || stage === 'waiting');
+  // The install screen comes before any submission, so it never has a Noise link state to show.
+  const isInstall = stage === 'install';
+  const showQr = Boolean(handshakePubky) && stage === 'waiting';
   const showSpinner = stage === 'checking' || (stage === 'waiting' && !showQr && !isStalled && !connectionIssue);
-  const showPrimary = stage === 'retry';
+  const showPrimary = stage === 'retry' || isInstall;
+  const primaryLabel = isInstall ? 'I completed the steps' : 'Try again';
   // `unopened` reached this screen by a completed payment too, so it must not show a cost to pay.
   const isPaid = stage === 'paid' || stage === 'unopened';
   const [isConfirmingClose, setIsConfirmingClose] = useState(false);
@@ -69,7 +72,8 @@ export function DialogPayToUnlock({
       return;
     }
     // `isSubmitting` covers the gap before `waiting`, while the submission is in flight.
-    if (!next && (stage === 'waiting' || isSubmitting)) {
+    // On the install screen it is only the wallet check, and nothing is running yet.
+    if (!next && (stage === 'waiting' || (isSubmitting && !isInstall))) {
       setIsConfirmingClose(true);
       return;
     }
@@ -136,22 +140,18 @@ export function DialogPayToUnlock({
                 >
                   {'Pay with Bitkit'}
                 </Button>
-                {/* Not in the design: without these a reader who has no Bitkit yet has nothing to act on. */}
-                <Container overrideDefaults className="flex flex-col gap-1">
-                  {INSTALL_STEPS.map((step, index) => (
-                    <Typography key={step} className="text-base text-secondary-foreground">
-                      <span className="font-bold">{`${index + 1}) `}</span>
-                      {step}
-                    </Typography>
-                  ))}
-                </Container>
-                <AppDownload
-                  logo={BITKIT_LOGO}
-                  appStoreUrl={BITKIT_APP_STORE_URL}
-                  playStoreUrl={BITKIT_PLAY_STORE_URL}
-                  layout="row"
-                />
               </>
+            )}
+
+            {isInstall && (
+              <Container overrideDefaults className="flex flex-wrap gap-x-3 gap-y-1">
+                {INSTALL_STEPS.map((step, index) => (
+                  <Typography key={step} className="text-base text-secondary-foreground">
+                    <span className="font-bold">{`${index + 1}) `}</span>
+                    {step}
+                  </Typography>
+                ))}
+              </Container>
             )}
 
             {/* A parked wait shows only its Check again copy; the link notices still apply there. */}
@@ -184,17 +184,18 @@ export function DialogPayToUnlock({
             )}
 
             {stage === 'retry' && (
-              <>
-                <Typography className="text-base text-secondary-foreground">
-                  {'The payment could not continue. Try again when Bitkit is ready.'}
-                </Typography>
-                <AppDownload
-                  logo={BITKIT_LOGO}
-                  appStoreUrl={BITKIT_APP_STORE_URL}
-                  playStoreUrl={BITKIT_PLAY_STORE_URL}
-                  layout="row"
-                />
-              </>
+              <Typography className="text-base text-secondary-foreground">
+                {'The payment could not continue. Try again when Bitkit is ready.'}
+              </Typography>
+            )}
+
+            {showPrimary && (
+              <AppDownload
+                logo={BITKIT_LOGO}
+                appStoreUrl={BITKIT_APP_STORE_URL}
+                playStoreUrl={BITKIT_PLAY_STORE_URL}
+                layout="row"
+              />
             )}
 
             {stage === 'paid' && (
@@ -289,7 +290,7 @@ export function DialogPayToUnlock({
               disabled={isSubmitting}
               data-cy="pay-to-unlock-retry"
             >
-              {isSubmitting ? <Spinner size="sm" /> : 'Try again'}
+              {isSubmitting ? <Spinner size="sm" /> : primaryLabel}
             </Button>
           )}
         </DialogFooter>

@@ -3,13 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import type { LockFile, TUnlockedContent, TVerificationStatus } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  CONNECTION_POLL_INTERVAL_MS,
-  POLL_INTERVAL_MS,
-  STALL_AFTER_MS,
-  usePayToUnlock,
-  WALLET_POLL_INTERVAL_MS,
-} from './usePayToUnlock';
+import { CONNECTION_POLL_INTERVAL_MS, POLL_INTERVAL_MS, STALL_AFTER_MS, usePayToUnlock } from './usePayToUnlock';
 import type { TPayToUnlockStage } from './usePayToUnlock.types';
 
 vi.mock('@/controllers/locks/locks', () => ({
@@ -139,7 +133,7 @@ describe('usePayToUnlock (opening)', () => {
 
   it.each([
     ['none', 'pubkybob', null],
-    ['handshake', null, null],
+    ['handshake', 'pubkybob', null],
     ['connected', null, null],
     ['recovery_required', null, 'recovery_required'],
     ['blocked', null, 'blocked'],
@@ -309,89 +303,118 @@ describe('usePayToUnlock (retry)', () => {
   });
 
   describe('install screen', () => {
-    beforeEach(() => vi.useFakeTimers());
-    afterEach(() => vi.useRealTimers());
+    const openOnInstall = async () => {
+      vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValueOnce(false);
+      const rendered = renderPay();
+      await waitFor(() => expect(rendered.result.current.stage).toBe('install'));
+      return rendered;
+    };
 
-    const advance = (ms: number) =>
-      act(async () => {
-        await vi.advanceTimersByTimeAsync(ms);
-      });
-    const walletChecks = () => vi.mocked(LocksController.hasPaykitReceiver).mock.calls.length;
+    it('shows no QR before the reader has a wallet', async () => {
+      const { result } = await openOnInstall();
+      expect(result.current.handshakePubky).toBeNull();
+      expect(LocksController.fetchPaykitConnectionState).not.toHaveBeenCalled();
+    });
 
-    it('shows the QR and keeps checking for a wallet without submitting', async () => {
-      vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(false);
+    it('re-checks the wallet before submitting and stays on install when there is still none', async () => {
+      const { result } = await openOnInstall();
+      vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValueOnce(false);
 
-      const { result } = renderPay();
-      await advance(0);
+      result.current.retry();
+      await waitFor(() => expect(toastMock).toHaveBeenCalledTimes(1));
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: 'warning',
+          description: expect.stringContaining('Bitkit is not set up yet'),
+        }),
+      );
+      expect(LocksController.hasPaykitReceiver).toHaveBeenCalledTimes(2);
+      expect(LocksController.startPayment).not.toHaveBeenCalled();
       expect(result.current.stage).toBe('install');
-      // The QR is the creator's pubky, so it does not wait on the reader's wallet.
-      expect(result.current.handshakePubky).toBe('pubkybob');
-
-      await advance(WALLET_POLL_INTERVAL_MS * 2);
-      expect(walletChecks()).toBe(3);
-      expect(LocksController.startPayment).not.toHaveBeenCalled();
+      expect(result.current.isSubmitting).toBe(false);
     });
 
-    it('starts the purchase as soon as a wallet shows up', async () => {
-      vi.mocked(LocksController.hasPaykitReceiver)
-        .mockResolvedValueOnce(false)
-        .mockResolvedValueOnce(false)
-        .mockResolvedValue(true);
+    it('submits once the wallet shows up and moves to the QR wait', async () => {
+      vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('none');
+      const { result } = await openOnInstall();
 
-      const { result } = renderPay();
-      await advance(0);
-      await advance(WALLET_POLL_INTERVAL_MS);
-      expect(LocksController.startPayment).not.toHaveBeenCalled();
-
-      await advance(WALLET_POLL_INTERVAL_MS);
+      result.current.retry();
+      await waitFor(() => expect(result.current.stage).toBe('waiting'));
       expect(LocksController.startPayment).toHaveBeenCalledTimes(1);
-      expect(result.current.stage).toBe('waiting');
-
-      // Found once is enough: the check stops for good.
-      const checksWhenFound = walletChecks();
-      await advance(WALLET_POLL_INTERVAL_MS * 2);
-      expect(walletChecks()).toBe(checksWhenFound);
+      await waitFor(() => expect(result.current.handshakePubky).toBe('pubkybob'));
     });
 
-    it('treats a failed wallet check as "not yet" and keeps checking', async () => {
-      vi.mocked(LocksController.hasPaykitReceiver)
-        .mockResolvedValueOnce(false)
-        .mockRejectedValueOnce(new Error('homeserver blip'))
-        .mockResolvedValue(true);
+    // A close on the install screen skips the "still running" prompt, so the in-flight submission must
+    // not sit there.
+    it('leaves install for checking while the submission is in flight', async () => {
+      vi.mocked(LocksController.startPayment).mockImplementation(() => new Promise(() => {}));
+      const { result } = await openOnInstall();
 
-      const { result } = renderPay();
-      await advance(0);
-      await advance(WALLET_POLL_INTERVAL_MS);
-      expect(result.current.stage).toBe('install');
-      expect(toastMock).not.toHaveBeenCalled();
-
-      await advance(WALLET_POLL_INTERVAL_MS);
-      expect(LocksController.startPayment).toHaveBeenCalledTimes(1);
+      result.current.retry();
+      await waitFor(() => expect(result.current.stage).toBe('checking'));
+      expect(result.current.isSubmitting).toBe(true);
     });
 
-    it('stops checking when the modal closes', async () => {
-      vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(false);
-
-      const { rerender } = renderPayWith({ open: true });
-      await advance(0);
-      rerender({ open: false });
-
-      const checksWhenClosed = walletChecks();
-      await advance(WALLET_POLL_INTERVAL_MS * 3);
-      expect(walletChecks()).toBe(checksWhenClosed);
-      expect(LocksController.startPayment).not.toHaveBeenCalled();
-    });
-
-    it('offers Try again when the submission after the wallet shows up fails', async () => {
-      vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValueOnce(false).mockResolvedValue(true);
+    // Try again skips the wallet check, so a failure that started here has to come back here.
+    it('goes back to install when the submission after the re-check fails', async () => {
       vi.mocked(LocksController.startPayment).mockRejectedValue(new Error('HTTP 502'));
+      const { result } = await openOnInstall();
 
-      const { result } = renderPay();
-      await advance(0);
-      await advance(WALLET_POLL_INTERVAL_MS);
+      result.current.retry();
+      await waitFor(() => expect(toastMock).toHaveBeenCalledTimes(1));
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ description: expect.stringContaining('could not be started') }),
+      );
+      expect(result.current.stage).toBe('install');
+    });
 
-      expect(result.current.stage).toBe('retry');
-      expect(toastMock).toHaveBeenCalledTimes(1);
+    it('stays on install when the re-check itself fails', async () => {
+      const { result } = await openOnInstall();
+      vi.mocked(LocksController.hasPaykitReceiver).mockRejectedValueOnce(new Error('homeserver blip'));
+
+      result.current.retry();
+      await waitFor(() => expect(toastMock).toHaveBeenCalledTimes(1));
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ description: expect.stringContaining('could not be started') }),
+      );
+      expect(result.current.stage).toBe('install');
+      expect(LocksController.startPayment).not.toHaveBeenCalled();
+    });
+
+    it('submits nothing when the modal closes during the re-check', async () => {
+      vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValueOnce(false);
+      const { result, rerender } = renderPayWith({ open: true });
+      await waitFor(() => expect(result.current.stage).toBe('install'));
+      let answer!: (hasWallet: boolean) => void;
+      vi.mocked(LocksController.hasPaykitReceiver).mockImplementationOnce(
+        () => new Promise((resolve) => (answer = resolve)),
+      );
+
+      result.current.retry();
+      rerender({ open: false });
+      await act(async () => answer(true));
+      expect(LocksController.startPayment).not.toHaveBeenCalled();
+      expect(result.current.stage).toBe('install');
+      expect(result.current.isSubmitting).toBe(false);
+    });
+
+    // A check that never settles must not lock the button of the next opening.
+    it('unlocks the button on reopen while the earlier re-check is still out', async () => {
+      vi.mocked(LocksController.hasPaykitReceiver)
+        .mockResolvedValueOnce(false)
+        .mockImplementationOnce(() => new Promise(() => {}))
+        .mockResolvedValueOnce(false);
+      const { result, rerender } = renderPayWith({ open: true });
+      await waitFor(() => expect(result.current.stage).toBe('install'));
+
+      act(() => result.current.retry());
+      await waitFor(() => expect(result.current.isSubmitting).toBe(true));
+      rerender({ open: false });
+      rerender({ open: true });
+
+      await waitFor(() => expect(LocksController.hasPaykitReceiver).toHaveBeenCalledTimes(3));
+      await waitFor(() => expect(result.current.stage).toBe('install'));
+      expect(result.current.isSubmitting).toBe(false);
     });
   });
 
@@ -553,6 +576,26 @@ describe('usePayToUnlock (waiting)', () => {
     await advance(POLL_INTERVAL_MS * 2);
     expect(connectionCalls()).toBe(2);
     expect(statusCalls()).toBe(lookupsWhenConnected + 2);
+  });
+
+  // `handshake` is only Paykit's half of the link; the wallet still needs the creator pubky to answer.
+  it('keeps the QR through handshake and drops it on connected', async () => {
+    vi.mocked(LocksController.fetchPaykitConnectionState)
+      .mockResolvedValueOnce('none')
+      .mockResolvedValueOnce('handshake')
+      .mockResolvedValue('connected');
+
+    const { result } = renderPay();
+    await advance(0);
+    expect(result.current.handshakePubky).toBe('pubkybob');
+
+    await advance(CONNECTION_POLL_INTERVAL_MS);
+    expect(result.current.handshakePubky).toBe('pubkybob');
+    expect(connectionCalls()).toBe(2);
+
+    await advance(CONNECTION_POLL_INTERVAL_MS);
+    expect(result.current.handshakePubky).toBeNull();
+    expect(connectionCalls()).toBe(3);
   });
 
   // An operator switch this reader cannot flip: reading it again would never say anything new.

@@ -26,13 +26,13 @@ export interface UsePayToUnlockResult {
   stage: TPayToUnlockStage;
   /** The wait gave up on its own; only `recheck` moves it forward from here. */
   isStalled: boolean;
-  /** The lock creator's pubky to hand to Bitkit, while the reader has no wallet yet or no Paykit link. */
+  /** The lock creator's pubky to hand to Bitkit, until the reader's Paykit link with them is `connected`. */
   handshakePubky: string | null;
   /** A link state the reader cannot fix by waiting or paying — shown as a notice instead of the QR. */
   connectionIssue: 'recovery_required' | 'blocked' | null;
-  /** True while the proof submission is in flight. */
+  /** True while the install screen's wallet check or the proof submission is in flight. */
   isSubmitting: boolean;
-  /** Retries a failed submission, or starts over with a fresh id after a failed/expired payment. */
+  /** Install screen: re-checks the wallet, then submits. Retry screen: submits again (a fresh id after a failed/expired payment). */
   retry: () => void;
   /** Resume a parked wait. The purchase was never abandoned, so this only restarts the polling. */
   recheck: () => void;

@@ -79,18 +79,18 @@ describe('DialogPayToUnlock', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  // The wallet check runs on its own now, so the install screen is the QR screen with no button.
-  it('install: shows the QR, the scan copy, the setup steps and store links, and no primary button', () => {
-    renderDialog('install', { handshakePubky: 'pubkylockcreator' });
+  it('install: shows the setup steps, the store links and the I completed the steps button, and no QR', () => {
+    const onRetry = vi.fn();
+    renderDialog('install', { onRetry, handshakePubky: 'pubkylockcreator' });
 
-    expect(screen.getByRole('img', { name: 'Creator Pubky QR code' })).toBeInTheDocument();
-    expect(screen.getByText('Scan with Bitkit and pay to unlock.')).toBeInTheDocument();
     expect(screen.getByText(/Install Bitkit/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /I completed the steps|Try again/ })).not.toBeInTheDocument();
-    // Mobile's stand-in for the QR; its deeplink is still a TODO.
-    expect(screen.getByRole('button', { name: 'Pay with Bitkit' })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pay with Bitkit' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'I completed the steps' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
   // Nothing to cancel past submission — the purchase continues server-side, so the button only closes.
@@ -106,11 +106,17 @@ describe('DialogPayToUnlock', () => {
     expect(document.querySelector('[data-cy="pay-to-unlock-cancel"]')).toHaveTextContent('Close');
   });
 
-  it('waiting: shows the creator pubky QR only when the handshake is missing', () => {
+  it('waiting: shows the creator pubky QR while the hook hands one over', () => {
     const { rerender } = renderDialog('waiting', { handshakePubky: 'lockcreator' });
 
     expect(screen.getByRole('img', { name: 'Creator Pubky QR code' })).toBeInTheDocument();
     expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
+    expect(screen.getByText('Scan with Bitkit and pay to unlock.')).toBeInTheDocument();
+    // Mobile's stand-in for the QR; its deeplink is still a TODO.
+    expect(screen.getByRole('button', { name: 'Pay with Bitkit' })).toBeInTheDocument();
+    // The QR screen stays clean: setup belongs to the install screen.
+    expect(screen.queryByText(/Install Bitkit/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'App Store' })).not.toBeInTheDocument();
 
     rerender(dialogElement('waiting', { handshakePubky: 'pubkylockcreator' }));
     expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
@@ -267,11 +273,11 @@ describe('DialogPayToUnlock', () => {
     expect(screen.queryByText('The payment is still running')).not.toBeInTheDocument();
   });
 
-  // Only the wallet check runs on install, and closing cancels it, so that close needs no prompt.
-  // Nothing has been submitted while the install screen waits for a wallet, so that close needs no prompt.
-  it('install: the cancel button closes without asking', () => {
+  // Install only runs the wallet check (the hook moves to checking before it submits), and closing
+  // cancels that check, so this close needs no prompt.
+  it('install: the cancel button closes without asking, even during the wallet check', () => {
     const onOpenChange = vi.fn();
-    renderDialog('install', { onOpenChange });
+    renderDialog('install', { onOpenChange, isSubmitting: true });
 
     fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement);
     expect(onOpenChange).toHaveBeenCalledWith(false);
