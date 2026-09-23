@@ -1,7 +1,18 @@
 import { permanentRedirect } from 'next/navigation';
+import { render } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
 import PostPage, { generateMetadata } from './page';
+
+/**
+ * The page returns `[preload link?, SinglePostPage]`, so the post element is the
+ * child that is not the image preload.
+ */
+const getPostElement = (element: ReactElement): ReactElement<{ postId: string }> => {
+  const children = (element.props as { children: ReactElement[] }).children;
+  return children.find((child) => child && child.type !== 'link') as ReactElement<{ postId: string }>;
+};
 
 vi.mock('@/templates/Post/SinglePost/SinglePost', () => ({
   SinglePost: ({ postId }: { postId: string }) => <div data-testid="single-post">{postId}</div>,
@@ -221,7 +232,7 @@ describe('PostPage (collection redirect)', () => {
     });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
-    expect(element.props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
+    expect(getPostElement(element).props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
   });
 
   it('renders the post (no redirect) when the kind lookup fails', async () => {
@@ -232,6 +243,59 @@ describe('PostPage (collection redirect)', () => {
     });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
-    expect(element.props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
+    expect(getPostElement(element).props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
+  });
+});
+
+describe('PostPage (cover preload)', () => {
+  const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+  const FILE_URI = `pubky://${AUTHOR}/pub/pubky.app/files/0035R8SA18DE0`;
+
+  const jsonResponse = (body: unknown) =>
+    new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const renderPost = async (post: Record<string, unknown>) => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse(post));
+
+    const element = await PostPage({ params: Promise.resolve({ userId: AUTHOR, postId: 'post-1' }) });
+    return render(element);
+  };
+
+  it('preloads the article cover so the browser can start it before hydration', async () => {
+    await renderPost({
+      kind: 'long',
+      content: JSON.stringify({ title: 'How to Think About Names', body: 'My name is John Carvalho.' }),
+      attachments: [FILE_URI],
+    });
+
+    const preload = document.querySelector('link[rel="preload"]');
+    expect(preload).toHaveAttribute('as', 'image');
+    expect(preload).toHaveAttribute(
+      'href',
+      `https://nexus.staging.pubky.app/static/files/${AUTHOR}/0035R8SA18DE0/main`,
+    );
+    expect(preload).toHaveAttribute('fetchpriority', 'high');
+  });
+
+  it('emits no image preload when slot 0 is an inline image instead of the cover', async () => {
+    await renderPost({
+      kind: 'long',
+      content: JSON.stringify({ title: 'Article', body: 'Intro\n\n![diagram](attachment:0)' }),
+      attachments: [FILE_URI],
+    });
+
+    expect(document.querySelector('link[rel="preload"]')).toBeNull();
+  });
+
+  it('emits no image preload for a post that is not an article', async () => {
+    await renderPost({ kind: 'short', content: 'gm', attachments: [FILE_URI] });
+
+    expect(document.querySelector('link[rel="preload"]')).toBeNull();
   });
 });

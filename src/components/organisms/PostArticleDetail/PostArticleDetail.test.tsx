@@ -35,9 +35,17 @@ vi.mock('@/atoms/Container/Container', () => ({
 }));
 
 vi.mock('@/atoms/Image/Image', () => ({
-  Image: ({ src, alt, className }: { src: string; alt: string; className?: string }) => (
-    <img data-testid="cover-image" src={src} alt={alt} className={className} />
-  ),
+  Image: ({
+    src,
+    alt,
+    className,
+    ...rest
+  }: {
+    src: string;
+    alt: string;
+    className?: string;
+    [key: string]: unknown;
+  }) => <img data-testid="cover-image" src={src} alt={alt} className={className} {...rest} />,
 }));
 
 vi.mock('@/atoms/Typography/Typography', () => ({
@@ -329,6 +337,24 @@ describe('PostArticleDetail', () => {
 
     expect(screen.getByTestId('cover-image')).toHaveAttribute('src', 'https://example.com/image.jpg');
     expect(screen.getByTestId('cover-image')).toHaveAttribute('alt', 'Cover image');
+  });
+
+  it('eager-loads the cover with high fetch priority, since it is the article LCP', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://example.com/image.jpg',
+        alt: 'Cover image',
+      },
+      hasCover: true,
+    });
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    const cover = screen.getByTestId('cover-image');
+    expect(cover).toHaveAttribute('loading', 'eager');
+    expect(cover).toHaveAttribute('fetchpriority', 'high');
   });
 
   it('places inline tags and actions between the user header and cover image in columns layout', () => {

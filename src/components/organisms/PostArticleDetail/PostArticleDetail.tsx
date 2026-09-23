@@ -117,6 +117,10 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
         <Image
           src={finalCoverImage.src}
           alt={finalCoverImage.alt}
+          // The cover is this page's largest contentful paint: eager + high priority
+          // so it is not queued behind the images below the fold.
+          loading="eager"
+          fetchPriority="high"
           className="mb-6 aspect-video w-full rounded-md object-cover object-center"
         />
       )}

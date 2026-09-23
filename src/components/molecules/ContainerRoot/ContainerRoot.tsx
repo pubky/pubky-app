@@ -2,6 +2,8 @@ import { Inter_Tight } from 'next/font/google';
 import Script from 'next/script';
 import { Container } from '@/atoms/Container/Container';
 import {
+  getCdnUrl,
+  getNexusUrl,
   getPlausibleDomain,
   getPlausibleScriptUrl,
   serializeRuntimeConfig,
@@ -20,10 +22,19 @@ interface RootContainerProps {
 export function RootContainer({ children }: RootContainerProps) {
   const plausibleDomain = getPlausibleDomain();
   const plausibleScriptUrl = getPlausibleScriptUrl();
+  // Images and data both come from Nexus, and the first image of a cold visit is a
+  // multi-megabyte file: warm DNS + TLS for it while the document is still parsing.
+  // Two hints, because a CORS request (the Nexus API) cannot reuse a non-credentialed
+  // preconnected socket. The origins are equal on production; keeping both hints means
+  // the config can split them (staging CDN vs API host) without losing either.
+  const cdnOrigin = new URL(getCdnUrl()).origin;
+  const nexusOrigin = new URL(getNexusUrl()).origin;
 
   return (
     <Container as="html" lang="en-US" dir="ltr">
       <Container as="body" className={`${interTight.variable} antialiased`}>
+        <link rel="preconnect" href={cdnOrigin} />
+        <link rel="preconnect" href={nexusOrigin} crossOrigin="anonymous" />
         {/*
           Publish runtime config before any Next.js bundle executes. This must stay a RAW
           <script> element rendered first in <body>: App Router's next/script with

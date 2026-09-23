@@ -149,6 +149,8 @@ exports[`PostArticleDetail > matches snapshot with cover image 1`] = `
       alt="Article cover"
       class="mb-6 aspect-video w-full rounded-md object-cover object-center"
       data-testid="cover-image"
+      fetchpriority="high"
+      loading="eager"
       src="https://example.com/cover.jpg"
     />
     <div
