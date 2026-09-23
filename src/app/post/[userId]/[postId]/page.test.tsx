@@ -304,26 +304,4 @@ describe('PostPage (cover preload)', () => {
 
     expect(document.querySelector('link[rel="preload"]')).toBeNull();
   });
-
-  it('hands the client the normalised ids the preload was built from', async () => {
-    // A crawler-mangled segment (`post-1%5Cn` decodes to `post-1` plus a literal escape
-    // sequence) must reach the client as the post the preload describes, not as the raw
-    // segment Nexus rejects.
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
-      .mockResolvedValueOnce(
-        jsonResponse({
-          kind: 'long',
-          content: JSON.stringify({ title: 'Article', body: 'Body' }),
-          attachments: [FILE_URI],
-        }),
-      );
-
-    const element = await PostPage({ params: Promise.resolve({ userId: AUTHOR, postId: 'post-1%5Cn' }) });
-
-    expect(getPostElement(element).props.postId).toBe(`${AUTHOR}:post-1`);
-
-    render(element);
-    expect(document.querySelector('link[rel="preload"]')).not.toBeNull();
-  });
 });

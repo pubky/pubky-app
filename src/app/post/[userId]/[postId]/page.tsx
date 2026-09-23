@@ -111,14 +111,9 @@ export default async function PostPage({ params }: PostPageProps) {
     permanentRedirect(getCollectionRoute(ids.userId, ids.postId));
   }
 
-  // Normalised ids win when they exist: the preload above was built from them, so a
-  // crawler-mangled segment (trailing escape sequence, percent-encoded bracket) must reach
-  // the client as the same post the preload describes. Malformed ids never reach Nexus;
-  // render them as-is so the client-side guard in SinglePostPage handles the not-found
-  // state as before.
-  const compositeId = ids
-    ? buildCompositeId({ pubky: ids.userId, id: ids.postId })
-    : buildCompositeId({ pubky: userId, id: postId });
+  // Malformed ids never reach Nexus; render with them as-is so the client-side
+  // guard in SinglePostPage handles the not-found state as before.
+  const compositeId = buildCompositeId({ pubky: userId, id: postId });
 
   return (
     <>
