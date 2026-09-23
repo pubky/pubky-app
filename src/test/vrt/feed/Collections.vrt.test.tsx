@@ -6,7 +6,7 @@ import { page } from 'vitest/browser';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { describe, expect, it, vi } from 'vitest';
-import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT, waitForImagesReady } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -980,6 +980,8 @@ describe('Cards cards — browser coverage', () => {
 
     secondPage.resolve({ postIds: ids.slice(2, 4), hasMore: true });
     await expect.poll(() => cards().length).toBe(4);
+    // Appended media can change card heights after the initial renderForVRT readiness check.
+    await waitForImagesReady(feed);
     await expect.poll(assertSentinelPosition).toBe(true);
     expect(
       cards()
