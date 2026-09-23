@@ -195,6 +195,16 @@ export const APP_RUNTIME_DEFAULTS = {
   playStoreUrl: 'https://play.google.com/store/apps/details?id=to.pubky.ring&pcampaignid=web_share',
 } as const;
 
+/**
+ * Pubky Passport signer origin. Deployed mode has NO default: an unset value disables the
+ * "Continue with Google" entry points until the operator points the deploy at a live Passport.
+ * The staging origin below is applied only by the lenient dev/test parse so `npm run dev:https`
+ * works without an `.env.local`.
+ */
+export const PASSPORT_RUNTIME_DEFAULTS = {
+  passportUrl: 'https://passport.staging.pubky.app',
+} as const;
+
 // ---------------------------------------------------------------------------
 // App-facing config shape
 // ---------------------------------------------------------------------------
@@ -223,6 +233,9 @@ export type NetworkRuntimeConfig = z.infer<typeof networkConfigValueSchema>;
  * Validates `window.__PUBKY_CONFIG__`.
  */
 export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
+  /** Optional browser telemetry. Only a client key is needed; endpoint overrides the SDK default. */
+  pulseClientKey: z.string().startsWith('pulse_client_').optional(),
+  pulseEndpoint: urlValue.optional(),
   /** Sentry DSN shared by browser/server/edge. Absent/empty disables Sentry entirely. */
   sentryDsn: urlValue.optional(),
   /** Environment tag attached to every Sentry event. Absent falls back to NODE_ENV (see sentry.ts). */
@@ -252,6 +265,8 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   preludeSdkTimeoutMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.preludeSdkTimeoutMs),
   plausibleDomain: nonEmptyStringValue.optional(),
   plausibleScriptUrl: urlValue.optional(),
+  /** Pubky Passport origin. Absent disables Passport ("Continue with Google") everywhere. */
+  passportUrl: urlValue.optional(),
   previewImage: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.previewImage),
   siteName: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.siteName),
   locale: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.locale),
@@ -297,6 +312,8 @@ export const runtimeEnvInputSchema = z
     pkarrRelays: pkarrRelaysFromString,
     testnet: testnetFromString,
     deployEnv: deployEnvValue,
+    pulseClientKey: optionalTrimmedString,
+    pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -324,6 +341,7 @@ export const runtimeEnvInputSchema = z
     preludeSdkTimeoutMs: optionalPositiveIntFromString,
     plausibleDomain: optionalTrimmedString,
     plausibleScriptUrl: optionalUrlFromString,
+    passportUrl: optionalUrlFromString,
     previewImage: optionalTrimmedString,
     siteName: optionalTrimmedString,
     locale: optionalTrimmedString,
@@ -375,6 +393,8 @@ export const runtimeEnvInputSchemaWithDefaults = z
     pkarrRelays: z.string().default(JSON.stringify(NETWORK_RUNTIME_DEFAULTS.pkarrRelays)).pipe(pkarrRelaysFromString),
     testnet: z.string().default(String(NETWORK_RUNTIME_DEFAULTS.testnet)).pipe(testnetFromString),
     deployEnv: deployEnvValue.default(NETWORK_RUNTIME_DEFAULTS.deployEnv),
+    pulseClientKey: optionalTrimmedString,
+    pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -402,6 +422,12 @@ export const runtimeEnvInputSchemaWithDefaults = z
     preludeSdkTimeoutMs: optionalPositiveIntFromString,
     plausibleDomain: optionalTrimmedString,
     plausibleScriptUrl: optionalUrlFromString,
+    // Lenient-only staging default; an explicit empty value still disables Passport in dev.
+    passportUrl: z
+      .string()
+      .default(PASSPORT_RUNTIME_DEFAULTS.passportUrl)
+      .transform((val) => (val.trim() !== '' ? val : undefined))
+      .pipe(urlValue.optional()),
     previewImage: optionalTrimmedString,
     siteName: optionalTrimmedString,
     locale: optionalTrimmedString,
@@ -445,6 +471,8 @@ const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
 
 export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ...NETWORK_RUNTIME_ENV_NAMES,
+  pulseClientKey: 'PUBKY_RUNTIME_PULSE_CLIENT_KEY',
+  pulseEndpoint: 'PUBKY_RUNTIME_PULSE_ENDPOINT',
   sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',
   sentryEnvironment: 'PUBKY_RUNTIME_SENTRY_ENVIRONMENT',
   sentryTracesSampleRate: 'PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE',
@@ -472,6 +500,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   preludeSdkTimeoutMs: 'PUBKY_RUNTIME_PRELUDE_SDK_TIMEOUT_MS',
   plausibleDomain: 'PUBKY_RUNTIME_PLAUSIBLE_DOMAIN',
   plausibleScriptUrl: 'PUBKY_RUNTIME_PLAUSIBLE_SCRIPT_URL',
+  passportUrl: 'PUBKY_RUNTIME_PASSPORT_URL',
   previewImage: 'PUBKY_RUNTIME_PREVIEW_IMAGE',
   siteName: 'PUBKY_RUNTIME_SITE_NAME',
   locale: 'PUBKY_RUNTIME_LOCALE',

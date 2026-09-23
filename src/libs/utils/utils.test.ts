@@ -30,6 +30,7 @@ import {
   isPubkyIdentifier,
   isSameDomain,
   isStarterPackReservedTag,
+  isUserDeleted,
   isValidPostCompositeId,
   isValidTagLabel,
   minutesAgo,
@@ -241,6 +242,10 @@ describe('Utils', () => {
       expect(result).toBe(formatPublicKey({ key: PUBKY }));
       expect(result).toContain('...');
       expect(result).not.toBe(PUBKY);
+    });
+
+    it('returns [DELETED] instead of the public key fallback for a deleted user', () => {
+      expect(resolveDisplayName({ name: '', id: PUBKY, deleted: true })).toBe('[DELETED]');
     });
   });
 
@@ -886,6 +891,35 @@ describe('Utils', () => {
     it('should return false for content containing "[DELETED]"', () => {
       expect(isPostDeleted('This post is [DELETED]')).toBe(false);
       expect(isPostDeleted('[DELETED] post')).toBe(false);
+    });
+  });
+
+  describe('isUserDeleted', () => {
+    it('returns true when Nexus flags the user as deleted', () => {
+      expect(isUserDeleted({ name: '', deleted: true })).toBe(true);
+    });
+
+    it('returns true for the legacy [DELETED] name sentinel without the flag', () => {
+      expect(isUserDeleted({ name: '[DELETED]' })).toBe(true);
+    });
+
+    it('returns false for a live user', () => {
+      expect(isUserDeleted({ name: 'Alice' })).toBe(false);
+      expect(isUserDeleted({ name: 'Alice', deleted: false })).toBe(false);
+    });
+
+    it('returns false for an empty name without the flag', () => {
+      expect(isUserDeleted({ name: '' })).toBe(false);
+    });
+
+    it('returns false for missing details', () => {
+      expect(isUserDeleted(null)).toBe(false);
+      expect(isUserDeleted(undefined)).toBe(false);
+    });
+
+    it('requires an exact sentinel match', () => {
+      expect(isUserDeleted({ name: '[deleted]' })).toBe(false);
+      expect(isUserDeleted({ name: 'Alice [DELETED]' })).toBe(false);
     });
   });
 

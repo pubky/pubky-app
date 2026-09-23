@@ -218,6 +218,34 @@ describe('PostHeader', () => {
     expect(screen.getByText('2h')).toBeInTheDocument();
   });
 
+  it.each([
+    ['flagged deleted by Nexus', { name: '', deleted: true }],
+    ['cached with the legacy name sentinel', { name: '[DELETED]' }],
+  ])('renders [DELETED] as the author name when the author is %s', (_label, author) => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: {
+        id: 'userpubkykey:post456',
+        indexed_at: Date.now(),
+        kind: 'short' as const,
+        uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
+        content: 'Hello',
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+      } as EnrichedPostDetails,
+      isLoading: false,
+    });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: { id: 'userpubkykey', image: null, ...author } as NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue(undefined);
+
+    renderPostHeader(<PostHeader postId="userpubkykey:post456" />);
+
+    expect(screen.getByText('[DELETED]')).toBeInTheDocument();
+  });
+
   it('renders a real post when the author profile query settles without details', () => {
     mockUsePostDetails.mockReturnValue({
       postDetails: {

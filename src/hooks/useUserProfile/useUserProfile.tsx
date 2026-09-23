@@ -4,7 +4,8 @@ import { getDefaultUrl } from '@/config/metadata';
 import { FileController } from '@/controllers/file/file';
 import { UserController } from '@/controllers/user/user';
 import { isLocalFirstQueryEnabled, useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import { withPubkyPrefix } from '@/libs/utils/utils';
+import { isUserDeleted, withPubkyPrefix } from '@/libs/utils/utils';
+import { DELETED_USER_NAME } from '@/libs/utils/utils.constants';
 import type { NexusUserDetails, NexusUserLink } from '@/services/nexus/nexus.types';
 
 export interface UserProfile {
@@ -27,6 +28,8 @@ export interface UseUserProfileResult {
 export interface UseUserProfileOptions {
   /** When false, skips local-first read/fetch (e.g. known-invalid pubky in URL). */
   enabled?: boolean;
+  /** Use the shorter not-found budget when rendering a profile page. */
+  profileLookup?: boolean;
 }
 
 /**
@@ -46,11 +49,12 @@ export interface UseUserProfileOptions {
  */
 export function useUserProfile(userId: string, options?: UseUserProfileOptions): UseUserProfileResult {
   const enabled = isLocalFirstQueryEnabled(userId, options?.enabled);
+  const profileLookup = options?.profileLookup;
 
   const { data: userDetails, isLoading } = useLocalFirstQuery<NexusUserDetails>({
     queryFn: () => UserController.getDetails({ userId }),
-    fetchFn: () => UserController.fetchDetails({ userId }),
-    deps: [userId, enabled],
+    fetchFn: () => UserController.fetchDetails({ userId, profileLookup }),
+    deps: [userId, enabled, profileLookup],
     enabled,
   });
 
@@ -68,7 +72,7 @@ export function useUserProfile(userId: string, options?: UseUserProfileOptions):
   const link = `${getDefaultUrl()}/profile/${userId}`;
 
   const profile: UserProfile = {
-    name: userDetails.name ?? '',
+    name: isUserDeleted(userDetails) ? DELETED_USER_NAME : (userDetails.name ?? ''),
     bio: userDetails.bio ?? '',
     publicKey,
     emoji: '🌴', // Default emoji, TODO: get from user data when available

@@ -188,6 +188,36 @@ describe('buildFallbackMetadata', () => {
   });
 });
 
+describe('hasOgMetadata', () => {
+  let hasOgMetadata: typeof import('./og-metadata.utils').hasOgMetadata;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    const mod = await import('./og-metadata.utils');
+    hasOgMetadata = mod.hasOgMetadata;
+  });
+
+  it('should return true for an og:title tag', () => {
+    expect(hasOgMetadata('<html><head><meta property="og:title" content="Title" /></head></html>')).toBe(true);
+  });
+
+  it('should return true for an og:image tag', () => {
+    expect(hasOgMetadata('<html><head><meta property="og:image" content="/img.png" /></head></html>')).toBe(true);
+  });
+
+  it('should return false for a page with only a <title> tag', () => {
+    expect(hasOgMetadata('<html><head><title>Reddit - The heart of the internet</title></head></html>')).toBe(false);
+  });
+
+  it('should return false for a head with no metadata', () => {
+    expect(hasOgMetadata('<html><head></head><body></body></html>')).toBe(false);
+  });
+
+  it('should return false for an empty og:title value', () => {
+    expect(hasOgMetadata('<html><head><meta property="og:title" content="" /></head></html>')).toBe(false);
+  });
+});
+
 describe('validateRedirectUrl', () => {
   let validateRedirectUrl: typeof import('./og-metadata.utils').validateRedirectUrl;
 

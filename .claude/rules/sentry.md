@@ -2,7 +2,7 @@
 paths:
   - "src/**/*"
 ---
-# Sentry Rules
+# Observability Rules (Sentry + Pulse)
 
 Read and follow `docs/sentry.md` before editing these files.
 

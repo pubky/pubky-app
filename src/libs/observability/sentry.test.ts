@@ -19,6 +19,7 @@ import { RUNTIME_CONFIG_WINDOW_KEY } from '@/libs/runtime-config/runtime-config'
 import { NETWORK_RUNTIME_DEFAULTS } from '@/libs/runtime-config/runtime-config.schema';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { getSentryInitBase } from './sentry';
+import { OBSERVABILITY_IGNORE_ERRORS } from './sentry.constants';
 import { shouldDropAppErrorFromSentry } from './sentry.utils';
 
 const TEST_PUBKY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
@@ -759,6 +760,10 @@ describe('Sentry tracing hooks wired into init base', () => {
 
   it('exposes beforeSendSpan as a function on getSentryInitBase()', () => {
     expect(getSentryInitBase().beforeSendSpan).toBeTypeOf('function');
+  });
+
+  it('takes its ignore policy from the constant the optional Pulse sink also spreads', () => {
+    expect(getSentryInitBase().ignoreErrors).toEqual([...OBSERVABILITY_IGNORE_ERRORS]);
   });
 });
 
