@@ -26,7 +26,9 @@ vi.mock('dexie-react-hooks', () => ({
     if (queryFn) {
       void queryFn();
     }
-    return mockMocks.mockUserDetails.current;
+    return mockMocks.mockUserDetails.current === undefined
+      ? undefined
+      : { query: _deps[0], data: mockMocks.mockUserDetails.current };
   }),
 }));
 

@@ -35,12 +35,12 @@ const {
 
 // Mock dexie-react-hooks
 vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: vi.fn((queryFn) => {
+  useLiveQuery: vi.fn((queryFn, deps) => {
     // Execute the query function to return mock data
     if (queryFn) {
       void queryFn();
     }
-    return mockUserCounts.current;
+    return mockUserCounts.current === undefined ? undefined : { query: deps[0], data: mockUserCounts.current };
   }),
 }));
 
