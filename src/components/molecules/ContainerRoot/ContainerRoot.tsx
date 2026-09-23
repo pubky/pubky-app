@@ -33,8 +33,6 @@ export function RootContainer({ children }: RootContainerProps) {
   return (
     <Container as="html" lang="en-US" dir="ltr">
       <Container as="body" className={`${interTight.variable} antialiased`}>
-        <link rel="preconnect" href={cdnOrigin} />
-        <link rel="preconnect" href={nexusOrigin} crossOrigin="anonymous" />
         {/*
           Publish runtime config before any Next.js bundle executes. This must stay a RAW
           <script> element rendered first in <body>: App Router's next/script with
@@ -46,6 +44,13 @@ export function RootContainer({ children }: RootContainerProps) {
           NOTE: if a Content-Security-Policy is added later, this inline script needs a nonce.
         */}
         <script id="pubky-runtime-config" dangerouslySetInnerHTML={{ __html: serializeRuntimeConfig() }} />
+        {/*
+          React hoists both hints into <head> (they are host-hoistable `link` elements), so
+          their position here is for readability: the runtime-config script above stays the
+          first element in <body>, as its own comment requires.
+        */}
+        <link rel="preconnect" href={cdnOrigin} />
+        <link rel="preconnect" href={nexusOrigin} crossOrigin="anonymous" />
         {plausibleDomain && plausibleScriptUrl && (
           <Script
             data-domain={plausibleDomain}

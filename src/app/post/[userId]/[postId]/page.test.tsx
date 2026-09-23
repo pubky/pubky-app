@@ -3,6 +3,7 @@ import { render } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
+import { SinglePostPage } from '@/templates/Post/SinglePost/SinglePostPage';
 import PostPage, { generateMetadata } from './page';
 
 /**
@@ -11,7 +12,9 @@ import PostPage, { generateMetadata } from './page';
  */
 const getPostElement = (element: ReactElement): ReactElement<{ postId: string }> => {
   const children = (element.props as { children: ReactElement[] }).children;
-  return children.find((child) => child && child.type !== 'link') as ReactElement<{ postId: string }>;
+  const post = children.find((child) => child?.type === SinglePostPage);
+  if (!post) throw new Error('PostPage did not render SinglePostPage');
+  return post as ReactElement<{ postId: string }>;
 };
 
 vi.mock('@/templates/Post/SinglePost/SinglePost', () => ({
@@ -244,6 +247,7 @@ describe('PostPage (collection redirect)', () => {
 
     expect(permanentRedirect).not.toHaveBeenCalled();
     expect(getPostElement(element).props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
+    expect(document.querySelector('link[rel="preload"]')).toBeNull();
   });
 });
 
@@ -274,7 +278,9 @@ describe('PostPage (cover preload)', () => {
       attachments: [FILE_URI],
     });
 
-    const preload = document.querySelector('link[rel="preload"]');
+    const preloads = document.querySelectorAll('link[rel="preload"]');
+    expect(preloads).toHaveLength(1);
+    const preload = preloads[0];
     expect(preload).toHaveAttribute('as', 'image');
     expect(preload).toHaveAttribute(
       'href',
@@ -297,5 +303,27 @@ describe('PostPage (cover preload)', () => {
     await renderPost({ kind: 'short', content: 'gm', attachments: [FILE_URI] });
 
     expect(document.querySelector('link[rel="preload"]')).toBeNull();
+  });
+
+  it('hands the client the normalised ids the preload was built from', async () => {
+    // A crawler-mangled segment (`post-1%5Cn` decodes to `post-1` plus a literal escape
+    // sequence) must reach the client as the post the preload describes, not as the raw
+    // segment Nexus rejects.
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          kind: 'long',
+          content: JSON.stringify({ title: 'Article', body: 'Body' }),
+          attachments: [FILE_URI],
+        }),
+      );
+
+    const element = await PostPage({ params: Promise.resolve({ userId: AUTHOR, postId: 'post-1%5Cn' }) });
+
+    expect(getPostElement(element).props.postId).toBe(`${AUTHOR}:post-1`);
+
+    render(element);
+    expect(document.querySelector('link[rel="preload"]')).not.toBeNull();
   });
 });
