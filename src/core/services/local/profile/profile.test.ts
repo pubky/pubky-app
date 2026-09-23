@@ -77,6 +77,34 @@ describe('LocalProfileService', () => {
       indexed_at: 1,
     };
 
+    it('keeps a newer profile and its social graph tier when an older response arrives', async () => {
+      const newerDetails = {
+        ...baseDetails,
+        name: 'Newer name',
+        bio: 'Newer bio',
+        image: 'https://example.com/new-avatar.jpg',
+        status: 'Available',
+        links: [{ title: 'Website', url: 'https://example.com' }],
+        indexed_at: 2,
+        nexusIndexedAt: 2,
+        social_graph_status: NexusSocialGraphStatus.NETWORKED,
+      };
+      await UserDetailsModel.upsert(newerDetails);
+
+      await LocalProfileService.upsertDetails(baseDetails);
+
+      expect(await UserDetailsModel.findById(userId)).toMatchObject(newerDetails);
+    });
+
+    it.each([true, false])('keeps the newer concurrent write (older first: %s)', async (olderFirst) => {
+      const newerDetails = { ...baseDetails, name: 'Newer name', indexed_at: 2 };
+      const details = olderFirst ? [baseDetails, newerDetails] : [newerDetails, baseDetails];
+
+      await Promise.all(details.map((user) => LocalProfileService.upsertDetails(user)));
+
+      expect(await UserDetailsModel.findById(userId)).toMatchObject(newerDetails);
+    });
+
     it('should keep a social graph tier persisted by a full user view', async () => {
       await UserDetailsModel.upsert({ ...baseDetails, social_graph_status: NexusSocialGraphStatus.NETWORKED });
 

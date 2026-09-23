@@ -28,6 +28,8 @@ export interface UseUserProfileResult {
 export interface UseUserProfileOptions {
   /** When false, skips local-first read/fetch (e.g. known-invalid pubky in URL). */
   enabled?: boolean;
+  /** Use the shorter not-found budget when rendering a profile page. */
+  profileLookup?: boolean;
 }
 
 /**
@@ -47,11 +49,12 @@ export interface UseUserProfileOptions {
  */
 export function useUserProfile(userId: string, options?: UseUserProfileOptions): UseUserProfileResult {
   const enabled = isLocalFirstQueryEnabled(userId, options?.enabled);
+  const profileLookup = options?.profileLookup;
 
   const { data: userDetails, isLoading } = useLocalFirstQuery<NexusUserDetails>({
     queryFn: () => UserController.getDetails({ userId }),
-    fetchFn: () => UserController.fetchDetails({ userId }),
-    deps: [userId, enabled],
+    fetchFn: () => UserController.fetchDetails({ userId, profileLookup }),
+    deps: [userId, enabled, profileLookup],
     enabled,
   });
 

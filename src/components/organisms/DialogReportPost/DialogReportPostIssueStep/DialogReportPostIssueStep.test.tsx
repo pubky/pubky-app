@@ -52,9 +52,45 @@ describe('DialogReportPostIssueStep', () => {
       const label = REPORT_ISSUE_LABELS[issueType];
       expect(screen.getByText(label)).toBeInTheDocument();
     });
+    expect(screen.getAllByRole('option')).toHaveLength(9);
   });
 
-  it('calls onSelectIssueType with correct issue type when Next button is clicked after selecting issue', async () => {
+  it('requires one selection and continues with the most recently selected issue', async () => {
+    const user = userEvent.setup();
+    renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
+
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    const personalInfo = screen.getByRole('option', { name: REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.PERSONAL_INFO] });
+    const hateSpeech = screen.getByRole('option', { name: REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.HATE_SPEECH] });
+    expect(continueButton).toBeDisabled();
+
+    await user.click(personalInfo);
+    expect(continueButton).toBeEnabled();
+    expect(personalInfo).toHaveAttribute('aria-selected', 'true');
+    await user.click(hateSpeech);
+    expect(personalInfo).toHaveAttribute('aria-selected', 'false');
+    expect(hateSpeech).toHaveAttribute('aria-selected', 'true');
+    expect(mockOnSelectIssueType).not.toHaveBeenCalled();
+
+    await user.click(continueButton);
+    expect(mockOnSelectIssueType).toHaveBeenCalledExactlyOnceWith(REPORT_ISSUE_TYPES.HATE_SPEECH);
+  });
+
+  it('renders the footer as a primary Continue action and an outline Cancel action', () => {
+    renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
+
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+
+    expect(continueButton).toHaveAttribute('data-variant', 'default');
+    expect(cancelButton).toHaveAttribute('data-variant', 'outline');
+    // Match the mobile design's Cancel-first column and the desktop's trailing Continue action.
+    expect(cancelButton.nextElementSibling).toBe(continueButton);
+    expect(cancelButton.className).not.toMatch(/\border-/);
+    expect(continueButton.className).not.toMatch(/\border-/);
+  });
+
+  it('calls onSelectIssueType with correct issue type when Continue button is clicked after selecting issue', async () => {
     const user = userEvent.setup();
     renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
 
@@ -62,8 +98,8 @@ describe('DialogReportPostIssueStep', () => {
     const firstIssueButton = screen.getByLabelText(REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.PERSONAL_INFO]);
     await user.click(firstIssueButton);
 
-    // Then click Next button (translated to "Next" from common.next)
-    const nextButton = screen.getByRole('button', { name: 'Next' });
+    // Then click the Continue action
+    const nextButton = screen.getByRole('button', { name: 'Continue' });
     await user.click(nextButton);
 
     expect(mockOnSelectIssueType).toHaveBeenCalledWith(REPORT_ISSUE_TYPES.PERSONAL_INFO);
@@ -80,7 +116,7 @@ describe('DialogReportPostIssueStep', () => {
     expect(mockOnCancel).toHaveBeenCalled();
   });
 
-  it('redirects to /copyright and closes dialog when copyright infringement is selected and Next is clicked', async () => {
+  it('redirects to /copyright and closes dialog when copyright infringement is selected and Continue is clicked', async () => {
     const user = userEvent.setup();
     renderWithDialog(
       <DialogReportPostIssueStep
@@ -94,8 +130,8 @@ describe('DialogReportPostIssueStep', () => {
     const copyrightButton = screen.getByLabelText(REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.COPYRIGHT]);
     await user.click(copyrightButton);
 
-    // Click Next button (translated to "Next" from common.next)
-    const nextButton = screen.getByRole('button', { name: 'Next' });
+    // Click the Continue action
+    const nextButton = screen.getByRole('button', { name: 'Continue' });
     await user.click(nextButton);
 
     // Should close dialog and redirect to /copyright
@@ -119,8 +155,8 @@ describe('DialogReportPostIssueStep', () => {
     const personalInfoButton = screen.getByLabelText(REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.PERSONAL_INFO]);
     await user.click(personalInfoButton);
 
-    // Click Next button (translated to "Next" from common.next)
-    const nextButton = screen.getByRole('button', { name: 'Next' });
+    // Click the Continue action
+    const nextButton = screen.getByRole('button', { name: 'Continue' });
     await user.click(nextButton);
 
     // Should call onSelectIssueType normally
@@ -135,10 +171,15 @@ describe('DialogReportPostIssueStep - Snapshots', () => {
   const mockOnSelectIssueType = vi.fn();
   const mockOnCancel = vi.fn();
 
-  it('matches snapshot', () => {
-    const { container } = renderWithDialog(
-      <DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
+  it('matches the issue selection snapshot', () => {
+    renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches the selected issue snapshot', async () => {
+    const user = userEvent.setup();
+    renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
+    await user.click(screen.getByRole('option', { name: REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.HATE_SPEECH] }));
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
   });
 });

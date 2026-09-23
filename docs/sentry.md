@@ -46,6 +46,15 @@ Global-handler noise that is not an `AppError` (extension `inpage.js`, native we
 
 The two route-segment error boundaries (`app/error.tsx`, `app/global-error.tsx`) guard their `Sentry.captureException` and `Pulse.captureException` calls with `if (!(error instanceof AppError))` so an `AppError` thrown during render isn't captured twice (once by the factory, once by the boundary).
 
+### Stale chunk recovery after a deploy
+
+A tab left open across a deploy keeps the previous build's asset manifest, so a chunk it lazily loads can fail with `ChunkLoadError` (`Loading chunk <id> failed.`). Both boundaries recognise it (`isChunkLoadError`) and reload the page once to pick up the current build, so the missing chunk exists again.
+
+- The reload is a `chunk-load` breadcrumb, never a captured error: it is expected after a deploy and self-heals. The usual `Logger.error` line and `captureException` call are skipped for it.
+- `claimStaleChunkReload` writes the running `NEXT_PUBLIC_APP_VERSION` to `pubky-app:chunk-load-recovery` in `sessionStorage` **before** reloading. A genuinely broken build (the chunk is missing from the deployed artifact too) therefore reloads once, fails again, and stays on the terminal error UI instead of looping; a tab that survives a second deploy can recover again.
+- When `sessionStorage` is unavailable (private mode, disabled storage) nothing is written and no reload happens: without a durable guard the reload could loop forever, so the boundary keeps its terminal error state.
+- `src/libs/chunk-load/chunkLoadRecovery.ts`
+
 For future Server Actions, wrap with `Sentry.withServerActionInstrumentation('actionName', { headers: await headers() }, async () => { ... })` so server-action errors are captured and traces stitch with the client.
 
 ### OG metadata enrichment
