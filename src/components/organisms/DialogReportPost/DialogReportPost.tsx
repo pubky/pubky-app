@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
 import { useReportPost } from '@/hooks/useReportPost/useReportPost';
 import { REPORT_POST_STEPS } from '@/hooks/useReportPost/useReportPost.constants';
 import type { DialogReportPostProps } from './DialogReportPost.types';
@@ -63,11 +63,7 @@ export function DialogReportPost({ open, onOpenChange, postId }: DialogReportPos
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-xl" hiddenTitle="Report Post" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle className="sr-only">Report Post</DialogTitle>
-          <DialogDescription className="sr-only">Report post dialog</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="w-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
         {renderContent()}
       </DialogContent>
     </Dialog>
