@@ -13,6 +13,25 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+// Join entry: fair-access step unless Pubky Passport is enabled on this page.
+const mockJoinRoute = vi.hoisted(() => ({ value: '/onboarding/human' }));
+vi.mock('@/hooks/useJoinRoute/useJoinRoute', () => ({
+  useJoinRoute: () => mockJoinRoute.value,
+}));
+
+// Pubky Passport hooks: disabled by default, tests opt in.
+const passportMocks = vi.hoisted(() => ({
+  eligibility: 'disabled' as 'pending' | 'enabled' | 'disabled',
+  isPending: false,
+  startPassportAuth: vi.fn(),
+}));
+vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
+  usePassportEligibility: () => passportMocks.eligibility,
+}));
+vi.mock('@/hooks/usePassportAuth/usePassportAuth', () => ({
+  usePassportAuth: () => ({ startPassportAuth: passportMocks.startPassportAuth, isPending: passportMocks.isPending }),
+}));
+
 // Mock molecules
 vi.mock('@/molecules/ActionButtons/ActionButtons', () => {
   return {
@@ -20,10 +39,14 @@ vi.mock('@/molecules/ActionButtons/ActionButtons', () => {
       onCreateAccount,
       onExplore,
       onLearn,
+      onContinueWithGoogle,
+      isContinueWithGooglePending,
     }: {
       onCreateAccount: () => void;
       onExplore?: () => void;
       onLearn?: () => void;
+      onContinueWithGoogle?: () => void;
+      isContinueWithGooglePending?: boolean;
     }) => (
       <div data-testid="action-buttons">
         <button data-testid="learn-button" onClick={onLearn}>
@@ -35,6 +58,15 @@ vi.mock('@/molecules/ActionButtons/ActionButtons', () => {
         <button data-testid="explore-button" onClick={onExplore}>
           Explore
         </button>
+        {onContinueWithGoogle && (
+          <button
+            data-testid="continue-with-google-button"
+            onClick={onContinueWithGoogle}
+            disabled={isContinueWithGooglePending}
+          >
+            Continue with Google
+          </button>
+        )}
       </div>
     ),
   };
@@ -63,6 +95,18 @@ vi.mock('@/organisms/DialogTerms/DialogTerms', () => {
 vi.mock('@/config/externalLinks', () => ({
   PUBKY_CORE_URL: 'https://github.com/pubky/pubky-core',
   getPubkyCoreLink: () => 'https://github.com/pubky/pubky-core',
+  getGithubLink: () => 'https://github.com/pubky',
+  getTwitterGetpubkyLink: () => 'https://x.com/getpubky',
+  getTelegramLink: () => 'https://t.me/pubkychat',
+}));
+
+// Social links moved from the landing navbar into the hero footer (design 41492-354461).
+vi.mock('../Header/Header', () => ({
+  HeaderSocialLinks: ({ className }: { className?: string }) => (
+    <div data-testid="header-social-links" className={className}>
+      Social Links
+    </div>
+  ),
 }));
 
 // Mock atoms
@@ -182,6 +226,47 @@ describe('HomeActions', () => {
     expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.HUMAN);
   });
 
+  it('routes Join now to the Join step when Passport is enabled', () => {
+    mockJoinRoute.value = ONBOARDING_ROUTES.JOIN;
+    render(<HomeActions />);
+
+    fireEvent.click(screen.getByTestId('create-account-button'));
+
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.JOIN);
+    mockJoinRoute.value = ONBOARDING_ROUTES.HUMAN;
+  });
+
+  it('hides Continue with Google while Passport eligibility is pending or disabled', () => {
+    passportMocks.eligibility = 'pending';
+    const { unmount } = render(<HomeActions />);
+    expect(screen.queryByTestId('continue-with-google-button')).not.toBeInTheDocument();
+    unmount();
+
+    passportMocks.eligibility = 'disabled';
+    render(<HomeActions />);
+    expect(screen.queryByTestId('continue-with-google-button')).not.toBeInTheDocument();
+  });
+
+  it('starts a Passport attempt from Continue with Google when enabled', () => {
+    passportMocks.eligibility = 'enabled';
+    render(<HomeActions />);
+
+    fireEvent.click(screen.getByTestId('continue-with-google-button'));
+
+    expect(passportMocks.startPassportAuth).toHaveBeenCalledTimes(1);
+    passportMocks.eligibility = 'disabled';
+  });
+
+  it('disables Continue with Google while an attempt is pending', () => {
+    passportMocks.eligibility = 'enabled';
+    passportMocks.isPending = true;
+    render(<HomeActions />);
+
+    expect(screen.getByTestId('continue-with-google-button')).toBeDisabled();
+    passportMocks.eligibility = 'disabled';
+    passportMocks.isPending = false;
+  });
+
   it('handles explore button click', () => {
     render(<HomeActions />);
 
@@ -212,6 +297,12 @@ describe('HomeFooter', () => {
 
     expect(screen.getByAltText('Synonym')).toBeInTheDocument();
     expect(screen.getByAltText('a tether. company')).toBeInTheDocument();
+  });
+
+  it('renders the social links beside the brand endorsement', () => {
+    render(<HomeFooter />);
+
+    expect(screen.getByTestId('header-social-links')).toBeInTheDocument();
   });
 });
 

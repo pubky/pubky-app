@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   APP_RUNTIME_DEFAULTS,
   NETWORK_RUNTIME_DEFAULTS,
+  PASSPORT_RUNTIME_DEFAULTS,
   runtimeConfigValueSchema,
   runtimeEnvInputSchema,
   runtimeEnvInputSchemaWithDefaults,
@@ -260,7 +261,12 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     const parsed = runtimeEnvInputSchemaWithDefaults.parse({});
 
     // Defaults must come out PARSED, not as strings.
-    expect(parsed).toEqual({ ...NETWORK_RUNTIME_DEFAULTS, ...SENTRY_RUNTIME_DEFAULTS, ...APP_RUNTIME_DEFAULTS });
+    expect(parsed).toEqual({
+      ...NETWORK_RUNTIME_DEFAULTS,
+      ...SENTRY_RUNTIME_DEFAULTS,
+      ...APP_RUNTIME_DEFAULTS,
+      ...PASSPORT_RUNTIME_DEFAULTS,
+    });
     expect(Array.isArray(parsed.pkarrRelays)).toBe(true);
     expect(typeof parsed.testnet).toBe('boolean');
     expect(parsed.moderationId).toBe(APP_RUNTIME_DEFAULTS.moderationId);
@@ -295,5 +301,25 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     expect(() => runtimeEnvInputSchemaWithDefaults.parse({ moderationId: 'moderation-key' })).toThrow(
       'Expected a 52-character z-base-32 Pubky',
     );
+  });
+
+  it('defaults passportUrl to the staging Passport only in lenient mode', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({}).passportUrl).toBe(PASSPORT_RUNTIME_DEFAULTS.passportUrl);
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).passportUrl).toBeUndefined();
+  });
+
+  it('lets an explicit blank passportUrl disable Passport in lenient mode', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ passportUrl: '' }).passportUrl).toBeUndefined();
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ passportUrl: '   ' }).passportUrl).toBeUndefined();
+  });
+
+  it('honors a provided passportUrl and rejects a malformed one', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ passportUrl: 'https://passport.example.com' }).passportUrl).toBe(
+      'https://passport.example.com',
+    );
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, passportUrl: 'https://passport.example.com' }).passportUrl,
+    ).toBe('https://passport.example.com');
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, passportUrl: 'not-a-url' })).toThrow();
   });
 });

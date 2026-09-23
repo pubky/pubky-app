@@ -11,6 +11,8 @@ import type { FileVariant } from '@/services/nexus/file/file.types';
 
 interface CoverImage {
   src: string;
+  /** Set when a desktop variant was requested: the same file at its larger size. */
+  desktopSrc?: string;
   alt: string;
 }
 
@@ -18,6 +20,11 @@ interface UsePostArticleParams {
   content: string;
   attachments: PostDetailsModel['attachments'];
   coverImageVariant: FileVariant;
+  /**
+   * Second, larger source for surfaces that render the cover at full width (the article hero).
+   * Left unset by feed-sized surfaces, which never want the original upload.
+   */
+  coverImageDesktopVariant?: FileVariant;
 }
 
 interface UsePostArticleResult {
@@ -57,6 +64,7 @@ export function usePostArticle({
   content,
   attachments,
   coverImageVariant,
+  coverImageDesktopVariant,
 }: UsePostArticleParams): UsePostArticleResult {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -94,7 +102,13 @@ export function usePostArticle({
 
   const coverImage: CoverImage | null =
     coverFile && coverFile.content_type.startsWith('image')
-      ? { src: FileController.getFileUrl({ fileId: coverFile.id, variant: coverImageVariant }), alt: coverFile.name }
+      ? {
+          src: FileController.getFileUrl({ fileId: coverFile.id, variant: coverImageVariant }),
+          desktopSrc: coverImageDesktopVariant
+            ? FileController.getFileUrl({ fileId: coverFile.id, variant: coverImageDesktopVariant })
+            : undefined,
+          alt: coverFile.name,
+        }
       : null;
 
   return {

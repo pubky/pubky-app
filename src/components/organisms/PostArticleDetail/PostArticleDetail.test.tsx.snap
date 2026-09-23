@@ -145,12 +145,21 @@ exports[`PostArticleDetail > matches snapshot with cover image 1`] = `
         Repost
       </button>
     </div>
-    <img
-      alt="Article cover"
-      class="mb-6 aspect-video w-full rounded-md object-cover object-center"
-      data-testid="cover-image"
-      src="https://example.com/cover.jpg"
-    />
+    <picture>
+      <source
+        media="(min-width: 1024px)"
+      />
+      <img
+        alt="Article cover"
+        class="mb-6 aspect-video w-full rounded-md object-cover object-center"
+        decoding="async"
+        fetchpriority="high"
+        height="600"
+        loading="eager"
+        src="https://example.com/cover.jpg"
+        width="800"
+      />
+    </picture>
     <div
       data-full-article="true"
       data-is-article="true"

@@ -49,7 +49,7 @@ interface HomeStoreOptions {
  * Return type for controller spies
  */
 interface ControllerSpies {
-  getStreamHeadSpy: ReturnType<typeof vi.spyOn>;
+  getOrFetchStreamHeadSpy: ReturnType<typeof vi.spyOn>;
   getOrFetchStreamSliceSpy: ReturnType<typeof vi.spyOn>;
 }
 
@@ -110,13 +110,15 @@ function setupHomeStore(options: HomeStoreOptions = {}): HomeStoreSetup {
 
 /** Sets up controller spies (mocks IO boundaries only, not utilities) */
 function setupControllerSpies(streamHeadValue = 1_000_000_000): ControllerSpies {
-  const getStreamHeadSpy = vi.spyOn(StreamPostsController, 'getStreamHead').mockResolvedValue(streamHeadValue);
+  const getOrFetchStreamHeadSpy = vi
+    .spyOn(StreamPostsController, 'getOrFetchStreamHead')
+    .mockResolvedValue(streamHeadValue);
 
   const getOrFetchStreamSliceSpy = vi
     .spyOn(StreamPostsController, 'getOrFetchStreamSlice')
     .mockResolvedValue({ nextPageIds: [], nextCursor: 0 });
 
-  return { getStreamHeadSpy, getOrFetchStreamSliceSpy };
+  return { getOrFetchStreamHeadSpy, getOrFetchStreamSliceSpy };
 }
 
 // -----------------------------------------------------------------------------
@@ -138,7 +140,7 @@ function setupIntegrationTest(
   const { homeStoreState, unsubscribeSpy } = setupHomeStore(options.homeStore);
 
   // Setup controller spies
-  const { getStreamHeadSpy, getOrFetchStreamSliceSpy } = setupControllerSpies(options.streamHead);
+  const { getOrFetchStreamHeadSpy, getOrFetchStreamSliceSpy } = setupControllerSpies(options.streamHead);
 
   // Get coordinator instance
   const coordinator = StreamCoordinator.getInstance();
@@ -147,7 +149,7 @@ function setupIntegrationTest(
     coordinator,
     homeStoreState,
     unsubscribeSpy,
-    getStreamHeadSpy,
+    getOrFetchStreamHeadSpy,
     getOrFetchStreamSliceSpy,
   };
 }
@@ -369,7 +371,7 @@ describe('StreamCoordinator', () => {
 
     it('removes home store subscription on destroy()', () => {
       const unsubscribeSpy = vi.fn();
-      vi.spyOn(StreamPostsController, 'getStreamHead').mockResolvedValue(1_000_000_000);
+      vi.spyOn(StreamPostsController, 'getOrFetchStreamHead').mockResolvedValue(1_000_000_000);
       vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds: [],
         nextCursor: 0,
@@ -517,7 +519,7 @@ describe('StreamCoordinator', () => {
     });
 
     it('resets stream head and polls with new stream when user changes filters', async () => {
-      const { getStreamHeadSpy, getOrFetchStreamSliceSpy, coordinator, homeStoreState } = setupIntegrationTest();
+      const { getOrFetchStreamHeadSpy, getOrFetchStreamSliceSpy, coordinator, homeStoreState } = setupIntegrationTest();
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute(APP_ROUTES.HOME);
       coordinator.start();
@@ -526,8 +528,8 @@ describe('StreamCoordinator', () => {
       await flushPromises();
       vi.advanceTimersByTime(1_000);
       await flushPromises();
-      expect(getStreamHeadSpy).toHaveBeenCalled();
-      const initialHeadCalls = getStreamHeadSpy.mock.calls.length;
+      expect(getOrFetchStreamHeadSpy).toHaveBeenCalled();
+      const initialHeadCalls = getOrFetchStreamHeadSpy.mock.calls.length;
       const initialSliceCalls = getOrFetchStreamSliceSpy.mock.calls.length;
 
       // User changes filter reach: ALL → FOLLOWING (simulates clicking filter)
@@ -543,7 +545,7 @@ describe('StreamCoordinator', () => {
       await flushPromises();
 
       // Should re-fetch stream head and continue polling with new stream
-      expect(getStreamHeadSpy.mock.calls.length).toBeGreaterThan(initialHeadCalls);
+      expect(getOrFetchStreamHeadSpy.mock.calls.length).toBeGreaterThan(initialHeadCalls);
       expect(getOrFetchStreamSliceSpy.mock.calls.length).toBeGreaterThan(initialSliceCalls);
     });
   });
@@ -904,7 +906,7 @@ describe('StreamCoordinator', () => {
 
   describe('Stream Head Resolution', () => {
     it('does not poll when stream head cannot be resolved', async () => {
-      const { getStreamHeadSpy, getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest({
+      const { getOrFetchStreamHeadSpy, getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest({
         streamHead: SKIP_FETCH_NEW_POSTS,
       });
 
@@ -914,13 +916,13 @@ describe('StreamCoordinator', () => {
 
       await flushPromises();
 
-      expect(getStreamHeadSpy).toHaveBeenCalled();
+      expect(getOrFetchStreamHeadSpy).toHaveBeenCalled();
       expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
     });
 
     it('does not poll when stream head is invalid', async () => {
-      const { getStreamHeadSpy, getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
-      getStreamHeadSpy.mockResolvedValue(-1); // Invalid timestamp
+      const { getOrFetchStreamHeadSpy, getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      getOrFetchStreamHeadSpy.mockResolvedValue(-1); // Invalid timestamp
 
       coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute(APP_ROUTES.HOME);
@@ -928,14 +930,14 @@ describe('StreamCoordinator', () => {
 
       await flushPromises();
 
-      expect(getStreamHeadSpy).toHaveBeenCalled();
+      expect(getOrFetchStreamHeadSpy).toHaveBeenCalled();
       expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
     });
 
     it('passes correct stream head to controller', async () => {
-      const { getStreamHeadSpy, getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      const { getOrFetchStreamHeadSpy, getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
       const expectedStreamHead = 1_500_000_000; // Unix timestamp
-      getStreamHeadSpy.mockResolvedValue(expectedStreamHead);
+      getOrFetchStreamHeadSpy.mockResolvedValue(expectedStreamHead);
 
       coordinator.configure({ pollOnStart: true, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
       coordinator.setRoute(APP_ROUTES.HOME);
@@ -983,6 +985,23 @@ describe('StreamCoordinator', () => {
   });
 
   describe('Main Polling Behavior', () => {
+    it('does not continue an old poll after navigating during unread hydration', async () => {
+      const { getOrFetchStreamHeadSpy, getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      const head = Promise.withResolvers<number>();
+      getOrFetchStreamHeadSpy.mockReturnValueOnce(head.promise);
+      coordinator.configure({ pollOnStart: true });
+      await coordinator.setRoute(APP_ROUTES.HOME);
+      await coordinator.start();
+      await flushPromises();
+      expect(getOrFetchStreamHeadSpy).toHaveBeenCalledTimes(1);
+
+      await coordinator.setRoute(APP_ROUTES.SETTINGS);
+      head.resolve(1_000_000_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
+    });
+
     it('polls on interval when started', async () => {
       const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
@@ -1165,8 +1184,8 @@ describe('StreamCoordinator', () => {
 
     it('continues polling despite transient errors', async () => {
       const { coordinator } = setupIntegrationTest();
-      const getStreamHeadSpy = vi
-        .spyOn(StreamPostsController, 'getStreamHead')
+      const getOrFetchStreamHeadSpy = vi
+        .spyOn(StreamPostsController, 'getOrFetchStreamHead')
         .mockRejectedValueOnce(new Error('network timeout'))
         .mockResolvedValue(1_000_000_000);
 
@@ -1179,13 +1198,13 @@ describe('StreamCoordinator', () => {
       vi.advanceTimersByTime(1_000);
       await flushPromises();
 
-      expect(getStreamHeadSpy).toHaveBeenCalledTimes(2); // Tried again after failure
+      expect(getOrFetchStreamHeadSpy).toHaveBeenCalledTimes(2); // Tried again after failure
     });
 
     it('recovers automatically from multiple consecutive network failures', async () => {
       const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
-      const getStreamHeadSpy = vi
-        .spyOn(StreamPostsController, 'getStreamHead')
+      const getOrFetchStreamHeadSpy = vi
+        .spyOn(StreamPostsController, 'getOrFetchStreamHead')
         .mockRejectedValueOnce(new Error('network timeout'))
         .mockRejectedValueOnce(new Error('network timeout'))
         .mockResolvedValue(1_000_000_000); // Network recovers
@@ -1197,20 +1216,20 @@ describe('StreamCoordinator', () => {
       await flushPromises();
 
       // Poll 1: Fails
-      expect(getStreamHeadSpy).toHaveBeenCalledTimes(1);
+      expect(getOrFetchStreamHeadSpy).toHaveBeenCalledTimes(1);
       expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
 
       // Poll 2: Fails
       vi.advanceTimersByTime(1_000);
       await flushPromises();
-      expect(getStreamHeadSpy).toHaveBeenCalledTimes(2);
+      expect(getOrFetchStreamHeadSpy).toHaveBeenCalledTimes(2);
       expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
 
       // Poll 3: Succeeds (network recovered)
       vi.advanceTimersByTime(1_000);
       await flushPromises();
 
-      expect(getStreamHeadSpy).toHaveBeenCalledTimes(3);
+      expect(getOrFetchStreamHeadSpy).toHaveBeenCalledTimes(3);
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalled();
     });
 

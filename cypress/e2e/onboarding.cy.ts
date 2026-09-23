@@ -165,7 +165,9 @@ describe('Onboarding', () => {
   });
 
   it('can use Explore mode without signing in and shows Join Pubky dialog when clicking new post button', () => {
-    cy.get('[data-cy="explore-btn"]').should('be.visible').click();
+    // Explore lives in the navbar on desktop and in the hero action row below `md`
+    const exploreBtn = Cypress.expose('isMobile') ? '[data-cy="explore-btn"]' : '#header-explore-btn';
+    cy.get(exploreBtn).should('be.visible').click();
 
     waitForFeedToLoad();
 

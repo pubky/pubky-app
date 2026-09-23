@@ -17,6 +17,7 @@ interface NewPostsSectionProps {
   variant: TimelineFeedVariant;
   postIds: string[];
   mutedUserIdSet: Set<Pubky>;
+  mutedUsersLoading: boolean;
   loading: boolean;
   prependPosts: (postIds: string | string[]) => Promise<void>;
 }
@@ -35,13 +36,14 @@ interface NewPostsSectionProps {
  * `useStreamPagination`) — it does not choose which stream a post belongs to in
  * Dexie. Before prepending, we drop ids whose `kind` does not match the active
  * `streamId` content filter so a post never flashes at the top of the wrong tab.
- * The merge above still persists unread ids into the stream; this gate is UI-only.
+ * Acknowledgement persists the selected unread ids into the stream; this gate is UI-only.
  */
 export function NewPostsSection({
   streamId,
   variant,
   postIds,
   mutedUserIdSet,
+  mutedUsersLoading,
   loading,
   prependPosts,
 }: NewPostsSectionProps) {
@@ -53,13 +55,15 @@ export function NewPostsSection({
   const actualNewPostIds =
     variant === TIMELINE_FEED_VARIANT.BOOKMARKS
       ? notDisplayed
-      : MuteFilter.filterPostsSafe(notDisplayed, mutedUserIdSet);
+      : mutedUsersLoading
+        ? []
+        : MuteFilter.filterPostsSafe(notDisplayed, mutedUserIdSet);
   const actualNewCount = actualNewPostIds.length;
 
   const handleNewPostsClick = async () => {
     try {
-      await StreamPostsController.mergeUnreadStreamWithPostStream({ streamId });
-      await StreamPostsController.clearUnreadStream({ streamId });
+      // Pending details and posts arriving after this render remain unread.
+      await StreamPostsController.markUnreadPostsAsRead({ streamId, postIds: actualNewPostIds });
 
       const existingPosts = await StreamPostsController.filterDeletedPosts(actualNewPostIds);
       const displayedPostIdsSet = new Set(postIds);
