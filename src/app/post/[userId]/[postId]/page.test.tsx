@@ -1,7 +1,22 @@
 import { permanentRedirect } from 'next/navigation';
+import { render } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
+import { POST_COVER_DESKTOP_MEDIA, POST_COVER_MOBILE_MEDIA } from '@/libs/post/postCoverVariant';
+import { SinglePostPage } from '@/templates/Post/SinglePost/SinglePostPage';
 import PostPage, { generateMetadata } from './page';
+
+/**
+ * The page returns `[preload link?, SinglePostPage]`, so the post element is the
+ * child that is not the image preload.
+ */
+const getPostElement = (element: ReactElement): ReactElement<{ postId: string }> => {
+  const children = (element.props as { children: ReactElement[] }).children;
+  const post = children.find((child) => child?.type === SinglePostPage);
+  if (!post) throw new Error('PostPage did not render SinglePostPage');
+  return post as ReactElement<{ postId: string }>;
+};
 
 vi.mock('@/templates/Post/SinglePost/SinglePost', () => ({
   SinglePost: ({ postId }: { postId: string }) => <div data-testid="single-post">{postId}</div>,
@@ -221,7 +236,7 @@ describe('PostPage (collection redirect)', () => {
     });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
-    expect(element.props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
+    expect(getPostElement(element).props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
   });
 
   it('renders the post (no redirect) when the kind lookup fails', async () => {
@@ -232,6 +247,68 @@ describe('PostPage (collection redirect)', () => {
     });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
-    expect(element.props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
+    expect(getPostElement(element).props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
+    expect(document.querySelector('link[rel="preload"]')).toBeNull();
+  });
+});
+
+describe('PostPage (cover preload)', () => {
+  const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+  const FILE_URI = `pubky://${AUTHOR}/pub/pubky.app/files/0035R8SA18DE0`;
+
+  const jsonResponse = (body: unknown) =>
+    new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const renderPost = async (post: Record<string, unknown>) => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse(post));
+
+    const element = await PostPage({ params: Promise.resolve({ userId: AUTHOR, postId: 'post-1' }) });
+    return render(element);
+  };
+
+  it('preloads both cover variants, one per media query, so the browser starts the one it renders', async () => {
+    await renderPost({
+      kind: 'long',
+      content: JSON.stringify({ title: 'How to Think About Names', body: 'My name is John Carvalho.' }),
+      attachments: [FILE_URI],
+    });
+
+    const preloads = Array.from(document.querySelectorAll('link[rel="preload"]'));
+    expect(preloads).toHaveLength(2);
+
+    const byMedia = new Map(preloads.map((link) => [link.getAttribute('media'), link]));
+    const cdn = `https://nexus.staging.pubky.app/static/files/${AUTHOR}/0035R8SA18DE0`;
+
+    // One URL per side of the breakpoint, both the variants the hero renders: `feed` is what a
+    // phone downloads, `main` what a wide screen keeps.
+    expect(byMedia.get(POST_COVER_MOBILE_MEDIA)).toHaveAttribute('href', `${cdn}/feed`);
+    expect(byMedia.get(POST_COVER_DESKTOP_MEDIA)).toHaveAttribute('href', `${cdn}/main`);
+
+    for (const preload of preloads) {
+      expect(preload).toHaveAttribute('as', 'image');
+      expect(preload).toHaveAttribute('fetchpriority', 'high');
+    }
+  });
+
+  it('emits no image preload when slot 0 is an inline image instead of the cover', async () => {
+    await renderPost({
+      kind: 'long',
+      content: JSON.stringify({ title: 'Article', body: 'Intro\n\n![diagram](attachment:0)' }),
+      attachments: [FILE_URI],
+    });
+
+    expect(document.querySelector('link[rel="preload"]')).toBeNull();
+  });
+
+  it('emits no image preload for a post that is not an article', async () => {
+    await renderPost({ kind: 'short', content: 'gm', attachments: [FILE_URI] });
+
+    expect(document.querySelector('link[rel="preload"]')).toBeNull();
   });
 });
