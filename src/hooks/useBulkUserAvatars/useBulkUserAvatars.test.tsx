@@ -7,6 +7,11 @@ import { useBulkUserAvatars } from './useBulkUserAvatars';
 
 vi.mock('@/controllers/stream/users/users', () => ({ StreamUserController: { getOrFetchUsers: vi.fn() } }));
 
+const { mockGetAvatarUrl } = vi.hoisted(() => ({ mockGetAvatarUrl: vi.fn() }));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: { getAvatarUrl: (...args: unknown[]) => mockGetAvatarUrl(...args) },
+}));
+
 describe('useBulkUserAvatars with reactive local data', () => {
   beforeEach(async () => {
     await db.initialize();
@@ -38,6 +43,47 @@ describe('useBulkUserAvatars with reactive local data', () => {
     await waitFor(() => expect(result.current.usersMap.get(ids[0])?.name).toBe('Updated name'));
     expect(StreamUserController.getOrFetchUsers).toHaveBeenCalledTimes(20);
   }, 15_000);
+  it('versions avatars by indexed_at and still reacts to a name/bio edit on an existing user', async () => {
+    // This user is already cached, so the hook must not re-fetch over the row.
+    vi.mocked(StreamUserController.getOrFetchUsers).mockResolvedValue(undefined);
+    mockGetAvatarUrl.mockImplementation((id: string, version?: string | number) => `avatar:${id}:${version}`);
+
+    await act(async () => {
+      await UserDetailsModel.table.bulkPut([
+        {
+          id: 'user-edit',
+          name: 'Old name',
+          bio: 'Old bio',
+          image: 'old.jpg',
+          indexed_at: 1,
+          links: null,
+          status: null,
+        },
+      ]);
+    });
+
+    const { result } = renderHook(() => useBulkUserAvatars(['user-edit']));
+
+    await waitFor(() => expect(result.current.usersMap.get('user-edit')?.name).toBe('Old name'));
+    expect(result.current.usersMap.get('user-edit')?.avatarUrl).toBe('avatar:user-edit:1');
+
+    // The other user edits their profile; the TTL refresh writes the new row.
+    await act(async () => {
+      await UserDetailsModel.table.put({
+        id: 'user-edit',
+        name: 'New name',
+        bio: 'New bio',
+        image: 'new.jpg',
+        indexed_at: 2,
+        links: null,
+        status: null,
+      });
+    });
+
+    await waitFor(() => expect(result.current.usersMap.get('user-edit')?.name).toBe('New name'));
+    expect(result.current.usersMap.get('user-edit')?.avatarUrl).toBe('avatar:user-edit:2');
+  });
+
   it('retries users omitted by a successful request when another page arrives', async () => {
     vi.mocked(StreamUserController.getOrFetchUsers).mockResolvedValueOnce(undefined);
     const { result, rerender } = renderHook(({ ids }) => useBulkUserAvatars(ids), {
