@@ -140,6 +140,32 @@ vi.mock('@/molecules/ProfilePageSocialGraph/ProfilePageSocialGraph', () => {
   };
 });
 
+// Mock the avatar renderer inside the modal: the real one reads moderation state from Dexie.
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
+  return {
+    AvatarWithFallback: ({
+      avatarUrl,
+      name,
+      fallbackSeed,
+      alt,
+    }: {
+      avatarUrl?: string;
+      name: string;
+      fallbackSeed?: string;
+      alt?: string;
+    }) => (
+      <div
+        data-testid="avatar-zoom-image"
+        data-avatar-url={avatarUrl}
+        data-name={name}
+        data-fallback-seed={fallbackSeed}
+      >
+        {avatarUrl ? <img src={avatarUrl} alt={alt || name} /> : <span data-testid="avatar-zoom-fallback">{name}</span>}
+      </div>
+    ),
+  };
+});
+
 // Mock organisms
 vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', () => {
   return {
@@ -162,10 +188,16 @@ vi.mock('@/organisms/ProfilePageHeader/ProfilePageHeader', () => {
         onCopyLink?: () => void;
         onSignOut?: () => void;
         onStatusClick?: () => void;
+        onAvatarClick?: () => void;
       };
     }) => (
       <div data-testid="profile-page-header">
         <div>{profile.name}</div>
+        {actions.onAvatarClick && (
+          <button data-testid="avatar-button" onClick={actions.onAvatarClick}>
+            Avatar
+          </button>
+        )}
         {profile.bio && <div>{profile.bio}</div>}
         <div>{profile.publicKey}</div>
         {profile.emoji && <div>{profile.emoji}</div>}
@@ -302,5 +334,100 @@ describe('ProfileProfile', () => {
   it('matches snapshot', () => {
     const { container } = render(<ProfileProfile />);
     expect(container).toMatchSnapshot();
+  });
+
+  describe('avatar zoom', () => {
+    it('does not render the zoom modal before the avatar is clicked', () => {
+      render(<ProfileProfile />);
+
+      expect(screen.queryByTestId('avatar-zoom-modal-overlay')).not.toBeInTheDocument();
+    });
+
+    it('opens the zoom modal when the avatar is clicked', () => {
+      render(<ProfileProfile />);
+
+      fireEvent.click(screen.getByTestId('avatar-button'));
+
+      expect(screen.getByTestId('avatar-zoom-modal-overlay')).toBeInTheDocument();
+      const image = screen.getByTestId('avatar-zoom-image');
+      expect(image).toHaveAttribute('data-name', 'Satoshi Nakamoto');
+      expect(image).toHaveAttribute('data-fallback-seed', mockProfilePubky);
+    });
+
+    it('opens the zoom modal on another user profile', () => {
+      vi.mocked(useProfileContext).mockReturnValue({
+        pubky: mockProfilePubky,
+        isOwnProfile: false,
+        isLoading: false,
+      });
+
+      render(<ProfileProfile />);
+      fireEvent.click(screen.getByTestId('avatar-button'));
+
+      expect(screen.getByTestId('avatar-zoom-modal-overlay')).toBeInTheDocument();
+    });
+
+    it('closes the zoom modal on Escape', () => {
+      render(<ProfileProfile />);
+
+      fireEvent.click(screen.getByTestId('avatar-button'));
+      expect(screen.getByTestId('avatar-zoom-modal-overlay')).toBeInTheDocument();
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+
+      expect(screen.queryByTestId('avatar-zoom-modal-overlay')).not.toBeInTheDocument();
+    });
+
+    it('closes the zoom modal when the backdrop is clicked', () => {
+      render(<ProfileProfile />);
+
+      fireEvent.click(screen.getByTestId('avatar-button'));
+      fireEvent.click(screen.getByTestId('avatar-zoom-modal-overlay'));
+
+      expect(screen.queryByTestId('avatar-zoom-modal-overlay')).not.toBeInTheDocument();
+    });
+
+    it('opens the zoom modal with the initials fallback when the profile has no avatar', () => {
+      vi.mocked(useProfileHeader).mockReturnValueOnce({
+        profile: {
+          name: 'Satoshi Nakamoto',
+          bio: '',
+          publicKey: 'pubky1QX7GKW3abcdef1234567890',
+          emoji: '🌴',
+          status: '',
+          avatarUrl: undefined,
+          link: '',
+          links: [],
+        },
+        stats: {
+          notifications: 0,
+          posts: 0,
+          replies: 0,
+          following: 0,
+          followers: 0,
+          friends: 0,
+          collections: 0,
+          uniqueTags: 0,
+        },
+        actions: {
+          onEdit: vi.fn(),
+          onCopyPublicKey: vi.fn(),
+          onCopyLink: vi.fn(),
+          onSignOut: vi.fn(),
+          onStatusChange: vi.fn(),
+          isLoggingOut: false,
+        },
+        isLoading: false,
+        isProfileLoading: false,
+        userNotFound: false,
+      });
+
+      render(<ProfileProfile />);
+      fireEvent.click(screen.getByTestId('avatar-button'));
+
+      const image = screen.getByTestId('avatar-zoom-image');
+      expect(image).not.toHaveAttribute('data-avatar-url');
+      expect(screen.getByTestId('avatar-zoom-fallback')).toHaveTextContent('Satoshi Nakamoto');
+    });
   });
 });
