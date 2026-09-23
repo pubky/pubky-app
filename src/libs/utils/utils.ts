@@ -4,7 +4,7 @@ import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/post
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import { getSafeExternalUrl } from './safeExternalUrl';
-import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
+import { DELETED_USER_NAME, RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 import type {
   CopyToClipboardProps,
   ExtractInitialsProps,
@@ -52,9 +52,11 @@ export function formatPublicKey({
 /**
  * Resolves a user's display name, falling back to a shortened public key when
  * the profile has no `name` set. Mirrors the app's UI convention
- * (`user.name || formatPublicKey(...)`, e.g. in `UserListItem`).
+ * (`user.name || formatPublicKey(...)`, e.g. in `UserListItem`). Deleted users
+ * resolve to `[DELETED]` rather than the fallback.
  */
-export function resolveDisplayName(user: { name: string; id: string }): string {
+export function resolveDisplayName(user: { name: string; id: string; deleted?: boolean }): string {
+  if (isUserDeleted(user)) return DELETED_USER_NAME;
   return user.name || formatPublicKey({ key: user.id });
 }
 
@@ -444,6 +446,13 @@ export const convertHmsToSeconds = (
 };
 
 export const isPostDeleted = (content: string | undefined) => content === '[DELETED]';
+
+/**
+ * Whether a user is a Nexus tombstone. Current Nexus sets `deleted: true` and empties the name;
+ * rows cached from older builds still carry the legacy `[DELETED]` name instead.
+ */
+export const isUserDeleted = (user: { name?: string; deleted?: boolean } | null | undefined) =>
+  user?.deleted === true || user?.name === DELETED_USER_NAME;
 
 /**
  * Get tags that fit within the character budget.

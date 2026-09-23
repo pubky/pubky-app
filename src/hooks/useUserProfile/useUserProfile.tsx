@@ -4,7 +4,8 @@ import { getDefaultUrl } from '@/config/metadata';
 import { FileController } from '@/controllers/file/file';
 import { UserController } from '@/controllers/user/user';
 import { isLocalFirstQueryEnabled, useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import { withPubkyPrefix } from '@/libs/utils/utils';
+import { isUserDeleted, withPubkyPrefix } from '@/libs/utils/utils';
+import { DELETED_USER_NAME } from '@/libs/utils/utils.constants';
 import type { NexusUserDetails, NexusUserLink } from '@/services/nexus/nexus.types';
 
 export interface UserProfile {
@@ -68,7 +69,7 @@ export function useUserProfile(userId: string, options?: UseUserProfileOptions):
   const link = `${getDefaultUrl()}/profile/${userId}`;
 
   const profile: UserProfile = {
-    name: userDetails.name ?? '',
+    name: isUserDeleted(userDetails) ? DELETED_USER_NAME : (userDetails.name ?? ''),
     bio: userDetails.bio ?? '',
     publicKey,
     emoji: '🌴', // Default emoji, TODO: get from user data when available
