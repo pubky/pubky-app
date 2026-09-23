@@ -62,7 +62,19 @@ export function PostMediaCarousel({ media, onOpenPreview, isPreviewOpen }: PostM
       className="-mx-6 min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
       onClick={(event) => event.stopPropagation()}
       onAuxClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (
+          media.length > 1 &&
+          (event.key === 'ArrowLeft' || event.key === 'ArrowRight') &&
+          event.target instanceof HTMLElement &&
+          !(event.target instanceof HTMLMediaElement) &&
+          event.target.closest('[data-slot="carousel-item"]')
+        ) {
+          // The outgoing slide becomes inert; keep focus on a control that remains available.
+          event.currentTarget.focus({ preventScroll: true });
+        }
+      }}
     >
       <Container overrideDefaults ref={mediaContainerRef}>
         <CarouselContent className="ml-0">

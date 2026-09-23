@@ -65,6 +65,19 @@ describe('PostMediaCarousel', () => {
     expect(screen.getByRole('button', { name: 'Open image 1 of 2: Portrait' })).toBeInTheDocument();
   });
 
+  it('keeps keyboard focus in the carousel when the focused image becomes inactive', () => {
+    render(<PostMediaCarousel media={media} onOpenPreview={vi.fn()} isPreviewOpen={false} />);
+    const carousel = screen.getByRole('region', { name: 'Post media' });
+    const trigger = screen.getByRole('button', { name: 'Open image 1 of 2: Portrait' });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: 'ArrowRight' });
+    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+    expect(carousel).toHaveFocus();
+    fireEvent.keyDown(carousel, { key: 'ArrowLeft' });
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    expect(carousel).toHaveFocus();
+  });
+
   it('pauses a video when its slide becomes inactive or the lightbox opens', () => {
     const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
     const paused = vi.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(false);
