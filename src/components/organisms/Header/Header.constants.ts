@@ -1,6 +1,7 @@
 // Map paths to step numbers and header titles.
 // 4-step model per the onboarding design: account (1), keys (2), profile (3), experience (4).
 export const pathToStepConfig: Record<string, { step: number; title: string }> = {
+  '/onboarding/join': { step: 1, title: 'Create account' },
   '/onboarding/human': { step: 1, title: 'Create account' },
   '/onboarding/install': { step: 2, title: 'Identity keys' },
   '/onboarding/scan': { step: 2, title: 'Use Pubky Ring' },
@@ -10,4 +11,5 @@ export const pathToStepConfig: Record<string, { step: number; title: string }> =
   '/onboarding/tags': { step: 4, title: 'Experience' },
   '/onboarding/follow': { step: 4, title: 'Experience' },
   '/logout': { step: 1, title: 'Signed out' },
+  '/sign-in': { step: 1, title: 'Sign in' },
 };
