@@ -180,7 +180,7 @@ export function useUserStream({
       name: details.name,
       bio: details.bio,
       image: details.image,
-      avatarUrl: details.image ? FileController.getAvatarUrl(id) : null,
+      avatarUrl: details.image ? FileController.getAvatarUrl(id, details.indexed_at) : null,
       status: details.status,
       counts: counts
         ? {

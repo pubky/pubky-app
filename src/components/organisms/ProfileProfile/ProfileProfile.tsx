@@ -45,11 +45,13 @@ export function ProfileProfile() {
   // Get tags for the user
   const {
     tags: allTags,
+    count: tagsCount,
     isLoading: isLoadingTags,
+    handleTagAdd,
     handleTagToggle,
   } = useTagged(pubky, {
     enablePagination: false,
-    enableStats: false,
+    enableStats: true,
   });
 
   // Show only top 3 most popular tags (sorted by taggers_count)
@@ -97,8 +99,17 @@ export function ProfileProfile() {
         {/* Social graph section */}
         {socialGraphStatus && <ProfilePageSocialGraph status={socialGraphStatus} />}
 
-        {/* Tagged as section */}
-        <ProfilePageTaggedAs tags={tags} isLoading={isLoadingTags} onTagClick={handleTagToggle} pubky={pubky ?? ''} />
+        {/* Tagged section */}
+        <ProfilePageTaggedAs
+          tags={tags}
+          allTags={allTags}
+          count={tagsCount}
+          isLoading={isLoadingTags}
+          onTagClick={handleTagToggle}
+          onTagAdd={handleTagAdd}
+          variant="mobile"
+          pubky={pubky ?? ''}
+        />
 
         {/* Links section */}
         <ProfilePageLinks links={profile?.links} isOwnProfile={isOwnProfile} />

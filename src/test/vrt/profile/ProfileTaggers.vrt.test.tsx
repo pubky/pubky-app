@@ -4,6 +4,7 @@ import { TagKind } from '@/application/tag/tag.types';
 import { PostController } from '@/controllers/post/post';
 import { UserController } from '@/controllers/user/user';
 import { PostTagPopoverWrapper } from '@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper';
+import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
 import { TaggedList } from '@/molecules/TaggedList/TaggedList';
 import { renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
@@ -132,4 +133,21 @@ it('loads the next page inside the home-post nested taggers popover', async () =
   expect(PostController.fetchTaggers).toHaveBeenLastCalledWith(
     expect.objectContaining({ skip: 50, viewerId: 'viewer' }),
   );
+});
+
+it('expands and pages the mobile profile preview taggers', async () => {
+  await renderForVRT(
+    <div className="p-6">
+      <ProfilePageTaggedAs tags={[tag]} count={1} pubky="profile" variant="mobile" onTagClick={vi.fn()} />
+    </div>,
+    { viewport: VRT_VIEWPORT_MOBILE },
+  );
+  expect(UserController.fetchTaggers).not.toHaveBeenCalled();
+  await page.getByRole('button', { name: 'Show 50 users who tagged' }).click();
+  await expect.poll(rowCount).toBe(50);
+  expect(UserController.fetchTaggers).toHaveBeenLastCalledWith(expect.objectContaining({ user_id: 'profile' }));
+  scrollToEnd();
+  await expect.poll(rowCount).toBe(51);
+  await page.getByRole('button', { name: 'Show 50 users who tagged' }).click();
+  await expect.element(list()).not.toBeInTheDocument();
 });

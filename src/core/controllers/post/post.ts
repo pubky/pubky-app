@@ -4,6 +4,7 @@ import type { EnrichedPostDetails } from '@/application/moderation/moderation.ty
 import { PostApplication } from '@/application/post/post';
 import type { TGetDetailsByIdsParams, TGetOrFetchPostParams } from '@/application/post/post.types';
 import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
+import { POST_MAX_TAGS } from '@/config/posts';
 import type {
   TCreateCollectionParams,
   TCreatePostParams,
@@ -24,7 +25,9 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, requiresLogin, toAppError } from '@/libs/error/error.utils';
 import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { Logger } from '@/libs/logger/logger';
+import { parseArticleContent } from '@/libs/post/articleContent';
 import { isAuthorFileUri } from '@/libs/post/articleInlineImages';
+import { extractHashtagLabelsFromMarkdown, mergeTagLabels } from '@/libs/post/hashtags';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';
@@ -218,7 +221,15 @@ export class PostController {
 
     const { id: postId } = meta;
 
-    if (tags) {
+    // Hashtags in the content become tags of the created post (#1882). Articles store
+    // their title (plain text, never rendered as a hashtag) and body (markdown) as JSON.
+    const hashtagLabels = extractHashtagLabelsFromMarkdown(
+      isArticle ? (parseArticleContent(content)?.body ?? '') : content,
+      isArticle,
+    );
+    const tagLabels = mergeTagLabels(tags ?? [], hashtagLabels, POST_MAX_TAGS);
+
+    if (tagLabels.length > 0) {
       const tagTargetCompositeId = resolveTagTargetCompositeIdForPostCreate({
         authorId,
         newPostId: postId,
@@ -226,7 +237,7 @@ export class PostController {
         content,
         attachments,
       });
-      const tagsMetadata = tags.map((tag) => {
+      const tagsMetadata = tagLabels.map((tag) => {
         return {
           taggerId: authorId,
           taggedId: tagTargetCompositeId,
