@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
+import { Pulse } from '@synonymdev/pubky-pulse-web';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -16,6 +17,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
     // only capture the non-AppError path here to avoid double-emitting the same fingerprint.
     if (!(error instanceof AppError)) {
       Sentry.captureException(error);
+      Pulse.captureException(error);
     }
   }, [error]);
 

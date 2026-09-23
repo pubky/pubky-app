@@ -26,11 +26,11 @@ describe('useRelativeTime', () => {
     ['6M', 6 * 30 * DAY],
     ['1Y', 365 * DAY],
     ['2Y', 730 * DAY],
-    ['1Y 1M', 395 * DAY],
-    ['2Y 1M', 760 * DAY],
-    ['1Y 10M', 665 * DAY],
-    ['2Y 10M', 1030 * DAY],
-    ['3Y 10M', 1395 * DAY],
+    ['1Y', 395 * DAY],
+    ['2Y', 760 * DAY],
+    ['1Y', 665 * DAY],
+    ['2Y', 1030 * DAY],
+    ['3Y', 1395 * DAY],
   ])('formats %s timestamps with a compact label', (expected, elapsedMs) => {
     const { result } = renderHook(() => useRelativeTime());
 
@@ -49,8 +49,9 @@ describe('useRelativeTime', () => {
     ['23h', 23 * 60 * 60 * 1000, '1d', 24 * 60 * 60 * 1000],
     ['6d', 6 * DAY, '1w', 7 * DAY],
     ['7w', 55 * DAY, '2M', 56 * DAY],
-    ['11M', 364 * DAY, '1Y', 365 * DAY],
-    ['1Y', (365 + 27) * DAY, '1Y 1M', (365 + 28) * DAY],
+    ['11M', 365 * DAY - 1, '1Y', 365 * DAY],
+    ['1Y', 730 * DAY - 1, '2Y', 730 * DAY],
+    ['2Y', 1095 * DAY - 1, '3Y', 1095 * DAY],
   ])('does not skip or go backwards across the %s / %s boundary', (belowExpected, belowMs, atExpected, atMs) => {
     const { result } = renderHook(() => useRelativeTime());
 
@@ -79,7 +80,7 @@ describe('useRelativeTime', () => {
 
     function labelSeconds(elapsedMs: number): number {
       const label = formatRelativeTime(new Date(now.getTime() - elapsedMs));
-      // years render as one or two tokens, e.g. "2Y" or "1Y 1M"
+      expect(label).toMatch(/^\d+[smhdwMY]$/);
       return label.split(' ').reduce((total, token) => {
         const match = token.match(/^(\d+)([smhdwMY])$/);
         if (!match) throw new Error(`Unexpected label format: "${label}" (token "${token}") at elapsedMs=${elapsedMs}`);

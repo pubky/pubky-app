@@ -28,6 +28,9 @@ jobs:
           - app: "homeserver"
             submodule_dir: "pubky-stack/pubky-homeserver/"
             image: "homeserver-testnet"
+            build_args: |
+              BUILD_TARGET=testnet
+
 
     steps:
       - name: Checkout pubky-stack
@@ -76,6 +79,7 @@ jobs:
           cache_to: type=gha,mode=max,scope=${{ matrix.image }}
           context: ${{ matrix.submodule_dir }}
           platforms: ${{ env.platforms }}
+          build_args: ${{ matrix.build_args }}
         if: ${{ steps.check_image.outputs.exists != 'true' }}
 
   set_vars_pubky_app:
