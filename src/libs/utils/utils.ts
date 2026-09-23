@@ -56,8 +56,19 @@ export function formatPublicKey({
  * resolve to `[DELETED]` rather than the fallback.
  */
 export function resolveDisplayName(user: { name: string; id: string; deleted?: boolean }): string {
+  return resolveUserDisplayName(user) || formatPublicKey({ key: user.id });
+}
+
+/**
+ * Display label for a user: `[DELETED]` for a tombstone, the user's own name otherwise, and
+ * an empty string when a live user has none. Empty lets the caller keep its own fallback
+ * (public key, "Unknown User", …) while a deleted user never degrades into one.
+ */
+export function resolveUserDisplayName(
+  user: { name?: string | null; deleted?: boolean } | null | undefined,
+): string {
   if (isUserDeleted(user)) return DELETED_USER_NAME;
-  return user.name || formatPublicKey({ key: user.id });
+  return user?.name ?? '';
 }
 
 /**
@@ -451,7 +462,7 @@ export const isPostDeleted = (content: string | undefined) => content === '[DELE
  * Whether a user is a Nexus tombstone. Current Nexus sets `deleted: true` and empties the name;
  * rows cached from older builds still carry the legacy `[DELETED]` name instead.
  */
-export const isUserDeleted = (user: { name?: string; deleted?: boolean } | null | undefined) =>
+export const isUserDeleted = (user: { name?: string | null; deleted?: boolean } | null | undefined) =>
   user?.deleted === true || user?.name === DELETED_USER_NAME;
 
 /**

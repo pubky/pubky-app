@@ -117,8 +117,12 @@ function scored(ids: Pubky[]): { user_id: Pubky; score: number }[] {
   return ids.map((user_id, index) => ({ user_id, score: 100 - index }));
 }
 
-function seedUser(id: Pubky, name: string, { following = false, image = null as string | null } = {}) {
-  mockUserDetailsMap.set(id, detailsFixture(name, image));
+function seedUser(
+  id: Pubky,
+  name: string,
+  { following = false, image = null as string | null, deleted = false } = {},
+) {
+  mockUserDetailsMap.set(id, asOpaque<NexusUserDetails>({ ...detailsFixture(name, image), deleted }));
   mockUserCountsMap.set(id, countsFixture(5, 10));
   mockUserRelationshipsMap.set(id, relationshipFixture(following));
 }
@@ -148,6 +152,17 @@ describe('useSearchPeople', () => {
     expect(mockFetchUsersByTags).toHaveBeenCalledWith({ tags: 'synonym,rust', skip: 0, limit: 3 });
     expect(mockGetOrFetchUsers).toHaveBeenCalledWith({ userIds: [USER_A, USER_B] });
     expect(result.current.users.map((user) => user.name)).toEqual(['Alice', 'Bob']);
+  });
+
+  it('labels a tombstoned user as [DELETED]', async () => {
+    mockFetchUsersByTags.mockResolvedValue(scored([USER_A]));
+    seedUser(USER_A, '', { deleted: true });
+
+    const { result } = renderHook(() => useSearchPeople(['synonym']));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.users.map((user) => user.name)).toEqual(['[DELETED]']);
   });
 
   it('clamps the request to the endpoint tag ceiling', async () => {

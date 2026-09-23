@@ -37,6 +37,7 @@ import {
   radixIdSerializer,
   readFromClipboard,
   resolveDisplayName,
+  resolveUserDisplayName,
   sanitizeTagInput,
   shouldBypassLinkConfirmation,
   stripPubkyPrefix,
@@ -246,6 +247,26 @@ describe('Utils', () => {
 
     it('returns [DELETED] instead of the public key fallback for a deleted user', () => {
       expect(resolveDisplayName({ name: '', id: PUBKY, deleted: true })).toBe('[DELETED]');
+    });
+  });
+
+  describe('resolveUserDisplayName', () => {
+    it('returns the name when present', () => {
+      expect(resolveUserDisplayName({ name: 'Alice' })).toBe('Alice');
+    });
+
+    it('returns an empty string when a live user has no name, so the caller keeps its fallback', () => {
+      expect(resolveUserDisplayName({ name: '' })).toBe('');
+      expect(resolveUserDisplayName({ name: null })).toBe('');
+      expect(resolveUserDisplayName(undefined)).toBe('');
+    });
+
+    it('returns [DELETED] for a flagged tombstone, never the empty fallback', () => {
+      expect(resolveUserDisplayName({ name: '', deleted: true })).toBe('[DELETED]');
+    });
+
+    it('returns [DELETED] for the legacy sentinel name', () => {
+      expect(resolveUserDisplayName({ name: '[DELETED]' })).toBe('[DELETED]');
     });
   });
 

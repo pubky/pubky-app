@@ -18,7 +18,7 @@ import { useRemoveDeletedPost } from '@/hooks/useRemoveDeletedPost/useRemoveDele
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
-import { cn } from '@/libs/utils/utils';
+import { cn, resolveUserDisplayName } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
@@ -166,7 +166,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
               {userDetails ? (
                 <PostHeaderUserInfo
                   userId={userId}
-                  userName={userDetails.name || ''}
+                  userName={resolveUserDisplayName(userDetails)}
                   status={userDetails.status}
                   avatarUrl={avatarUrl}
                 />

@@ -5,6 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { FileController } from '@/controllers/file/file';
 import { UserController } from '@/controllers/user/user';
 import { Logger } from '@/libs/logger/logger';
+import { resolveUserDisplayName } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { FALLBACK_USER_NAME } from './useUserDetailsFromIds.constants';
@@ -51,7 +52,7 @@ export function useUserDetailsFromIds({
           const avatarUrl = details.image ? FileController.getAvatarUrl(details.id) : undefined;
           result.push({
             id: userId,
-            name: details.name || FALLBACK_USER_NAME,
+            name: resolveUserDisplayName(details) || FALLBACK_USER_NAME,
             avatarUrl,
           });
         }

@@ -247,6 +247,48 @@ describe('ProfileApplication', () => {
       expect(updatedUser!.deleted).toBe(false);
     });
 
+    it('refuses to republish a tombstoned row, so the cleared name never reaches the homeserver', async () => {
+      await UserDetailsModel.create({
+        id: testPubky,
+        name: '',
+        bio: '',
+        image: null,
+        status: null,
+        links: null,
+        indexed_at: Date.now(),
+        deleted: true,
+      });
+      const normalizerSpy = vi.spyOn(UserNormalizer, 'to');
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+
+      await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toThrow(
+        'Cannot update the status of a deleted profile',
+      );
+
+      expect(normalizerSpy).not.toHaveBeenCalled();
+      expect(requestSpy).not.toHaveBeenCalled();
+      const unchanged = await UserDetailsModel.findById(testPubky);
+      expect(unchanged!.status).toBeNull();
+    });
+
+    it('refuses when the cached row still carries the legacy [DELETED] name', async () => {
+      await UserDetailsModel.create({
+        id: testPubky,
+        name: '[DELETED]',
+        bio: '',
+        image: null,
+        status: null,
+        links: null,
+        indexed_at: Date.now(),
+      });
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+
+      await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toThrow(
+        'Cannot update the status of a deleted profile',
+      );
+      expect(requestSpy).not.toHaveBeenCalled();
+    });
+
     it('throws error when user not found', async () => {
       await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'available' })).rejects.toThrow(
         'User profile not found',

@@ -12,9 +12,10 @@ import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatar
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { isAppError } from '@/libs/error/error.utils';
-import { extractInitials, truncateMiddle } from '@/libs/utils/utils';
+import { truncateMiddle } from '@/libs/utils/utils';
 import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
 import { toast } from '@/molecules/Toaster/toast';
+import { resolveAvatarFallbackInitial } from '@/organisms/AvatarWithFallback/AvatarWithFallback.utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
@@ -88,14 +89,9 @@ export function MutedUsersList() {
                   <AvatarFallback className="overflow-hidden border-none">
                     <FacehashAvatar
                       seed={mutedUser?.id || mutedUser?.name || 'user'}
-                      initial={
-                        extractInitials({
-                          name: mutedUser?.name || '',
-                          maxLength: 1,
-                        }) ||
-                        mutedUser?.id?.charAt(0).toUpperCase() ||
-                        'U'
-                      }
+                      // A deleted muted user reads `[DELETED]`, which resolves to the pubky's
+                      // first letter instead of a bare `[`.
+                      initial={resolveAvatarFallbackInitial({ name: mutedUser?.name, seed: mutedUser?.id })}
                     />
                   </AvatarFallback>
                 </Avatar>

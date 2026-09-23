@@ -10,7 +10,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
-import { cn, formatPublicKey } from '@/libs/utils/utils';
+import { cn, formatPublicKey, resolveUserDisplayName } from '@/libs/utils/utils';
 import { FollowButton } from '@/molecules/FollowButton/FollowButton';
 import { UserStats } from '@/molecules/UserStats/UserStats';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -390,7 +390,7 @@ export function UserListItem({
   // Normalize user data
   const avatarUrl = user.avatarUrl || user.image || undefined;
   const displayName =
-    user.name ||
+    resolveUserDisplayName(user) ||
     formatPublicKey({
       key: user.id,
     });
