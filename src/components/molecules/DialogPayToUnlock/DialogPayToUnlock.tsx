@@ -10,6 +10,7 @@ import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
 import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL } from '@/config/externalLinks';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { generateBitkitContactDeeplink } from '@/libs/deeplink/deeplink';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
 import { formatSats } from '@/libs/utils/formatSats';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
@@ -124,21 +125,20 @@ export function DialogPayToUnlock({
               </Typography>
             </Container>
 
-            {showQr && (
+            {showQr && handshakePubky && (
               <>
                 <Typography className="text-base text-secondary-foreground">
                   {'Scan with Bitkit and pay to unlock.'}
                 </Typography>
-                {/* A phone cannot scan its own screen, so mobile hands the creator pubky over by link instead.
-                  TODO:[Locks] #2574 — no deeplink yet: the Bitkit URL for handing over a pubky (what scanning
-                  the QR does) is unknown; asked the Bitkit team. Until then this button does nothing. */}
+                {/* A phone cannot scan its own screen, so mobile hands the same pubky over by deeplink. */}
                 <Button
+                  asChild
                   variant={ButtonVariant.DEFAULT}
                   size="lg"
                   className="w-full lg:hidden"
                   data-cy="pay-to-unlock-bitkit-link"
                 >
-                  {'Pay with Bitkit'}
+                  <a href={generateBitkitContactDeeplink(withPubkyPrefix(handshakePubky))}>{'Pay with Bitkit'}</a>
                 </Button>
               </>
             )}

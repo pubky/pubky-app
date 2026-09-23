@@ -112,8 +112,6 @@ describe('DialogPayToUnlock', () => {
     expect(screen.getByRole('img', { name: 'Creator Pubky QR code' })).toBeInTheDocument();
     expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
     expect(screen.getByText('Scan with Bitkit and pay to unlock.')).toBeInTheDocument();
-    // Mobile's stand-in for the QR; its deeplink is still a TODO.
-    expect(screen.getByRole('button', { name: 'Pay with Bitkit' })).toBeInTheDocument();
     // The QR screen stays clean: setup belongs to the install screen.
     expect(screen.queryByText(/Install Bitkit/)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'App Store' })).not.toBeInTheDocument();
@@ -123,6 +121,21 @@ describe('DialogPayToUnlock', () => {
 
     rerender(dialogElement('waiting'));
     expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+  });
+
+  // A phone cannot scan its own screen, so the link must hand Bitkit the value the QR carries.
+  it('waiting: the Bitkit handoff links to the contact deeplink with the QR value', () => {
+    const { rerender } = renderDialog('waiting', { handshakePubky: 'lockcreator' });
+    const href = 'bitkit://contact?pubky=pubkylockcreator';
+
+    expect(screen.getByRole('link', { name: 'Pay with Bitkit' })).toHaveAttribute('href', href);
+
+    rerender(dialogElement('waiting', { handshakePubky: 'pubkylockcreator' }));
+    expect(screen.getByRole('link', { name: 'Pay with Bitkit' })).toHaveAttribute('href', href);
+
+    // The handoff leaves with the QR: with no pubky there is nothing to hand over.
+    rerender(dialogElement('waiting'));
+    expect(screen.queryByRole('link', { name: 'Pay with Bitkit' })).not.toBeInTheDocument();
   });
 
   it.each([

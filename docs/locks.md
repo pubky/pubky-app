@@ -234,8 +234,8 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
    created; with nothing submitted, the install screen has no link state. `none` shows the handoff
    that hands the creator's pubky to Bitkit: a QR on desktop, and below the `lg` breakpoint (1024px)
-   a **Pay with Bitkit** button instead, since a phone cannot scan its own screen (its deeplink
-   format is still unknown, so the button does nothing yet). `handshake` keeps it: that state only
+   a **Pay with Bitkit** button instead, since a phone cannot scan its own screen; it opens
+   `bitkit://contact?pubky=<creator pubky>`, which routes Bitkit to the screen a scan reaches. `handshake` keeps it: that state only
    means Paykit has opened its half of the link and is waiting for the reader's wallet, which still
    needs the creator's pubky to answer. `connected` removes it; `recovery_required` and `blocked`
    replace it with a notice, because the reader cannot clear either from here (`blocked` is a policy
