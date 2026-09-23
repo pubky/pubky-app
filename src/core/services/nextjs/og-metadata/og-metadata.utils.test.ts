@@ -103,10 +103,28 @@ describe('extractMetadata', () => {
     expect(result.title).toBeNull();
   });
 
-  it('should ignore a placeholder og:title regardless of case and surrounding whitespace', async () => {
-    const html = '<html><head><meta property="og:title" content="  UnDefined  " /></head></html>';
+  it('should match placeholders exactly, keeping a title that differs only by case', async () => {
+    const html = '<html><head><meta property="og:title" content="  Null  " /></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBe('Null');
+  });
+
+  it('should ignore a placeholder og:title with surrounding whitespace', async () => {
+    const html = '<html><head><meta property="og:title" content="  undefined  " /></head></html>';
     const result = await extractMetadata('https://example.com/', html);
     expect(result.title).toBeNull();
+  });
+
+  it('should ignore a placeholder og:title that is entity-encoded', async () => {
+    const html = '<html><head><meta property="og:title" content="undefined&nbsp;" /></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBeNull();
+  });
+
+  it('should fall back to <title> when og:title is whitespace only', async () => {
+    const html = '<html><head><meta property="og:title" content="&nbsp;" /><title>Real Title</title></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBe('Real Title');
   });
 
   it('should ignore a "null" placeholder title', async () => {
@@ -134,6 +152,18 @@ describe('extractMetadata', () => {
     const html = '<html><head><meta property="og:image" content="/img.png" /></head></html>';
     const result = await extractMetadata('https://example.com/', html);
     expect(mockNormalizeImageUrl).toHaveBeenCalledWith('/img.png', 'https://example.com/');
+    expect(result.image).toBe('https://example.com/img.png');
+  });
+
+  it('should decode HTML entities in og:image before normalizing it', async () => {
+    mockNormalizeImageUrl.mockResolvedValue('https://example.com/img.png');
+    const html =
+      '<html><head><meta property="og:image" content="https://cdn.example.com/a.jpg?w=600&amp;h=400" /></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(mockNormalizeImageUrl).toHaveBeenCalledWith(
+      'https://cdn.example.com/a.jpg?w=600&h=400',
+      'https://example.com/',
+    );
     expect(result.image).toBe('https://example.com/img.png');
   });
 
@@ -215,6 +245,12 @@ describe('hasOgMetadata', () => {
 
   it('should return false for an empty og:title value', () => {
     expect(hasOgMetadata('<html><head><meta property="og:title" content="" /></head></html>')).toBe(false);
+  });
+
+  it('should return false when the only tags are placeholders', () => {
+    const html =
+      '<html><head><meta property="og:title" content="undefined" /><meta property="og:image" content="null" /><title>undefined</title></head></html>';
+    expect(hasOgMetadata(html)).toBe(false);
   });
 });
 

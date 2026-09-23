@@ -18,12 +18,19 @@ const MEDIA_TYPES = ['image', 'video', 'audio'] as const;
 const PLACEHOLDER_VALUES = new Set(['undefined', 'null']);
 
 /**
- * True when a tag value carries no metadata: missing, blank, or a placeholder.
- * Callers treat a placeholder exactly like a missing value.
+ * Normalizes a raw tag capture into a usable metadata value, or null when it carries no metadata:
+ * missing, blank after entity decoding and trimming, or one of the placeholder literals.
+ *
+ * The placeholder match is exact: only JavaScript stringification of `undefined` / `null` produces
+ * these literals, so a real title such as "Null" or "Undefined" is kept.
  */
-function isPlaceholderValue(value: string | null | undefined): boolean {
-  const normalized = value?.trim().toLowerCase();
-  return !normalized || PLACEHOLDER_VALUES.has(normalized);
+function pickMetadataValue(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = decodeHtmlEntities(value).trim();
+  return normalized && !PLACEHOLDER_VALUES.has(normalized) ? normalized : null;
 }
 
 /**
@@ -50,7 +57,10 @@ export function detectMediaType(url: string, response: Response): TOgMetadataRes
  * whether a 200 is worth one retry with a crawler identity.
  */
 export function hasOgMetadata(html: string): boolean {
-  return extractFromHtml(html, OG_PATTERNS.TITLE) !== null || extractFromHtml(html, OG_PATTERNS.IMAGE) !== null;
+  return (
+    pickMetadataValue(extractFromHtml(html, OG_PATTERNS.TITLE)) !== null ||
+    pickMetadataValue(extractFromHtml(html, OG_PATTERNS.IMAGE)) !== null
+  );
 }
 
 /**
@@ -59,20 +69,17 @@ export function hasOgMetadata(html: string): boolean {
 export async function extractMetadata(url: string, html: string): Promise<TOgMetadataResult> {
   // Extract title (og:title → <title> fallback), skipping placeholder values so a shell page
   // cannot become a card title and the fallback tag still gets its chance.
-  const titleCandidates = [extractFromHtml(html, OG_PATTERNS.TITLE), html.match(OG_PATTERNS.TITLE_TAG)?.[1] || null];
-  const rawTitle = titleCandidates.find((candidate) => !isPlaceholderValue(candidate)) ?? null;
-  const title = rawTitle ? decodeHtmlEntities(rawTitle) : null;
+  const titleCandidates = [extractFromHtml(html, OG_PATTERNS.TITLE), html.match(OG_PATTERNS.TITLE_TAG)?.[1] ?? null];
+  const title = titleCandidates.map(pickMetadataValue).find((candidate) => candidate !== null) ?? null;
 
-  // Extract og:image
-  const image = extractFromHtml(html, OG_PATTERNS.IMAGE);
-
-  // Normalize and validate image URL. A placeholder is not a path: resolving it against the page
-  // URL would turn "undefined" into https://<host>/undefined.
-  const normalizedImage = image && !isPlaceholderValue(image) ? await normalizeImageUrl(image, url) : null;
+  // Extract og:image. A placeholder is not a path: resolving it against the page URL would turn
+  // "undefined" into https://<host>/undefined.
+  const image = pickMetadataValue(extractFromHtml(html, OG_PATTERNS.IMAGE));
+  const normalizedImage = image ? await normalizeImageUrl(image, url) : null;
 
   return {
     url: truncateMiddle(url, URL_TRUNCATE_LENGTH),
-    title: title ? truncateString(title.trim(), TITLE_TRUNCATE_LENGTH) : null,
+    title: title ? truncateString(title, TITLE_TRUNCATE_LENGTH) : null,
     image: normalizedImage,
     type: 'website',
   };
