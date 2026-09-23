@@ -3,16 +3,19 @@
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogIn, UserRoundPlus } from 'lucide-react';
-import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { AUTH_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
+import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
 
 export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButtonElement>) {
   const router = useRouter();
   const pathname = usePathname();
+  const joinRoute = useJoinRoute();
   const isSignInPage = pathname === AUTH_ROUTES.SIGN_IN;
 
   const handleClick = () => {
-    router.push(isSignInPage ? ONBOARDING_ROUTES.HUMAN : AUTH_ROUTES.SIGN_IN);
+    // "New here?" is a sign-up entry point: Join step when Passport is enabled, fair-access otherwise.
+    router.push(isSignInPage ? joinRoute : AUTH_ROUTES.SIGN_IN);
   };
 
   return (

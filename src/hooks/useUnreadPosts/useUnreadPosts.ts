@@ -1,8 +1,10 @@
 'use client';
 
 import { useLiveQuery } from 'dexie-react-hooks';
+import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { Logger } from '@/libs/logger/logger';
+import { postKindBelongsToStream } from '@/stores/home/home.utils';
 import type { UseUnreadPostsOptions, UseUnreadPostsResult } from './useUnreadPosts.types';
 
 /**
@@ -10,7 +12,7 @@ import type { UseUnreadPostsOptions, UseUnreadPostsResult } from './useUnreadPos
  *
  * Hook to reactively watch unread posts for a specific stream.
  * Uses Dexie's useLiveQuery to automatically re-render when the
- * unread_post_streams table is updated by the StreamCoordinator.
+ * unread_post_streams or post_details tables are updated by the StreamCoordinator.
  *
  * @param options - Options containing the streamId to watch
  * @returns Object with unreadPostIds array and unreadCount
@@ -30,16 +32,22 @@ export function useUnreadPosts({ streamId }: UseUnreadPostsOptions): UseUnreadPo
       if (!streamId) return null;
       const stream = await StreamPostsController.getUnreadStream({ streamId });
       if (!stream) return null;
-      const filteredStream = await StreamPostsController.filterStreamPosts({ streamId, postIds: stream.stream });
-      return { stream: filteredStream };
+      // Unread IDs can arrive before the coordinator hydrates their details.
+      // Wait for local data so a collection or tombstone never inflates the count.
+      const details = await PostController.getDetailsByIds({ compositeIds: stream.stream });
+      const readyPostIds = stream.stream.filter((_id, index) => {
+        const detail = details[index];
+        return detail !== undefined && postKindBelongsToStream(detail.kind, streamId);
+      });
+      const filteredStream = await StreamPostsController.filterStreamPosts({ streamId, postIds: readyPostIds });
+      return { streamId, stream: filteredStream };
     } catch (error) {
       Logger.error('[useUnreadPosts] Failed to query unread stream', { streamId, error });
       return null;
     }
   }, [streamId]);
 
-  return {
-    unreadPostIds: unreadStream?.stream ?? [],
-    unreadCount: unreadStream?.stream?.length ?? 0,
-  };
+  // useLiveQuery retains its previous result while a new dependency is loading.
+  const unreadPostIds = unreadStream?.streamId === streamId ? unreadStream.stream : [];
+  return { unreadPostIds, unreadCount: unreadPostIds.length };
 }
