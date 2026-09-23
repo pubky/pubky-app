@@ -29,7 +29,10 @@ const PostCodeBlockHighlighter = dynamic(() =>
  * boundary.
  */
 const PostCodeBlockPlain = ({ code }: { code: string }) => (
-  <pre className="overflow-x-auto rounded-b-md bg-neutral-800 p-4 font-mono text-sm">{code}</pre>
+  // Same padding, font size and line height as the highlighted block (oneDark pads 1em, the
+  // post body is text-base at line-height 1.5), so the box does not change height when the
+  // chunk lands.
+  <pre className="overflow-x-auto rounded-b-md bg-neutral-800 p-4 font-mono text-base leading-normal">{code}</pre>
 );
 
 type PostCodeBlockProps = ClassAttributes<HTMLElement> & HTMLAttributes<HTMLElement> & ExtraProps;
