@@ -16,9 +16,10 @@ export interface DialogPayToUnlockProps {
   handshakePubky: string | null;
   /** Waiting stage: a wallet-link state the reader cannot fix here — replaces the QR with a notice. */
   connectionIssue: 'recovery_required' | 'blocked' | null;
-  /** True while a submission is in flight — locks the primary button and makes a close ask first. */
+  /** True while the install screen's wallet check or a submission is in flight — locks the primary button, and
+   * outside the install screen makes a close ask first. */
   isSubmitting: boolean;
-  /** Retries a failed submission, or starts over with a fresh id after a failed/expired payment. */
+  /** Install screen: re-checks the wallet, then submits. Retry screen: submits again (a fresh id after a failed/expired payment). */
   onRetry: () => void;
   /** Restarts a parked wait. */
   onRecheck: () => void;

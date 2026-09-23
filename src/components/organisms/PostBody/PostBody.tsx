@@ -19,7 +19,11 @@ export function PostBody({ content, attachments, localAttachments, textClassName
     <>
       {hasContent && <PostText content={content} className={textClassName} />}
       {hasContent && <PostLinkEmbeds content={content} />}
-      <PostAttachments attachments={attachments} localAttachments={localAttachments} {...(mediaVariant ? { mediaVariant } : {})} />
+      <PostAttachments
+        attachments={attachments}
+        localAttachments={localAttachments}
+        {...(mediaVariant ? { mediaVariant } : {})}
+      />
     </>
   );
 }

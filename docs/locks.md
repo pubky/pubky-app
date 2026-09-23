@@ -214,12 +214,13 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    is submitted, kept after replication, and a failed read blocks paying (fail closed).
 2. Opening the modal starts the payment: nothing asks the reader to confirm before the proof is
    submitted (#2574). With no saved id, the app first checks the reader's homeserver for Paykit data
-   (`hasPaykitReceiver`). With none it shows the handoff (below) with the Bitkit install steps and
-   store links, submits nothing, and re-checks every 3 seconds with no time limit; the moment a
-   wallet appears it mints, saves and submits. A failed check on open lands on the blocked screen;
-   a failed re-check counts as "not yet". The check reports presence only, so a submission can
-   still fail afterwards (one `502` covers both "wallet not ready" and "Paykit down" — a distinct
-   code is a pending ask on the locks side).
+   (`hasPaykitReceiver`). With none it shows the install screen (Bitkit setup steps, store links and
+   **I completed the steps**) and submits nothing. That button checks again: still no wallet → a
+   toast, and the reader stays; a wallet → the modal moves to checking, then mints, saves and
+   submits. A failed check on open lands on the blocked screen; a failed check from the button, or a
+   failed submission after it, shows a toast and returns to the install screen. The check reports
+   presence only, so a submission can still fail afterwards (one `502` covers both "wallet not
+   ready" and "Paykit down" — a distinct code is a pending ask on the locks side).
 3. A saved id is looked up first (`fetchPaymentStatus`; SDK 404 maps to `null`). `completed` →
    credential; `failed`/`expired` → **Try again**, which mints a fresh id (those cannot be retried,
    and doing it automatically could charge twice). `pending`/`in_progress` → the task is already
@@ -231,13 +232,15 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    sees an address or invoice. A failed submission (for example `502`) shows **Try again**, which
    keeps the saved id.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
-   created. `none` shows the handoff that hands the creator's pubky to Bitkit: a QR on desktop, and
-   below the `lg` breakpoint (1024px) a **Pay with Bitkit** button instead, since a phone cannot
-   scan its own screen (its deeplink format is still unknown, so the button does nothing yet).
-   `handshake` and `connected` remove it; `recovery_required` and `blocked` replace it with a
-   notice, because the reader cannot clear either from here (`blocked` is a policy switch a fresh
-   bundle id does not reset). A failed read keeps the last state and the handoff — it never invents
-   one, and never stops the task polling.
+   created; with nothing submitted, the install screen has no link state. `none` shows the handoff
+   that hands the creator's pubky to Bitkit: a QR on desktop, and below the `lg` breakpoint (1024px)
+   a **Pay with Bitkit** button instead, since a phone cannot scan its own screen; it opens
+   `bitkit://contact?pubky=<creator pubky>`, which routes Bitkit to the screen a scan reaches. `handshake` keeps it: that state only
+   means Paykit has opened its half of the link and is waiting for the reader's wallet, which still
+   needs the creator's pubky to answer. `connected` removes it; `recovery_required` and `blocked`
+   replace it with a notice, because the reader cannot clear either from here (`blocked` is a policy
+   switch a fresh bundle id does not reset). A failed read keeps the last state and the handoff — it
+   never invents one, and never stops the task polling.
 6. Waiting runs two loops on their own timers, and neither waits on the other: the task lookup every
    **3 seconds**, the link read every **1 second**. Each skips a tick while its own call is still out,
    so a link read that hangs cannot delay a finished payment. The task lookup is the only lifecycle
@@ -352,9 +355,12 @@ Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
 
 ## Testing & local demo
 
-**The Lock SDK is not on npm yet** (as of 2026-09), so it is vendored:
-`package.json` declares `"@pubky/locks-sdk": "file:vendor/locks-sdk"`, and the WASM build
-output is committed under `vendor/locks-sdk/`.
+**The Lock SDK is not on npm yet** (as of 2026-08). `@pubky/locks-sdk` is deliberately
+missing from `package.json` — you build it from the `pubky/locks` repo and copy it into
+`node_modules` by hand:
+
+Build the SDK from `pubky/locks` master: the payment flow needs `Locks.hasPaykitDataWithOptions`
+(`pubky/locks#42`) and `lookupPaykitConnectionState` (`pubky/locks#54`).
 
 ```bash
 cd <locks repo>/locks-sdk/bindings/js

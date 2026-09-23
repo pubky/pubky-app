@@ -47,7 +47,11 @@ describe('readPaykitSetupBridgeMessage', () => {
   it('treats a blank or non-string error as no error', () => {
     for (const error of ['', 0, null, {}]) {
       expect(
-        readPaykitSetupBridgeMessage(makeEvent({ data: { type: PAYKIT_SETUP_MESSAGE_TYPE, state: 'STATE', error } }), iframeWindow, PAYKIT_ORIGIN),
+        readPaykitSetupBridgeMessage(
+          makeEvent({ data: { type: PAYKIT_SETUP_MESSAGE_TYPE, state: 'STATE', error } }),
+          iframeWindow,
+          PAYKIT_ORIGIN,
+        ),
       ).toEqual({ state: 'STATE' });
     }
   });

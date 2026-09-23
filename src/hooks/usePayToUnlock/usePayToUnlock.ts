@@ -12,8 +12,6 @@ import type { TPayToUnlockStage, UsePayToUnlockParams, UsePayToUnlockResult } fr
 export const POLL_INTERVAL_MS = 3000;
 /** Only the link read runs this fast — the reader is staring at the QR. The task stays on its own interval. */
 export const CONNECTION_POLL_INTERVAL_MS = 1000;
-/** How often the install screen re-checks for a wallet while the reader sets Bitkit up. */
-export const WALLET_POLL_INTERVAL_MS = 3000;
 /**
  * When to park the polling, on the wall clock — a frozen background tab skips attempts, so
  * counting them would under-measure. Parking is NOT failing: the purchase and its stored bundle
@@ -27,6 +25,7 @@ export const STALL_AFTER_MS = 3 * 60 * 1000;
  * TODO:[Locks] ask the locks side for a distinct code, so this toast can name the cause.
  */
 const SUBMIT_FAILED_TOAST = 'The payment could not be started. Check that Bitkit is set up, or try again later.';
+const NO_WALLET_TOAST = 'Bitkit is not set up yet. Finish the steps, then try again.';
 const FINISH_FAILED_TOAST =
   'Your payment went through, but the content could not be opened. Nothing is lost — try again.';
 
@@ -243,12 +242,23 @@ export function usePayToUnlock({
 
   // A reopen while an earlier submission is still out submits again; `startPayment` serializes the
   // two per reader and lock, so the second one replays the saved id instead of minting another.
-  const attemptPayment = async (gen: number) => {
+  const attemptPayment = async (gen: number, checkWallet: boolean) => {
     if (!lockFile || !readerPubky || !session || submittingGeneration.current === gen) return;
     submittingGeneration.current = gen;
     setIsSubmitting(true);
 
     try {
+      if (checkWallet) {
+        const hasWallet = await LocksController.hasPaykitReceiver(readerPubky);
+        if (generation.current !== gen) return;
+        if (!hasWallet) {
+          toast({ variant: 'warning', description: NO_WALLET_TOAST });
+          return;
+        }
+        // Off the install screen before submitting: a close there skips the "still running" prompt.
+        setStage('checking');
+      }
+
       const { bundleId, status } = await LocksController.startPayment({
         lockFile,
         lockUrl,
@@ -262,9 +272,10 @@ export function usePayToUnlock({
       // loop reads it — the QR appears one round trip later.
       if (applyStatus(gen, bundleId, status)) startPolling(gen, bundleId, true);
     } catch {
-      // Already reported by the Err factory. Try again replays the saved id.
+      // Already reported by the Err factory. Try again replays the saved id; a failure that started
+      // on the install screen goes back there, because Try again skips the wallet check.
       if (generation.current !== gen) return;
-      setStage('retry');
+      setStage(checkWallet ? 'install' : 'retry');
       toast({ variant: 'error', description: SUBMIT_FAILED_TOAST });
     } finally {
       if (submittingGeneration.current === gen) {
@@ -272,37 +283,6 @@ export function usePayToUnlock({
         setIsSubmitting(false);
       }
     }
-  };
-
-  /**
-   * The install screen: re-checks for a wallet until one shows up, then starts the purchase. Nothing
-   * is minted or submitted before that — a submission without a wallet fails with the same `502` as
-   * a Paykit outage, after the purchase file is already written.
-   */
-  const watchForWallet = (gen: number) => {
-    if (!readerPubky) return;
-    let timer: number | null = null;
-    let active = true;
-    const stop = () => {
-      active = false;
-      if (timer !== null) window.clearTimeout(timer);
-      if (stopPolling.current === stop) stopPolling.current = null;
-    };
-    const check = async () => {
-      const hasWallet = await LocksController.hasPaykitReceiver(readerPubky).catch(() => false);
-      if (!active || generation.current !== gen) return;
-      if (!hasWallet) {
-        timer = window.setTimeout(() => void check(), WALLET_POLL_INTERVAL_MS);
-        return;
-      }
-      stop();
-      // Off the install screen before submitting: a close there skips the "still running" prompt.
-      setStage('checking');
-      await attemptPayment(gen);
-    };
-    stopPolling.current?.();
-    stopPolling.current = stop;
-    timer = window.setTimeout(() => void check(), WALLET_POLL_INTERVAL_MS);
   };
 
   // Modal opened: resolve the saved bundle id, then route. Closed: bump the generation so every
@@ -315,6 +295,9 @@ export function usePayToUnlock({
     setConnectionState(null);
     completedContent.current = null;
     deadBundleId.current = null;
+    // A wallet check from the last opening may still be out; its `finally` no longer owns the flag.
+    submittingGeneration.current = null;
+    setIsSubmitting(false);
 
     void (async () => {
       try {
@@ -341,12 +324,11 @@ export function usePayToUnlock({
           if (generation.current !== gen) return;
           if (!hasWallet) {
             setStage('install');
-            watchForWallet(gen);
             return;
           }
         }
         // Left: no saved id at all, or a saved id whose first submission never reached the server.
-        await attemptPayment(gen);
+        await attemptPayment(gen, false);
       } catch {
         // Includes an unreadable saved bundle id: minting a fresh one could pay twice, so there is
         // no retry. Already reported by the Err factory that threw it.
@@ -367,7 +349,7 @@ export function usePayToUnlock({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, lockUrl, lockFile, readerPubky, session]);
 
-  const retry = () => void attemptPayment(generation.current);
+  const retry = () => void attemptPayment(generation.current, stage === 'install');
 
   const recheck = () => {
     const bundleId = waitingBundleId.current;
@@ -390,8 +372,10 @@ export function usePayToUnlock({
     onCompleted(content);
   };
 
-  // The install screen shows the QR too: a reader can set Bitkit up and scan in one sitting.
-  const handshakePubky = stage === 'install' || connectionState === 'none' ? (lockFile?.creator ?? null) : null;
+  // `handshake` is the server's half only: Paykit has opened the link and waits for the reader's
+  // wallet, which still needs the creator pubky to answer. So the QR stays up until `connected`.
+  const handshakePubky =
+    connectionState === 'none' || connectionState === 'handshake' ? (lockFile?.creator ?? null) : null;
   // Neither state is something the reader can act on from here, so they are surfaced as notices.
   const connectionIssue =
     connectionState === 'recovery_required' || connectionState === 'blocked' ? connectionState : null;
