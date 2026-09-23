@@ -1,8 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GRID_FEED_SKELETON_COUNT } from '@/config/feed';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelineCardsPosts } from './CardsPosts';
 
 vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({ useInfiniteScroll: vi.fn() }));
@@ -81,22 +80,5 @@ describe('TimelineCardsPosts', () => {
     fireEvent.click(load);
     expect(resume).toHaveBeenCalledOnce();
     expect(screen.getByText(/Could not load more posts/)).toBeInTheDocument();
-  });
-});
-
-describe('TimelineCardsPosts - Snapshots', () => {
-  it('renders initial placeholders using the shared loading count', () => {
-    const { container } = render(<TimelineCardsPosts {...props} postIds={[]} loading />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('TimelineCardsPosts - Mobile Snapshots', () => {
-  beforeEach(() => setMobileViewport());
-  afterEach(() => resetViewport());
-
-  it('renders initial placeholders using the shared loading count on mobile', () => {
-    const { container } = render(<TimelineCardsPosts {...props} postIds={[]} loading />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

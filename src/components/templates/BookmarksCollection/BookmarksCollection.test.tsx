@@ -21,28 +21,24 @@ vi.mock('@/organisms/Bookmarks/BookmarksHero/BookmarksHero', () => ({
     avatarUrl?: string;
     bookmarkCount?: number;
     isProfileResolved: boolean;
-  }) => {
-    return (
-      <div
-        data-testid="bookmarks-hero"
-        data-avatar-name={avatarName}
-        data-avatar-seed={avatarSeed}
-        data-avatar-url={avatarUrl ?? ''}
-        data-bookmark-count={String(bookmarkCount)}
-        data-is-profile-resolved={String(isProfileResolved)}
-      />
-    );
-  },
+  }) => (
+    <div
+      data-testid="bookmarks-hero"
+      data-avatar-name={avatarName}
+      data-avatar-seed={avatarSeed}
+      data-avatar-url={avatarUrl ?? ''}
+      data-bookmark-count={String(bookmarkCount)}
+      data-is-profile-resolved={String(isProfileResolved)}
+    />
+  ),
 }));
 
 vi.mock('@/organisms/Bookmarks/BookmarksItems/BookmarksItems', () => ({
-  BookmarksItems: ({ header }: { header: ReactNode }) => {
-    return (
-      <div data-testid="bookmarks-items">
-        <div data-testid="bookmarks-items-header">{header}</div>
-      </div>
-    );
-  },
+  BookmarksItems: ({ header }: { header: ReactNode }) => (
+    <div data-testid="bookmarks-items">
+      <div data-testid="bookmarks-items-header">{header}</div>
+    </div>
+  ),
 }));
 
 vi.mock('@/organisms/Collections/CollectionsSections/CollectionsSections', () => ({

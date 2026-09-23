@@ -186,8 +186,7 @@ describe('resolveFeedLayout', () => {
     });
 
     it('uses Cards as the collection fallback for unsupported layouts', () => {
-      // The collection variant is not in the rich-layout set, so a WIDE request
-      // falls back to COLUMNS; grid membership must still be derived from the variant.
+      // Collections do not support Wide, so unsupported requests use their Cards fallback.
       const result = resolveFeedLayout({
         requestedLayout: LAYOUT.WIDE,
         variant: TIMELINE_FEED_VARIANT.COLLECTION,
