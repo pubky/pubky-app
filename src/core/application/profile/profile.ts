@@ -128,6 +128,7 @@ export class ProfileApplication {
     await UserDetailsModel.upsert({
       ...currentUser,
       status: status || null,
+      deleted: false,
     });
   }
 

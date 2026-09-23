@@ -70,6 +70,8 @@ export class LocalProfileService {
       image: user.image,
       links: user.links ? user.links.map((link) => ({ title: link.title, url: link.url })) : [],
       indexed_at: Date.now(),
+      // Writing a profile revives a tombstone on Nexus, so the cached row must stop reading as one.
+      deleted: false,
     });
   }
 

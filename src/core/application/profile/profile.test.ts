@@ -221,6 +221,32 @@ describe('ProfileApplication', () => {
       expect(updatedUser!.status).toBeNull();
     });
 
+    it('clears a cached tombstone after the status is written', async () => {
+      await UserDetailsModel.create({
+        id: testPubky,
+        name: 'Test User',
+        bio: '',
+        image: null,
+        status: null,
+        links: null,
+        indexed_at: Date.now(),
+        deleted: true,
+      });
+
+      const mockUserResult = {
+        user: { toJson: vi.fn(() => ({ name: 'Test User', bio: '', image: '', links: [], status: 'back' })) },
+        meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
+      };
+      vi.spyOn(UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
+      vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+
+      await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+
+      const updatedUser = await UserDetailsModel.findById(testPubky);
+      expect(updatedUser!.status).toBe('back');
+      expect(updatedUser!.deleted).toBe(false);
+    });
+
     it('throws error when user not found', async () => {
       await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'available' })).rejects.toThrow(
         'User profile not found',
