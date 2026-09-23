@@ -7,7 +7,7 @@ import type {
 } from '@/application/user/user.types';
 import { USER_TAGS_PER_PAGE } from '@/config/tags';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
-import type { TFetchUserParams, TPubkyListParams } from '@/controllers/user/user.type';
+import type { TFetchUserDetailsParams, TFetchUserParams, TPubkyListParams } from '@/controllers/user/user.type';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -89,8 +89,12 @@ export class UserApplication {
    * @param params - Parameters containing user ID
    * @returns Promise resolving to user details or null if not found
    */
-  static async fetchDetails({ userId, isCurrent }: TReadProfileParams & { isCurrent?: () => boolean }) {
-    const nexusUserDetails = await NexusUserService.details({ user_id: userId });
+  static async fetchDetails({
+    userId,
+    isCurrent,
+    ...options
+  }: TFetchUserDetailsParams & { isCurrent?: () => boolean }) {
+    const nexusUserDetails = await NexusUserService.details({ user_id: userId, ...options });
     if (isCurrent && !isCurrent()) return null;
     await LocalProfileService.upsertDetails(nexusUserDetails);
     return await LocalUserService.readDetails({ userId });

@@ -20,6 +20,7 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
 
 export class LocalProfileService {
   private constructor() {} // Prevent instantiation
@@ -31,17 +32,36 @@ export class LocalProfileService {
    * `social_graph_status`; the tier is only known from a full user view. A whole-row put
    * would erase a tier persisted earlier, so the existing one is carried over. Read and
    * write share a transaction so a concurrent full-view persist cannot slip in between.
+   * Concurrent details requests may use different retry budgets and finish out of order;
+   * compare only known Nexus revisions, never the client timestamp used for local
+   * avatar updates. A response started before a local edit cannot replace that edit.
    *
    * @param userDetails - The user details to upsert
+   * @param source - Profile creation is local; fetched details carry a Nexus revision
    * @returns Promise resolving to void
    */
-  static async upsertDetails(userDetails: NexusUserDetails): Promise<void> {
-    await db.transaction('rw', UserDetailsModel.table, async () => {
+  static async upsertDetails(userDetails: NexusUserDetails, source: 'nexus' | 'local' = 'nexus'): Promise<void> {
+    const fetchStartedAt = getNexusResponseStartedAt(userDetails);
+    await db.transaction('rw', [UserDetailsModel.table, UserTtlModel.table], async () => {
       const existing = await UserDetailsModel.findById(userDetails.id);
+      if (source === 'nexus') {
+        if (existing?.nexusIndexedAt !== undefined && existing.nexusIndexedAt > userDetails.indexed_at) return;
+        if (existing?.localUpdatedAt !== undefined) {
+          if (fetchStartedAt === undefined || fetchStartedAt <= existing.localUpdatedAt) return;
+          if (existing.nexusIndexedAt !== undefined && existing.nexusIndexedAt === userDetails.indexed_at) return;
+        }
+      }
+      const localUpdatedAt = source === 'local' ? Date.now() : undefined;
       const social_graph_status = existing?.social_graph_status;
-      await UserDetailsModel.upsert(
-        social_graph_status === undefined ? userDetails : { ...userDetails, social_graph_status },
-      );
+      await UserDetailsModel.upsert({
+        ...userDetails,
+        nexusIndexedAt: source === 'local' ? existing?.nexusIndexedAt : userDetails.indexed_at,
+        ...(localUpdatedAt === undefined ? {} : { localUpdatedAt }),
+        ...(social_graph_status === undefined ? {} : { social_graph_status }),
+      });
+      if (localUpdatedAt !== undefined) {
+        await UserTtlModel.upsert({ id: userDetails.id, lastUpdatedAt: localUpdatedAt });
+      }
     });
   }
 
@@ -64,12 +84,17 @@ export class LocalProfileService {
    * @returns Promise resolving to void
    */
   static async updateDetails(user: PubkyAppUser, pubky: Pubky): Promise<void> {
-    await UserDetailsModel.update(pubky, {
-      name: user.name,
-      bio: user.bio,
-      image: user.image,
-      links: user.links ? user.links.map((link) => ({ title: link.title, url: link.url })) : [],
-      indexed_at: Date.now(),
+    await db.transaction('rw', [UserDetailsModel.table, UserTtlModel.table], async () => {
+      const now = Date.now();
+      await UserDetailsModel.update(pubky, {
+        name: user.name,
+        bio: user.bio,
+        image: user.image,
+        links: user.links ? user.links.map((link) => ({ title: link.title, url: link.url })) : [],
+        indexed_at: now,
+        localUpdatedAt: now,
+      });
+      await UserTtlModel.upsert({ id: pubky, lastUpdatedAt: now });
     });
   }
 
