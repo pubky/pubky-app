@@ -1,9 +1,11 @@
+import type { PubkyAppUser } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalUserService } from '@/services/local/user/user';
 import { NexusSocialGraphStatus, type NexusUserCounts, type NexusUserDetails } from '@/services/nexus/nexus.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { LocalProfileService } from './profile';
 
 describe('LocalProfileService', () => {
@@ -127,6 +129,32 @@ describe('LocalProfileService', () => {
 
       const result = await UserDetailsModel.findById(userId);
       expect(result!.social_graph_status).toBeUndefined();
+    });
+  });
+
+  describe('updateDetails', () => {
+    const userId = 'test-user-id' as Pubky;
+
+    it('should clear a cached tombstone when the profile is written', async () => {
+      await UserDetailsModel.upsert({
+        id: userId,
+        name: '',
+        bio: '',
+        image: null,
+        status: null,
+        links: null,
+        indexed_at: 1,
+        deleted: true,
+      });
+
+      await LocalProfileService.updateDetails(
+        asOpaque<PubkyAppUser>({ name: 'Revived', bio: 'Back again', image: null, links: [] }),
+        userId,
+      );
+
+      const result = await UserDetailsModel.findById(userId);
+      expect(result!.name).toBe('Revived');
+      expect(result!.deleted).toBe(false);
     });
   });
 

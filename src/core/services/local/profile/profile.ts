@@ -93,6 +93,8 @@ export class LocalProfileService {
         links: user.links ? user.links.map((link) => ({ title: link.title, url: link.url })) : [],
         indexed_at: now,
         localUpdatedAt: now,
+        // Writing a profile revives a tombstone on Nexus, so the cached row must stop reading as one.
+        deleted: false,
       });
       await UserTtlModel.upsert({ id: pubky, lastUpdatedAt: now });
     });

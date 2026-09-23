@@ -130,6 +130,42 @@ describe('useUserProfile', () => {
     });
   });
 
+  describe('Deleted users', () => {
+    const baseUser: NexusUserDetails = {
+      id: 'test-user-id' as Pubky,
+      name: 'Test User',
+      bio: 'Test bio',
+      image: null,
+      status: null,
+      links: [],
+      indexed_at: Date.now(),
+    };
+
+    const renderWithUser = (user: NexusUserDetails) => {
+      mockMocks.mockUserDetails.current = user;
+      mockMocks.mockGetDetails.mockResolvedValue(user);
+      return renderHook(() => useUserProfile('test-user-id'));
+    };
+
+    it('shows [DELETED] as the name when Nexus flags the user as deleted', () => {
+      const { result } = renderWithUser({ ...baseUser, name: '', bio: '', deleted: true });
+
+      expect(result.current.profile?.name).toBe('[DELETED]');
+    });
+
+    it('shows [DELETED] for a row cached with the legacy name sentinel', () => {
+      const { result } = renderWithUser({ ...baseUser, name: '[DELETED]' });
+
+      expect(result.current.profile?.name).toBe('[DELETED]');
+    });
+
+    it('keeps the real name when the user is not deleted', () => {
+      const { result } = renderWithUser({ ...baseUser, deleted: false });
+
+      expect(result.current.profile?.name).toBe('Test User');
+    });
+  });
+
   describe('Public key formatting', () => {
     it('builds correct public key format', () => {
       const mockUser: NexusUserDetails = {

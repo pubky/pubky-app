@@ -62,3 +62,9 @@ export const TAG_BANNED_CHARS = new RegExp(`[${TAG_INVALID_CHARS_FOR_REGEX}]`, '
  * Use with isValidTagLabel before converting to a link.
  */
 export const HASHTAG_IN_TEXT_REGEX = new RegExp(`(^|\\s)(#[a-zA-Z0-9][^${TAG_INVALID_CHARS_FOR_REGEX}]*)`, 'g');
+
+/**
+ * Name shown for a deleted user. Also the legacy Nexus tombstone sentinel: builds without the
+ * `deleted` flag overwrite the user's `name` with it.
+ */
+export const DELETED_USER_NAME = '[DELETED]';

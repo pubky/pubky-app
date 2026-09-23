@@ -17,6 +17,7 @@ export class UserDetailsModel extends RecordModelBase<Pubky, UserDetailsModelSch
   links: NexusUserLink[] | null;
   status: string | null;
   social_graph_status?: NexusSocialGraphStatus | null;
+  deleted?: boolean;
 
   constructor(userDetails: UserDetailsModelSchema) {
     super(userDetails);
@@ -29,5 +30,6 @@ export class UserDetailsModel extends RecordModelBase<Pubky, UserDetailsModelSch
     this.links = userDetails.links;
     this.status = userDetails.status;
     this.social_graph_status = userDetails.social_graph_status;
+    this.deleted = userDetails.deleted;
   }
 }
