@@ -1,0 +1,151 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PassportMethodCard > renders the Quick & Easy card with the cloud illustration and forwards the click 1`] = `
+<div>
+  <div
+    class="flex flex-col bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12 flex-1 rounded-md"
+    data-slot="card"
+    data-testid="passport-method-card"
+  >
+    <div
+      class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+      data-slot="card-content"
+    >
+      <div
+        class="hidden w-48 shrink-0 flex-col lg:flex"
+        data-slot="illustrated-card-visual"
+      >
+        <img
+          alt="Lime cloud representing an account backed by an existing sign-in provider"
+          class="max-w-full size-48"
+          height="192"
+          src="/images/passport-cloud.webp"
+          width="192"
+        />
+      </div>
+      <div
+        class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+        data-slot="illustrated-card-content"
+      >
+        <div
+          class="mx-auto w-full flex-col flex gap-3"
+          data-testid="container"
+        >
+          <h3
+            class="text-2xl font-bold text-foreground leading-8"
+            data-testid="typography"
+          >
+            Quick & Easy
+          </h3>
+          <p
+            class="text-base font-medium leading-6 text-secondary-foreground/80"
+            data-testid="typography"
+          >
+            Use legacy sign-in methods.
+          </p>
+        </div>
+        <button
+          aria-busy="false"
+          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal w-full"
+          data-size="lg"
+          data-slot="button"
+          data-testid="continue-with-google"
+          data-variant="secondary"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="size-4"
+            fill="none"
+            height="24"
+            viewBox="0 0 16 16"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M7.99988 6.54543V9.64362H12.3053C12.1163 10.64 11.5489 11.4836 10.698 12.0509L13.2944 14.0655C14.8071 12.6692 15.6798 10.6182 15.6798 8.18187C15.6798 7.61461 15.6289 7.06911 15.5344 6.54552L7.99988 6.54543Z"
+              fill="#4285F4"
+            />
+            <path
+              d="M3.51645 9.52268L2.93088 9.97093L0.858114 11.5854C2.17447 14.1963 4.87246 16 7.9997 16C10.1596 16 11.9705 15.2873 13.2942 14.0655L10.6979 12.0509C9.98512 12.5309 9.07602 12.8219 7.9997 12.8219C5.91972 12.8219 4.15249 11.4182 3.51972 9.5273L3.51645 9.52268Z"
+              fill="#34A853"
+            />
+            <path
+              d="M0.858119 4.41455C0.312695 5.49086 0 6.70543 0 7.99995C0 9.29447 0.312695 10.509 0.858119 11.5854C0.858119 11.5926 3.51998 9.5199 3.51998 9.5199C3.35998 9.03991 3.26541 8.53085 3.26541 7.99987C3.26541 7.46889 3.35998 6.95983 3.51998 6.47983L0.858119 4.41455Z"
+              fill="#FBBC05"
+            />
+            <path
+              d="M7.99987 3.18545C9.17807 3.18545 10.2253 3.59271 11.0617 4.37818L13.3526 2.0873C11.9635 0.792777 10.1599 0 7.99987 0C4.87262 0 2.17447 1.79636 0.858114 4.41455L3.5199 6.48001C4.15259 4.58908 5.91988 3.18545 7.99987 3.18545Z"
+              fill="#EA4335"
+            />
+          </svg>
+          <span
+            aria-live="polite"
+            data-testid="typography"
+          >
+            Continue with Google
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PassportMethodSection > renders the uppercase label and button for the mobile layout 1`] = `
+<div>
+  <div
+    class="mx-auto w-full flex-col flex gap-3"
+    data-testid="passport-method-section"
+  >
+    <p
+      class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+      data-testid="typography"
+    >
+      Quick & Easy
+    </p>
+    <button
+      aria-busy="false"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal w-full"
+      data-size="lg"
+      data-slot="button"
+      data-testid="continue-with-google"
+      data-variant="secondary"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="size-4"
+        fill="none"
+        height="24"
+        viewBox="0 0 16 16"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M7.99988 6.54543V9.64362H12.3053C12.1163 10.64 11.5489 11.4836 10.698 12.0509L13.2944 14.0655C14.8071 12.6692 15.6798 10.6182 15.6798 8.18187C15.6798 7.61461 15.6289 7.06911 15.5344 6.54552L7.99988 6.54543Z"
+          fill="#4285F4"
+        />
+        <path
+          d="M3.51645 9.52268L2.93088 9.97093L0.858114 11.5854C2.17447 14.1963 4.87246 16 7.9997 16C10.1596 16 11.9705 15.2873 13.2942 14.0655L10.6979 12.0509C9.98512 12.5309 9.07602 12.8219 7.9997 12.8219C5.91972 12.8219 4.15249 11.4182 3.51972 9.5273L3.51645 9.52268Z"
+          fill="#34A853"
+        />
+        <path
+          d="M0.858119 4.41455C0.312695 5.49086 0 6.70543 0 7.99995C0 9.29447 0.312695 10.509 0.858119 11.5854C0.858119 11.5926 3.51998 9.5199 3.51998 9.5199C3.35998 9.03991 3.26541 8.53085 3.26541 7.99987C3.26541 7.46889 3.35998 6.95983 3.51998 6.47983L0.858119 4.41455Z"
+          fill="#FBBC05"
+        />
+        <path
+          d="M7.99987 3.18545C9.17807 3.18545 10.2253 3.59271 11.0617 4.37818L13.3526 2.0873C11.9635 0.792777 10.1599 0 7.99987 0C4.87262 0 2.17447 1.79636 0.858114 4.41455L3.5199 6.48001C4.15259 4.58908 5.91988 3.18545 7.99987 3.18545Z"
+          fill="#EA4335"
+        />
+      </svg>
+      <span
+        aria-live="polite"
+        data-testid="typography"
+      >
+        Continue with Google
+      </span>
+    </button>
+  </div>
+</div>
+`;

@@ -69,5 +69,8 @@ public/sw.js.map
 # Cursor: plans saved to the workspace are personal
 /.cursor/plans
 
+# Serena AI
+.serena/*
+
 # Development Containers
 .devcontainer

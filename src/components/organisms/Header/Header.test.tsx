@@ -540,6 +540,15 @@ describe('Header', () => {
       expect(screen.getByTestId('header-title')).toHaveTextContent('Signed out');
     });
 
+    it('renders the "Sign in" HeaderTitle for unauthenticated users on the sign-in route', () => {
+      mockCurrentUserPubky = null;
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.SIGN_IN);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('header-title')).toHaveTextContent('Sign in');
+    });
+
     it('renders HeaderTitle when on the profile step even if signed in', () => {
       mockCurrentUserPubky = 'test-pubky-123';
       mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
