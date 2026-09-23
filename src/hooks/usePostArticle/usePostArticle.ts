@@ -10,6 +10,8 @@ import type { FileVariant } from '@/services/nexus/file/file.types';
 
 interface CoverImage {
   src: string;
+  /** Set when a desktop variant was requested: the same file at its larger size. */
+  desktopSrc?: string;
   alt: string;
 }
 
@@ -17,6 +19,11 @@ interface UsePostArticleParams {
   content: string;
   attachments: PostDetailsModel['attachments'];
   coverImageVariant: FileVariant;
+  /**
+   * Second, larger source for surfaces that render the cover at full width (the article hero).
+   * Left unset by feed-sized surfaces, which never want the original upload.
+   */
+  coverImageDesktopVariant?: FileVariant;
 }
 
 interface UsePostArticleResult {
@@ -52,6 +59,7 @@ export function usePostArticle({
   content,
   attachments,
   coverImageVariant,
+  coverImageDesktopVariant,
 }: UsePostArticleParams): UsePostArticleResult {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -97,7 +105,10 @@ export function usePostArticle({
 
         if (attachment && attachment.content_type.startsWith('image')) {
           const src = FileController.getFileUrl({ fileId: attachment.id, variant: coverImageVariant });
-          const coverImage = { src, alt: attachment.name };
+          const desktopSrc = coverImageDesktopVariant
+            ? FileController.getFileUrl({ fileId: attachment.id, variant: coverImageDesktopVariant })
+            : undefined;
+          const coverImage = { src, desktopSrc, alt: attachment.name };
           setCoverImage(coverImage);
         } else {
           setCoverImage(null);
@@ -120,7 +131,7 @@ export function usePostArticle({
     return () => {
       cancelled = true;
     };
-  }, [attachments, coverImageVariant, hasInlineSlotZero]);
+  }, [attachments, coverImageVariant, coverImageDesktopVariant, hasInlineSlotZero]);
 
   return {
     title,

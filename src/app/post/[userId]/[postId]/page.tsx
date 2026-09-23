@@ -2,7 +2,9 @@ import { permanentRedirect } from 'next/navigation';
 import type { Metadata as NextMetadata } from 'next';
 import { getCollectionRoute, POST_ROUTES } from '@/app/routes';
 import { normalizePostIds } from '@/libs/og/routeIds';
-import { resolvePostCoverPreloadUrl } from '@/libs/post/postCoverPreload';
+import type { PostCoverPreloadUrls } from '@/libs/post/postCoverPreload';
+import { resolvePostCoverPreloadUrls } from '@/libs/post/postCoverPreload';
+import { POST_COVER_DESKTOP_MEDIA, POST_COVER_MOBILE_MEDIA } from '@/libs/post/postCoverVariant';
 import { fetchUserAndPostForMetadata, resolveMentionsForMetadata } from '@/libs/post/postMetadata';
 import { deriveTextPreview, isMentionResolvablePreview } from '@/libs/post/postPreview';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
@@ -94,15 +96,16 @@ export default async function PostPage({ params }: PostPageProps) {
   // paths — keep both in sync.
   const ids = normalizePostIds(userId, postId);
   let isCollection = false;
-  let coverPreloadUrl: string | null = null;
+  let coverPreload: PostCoverPreloadUrls | null = null;
   if (ids) {
     try {
       const result = await fetchUserAndPostForMetadata(ids.userId, ids.postId);
       isCollection = result?.post.kind === 'collection';
       // The cover is the page's largest contentful paint, and the client only learns
-      // its URL after hydration + a file-metadata lookup. Preload it here, from the
-      // post this render already fetched, so the download starts with the HTML.
-      coverPreloadUrl = result ? resolvePostCoverPreloadUrl(result.post) : null;
+      // its URL after hydration + a file-metadata lookup. Preload both variants here,
+      // from the post this render already fetched: the browser honours the one whose
+      // media query matches, so the download starts before the app JS runs.
+      coverPreload = result ? resolvePostCoverPreloadUrls(result.post) : null;
     } catch {
       // Ignore — render the post normally when the kind lookup fails.
     }
@@ -117,7 +120,24 @@ export default async function PostPage({ params }: PostPageProps) {
 
   return (
     <>
-      {coverPreloadUrl && <link rel="preload" as="image" href={coverPreloadUrl} fetchPriority="high" />}
+      {coverPreload && (
+        <>
+          <link
+            rel="preload"
+            as="image"
+            href={coverPreload.mobile}
+            media={POST_COVER_MOBILE_MEDIA}
+            fetchPriority="high"
+          />
+          <link
+            rel="preload"
+            as="image"
+            href={coverPreload.desktop}
+            media={POST_COVER_DESKTOP_MEDIA}
+            fetchPriority="high"
+          />
+        </>
+      )}
       <SinglePostPage postId={compositeId} />
     </>
   );

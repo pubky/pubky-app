@@ -1,19 +1,31 @@
 import { FileVariant } from '@/services/nexus/file/file.types';
 
 /**
- * Variant the post page renders as its cover, and the one its preload must ask
- * for. One constant on purpose: if the preload requested a different variant
- * than the `<img>` renders, the browser would download the image twice.
+ * The two variants the article hero picks between, and the media query that picks.
  *
- * `feed` (720 px WebP) is the hero's source for now. It used to ask for `main`,
- * the original upload (a 2048x683 PNG, 1.9 MB for the post in #2633), and the
- * high-priority preload pulled that over the app JS: FCP got worse, ~4.65 s
- * against ~3.9 s before the preload, and LCP ~5.8 s. With `feed` the cover is
- * 43 KB and FCP/LCP come back to ~4.0 s / ~5.2 s.
+ * Below the desktop breakpoint the hero renders `feed` (a 720 px WebP, 43 KB for the post in
+ * #2633) and above it the original upload, so a phone never downloads a multi-megabyte file at
+ * any device pixel ratio while a wide screen keeps the detail `feed` cannot.
  *
- * pubky/pubky-nexus#1083 tracks a ~1440 px WebP hero variant. Once it exists,
- * the hero and the preload move to one `srcset` (`feed 720w` + `1440w`) with
- * matching `imageSrcSet`/`imageSizes` on the preload, and this constant becomes
- * the fallback source. Until then both sides read it from here.
+ * A `srcset` cannot express that choice: the browser picks a candidate by `sizes × DPR`, so a 3x
+ * phone asks for roughly 1170w and takes the original upload. Measured on a 390 CSS px viewport
+ * with `srcset="feed 720w, main 2048w"` and `sizes="100vw"`: DPR 1 fetches `feed`, DPR 2 and
+ * DPR 3 fetch `main`.
+ *
+ * The preload and the `<img>` read these constants, so the URL the browser is told about early
+ * is the one it renders: one download, never two.
+ *
+ * pubky/pubky-nexus#1083 tracks a ~1440 px WebP hero variant, which takes the desktop slot here
+ * (and then earns a `srcset` of its own) once it exists.
  */
-export const POST_COVER_VARIANT = FileVariant.FEED;
+export const POST_COVER_MOBILE_VARIANT = FileVariant.FEED;
+export const POST_COVER_DESKTOP_VARIANT = FileVariant.MAIN;
+
+/** Tailwind `lg`: at and above it the hero's column is wide enough to want the original. */
+export const POST_COVER_DESKTOP_MEDIA = '(min-width: 1024px)';
+
+/**
+ * The complement of {@link POST_COVER_DESKTOP_MEDIA}, so exactly one of the two preloads (and
+ * exactly one `<source>` candidate) matches on every viewport.
+ */
+export const POST_COVER_MOBILE_MEDIA = '(max-width: 1023.98px)';

@@ -3,6 +3,7 @@ import { render } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
+import { POST_COVER_DESKTOP_MEDIA, POST_COVER_MOBILE_MEDIA } from '@/libs/post/postCoverVariant';
 import { SinglePostPage } from '@/templates/Post/SinglePost/SinglePostPage';
 import PostPage, { generateMetadata } from './page';
 
@@ -271,22 +272,28 @@ describe('PostPage (cover preload)', () => {
     return render(element);
   };
 
-  it('preloads the article cover so the browser can start it before hydration', async () => {
+  it('preloads both cover variants, one per media query, so the browser starts the one it renders', async () => {
     await renderPost({
       kind: 'long',
       content: JSON.stringify({ title: 'How to Think About Names', body: 'My name is John Carvalho.' }),
       attachments: [FILE_URI],
     });
 
-    const preloads = document.querySelectorAll('link[rel="preload"]');
-    expect(preloads).toHaveLength(1);
-    const preload = preloads[0];
-    expect(preload).toHaveAttribute('as', 'image');
-    expect(preload).toHaveAttribute(
-      'href',
-      `https://nexus.staging.pubky.app/static/files/${AUTHOR}/0035R8SA18DE0/feed`,
-    );
-    expect(preload).toHaveAttribute('fetchpriority', 'high');
+    const preloads = Array.from(document.querySelectorAll('link[rel="preload"]'));
+    expect(preloads).toHaveLength(2);
+
+    const byMedia = new Map(preloads.map((link) => [link.getAttribute('media'), link]));
+    const cdn = `https://nexus.staging.pubky.app/static/files/${AUTHOR}/0035R8SA18DE0`;
+
+    // One URL per side of the breakpoint, both the variants the hero renders: `feed` is what a
+    // phone downloads, `main` what a wide screen keeps.
+    expect(byMedia.get(POST_COVER_MOBILE_MEDIA)).toHaveAttribute('href', `${cdn}/feed`);
+    expect(byMedia.get(POST_COVER_DESKTOP_MEDIA)).toHaveAttribute('href', `${cdn}/main`);
+
+    for (const preload of preloads) {
+      expect(preload).toHaveAttribute('as', 'image');
+      expect(preload).toHaveAttribute('fetchpriority', 'high');
+    }
   });
 
   it('emits no image preload when slot 0 is an inline image instead of the cover', async () => {
