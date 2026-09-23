@@ -53,7 +53,7 @@ describe('CollectionLayoutPicker', () => {
 
     const visualOption = await screen.findByRole('menuitem', { name: 'Visual' });
     expect(visualOption).toHaveAttribute('data-cy', 'collection-layout-visual');
-    expect(visualOption.querySelector('.lucide-layout-grid')).toBeInTheDocument();
+    expect(visualOption.querySelector('.lucide-grid-2x2')).toBeInTheDocument();
     expect(visualOption.querySelector('.lucide-check')).not.toBeInTheDocument();
 
     fireEvent.click(visualOption);
@@ -65,7 +65,7 @@ describe('CollectionLayoutPicker', () => {
     renderPicker({ layout: COLLECTION_LAYOUT.VISUAL });
 
     const trigger = screen.getByRole('button', { name: 'Layout: Visual' });
-    expect(trigger.querySelector('.lucide-layout-grid')).toBeInTheDocument();
+    expect(trigger.querySelector('.lucide-grid-2x2')).toBeInTheDocument();
 
     fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Grip, LayoutDashboard, LayoutGrid, type LucideIcon, Rows4 } from 'lucide-react';
+import { Check, Grid2X2, Grip, LayoutDashboard, type LucideIcon, Rows4 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -43,7 +43,7 @@ const COLLECTION_LAYOUT_PICKER_OPTIONS: Array<{
   { value: COLLECTION_LAYOUT.GRID, label: 'Grid', icon: Grip },
   { value: 'masonry', label: 'Cards', icon: LayoutDashboard },
   { value: COLLECTION_LAYOUT.LIST, label: 'List', icon: Rows4 },
-  { value: COLLECTION_LAYOUT.VISUAL, label: 'Visual', icon: LayoutGrid },
+  { value: COLLECTION_LAYOUT.VISUAL, label: 'Visual', icon: Grid2X2 },
 ];
 
 function getPickerOption(layout: CollectionViewLayout) {
