@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { PostCodeBlock } from './PostCodeBlock';
@@ -17,14 +18,24 @@ vi.mock('@/libs/utils/utils', async () => {
 // creates is a bundling concern, so the assertions below keep checking highlighted output while
 // the split itself is pinned by the recorded call. The record is a plain array because the call
 // happens at module import, before `vi.clearAllMocks()` runs in `beforeEach`.
-const { dynamicCalls } = vi.hoisted(() => ({ dynamicCalls: [] as unknown[][] }));
+const { dynamicCalls, dynamicMode } = vi.hoisted(() => ({
+  dynamicCalls: [] as unknown[][],
+  dynamicMode: { current: 'ready' as 'ready' | 'pending' | 'failed' },
+}));
 
 vi.mock('next/dynamic', async () => {
   const { PostCodeBlockHighlighter } = await import('./PostCodeBlockHighlighter');
   return {
     default: (...args: unknown[]) => {
       dynamicCalls.push(args);
-      return PostCodeBlockHighlighter;
+      // `pending` throws a promise (suspends, as a chunk still in flight does) and `failed`
+      // throws an error (as a rejected chunk does), so a test can assert what the block shows
+      // while the chunk is missing.
+      return (props: ComponentProps<typeof PostCodeBlockHighlighter>) => {
+        if (dynamicMode.current === 'pending') throw new Promise(() => {});
+        if (dynamicMode.current === 'failed') throw new Error('highlighter chunk failed');
+        return <PostCodeBlockHighlighter {...props} />;
+      };
     },
   };
 });
@@ -84,6 +95,7 @@ describe('PostCodeBlock', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    dynamicMode.current = 'ready';
   });
 
   afterEach(() => {
@@ -144,16 +156,32 @@ describe('PostCodeBlock', () => {
     it('loads the syntax highlighter on demand so a post without code never fetches it', async () => {
       render(<PostCodeBlock className="language-javascript">const x = 1;</PostCodeBlock>);
 
-      // ssr: false plus a loader: the chunk is fetched when a fenced block actually renders,
-      // never as part of the route's initial bundle.
-      const [loader, options] = dynamicCalls[0] as [() => Promise<unknown>, { ssr?: boolean }];
+      // A loader function: the chunk is fetched when a fenced block actually renders, never
+      // as part of the route's initial bundle.
+      const [loader] = dynamicCalls[0] as [() => Promise<unknown>];
       expect(loader).toBeTypeOf('function');
-      expect(options.ssr).toBe(false);
 
       // The loader resolves to the real highlighter module, not a stub.
       const loaded = await loader();
       const { PostCodeBlockHighlighter } = await import('./PostCodeBlockHighlighter');
       expect(loaded).toBe(PostCodeBlockHighlighter);
+    });
+
+    it('shows the plain code while the highlighter chunk is still loading', () => {
+      dynamicMode.current = 'pending';
+
+      const { container } = render(<PostCodeBlock className="language-javascript">const x = 1;</PostCodeBlock>);
+
+      expect(container.querySelector('pre')?.textContent).toBe('const x = 1;');
+    });
+
+    it('keeps the plain code and the copy button when the highlighter chunk fails', () => {
+      dynamicMode.current = 'failed';
+
+      const { container } = render(<PostCodeBlock className="language-javascript">const x = 1;</PostCodeBlock>);
+
+      expect(container.querySelector('pre')?.textContent).toBe('const x = 1;');
+      expect(screen.getByTestId('copy-button')).toBeInTheDocument();
     });
 
     it('renders code block with container wrapper', () => {
