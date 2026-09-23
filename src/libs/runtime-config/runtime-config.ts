@@ -196,6 +196,8 @@ export const getPreludeSdkKey = (): string | undefined => getRuntimeConfig().pre
 export const getPreludeSdkTimeoutMs = (): number => getRuntimeConfig().preludeSdkTimeoutMs;
 export const getPlausibleDomain = (): string | undefined => getRuntimeConfig().plausibleDomain;
 export const getPlausibleScriptUrl = (): string | undefined => getRuntimeConfig().plausibleScriptUrl;
+/** Pubky Passport signer origin; `undefined` disables every "Continue with Google" entry point. */
+export const getPassportUrl = (): string | undefined => getRuntimeConfig().passportUrl;
 export const getPreviewImage = (): string => getRuntimeConfig().previewImage;
 export const getSiteName = (): string => getRuntimeConfig().siteName;
 export const getLocale = (): string => getRuntimeConfig().locale;

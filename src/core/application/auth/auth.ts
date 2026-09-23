@@ -18,6 +18,7 @@ import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type {
   TGenerateAuthUrlResult,
+  TGeneratePassportAuthUrlParams,
   THomeserverPublicKeyParams,
   THomeserverSessionResult,
   THomeserverSignUpParams,
@@ -177,6 +178,17 @@ export class AuthApplication {
    */
   static async generateSignupAuthUrl(inviteCode: string): Promise<TGenerateAuthUrlResult> {
     return await HomeserverService.generateSignupAuthUrl({ inviteCode });
+  }
+
+  /**
+   * Generates the sign-in authentication URL handed to Pubky Passport.
+   * Passport approves it with the identity behind the user's Google account (creating one when needed).
+   *
+   * @param params - x-callback-url metadata (source label and same-origin callbacks)
+   * @returns Authentication URL and approval promise
+   */
+  static async generatePassportAuthUrl(params: TGeneratePassportAuthUrlParams): Promise<TGenerateAuthUrlResult> {
+    return await HomeserverService.generatePassportAuthUrl(params);
   }
 
   /**

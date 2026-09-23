@@ -55,13 +55,31 @@ const nextConfig: NextConfig = {
 const withSerwist = withSerwistInit({
   swSrc: 'src/sw.ts',
   swDest: 'public/sw.js',
-  disable: process.env.NODE_ENV === 'development',
-  // Serwist's injected entry calls `window.serwist.register()` without a `.catch()`, so the
-  // rejection of `navigator.serviceWorker.register()` reaches Sentry as an unhandled error even
-  // though it is an expected browser/network condition. Registration is done by
-  // ServiceWorkerRegistrationProvider instead, which handles that rejection; the injected entry
-  // still exposes `window.serwist` with the same script URL and scope.
+  // Build-tool flag (like NEXT_STANDALONE), webpack dev only: `SERWIST_DEV=true npm run dev:https`.
+  // Dev builds ship an empty precache, so the offline fallback needs `npm run build && npm run start`.
+  disable: process.env.NODE_ENV === 'development' && process.env.SERWIST_DEV !== 'true',
+  // Serwist's injected entry calls `window.serwist.register()` without a `.catch()`, so a rejected
+  // `navigator.serviceWorker.register()` reaches Sentry as an unhandled error even though it is an
+  // expected browser/network condition. Registration is done by ServiceWorkerRegistrationProvider,
+  // which handles that rejection, after useServiceWorkerUpdate has attached its lifecycle listeners;
+  // the injected entry still exposes `window.serwist` with the same script URL and scope (docs/pwa.md).
   register: false,
+  // The local-first UI recovers on its own; a forced reload would drop in-progress state.
+  reloadOnOnline: false,
+  // `public/` precache allow-list. Public entries bypass `exclude` and
+  // `maximumFileSizeToCacheInBytes` (appended last by @serwist/build), so this list is the
+  // only size control for public assets. Keep it additive: only what the shell, the manifest
+  // and the offline page need. Illustrations, landing media and screenshots stay out.
+  globPublicPatterns: [
+    'offline.html',
+    'manifest.json',
+    'pubky-logo.svg',
+    'pubky-favicon.svg',
+    'images/manifest/web-app-manifest-{48x48,72x72,96x96,128x128,144x144,152x152,180x180,192x192,384x384,512x512,512x512-maskable}.png',
+  ],
+  // The largest chunk is ~1.75 MB; an over-limit chunk is dropped with only a build warning
+  // and would break offline boot, so keep headroom above the 2 MiB default.
+  maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
 });
 
 const composedConfig = withSerwist(nextConfig);

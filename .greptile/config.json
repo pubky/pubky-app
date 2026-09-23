@@ -171,6 +171,12 @@
         "src/libs/lucide/lucideIcons.tags.ts"
       ],
       "severity": "high"
+    },
+    {
+      "id": "sw-shell-only",
+      "rule": "The service worker owns the app shell only: precache, the share target and the static offline fallback. Do not add runtime caching for homeserver, pkarr, httprelay, Nexus, CDN or any data (Dexie is the only data cache; TTL is the only freshness mechanism), no defaultCache, and keep skipWaiting false (updates are user-consented via useServiceWorkerUpdate). Public precache entries are an allow-list in globPublicPatterns. See docs/pwa.md and ADR-0021.",
+      "scope": ["src/sw.ts", "next.config.ts", "src/hooks/useServiceWorkerUpdate/**"],
+      "severity": "high"
     }
   ]
 }
