@@ -7,7 +7,7 @@ vi.mock('@/config/app', () => ({
 }));
 
 vi.mock('@/config/externalLinks', () => ({
-  APP_RELEASE_URL: 'https://github.com/pubky/pubky-app/releases/tag/1.2.3',
+  APP_RELEASE_URL: 'https://github.com/pubky/pubky-app/releases/tag/v1.2.3',
 }));
 
 describe('SettingsInfo', () => {
@@ -37,7 +37,7 @@ describe('SettingsInfo', () => {
   it('renders version link pointing to release URL', () => {
     render(<SettingsInfo />);
     const versionLink = screen.getByText('v1.2.3').closest('a');
-    expect(versionLink).toHaveAttribute('href', 'https://github.com/pubky/pubky-app/releases/tag/1.2.3');
+    expect(versionLink).toHaveAttribute('href', 'https://github.com/pubky/pubky-app/releases/tag/v1.2.3');
     expect(versionLink).toHaveAttribute('target', '_blank');
   });
 
