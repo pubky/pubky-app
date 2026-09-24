@@ -54,7 +54,7 @@ export type ExistingAttachment = {
   type: string;
   name: string;
   /** Resolved render URLs (local blob or CDN); `null` while metadata is loading. */
-  urls: { main: string; feed?: string } | null;
+  urls: { main: string; feed?: string; large?: string } | null;
   /**
    * Set when metadata resolution (local + Nexus backfill) has terminally failed.
    * Distinguishes "still loading" (skeleton) from "unknowable" (generic file

@@ -15,17 +15,20 @@ const PLACEHOLDER_TYPE = 'application/octet-stream';
 
 const placeholderName = (uri: string): string => uri.split('/').pop() ?? 'file';
 
-const toResolvedAttachment = (uri: string, metadata: FileMetadata): ExistingAttachment => ({
-  uri,
-  type: metadata.content_type,
-  name: metadata.name,
-  urls: {
-    main: FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.MAIN }),
-    feed: metadata.content_type.startsWith('image')
-      ? FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.FEED })
-      : undefined,
-  },
-});
+const toResolvedAttachment = (uri: string, metadata: FileMetadata): ExistingAttachment => {
+  const isImage = metadata.content_type.startsWith('image');
+  return {
+    uri,
+    type: metadata.content_type,
+    name: metadata.name,
+    urls: {
+      main: FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.MAIN }),
+      feed: isImage ? FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.FEED }) : undefined,
+      // A kept article cover is seeded from here, and the desktop hero renders `large`.
+      large: isImage ? FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.LARGE }) : undefined,
+    },
+  };
+};
 
 /**
  * Seeds and resolves the composer's existing-attachment list for the EDIT variant.
