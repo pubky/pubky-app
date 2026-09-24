@@ -111,14 +111,11 @@ describe('ServiceWorkerRegistrationProvider', () => {
     expect(register).not.toHaveBeenCalled();
   });
 
-  it('reloads when connectivity returns and removes the listener on unmount', () => {
+  it('does not reload when connectivity returns', () => {
     const reload = vi.fn();
     vi.stubGlobal('location', { reload });
-    const { unmount } = renderProvider();
+    renderProvider();
     window.dispatchEvent(new Event('online'));
-    expect(reload).toHaveBeenCalledTimes(1);
-    unmount();
-    window.dispatchEvent(new Event('online'));
-    expect(reload).toHaveBeenCalledTimes(1);
+    expect(reload).not.toHaveBeenCalled();
   });
 });

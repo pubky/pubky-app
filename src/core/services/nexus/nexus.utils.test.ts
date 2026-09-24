@@ -520,4 +520,125 @@ describe('nexus.utils', () => {
       expect(mockFetch).toHaveBeenCalledTimes(4);
     });
   });
+
+  describe('queryNexus not-found budget', () => {
+    const mockFetch = vi.fn();
+    const originalFetch = globalThis.fetch;
+
+    /** A syntactically valid pubky that Nexus does not know (valid-format unknown key). */
+    const unknownPubky = 'pperrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rdo';
+    const detailsUrl = (suffix = '') => `${getNexusUrl()}/v0/user/${unknownPubky}/details${suffix}`;
+
+    const notFoundResponse = () => new Response('Not Found', { status: 404 });
+
+    beforeEach(async () => {
+      vi.clearAllMocks();
+      globalThis.fetch = mockFetch;
+      const { nexusQueryClient } = await import('./nexus.query-client');
+      nexusQueryClient.clear();
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      globalThis.fetch = originalFetch;
+      vi.useRealTimers();
+    });
+
+    it('gives up on an unknown profile after the scoped 404 budget, not the shared one', async () => {
+      mockFetch.mockImplementation(() => Promise.resolve(notFoundResponse()));
+
+      const pending = queryNexus({ url: detailsUrl(), notFoundRetries: 2 });
+      const rejection = expect(pending).rejects.toMatchObject({
+        category: ErrorCategory.Client,
+        code: ClientErrorCode.NOT_FOUND,
+      });
+
+      // Attempts at 0ms, 500ms, 1500ms - then the not-found verdict, ~1.5s total.
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(500);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+
+      await rejection;
+
+      // Never a fourth attempt: the page is not parked behind the 15.5s indexing window.
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    it('keeps the shared 404 budget for callers that do not scope one', async () => {
+      mockFetch.mockImplementation(() => Promise.resolve(notFoundResponse()));
+
+      const pending = queryNexus({ url: detailsUrl('-unscoped') });
+      const rejection = expect(pending).rejects.toMatchObject({ code: ClientErrorCode.NOT_FOUND });
+
+      // At 1.5s both budgets have made three attempts; only the scoped one is done.
+      await vi.advanceTimersByTimeAsync(1_500);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+
+      await vi.advanceTimersByTimeAsync(20_000);
+      await rejection;
+      expect(mockFetch).toHaveBeenCalledTimes(6);
+    });
+
+    it.each([true, false])('keeps concurrent retry budgets separate (profile first: %s)', async (profileFirst) => {
+      const startedAt = Date.now();
+      const details = { id: unknownPubky, name: 'Indexed after two seconds' };
+      mockFetch.mockImplementation(() =>
+        Promise.resolve(Date.now() - startedAt < 2_000 ? notFoundResponse() : new Response(JSON.stringify(details))),
+      );
+      const url = detailsUrl();
+      const profile = () => queryNexus({ url, notFoundRetries: 2 });
+      const background = () => queryNexus({ url });
+      const first = profileFirst ? profile() : background();
+      // Attach rejection handlers before advancing fake timers.
+      const firstResult = first.catch((error: unknown) => error);
+      await vi.advanceTimersByTimeAsync(0);
+      const second = profileFirst ? background() : profile();
+      const secondResult = second.catch((error: unknown) => error);
+      let backgroundSettled = false;
+      void (profileFirst ? secondResult : firstResult).then(() => {
+        backgroundSettled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(1_500);
+      expect(await (profileFirst ? firstResult : secondResult)).toMatchObject({ code: ClientErrorCode.NOT_FOUND });
+      expect(backgroundSettled).toBe(false);
+      expect(mockFetch).toHaveBeenCalledTimes(6);
+
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(await (profileFirst ? secondResult : firstResult)).toEqual(details);
+      expect(mockFetch).toHaveBeenCalledTimes(7);
+    });
+
+    it('still resolves a profile that gets indexed during the scoped retries', async () => {
+      const details = { id: 'some-pubky', name: 'Newly Indexed' };
+      mockFetch.mockResolvedValueOnce(notFoundResponse()).mockResolvedValue(new Response(JSON.stringify(details)));
+
+      const pending = queryNexus({ url: detailsUrl('-indexed-later'), notFoundRetries: 2 });
+
+      await vi.advanceTimersByTimeAsync(500);
+      expect(await pending).toEqual(details);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the transient 5xx budget when a 404 budget is scoped', async () => {
+      mockFetch.mockImplementation(() => Promise.resolve(new Response('Unavailable', { status: 503 })));
+
+      const pending = queryNexus({ url: detailsUrl('-transient'), notFoundRetries: 2 });
+      const rejection = expect(pending).rejects.toMatchObject({ category: ErrorCategory.Server });
+
+      // serverError backoff is 1s/2s/4s: attempts at 0ms, 1000ms, 3000ms, 7000ms.
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      await rejection;
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+    });
+  });
 });

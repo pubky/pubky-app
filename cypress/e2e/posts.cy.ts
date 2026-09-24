@@ -104,7 +104,6 @@ describe('posts', () => {
 
   it('can post with emojis', () => {
     const postContent = `🥋🗾⛩️ I can post with emojis! ${Date.now()}`;
-    const expectedLength = Array.from(postContent).length;
 
     createQuickPost(postContent, []);
 

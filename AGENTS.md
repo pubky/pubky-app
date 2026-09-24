@@ -73,8 +73,8 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   CI workflows change only in a CI task.
 - Env: only `src/libs/env/env.ts` and `src/libs/runtime-config/**` read `process.env.NEXT_PUBLIC_*` / `PUBKY_RUNTIME_*`
   (Oxlint-enforced); deploy-time values are `PUBKY_RUNTIME_*` getters, never secrets. `docs/environment.md`
-- Sentry: throw via `Err.*`; `Sentry.captureException` is called only in `app/error.tsx` and `app/global-error.tsx`, for
-  non-`AppError` values; no raw user data in error context. `docs/sentry.md`
+- Observability: throw via `Err.*`; they capture to Sentry and, in a consenting browser, Pulse. No other direct
+  `captureException` except `app/error.tsx` / `app/global-error.tsx`, for non-`AppError` values; no raw user data. `docs/sentry.md`
 - Tests: colocated `*.test.tsx`, one snapshot per test, mobile snapshot blocks for viewport-aware organisms; no `as any` or
   `as unknown as T` (use the `src/test-utils` helpers). `docs/component-testing.md`
 
@@ -84,7 +84,7 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - `src/hooks/**` → `docs/local-first.md`, `docs/data-patterns.md`, `docs/components.md` (Forms)
 - `src/components/**`, `src/app/**` → `docs/components.md`, `docs/z-index.md`, `docs/skeleton-architecture.md`,
   `docs/component-testing.md`
-- `src/test/vrt/**` → `docs/visual-regression-testing.md`
+- `src/test/vrt/**` → `docs/visual-regression-testing.md`; `src/sw.ts`, `public/manifest.json`, `src/libs/pwa/**` → `docs/pwa.md`
 - `src/libs/env/**`, `src/libs/runtime-config/**`, `src/config/**` → `docs/environment.md`
 - `src/libs/observability/**`, `src/instrumentation*.ts`, `src/sentry.*.config.ts` → `docs/sentry.md`
 - `src/core/database/**`, `src/core/services/homeserver/**`, `src/core/pipes/**`, `src/libs/network/**` →

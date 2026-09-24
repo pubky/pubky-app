@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { postUriBuilder } from 'pubky-app-specs';
 import { DEFAULT_COLLECTION_LAYOUT } from '@/config/collections';
 import { PostController } from '@/controllers/post/post';
-import { useAuthoredCollections } from '@/hooks/useAuthoredCollections/useAuthoredCollections';
+import {
+  useAuthoredCollections,
+  useAuthoredCollectionsPagination,
+} from '@/hooks/useAuthoredCollections/useAuthoredCollections';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
@@ -20,6 +23,15 @@ export type PostSaveCollectionTarget = {
   isUpdating: boolean;
 };
 
+type UsePostSaveTargetsOptions = {
+  /**
+   * Whether the picker is open. Drives collection pagination: the picker can
+   * hold more collections than one page, so it loads more while open and stays
+   * inert (no fetching, no scroll listener) while closed.
+   */
+  isPickerOpen?: boolean;
+};
+
 type UsePostSaveTargetsResult = {
   isBookmarked: boolean;
   isBookmarkLoading: boolean;
@@ -27,15 +39,37 @@ type UsePostSaveTargetsResult = {
   collections: PostSaveCollectionTarget[];
   isCollectionsLoading: boolean;
   isCreatingCollection: boolean;
+  hasMoreCollections: boolean;
+  isCollectionsLoadingMore: boolean;
+  loadMoreCollections: () => Promise<void>;
   toggleBookmark: () => Promise<void>;
   toggleCollection: (collectionId: string) => Promise<void>;
   createCollectionWithPost: (name: string) => Promise<void>;
 };
 
-export function usePostSaveTargets(postId: string): UsePostSaveTargetsResult {
+export function usePostSaveTargets(
+  postId: string,
+  { isPickerOpen = false }: UsePostSaveTargetsOptions = {},
+): UsePostSaveTargetsResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const bookmark = useBookmark(postId);
   const { collections, isLoading: isCollectionsLoading } = useAuthoredCollections(Boolean(currentUserPubky));
+  // `useAuthoredCollections` reads the whole cached stream, so it already renders
+  // every page this driver persists: the picker list grows through the live read
+  // rather than through a page-scoped list that would shrink back to one page.
+  const {
+    hasMore: hasMoreCollections,
+    isLoading: isCollectionsPageLoading,
+    isLoadingMore: isCollectionsPageLoadingMore,
+    loadMore: loadMoreCollections,
+  } = useAuthoredCollectionsPagination({
+    enabled: isPickerOpen,
+    onError: () => toast({ variant: 'error', description: 'Failed to load collections.' }),
+  });
+  // The paginator's first page counts as busy too: while it is in flight the
+  // picker must not arm its scroll sentinel, or a scroll would start a second
+  // concurrent load on the same stream.
+  const isCollectionsLoadingMore = isCollectionsPageLoading || isCollectionsPageLoadingMore;
   const [updatingCollectionIds, setUpdatingCollectionIds] = useState<Set<string>>(new Set());
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
 
@@ -121,6 +155,9 @@ export function usePostSaveTargets(postId: string): UsePostSaveTargetsResult {
     collections: saveTargets,
     isCollectionsLoading,
     isCreatingCollection,
+    hasMoreCollections,
+    isCollectionsLoadingMore,
+    loadMoreCollections,
     toggleBookmark: bookmark.toggle,
     toggleCollection,
     createCollectionWithPost,

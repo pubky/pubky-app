@@ -27,6 +27,7 @@ export interface QuickReplyContentProps {
   onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onFocus: () => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onSelect: (event: React.SyntheticEvent<HTMLTextAreaElement>) => void;
   onPaste: (event: React.ClipboardEvent) => void;
 
   // Mention autocomplete

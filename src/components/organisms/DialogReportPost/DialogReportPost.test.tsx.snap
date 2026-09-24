@@ -16,36 +16,17 @@ exports[`DialogReportPost - Snapshots > matches snapshot for issue selection ste
     style="pointer-events: auto;"
     tabindex="-1"
   >
-    <h2
-      class="sr-only"
-      id="radix-normalized"
-    >
-      Report Post
-    </h2>
     <div
-      class="flex flex-col gap-1.5 pr-6"
-      data-slot="dialog-header"
-      data-testid="dialog-header"
+      data-testid="dialog-report-post-issue-step"
     >
       <h2
-        class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333] sr-only"
+        class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
         data-slot="dialog-title"
         data-testid="dialog-title"
         id="radix-normalized"
       >
         Report Post
       </h2>
-      <p
-        class="text-sm leading-normal font-medium text-muted-foreground sr-only"
-        data-slot="dialog-description"
-        id="radix-normalized"
-      >
-        Report post dialog
-      </p>
-    </div>
-    <div
-      data-testid="dialog-report-post-issue-step"
-    >
       DialogReportPostIssueStep
     </div>
     <button
@@ -100,36 +81,17 @@ exports[`DialogReportPost - Snapshots > matches snapshot for reason step 1`] = `
     style="pointer-events: auto;"
     tabindex="-1"
   >
-    <h2
-      class="sr-only"
-      id="radix-normalized"
-    >
-      Report Post
-    </h2>
     <div
-      class="flex flex-col gap-1.5 pr-6"
-      data-slot="dialog-header"
-      data-testid="dialog-header"
+      data-testid="dialog-report-post-reason-step"
     >
       <h2
-        class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333] sr-only"
+        class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
         data-slot="dialog-title"
         data-testid="dialog-title"
         id="radix-normalized"
       >
         Report Post
       </h2>
-      <p
-        class="text-sm leading-normal font-medium text-muted-foreground sr-only"
-        data-slot="dialog-description"
-        id="radix-normalized"
-      >
-        Report post dialog
-      </p>
-    </div>
-    <div
-      data-testid="dialog-report-post-reason-step"
-    >
       <button
         data-testid="back-button"
       >
@@ -194,36 +156,17 @@ exports[`DialogReportPost - Snapshots > matches snapshot for success state 1`] =
     style="pointer-events: auto;"
     tabindex="-1"
   >
-    <h2
-      class="sr-only"
-      id="radix-normalized"
-    >
-      Report Post
-    </h2>
     <div
-      class="flex flex-col gap-1.5 pr-6"
-      data-slot="dialog-header"
-      data-testid="dialog-header"
+      data-testid="dialog-report-post-success"
     >
       <h2
-        class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333] sr-only"
+        class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
         data-slot="dialog-title"
         data-testid="dialog-title"
         id="radix-normalized"
       >
-        Report Post
+        Report Sent
       </h2>
-      <p
-        class="text-sm leading-normal font-medium text-muted-foreground sr-only"
-        data-slot="dialog-description"
-        id="radix-normalized"
-      >
-        Report post dialog
-      </p>
-    </div>
-    <div
-      data-testid="dialog-report-post-success"
-    >
       DialogReportPostSuccess
     </div>
     <button

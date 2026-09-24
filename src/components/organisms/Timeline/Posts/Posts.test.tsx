@@ -136,7 +136,10 @@ describe('TimelinePosts', () => {
     });
 
     // Mock useLiveQuery to return no replies by default
-    mockUseLiveQuery.mockReturnValue({ id: 'test', replies: 0, tags: 0, unique_tags: 0, reposts: 0 });
+    mockUseLiveQuery.mockImplementation((_queryFn, deps) => ({
+      query: deps?.[0],
+      data: { id: 'test', replies: 0, tags: 0, unique_tags: 0, reposts: 0 },
+    }));
   });
 
   afterEach(() => {
@@ -719,7 +722,10 @@ describe('TimelinePosts - Snapshots', () => {
     });
 
     // Mock useLiveQuery
-    mockUseLiveQuery.mockReturnValue({ id: 'test', replies: 0, tags: 0, unique_tags: 0, reposts: 0 });
+    mockUseLiveQuery.mockImplementation((_queryFn, deps) => ({
+      query: deps?.[0],
+      data: { id: 'test', replies: 0, tags: 0, unique_tags: 0, reposts: 0 },
+    }));
   });
 
   afterEach(() => {

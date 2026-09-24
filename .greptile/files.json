@@ -32,7 +32,7 @@
     },
     {
       "path": "docs/sentry.md",
-      "description": "What Sentry captures, the capture rule, drop rules, privacy scrubbing, source maps",
+      "description": "What Sentry and Pulse capture, the capture rule, drop rules, the Pulse consent gate, privacy scrubbing, source maps",
       "scope": [
         "src/libs/observability/**",
         "src/libs/error/**",
@@ -71,6 +71,30 @@
       "path": "docs/environment.md",
       "description": "Build-time Env and runtime PUBKY_RUNTIME_* configuration, Zod validation, docker run recipe",
       "scope": ["src/libs/env/**", "src/libs/runtime-config/**", "src/config/**", ".env.example", "Dockerfile"]
+    },
+    {
+      "path": "docs/pwa.md",
+      "description": "Service worker scope (shell only, no data caching), user-consented updates, static offline fallback, precache allow-list, manifest, install banner",
+      "scope": [
+        "src/sw.ts",
+        "serwist.config.mjs",
+        "next.config.ts",
+        "src/providers/ServiceWorkerRegistrationProvider/**",
+        "public/manifest.json",
+        "public/offline.html",
+        "src/libs/pwa/**",
+        "src/config/pwa.ts",
+        "src/hooks/useServiceWorkerUpdate/**",
+        "src/hooks/useNetworkStatus/**",
+        "src/hooks/useNetworkStatusToasts/**",
+        "src/hooks/useAppBadge/**",
+        "src/hooks/useIsStandalone/**",
+        "src/hooks/useInstallPrompt/**",
+        "src/hooks/useInstallPromptLifecycle/**",
+        "src/components/organisms/PwaManager/**",
+        "src/components/organisms/AlertInstall/**",
+        "src/components/organisms/DialogInstallIos/**"
+      ]
     },
     {
       "path": "docs/adr-guidelines.md",

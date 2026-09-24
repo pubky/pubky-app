@@ -63,6 +63,7 @@ export function QuickReply({
     setMentionSelectedIndex,
     handleMentionSelect,
     handleMentionKeyDown,
+    handleSelectionChange,
   } = usePostInput({
     variant: POST_INPUT_VARIANT.REPLY,
     postId: parentPostId,
@@ -135,6 +136,7 @@ export function QuickReply({
     onChange: handleChangeWithAuth,
     onFocus: handleExpandWithAuth,
     onKeyDown: handleKeyDown,
+    onSelect: handleSelectionChange,
     onPaste: handlePasteWithAuth,
     mentionIsOpen,
     mentionUsers,

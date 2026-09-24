@@ -62,7 +62,7 @@ There is no separate backend in this repo; the "backend" is the layer stack plus
 - `services/homeserver` — session, PUT/POST/DELETE writes, blob uploads, signup tokens.
 - `services/nexus` — paginated reads (bootstrap, streams, users, posts, tags, search, files).
 - `services/homegate` (SMS/phone verification), `chatwoot` (support), `exchangerate` (SAT/USD), `nextjs` (server-only work such as OG-metadata scraping) plus Next route handlers under `src/app/api/`.
-- Service worker: `src/sw.ts` (Serwist, share-target + local file cache, ADR-0016); its output `public/sw.js` is generated.
+- Service worker: `src/sw.ts` (Serwist: app-shell precache, share target, static offline fallback; no data caching, user-consented updates — `pwa.md`, ADR-0021); its output `public/sw.js` is generated.
 
 High-risk areas (schema, wire formats, TTL writers, env/runtime config, auth/keys, SSRF guards, build plumbing) are listed in `architecture.md`, _High-Risk Areas_.
 
@@ -100,7 +100,7 @@ The Build workflow caches `.next/cache` separately from setup-node's npm downloa
 
 Production builds use Next.js's default Turbopack bundler. Serwist 9.5.12 runs afterward in configurator mode (`serwist.config.mjs`), emitting `public/sw.js`; do not deploy the output of `next build` alone. Docker copies that worker with the other public assets. `@serwist/cli` uses esbuild to bundle the worker; TypeScript 7 remains the sole type checker. The config includes emitted font files and excludes source maps, with `precachePrerendered: false` to preserve the existing asset-only precache policy.
 
-`ServiceWorkerRegistrationProvider` creates the Serwist browser client directly, registers `/sw.js` as a classic worker at scope `/`, handles registration failures and reloads when connectivity returns. Registration stays disabled in development. There is no bundler-injected `window.serwist` dependency. The worker's share-target handler and Nexus-only runtime caching remain in `src/sw.ts`; the migration does not introduce Serwist's broader `defaultCache` rules.
+`ServiceWorkerRegistrationProvider` creates the Serwist browser client directly, registers `/sw.js` as a classic worker at scope `/` and handles registration failures; it does not reload when connectivity returns (ADR-0021). Registration and `useServiceWorkerUpdate` stay disabled outside production builds. There is no bundler-injected `window.serwist` dependency. The `public/` precache allow-list and the 3 MiB chunk limit live in `serwist.config.mjs`; the worker's scope and update policy are in `docs/pwa.md`.
 
 Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; `describe('<Component>')` plus a separate `describe('<Component> - Snapshots')` with exactly one `expect().toMatchSnapshot()` per test; mobile blocks (`- Mobile Snapshots`) for organisms/templates that use `useIsMobile` directly or through a child, via `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are Oxlint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
 

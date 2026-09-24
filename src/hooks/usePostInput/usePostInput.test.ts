@@ -3022,4 +3022,88 @@ describe('usePostInput', () => {
       expect(mockSetAttachments).not.toHaveBeenCalled();
     });
   });
+  describe('mention autocomplete', () => {
+    /** A real textarea so the hook can read the live selection, as the composer does */
+    const mountTextarea = (value: string, caret: number) => {
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      document.body.appendChild(textarea);
+      textarea.setSelectionRange(caret, caret);
+      return textarea;
+    };
+
+    it('writes the mention over the pattern at the caret and keeps the text after it', () => {
+      mockContent = 'Hello @jo world';
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+      const textarea = mountTextarea(mockContent, 9);
+      result.current.textareaRef.current = textarea;
+
+      act(() => {
+        result.current.handleMentionSelect('abc123');
+      });
+
+      expect(mockSetContent).toHaveBeenCalledWith('Hello pubkyabc123  world');
+      textarea.remove();
+    });
+
+    it('restores the caret after the inserted mention', async () => {
+      mockContent = 'Hello @jo world';
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+      const textarea = mountTextarea(mockContent, 9);
+      const setSelectionRange = vi.spyOn(textarea, 'setSelectionRange');
+      result.current.textareaRef.current = textarea;
+
+      act(() => {
+        result.current.handleMentionSelect('abc123');
+      });
+
+      // 'Hello ' + 'pubkyabc123 ' = the caret sits after the mention, before ' world'
+      await waitFor(() => expect(setSelectionRange).toHaveBeenCalledWith(18, 18));
+      textarea.remove();
+    });
+
+    it('writes the mention at the end of the value when the caret is there', () => {
+      mockContent = 'Hello @jo';
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+      const textarea = mountTextarea(mockContent, mockContent.length);
+      result.current.textareaRef.current = textarea;
+
+      act(() => {
+        result.current.handleMentionSelect('abc123');
+      });
+
+      expect(mockSetContent).toHaveBeenCalledWith('Hello pubkyabc123 ');
+      textarea.remove();
+    });
+
+    it('leaves the content alone when the mention would exceed the character limit', () => {
+      mockContent = `@jo ${'a'.repeat(POST_MAX_CHARACTER_LENGTH - 4)}`;
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+      const textarea = mountTextarea(mockContent, 3);
+      result.current.textareaRef.current = textarea;
+
+      act(() => {
+        result.current.handleMentionSelect('abc123');
+      });
+
+      expect(mockSetContent).not.toHaveBeenCalled();
+      textarea.remove();
+    });
+  });
 });

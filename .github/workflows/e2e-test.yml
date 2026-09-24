@@ -28,6 +28,9 @@ jobs:
           - app: "homeserver"
             submodule_dir: "pubky-stack/pubky-homeserver/"
             image: "homeserver-testnet"
+            build_args: |
+              BUILD_TARGET=testnet
+
 
     steps:
       - name: Checkout pubky-stack
@@ -44,7 +47,7 @@ jobs:
 
       - name: Set HEAD commit hash
         id: sha_tag
-        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
+        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
         with:
           path: ${{ matrix.submodule_dir }}
 
@@ -54,13 +57,13 @@ jobs:
           echo ${{ matrix.image }}_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
 
       - name: Login to registry
-        uses: pubky/ci-workflows/.github/actions/docker/registry_login@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
         with:
           registry: ${{ env.registry }}
           gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
 
       - name: Check if image needs to be rebuild
-        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
+        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
         id: check_image
         with:
           image: ${{ env.registry }}/${{ matrix.image }}
@@ -68,12 +71,15 @@ jobs:
           arch: ${{ env.platforms }}
 
       - name: Rebuild the images if needed
-        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
+        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
         with:
           registry: ${{ env.registry }}
           image: ${{ matrix.image }}
+          cache_from: type=gha,scope=${{ matrix.image }}
+          cache_to: type=gha,mode=max,scope=${{ matrix.image }}
           context: ${{ matrix.submodule_dir }}
           platforms: ${{ env.platforms }}
+          build_args: ${{ matrix.build_args }}
         if: ${{ steps.check_image.outputs.exists != 'true' }}
 
   set_vars_pubky_app:
@@ -169,7 +175,7 @@ jobs:
         run: npm ci
 
       - name: Login to registry
-        uses: pubky/ci-workflows/.github/actions/docker/registry_login@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
         with:
           registry: ${{ env.registry }}
           gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
@@ -250,7 +256,7 @@ jobs:
 
       - name: Run e2e tests - Desktop (${{ matrix.browser }}) - Spec (${{matrix.spec}})
         id: test-desktop
-        uses: cypress-io/github-action@v6
+        uses: cypress-io/github-action@v7
         env:
           DEBUG: '@cypress/github-action'
         with:
@@ -266,7 +272,7 @@ jobs:
 
       - name: Upload screenshots - ${{ matrix.browser }} - Desktop
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshots-${{ matrix.browser }}-${{ matrix.spec }}-desktop
           path: pubky-app/cypress/screenshots
@@ -274,7 +280,7 @@ jobs:
 
       - name: Upload video for ${{ matrix.spec }} test - ${{ matrix.browser }} - Desktop
         if: always() && steps.test-desktop.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: video-${{ matrix.browser }}-${{ matrix.spec }}-desktop-onboarding
@@ -284,7 +290,7 @@ jobs:
       # TODO: Skipped due to bug https://github.com/pubky/pubky-app/issues/372
       # - name: Run e2e tests - Mobile (${{ matrix.browser }})
       #   id: test-mobile
-      #   uses: cypress-io/github-action@v6
+      #   uses: cypress-io/github-action@v7
       #   env:
       #     DEBUG: '@cypress/github-action'
       #   with:
@@ -301,7 +307,7 @@ jobs:
 
       - name: Upload screenshots - ${{ matrix.browser }} - Mobile
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshots-${{ matrix.browser }}-${{ matrix.spec }}-mobile
           path: pubky-app/cypress/screenshots/mobile
@@ -309,7 +315,7 @@ jobs:
 
       - name: Upload video for ${{ matrix.spec }} test - ${{ matrix.browser }} - Mobile
         if: always() && steps.test-mobile.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: video-${{ matrix.browser }}-${{ matrix.spec }}-mobile-onboarding
@@ -318,7 +324,7 @@ jobs:
 
       - name: Upload cypress.log
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: cypress-log-${{ matrix.browser }}-${{ matrix.spec }}

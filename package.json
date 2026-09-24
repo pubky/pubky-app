@@ -1,10 +1,11 @@
 {
   "name": "franky",
-  "version": "1.9.0",
+  "version": "1.11.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "dev:webpack": "next dev --webpack",
+    "dev:https": "next dev --experimental-https",
     "build": "next build && npm run build:sw",
     "build:sw": "serwist build serwist.config.mjs",
     "start": "next start",
@@ -53,6 +54,7 @@
     "@serwist/next": "9.5.12",
     "@serwist/window": "9.5.12",
     "@synonymdev/pubky": "0.11.0",
+    "@synonymdev/pubky-pulse-web": "0.9.0",
     "@tanstack/react-query": "5.102.8",
     "@vitest/browser": "4.1.11",
     "@vitest/browser-playwright": "4.1.11",

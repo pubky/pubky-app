@@ -13,6 +13,7 @@ vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getMetadata: vi.fn(),
+    fetchFiles: vi.fn(),
     getFileUrl: vi.fn(),
   },
 }));

@@ -1,30 +1,33 @@
-# Sentry (Observability)
+# Observability (Sentry + Pulse)
 
-How errors and performance data flow into Sentry from Pubky App.
+How errors and performance data leave Pubky App. Sentry is the primary sink (browser, server and edge). Pulse (`@synonymdev/pubky-pulse-web`) is an optional, consent-gated, browser-only second sink for anonymous usage and errors — see [Pulse](#pulse-browser-only-second-sink) below, and [environment.md](environment.md) for its configuration and consent flow.
 
 ## What is captured
 
-| Source                                               | Mechanism                                                                                                                                                                         |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Every `Err.*` factory call                           | `captureAppError(error)` inside `createAppError()` (one call per AppError; structured tags: `error.category`, `error.code`, `error.service`, `error.operation`, `error.trace_id`) |
-| Unhandled browser JS exceptions                      | Sentry `globalHandlers` integration (auto)                                                                                                                                        |
-| Unhandled promise rejections                         | Sentry `globalHandlers` integration (auto)                                                                                                                                        |
-| Server Component / Route Handler / middleware errors | `onRequestError = Sentry.captureRequestError` exported from `src/instrumentation.ts` (Next.js 15+)                                                                                |
-| Route segment render errors                          | `Sentry.captureException(error)` in the `useEffect` of `src/app/error.tsx`                                                                                                        |
-| Root layout render errors                            | `Sentry.captureException(error)` in the `useEffect` of `src/app/global-error.tsx`                                                                                                 |
-| Replay (masked)                                      | `replayIntegration({ maskAllText, blockAllMedia, maskAllInputs })` on errored sessions                                                                                            |
+| Source                                               | Mechanism                                                                                                                                                                         | Sink           |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| Every `Err.*` factory call                           | `captureAppError(error)` inside `createAppError()` (one call per AppError; structured tags: `error.category`, `error.code`, `error.service`, `error.operation`, `error.trace_id`) | Sentry + Pulse |
+| Unhandled browser JS exceptions                      | Sentry `globalHandlers` integration (auto); Pulse `captureUnhandled` (auto)                                                                                                       | Sentry + Pulse |
+| Unhandled promise rejections                         | Sentry `globalHandlers` integration (auto); Pulse `captureUnhandled` (auto)                                                                                                       | Sentry + Pulse |
+| Server Component / Route Handler / middleware errors | `onRequestError = Sentry.captureRequestError` exported from `src/instrumentation.ts` (Next.js 15+)                                                                                | Sentry         |
+| Route segment render errors                          | `Sentry.captureException(error)` + `Pulse.captureException(error)` in the `useEffect` of `src/app/error.tsx`                                                                      | Sentry + Pulse |
+| Root layout render errors                            | the same pair in the `useEffect` of `src/app/global-error.tsx`                                                                                                                    | Sentry + Pulse |
+| Replay (masked)                                      | `replayIntegration({ maskAllText, blockAllMedia, maskAllInputs })` on errored sessions                                                                                            | Sentry         |
+| Browser screen views                                 | Pulse `trackPageViews`, pathnames mapped to route templates by `pulseScreenName` in `src/libs/observability/pulse.ts`                                                             | Pulse          |
+
+Every `Pulse.*` capture call is a no-op until `Pulse.init()` runs, and it never runs outside the browser or without consent — so a `Sink` of "Sentry + Pulse" means Sentry always, Pulse only in a consenting browser.
 
 ## Capture rule
 
-> Throw via `Err.*` factories. Do **not** call `Sentry.captureException` directly anywhere except `app/error.tsx` and `app/global-error.tsx`, and in those two files only for non-`AppError` instances.
+> Throw via `Err.*` factories. Do **not** call `Sentry.captureException` or `Pulse.captureException` directly anywhere except the single `Pulse.captureException` inside `createAppError()` (`src/libs/error/error.factories.ts`) and the two boundaries `app/error.tsx` and `app/global-error.tsx` — and in those two files only for non-`AppError` instances.
 
-The `Err.*` factories already log once and capture once — adding extra `Sentry.captureException` calls causes duplicate issues in the dashboard. Anything that bubbles to the browser global handler or the server `onRequestError` hook is captured automatically by the SDK.
+The `Err.*` factories already log once and capture once into each sink — adding extra `Sentry.captureException` or `Pulse.captureException` calls causes duplicate issues in that dashboard. Anything that bubbles to the browser global handler is captured automatically by both SDKs; the server `onRequestError` hook reaches Sentry only.
 
 ### Capture happens at construction, once per error chain
 
-`createAppError` calls `captureAppError` **when the `AppError` is built**, before any `catch` block runs. Two consequences:
+`createAppError` calls `captureAppError`, then `Pulse.captureException`, **when the `AppError` is built**, before any `catch` block runs. Both sit after the once-per-chain guard. Two consequences:
 
-- **Once per chain (ADR-0015 §5.1 Challenge 1).** If `params.cause` is, or wraps via `Error.cause`, an `AppError`, the wrapper is _not_ captured — the root already reached Sentry with the most precise stack and context. The wrapper's `Logger.error` line is still emitted for local logs. Wrapping a root that a drop rule suppressed therefore stays suppressed.
+- **Once per chain (ADR-0015 §5.1 Challenge 1).** If `params.cause` is, or wraps via `Error.cause`, an `AppError`, the wrapper is _not_ captured — the root already reached both sinks with the most precise stack and context. The wrapper's `Logger.error` line is still emitted for local logs. Wrapping a root that a drop rule suppressed therefore stays suppressed.
 - **Downstream mitigations do not reduce Sentry volume.** Lowering a `Logger` level (`Logger` has no Sentry sink), re-tagging a category at the throw site, handling the error more gracefully in a `catch`, or `event.preventDefault()` on an unhandled rejection all run _after_ the event was sent. The only ways to keep an expected `AppError` out of Sentry are to avoid creating it (handle the expected state before `Err.*`, see _OG metadata enrichment_ below) or to add a drop rule.
 - **The same decision is enforced in `beforeSend`.** The factory only controls its own `captureException` call. An `AppError` that escapes as an unhandled rejection (a fire-and-forget `void controller.action()` in a click handler) reaches the SDK again through `globalHandlers`, and Sentry's dedupe works per error _object_, not per cause chain — so a wrapper would produce a second, untagged event and a rule-dropped root would be sent after all. `filterAndScrubErrorEvent` in `sentry.ts` therefore re-applies both predicates (`shouldDropCapturedExceptionFromSentry`) to `hint.originalException` before scrubbing. Non-`AppError` exceptions are untouched.
 
@@ -41,7 +44,16 @@ Drop rules implement the `shouldReportToSentry` predicate from ADR-0015 §5.1 Ch
 
 Global-handler noise that is not an `AppError` (extension `inpage.js`, native webview bridge scripts) belongs in `ignoreErrors`, with a pattern specific enough to match only the third-party message.
 
-The two route-segment error boundaries (`app/error.tsx`, `app/global-error.tsx`) guard their `Sentry.captureException` call with `if (!(error instanceof AppError))` so an `AppError` thrown during render isn't captured twice (once by the factory, once by the boundary).
+The two route-segment error boundaries (`app/error.tsx`, `app/global-error.tsx`) guard their `Sentry.captureException` and `Pulse.captureException` calls with `if (!(error instanceof AppError))` so an `AppError` thrown during render isn't captured twice (once by the factory, once by the boundary).
+
+### Stale chunk recovery after a deploy
+
+A tab left open across a deploy keeps the previous build's asset manifest, so a chunk it lazily loads can fail with `ChunkLoadError` (`Loading chunk <id> failed.`). Both boundaries recognise it (`isChunkLoadError`) and reload the page once to pick up the current build, so the missing chunk exists again.
+
+- The reload is a `chunk-load` breadcrumb, never a captured error: it is expected after a deploy and self-heals. The usual `Logger.error` line and `captureException` call are skipped for it.
+- `claimStaleChunkReload` writes the running `NEXT_PUBLIC_APP_VERSION` to `pubky-app:chunk-load-recovery` in `sessionStorage` **before** reloading. A genuinely broken build (the chunk is missing from the deployed artifact too) therefore reloads once, fails again, and stays on the terminal error UI instead of looping; a tab that survives a second deploy can recover again.
+- When `sessionStorage` is unavailable (private mode, disabled storage) nothing is written and no reload happens: without a durable guard the reload could loop forever, so the boundary keeps its terminal error state.
+- `src/libs/chunk-load/chunkLoadRecovery.ts`
 
 For future Server Actions, wrap with `Sentry.withServerActionInstrumentation('actionName', { headers: await headers() }, async () => { ... })` so server-action errors are captured and traces stitch with the client.
 
@@ -73,27 +85,46 @@ Both events share identical fingerprints, so Sentry groups them into a **single 
 
 See [React 19's `onRecoverableError` docs](https://react.dev/reference/react-dom/client/createRoot#parameters) for the retry semantics. If event-quota inflation ever becomes a concern, the fix is a short-window LRU in `captureAppError` keyed on `${service}:${operation}:${message}`.
 
+## Pulse (browser-only second sink)
+
+Pulse is opt-in twice over: it does nothing without `PUBKY_RUNTIME_PULSE_CLIENT_KEY`, and nothing until the visitor accepts the analytics banner. Until `Pulse.init()` runs, every `Pulse.*` capture call is a silent no-op — including on the server, where the SDK never initializes, so a server-side `Err.*` reaches Sentry only. (`Pulse.reset()` is the exception: it deletes stored `pulse.*` state even on a page that never initialized, which is how a returning tab cleans up.) `initializePulseConsent()` in `src/libs/observability/pulse.ts` installs the gate from `src/instrumentation-client.ts` before any app code runs, and it resets with whichever scope the situation calls for: a withdrawal calls `Pulse.reset()`, which disables collection without flushing and deletes the browser-wide anonymous id, session and queued events, while a tab whose own state merely predates a consent that still stands calls `Pulse.reset({ scope: 'tab' })`, which deletes that tab's client and session and leaves the shared id and the queued events other tabs recorded under the current consent alone. The SDK falls back to the browser-wide deletion whenever the narrower one cannot be confirmed, so the failure mode deletes more, not less. The consent storage, the cross-tab generation marker and the user-facing controls are documented in [environment.md](environment.md).
+
+- **One drop policy for both sinks.** `beforeSendPulse` re-applies `shouldDropCapturedExceptionFromSentry` and `sanitizeForSentry` from `sentry.utils.ts` to every event, so a rule added to `APP_ERROR_DROP_RULES` and a key added to the scrubber cover Sentry and Pulse together. Nothing Pulse-specific should be filtered elsewhere. `beforeSendPulse` also drops everything once consent is withdrawn, or when this tab's Pulse state predates the current consent.
+- **One `ignoreErrors` list.** Both initializers spread `OBSERVABILITY_IGNORE_ERRORS` from `sentry.constants.ts`; add a noise pattern there, never in one SDK's options, or the two dashboards drift.
+- **No raw error context.** Only `category`, `code`, `service`, `operation` and `trace_id` are copied onto the event; the `AppError` and its `context` are never spread.
+- **No fetch-level network tracking.** `networkTracking` stays off: the SDK's own request events are emitted before `beforeSend` sees an `AppError`, so they would bypass the drop rules. Network failures still arrive, as the `AppError`s the app throws for them.
+- **Screen names are an allowlist.** `pulseScreenName` maps a pathname to one of the declared route templates and falls back to `/unknown`, so a pubky, post id or invite code never becomes a screen name. Add new routes to that list, never a raw pathname.
+- **Device fields are spelled out.** `deviceInfo: { os: true, browser: true, language: false }`: the SDK stamps the operating-system and browser/device strings it parses from the user agent (what makes a browser-only error actionable, and what the banner names), and no `locale` / `preferred_language`.
+- **Pulse is off when** `NODE_ENV=test`, `VITEST` is set, the **runtime** config has `testnet=true`, no **runtime** client key is configured, or consent is not `accepted` — the same test/testnet gates Sentry uses.
+
+There is deliberately no `capturePulseException` funnel mirroring `captureAppError`: `beforeSendPulse` runs on every path into the SDK (factory captures, boundary captures and its own unhandled handlers), so it is already the single policy point.
+
 ## Files
 
 - `src/instrumentation.ts` — server runtime dispatch + `onRequestError` + boot-time runtime-config fail-fast
-- `src/instrumentation-client.ts` — browser init + Replay + `onRouterTransitionStart`
+- `src/instrumentation-client.ts` — browser init + Replay + `onRouterTransitionStart` + `initializePulseConsent()`
 - `src/sentry.server.config.ts` / `src/sentry.edge.config.ts` — runtime-specific init
 - `src/libs/observability/sentry.ts` — single source of truth (`shouldEnableSentry`, `getSentryInitBase`, `captureAppError`). Sentry is off when `NODE_ENV=test`, `VITEST` is set, the **runtime** config has `testnet=true`, or no **runtime** DSN is configured. If the runtime config cannot be resolved at all, the gate returns `false` instead of throwing (the capture funnel must never mask the original boot error).
-- `src/libs/error/error.factories.ts` — `createAppError()` calls `captureAppError(error)` after `Logger.error`
+- `src/libs/observability/sentry.constants.ts` — `OBSERVABILITY_IGNORE_ERRORS`, the one noise policy both Sentry and the optional Pulse sink spread into their SDK `ignoreErrors`; add a pattern here, never in a single initializer
+- `src/libs/observability/pulse.ts` — Pulse init, the consent gate, the screen-name allowlist and `beforeSendPulse`
+- `src/libs/observability/pulse-consent.ts` — the stored consent choice and its generation, the availability gate, and the cross-tab subscription
+- `src/libs/error/error.factories.ts` — `createAppError()` calls `captureAppError(error)` after `Logger.error`, then `Pulse.captureException(error)`
 - `next.config.ts` — wrapped by `withSentryConfig(...)` for SDK wiring only; source-map upload is disabled (see below)
 
 ## Environment variables
 
-All Sentry values are part of the **optional runtime-config tier** ([ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md)): set `PUBKY_RUNTIME_SENTRY_*` on the deployed container, or in `.env.local` for local dev. Schema and defaults live in `src/libs/runtime-config/runtime-config.schema.ts`.
+All Sentry and Pulse values are part of the **optional runtime-config tier** ([ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md)): set `PUBKY_RUNTIME_SENTRY_*` / `PUBKY_RUNTIME_PULSE_*` on the deployed container, or in `.env.local` for local dev. Schema and defaults live in `src/libs/runtime-config/runtime-config.schema.ts`.
 
-| Variable                                            | Runtime                 | Required?                                                  |
-| --------------------------------------------------- | ----------------------- | ---------------------------------------------------------- |
-| `PUBKY_RUNTIME_SENTRY_DSN`                          | browser + server + edge | Optional. Empty/unset disables Sentry entirely.            |
-| `PUBKY_RUNTIME_SENTRY_ENVIRONMENT`                  | all                     | Optional. Defaults to `NODE_ENV`.                          |
-| `PUBKY_RUNTIME_TESTNET`                             | all                     | When `true`, Sentry is disabled (CI E2E / testnet deploy). |
-| `PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE`           | all                     | Optional. Default `0.1`.                                   |
-| `PUBKY_RUNTIME_SENTRY_REPLAYS_SESSION_SAMPLE_RATE`  | browser                 | Optional. Default `0.0` (record only on error).            |
-| `PUBKY_RUNTIME_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | browser                 | Optional. Default `1.0`.                                   |
+| Variable                                            | Runtime                 | Required?                                                                                                     |
+| --------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `PUBKY_RUNTIME_SENTRY_DSN`                          | browser + server + edge | Optional. Empty/unset disables Sentry entirely.                                                               |
+| `PUBKY_RUNTIME_SENTRY_ENVIRONMENT`                  | all                     | Optional. Defaults to `NODE_ENV`.                                                                             |
+| `PUBKY_RUNTIME_TESTNET`                             | all                     | When `true`, Sentry and Pulse are disabled (CI E2E / testnet deploy).                                         |
+| `PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE`           | all                     | Optional. Default `0.1`.                                                                                      |
+| `PUBKY_RUNTIME_SENTRY_REPLAYS_SESSION_SAMPLE_RATE`  | browser                 | Optional. Default `0.0` (record only on error).                                                               |
+| `PUBKY_RUNTIME_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | browser                 | Optional. Default `1.0`.                                                                                      |
+| `PUBKY_RUNTIME_PULSE_CLIENT_KEY`                    | browser                 | Optional. Empty/unset disables Pulse entirely. Public, write-only `pulse_client_…` key — never an admin key.  |
+| `PUBKY_RUNTIME_PULSE_ENDPOINT`                      | browser                 | Optional. Overrides the SDK's hosted ingest host (`https://ingest.pubkypulse.com`); self-hosters must set it. |
 
 `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` are optional Docker build inputs used only for source-map upload. They are never app runtime config and are not required to build or run the public image. The release tag comes from `NEXT_PUBLIC_APP_VERSION`: local builds fall back to the package version, while Docker CI sets it to the commit SHA so SDK events and uploaded maps use the same release.
 
@@ -119,9 +150,11 @@ Pubky App is decentralized social — strict defaults:
   `email`, `phone` / `phoneNumber`, `name`, `firstName`, `lastName`, `displayName`, `username`, `bio`, `file`,
   `user`, raw Pubky public keys, `pubky://...` URIs, compact Pubky URLs, and `_pubky.` HTTP hostnames.
 - `captureAppError()` sanitizes `error.context` before attaching it to Sentry. New `Err.*` contexts must avoid raw user
-  data unless the key is covered by the scrubber in `src/libs/observability/sentry.ts`.
+  data unless the key is covered by the scrubber in `src/libs/observability/sentry.utils.ts`.
+- Pulse events pass through that same scrubber in `beforeSendPulse`; they carry no bodies, no replay, no raw error
+  context and no user id — `Pulse.setUser` is never called, so every event is anonymous.
 
-Never call `Sentry.setUser({ email, ... })`. If user attribution is ever needed, use the user's Pubky public key as `id` only.
+Never call `Sentry.setUser({ email, ... })` or `Pulse.setUser(...)`. If user attribution is ever needed, use the user's Pubky public key as `id` only.
 
 ### Tracing scrubbing (`beforeSendTransaction`, `beforeSendSpan`)
 
@@ -142,13 +175,14 @@ Deliberately untouched: `event.tags` (app-controlled operational labels — `err
 
 ## Disabled / deferred features
 
-| Feature                      | Status   | Why                                                                                                 |
-| ---------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
-| Sentry Logs                  | Disabled | Repo uses a custom `Logger`; routing through `Sentry.logger.*` adds no value today.                 |
-| Profiling                    | Disabled | Requires `Document-Policy: js-profiling` header; revisit if performance hunts need it.              |
-| AI Monitoring                | N/A      | No OpenAI/Anthropic/Vercel AI SDK calls in this codebase.                                           |
-| Crons                        | N/A      | No scheduled jobs.                                                                                  |
-| `tunnelRoute: '/monitoring'` | Deferred | Would require adding `middleware.ts` to exclude the path. Revisit if Sentry shows ad-blocker drops. |
+| Feature                      | Status   | Why                                                                                                                 |
+| ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| Sentry Logs                  | Disabled | Repo uses a custom `Logger`; routing through `Sentry.logger.*` adds no value today.                                 |
+| Profiling                    | Disabled | Requires `Document-Policy: js-profiling` header; revisit if performance hunts need it.                              |
+| AI Monitoring                | N/A      | No OpenAI/Anthropic/Vercel AI SDK calls in this codebase.                                                           |
+| Crons                        | N/A      | No scheduled jobs.                                                                                                  |
+| `tunnelRoute: '/monitoring'` | Deferred | Would require adding `middleware.ts` to exclude the path. Revisit if Sentry shows ad-blocker drops.                 |
+| Pulse `networkTracking`      | Disabled | Its fetch-level events are emitted before `beforeSend` can see an `AppError`, so they bypass the shared drop rules. |
 
 ## Verification
 

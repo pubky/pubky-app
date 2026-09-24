@@ -12,6 +12,8 @@ export interface AuthState extends AuthInitParams {
   sessionExport: string | null;
   hasHydrated: boolean;
   isRestoringSession: boolean;
+  /** Whether a restored session's undetermined profile state is being resolved with the homeserver */
+  isResolvingProfile: boolean;
   /** Whether the sign-in dialog is open (for unauthenticated users) */
   showSignInDialog: boolean;
   /** Whether a logout is in progress (prevents flash of weird states during logout) */
@@ -24,6 +26,7 @@ export interface AuthActions {
   setCurrentUserPubky: (pubky: Pubky | null) => void;
   setSession: (session: Session | null) => void;
   setIsRestoringSession: (isRestoringSession: boolean) => void;
+  setIsResolvingProfile: (isResolvingProfile: boolean) => void;
   setHasProfile: (hasProfile: boolean) => void;
   setHasHydrated: (hasHydrated: boolean) => void;
   /** Open or close the sign-in dialog */
@@ -47,6 +50,7 @@ export const authInitialState: AuthState = {
   hasProfile: null,
   hasHydrated: false,
   isRestoringSession: false,
+  isResolvingProfile: false,
   showSignInDialog: false,
   isLoggingOut: false,
 };
@@ -58,6 +62,7 @@ export enum AuthActionTypes {
   SET_SESSION = 'SET_SESSION',
   CLEAR_SESSION = 'CLEAR_SESSION',
   SET_IS_RESTORING_SESSION = 'SET_IS_RESTORING_SESSION',
+  SET_IS_RESOLVING_PROFILE = 'SET_IS_RESOLVING_PROFILE',
   SET_HAS_PROFILE = 'SET_HAS_PROFILE',
   SET_HAS_HYDRATED = 'SET_HAS_HYDRATED',
   SET_SHOW_SIGN_IN_DIALOG = 'SET_SHOW_SIGN_IN_DIALOG',

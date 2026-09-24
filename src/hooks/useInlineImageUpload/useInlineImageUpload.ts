@@ -8,6 +8,7 @@ import {
   ARTICLE_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
 import { FileController } from '@/controllers/file/file';
+import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
@@ -114,7 +115,13 @@ export function useInlineImageUpload({
       Logger.error('[useInlineImageUpload] Inline image upload failed', { error });
       toast({
         variant: 'error',
-        description: getImageUploadSizeLimitToastMessage(error) ?? 'Could not upload image. Try again.',
+        // An expired session cannot be retried away: ask for sign-in instead of
+        // showing retry copy (issue #2555). One toast only, and the rejection
+        // below keeps the tag the global handler uses to stay quiet.
+        description:
+          isAppError(error) && requiresLogin(error)
+            ? 'Session expired. Please sign in.'
+            : (getImageUploadSizeLimitToastMessage(error) ?? 'Could not upload image. Try again.'),
       });
       // Rethrow tagged (message preserved) so callers still see the failure
       // but the global handler doesn't re-report what was just toasted

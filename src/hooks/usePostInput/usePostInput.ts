@@ -103,6 +103,10 @@ export function usePostInput({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isExpanded, setIsExpanded] = useState(expanded);
   const [isDragging, setIsDragging] = useState(false);
+  // Caret of the composer textarea, or null until it is known. Mention detection
+  // and insertion are anchored here, so a mention completes anywhere in the text
+  // and the text after the caret survives (#1959)
+  const [caret, setCaret] = useState<number | null>(null);
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -166,17 +170,37 @@ export function usePostInput({
     setExistingAttachments,
   });
 
-  // Handle mention selection - inserts pubky{userId} into content
+  // The caret a mention selection acts on: the live one when it is known, else
+  // the end of the value (prefilled content, a programmatic set)
+  const mentionCaret = caret ?? content.length;
+
+  // Handle mention selection - writes pubky{userId} over the pattern at the caret
   const handleMentionSelect = useCallback(
     (userId: string) => {
-      const newContent = getContentWithMention(content, userId);
-      if (newContent.length <= POST_MAX_CHARACTER_LENGTH) {
-        setContent(newContent);
+      const textarea = textareaRef.current;
+      const selectionCaret = textarea?.selectionStart ?? mentionCaret;
+      const insertion = getContentWithMention(content, selectionCaret, userId);
+
+      if (insertion.content.length <= POST_MAX_CHARACTER_LENGTH) {
+        setContent(insertion.content);
+        setCaret(insertion.caret);
+
+        // A controlled value parks the caret at the end of the textarea; put it
+        // back after the inserted mention so the user keeps typing where they were
+        requestAnimationFrame(() => {
+          const element = textareaRef.current;
+          if (!element) return;
+          element.focus();
+          element.setSelectionRange(insertion.caret, insertion.caret);
+        });
+        return;
       }
-      // Focus textarea after selection
-      textareaRef.current?.focus();
+
+      // Over the character limit: leave the content alone, just keep the caret in
+      // the textarea for the next edit
+      textarea?.focus();
     },
-    [content, setContent],
+    [content, mentionCaret, setContent],
   );
 
   // Mention autocomplete
@@ -186,7 +210,16 @@ export function usePostInput({
     selectedIndex: mentionSelectedIndex,
     setSelectedIndex: setMentionSelectedIndex,
     handleKeyDown: mentionHandleKeyDown,
-  } = useMentionAutocomplete({ content, onSelect: handleMentionSelect });
+  } = useMentionAutocomplete({ content, caret: mentionCaret, onSelect: handleMentionSelect });
+
+  /**
+   * Track the composer caret. Arrow keys, Home/End and clicks move it without a
+   * change event, and mention detection follows the caret (#1959)
+   */
+  const handleSelectionChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    setCaret(target.selectionStart ?? target.value.length);
+  };
 
   // Notify parent of content changes
   useEffect(() => {
@@ -417,6 +450,9 @@ export function usePostInput({
       const value = e.target.value;
       if (value.length <= POST_MAX_CHARACTER_LENGTH) {
         setContent(value);
+        // Typing moves the caret without a selection event; mention detection
+        // needs it before the next render (#1959)
+        setCaret(e.target.selectionStart ?? value.length);
       }
     },
     [setContent],
@@ -726,6 +762,7 @@ export function usePostInput({
     handleDragOver,
     handleDrop,
     handlePaste,
+    handleSelectionChange,
     handleMentionSelect,
     handleMentionKeyDown: mentionHandleKeyDown,
   };
