@@ -376,6 +376,26 @@ describe('PostArticleDetail', () => {
     expect(getCoverImage()).toHaveAttribute('src', 'https://example.com/cover-feed.webp');
   });
 
+  it('renders a kept local cover from its large variant on desktop, a fresh upload from its object URL', () => {
+    mockUsePostArticle.mockReturnValue({ title: 'Test Title', body: 'Test body', coverImage: null, hasCover: true });
+    const renderLocalCover = (urls: AttachmentConstructed['urls']) => {
+      mockUseLocalFilesStore.mockImplementation((selector) =>
+        selector(
+          createMockLocalFilesStore({ [defaultProps.postId]: [{ type: 'image/png', name: 'cover.png', urls }] }),
+        ),
+      );
+      const { unmount } = render(<PostArticleDetail {...defaultProps} />);
+      const srcset = document.querySelector('picture source')?.getAttribute('srcset');
+      unmount();
+      return srcset;
+    };
+
+    expect(
+      renderLocalCover({ main: 'cdn://cover?v=main', feed: 'cdn://cover?v=feed', large: 'cdn://cover?v=large' }),
+    ).toBe('cdn://cover?v=large');
+    expect(renderLocalCover({ main: 'blob:cover', feed: 'blob:cover' })).toBe('blob:cover');
+  });
+
   it('places inline tags and actions between the user header and cover image in columns layout', () => {
     mockUsePostArticle.mockReturnValue({
       title: 'Test Title',

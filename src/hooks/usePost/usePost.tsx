@@ -212,13 +212,18 @@ export function usePost(): UsePostReturn {
         if (sessionEntry) return sessionEntry;
         const fileMetadata = metadataByUri.get(uri);
         if (!fileMetadata) return null;
+        const isImage = fileMetadata.content_type.startsWith('image');
         return {
           type: fileMetadata.content_type,
           name: fileMetadata.name,
           urls: {
             main: FileController.getFileUrl({ fileId: fileMetadata.id, variant: FileVariant.MAIN }),
-            feed: fileMetadata.content_type.startsWith('image')
+            feed: isImage
               ? FileController.getFileUrl({ fileId: fileMetadata.id, variant: FileVariant.FEED })
+              : undefined,
+            // A kept cover renders from here, so the desktop hero needs its derived variant too.
+            large: isImage
+              ? FileController.getFileUrl({ fileId: fileMetadata.id, variant: FileVariant.LARGE })
               : undefined,
           },
         };

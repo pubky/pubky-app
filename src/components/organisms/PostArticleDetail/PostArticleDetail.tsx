@@ -77,7 +77,8 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     hasCover && localAttachments?.[0]?.type.startsWith('image')
       ? {
           src: localAttachments[0].urls.feed ?? localAttachments[0].urls.main,
-          desktopSrc: localAttachments[0].urls.main,
+          // A kept cover has `large`; a fresh upload only has its object URL.
+          desktopSrc: localAttachments[0].urls.large ?? localAttachments[0].urls.main,
           alt: localAttachments[0].name,
         }
       : null;

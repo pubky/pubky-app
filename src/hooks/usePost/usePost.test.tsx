@@ -2333,7 +2333,11 @@ describe('usePost — article inline images', () => {
         {
           type: 'image/png',
           name: 'kept.png',
-          urls: { main: `cdn://${AUTHOR}:kept-inline?v=main`, feed: `cdn://${AUTHOR}:kept-inline?v=feed` },
+          urls: {
+            main: `cdn://${AUTHOR}:kept-inline?v=main`,
+            feed: `cdn://${AUTHOR}:kept-inline?v=feed`,
+            large: `cdn://${AUTHOR}:kept-inline?v=large`,
+          },
         },
       ]);
     });
@@ -2377,7 +2381,11 @@ describe('usePost — article inline images', () => {
       expect(useLocalFilesStore.getState().posts[`${AUTHOR}:post1`]).toEqual([
         expect.objectContaining({
           name: 'oldA.png',
-          urls: { main: `cdn://${AUTHOR}:oldA?v=main`, feed: `cdn://${AUTHOR}:oldA?v=feed` },
+          urls: {
+            main: `cdn://${AUTHOR}:oldA?v=main`,
+            feed: `cdn://${AUTHOR}:oldA?v=feed`,
+            large: `cdn://${AUTHOR}:oldA?v=large`,
+          },
         }),
         expect.objectContaining({ name: 'newC.png', urls: { main: 'blob:mock-url', feed: 'blob:mock-url' } }),
       ]);
