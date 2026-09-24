@@ -354,13 +354,13 @@ describe('PostArticleDetail', () => {
     expect(cover).toHaveAttribute('fetchpriority', 'high');
   });
 
-  it('picks the hero source by viewport: feed below the desktop breakpoint, the original above it', () => {
+  it('picks the hero source by viewport: feed below the desktop breakpoint, large above it', () => {
     mockUsePostArticle.mockReturnValue({
       title: 'Test Title',
       body: 'Test body',
       coverImage: {
         src: 'https://example.com/cover-feed.webp',
-        desktopSrc: 'https://example.com/cover-main.png',
+        desktopSrc: 'https://example.com/cover-large.webp',
         alt: 'Cover image',
       },
       hasCover: true,
@@ -372,7 +372,7 @@ describe('PostArticleDetail', () => {
     // the original upload at any descriptor. The breakpoint is what keeps it off.
     const source = document.querySelector('picture source');
     expect(source).toHaveAttribute('media', POST_COVER_DESKTOP_MEDIA);
-    expect(source).toHaveAttribute('srcset', 'https://example.com/cover-main.png');
+    expect(source).toHaveAttribute('srcset', 'https://example.com/cover-large.webp');
     expect(getCoverImage()).toHaveAttribute('src', 'https://example.com/cover-feed.webp');
   });
 
