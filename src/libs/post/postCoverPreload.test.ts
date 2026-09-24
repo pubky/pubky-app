@@ -32,10 +32,10 @@ describe('resolvePostCoverPreloadUrls', () => {
     });
 
     // Built from the shared constants, so the preload can never ask for a different file
-    // than the `<picture>` in PostArticleDetail: `feed` below the desktop breakpoint, the
-    // original upload above it.
+    // than the `<picture>` in PostArticleDetail: `feed` below the desktop breakpoint, `large`
+    // above it.
     expect(POST_COVER_MOBILE_VARIANT).toBe('feed');
-    expect(POST_COVER_DESKTOP_VARIANT).toBe('main');
+    expect(POST_COVER_DESKTOP_VARIANT).toBe('large');
     expect(urls).toEqual(cover);
   });
 
