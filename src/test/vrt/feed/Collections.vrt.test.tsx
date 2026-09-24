@@ -1038,7 +1038,8 @@ describe('Cards cards — browser coverage', () => {
     const video = document.querySelectorAll('video')[2];
     video.muted = true;
     await video.play();
-    await expect.poll(() => video.currentTime).toBeGreaterThan(0);
+    // Decoding the first frame can exceed the default 1s poll budget on shared CI runners.
+    await expect.poll(() => video.currentTime, { timeout: 5_000 }).toBeGreaterThan(0);
     const scroller = document.querySelector<HTMLElement>('[data-testid="media-scroll"]')!;
     scroller.scrollTop = video.getBoundingClientRect().bottom - scroller.getBoundingClientRect().top + 1;
     await expect.poll(() => video.paused).toBe(true);
