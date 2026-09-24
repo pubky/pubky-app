@@ -30,7 +30,7 @@ export const REPORT_ISSUE_LABELS: Record<ReportIssueType, string> = {
   [REPORT_ISSUE_TYPES.HATE_SPEECH]: 'Hate or Threatening Speech',
   [REPORT_ISSUE_TYPES.HARASSMENT]: 'Harassment or Targeted',
   [REPORT_ISSUE_TYPES.CHILD_ABUSE]: 'Child Sexual Abuse or Exploitation',
-  [REPORT_ISSUE_TYPES.TERRORISM]: 'Promotion of Terrorist',
+  [REPORT_ISSUE_TYPES.TERRORISM]: 'Promotion of Terrorism',
   [REPORT_ISSUE_TYPES.VIOLENCE]: 'Graphic or Criminal Violence',
   [REPORT_ISSUE_TYPES.ILLEGAL_SALES]: 'Illegal Sales or Criminal',
   [REPORT_ISSUE_TYPES.SEXUAL_CONTENT]: 'Non-consensual or Criminal Sexual Content',

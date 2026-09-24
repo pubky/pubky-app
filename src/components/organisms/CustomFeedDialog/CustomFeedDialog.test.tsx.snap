@@ -438,12 +438,51 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
         data-override-defaults="true"
         data-testid="layout-filter-section"
       >
-        <label
-          class="text-xs tracking-wide text-muted-foreground uppercase"
-          data-testid="label"
+        <div
+          class="flex items-center gap-1"
+          data-override-defaults="true"
+          data-testid="container"
         >
-          Layout
-        </label>
+          <label
+            class="text-xs tracking-wide text-muted-foreground uppercase"
+            data-testid="label"
+          >
+            Layout
+          </label>
+          <button
+            aria-label="About layout settings"
+            class="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            data-state="closed"
+            data-testid="layout-tooltip-trigger"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-circle-question-mark size-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+              <path
+                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+              />
+              <path
+                d="M12 17h.01"
+              />
+            </svg>
+          </button>
+        </div>
         <div
           data-disabled="false"
           data-testid="layout-select"
@@ -1401,12 +1440,51 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
         data-override-defaults="true"
         data-testid="layout-filter-section"
       >
-        <label
-          class="text-xs tracking-wide text-muted-foreground uppercase"
-          data-testid="label"
+        <div
+          class="flex items-center gap-1"
+          data-override-defaults="true"
+          data-testid="container"
         >
-          Layout
-        </label>
+          <label
+            class="text-xs tracking-wide text-muted-foreground uppercase"
+            data-testid="label"
+          >
+            Layout
+          </label>
+          <button
+            aria-label="About layout settings"
+            class="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            data-state="closed"
+            data-testid="layout-tooltip-trigger"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-circle-question-mark size-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+              <path
+                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+              />
+              <path
+                d="M12 17h.01"
+              />
+            </svg>
+          </button>
+        </div>
         <div
           data-disabled="false"
           data-testid="layout-select"
@@ -2362,12 +2440,51 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
         data-override-defaults="true"
         data-testid="layout-filter-section"
       >
-        <label
-          class="text-xs tracking-wide text-muted-foreground uppercase"
-          data-testid="label"
+        <div
+          class="flex items-center gap-1"
+          data-override-defaults="true"
+          data-testid="container"
         >
-          Layout
-        </label>
+          <label
+            class="text-xs tracking-wide text-muted-foreground uppercase"
+            data-testid="label"
+          >
+            Layout
+          </label>
+          <button
+            aria-label="About layout settings"
+            class="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            data-state="closed"
+            data-testid="layout-tooltip-trigger"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-circle-question-mark size-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+              <path
+                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+              />
+              <path
+                d="M12 17h.01"
+              />
+            </svg>
+          </button>
+        </div>
         <div
           data-disabled="false"
           data-testid="layout-select"
@@ -3397,12 +3514,51 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
         data-override-defaults="true"
         data-testid="layout-filter-section"
       >
-        <label
-          class="text-xs tracking-wide text-muted-foreground uppercase"
-          data-testid="label"
+        <div
+          class="flex items-center gap-1"
+          data-override-defaults="true"
+          data-testid="container"
         >
-          Layout
-        </label>
+          <label
+            class="text-xs tracking-wide text-muted-foreground uppercase"
+            data-testid="label"
+          >
+            Layout
+          </label>
+          <button
+            aria-label="About layout settings"
+            class="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            data-state="closed"
+            data-testid="layout-tooltip-trigger"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-circle-question-mark size-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+              <path
+                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+              />
+              <path
+                d="M12 17h.01"
+              />
+            </svg>
+          </button>
+        </div>
         <div
           data-disabled="false"
           data-testid="layout-select"

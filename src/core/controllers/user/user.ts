@@ -2,7 +2,12 @@ import { UserApplication } from '@/application/user/user';
 import type { TUserCountsOrFetchResult, TUserSocialGraphStatusResult } from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
-import type { TFetchUserParams, TFollowParams, TPubkyListParams } from '@/controllers/user/user.type';
+import type {
+  TFetchUserDetailsParams,
+  TFetchUserParams,
+  TFollowParams,
+  TPubkyListParams,
+} from '@/controllers/user/user.type';
 import { HttpMethod } from '@/libs/http/http.types';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -145,7 +150,7 @@ export class UserController {
    * Fetch user details from Nexus and persist locally (network-only, no local read).
    * Use instead of `getOrFetchDetails` when the caller already knows the user is not cached.
    */
-  static async fetchDetails(param: TReadProfileParams): Promise<NexusUserDetails | null> {
+  static async fetchDetails(param: TFetchUserDetailsParams): Promise<NexusUserDetails | null> {
     return await UserApplication.fetchDetails({ ...param, isCurrent: captureViewerSession() });
   }
 

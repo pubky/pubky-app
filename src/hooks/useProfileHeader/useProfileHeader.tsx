@@ -45,7 +45,7 @@ const DEFAULT_PROFILE: UserProfile = {
  */
 export function useProfileHeader(userId: string, options?: UseProfileHeaderOptions) {
   // Fetch user profile data
-  const { profile, isLoading: isProfileLoading } = useUserProfile(userId, options);
+  const { profile, isLoading: isProfileLoading } = useUserProfile(userId, { ...options, profileLookup: true });
 
   // Fetch profile statistics
   const { stats, isLoading: isStatsLoading } = useProfileStats(userId, options);

@@ -22,9 +22,9 @@ vi.mock('@/controllers/user/user', () => ({
 // Mock dexie-react-hooks: run the query (so the controller call can be asserted) and hand
 // the hook a controlled value instead of the real IndexedDB read.
 vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: (queryFn: () => Promise<unknown>) => {
+  useLiveQuery: (queryFn: () => Promise<unknown>, deps: unknown[]) => {
     queryFn();
-    return mockState.liveQueryValue;
+    return mockState.liveQueryValue === undefined ? undefined : { query: deps[0], data: mockState.liveQueryValue };
   },
 }));
 

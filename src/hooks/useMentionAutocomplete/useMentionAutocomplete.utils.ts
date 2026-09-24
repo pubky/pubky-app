@@ -40,13 +40,41 @@ function clampCaret(content: string, caret: number): number {
 }
 
 /**
+ * Normalize a name query for the search prefix
+ *
+ * The pattern keeps the whitespace the caret sits in, so the prefix handed to the
+ * name search trims only the edges: `@John  ` still searches for `John`, while
+ * internal spaces stay intact to match names in the Nexus index.
+ */
+function normalizeNameQuery(query: string): string {
+  return query.trim();
+}
+
+/**
+ * Nexus searches the lowercased Redis byte interval [prefix, prefix + '~').
+ * An empty interval also rules out extensions whose first added character is
+ * ASCII below '~'. Unicode extensions can leave that interval: `rocket` can be
+ * empty even when `rocket🚀` matches, so startsWith alone is not sufficient.
+ * See pubky-nexus nexus-common/src/models/user/search.rs, get_from_index_name.
+ */
+export function isNameQueryWithinEmptyPrefix(query: string, emptyQuery: string): boolean {
+  const prefix = query.toLowerCase();
+  const emptyPrefix = emptyQuery.toLowerCase();
+  return (
+    prefix.startsWith(emptyPrefix) &&
+    (prefix.length === emptyPrefix.length || prefix.charCodeAt(emptyPrefix.length) < '~'.charCodeAt(0))
+  );
+}
+
+/**
  * Extract the mention query the caret sits in
  *
  * Only the text before the caret can hold the pattern being typed, so a mention
  * completes wherever the caret is, not only at the end of the value (#1959).
  *
  * Filtering rules (matching pubky-app):
- * - @username: requires at least MIN_USERNAME_SEARCH_LENGTH (2) chars after @
+ * - @username: requires at least MIN_USERNAME_SEARCH_LENGTH (2) chars after @,
+ *   spaces included, so a multiword display name is searched whole
  * - pubky/pk: ID: requires at least MIN_USER_ID_SEARCH_LENGTH (3) chars after prefix
  * - pubky/pk: ID: skips complete pubkeys (52+ alphanumeric chars)
  *
@@ -65,7 +93,9 @@ export function extractMentionQuery(content: string, caret: number = content.len
   // Check for @username in the text before the caret
   const atMatch = beforeCaret.match(AT_MENTION_PATTERN);
   if (atMatch) {
-    const username = atMatch[0].slice(1); // Remove @ prefix
+    // A display name can hold spaces, so the query is the whole run typed after
+    // `@`; the trailing space the pattern keeps is not part of the search prefix
+    const username = normalizeNameQuery(atMatch[0].slice(1)); // Remove @ prefix
     if (username.length >= MIN_USERNAME_SEARCH_LENGTH) {
       atQuery = username;
     }
