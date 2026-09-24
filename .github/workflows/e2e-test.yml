@@ -161,7 +161,7 @@ jobs:
           cache-dependency-path: 'pubky-app/package-lock.json'
 
       - name: Cache node modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             pubky-app/node_modules
