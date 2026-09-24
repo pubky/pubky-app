@@ -52,6 +52,14 @@ describe('UserDetailsModel', () => {
       expect(userDetails.social_graph_status).toBe(NexusSocialGraphStatus.NEW);
       expect({ ...userDetails }.social_graph_status).toBe(NexusSocialGraphStatus.NEW);
     });
+
+    it('should carry the deleted flag so reads by id keep the tombstone', async () => {
+      await UserDetailsModel.upsert({ id: testUserId1, ...MOCK_NEXUS_USER_DETAILS, name: '', deleted: true });
+
+      const userDetails = await UserDetailsModel.findById(testUserId1);
+
+      expect(userDetails?.deleted).toBe(true);
+    });
   });
 
   describe('Static Methods', () => {

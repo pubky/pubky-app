@@ -339,6 +339,36 @@ describe('PostMainListRow', () => {
     expect(screen.getByText('Author').closest('a')).toHaveAttribute('href', '/profile');
   });
 
+  it('renders [DELETED] as the author name when Nexus flags the author as deleted', () => {
+    mockPostDetails('Some post content');
+    vi.mocked(useUserDetails).mockReturnValue({
+      userDetails: {
+        id: 'author',
+        name: '',
+        bio: '',
+        links: null,
+        status: null,
+        image: null,
+        indexed_at: Date.now(),
+        deleted: true,
+      },
+      isLoading: false,
+    });
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('[DELETED]')).toBeInTheDocument();
+    expect(screen.getByTestId('user-info-popover')).toHaveAttribute('data-user-name', '[DELETED]');
+  });
+
   it('renders full post content below the header row when full content is enabled', () => {
     const longContent =
       'We did it! Pubky Hackathon Champions in Lugano! This is the main post text that should remain visible in full on the single post page list layout.';

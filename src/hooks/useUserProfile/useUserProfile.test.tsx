@@ -26,7 +26,9 @@ vi.mock('dexie-react-hooks', () => ({
     if (queryFn) {
       void queryFn();
     }
-    return mockMocks.mockUserDetails.current;
+    return mockMocks.mockUserDetails.current === undefined
+      ? undefined
+      : { query: _deps[0], data: mockMocks.mockUserDetails.current };
   }),
 }));
 
@@ -125,6 +127,42 @@ describe('useUserProfile', () => {
       expect(result.current.profile?.bio).toBe('');
       expect(result.current.profile?.status).toBe('');
       expect(result.current.profile?.avatarUrl).toBeUndefined();
+    });
+  });
+
+  describe('Deleted users', () => {
+    const baseUser: NexusUserDetails = {
+      id: 'test-user-id' as Pubky,
+      name: 'Test User',
+      bio: 'Test bio',
+      image: null,
+      status: null,
+      links: [],
+      indexed_at: Date.now(),
+    };
+
+    const renderWithUser = (user: NexusUserDetails) => {
+      mockMocks.mockUserDetails.current = user;
+      mockMocks.mockGetDetails.mockResolvedValue(user);
+      return renderHook(() => useUserProfile('test-user-id'));
+    };
+
+    it('shows [DELETED] as the name when Nexus flags the user as deleted', () => {
+      const { result } = renderWithUser({ ...baseUser, name: '', bio: '', deleted: true });
+
+      expect(result.current.profile?.name).toBe('[DELETED]');
+    });
+
+    it('shows [DELETED] for a row cached with the legacy name sentinel', () => {
+      const { result } = renderWithUser({ ...baseUser, name: '[DELETED]' });
+
+      expect(result.current.profile?.name).toBe('[DELETED]');
+    });
+
+    it('keeps the real name when the user is not deleted', () => {
+      const { result } = renderWithUser({ ...baseUser, deleted: false });
+
+      expect(result.current.profile?.name).toBe('Test User');
     });
   });
 
@@ -231,6 +269,40 @@ describe('useUserProfile', () => {
       const { result } = renderHook(() => useUserProfile('test-user-id'));
 
       expect(result.current.profile?.avatarUrl).toBeUndefined();
+    });
+  });
+
+  describe('Other profile edits (#525)', () => {
+    it('reflects a re-indexed profile: new name, bio and avatar version', () => {
+      mockMocks.mockGetAvatarUrl.mockImplementation(
+        (userId: string, version?: string | number) => `avatar:${userId}:${version}`,
+      );
+      const before: NexusUserDetails = {
+        id: 'other-user' as Pubky,
+        name: 'Old name',
+        bio: 'Old bio',
+        image: 'old.jpg',
+        status: null,
+        links: null,
+        indexed_at: 1,
+      };
+      mockMocks.mockUserDetails.current = before;
+      mockMocks.mockGetDetails.mockResolvedValue(before);
+
+      const { result, rerender } = renderHook(() => useUserProfile('other-user'));
+
+      expect(result.current.profile?.name).toBe('Old name');
+      expect(result.current.profile?.avatarUrl).toBe('avatar:other-user:1');
+
+      // The other user edits their profile; the TTL refresh writes the new row.
+      const after: NexusUserDetails = { ...before, name: 'New name', bio: 'New bio', image: 'new.jpg', indexed_at: 2 };
+      mockMocks.mockUserDetails.current = after;
+      mockMocks.mockGetDetails.mockResolvedValue(after);
+      rerender();
+
+      expect(result.current.profile?.name).toBe('New name');
+      expect(result.current.profile?.bio).toBe('New bio');
+      expect(result.current.profile?.avatarUrl).toBe('avatar:other-user:2');
     });
   });
 

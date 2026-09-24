@@ -14,7 +14,8 @@ import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
-import { cn, formatPublicKey, isPostDeleted } from '@/libs/utils/utils';
+import { cn, formatPublicKey, isPostDeleted, isUserDeleted } from '@/libs/utils/utils';
+import { DELETED_USER_NAME } from '@/libs/utils/utils.constants';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostListMediaThumbnail } from '@/molecules/PostListMediaThumbnail/PostListMediaThumbnail';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
@@ -132,6 +133,7 @@ export function PostMainListRow({
   const indexedAt = new Date(displayPostDetails.indexed_at);
   const timeAgo = formatRelativeTime(indexedAt);
   const formattedPublicKey = formatPublicKey({ key: displayUserId });
+  const authorName = isUserDeleted(userDetails) ? DELETED_USER_NAME : userDetails.name || '';
   const contentSnippet = getListPostSnippet(previewPostDetails.content, previewPostDetails.kind);
   const snippet = showFullContent ? '' : truncateAtWordBoundary(contentSnippet, LIST_SNIPPET_MAX_CHARS);
   const profileUrl = getUserProfileUrl(displayUserId, currentUserPubky);
@@ -152,17 +154,12 @@ export function PostMainListRow({
         {shouldShowDisplayHeader ? (
           <UserInfoPopover
             userId={displayUserId}
-            userName={userDetails.name || ''}
+            userName={authorName}
             avatarUrl={avatarUrl}
             formattedPublicKey={formattedPublicKey}
           >
             <Link href={profileUrl} onClick={stopCardPropagation} className="shrink-0">
-              <AvatarWithFallback
-                avatarUrl={avatarUrl}
-                name={userDetails.name || ''}
-                fallbackSeed={displayUserId}
-                size="md"
-              />
+              <AvatarWithFallback avatarUrl={avatarUrl} name={authorName} fallbackSeed={displayUserId} size="md" />
             </Link>
           </UserInfoPopover>
         ) : null}
@@ -176,7 +173,7 @@ export function PostMainListRow({
                 className={cn(showFullContent ? 'max-w-full' : 'max-w-[40%]', 'shrink-0')}
               >
                 <Typography className="truncate text-base font-bold text-foreground" overrideDefaults>
-                  {userDetails.name}
+                  {authorName}
                 </Typography>
               </Link>
             ) : null}

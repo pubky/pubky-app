@@ -42,7 +42,7 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: (queryFn: () => Promise<unknown>, _deps: unknown[], defaultValue: unknown) => {
     queryFn();
     const result = mockGetRelationships.mock.results[mockGetRelationships.mock.results.length - 1];
-    return result?.value ?? defaultValue;
+    return result?.value == null ? defaultValue : { query: _deps[0], data: result.value };
   },
 }));
 

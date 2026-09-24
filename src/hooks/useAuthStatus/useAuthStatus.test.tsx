@@ -19,6 +19,7 @@ const mockAuthStore = {
   session: null as Session | null,
   sessionExport: null as string | null,
   isRestoringSession: false,
+  isResolvingProfile: false,
   hasProfile: null as boolean | null,
   hasHydrated: true,
   selectIsAuthenticated: vi.fn(() => false),
@@ -45,6 +46,7 @@ describe('useAuthStatus', () => {
     mockAuthStore.session = null;
     mockAuthStore.sessionExport = null;
     mockAuthStore.isRestoringSession = false;
+    mockAuthStore.isResolvingProfile = false;
     mockAuthStore.hasProfile = null;
     mockAuthStore.hasHydrated = true;
     mockAuthStore.selectIsAuthenticated = vi.fn(() => false);
@@ -114,18 +116,56 @@ describe('useAuthStatus', () => {
     expect(result.current.hasProfile).toBe(null);
   });
 
-  it('should return UNAUTHENTICATED status when has session but hasProfile is null (determining)', () => {
+  it('should return UNAUTHENTICATED status when an interactive sign-in is still determining the profile', () => {
     mockOnboardingStore.hasHydrated = true;
     mockAuthStore.session = mockSession;
     mockAuthStore.hasProfile = null; // Still determining profile status
+    mockAuthStore.isResolvingProfile = false; // The sign-in flow owns the screen, not a restore
 
     const { result } = renderHook(() => useAuthStatus());
 
     // User stays UNAUTHENTICATED while hasProfile is null (allows sign-in progress UI)
     expect(result.current.status).toBe('UNAUTHENTICATED');
+    expect(result.current.isLoading).toBe(false);
     expect(result.current.isFullyAuthenticated).toBe(false);
     expect(result.current.hasKeypair).toBe(true);
     expect(result.current.hasProfile).toBe(null);
+  });
+
+  it('should return loading while a restored session profile is undetermined', () => {
+    mockOnboardingStore.hasHydrated = true;
+    mockAuthStore.session = mockSession;
+    mockAuthStore.sessionExport = 'some-exported-session';
+    mockAuthStore.hasProfile = null; // Undetermined profile restored from localStorage
+    mockAuthStore.isResolvingProfile = true; // The controller is resolving it
+
+    const { result } = renderHook(() => useAuthStatus());
+
+    // No route may decide on an undetermined profile: the app waits for the controller
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.status).toBe('UNAUTHENTICATED');
+    expect(result.current.isFullyAuthenticated).toBe(false);
+    expect(result.current.hasKeypair).toBe(true);
+    expect(result.current.hasProfile).toBe(null);
+  });
+
+  it('should stop loading once the restored profile state is resolved', () => {
+    mockOnboardingStore.hasHydrated = true;
+    mockAuthStore.session = mockSession;
+    mockAuthStore.sessionExport = 'some-exported-session';
+    mockAuthStore.hasProfile = null;
+    mockAuthStore.isResolvingProfile = true;
+
+    const { result, rerender } = renderHook(() => useAuthStatus());
+    expect(result.current.isLoading).toBe(true);
+
+    // The controller resolved the profile: the session is now fully authenticated
+    mockAuthStore.isResolvingProfile = false;
+    mockAuthStore.hasProfile = true;
+    rerender();
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.status).toBe('AUTHENTICATED');
   });
 
   it('should return NEEDS_PROFILE_CREATION status when has session but no profile', () => {

@@ -21,6 +21,8 @@ import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 export function useAvatarUrl(userDetails: NexusUserDetails | null | undefined): string | undefined {
   return useMemo(() => {
     if (!userDetails?.image) return undefined;
-    return FileController.getAvatarUrl(userDetails.id);
+    // Version the CDN URL by the details' indexed_at so a re-fetched profile
+    // (after TTL) points at the new avatar instead of a cached one.
+    return FileController.getAvatarUrl(userDetails.id, userDetails.indexed_at);
   }, [userDetails]);
 }
