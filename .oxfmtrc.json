@@ -21,10 +21,7 @@
     "dist/",
     "build/",
     "coverage/",
-    ".eslintcache",
     ".turbo",
-    "*.log",
-    ".DS_Store",
     ".vscode/",
     ".idea/",
     ".cursor/",
@@ -34,8 +31,7 @@
     ".husky/",
     "public/",
     "next-env.d.ts",
-    "tsconfig.json",
-    "src/components/templates/Public/**"
+    "tsconfig.json"
   ],
   "$schema": "./node_modules/oxfmt/configuration_schema.json"
 }

@@ -226,7 +226,7 @@ export function DiscoverCollections() {
     // including it would re-fire this initial-load effect on every state update
     // and restart the fetch mid-stream. The auth/stream identity deps below are
     // the only triggers we want.
-    // oxlint-disable-next-line react/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated, currentUserPubky, streamId]);
 
   // Live-reactive subtractive overlay: subscribe to the local bookmark id

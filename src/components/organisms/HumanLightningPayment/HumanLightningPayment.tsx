@@ -93,7 +93,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         verificationRef.current = null;
       }
     };
-    // oxlint-disable-next-line react/exhaustive-deps -- run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
   async function copyInvoiceToClipboard(text: string) {
     try {

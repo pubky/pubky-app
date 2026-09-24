@@ -2,6 +2,7 @@
 paths:
   - "src/sw.ts"
   - "serwist.config.mjs"
+  - "tooling/sw/**"
   - "next.config.ts"
   - "src/providers/ServiceWorkerRegistrationProvider/**"
   - "public/manifest.json"

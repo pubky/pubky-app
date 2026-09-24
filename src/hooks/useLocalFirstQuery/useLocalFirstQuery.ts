@@ -139,7 +139,7 @@ export function useLocalFirstQuery<T>({
     return () => {
       cancelled = true;
     };
-    // oxlint-disable-next-line react/exhaustive-deps -- the caller supplies fetch dependencies; callback identity must not refetch on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the caller supplies fetch dependencies; callback identity must not refetch on every render
   }, [...deps, enabled, data]);
 
   // `isLoading` is true when:

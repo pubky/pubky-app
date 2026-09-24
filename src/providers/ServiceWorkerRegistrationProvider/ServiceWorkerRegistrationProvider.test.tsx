@@ -1,4 +1,3 @@
-import { StrictMode } from 'react';
 import { render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
@@ -56,15 +55,6 @@ describe('ServiceWorkerRegistrationProvider', () => {
     await waitFor(() => expect(register).toHaveBeenCalledTimes(1));
     expect(construct).toHaveBeenCalledWith('/sw.js', { scope: '/', type: 'classic' });
     expect(Logger.warn).not.toHaveBeenCalled();
-  });
-
-  it('registers only once when StrictMode replays effects', async () => {
-    render(
-      <StrictMode>
-        <ServiceWorkerRegistrationProvider>child</ServiceWorkerRegistrationProvider>
-      </StrictMode>,
-    );
-    await waitFor(() => expect(register).toHaveBeenCalledTimes(1));
   });
 
   it.each(['development', 'test'])('does not register in %s', (environment) => {

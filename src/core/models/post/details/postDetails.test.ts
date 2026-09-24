@@ -30,8 +30,7 @@ describe('PostDetailsModel', () => {
     nexusDetails: typeof MOCK_NEXUS_POST_DETAILS,
   ): PostDetailsModelSchema => {
     const compositeId = buildCompositeId({ pubky: nexusDetails.author, id: originalId });
-    // oxlint-disable-next-line no-unused-vars -- omit author because it is encoded in the composite post ID
-    const { author, ...detailsWithoutAuthor } = nexusDetails;
+    const { author: _author, ...detailsWithoutAuthor } = nexusDetails;
     return { ...detailsWithoutAuthor, id: compositeId };
   };
 

@@ -68,7 +68,7 @@ function useExecutedLiveQuery(
     return () => {
       isMounted = false;
     };
-    // oxlint-disable-next-line react/exhaustive-deps -- identity-compare the hook's own deps, like dexie does
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- identity-compare the hook's own deps, like dexie does
   }, deps);
 
   return snapshot;

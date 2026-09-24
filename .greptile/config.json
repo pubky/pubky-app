@@ -68,7 +68,7 @@
     },
     {
       "id": "no-suppressed-lints",
-      "rule": "Every oxlint-disable, oxlint-disable-next-line, @ts-ignore, and @ts-expect-error must have an adjacent comment explaining WHY the suppression is needed. Bare suppressions hide real bugs. If a rule is wrong for the whole file, use a top-level oxlint-disable with rationale rather than sprinkling inline ignores.",
+      "rule": "Every oxlint-disable, oxlint-disable-next-line, eslint-disable, eslint-disable-next-line, @ts-ignore, and @ts-expect-error must have an adjacent comment explaining WHY the suppression is needed. Bare suppressions hide real bugs. If a rule is wrong for the whole file, use a top-level oxlint-disable with rationale rather than sprinkling inline ignores. The eslint-disable form is only for react-hooks/exhaustive-deps and react-hooks/rules-of-hooks, because the React Compiler skips components suppressed that way (docs/development-workflow.md); every other suppression uses oxlint-disable with the rule names from .oxlintrc.json.",
       "scope": ["src/**"],
       "severity": "high"
     },

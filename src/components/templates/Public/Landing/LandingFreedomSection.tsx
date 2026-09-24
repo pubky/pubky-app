@@ -16,7 +16,8 @@ const FEATURES: Array<{ key: string; backgroundImage: string; title: string; des
     key: 'creation',
     backgroundImage: '/images/landing-experience1.png',
     title: 'Create without limits',
-    description: 'Post anything: thoughts, articles, photos, videos, links. Your content starts with you, and stays with you.',
+    description:
+      'Post anything: thoughts, articles, photos, videos, links. Your content starts with you, and stays with you.',
   },
   {
     key: 'browsing',
@@ -34,7 +35,8 @@ const FEATURES: Array<{ key: string; backgroundImage: string; title: string; des
     key: 'tagging',
     backgroundImage: '/images/landing-experience4.png',
     title: 'Tag everything',
-    description: 'Tag posts, media, and profiles to add context, find better content, discover people, and react quickly.',
+    description:
+      'Tag posts, media, and profiles to add context, find better content, discover people, and react quickly.',
   },
   {
     key: 'collections',
@@ -95,10 +97,14 @@ export function LandingFreedomSection() {
     >
       <Container size="container" className={cn('gap-10', PAGE_GUTTER_CLASS)}>
         <Container className="mx-0 max-w-[760px] gap-5">
-          <Typography as="span" size="xs" className="text-brand tracking-[1.2px] uppercase">
+          <Typography as="span" size="xs" className="tracking-[1.2px] text-brand uppercase">
             {'Built for freedom'}
           </Typography>
-          <Heading level={2} size="xl" className="max-w-[680px] text-4xl sm:text-6xl lg:max-w-none lg:whitespace-nowrap">
+          <Heading
+            level={2}
+            size="xl"
+            className="max-w-[680px] text-4xl sm:text-6xl lg:max-w-none lg:whitespace-nowrap"
+          >
             {'You are '}
             <br className="sm:hidden" />
             <span className="text-brand">{'the algorithm'}</span>
@@ -112,7 +118,7 @@ export function LandingFreedomSection() {
           {FEATURES.map(({ key, backgroundImage }, index) => (
             <div
               key={key}
-              className={`absolute inset-x-0 bottom-0 h-[58%] bg-[length:auto_100%] bg-no-repeat opacity-0 transition-opacity duration-500 ease-in-out [background-position:calc(50%+100px)_100%] md:inset-0 md:h-auto md:bg-cover md:bg-center ${
+              className={`absolute inset-x-0 bottom-0 h-[58%] bg-[length:auto_100%] [background-position:calc(50%+100px)_100%] bg-no-repeat opacity-0 transition-opacity duration-500 ease-in-out md:inset-0 md:h-auto md:bg-cover md:bg-center ${
                 activeSlide === index ? 'opacity-100' : ''
               }`}
               style={{ backgroundImage: `url(${backgroundImage})` }}
@@ -126,7 +132,7 @@ export function LandingFreedomSection() {
                 className="absolute inset-0 origin-bottom animate-[landing-carousel-progress-fill_6000ms_linear_forwards] bg-brand/32"
                 aria-hidden
               />
-              <Typography as="span" overrideDefaults className="text-xl font-semibold leading-none">
+              <Typography as="span" overrideDefaults className="text-xl leading-none font-semibold">
                 {slideNumber}
               </Typography>
             </div>

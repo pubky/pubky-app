@@ -11,9 +11,9 @@ vi.mock('@sentry/nextjs', async (importOriginal) => ({
   captureException: vi.fn(),
 }));
 
-/** A deployed chunk the tab can no longer fetch, exactly as webpack raises it. */
+/** A deployed chunk the tab can no longer fetch, exactly as the Turbopack runtime raises it. */
 function staleChunkError(): Error {
-  const error = new Error('Loading CSS chunk 7 failed.');
+  const error = new Error('Failed to load chunk /_next/static/chunks/0i4cyig_78vax.js from module 466034');
   error.name = 'ChunkLoadError';
   return error;
 }
@@ -92,6 +92,17 @@ describe('app/global-error', () => {
       expect(reload).toHaveBeenCalledTimes(1);
       expect(vi.mocked(Sentry.captureException)).toHaveBeenCalledTimes(1);
       expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    });
+
+    it('reports an unrecovered stale chunk as a ChunkLoadRecoveryError that the noise filter keeps', () => {
+      const error = staleChunkError();
+      const { unmount } = render(<GlobalErrorPage error={error} reset={vi.fn()} />);
+      unmount();
+      render(<GlobalErrorPage error={error} reset={vi.fn()} />);
+
+      expect(vi.mocked(Sentry.captureException)).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'ChunkLoadRecoveryError', cause: error }),
+      );
     });
 
     it('does not reload when the guard cannot be persisted', () => {

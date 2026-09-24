@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_VERSION } from '@/config/app';
-import { CHUNK_LOAD_RECOVERY_STORAGE_KEY, claimStaleChunkReload, isChunkLoadError } from './chunkLoadRecovery';
+import {
+  CHUNK_LOAD_RECOVERY_STORAGE_KEY,
+  claimStaleChunkReload,
+  isChunkLoadError,
+  toChunkLoadRecoveryError,
+} from './chunkLoadRecovery';
 
 describe('isChunkLoadError', () => {
   it('matches a webpack ChunkLoadError by name', () => {
@@ -22,6 +27,17 @@ describe('isChunkLoadError', () => {
       isChunkLoadError(new Error('Loading chunk 42 failed.\n(webpack 5: missing: /_next/static/chunks/42.js)')),
     ).toBe(true);
     expect(isChunkLoadError(new Error('Loading chunk app/layout failed.'))).toBe(true);
+  });
+
+  it('matches the Turbopack chunk message', () => {
+    expect(
+      isChunkLoadError(new Error('Failed to load chunk /_next/static/chunks/0i4cyig_78vax.js from module 466034')),
+    ).toBe(true);
+    expect(
+      isChunkLoadError(
+        new Error('Failed to load chunk static/chunks/1a2b.js as a runtime dependency of chunk static/chunks/3c4d.js'),
+      ),
+    ).toBe(true);
   });
 
   it('matches a failed CSS chunk', () => {
@@ -108,5 +124,18 @@ describe('claimStaleChunkReload', () => {
     if (windowDescriptor) {
       Object.defineProperty(globalThis, 'window', windowDescriptor);
     }
+  });
+});
+
+describe('toChunkLoadRecoveryError', () => {
+  it('wraps the chunk error so it is reported under its own name with the original as cause', () => {
+    const error = new Error('Failed to load chunk /_next/static/chunks/a.js from module 1');
+    error.name = 'ChunkLoadError';
+
+    const reported = toChunkLoadRecoveryError(error);
+
+    expect(reported.name).toBe('ChunkLoadRecoveryError');
+    expect(reported.cause).toBe(error);
+    expect(isChunkLoadError(reported)).toBe(false);
   });
 });

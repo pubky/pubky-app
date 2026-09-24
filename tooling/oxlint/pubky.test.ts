@@ -118,6 +118,7 @@ add(
 add('toast-store-blocked', "import { x } from '@/molecules/Toaster/toast.store';", 1);
 add('toast-state-blocked', "import { x } from '@/molecules/Toaster/useToastState';", 1);
 add('toast-atom-blocked', "import { x } from '@/atoms/Toast/Toast';", 1);
+add('nested-toast-atom-blocked', "import { x } from '@/atoms/Toast/parts/Icon';", 1);
 add('toast-api-allowed', "import { toast } from '@/molecules/Toaster/toast';", 0);
 add(
   'toaster-internals-allowed',
@@ -138,6 +139,9 @@ add(
   'src/components/molecules/ToasterOther/example.ts',
 );
 add('cypress-excluded', 'const x = process.env.PUBKY_RUNTIME_X;', 0, 'cypress/example.ts');
+// Only root tool configs are excluded; nested `*.config.ts` files (the Sentry inits) are app code.
+add('root-config-excluded', 'const x = process.env.PUBKY_RUNTIME_X;', 0, 'next.config.ts');
+add('nested-config-linted', 'const x = process.env.PUBKY_RUNTIME_X;', 1, 'src/sentry.server.config.ts');
 add('generated-service-worker-excluded', 'const x = process.env.PUBKY_RUNTIME_X;', 0, 'public/sw.js');
 add('local-worktree-excluded', 'const x = process.env.PUBKY_RUNTIME_X;', 0, '.claude/worktrees/example/src/example.ts');
 

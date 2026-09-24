@@ -32,7 +32,10 @@ export function LandingVideo() {
   if (!shouldLoadVideo) return null;
 
   return (
-    <aside className="relative z-0 w-full max-w-[460px] md:max-w-[560px] lg:max-w-none lg:pt-20" aria-label={'Pubky video'}>
+    <aside
+      className="relative z-0 w-full max-w-[460px] md:max-w-[560px] lg:max-w-none lg:pt-20"
+      aria-label={'Pubky video'}
+    >
       <div className="overflow-hidden rounded-md border border-border bg-background shadow-xl shadow-black/20">
         <video className="block aspect-video w-full object-cover" src="/pubky.mp4" autoPlay loop muted playsInline />
       </div>

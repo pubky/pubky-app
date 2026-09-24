@@ -242,7 +242,7 @@ export function PostInput({
         setContent(editContent);
       }
     }
-    // oxlint-disable-next-line react/exhaustive-deps -- toast is an external side-effect, not a dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
   }, [variant, editContent, editIsArticle]);
 
   // Pre-fill content from share target or other external sources
@@ -250,7 +250,7 @@ export function PostInput({
     if (initialContent && !isEdit) {
       setContent(initialContent);
     }
-    // oxlint-disable-next-line react/exhaustive-deps -- only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 
   // Pre-fill attachments from share target or other external sources
@@ -258,7 +258,7 @@ export function PostInput({
     if (initialAttachments && initialAttachments.length > 0 && !isEdit) {
       handleFilesAdded(initialAttachments);
     }
-    // oxlint-disable-next-line react/exhaustive-deps -- only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 
   const characterLimit =

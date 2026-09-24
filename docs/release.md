@@ -86,7 +86,7 @@ These workflows trigger on `pull_request` (any target branch):
 | ------------ | ------------------------------ | -------------------------------------- |
 | Tests        | `.github/workflows/test.yml`   | Unit tests (sharded Vitest)            |
 | Build        | `.github/workflows/build.yml`  | Production Next.js build + smoke start |
-| Code Quality | `.github/workflows/format.yml` | Prettier, ESLint, TypeScript           |
+| Code Quality | `.github/workflows/format.yml` | Oxfmt, Oxlint, TypeScript              |
 
 ### VRT and e2e
 

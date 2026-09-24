@@ -201,7 +201,7 @@ vi.mock('dexie-react-hooks', async () => {
         return () => {
           alive = false;
         };
-        // oxlint-disable-next-line react/exhaustive-deps -- serialized dependencies control mock live-query subscriptions, matching the other VRT fixtures
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- serialized dependencies control mock live-query subscriptions, matching the other VRT fixtures
       }, [depsKey]);
       return data;
     },

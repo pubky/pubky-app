@@ -29,12 +29,11 @@
     "format": "oxfmt --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css,md}\"",
     "format:check": "oxfmt --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css,md}\"",
     "precommit": "lint-staged && npm run typecheck",
-    "prepare": "husky",
-    "test:tooling": "vitest run --project unit tooling/oxlint/pubky.test.ts"
+    "prepare": "husky"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
-      "oxlint --fix",
+      "oxlint --fix --no-error-on-unmatched-pattern",
       "oxfmt --write --no-error-on-unmatched-pattern"
     ],
     "*.{json,css,md}": "oxfmt --write --no-error-on-unmatched-pattern"
@@ -100,6 +99,7 @@
     "zustand": "5.0.15"
   },
   "devDependencies": {
+    "@bahmutov/cypress-esbuild-preprocessor": "2.2.8",
     "@fontsource-variable/inter-tight": "^5.3.0",
     "@next/eslint-plugin-next": "16.3.4",
     "@serwist/build": "9.5.12",
@@ -124,7 +124,6 @@
     "dotenv": "17.4.2",
     "esbuild": "0.28.2",
     "eslint-plugin-react": "7.37.5",
-    "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-simple-import-sort": "14.0.0",
     "fake-indexeddb": "6.2.5",
     "husky": "9.1.7",
@@ -132,6 +131,7 @@
     "lint-staged": "17.4.1",
     "oxfmt": "0.68.0",
     "oxlint": "1.83.0",
+    "path-browserify": "1.0.1",
     "playwright": "^1.62.1",
     "tailwindcss": "4.3.3",
     "tw-animate-css": "1.4.0",

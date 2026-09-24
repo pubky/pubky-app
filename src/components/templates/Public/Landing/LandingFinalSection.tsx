@@ -27,7 +27,10 @@ export function LandingFinalSection() {
   };
 
   return (
-    <section id={LANDING_FINAL_SECTION_ID} className={cn('relative z-0 flex min-h-svh items-center py-10 sm:py-20', PAGE_GUTTER_CLASS)}>
+    <section
+      id={LANDING_FINAL_SECTION_ID}
+      className={cn('relative z-0 flex min-h-svh items-center py-10 sm:py-20', PAGE_GUTTER_CLASS)}
+    >
       <Container size="container" className="items-center gap-8 text-center">
         <Heading level={2} size="xl" className="max-w-[820px] text-5xl sm:text-7xl">
           {'Enter the '}
@@ -45,8 +48,7 @@ export function LandingFinalSection() {
           {'By creating a '}
           {'Pubky'}
           {' account, you agree to the'} <DialogTerms />, <DialogPrivacy />
-          {', and confirm you are'} <DialogAge />{' '}
-          {'Pubky is powered by '}
+          {', and confirm you are'} <DialogAge /> {'Pubky is powered by '}
           <Link href={getPubkyCoreLink()} target="_blank">
             {'Pubky Core'}
           </Link>

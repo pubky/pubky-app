@@ -5,7 +5,7 @@ import { APP_VERSION } from '@/config/app';
  *
  * A tab left open across a deploy keeps the previous build's asset manifest, so a chunk it
  * lazily requests (a route segment, a `next/dynamic` component, the icon catalog) can be
- * missing from the new deployment and fail with `ChunkLoadError` / `Loading chunk <id> failed`.
+ * missing from the new deployment and fail with `ChunkLoadError`.
  * Next.js surfaces that as a render error, so the nearest error boundary takes over; reloading
  * the tab fetches the current build, where the chunk exists again.
  *
@@ -29,10 +29,11 @@ function readStringProperty(value: object, key: 'name' | 'message'): string | un
 /**
  * Whether a render error is a failed lazy chunk load.
  *
- * Webpack's chunk loaders set `name = 'ChunkLoadError'` and `message = 'Loading chunk <id> failed.'`
- * (`Loading CSS chunk <id> failed.` for stylesheets). The id is numeric for route chunks but a name
- * for named ones, so match the shape of the message rather than a specific id. The message is not
- * anchored because a wrapper can prefix it (for example `ChunkLoadError: Loading chunk 42 failed.`).
+ * Both bundlers' chunk loaders set `name = 'ChunkLoadError'`. Turbopack (production builds) says
+ * `Failed to load chunk <path> from module <id>`; webpack says `Loading chunk <id> failed.`
+ * (`Loading CSS chunk <id> failed.` for stylesheets, with a name instead of a number for named
+ * chunks). The message fallback covers errors whose name was lost; it is not anchored because a
+ * wrapper can prefix it (for example `ChunkLoadError: Loading chunk 42 failed.`).
  */
 export function isChunkLoadError(error: unknown): boolean {
   if (typeof error !== 'object' || error === null) {
@@ -44,7 +45,22 @@ export function isChunkLoadError(error: unknown): boolean {
   }
 
   const message = readStringProperty(error, 'message');
-  return message !== undefined && /Loading (CSS )?chunk .+ failed/.test(message);
+  return message !== undefined && /Loading (CSS )?chunk .+ failed|Failed to load chunk \S+ /.test(message);
+}
+
+/**
+ * The error a boundary reports when a stale-chunk failure outlived the one-time reload: the same build
+ * failed again (the chunk is missing from the deployed artifact) or `sessionStorage` is unavailable.
+ * The raw `ChunkLoadError` matches `OBSERVABILITY_IGNORE_ERRORS`, which drops it as expected deploy
+ * noise, so it is wrapped to keep the signal: Sentry and Pulse match their ignore list against the
+ * reported error's own message, and the original stays attached as `cause`.
+ */
+export function toChunkLoadRecoveryError(error: unknown): Error {
+  const recoveryError = new Error('A chunk failed to load again after the one-time stale-build reload', {
+    cause: error,
+  });
+  recoveryError.name = 'ChunkLoadRecoveryError';
+  return recoveryError;
 }
 
 /**

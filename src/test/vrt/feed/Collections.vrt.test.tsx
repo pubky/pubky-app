@@ -100,7 +100,7 @@ vi.mock('dexie-react-hooks', async () => {
         };
         // Intentionally keyed by serialized deps — mirrors Dexie live-query
         // re-subscription when the dependency list identity changes.
-        // oxlint-disable-next-line react/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [depsKey]);
       return data;
     },

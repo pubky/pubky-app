@@ -1,6 +1,6 @@
 # Test utilities
 
-Typed helpers for unit/component tests. All helpers live here so the ESLint rule
+Typed helpers for unit/component tests. All helpers live here so the Oxlint rule
 that bans raw `as any` and `as unknown as …` casts in `*.test.{ts,tsx}` files
 has a canonical set of named escape hatches to route through.
 

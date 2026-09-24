@@ -1,8 +1,9 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { Serwist } from '@serwist/window';
 import { Logger } from '@/libs/logger/logger';
+import { isServiceWorkerEnabled } from '@/libs/pwa/platform';
 
 interface ServiceWorkerRegistrationProviderProps {
   children: ReactNode;
@@ -17,16 +18,11 @@ interface ServiceWorkerRegistrationProviderProps {
  * lifecycle listeners (docs/pwa.md).
  */
 export function ServiceWorkerRegistrationProvider({ children }: ServiceWorkerRegistrationProviderProps) {
-  const registrationStarted = useRef(false);
-
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator) || typeof caches === 'undefined')
-      return;
+    if (!isServiceWorkerEnabled()) return;
 
-    // StrictMode replays effects; register once. No `online` reload: the local-first UI recovers on
-    // its own and useNetworkStatusToasts reports connectivity (ADR-0021).
-    if (registrationStarted.current) return;
-    registrationStarted.current = true;
+    // No `online` reload: the local-first UI recovers on its own and useNetworkStatusToasts reports
+    // connectivity (ADR-0021).
     try {
       const serwist = new Serwist('/sw.js', { scope: '/', type: 'classic' });
       void serwist.register().catch((error: unknown) => {

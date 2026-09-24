@@ -4,9 +4,6 @@
   "categories": {
     "correctness": "off"
   },
-  "env": {
-    "builtin": true
-  },
   "ignorePatterns": [
     "**/node_modules/**",
     "**/.claude/**",
@@ -17,12 +14,12 @@
     "**/.turbo/**",
     "**/coverage/**",
     "**/__snapshots__/**",
-    "*.config.js",
-    "*.config.mjs",
-    "*.config.ts",
+    "/*.config.js",
+    "/*.config.mjs",
+    "/*.config.ts",
     "cypress/**",
-    "cypress.config.ts",
-    "next-env.d.ts",
+    "/cypress.config.ts",
+    "/next-env.d.ts",
     "public/sw.js"
   ],
   "overrides": [
@@ -43,7 +40,6 @@
       "rules": {
         "nextjs/no-img-element": "off",
         "nextjs/no-html-link-for-pages": "off",
-        "typescript/no-explicit-any": "error",
         "pubky/no-restricted-syntax": [
           "error",
           {
@@ -76,10 +72,6 @@
     {
       "name": "react-compat",
       "specifier": "eslint-plugin-react"
-    },
-    {
-      "name": "react-hooks-compat",
-      "specifier": "eslint-plugin-react-hooks"
     }
   ],
   "settings": {
@@ -94,7 +86,8 @@
       "error",
       {
         "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_"
+        "varsIgnorePattern": "^_",
+        "reportVarsOnlyUsedAsTypes": true
       }
     ],
     "react/display-name": "error",
@@ -112,8 +105,6 @@
     "react/no-string-refs": "error",
     "react/no-unescaped-entities": "error",
     "react/no-unknown-property": "error",
-    "react/no-unsafe": "off",
-    "react/react-in-jsx-scope": "off",
     "import/first": "error",
     "@stylistic/padding-line-between-statements": [
       "error",
@@ -142,7 +133,7 @@
       {
         "patterns": [
           {
-            "group": ["**/Toaster/toast.store", "**/Toaster/useToastState", "**/atoms/Toast/*"],
+            "group": ["**/Toaster/toast.store", "**/Toaster/useToastState", "**/atoms/Toast/**"],
             "message": "Toast internals are private to the Toaster module. Import { toast } from '@/molecules/Toaster/toast'."
           }
         ]
@@ -217,8 +208,6 @@
     ],
     "next-compat/no-location-assign-relative-destination": "warn",
     "react-compat/no-deprecated": "error",
-    "react/require-render-return": "error",
-    "react-hooks-compat/config": "error",
-    "react-hooks-compat/gating": "error"
+    "react/require-render-return": "error"
   }
 }

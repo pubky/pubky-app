@@ -30,8 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Cache Next.js build
-        uses: actions/cache@v4
+      - name: Restore Next.js build cache
+        id: next-cache
+        uses: actions/cache/restore@v4
         with:
           path: .next/cache
           key: ${{ runner.os }}-${{ runner.arch }}-nextjs-v1-${{ hashFiles('.nvmrc', 'package.json', 'package-lock.json', 'next.config.ts', 'serwist.config.mjs', 'tsconfig.json', 'postcss.config.mjs') }}-${{ hashFiles('src/**', 'public/**') }}
@@ -40,6 +41,16 @@ jobs:
 
       - name: Build prod
         run: npm run build
+
+      # Save only from dev/master pushes. Pull-request and merge-queue caches are scoped to refs that
+      # other runs cannot restore, and each ~420 MB entry would evict other workflows' caches. Those
+      # runs still restore the newest dev entry through the restore-keys prefix.
+      - name: Save Next.js build cache
+        if: github.event_name == 'push' && steps.next-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .next/cache
+          key: ${{ steps.next-cache.outputs.cache-primary-key }}
 
       - name: Smoke test production server
         run: |
@@ -87,3 +98,6 @@ jobs:
           # A catch-all HTML response can also return 200; verify the actual worker bytes.
           test -s public/sw.js
           curl -fsS "http://localhost:${PORT}/sw.js" | cmp public/sw.js -
+          # The precache must cover the whole build (Serwist only warns when it drops a file) and every
+          # entry must be served as built, or the worker install fails or caches the wrong response.
+          node tooling/sw/verify-precache.mjs "http://localhost:${PORT}"

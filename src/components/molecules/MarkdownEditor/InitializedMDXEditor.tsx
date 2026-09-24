@@ -98,7 +98,7 @@ function ImageDialogOpenReporter({ onOpenChange }: { onOpenChange: (open: boolea
 
   useEffect(() => {
     onOpenChange(isOpen);
-    // oxlint-disable-next-line react/exhaustive-deps -- onOpenChange is a stable setState
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onOpenChange is a stable setState
   }, [isOpen]);
 
   return null;

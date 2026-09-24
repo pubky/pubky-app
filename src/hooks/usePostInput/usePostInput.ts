@@ -669,7 +669,7 @@ export function usePostInput({
 
       handleFilesAdded(files);
     },
-    // oxlint-disable-next-line react/exhaustive-deps -- insertInlineImagesAtCaret only uses stable refs and the upload handle
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- insertInlineImagesAtCaret only uses stable refs and the upload handle
     [handleFilesAdded, isArticle, inlineImages],
   );
 

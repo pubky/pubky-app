@@ -518,7 +518,7 @@ export function usePost(): UsePostReturn {
       });
       setAttachments([]);
     }
-    // oxlint-disable-next-line react/exhaustive-deps -- only trigger on isArticle change, not attachments
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only trigger on isArticle change, not attachments
   }, [isArticle]);
 
   return {

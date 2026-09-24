@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { SW_UPDATE_CHECK_MIN_INTERVAL_MS } from '@/config/pwa';
+import { isServiceWorkerEnabled } from '@/libs/pwa/platform';
 import { toast, type ToastHandle, type ToastOptions } from '@/molecules/Toaster/toast';
 
 /**
@@ -29,8 +30,7 @@ import { toast, type ToastHandle, type ToastOptions } from '@/molecules/Toaster/
  */
 export function useServiceWorkerUpdate() {
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator) || typeof caches === 'undefined')
-      return;
+    if (!isServiceWorkerEnabled()) return;
     const container = navigator.serviceWorker;
 
     let disposed = false;

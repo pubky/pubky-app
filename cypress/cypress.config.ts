@@ -1,3 +1,4 @@
+import createBundler from '@bahmutov/cypress-esbuild-preprocessor';
 import { defineConfig } from 'cypress';
 import { config } from 'dotenv';
 
@@ -37,6 +38,20 @@ export default defineConfig({
     // Plugins
 
     setupNodeEvents(on, _config) {
+      // Cypress's default preprocessor transpiles specs with ts-loader, which needs the JavaScript
+      // compiler API that TypeScript 7 no longer ships. esbuild strips types itself. The options keep
+      // what the default webpack bundle provided: inline source maps for command-log code frames, a
+      // browser `path` (support helpers call `path.join`), and webpack's development `process.env`,
+      // where only NODE_ENV is set (support/slow-down.ts reads `CI`, which stays undefined).
+      on(
+        'file:preprocessor',
+        createBundler({
+          sourcemap: 'inline',
+          alias: { path: 'path-browserify' },
+          define: { 'process.env.NODE_ENV': '"development"', 'process.env': '{}' },
+        }),
+      );
+
       on('before:browser:launch', (browser, launchOptions) => {
         if (browser.family === 'firefox') {
           // Firefox to treat localhost as secure context (needed for win.navigator.clipboard)

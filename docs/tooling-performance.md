@@ -15,7 +15,9 @@ These are wall-clock medians of three successful runs per setup. Lower is better
 
 Adding the three check medians (fresh type check + lint + formatting) gives **38.98 s → 10.08 s**, saving about **28.90 s**, or **74.1%**. This is a derived total, not a separately timed command. It does not predict pre-commit latency: lint-staged checks only staged files, while this benchmark checks the repository.
 
-The native compiler provides the largest reduction in type-check time. Oxlint preserves the existing custom checks and still loads JavaScript plugins for import sorting, padding and missing native rules; that limits its speedup relative to an all-native configuration. Oxfmt provides the largest formatting speedup while retaining Tailwind sorting.
+The native compiler provides the largest reduction in type-check time. Oxfmt provides the largest formatting speedup while retaining Tailwind sorting. At the time of this measurement Oxlint still loaded `eslint-plugin-react-hooks` only for its `config` and `gating` rules; each of its rules runs the full React Compiler over every file, and those two cannot report anything without compiler options. That plugin was about 80% of the lint time, not the import-sort and padding plugins (together about 1.3 s).
+
+**Update, September 24, 2026:** the plugin and its two rules were removed (the other React Compiler rules are native in Oxlint) and the root-only `*.config.*` ignores were anchored, which adds `src/sentry.*.config.ts` back to linting. Whole-repository lint on the same machine went from **7.19 s to 1.51 s** (three-run medians via `npx oxlint`) with identical diagnostics; the table above keeps the original September 17 figures.
 
 ## Local memory
 
@@ -100,7 +102,7 @@ Each bundler ran three cold/repeat pairs in separate temporary checkouts with th
 | Webpack: cached build after a page-text edit   | 147.960 s | 145.410 s | 144.243 s |
 | Turbopack: cached build after a page-text edit |   7.124 s |   5.508 s |   6.470 s |
 
-The repeat figures describe unchanged local rebuilds with caches available. The page-edit figures cover a small, isolated source change; a dependency or configuration change can invalidate more work. Neither is a promised CI duration. The normal CI Build job now preserves `.next/cache`; Docker keeps its existing layer cache without transferring Next's incremental cache between fresh builders. This measures build tooling, not browser interaction or page-load performance.
+The repeat figures describe unchanged local rebuilds with caches available. The page-edit figures cover a small, isolated source change; a dependency or configuration change can invalidate more work. Neither is a promised CI duration. The normal CI Build job now restores `.next/cache` on every run and saves it only from `dev`/`master` pushes (pull-request and merge-queue entries were ~420 MB each, could not be restored by other refs and evicted other workflows' caches); Docker keeps its existing layer cache without transferring Next's incremental cache between fresh builders. This measures build tooling, not browser interaction or page-load performance.
 
 ## PR CI production-build comparison
 
@@ -122,7 +124,7 @@ Compilation improved, but this first pair did **not** demonstrate faster preview
 
 ### Existing Docker overhead versus migration costs
 
-The Dockerfile and Docker workflow are unchanged by the bundler migration. The existing [shared build action](https://github.com/pubky/ci-workflows/blob/e6d3b38b5ebfa97b86595cb44f3a86695e473b09/.github/actions/docker/build_and_push/action.yml) imports and exports `pubky-app:cache` with `mode=max`. This [registry cache](https://docs.docker.com/build/cache/backends/registry/) includes intermediate build stages and is separate from the application image. It predates the newly added `.next/cache` preservation in the normal Build job.
+The Docker workflow is unchanged by the bundler migration; the Dockerfile only moves the runner stage's `public/` copy after the standalone tree (and `.dockerignore` excludes a local `public/sw.js`), so a stale traced worker can never overwrite the freshly generated one. The existing [shared build action](https://github.com/pubky/ci-workflows/blob/e6d3b38b5ebfa97b86595cb44f3a86695e473b09/.github/actions/docker/build_and_push/action.yml) imports and exports `pubky-app:cache` with `mode=max`. This [registry cache](https://docs.docker.com/build/cache/backends/registry/) includes intermediate build stages and is separate from the application image. It predates the newly added `.next/cache` preservation in the normal Build job.
 
 | Preview head | Bundler   | Docker dependency install | Application image export/push | Registry cache export | Entire image job |
 | ------------ | --------- | ------------------------: | ----------------------------: | --------------------: | ---------------: |
@@ -171,11 +173,11 @@ Four consecutive successful Webpack Build runs in this PR took **136, 141, 156 a
 ## Bundler verification
 
 - Clean `npm ci`, formatting, lint, type checking and workflow validation pass. The full unit suite passes **13,791 tests**, with **2 skipped**, including **12** service-worker registration checks.
-- Chromium verifies upgrading an installed Webpack worker to the new worker at the same `/sw.js` URL and `/` scope, shared text/file redirects, cached assets offline, and no page errors. All **69 public assets** retain identical URLs and revisions. Emitted fonts are cached; source maps are excluded.
+- Chromium verifies upgrading an installed Webpack worker to the new worker at the same `/sw.js` URL and `/` scope, shared text/file redirects, cached assets offline, and no page errors. All **69 public assets** retained identical URLs and revisions before `dev`'s precache allow-list (#2550) was merged into this branch; the worker now precaches 15 public entries. Emitted fonts are cached; source maps are excluded.
 - A local Linux/arm64 Docker image builds without Sentry credentials and serves `/`, `/home`, `/robots.txt` and the exact generated worker bytes. Browser source maps are absent; **68** server maps retain matching Sentry Debug IDs. Uploading to Sentry was not exercised locally.
 - CI passes the [production build, worker smoke test and cache save](https://github.com/pubky/pubky-app/actions/runs/35185281615/attempts/1), [code quality](https://github.com/pubky/pubky-app/actions/runs/35185281681) and [unit tests](https://github.com/pubky/pubky-app/actions/runs/35185281694), and [preview Docker build/deployment](https://github.com/pubky/pubky-app/actions/runs/35185281786). Browser verification used local production servers; the deployed preview requires Google IAP authentication.
 
-Existing worker limitations were reproduced before and after the migration: `/offline` is not precached, so offline document navigation fails, and the default 2 MiB chunk limit excludes one large JavaScript chunk in each bundler's output. Public files retain the classic integration's separate size policy, including the large landing-page video. Changing offline navigation or the chunk limit is outside this build migration.
+At the time of these measurements the worker had known limitations in both bundlers: `/offline` was not precached, the default 2 MiB chunk limit excluded one large JavaScript chunk, and the landing-page video was precached. `dev` fixed them in #2550, and merging it carried the fixes into configurator mode: `/offline.html` is precached and serves failed navigations, the public precache is a 15-entry allow-list without the video, and the chunk limit is 3 MiB (the largest Turbopack chunk is ~2.9 MB). The server-only Open Graph fonts that Turbopack copies into `static/media` are excluded. The Build workflow now fails when a static file is too large to precache or when any precached URL does not resolve on the production server.
 
 ## Initial tooling-migration verification
 
