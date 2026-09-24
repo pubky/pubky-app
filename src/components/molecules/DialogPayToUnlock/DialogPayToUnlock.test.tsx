@@ -334,3 +334,61 @@ describe('DialogPayToUnlock', () => {
     expect(cardClick).not.toHaveBeenCalled();
   });
 });
+
+// The dialog is portaled, so the render container is empty — snapshot the dialog node itself.
+describe('DialogPayToUnlock - Snapshots', () => {
+  it('matches snapshot for the checking stage', () => {
+    renderDialog('checking');
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the install stage', () => {
+    renderDialog('install');
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the retry stage', () => {
+    renderDialog('retry');
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the waiting stage', () => {
+    renderDialog('waiting');
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the waiting stage with the handshake QR and the Bitkit handoff', () => {
+    renderDialog('waiting', { handshakePubky: 'pubkylockcreator' });
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the waiting stage with a blocked link notice', () => {
+    renderDialog('waiting', { connectionIssue: 'blocked' });
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the waiting stage with a recovery_required link notice', () => {
+    renderDialog('waiting', { connectionIssue: 'recovery_required' });
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the parked waiting stage', () => {
+    renderDialog('waiting', { isStalled: true });
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the paid stage', () => {
+    renderDialog('paid');
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the unopened stage', () => {
+    renderDialog('unopened');
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the blocked stage', () => {
+    renderDialog('blocked');
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+});

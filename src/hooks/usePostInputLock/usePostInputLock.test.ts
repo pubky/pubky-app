@@ -363,6 +363,29 @@ describe('usePostInputLock', () => {
       expect(result.current.lockSwitch?.checked).toBe(true); // lock kept
     });
 
+    it('publishes the same draft and price once the creator signs in again', async () => {
+      setUpLocks();
+      mocks.publish.mockResolvedValueOnce({ status: 'auth-expired' });
+      const { result, onPublished } = setup();
+
+      configureLock(result);
+      await act(async () => result.current.submitOrPublish());
+
+      mocks.publish.mockResolvedValueOnce({ status: 'published', postId: 'alice:POST1' });
+      act(() => result.current.handleAuthSuccess());
+
+      expect(result.current.isAuthDialogOpen).toBe(false);
+      // Re-auth, not a fresh lock: the price step must not come back and the captured draft must stand.
+      expect(result.current.isLockDialogOpen).toBe(false);
+      expect(result.current.lockConfig).toEqual({ amountSats: '1000' });
+      expect(mocks.lockContentOptions?.lockedPost.content).toBe(JSON.stringify({ title: 'Essay', body: 'my secret' }));
+
+      await act(async () => result.current.submitOrPublish());
+
+      expect(onPublished).toHaveBeenCalledWith('alice:POST1');
+      expect(result.current.lockSwitch?.checked).toBe(false);
+    });
+
     it('toasts and keeps the composer on a failed publish', async () => {
       setUpLocks();
       mocks.publish.mockResolvedValue({ status: 'failed' });
