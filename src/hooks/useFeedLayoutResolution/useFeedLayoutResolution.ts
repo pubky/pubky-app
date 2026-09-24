@@ -1,31 +1,24 @@
 'use client';
 
-import { GRID_LAYOUT_VARIANTS, TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
+import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { pubkyLayoutToHomeLayout } from '@/utils/pubky-app-spec-feed-mappers';
 
-export type FeedViewLayout = LayoutType;
-
 export interface FeedLayoutResolutionInput {
-  requestedLayout: FeedViewLayout;
+  requestedLayout: LayoutType;
   variant: TimelineFeedVariant;
   isPhoneViewport: boolean;
 }
 
 export interface FeedLayoutResolution {
-  requestedLayout: FeedViewLayout;
-  effectiveLayout: FeedViewLayout;
+  requestedLayout: LayoutType;
+  effectiveLayout: LayoutType;
   isCardsActive: boolean;
   isVisualRequested: boolean;
   isVisualActive: boolean;
-  /**
-   * Whether this variant renders its posts in a fixed card grid (decision D5).
-   * Orthogonal to `effectiveLayout` — grid is variant-driven, not a `LayoutType`.
-   */
-  isGridActive: boolean;
   isPhoneViewport: boolean;
 }
 
@@ -65,17 +58,13 @@ export function resolveFeedLayout({
     isVisualRequested,
     isVisualActive: effectiveLayout === LAYOUT.VISUAL,
     isCardsActive: effectiveLayout === LAYOUT.CARDS,
-    isGridActive:
-      effectiveLayout !== LAYOUT.CARDS &&
-      (GRID_LAYOUT_VARIANTS.has(variant) ||
-        (variant === TIMELINE_FEED_VARIANT.COLLECTION && effectiveLayout === LAYOUT.COLUMNS)),
     isPhoneViewport,
   };
 }
 
 export function useFeedLayoutResolution(
   variant: TimelineFeedVariant,
-  requestedLayoutOverride?: FeedViewLayout,
+  requestedLayoutOverride?: LayoutType,
 ): FeedLayoutResolution {
   const homeLayout = useHomeStore((state) => state.layout);
   const customFeed = useCustomFeed();

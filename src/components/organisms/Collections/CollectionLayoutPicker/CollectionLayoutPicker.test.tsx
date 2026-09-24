@@ -42,6 +42,18 @@ describe('CollectionLayoutPicker', () => {
     expect(onLayoutChange).toHaveBeenCalledWith(COLLECTION_LAYOUT.LIST);
   });
 
+  it('does not reopen the tooltip after a pointer selection but retains keyboard focus help', async () => {
+    renderPicker();
+    openDesktopPicker();
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'List' }));
+    const trigger = screen.getByRole('button', { name: 'Layout: Cards' });
+    await waitFor(() => expect(trigger).toHaveFocus());
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    fireEvent.blur(trigger);
+    fireEvent.focus(trigger);
+    await waitFor(() => expect(screen.getByRole('tooltip')).toHaveTextContent('Change layout'));
+  });
+
   it('uses the standard List icon in the trigger', () => {
     renderPicker({ layout: COLLECTION_LAYOUT.LIST });
 

@@ -110,7 +110,7 @@ export function TimelinePosts({
 
           {/* Infinite-scroll sentinel — only mounted (and given height) while there are
               more posts to observe for and auto-loading is not stalled, mirroring
-              TimelineGridPosts. Once the feed is fully loaded the observer detaches, so
+              TimelineCardsPosts. Once the feed is fully loaded the observer detaches, so
               rendering it would just leave dead space below the list. */}
           {hasMore && !isStalled && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
         </Container>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Check, Grid2X2, LayoutDashboard, type LucideIcon, Rows4 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -30,7 +30,7 @@ interface CollectionLayoutOptionProps {
 }
 
 interface CollectionLayoutPickerContentProps {
-  layouts?: readonly CollectionLayout[];
+  layouts: readonly CollectionLayout[];
   layout: CollectionLayout;
   onSelect: (layout: CollectionLayout) => void;
 }
@@ -83,7 +83,7 @@ function CollectionLayoutOption({
 function CollectionLayoutPickerContent({ layout, onSelect, layouts }: CollectionLayoutPickerContentProps) {
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-3">
-      {COLLECTION_LAYOUT_PICKER_OPTIONS.filter((option) => !layouts || layouts.includes(option.value)).map((option) => (
+      {COLLECTION_LAYOUT_PICKER_OPTIONS.filter((option) => layouts.includes(option.value)).map((option) => (
         <CollectionLayoutOption
           key={option.value}
           value={option.value}
@@ -100,6 +100,9 @@ function CollectionLayoutPickerContent({ layout, onSelect, layouts }: Collection
 
 export function CollectionLayoutPicker({ layout, onLayoutChange }: CollectionLayoutPickerProps) {
   const [open, setOpen] = useState(false);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const pointerInteraction = useRef(false);
+  const suppressRestoredFocus = useRef(false);
   const isPhoneViewport = useIsMobile({ breakpoint: 'md' });
   // Visual falls back to Cards on phones; retain the viewer's preference for larger screens.
   const displayedLayout = isPhoneViewport && layout === COLLECTION_LAYOUT.VISUAL ? COLLECTION_LAYOUT.CARDS : layout;
@@ -122,10 +125,29 @@ export function CollectionLayoutPicker({ layout, onLayoutChange }: CollectionLay
   );
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <Tooltip>
+    <DropdownMenu
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        setTooltipOpen(false);
+      }}
+    >
+      <Tooltip open={tooltipOpen && !open} onOpenChange={setTooltipOpen}>
         <DropdownMenuTrigger asChild>
-          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+          <TooltipTrigger
+            asChild
+            onPointerDownCapture={() => {
+              pointerInteraction.current = true;
+            }}
+            onKeyDownCapture={() => {
+              pointerInteraction.current = false;
+            }}
+            onFocus={(event) => {
+              if (suppressRestoredFocus.current) event.preventDefault();
+            }}
+          >
+            {trigger}
+          </TooltipTrigger>
         </DropdownMenuTrigger>
         <TooltipPortal>
           {!open && (
@@ -135,7 +157,22 @@ export function CollectionLayoutPicker({ layout, onLayoutChange }: CollectionLay
           )}
         </TooltipPortal>
       </Tooltip>
-      <DropdownMenuContent align="end" className="w-70">
+      <DropdownMenuContent
+        align="end"
+        className="w-70"
+        onPointerDownCapture={() => {
+          pointerInteraction.current = true;
+        }}
+        onKeyDownCapture={() => {
+          pointerInteraction.current = false;
+        }}
+        onCloseAutoFocus={() => {
+          suppressRestoredFocus.current = pointerInteraction.current;
+          queueMicrotask(() => {
+            suppressRestoredFocus.current = false;
+          });
+        }}
+      >
         <CollectionLayoutPickerContent layout={displayedLayout} onSelect={handleSelect} layouts={availableLayouts} />
       </DropdownMenuContent>
     </DropdownMenu>

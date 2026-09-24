@@ -986,7 +986,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('tooltip')).toHaveTextContent(
-        'Cards and List also apply on mobile. Other layouts use a single column on mobile.',
+        'Cards also applies on mobile. Other layouts use a single column on mobile.',
       );
     });
   });
@@ -1005,7 +1005,7 @@ describe('CustomFeedDialog', () => {
     if (synthesizeClick) fireEvent.click(trigger);
     await waitFor(() => {
       expect(screen.getByRole('tooltip')).toHaveTextContent(
-        'Cards and List also apply on mobile. Other layouts use a single column on mobile.',
+        'Cards also applies on mobile. Other layouts use a single column on mobile.',
       );
     });
 

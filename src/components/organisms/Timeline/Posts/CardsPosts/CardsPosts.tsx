@@ -1,23 +1,47 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS, TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { useCardsLayout } from '@/hooks/useCardsLayout/useCardsLayout';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
 import type { UsePostListKeyboardResult } from '@/hooks/usePostListKeyboard/usePostListKeyboard.types';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
-import { cn } from '@/libs/utils/utils';
+import { cn, isPostDeleted } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
+import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { PostMain } from '@/organisms/PostMain/PostMain';
-import type { TimelineGridPostsProps } from '../GridPosts/GridPosts.types';
 import { CardsPostsSkeleton } from './CardsPosts.skeleton';
+
+interface TimelineCardsPostsProps {
+  postIds: string[];
+  loading: boolean;
+  loadingMore: boolean;
+  error: string | null;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+  /**
+   * Whether to render the "You've reached the end" message once the Cards feed is fully
+   * loaded. Defaults to `true`. Collection and bookmarks Cards feeds set this to
+   * `false` because the end-of-feed celebration reads as out of place in these
+   * finite, library-style surfaces.
+   */
+  showEndMessage?: boolean;
+  emptyState?: ReactNode;
+  /**
+   * Optional Add Post tile placed after the posts in the shortest column.
+   */
+  trailingSlot?: ReactNode;
+}
 
 function CardsPost({
   postId,
@@ -30,6 +54,8 @@ function CardsPost({
   totalCount: number;
   setCardRef: UsePostListKeyboardResult['setCardRef'];
 }) {
+  const { postDetails } = usePostDetails(postId);
+  const identity = parseCompositeId(postId);
   const visibility = usePostHeaderVisibility(postId);
   const displayedPostId = getDisplayedPostId(postId, visibility);
   const { handlePostKeyDown } = usePostNavigation();
@@ -44,7 +70,11 @@ function CardsPost({
       onKeyDown={(e) => handlePostKeyDown(displayedPostId, e)}
       className="@container/grid min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <PostMain postId={postId} isReply={false} presentation="cards" />
+      {postDetails?.kind === 'collection' && !isPostDeleted(postDetails.content) ? (
+        <CollectionCard authorPubky={identity.pubky} postId={identity.id} />
+      ) : (
+        <PostMain postId={postId} isReply={false} presentation="cards" />
+      )}
     </Container>
   );
 }
@@ -59,7 +89,7 @@ export function TimelineCardsPosts({
   showEndMessage = true,
   emptyState,
   trailingSlot,
-}: TimelineGridPostsProps) {
+}: TimelineCardsPostsProps) {
   // Rounds that surface nothing new (a long client-side-filtered region) are budgeted;
   // past the budget the sentinel stops and the manual Load more below takes over (#2523).
   const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({

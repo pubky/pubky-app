@@ -33,7 +33,9 @@ export function PostTagToggleButton({
   const tagCount = postCounts?.unique_tags ?? 0;
 
   if (isLoading) {
-    return <Skeleton data-cy="post-tag-btn-skeleton" className={cn('h-8 rounded-full', showCount ? 'w-12' : 'w-8')} />;
+    return (
+      <Skeleton data-cy="post-tag-btn-skeleton" className={cn('rounded-full', showCount ? 'h-8 w-12' : 'size-9')} />
+    );
   }
 
   const button = (

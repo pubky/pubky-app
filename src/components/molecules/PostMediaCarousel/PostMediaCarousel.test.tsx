@@ -1,26 +1,33 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostMediaCarousel } from './PostMediaCarousel';
 
 // jsdom has no slide geometry; exercise our event bridge against Embla's public API.
 const embla = vi.hoisted(() => {
   let index = 0;
-  const listeners = new Set<() => void>();
+  const listeners = new Map<string, Set<() => void>>();
+  const emit = (event: string) => listeners.get(event)?.forEach((listener) => listener());
   const select = (next: number) => {
     index = next;
-    listeners.forEach((listener) => listener());
+    emit('select');
   };
   const api = {
     selectedScrollSnap: () => index,
+    rootNode: () => document.querySelector<HTMLElement>('[data-slot="carousel-content"]')!,
+    slideNodes: () => Array.from(document.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]')),
     canScrollNext: () => true,
     canScrollPrev: () => true,
     scrollNext: () => select(1),
     scrollPrev: () => select(0),
-    on: (_event: string, listener: () => void) => listeners.add(listener),
-    off: (_event: string, listener: () => void) => listeners.delete(listener),
+    on: (event: string, listener: () => void) => {
+      if (!listeners.has(event)) listeners.set(event, new Set());
+      listeners.get(event)!.add(listener);
+    },
+    off: (event: string, listener: () => void) => listeners.get(event)?.delete(listener),
   };
   return {
     api,
+    emit,
     ref: vi.fn(),
     reset: () => {
       index = 0;
@@ -67,7 +74,7 @@ describe('PostMediaCarousel', () => {
 
   it('keeps keyboard focus in the carousel when the focused image becomes inactive', () => {
     render(<PostMediaCarousel media={media} onOpenPreview={vi.fn()} isPreviewOpen={false} />);
-    const carousel = screen.getByRole('region', { name: 'Post media' });
+    const carousel = screen.getByRole('group', { name: 'Post media' });
     const trigger = screen.getByRole('button', { name: 'Open image 1 of 2: Portrait' });
     trigger.focus();
     fireEvent.keyDown(trigger, { key: 'ArrowRight' });
@@ -76,6 +83,49 @@ describe('PostMediaCarousel', () => {
     fireEvent.keyDown(carousel, { key: 'ArrowLeft' });
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
     expect(carousel).toHaveFocus();
+  });
+
+  it('rescues focus for a swipe but does not steal focus from navigation buttons or on resize', () => {
+    render(<PostMediaCarousel media={media} onOpenPreview={vi.fn()} isPreviewOpen={false} />);
+    const root = screen.getByRole('group', { name: 'Post media' });
+    const image = screen.getByRole('button', { name: /Open image 1/ });
+    image.focus();
+    act(() => embla.emit('reInit'));
+    expect(image).toHaveFocus();
+    act(() => embla.api.scrollNext());
+    expect(root).toHaveFocus();
+    const previous = screen.getByRole('button', { name: 'Previous slide' });
+    previous.focus();
+    fireEvent.click(previous);
+    expect(previous).toHaveFocus();
+  });
+
+  it.each(['j', 'k', 'ArrowUp', 'ArrowDown', 'Home', 'End'])(
+    'lets %s reach the feed from the root but isolates native media',
+    (key) => {
+      const parent = vi.fn();
+      render(
+        <div onKeyDown={parent}>
+          <PostMediaCarousel
+            media={[{ ...media[0], type: 'video/mp4' }, media[1]]}
+            onOpenPreview={vi.fn()}
+            isPreviewOpen={false}
+          />
+        </div>,
+      );
+      fireEvent.keyDown(screen.getByRole('group', { name: 'Post media' }), { key });
+      expect(parent).toHaveBeenCalledOnce();
+      parent.mockClear();
+      fireEvent.keyDown(screen.getByTestId('video'), { key });
+      expect(parent).not.toHaveBeenCalled();
+    },
+  );
+
+  it('keeps a single image trigger without a redundant carousel tab stop', () => {
+    render(<PostMediaCarousel media={[media[0]]} onOpenPreview={vi.fn()} isPreviewOpen={false} />);
+    expect(screen.getByRole('group', { name: 'Post media' })).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('button', { name: /Open image 1/ })).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(screen.queryByRole('button', { name: 'Next slide' })).not.toBeInTheDocument();
   });
 
   it('pauses a video when its slide becomes inactive or the lightbox opens', () => {
@@ -102,7 +152,7 @@ describe('PostMediaCarousel', () => {
       expect(embla.api.selectedScrollSnap()).toBe(0);
     }
     if (count > 1) {
-      fireEvent.keyDown(screen.getByRole('region', { name: 'Post media' }), { key: 'ArrowRight' });
+      fireEvent.keyDown(screen.getByRole('group', { name: 'Post media' }), { key: 'ArrowRight' });
       expect(screen.getByText('2 / 2')).toBeInTheDocument();
     }
   });

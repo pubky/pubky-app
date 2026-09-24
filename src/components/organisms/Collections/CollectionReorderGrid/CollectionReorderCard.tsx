@@ -18,7 +18,7 @@ import type { CollectionReorderCardProps } from './CollectionReorderGrid.types';
  * `pointer-events-none` so nothing inside the post card — reply, repost, tags,
  * remove-from-collection — is reachable while reordering.
  *
- * Cell markup mirrors `TimelineGridPosts` (`@container/grid`,
+ * Cell markup mirrors `TimelineCardsPosts` (`@container/grid`,
  * `[&>*:first-child]:flex-1`) plus the design's white dashed border. Deleted /
  * missing posts render through `PostMain`'s own `PostDeleted` / `PostMissing`
  * branches and stay draggable; entries whose URI cannot be converted to a

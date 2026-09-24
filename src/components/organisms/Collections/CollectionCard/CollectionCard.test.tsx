@@ -480,6 +480,13 @@ describe('CollectionCard', () => {
       expect(mockTtlRef).toHaveBeenCalledWith(container.querySelector('a[data-cy="collection-card"]'));
     });
 
+    it('keeps a blurred landing card subscribed while its envelope can still change', () => {
+      setPostDetails(COLLECTION_CONTENT, { isBlurred: true });
+      const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+      expect(mockUseTtlSubscription).toHaveBeenCalledWith({ type: 'post', id: COMPOSITE_ID, enabled: true });
+      expect(mockTtlRef).toHaveBeenCalledWith(container.querySelector('button'));
+    });
+
     it('does not subscribe embed cards — the enclosing PostPreviewCard / PostMain owns the subscription', () => {
       // The enclosing surface already subscribes this id; a second observer
       // for the same post would be redundant.
@@ -492,7 +499,6 @@ describe('CollectionCard', () => {
       ['skeleton', () => mockUsePostDetails.mockReturnValue({ postDetails: undefined, isLoading: true })],
       ['missing', () => mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false })],
       ['deleted', () => setPostDetails('[DELETED]')],
-      ['blurred', () => setPostDetails(COLLECTION_CONTENT, { isBlurred: true })],
     ])('keeps the viewport observer detached in the %s state', (_state, arrange) => {
       arrange();
 

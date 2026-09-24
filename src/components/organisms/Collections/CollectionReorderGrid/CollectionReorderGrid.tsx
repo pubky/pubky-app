@@ -21,7 +21,7 @@ import type { CollectionReorderGridProps } from './CollectionReorderGrid.types';
  *
  * Drag-and-drop replacement for the single collection's stream grid while
  * reorder mode is active. Renders EVERY envelope item at once (no pagination)
- * in the same responsive grid footprint as `TimelineGridPosts`, each cell a
+ * in the same responsive grid footprint as `TimelineCardsPosts`, each cell a
  * sortable drag surface (`CollectionReorderCard`).
  *
  * Ordering state lives in `useReorderCollection` — this component only reports

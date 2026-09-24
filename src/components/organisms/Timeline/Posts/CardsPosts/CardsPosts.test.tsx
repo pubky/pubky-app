@@ -2,8 +2,18 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GRID_FEED_SKELETON_COUNT } from '@/config/feed';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { TimelineCardsPosts } from './CardsPosts';
 
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({ usePostDetails: vi.fn() }));
+vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({
+  CollectionCard: ({ authorPubky, postId }: { authorPubky: string; postId: string }) => (
+    <div data-testid="standalone-collection">
+      {authorPubky}:{postId}
+    </div>
+  ),
+}));
 vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({ useInfiniteScroll: vi.fn() }));
 vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => ({
   usePostHeaderVisibility: () => ({ showRepostHeader: false, shouldShowPostHeader: true, originalPostId: null }),
@@ -31,6 +41,7 @@ const props = {
 const resume = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(usePostDetails).mockReturnValue({ postDetails: null, isLoading: false });
   vi.mocked(useInfiniteScroll).mockReturnValue({ sentinelRef: vi.fn(), isStalled: false, resumeAutoLoad: resume });
 });
 
@@ -47,6 +58,23 @@ describe('TimelineCardsPosts', () => {
     expect(cards[1]).toHaveFocus();
     fireEvent.keyDown(cards[1], { key: 'Enter' });
     expect(navigate).toHaveBeenCalledWith('b:2', expect.anything());
+  });
+
+  it('renders collection posts as standalone cards without post chrome', () => {
+    vi.mocked(usePostDetails).mockReturnValue({ postDetails: asOpaque({ kind: 'collection' }), isLoading: false });
+    render(<TimelineCardsPosts {...props} postIds={['a:1']} />);
+    expect(screen.getByTestId('standalone-collection')).toHaveTextContent('a:1');
+    expect(screen.getByRole('article').querySelector('[data-presentation]')).toBeNull();
+  });
+
+  it('retains PostMain unavailable actions if a collection entry becomes a tombstone', () => {
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: asOpaque({ kind: 'collection', content: '[DELETED]' }),
+      isLoading: false,
+    });
+    render(<TimelineCardsPosts {...props} postIds={['a:1']} />);
+    expect(screen.queryByTestId('standalone-collection')).not.toBeInTheDocument();
+    expect(screen.getByRole('article').firstChild).toHaveAttribute('data-presentation', 'cards');
   });
 
   it('mounts the measured feed after initial loading resolves', () => {

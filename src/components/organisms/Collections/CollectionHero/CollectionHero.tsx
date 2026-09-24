@@ -320,16 +320,18 @@ function CollectionHeroContent({
               </Button>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={handleCopyLink}
-                    disabled={isDeleting || isReorderActive}
-                    aria-label="Copy link"
-                    data-cy="collection-hero-copy-link-btn"
-                  >
-                    <Link className="size-4" />
-                  </Button>
+                  <span className="inline-flex">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={handleCopyLink}
+                      disabled={isDeleting || isReorderActive}
+                      aria-label="Copy link"
+                      data-cy="collection-hero-copy-link-btn"
+                    >
+                      <Link className="size-4" />
+                    </Button>
+                  </span>
                 </TooltipTrigger>
                 <TooltipPortal>
                   <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
@@ -372,16 +374,18 @@ function CollectionHeroContent({
                 ) : (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        onClick={reorder.onEnter}
-                        disabled={isDeleting || itemCount < 2}
-                        aria-label={'Reorder'}
-                        data-cy="collection-hero-reorder-btn"
-                      >
-                        <Move className="size-4" />
-                      </Button>
+                      <span className="inline-flex">
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          onClick={reorder.onEnter}
+                          disabled={isDeleting || itemCount < 2}
+                          aria-label={'Reorder'}
+                          data-cy="collection-hero-reorder-btn"
+                        >
+                          <Move className="size-4" />
+                        </Button>
+                      </span>
                     </TooltipTrigger>
                     <TooltipPortal>
                       <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
@@ -392,16 +396,18 @@ function CollectionHeroContent({
                 ))}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={handleEdit}
-                    disabled={isDeleting || isReorderActive}
-                    aria-label={'Edit'}
-                    data-cy="collection-hero-edit-btn"
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
+                  <span className="inline-flex">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={handleEdit}
+                      disabled={isDeleting || isReorderActive}
+                      aria-label={'Edit'}
+                      data-cy="collection-hero-edit-btn"
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                  </span>
                 </TooltipTrigger>
                 <TooltipPortal>
                   <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
@@ -411,16 +417,18 @@ function CollectionHeroContent({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={handleDelete}
-                    disabled={isDeleting || isReorderActive}
-                    aria-label={'Delete'}
-                    data-cy="collection-hero-delete-btn"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+                  <span className="inline-flex">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={handleDelete}
+                      disabled={isDeleting || isReorderActive}
+                      aria-label={'Delete'}
+                      data-cy="collection-hero-delete-btn"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </span>
                 </TooltipTrigger>
                 <TooltipPortal>
                   <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
@@ -458,15 +466,17 @@ function CollectionHeroContent({
               </Button>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={handleCopyLink}
-                    aria-label="Copy link"
-                    data-cy="collection-hero-copy-link-btn"
-                  >
-                    <Link className="size-4" />
-                  </Button>
+                  <span className="inline-flex">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={handleCopyLink}
+                      aria-label="Copy link"
+                      data-cy="collection-hero-copy-link-btn"
+                    >
+                      <Link className="size-4" />
+                    </Button>
+                  </span>
                 </TooltipTrigger>
                 <TooltipPortal>
                   <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">

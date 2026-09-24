@@ -22,6 +22,7 @@ export function CollectionCardSkeleton({ className }: CollectionCardSkeletonProp
 
   return (
     <Container
+      data-post-content-pending
       overrideDefaults
       data-testid="collection-card-skeleton"
       className={cn('relative block w-full', className)}

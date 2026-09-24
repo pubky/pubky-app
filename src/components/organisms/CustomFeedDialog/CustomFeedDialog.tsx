@@ -81,7 +81,7 @@ function parseReachValue(value: string): CustomFeedFormReach {
 /** Shown for a stored reach/content this dialog cannot offer as a choice. */
 const UNSUPPORTED_OPTION_LABEL = 'Unsupported (set elsewhere)';
 
-const LAYOUT_HINT = 'Cards and List also apply on mobile. Other layouts use a single column on mobile.';
+const LAYOUT_HINT = 'Cards also applies on mobile. Other layouts use a single column on mobile.';
 
 const REACH_OPTION_VALUES: CustomFeedFormReach[] = [
   PubkyAppFeedReach.Wot,

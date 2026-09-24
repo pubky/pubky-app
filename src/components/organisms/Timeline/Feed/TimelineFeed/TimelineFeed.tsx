@@ -144,7 +144,7 @@ function BookmarksTimelineFeed({
   trailingSlot?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }>['trailingSlot'];
 }) {
   // Keep the library independent of Home filters and persisted layout preferences.
-  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.BOOKMARKS, requestedLayout ?? LAYOUT.COLUMNS);
+  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.BOOKMARKS, requestedLayout ?? LAYOUT.CARDS);
   const streamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL;
 
   return (
@@ -236,7 +236,7 @@ function CollectionTimelineFeed({
   const postId = params?.postId;
   const streamId = userId && postId ? buildCollectionItemsStreamId(userId, postId) : undefined;
   const collectionId = userId && postId ? buildCompositeId({ pubky: userId, id: postId }) : undefined;
-  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.COLLECTION, requestedLayout ?? LAYOUT.COLUMNS);
+  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.COLLECTION, requestedLayout ?? LAYOUT.CARDS);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   // The envelope's `items` (a live Dexie query) is the local-first source of

@@ -860,7 +860,7 @@ describe('Cards — mixed content and interactions', () => {
   it('keeps its frame stable through carousel navigation and opens the selected media', async () => {
     await renderBookmarks(VRT_VIEWPORT_DESKTOP, true);
     await expectCards();
-    const carousel = page.getByRole('region', { name: 'Post media' }).first();
+    const carousel = page.getByRole('group', { name: 'Post media' }).first();
     const frame = document.querySelector('[data-cy="timeline-posts-cards"] [data-slot="carousel"]')!;
     const height = frame.getBoundingClientRect().height;
     await carousel.getByRole('button', { name: 'Next slide' }).click();

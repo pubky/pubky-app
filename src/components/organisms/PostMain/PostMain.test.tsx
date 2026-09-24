@@ -15,8 +15,8 @@ import { buildCollectionItemsStreamId } from '@/models/stream/post/postStream.ty
 import { SinglePostContent } from '@/organisms/SinglePostContent/SinglePostContent';
 import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+import { TimelineCardsPosts } from '@/organisms/Timeline/Posts/CardsPosts/CardsPosts';
 import { TimelineFeedItem } from '@/organisms/Timeline/Posts/FeedItem/TimelineFeedItem';
-import { TimelineGridPosts } from '@/organisms/Timeline/Posts/GridPosts/GridPosts';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMain } from './PostMain';
 import { PostMainLayoutProvider } from './PostMainLayoutContext';
@@ -1058,7 +1058,7 @@ describe('PostMain', () => {
     const onKeyDown = vi.fn();
     vi.mocked(usePostNavigation).mockReturnValue({ ...vi.mocked(usePostNavigation)(), handlePostKeyDown: onKeyDown });
     render(
-      <TimelineGridPosts
+      <TimelineCardsPosts
         postIds={['me:simple-repost-1']}
         loading={false}
         loadingMore={false}

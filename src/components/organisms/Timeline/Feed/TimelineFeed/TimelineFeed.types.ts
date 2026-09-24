@@ -1,8 +1,8 @@
 import type { ReactNode, RefObject } from 'react';
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
-import type { FeedViewLayout } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import type { OptimisticPostRemoval } from '@/hooks/useStreamPagination/useStreamPagination.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import type { LayoutType } from '@/stores/home/home.types';
 
 interface TimelineFeedPropsBase {
   /**
@@ -47,14 +47,14 @@ type BookmarksTimelineFeedProps = TimelineFeedPropsBase & {
   /** Add Content CTA rendered after bookmarked posts. */
   trailingSlot?: ReactNode;
   pullToRefreshContainerRef?: never;
-  requestedLayout?: FeedViewLayout;
+  requestedLayout?: LayoutType;
   visualHiddenItemsNotice?: never;
 };
 
 type CollectionTimelineFeedProps = TimelineFeedPropsBase & {
   variant: typeof TIMELINE_FEED_VARIANT.COLLECTION;
-  /** Collection-scoped Grid/List/Visual choice; never sourced from the persisted home store. */
-  requestedLayout?: FeedViewLayout;
+  /** Collection-scoped Cards/List/Visual choice; never sourced from the persisted home store. */
+  requestedLayout?: LayoutType;
   /**
    * Empty state for finite collection-like feeds.
    */

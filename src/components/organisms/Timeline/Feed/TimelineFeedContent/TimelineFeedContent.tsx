@@ -20,7 +20,6 @@ import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
 import { TimelineCardsPosts } from '../../Posts/CardsPosts/CardsPosts';
-import { TimelineGridPosts } from '../../Posts/GridPosts/GridPosts';
 import { TimelinePosts } from '../../Posts/Posts';
 import { NewPostsSection } from '../NewPostsSection/NewPostsSection';
 import type {
@@ -174,7 +173,6 @@ function TimelineFeedContent({
 
   const isVisualActive = layoutResolution?.isVisualActive ?? false;
   const isCardsActive = layoutResolution?.isCardsActive ?? false;
-  const isGridActive = layoutResolution?.isGridActive ?? false;
   const isCollectionFeed = variant === TIMELINE_FEED_VARIANT.COLLECTION;
   const {
     postIds: rawPostIds,
@@ -353,7 +351,7 @@ function TimelineFeedContent({
   // `children` is the composer/filter region on interactive feeds (hidden by the
   // immersive Visual mosaic on Home/Search/Custom) but the collection hero on
   // COLLECTION, which must stay visible in every layout.
-  const shouldRenderChildren = !isVisualActive || isGridActive || variant === TIMELINE_FEED_VARIANT.COLLECTION;
+  const shouldRenderChildren = !isVisualActive || variant === TIMELINE_FEED_VARIANT.COLLECTION;
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
@@ -376,18 +374,6 @@ function TimelineFeedContent({
           />
           {isCardsActive ? (
             <TimelineCardsPosts
-              postIds={postIds}
-              loading={loading}
-              loadingMore={loadingMore}
-              error={error}
-              hasMore={hasMore}
-              loadMore={loadMore}
-              showEndMessage={showEndMessage}
-              emptyState={emptyState}
-              trailingSlot={trailingSlot}
-            />
-          ) : isGridActive ? (
-            <TimelineGridPosts
               postIds={postIds}
               loading={loading}
               loadingMore={loadingMore}

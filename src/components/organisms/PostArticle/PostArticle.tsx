@@ -28,7 +28,7 @@ export const PostArticle = ({
   className,
   presentation = 'default',
 }: PostArticleProps) => {
-  const { title, body, coverImage, hasCover } = usePostArticle({
+  const { title, body, coverImage, hasCover, isCoverLoading } = usePostArticle({
     content,
     attachments,
     coverImageVariant: FileVariant.FEED,
@@ -58,6 +58,7 @@ export const PostArticle = ({
           className,
         )}
       >
+        {presentation === 'cards' && isCoverLoading && !localCoverImage && <span hidden data-post-content-pending />}
         <Container className="gap-y-1">
           <Container className="flex-row items-start gap-2">
             <Newspaper aria-hidden="true" className="mt-1 size-5 shrink-0" />

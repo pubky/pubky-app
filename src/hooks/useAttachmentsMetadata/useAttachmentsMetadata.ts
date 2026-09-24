@@ -25,14 +25,15 @@ interface UseAttachmentsMetadataParams {
 interface UseAttachmentsMetadataResult {
   /** Local file rows that resolved, in the order requested. Empty until they exist. */
   files: NexusFileDetails[];
+  /** True until the initial metadata read and missing-file requests settle. */
+  isLoading: boolean;
 }
 
 /**
  * Resolves the local file rows behind a set of attachment URIs: live, local-first.
  *
- * A card paints from post details before the file rows land — `persistPosts` and
- * `persistFiles` are separate IndexedDB transactions, and Nexus can return a post
- * with attachment URIs before `attachments_metadata` is indexed. A one-shot
+ * A card can paint from post details before its file rows exist: Nexus can return
+ * attachment URIs while `attachments_metadata` is still missing or partially indexed. A one-shot
  * `getMetadata` right after the post row arrives reads an empty table and never
  * looks again, so the attachments stay missing until something remounts the card.
  * This hook instead:
@@ -59,7 +60,10 @@ export function useAttachmentsMetadata({
   // URIs this instance has already asked Nexus for, and the ones currently in
   // flight. Together they keep one instance from re-requesting a URI it already
   // asked for, which a live query would otherwise do on every write.
-  const [settledFileUris, setSettledFileUris] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const [{ uris: settledFileUris, readVersion }, setSettledFiles] = useState(() => ({
+    uris: new Set<string>(),
+    readVersion: 0,
+  }));
   const inFlightFileUris = useRef<Set<string>>(new Set<string>());
 
   // The live `fileUris` key and error handler, read when a request settles:
@@ -96,8 +100,10 @@ export function useAttachmentsMetadata({
 
     requested.forEach((uri) => inFlightFileUris.current.add(uri));
 
+    let fetched = false;
     try {
       await FileController.fetchFiles({ fileUris: [...requested] });
+      fetched = true;
     } catch (error) {
       // A failed fetch is not fatal: the caller renders whatever is local, and
       // the row may still arrive through a later write on another surface. It
@@ -105,12 +111,18 @@ export function useAttachmentsMetadata({
       reportError(requestedFileUrisKey, error);
     } finally {
       requested.forEach((uri) => inFlightFileUris.current.delete(uri));
-      setSettledFileUris((previous) => {
-        if (requested.every((uri) => previous.has(uri))) return previous;
+      setSettledFiles((previous) => {
+        if (requested.every((uri) => previous.uris.has(uri))) return previous;
 
-        const next = new Set(previous);
+        const next = new Set(previous.uris);
         requested.forEach((uri) => next.add(uri));
-        return next;
+        // Successful persistence needs a matching local snapshot before readiness.
+        // Failed reads/fetches already have their terminal result; don't retry them.
+        const currentKey = currentFileUrisKeyRef.current;
+        const currentUris = new Set(currentKey?.split('|'));
+        const refresh =
+          fetched && requested.some((uri) => currentUris.has(uri)) && reportedFileUrisKeyRef.current !== currentKey;
+        return { uris: next, readVersion: previous.readVersion + (refresh ? 1 : 0) };
       });
     }
   };
@@ -129,7 +141,9 @@ export function useAttachmentsMetadata({
       }
     },
     fetchFn: () => requestMissingFiles(fileUris, fileUrisKey),
-    deps: [fileUrisKey],
+    // Re-read after successful persistence so readiness and returned rows describe
+    // the same database snapshot, including permanently omitted files.
+    deps: [fileUrisKey, readVersion],
     enabled: isEnabled,
   });
 
@@ -147,5 +161,18 @@ export function useAttachmentsMetadata({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, fileUrisKey, isEnabled, settledFileUris]);
 
-  return { files: data ?? [] };
+  // A terminal reread must not unmount already-visible media (or its lightbox).
+  // Retain rows only for this URI set while the new snapshot is pending.
+  const [previousRows, setPreviousRows] = useState<{ key: string; files: NexusFileDetails[] | null } | null>(null);
+  if (!isEnabled && previousRows !== null) setPreviousRows(null);
+  else if (isEnabled && data !== undefined && (previousRows?.key !== fileUrisKey || previousRows.files !== data)) {
+    setPreviousRows({ key: fileUrisKey, files: data });
+  }
+  const files =
+    data === undefined && isEnabled && previousRows?.key === fileUrisKey ? (previousRows.files ?? []) : (data ?? []);
+  const resolved = new Set(files.map((file) => file.uri));
+  const isLoading =
+    isEnabled && (data === undefined || fileUris.some((uri) => !resolved.has(uri) && !settledFileUris.has(uri)));
+
+  return { files, isLoading };
 }

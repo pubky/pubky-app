@@ -44,7 +44,7 @@ describe('resolveFeedLayout', () => {
   });
 
   // The bookmarks route has no layout filter UI; it must not adopt the shared
-  // wide/visual layout. It is a fixed grid (see isGridActive) rendered in columns.
+  // wide/visual layout. The route explicitly requests Cards.
   it.each([LAYOUT.VISUAL, LAYOUT.WIDE])(
     'falls back to columns for %s layout on the bookmarks variant (desktop)',
     (requestedLayout) => {
@@ -149,70 +149,6 @@ describe('resolveFeedLayout', () => {
     expect(result.isVisualActive).toBe(false);
   });
 
-  describe('isGridActive', () => {
-    it('marks the collection variant as grid-active when Grid is requested', () => {
-      const result = resolveFeedLayout({
-        requestedLayout: LAYOUT.COLUMNS,
-        variant: TIMELINE_FEED_VARIANT.COLLECTION,
-        isPhoneViewport: false,
-      });
-
-      expect(result.isGridActive).toBe(true);
-    });
-
-    it('allows the collection variant to use the existing List renderer', () => {
-      const result = resolveFeedLayout({
-        requestedLayout: LAYOUT.LIST,
-        variant: TIMELINE_FEED_VARIANT.COLLECTION,
-        isPhoneViewport: false,
-      });
-
-      expect(result.effectiveLayout).toBe(LAYOUT.LIST);
-      expect(result.isGridActive).toBe(false);
-    });
-
-    it('marks the bookmarks variant as grid-active', () => {
-      const result = resolveFeedLayout({
-        requestedLayout: LAYOUT.COLUMNS,
-        variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
-        isPhoneViewport: false,
-      });
-
-      expect(result.isGridActive).toBe(true);
-    });
-
-    it.each([
-      TIMELINE_FEED_VARIANT.HOME,
-      TIMELINE_FEED_VARIANT.CUSTOM,
-      TIMELINE_FEED_VARIANT.PROFILE,
-      TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS,
-      TIMELINE_FEED_VARIANT.HOT,
-      TIMELINE_FEED_VARIANT.SEARCH,
-    ])('does not mark the %s variant as grid-active', (variant) => {
-      const result = resolveFeedLayout({
-        requestedLayout: LAYOUT.COLUMNS,
-        variant,
-        isPhoneViewport: false,
-      });
-
-      expect(result.isGridActive).toBe(false);
-    });
-
-    it('uses Cards as the collection fallback for unsupported layouts', () => {
-      // Collections do not support Wide, so unsupported requests use their Cards fallback.
-      const result = resolveFeedLayout({
-        requestedLayout: LAYOUT.WIDE,
-        variant: TIMELINE_FEED_VARIANT.COLLECTION,
-        isPhoneViewport: false,
-      });
-
-      expect(result.effectiveLayout).toBe(LAYOUT.CARDS);
-      expect(result.isVisualActive).toBe(false);
-      expect(result.isGridActive).toBe(false);
-      expect(result.isCardsActive).toBe(true);
-    });
-  });
-
   describe('collection visual layout', () => {
     it('keeps visual layout active for the collection variant on desktop/tablet', () => {
       const result = resolveFeedLayout({
@@ -223,7 +159,6 @@ describe('resolveFeedLayout', () => {
 
       expect(result.effectiveLayout).toBe(LAYOUT.VISUAL);
       expect(result.isVisualActive).toBe(true);
-      expect(result.isGridActive).toBe(false);
     });
 
     it('falls back to the collection Cards for visual layout on phones', () => {
@@ -237,7 +172,6 @@ describe('resolveFeedLayout', () => {
       expect(result.effectiveLayout).toBe(LAYOUT.CARDS);
       expect(result.isVisualRequested).toBe(true);
       expect(result.isVisualActive).toBe(false);
-      expect(result.isGridActive).toBe(false);
       expect(result.isCardsActive).toBe(true);
     });
 
@@ -271,7 +205,6 @@ describe('Cards scope', () => {
         ].some((value) => value === variant);
         expect(result.isCardsActive).toBe(supported);
         expect(result.effectiveLayout).toBe(supported ? 'cards' : LAYOUT.COLUMNS);
-        expect(result.isGridActive).toBe(false);
         expect(result.isVisualActive).toBe(false);
       }
     },
@@ -299,7 +232,6 @@ describe('saved custom feed layout', () => {
 
     expect(result.current.effectiveLayout).toBe(LAYOUT.CARDS);
     expect(result.current.isCardsActive).toBe(true);
-    expect(result.current.isGridActive).toBe(false);
     expect(useHomeStore.getState().layout).toBe(LAYOUT.WIDE);
   });
 });

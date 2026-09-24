@@ -1,33 +1,35 @@
 export interface CardsPlacement {
   columns: number;
-  items: Array<{ id: string; column: number; top: number }>;
+  items: Array<{ id: string; column: number; top: number; pending?: boolean }>;
   height: number;
 }
 
 /** Preserve columns through appends/removals and height changes, repack on an explicit reorder. */
 export function placeCardsItems(
-  items: Array<{ id: string; height: number }>,
+  items: Array<{ id: string; height: number; ready?: boolean }>,
   columns: number,
   gap: number,
   previous?: CardsPlacement,
 ): CardsPlacement {
   const count = Math.max(1, columns);
   const ids = new Set(items.map(({ id }) => id));
-  const previousIds = new Set(previous?.items.map(({ id }) => id));
   const surviving = previous?.items.filter(({ id }) => ids.has(id)).map(({ id }) => id) ?? [];
-  const retained = items.filter(({ id }) => previousIds.has(id)).map(({ id }) => id);
-  // New items before the old tail are an insertion, not an appended page.
-  const isAppendOrRemoval = items.slice(0, retained.length).every(({ id }, i) => id === retained[i]);
-  const keepColumns =
-    previous?.columns === count && isAppendOrRemoval && surviving.every((id, i) => id === retained[i]);
-  const assignments = new Map(keepColumns ? previous.items.map(({ id, column }) => [id, column]) : []);
+  // Surviving items must remain a prefix: insertion/reordering starts a new packing pass.
+  const keepColumns = previous?.columns === count && surviving.every((id, i) => items[i]?.id === id);
+  const assignments = new Map(
+    keepColumns ? previous.items.filter(({ pending }) => !pending).map(({ id, column }) => [id, column]) : [],
+  );
+  let canCommit = true;
   const bottoms = Array<number>(count).fill(0);
-  const placed = items.map(({ id, height }) => {
+  const placed = items.map(({ id, height, ready = true }) => {
     const column = assignments.get(id) ?? bottoms.indexOf(Math.min(...bottoms));
     const top = bottoms[column];
     // Empty/hidden posts don't leave phantom gaps.
     bottoms[column] = top + Math.max(0, height) + (height > 0 ? gap : 0);
-    return { id, column, top };
+    // Pin in source order only after initial content resolves. Existing pins survive
+    // appends and later loading/expansion; placeholders never determine final columns.
+    canCommit = canCommit && (ready || assignments.has(id));
+    return { id, column, top, ...(!canCommit ? { pending: true } : {}) };
   });
   return {
     columns: count,

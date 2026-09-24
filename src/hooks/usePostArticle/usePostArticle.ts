@@ -39,6 +39,7 @@ interface UsePostArticleResult {
    * cover). Callers must gate any locally sourced cover on this too.
    */
   hasCover: boolean;
+  isCoverLoading: boolean;
 }
 
 /**
@@ -96,7 +97,7 @@ export function usePostArticle({
   // article body and are never resolved here. An edit that replaces or removes
   // the cover derives a new result, so no stale cover can linger.
   const coverFileUri = hasCover ? attachments?.[0] : undefined;
-  const { files } = useAttachmentsMetadata({
+  const { files, isLoading: isCoverLoading } = useAttachmentsMetadata({
     fileUris: coverFileUri ? [coverFileUri] : [],
     onError: () => toast({ variant: 'error', description: 'Could not load cover image' }),
   });
@@ -121,5 +122,6 @@ export function usePostArticle({
     body,
     coverImage,
     hasCover,
+    isCoverLoading,
   };
 }

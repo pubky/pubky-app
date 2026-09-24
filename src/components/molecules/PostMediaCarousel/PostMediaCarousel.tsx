@@ -39,13 +39,23 @@ export function PostMediaCarousel({ media, onOpenPreview, isPreviewOpen }: PostM
 
   useEffect(() => {
     if (!api) return;
-    const select = () => setSelected(api.selectedScrollSnap());
-    select();
+    const syncSelection = () => setSelected(api.selectedScrollSnap());
+    const select = () => {
+      const active = document.activeElement;
+      const slides = api.slideNodes();
+      const selectedSlide = slides[api.selectedScrollSnap()];
+      if (active && slides.some((slide) => slide !== selectedSlide && slide.contains(active))) {
+        // Rescue focus before React makes the outgoing slide inert, including swipes.
+        api.rootNode().closest<HTMLElement>('[data-slot="carousel"]')?.focus({ preventScroll: true });
+      }
+      syncSelection();
+    };
+    syncSelection();
     api.on('select', select);
-    api.on('reInit', select);
+    api.on('reInit', syncSelection);
     return () => {
       api.off('select', select);
-      api.off('reInit', select);
+      api.off('reInit', syncSelection);
     };
   }, [api]);
 
@@ -57,23 +67,22 @@ export function PostMediaCarousel({ media, onOpenPreview, isPreviewOpen }: PostM
   return (
     <Carousel
       setApi={setApi}
-      opts={{ loop: media.length > 1 }}
+      opts={{ loop: media.length > 1, active: media.length > 1 }}
+      role="group"
+      tabIndex={media.length > 1 ? 0 : -1}
       aria-label="Post media"
       className="-mx-6 min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
       onClick={(event) => event.stopPropagation()}
       onAuxClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => {
-        event.stopPropagation();
+        // Only the non-interactive root participates in feed navigation. Native
+        // video keys and slide controls must not navigate or activate the post.
         if (
-          media.length > 1 &&
-          (event.key === 'ArrowLeft' || event.key === 'ArrowRight') &&
-          event.target instanceof HTMLElement &&
-          !(event.target instanceof HTMLMediaElement) &&
-          event.target.closest('[data-slot="carousel-item"]')
-        ) {
-          // The outgoing slide becomes inert; keep focus on a control that remains available.
-          event.currentTarget.focus({ preventScroll: true });
-        }
+          event.target === event.currentTarget &&
+          ['j', 'k', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)
+        )
+          return;
+        event.stopPropagation();
       }}
     >
       <Container overrideDefaults ref={mediaContainerRef}>
@@ -98,13 +107,19 @@ export function PostMediaCarousel({ media, onOpenPreview, isPreviewOpen }: PostM
                   >
                     <ImageOff aria-hidden="true" className="size-6" />
                     <Typography size="sm">Media unavailable</Typography>
-                    <Button variant="ghost" size="sm" onClick={(event) => onOpenPreview(index, event)}>
+                    <Button
+                      aria-haspopup="dialog"
+                      variant="ghost"
+                      size="sm"
+                      onClick={(event) => onOpenPreview(index, event)}
+                    >
                       Open original
                     </Button>
                   </Container>
                 ) : item.type.startsWith('image') ? (
                   <Button
                     overrideDefaults
+                    aria-haspopup="dialog"
                     className="absolute inset-0 h-full w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={`Open image ${index + 1} of ${media.length}: ${item.name}`}
                     onClick={(event) => onOpenPreview(index, event)}
@@ -136,6 +151,7 @@ export function PostMediaCarousel({ media, onOpenPreview, isPreviewOpen }: PostM
                       variant="secondary"
                       size="icon"
                       className="absolute top-3 right-3 z-10 size-8"
+                      aria-haspopup="dialog"
                       aria-label={`Open video ${index + 1} of ${media.length}`}
                       onClick={(event) => onOpenPreview(index, event)}
                     >

@@ -1292,7 +1292,7 @@ describe('VisualTimelinePosts', () => {
 
     it('renders the provided empty state without a trailing slot (visitor view, Grid/List parity)', () => {
       // Regression: emptyState must reach TimelineStateWrapper's emptyComponent
-      // like Posts/GridPosts do — a visitor whose visual collection feed
+      // like Posts/CardsPosts do — a visitor whose visual collection feed
       // resolves to zero posts sees CollectionItemsEmpty, not generic copy.
       mockUseVisualFeedTiles.mockReturnValue({
         rows: [],

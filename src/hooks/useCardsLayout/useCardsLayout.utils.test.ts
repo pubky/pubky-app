@@ -71,4 +71,32 @@ describe('placeCardsItems', () => {
       ).height,
     ).toBe(100);
   });
+  it('commits the ready prefix independently of pending cards and ignores placeholder columns', () => {
+    const initial = placeCardsItems(
+      [
+        { id: 'a', height: 500 },
+        { id: 'b', height: 100, ready: false },
+        { id: 'c', height: 100, ready: false },
+      ],
+      2,
+      12,
+    );
+    expect(initial.items[0].pending).toBeUndefined();
+    expect(initial.items[1].pending).toBe(true);
+    const resolved = placeCardsItems(
+      [
+        { id: 'a', height: 500 },
+        { id: 'b', height: 800 },
+        { id: 'c', height: 100 },
+      ],
+      2,
+      12,
+      initial,
+    );
+    expect(resolved.items).toEqual([
+      { id: 'a', column: 0, top: 0 },
+      { id: 'b', column: 1, top: 0 },
+      { id: 'c', column: 0, top: 512 },
+    ]);
+  });
 });

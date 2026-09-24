@@ -6,7 +6,7 @@ exports[`PostMediaCarousel - Snapshots > renders a portrait carousel with all na
   aria-roledescription="carousel"
   class="relative -mx-6 min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
-  role="region"
+  role="group"
   tabindex="0"
 >
   <div
@@ -34,6 +34,7 @@ exports[`PostMediaCarousel - Snapshots > renders a portrait carousel with all na
             style="aspect-ratio: 0.6666666666666666 / 1;"
           >
             <button
+              aria-haspopup="dialog"
               aria-label="Open image 1 of 2: Portrait"
               class="absolute inset-0 h-full w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring"
               data-slot="button"
@@ -65,6 +66,7 @@ exports[`PostMediaCarousel - Snapshots > renders a portrait carousel with all na
             style="aspect-ratio: 0.6666666666666666 / 1;"
           >
             <button
+              aria-haspopup="dialog"
               aria-label="Open image 2 of 2: Landscape"
               class="absolute inset-0 h-full w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring"
               data-slot="button"

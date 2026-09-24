@@ -22,7 +22,7 @@ export const PostAttachments = ({
 
   // Local (unsynced) attachments win over the published ones, and while they
   // exist there is nothing to resolve from the local file table.
-  const { files } = useAttachmentsMetadata({
+  const { files, isLoading } = useAttachmentsMetadata({
     fileUris: attachments ?? [],
     enabled: !localAttachments?.length,
     onError: () => toast({ variant: 'error', description: 'Could not load attachments' }),
@@ -32,10 +32,15 @@ export const PostAttachments = ({
     ? categorizeAttachments(localAttachments)
     : splitAttachmentsByMediaType(files);
 
-  if (!imagesAndVideos.length && !audios.length && !genericFiles.length && !children) return null;
+  const isContentPending = mediaVariant === 'cards' && isLoading;
+  if (!imagesAndVideos.length && !audios.length && !genericFiles.length && !children && !isContentPending) return null;
 
   return (
-    <Container ref={mediaContainerRef} className={cn(mediaVariant === 'cards' ? 'gap-6' : 'gap-3', className)}>
+    <Container
+      ref={mediaVariant !== 'cards' || audios.length > 0 ? mediaContainerRef : undefined}
+      className={cn(mediaVariant === 'cards' ? 'gap-6' : 'gap-3', className)}
+    >
+      {isContentPending && <span hidden data-post-content-pending />}
       {imagesAndVideos.length ? (
         <PostAttachmentsImagesAndVideos
           imagesAndVideos={imagesAndVideos}
