@@ -380,6 +380,117 @@ describe('DiscoverCollections', () => {
     expect(screen.getByText('No collections to discover right now.')).toBeInTheDocument();
   });
 
+  describe('unfollow reload', () => {
+    // The bookmarks overlay is the live query with `[]` deps; the deletions
+    // overlay (deps `[visibleIds]`) hides nothing in these scenarios.
+    let bookmarks: string[];
+
+    const cardIds = () => screen.getAllByTestId('collection-card').map((card) => card.getAttribute('data-post-id'));
+
+    const setBookmarks = async (next: string[], rerender: (ui: React.ReactElement) => void) => {
+      bookmarks = next;
+      await act(async () => {
+        rerender(<DiscoverCollections />);
+      });
+    };
+
+    beforeEach(() => {
+      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+      bookmarks = [];
+      mockUseLiveQuery.mockImplementation((_fn: unknown, deps?: unknown[]) =>
+        Array.isArray(deps) && deps.length === 0 ? bookmarks : new Set<string>(),
+      );
+    });
+
+    afterEach(() => {
+      // Drop queued slices a failed assertion left unconsumed so they cannot leak into later tests.
+      mockGetOrFetchStreamSlice.mockReset();
+    });
+
+    it('returns a collection unfollowed after its page loaded to its stream position', async () => {
+      bookmarks = ['x:followed'];
+      mockGetOrFetchStreamSlice.mockResolvedValueOnce(
+        makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: false, nextCursor: 3 }),
+      );
+      mockGetOrFetchStreamSlice.mockResolvedValueOnce(
+        makeSlice({ nextPageIds: ['a:1', 'x:followed', 'b:2'], reachedEnd: false, nextCursor: 3 }),
+      );
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+      await waitFor(() => expect(cardIds()).toEqual(['1', '2']));
+
+      await setBookmarks([], rerender);
+
+      await waitFor(() => expect(cardIds()).toEqual(['1', 'followed', '2']));
+      expect(mockPrepareStreamForInitialLoad).toHaveBeenCalledTimes(2);
+      expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 0 });
+    });
+
+    it('reloads every page already loaded, then resumes Show More from the reloaded offset', async () => {
+      bookmarks = ['x:followed'];
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1'], reachedEnd: false, nextCursor: 20 }))
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['b:2'], reachedEnd: false, nextCursor: 40 }))
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1', 'x:followed'], reachedEnd: false, nextCursor: 21 }))
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['b:2'], reachedEnd: false, nextCursor: 41 }))
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['c:3'], reachedEnd: true, nextCursor: 45 }));
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+      await act(async () => {
+        (await screen.findByRole('button', { name: 'Show more' })).click();
+      });
+      await waitFor(() => expect(cardIds()).toEqual(['1', '2']));
+
+      await setBookmarks([], rerender);
+
+      await waitFor(() => expect(cardIds()).toEqual(['1', 'followed', '2']));
+      expect(mockGetOrFetchStreamSlice.mock.calls.slice(2).map(([params]) => params.streamTail)).toEqual([0, 21]);
+
+      await act(async () => {
+        screen.getByRole('button', { name: 'Show more' }).click();
+      });
+      await waitFor(() => expect(cardIds()).toEqual(['1', 'followed', '2', '3']));
+      expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 41 });
+    });
+
+    it('does not reload when the unfollowed collection is still loaded', async () => {
+      bookmarks = ['a:1'];
+      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true }));
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+      await waitFor(() => expect(cardIds()).toEqual(['2']));
+
+      await setBookmarks([], rerender);
+
+      await waitFor(() => expect(cardIds()).toEqual(['1', '2']));
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not reload when a collection is followed', async () => {
+      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true }));
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+      await waitFor(() => expect(cardIds()).toEqual(['1', '2']));
+
+      await setBookmarks(['a:1'], rerender);
+
+      await waitFor(() => expect(cardIds()).toEqual(['2']));
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the loaded grid without an error toast when the reload fails', async () => {
+      bookmarks = ['x:followed'];
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: false, nextCursor: 3 }))
+        .mockRejectedValueOnce(new Error('boom'));
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+      await waitFor(() => expect(cardIds()).toEqual(['1', '2']));
+
+      await setBookmarks([], rerender);
+
+      await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2));
+      expect(cardIds()).toEqual(['1', '2']);
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Show more' })).toBeEnabled();
+    });
+  });
+
   describe('DiscoverCollections - Snapshots', () => {
     it('matches the snapshot for the pre-hydration skeleton state', () => {
       mockAuthState = { hasHydrated: false, currentUserPubky: null };

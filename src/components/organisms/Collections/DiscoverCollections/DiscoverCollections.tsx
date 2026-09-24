@@ -69,6 +69,13 @@ const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
  *      user follows a card — here, from another section, or from a future
  *      surface — the card disappears from Discover without a reload.
  *
+ *   3. **Unfollow reload** — a collection that was already followed when
+ *      its page loaded was dropped by the fetch-time filter, so it is not in
+ *      `visibleIds` and the subtractive overlay cannot bring it back. When a
+ *      bookmark disappears for an id that is not loaded, the depth already
+ *      loaded is re-pulled from offset 0 and swapped in without clearing the
+ *      grid, returning the collection at its popularity position.
+ *
  * If the user follows every visible card mid-session, the grid empties
  * but Show More remains until `reachedEnd` (the global engagement stream
  * is exhausted). This is intentional: it reads as "you've followed
@@ -112,6 +119,9 @@ export function DiscoverCollections() {
   // pattern for fetch-in-effect (see https://react.dev/reference/react/useEffect
   // "Fetching data with Effects").
   const inFlightInitialRef = useRef<{ cancelled: boolean } | null>(null);
+  // Same pattern for the in-place reload: a newer reload or an initial load
+  // supersedes the one in flight.
+  const inFlightReloadRef = useRef<{ cancelled: boolean } | null>(null);
 
   /**
    * One user-initiated action (initial mount or Show More click): pull one
@@ -196,6 +206,58 @@ export function DiscoverCollections() {
     }
   };
 
+  /**
+   * Re-pulls every page loaded so far (up to the current raw skip offset)
+   * from offset 0 and swaps the result in without clearing the grid, so the
+   * fetch-time filter runs again against the current bookmarks. Show More is
+   * disabled while it runs.
+   */
+  const reloadLoadedDepth = async () => {
+    if (inFlightReloadRef.current) {
+      inFlightReloadRef.current.cancelled = true;
+    }
+    const token = { cancelled: false };
+    inFlightReloadRef.current = token;
+    const loadedTail = cursorRef.current.streamTail;
+    setLoadingMore(true);
+
+    try {
+      await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+      let cursor = EMPTY_CURSOR;
+      let reachedStreamEnd = false;
+      const ids: string[] = [];
+      do {
+        if (token.cancelled) return;
+        const result = await StreamPostsController.getOrFetchStreamSlice({
+          streamId,
+          lastPostId: cursor.lastPostId,
+          streamTail: cursor.streamTail,
+          limit: COLLECTIONS_SECTION_PAGE_SIZE,
+        });
+        const seen = new Set(ids);
+        ids.push(...result.nextPageIds.filter((id) => !seen.has(id)));
+        const nextTail = result.nextCursor ?? cursor.streamTail;
+        const advanced = nextTail > cursor.streamTail;
+        cursor = { lastPostId: resolveResumeAnchor(result) ?? cursor.lastPostId, streamTail: nextTail };
+        reachedStreamEnd = result.reachedEnd === true;
+        if (!advanced) break;
+      } while (!reachedStreamEnd && cursor.streamTail < loadedTail);
+      if (token.cancelled) return;
+
+      cursorRef.current = cursor;
+      setReachedEnd(reachedStreamEnd);
+      setVisibleIds(ids);
+    } catch {
+      // Keep the grid as it is: the failed request's `Err.*` factory already
+      // logged it, and the collection returns on the next initial load.
+    } finally {
+      if (inFlightReloadRef.current === token) {
+        inFlightReloadRef.current = null;
+        setLoadingMore(false);
+      }
+    }
+  };
+
   // Initial load — wait until the auth store has rehydrated so the stream
   // layer filters against the *settled* viewer from the very first fetch.
   //
@@ -206,9 +268,12 @@ export function DiscoverCollections() {
   useEffect(() => {
     if (!hasHydrated) return;
 
-    // Mark any previous in-flight run as cancelled.
+    // Mark any previous in-flight run (and reload) as cancelled.
     if (inFlightInitialRef.current) {
       inFlightInitialRef.current.cancelled = true;
+    }
+    if (inFlightReloadRef.current) {
+      inFlightReloadRef.current.cancelled = true;
     }
     const token = { cancelled: false };
     inFlightInitialRef.current = token;
@@ -239,6 +304,27 @@ export function DiscoverCollections() {
   // to remove on first paint.
   const bookmarkedLive = useLiveQuery(() => BookmarkController.getAll(), []);
   const bookmarkedSet = bookmarkedLive ? new Set(bookmarkedLive) : null;
+
+  // Unfollow reload: an id that left the bookmark set but is not loaded was
+  // dropped by the fetch-time filter, so only a reload can return it (#2237).
+  // A loaded id reappears through the overlay above on its own.
+  const previousBookmarkedRef = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!bookmarkedLive) return;
+    const previous = previousBookmarkedRef.current;
+    const current = new Set(bookmarkedLive);
+    previousBookmarkedRef.current = current;
+    if (!previous) return;
+
+    const unfollowedUnloaded = [...previous].some((id) => !current.has(id) && !visibleIdsRef.current.includes(id));
+    if (unfollowedUnloaded) {
+      void reloadLoadedDepth();
+    }
+    // `reloadLoadedDepth` is recreated on every render (it closes over refs);
+    // only a new bookmark snapshot should trigger this check.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookmarkedLive]);
+
   // Live overlay for deletions + empty collections: subscribes to `post_details`
   // (via `getDetailsByIds`) for the current visible set and returns the subset
   // whose content has flipped to '[DELETED]' OR whose item count has fallen to
