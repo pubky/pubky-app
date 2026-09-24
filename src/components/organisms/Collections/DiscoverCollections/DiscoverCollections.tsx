@@ -72,9 +72,12 @@ const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
  *   3. **Unfollow reload** — a collection that was already followed when
  *      its page loaded was dropped by the fetch-time filter, so it is not in
  *      `visibleIds` and the subtractive overlay cannot bring it back. When a
- *      bookmark disappears for an id that is not loaded, the depth already
- *      loaded is re-pulled from offset 0 and swapped in without clearing the
- *      grid, returning the collection at its popularity position.
+ *      bookmark disappears for a collection that is not loaded, the depth
+ *      already loaded is re-pulled from offset 0 and swapped in without
+ *      clearing the grid, returning the collection at its popularity
+ *      position. The reload waits for an in-flight initial load or Show More
+ *      so they never race to commit the list, and a failed reload is retried
+ *      after the next Show More or unfollow.
  *
  * If the user follows every visible card mid-session, the grid empties
  * but Show More remains until `reachedEnd` (the global engagement stream
@@ -122,6 +125,11 @@ export function DiscoverCollections() {
   // Same pattern for the in-place reload: a newer reload or an initial load
   // supersedes the one in flight.
   const inFlightReloadRef = useRef<{ cancelled: boolean } | null>(null);
+  // An initial load or Show More is fetching; a reload requested meanwhile
+  // waits in `reloadPendingRef` and runs once that load settles.
+  const loadInFlightRef = useRef(false);
+  // A reload is owed: requested during another load, or the last one failed.
+  const reloadPendingRef = useRef(false);
 
   /**
    * One user-initiated action (initial mount or Show More click): pull one
@@ -134,6 +142,7 @@ export function DiscoverCollections() {
    */
   const runUserAction = async ({ isInitial, token }: { isInitial: boolean; token?: { cancelled: boolean } }) => {
     if (token?.cancelled) return;
+    loadInFlightRef.current = true;
     if (isInitial) {
       setLoading(true);
     } else {
@@ -198,10 +207,14 @@ export function DiscoverCollections() {
       setReachedEnd(true);
     } finally {
       if (token?.cancelled) return;
+      loadInFlightRef.current = false;
       if (isInitial) {
         setLoading(false);
       } else {
         setLoadingMore(false);
+      }
+      if (reloadPendingRef.current) {
+        void reloadLoadedDepth();
       }
     }
   };
@@ -218,6 +231,7 @@ export function DiscoverCollections() {
     }
     const token = { cancelled: false };
     inFlightReloadRef.current = token;
+    reloadPendingRef.current = false;
     const loadedTail = cursorRef.current.streamTail;
     setLoadingMore(true);
 
@@ -248,13 +262,26 @@ export function DiscoverCollections() {
       setReachedEnd(reachedStreamEnd);
       setVisibleIds(ids);
     } catch {
-      // Keep the grid as it is: the failed request's `Err.*` factory already
-      // logged it, and the collection returns on the next initial load.
+      // Keep the grid as it is (the failed request's `Err.*` factory already
+      // logged it) and owe the reload, so the next Show More or unfollow
+      // retries it instead of leaving the collection missing.
+      if (!token.cancelled) {
+        reloadPendingRef.current = true;
+      }
     } finally {
       if (inFlightReloadRef.current === token) {
         inFlightReloadRef.current = null;
         setLoadingMore(false);
       }
+    }
+  };
+
+  // Runs the reload now, or once the in-flight initial load / Show More
+  // settles, so the two never race to commit the list and cursor.
+  const requestReload = () => {
+    reloadPendingRef.current = true;
+    if (!loadInFlightRef.current) {
+      void reloadLoadedDepth();
     }
   };
 
@@ -277,6 +304,8 @@ export function DiscoverCollections() {
     }
     const token = { cancelled: false };
     inFlightInitialRef.current = token;
+    // The fresh load filters against the current bookmarks; nothing is owed.
+    reloadPendingRef.current = false;
 
     setVisibleIds([]);
     cursorRef.current = EMPTY_CURSOR;
@@ -305,9 +334,9 @@ export function DiscoverCollections() {
   const bookmarkedLive = useLiveQuery(() => BookmarkController.getAll(), []);
   const bookmarkedSet = bookmarkedLive ? new Set(bookmarkedLive) : null;
 
-  // Unfollow reload: an id that left the bookmark set but is not loaded was
-  // dropped by the fetch-time filter, so only a reload can return it (#2237).
-  // A loaded id reappears through the overlay above on its own.
+  // Unfollow reload: a collection that left the bookmark set but is not loaded
+  // was dropped by the fetch-time filter, so only a reload can return it
+  // (#2237). A loaded id reappears through the overlay above on its own.
   const previousBookmarkedRef = useRef<Set<string> | null>(null);
   useEffect(() => {
     if (!bookmarkedLive) return;
@@ -316,11 +345,25 @@ export function DiscoverCollections() {
     previousBookmarkedRef.current = current;
     if (!previous) return;
 
-    const unfollowedUnloaded = [...previous].some((id) => !current.has(id) && !visibleIdsRef.current.includes(id));
-    if (unfollowedUnloaded) {
-      void reloadLoadedDepth();
-    }
-    // `reloadLoadedDepth` is recreated on every render (it closes over refs);
+    const unloadedUnfollows = [...previous].filter((id) => !current.has(id) && !visibleIdsRef.current.includes(id));
+    if (unloadedUnfollows.length === 0) return;
+
+    // Bookmarks also hold ordinary posts, which never appear in Discover. An
+    // id without local details (or a failed read) may still be a collection.
+    void PostController.getDetailsByIds({ compositeIds: unloadedUnfollows })
+      .then((details) =>
+        unloadedUnfollows.some((_, index) => {
+          const kind = details[index]?.kind;
+          return kind === undefined || kind === 'collection';
+        }),
+      )
+      .catch(() => true)
+      .then((mayBeCollection) => {
+        if (mayBeCollection) {
+          requestReload();
+        }
+      });
+    // `requestReload` is recreated on every render (it closes over refs);
     // only a new bookmark snapshot should trigger this check.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookmarkedLive]);

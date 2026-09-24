@@ -2,9 +2,11 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
+import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { buildDiscoverCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -394,11 +396,35 @@ describe('DiscoverCollections', () => {
       });
     };
 
+    const clickShowMore = async () => {
+      await act(async () => {
+        (await screen.findByRole('button', { name: 'Show more' })).click();
+      });
+    };
+
+    /** Holds the next slice request open until `resolve` is called. */
+    const deferNextSlice = () => {
+      let resolve: (slice: TReadPostStreamChunkResponse) => void = () => {};
+      mockGetOrFetchStreamSlice.mockImplementationOnce(
+        () =>
+          new Promise((res) => {
+            resolve = res;
+          }),
+      );
+      return (slice: TReadPostStreamChunkResponse) => act(async () => resolve(slice));
+    };
+
+    const mockGetDetailsByIds = vi.mocked(PostController.getDetailsByIds);
+    const detailsOfKind = (kind: string) => asOpaque<PostDetailsModelSchema>({ kind });
+
     beforeEach(() => {
       mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
       bookmarks = [];
       mockUseLiveQuery.mockImplementation((_fn: unknown, deps?: unknown[]) =>
         Array.isArray(deps) && deps.length === 0 ? bookmarks : new Set<string>(),
+      );
+      mockGetDetailsByIds.mockImplementation(async ({ compositeIds }) =>
+        compositeIds.map(() => detailsOfKind('collection')),
       );
     });
 
@@ -434,9 +460,7 @@ describe('DiscoverCollections', () => {
         .mockResolvedValueOnce(makeSlice({ nextPageIds: ['b:2'], reachedEnd: false, nextCursor: 41 }))
         .mockResolvedValueOnce(makeSlice({ nextPageIds: ['c:3'], reachedEnd: true, nextCursor: 45 }));
       const { rerender } = await act(async () => render(<DiscoverCollections />));
-      await act(async () => {
-        (await screen.findByRole('button', { name: 'Show more' })).click();
-      });
+      await clickShowMore();
       await waitFor(() => expect(cardIds()).toEqual(['1', '2']));
 
       await setBookmarks([], rerender);
@@ -474,11 +498,15 @@ describe('DiscoverCollections', () => {
       expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
     });
 
-    it('keeps the loaded grid without an error toast when the reload fails', async () => {
+    it('keeps the grid when the reload fails, then retries it after the next Show More', async () => {
       bookmarks = ['x:followed'];
       mockGetOrFetchStreamSlice
         .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: false, nextCursor: 3 }))
-        .mockRejectedValueOnce(new Error('boom'));
+        .mockRejectedValueOnce(new Error('boom'))
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['c:3'], reachedEnd: false, nextCursor: 6 }))
+        .mockResolvedValueOnce(
+          makeSlice({ nextPageIds: ['a:1', 'x:followed', 'b:2', 'c:3'], reachedEnd: false, nextCursor: 7 }),
+        );
       const { rerender } = await act(async () => render(<DiscoverCollections />));
       await waitFor(() => expect(cardIds()).toEqual(['1', '2']));
 
@@ -487,7 +515,79 @@ describe('DiscoverCollections', () => {
       await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2));
       expect(cardIds()).toEqual(['1', '2']);
       expect(vi.mocked(toast)).not.toHaveBeenCalled();
-      expect(screen.getByRole('button', { name: 'Show more' })).toBeEnabled();
+
+      await clickShowMore();
+
+      await waitFor(() => expect(cardIds()).toEqual(['1', 'followed', '2', '3']));
+      expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 0 });
+    });
+
+    it('waits for an in-flight Show More before reloading, keeping the page it loaded', async () => {
+      bookmarks = ['x:followed'];
+      mockGetOrFetchStreamSlice.mockResolvedValueOnce(
+        makeSlice({ nextPageIds: ['a:1'], reachedEnd: false, nextCursor: 20 }),
+      );
+      const resolveShowMore = deferNextSlice();
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1', 'x:followed'], reachedEnd: false, nextCursor: 21 }))
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['b:2'], reachedEnd: false, nextCursor: 41 }));
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+      await clickShowMore();
+
+      await setBookmarks([], rerender);
+      await waitFor(() => expect(mockGetDetailsByIds).toHaveBeenCalled());
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+
+      await resolveShowMore(makeSlice({ nextPageIds: ['b:2'], reachedEnd: false, nextCursor: 40 }));
+
+      await waitFor(() => expect(cardIds()).toEqual(['1', 'followed', '2']));
+      expect(mockGetOrFetchStreamSlice.mock.calls.slice(2).map(([params]) => params.streamTail)).toEqual([0, 21]);
+    });
+
+    it('waits for the initial load before reloading', async () => {
+      bookmarks = ['x:followed'];
+      const resolveInitial = deferNextSlice();
+      mockGetOrFetchStreamSlice.mockResolvedValueOnce(
+        makeSlice({ nextPageIds: ['a:1', 'x:followed', 'b:2'], reachedEnd: false, nextCursor: 3 }),
+      );
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+
+      await setBookmarks([], rerender);
+      await waitFor(() => expect(mockGetDetailsByIds).toHaveBeenCalled());
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+
+      await resolveInitial(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: false, nextCursor: 3 }));
+
+      await waitFor(() => expect(cardIds()).toEqual(['1', 'followed', '2']));
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not reload when an ordinary post is unbookmarked', async () => {
+      bookmarks = ['p:post'];
+      mockGetDetailsByIds.mockResolvedValue([detailsOfKind('short')]);
+      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true }));
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+      await waitFor(() => expect(cardIds()).toEqual(['1', '2']));
+
+      await setBookmarks([], rerender);
+
+      await waitFor(() => expect(mockGetDetailsByIds).toHaveBeenCalledWith({ compositeIds: ['p:post'] }));
+      await act(async () => {});
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+    });
+
+    it('reloads when the unbookmarked id has no local details, since it may be a collection', async () => {
+      bookmarks = ['x:unknown'];
+      mockGetDetailsByIds.mockResolvedValue([undefined]);
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1'], reachedEnd: true, nextCursor: 1 }))
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['x:unknown', 'a:1'], reachedEnd: true, nextCursor: 2 }));
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+      await waitFor(() => expect(cardIds()).toEqual(['1']));
+
+      await setBookmarks([], rerender);
+
+      await waitFor(() => expect(cardIds()).toEqual(['unknown', '1']));
     });
   });
 
