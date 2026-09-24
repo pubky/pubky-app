@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { CircleCheck, Newspaper } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
@@ -9,6 +10,7 @@ import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
 import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL } from '@/config/externalLinks';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { generateBitkitContactDeeplink } from '@/libs/deeplink/deeplink';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
 import { formatSats } from '@/libs/utils/formatSats';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
@@ -18,7 +20,7 @@ import type { DialogPayToUnlockProps } from './DialogPayToUnlock.types';
 
 const FIELD_LABEL_CLASS = 'text-xs font-medium tracking-widest text-muted-foreground uppercase';
 
-const INSTALL_STEPS = ['Install Bitkit', 'Set up your profile with the same pubky', 'Fund your wallet'];
+const INSTALL_STEPS = ['Install Bitkit', 'Set up profile', 'Fund wallet'];
 const BITKIT_LOGO = { src: '/images/bitkit-logo.svg', alt: 'Bitkit', width: 110 };
 
 function CreatorAvatar({ authorId }: { authorId: string }) {
@@ -33,10 +35,10 @@ function CreatorAvatar({ authorId }: { authorId: string }) {
 /**
  * Pay to Unlock modal. Purely presentational — `usePayToUnlock` owns the state machine.
  *
- * The primary button is the start of the payment: nothing is submitted before it is pressed, so
- * opening and closing the modal is always safe. Closing during `waiting` is allowed too — the
- * purchase lives on the server and the stored bundle id picks it back up on reopen — but it asks
- * first, because a spinner vanishing on its own reads as a lost payment.
+ * Opening the modal starts the purchase automatically once the reader has a wallet. Closing during a
+ * submission or `waiting` is allowed — the stored bundle id safely resumes it on reopen — but it asks
+ * first, because a spinner vanishing on its own reads as a lost payment. The install screen is the
+ * exception: nothing has been submitted there, so that close goes through without asking.
  */
 export function DialogPayToUnlock({
   open,
@@ -46,13 +48,19 @@ export function DialogPayToUnlock({
   priceSats,
   stage,
   isStalled,
+  handshakePubky,
+  connectionIssue,
   isSubmitting,
-  onSubmit,
+  onRetry,
   onRecheck,
   onViewContent,
 }: DialogPayToUnlockProps) {
+  // The install screen comes before any submission, so it never has a Noise link state to show.
   const isInstall = stage === 'install';
-  const showPrimary = stage === 'pay' || stage === 'install';
+  const showQr = Boolean(handshakePubky) && stage === 'waiting';
+  const showSpinner = stage === 'checking' || (stage === 'waiting' && !showQr && !isStalled && !connectionIssue);
+  const showPrimary = stage === 'retry' || isInstall;
+  const primaryLabel = isInstall ? 'I completed the steps' : 'Try again';
   // `unopened` reached this screen by a completed payment too, so it must not show a cost to pay.
   const isPaid = stage === 'paid' || stage === 'unopened';
   const [isConfirmingClose, setIsConfirmingClose] = useState(false);
@@ -64,9 +72,9 @@ export function DialogPayToUnlock({
       onViewContent();
       return;
     }
-    // `isSubmitting` covers the gap before `waiting`: the submission is already in flight while the
-    // body still shows the pay screen, and on a slow connection that lasts seconds.
-    if (!next && (stage === 'waiting' || isSubmitting)) {
+    // `isSubmitting` covers the gap before `waiting`, while the submission is in flight.
+    // On the install screen it is only the wallet check, and nothing is running yet.
+    if (!next && (stage === 'waiting' || (isSubmitting && !isInstall))) {
       setIsConfirmingClose(true);
       return;
     }
@@ -103,7 +111,10 @@ export function DialogPayToUnlock({
           <CreatorAvatar authorId={authorId} />
         </Container>
 
-        <Container overrideDefaults className="flex items-start gap-6 rounded-md border border-dashed border-input p-6">
+        <Container
+          overrideDefaults
+          className="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+        >
           <Container overrideDefaults className="flex min-w-0 flex-1 flex-col gap-3">
             <Container overrideDefaults className="flex flex-col gap-1">
               <Typography className={cn(FIELD_LABEL_CLASS, isPaid && 'text-brand')}>
@@ -114,75 +125,83 @@ export function DialogPayToUnlock({
               </Typography>
             </Container>
 
-            {stage === 'checking' && (
-              <Container overrideDefaults className="flex items-center justify-center py-4">
-                <Spinner size="md" />
-              </Container>
-            )}
-
-            {stage === 'pay' && (
+            {showQr && handshakePubky && (
               <>
                 <Typography className="text-base text-secondary-foreground">
-                  {'Open your Bitkit wallet and pay to unlock.'}
+                  {'Scan with Bitkit and pay to unlock.'}
                 </Typography>
-                <AppDownload
-                  logo={BITKIT_LOGO}
-                  appStoreUrl={BITKIT_APP_STORE_URL}
-                  playStoreUrl={BITKIT_PLAY_STORE_URL}
-                  layout="row"
-                />
+                {/* A phone cannot scan its own screen, so mobile hands the same pubky over by deeplink. */}
+                <Button
+                  asChild
+                  variant={ButtonVariant.DEFAULT}
+                  size="lg"
+                  className="w-full lg:hidden"
+                  data-cy="pay-to-unlock-bitkit-link"
+                >
+                  <a href={generateBitkitContactDeeplink(withPubkyPrefix(handshakePubky))}>{'Pay with Bitkit'}</a>
+                </Button>
               </>
             )}
 
             {isInstall && (
-              <>
-                <Container overrideDefaults className="flex flex-col gap-1">
-                  {INSTALL_STEPS.map((step, index) => (
-                    <Typography key={step} className="text-base text-secondary-foreground">
-                      <span className="font-bold">{`${index + 1}) `}</span>
-                      {step}
-                    </Typography>
-                  ))}
-                </Container>
-                <AppDownload
-                  logo={BITKIT_LOGO}
-                  appStoreUrl={BITKIT_APP_STORE_URL}
-                  playStoreUrl={BITKIT_PLAY_STORE_URL}
-                  layout="row"
-                />
-              </>
+              <Container overrideDefaults className="flex flex-wrap gap-x-3 gap-y-1">
+                {INSTALL_STEPS.map((step, index) => (
+                  <Typography key={step} className="text-base text-secondary-foreground">
+                    <span className="font-bold">{`${index + 1}) `}</span>
+                    {step}
+                  </Typography>
+                ))}
+              </Container>
             )}
 
-            {stage === 'waiting' && (
-              <Container overrideDefaults className="flex flex-col items-center gap-3 py-4">
-                {/* Parked, not failed: the purchase is alive, so the reader gets a way back to it
-                  rather than a spinner that never resolves. */}
-                {isStalled ? (
-                  <>
-                    <Typography className="text-center text-base text-secondary-foreground">
-                      {'Still waiting for the payment. Pay in Bitkit, then check again.'}
-                    </Typography>
-                    <Button
-                      variant={ButtonVariant.OUTLINE}
-                      size="lg"
-                      onClick={onRecheck}
-                      data-cy="pay-to-unlock-recheck"
-                    >
-                      {'Check again'}
-                    </Button>
-                  </>
+            {/* A parked wait shows only its Check again copy; the link notices still apply there. */}
+            {stage === 'waiting' && !showQr && (connectionIssue || !isStalled) && (
+              <Typography className="text-base text-secondary-foreground">
+                {connectionIssue === 'blocked' ? (
+                  'This creator cannot receive payments from you right now. Please contact support.'
+                ) : connectionIssue === 'recovery_required' ? (
+                  'Your Bitkit connection to this creator is being restored. Keep Bitkit open while we reconnect.'
                 ) : (
                   <>
-                    <Spinner size="md" />
-                    <Typography className={FIELD_LABEL_CLASS}>{'AWAITING PAYMENT'}</Typography>
+                    <span className="hidden lg:inline">{'Awaiting payment. '}</span>
+                    {'Please confirm in Bitkit.'}
                   </>
                 )}
+              </Typography>
+            )}
+
+            {/* Parked, not failed: the purchase is alive, so the reader gets a way back to it rather
+              than a spinner that never resolves. */}
+            {stage === 'waiting' && isStalled && (
+              <Container overrideDefaults className="flex flex-col items-start gap-3">
+                <Typography className="text-base text-secondary-foreground">
+                  {'Still waiting for the payment. Pay in Bitkit, then check again.'}
+                </Typography>
+                <Button variant={ButtonVariant.OUTLINE} size="lg" onClick={onRecheck} data-cy="pay-to-unlock-recheck">
+                  {'Check again'}
+                </Button>
               </Container>
+            )}
+
+            {stage === 'retry' && (
+              <Typography className="text-base text-secondary-foreground">
+                {'The payment could not continue. Try again when Bitkit is ready.'}
+              </Typography>
+            )}
+
+            {showPrimary && (
+              <AppDownload
+                logo={BITKIT_LOGO}
+                appStoreUrl={BITKIT_APP_STORE_URL}
+                playStoreUrl={BITKIT_PLAY_STORE_URL}
+                layout="row"
+              />
             )}
 
             {stage === 'paid' && (
               <Typography className="text-base text-secondary-foreground">
-                {'Unlocked. Thank you for supporting creators!'}
+                <span className="hidden lg:inline">{'Unlocked. '}</span>
+                {'Thank you for supporting creators!'}
               </Typography>
             )}
 
@@ -204,8 +223,36 @@ export function DialogPayToUnlock({
             )}
           </Container>
 
+          {showQr && handshakePubky && (
+            <Container
+              overrideDefaults
+              role="img"
+              aria-label="Creator Pubky QR code"
+              data-cy="pay-to-unlock-handshake-qr"
+              className="hidden shrink-0 self-center rounded-md bg-foreground p-2 lg:block"
+            >
+              <QRCodeSVG value={withPubkyPrefix(handshakePubky)} size={112} />
+            </Container>
+          )}
+
+          {showSpinner && (
+            <Container
+              overrideDefaults
+              className="flex shrink-0 flex-col items-center gap-3 self-center lg:size-24 lg:justify-center"
+            >
+              <Spinner size="md" />
+              {stage === 'waiting' && (
+                <Typography className={cn(FIELD_LABEL_CLASS, 'lg:hidden')}>{'AWAITING PAYMENT'}</Typography>
+              )}
+            </Container>
+          )}
+
           {stage === 'paid' && (
-            <Container overrideDefaults className="flex size-24 shrink-0 items-center justify-center" aria-hidden>
+            <Container
+              overrideDefaults
+              className="flex size-24 shrink-0 items-center justify-center self-center"
+              aria-hidden
+            >
               <CircleCheck className="size-[72px] text-brand" strokeWidth={0.5} />
             </Container>
           )}
@@ -239,11 +286,11 @@ export function DialogPayToUnlock({
               variant={ButtonVariant.DEFAULT}
               size="lg"
               className="flex-1"
-              onClick={onSubmit}
+              onClick={onRetry}
               disabled={isSubmitting}
-              data-cy="pay-to-unlock-submit"
+              data-cy="pay-to-unlock-retry"
             >
-              {isSubmitting ? <Spinner size="sm" /> : isInstall ? 'I completed the steps' : 'Pay with Bitkit'}
+              {isSubmitting ? <Spinner size="sm" /> : primaryLabel}
             </Button>
           )}
         </DialogFooter>

@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   randomUUID: vi.fn(),
   generateBundleId: vi.fn(),
   submitProof: vi.fn(),
+  lookupPaykitConnectionState: vi.fn(),
   lookupVerificationTask: vi.fn(),
   issueAccessCredential: vi.fn(),
   readContentLock: vi.fn(),
@@ -39,6 +40,7 @@ vi.mock('@/services/locks/locks', () => ({
     createContentLock: mocks.createContentLock,
     generateBundleId: mocks.generateBundleId,
     submitProof: mocks.submitProof,
+    lookupPaykitConnectionState: mocks.lookupPaykitConnectionState,
     lookupVerificationTask: mocks.lookupVerificationTask,
     issueAccessCredential: mocks.issueAccessCredential,
     readContentLock: mocks.readContentLock,
@@ -301,6 +303,92 @@ describe('LocksApplication (payment unlock)', () => {
       expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: 'fresh-1' }));
     });
 
+    /** Installs a fake `navigator.locks` and hands back the restore. */
+    const stubLockManager = (request: unknown) => {
+      const original = Object.getOwnPropertyDescriptor(navigator, 'locks');
+      Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
+      return () => {
+        if (original) Object.defineProperty(navigator, 'locks', original);
+        else Reflect.deleteProperty(navigator, 'locks');
+      };
+    };
+
+    it('serializes the read-mint-write-submit section for the same reader and lock', async () => {
+      let storedBundleId: string | null = null;
+      mocks.getBytesIfExists.mockImplementation(async () =>
+        storedBundleId ? purchaseBytes(JSON.stringify({ bundle_id: storedBundleId })) : null,
+      );
+      mocks.putBlob.mockImplementation(async ({ blob }: { blob: Uint8Array }) => {
+        storedBundleId = GuardedContentParser.parsePurchaseFile(blob);
+      });
+
+      let tail = Promise.resolve();
+      const request = vi.fn((name: string, callback: () => Promise<unknown>) => {
+        const result = tail.then(callback);
+        tail = result.then(
+          () => undefined,
+          () => undefined,
+        );
+        return result;
+      });
+      const restore = stubLockManager(request);
+
+      try {
+        const [first, second] = await Promise.all([
+          LocksApplication.startPayment(params),
+          LocksApplication.startPayment(params),
+        ]);
+
+        expect(request).toHaveBeenCalledTimes(2);
+        expect(request).toHaveBeenNthCalledWith(1, 'locks-pay:reader1:LOCK1', expect.any(Function));
+        expect(mocks.generateBundleId).toHaveBeenCalledTimes(1);
+        expect(mocks.putBlob).toHaveBeenCalledTimes(1);
+        expect(mocks.submitProof.mock.calls.map(([bundle]) => bundle.bundle_id)).toEqual(['fresh-1', 'fresh-1']);
+        expect(first.bundleId).toBe(second.bundleId);
+      } finally {
+        restore();
+      }
+    });
+
+    // Callers treat every rejection as already reported by an Err factory; `request` has none behind it.
+    it('turns a Web Locks failure into a reported AppError', async () => {
+      const errorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      const restore = stubLockManager(vi.fn().mockRejectedValue(new DOMException('detached', 'InvalidStateError')));
+
+      try {
+        await expect(LocksApplication.startPayment(params)).rejects.toMatchObject({
+          operation: 'LocksApplication.startPayment',
+        });
+        expect(errorSpy).toHaveBeenCalled();
+        expect(mocks.submitProof).not.toHaveBeenCalled();
+      } finally {
+        restore();
+        errorSpy.mockRestore();
+      }
+    });
+
+    // The wrapper must not turn a reported failure into a second report with a new operation name.
+    it('rethrows a failure from inside the lock unchanged', async () => {
+      const errorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      const submitFailure = Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'paykit down', {
+        service: ErrorService.Locks,
+        operation: 'LocksService.submitProof',
+      });
+      // The factory reported it on construction; only a SECOND report would be the bug.
+      errorSpy.mockClear();
+      mocks.getBytesIfExists.mockResolvedValue(null);
+      mocks.submitProof.mockRejectedValue(submitFailure);
+      const restore = stubLockManager(vi.fn((_name: string, callback: () => Promise<unknown>) => callback()));
+
+      try {
+        await expect(LocksApplication.startPayment(params)).rejects.toBe(submitFailure);
+        expect(errorSpy).not.toHaveBeenCalled();
+      } finally {
+        restore();
+        errorSpy.mockRestore();
+      }
+    });
+
     it('does not submit when saving the fresh id fails', async () => {
       mocks.getBytesIfExists.mockResolvedValue(null);
       mocks.putBlob.mockRejectedValue(new Error('offline'));
@@ -335,6 +423,21 @@ describe('LocksApplication (payment unlock)', () => {
       expect(mocks.getBytesIfExists).not.toHaveBeenCalled();
       expect(mocks.generateBundleId).not.toHaveBeenCalled();
       expect(mocks.putBlob).not.toHaveBeenCalled();
+      expect(mocks.submitProof).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('fetchPaykitConnectionState', () => {
+    it('reads the link state for the lock creator and bundle', async () => {
+      mocks.lookupPaykitConnectionState.mockResolvedValue('handshake');
+
+      await expect(LocksApplication.fetchPaykitConnectionState({ lockFile, bundleId: 'saved-1' })).resolves.toBe(
+        'handshake',
+      );
+
+      expect(mocks.lookupPaykitConnectionState).toHaveBeenCalledWith('pubkybob', 'saved-1');
+      // Read-only: it must not touch the purchase file or submit anything.
+      expect(mocks.getBytesIfExists).not.toHaveBeenCalled();
       expect(mocks.submitProof).not.toHaveBeenCalled();
     });
   });
@@ -396,7 +499,7 @@ describe('LocksApplication (payment unlock)', () => {
       );
     });
 
-    // Only a 404 means "no task"; an outage shown as null would offer Pay again for a payment that may exist.
+    // Only a 404 means "no task"; an outage shown as null would pass for a submission that never landed.
     it('rethrows a non-404 lookup failure', async () => {
       mocks.lookupVerificationTask.mockRejectedValue(
         Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'down', { service: ErrorService.Locks, operation: 'test' }),
@@ -419,7 +522,7 @@ describe('LocksApplication (payment unlock)', () => {
       expect(mocks.lookupVerificationTask).not.toHaveBeenCalled();
     });
 
-    // A null here would read as "never paid" and let the caller offer Pay again for a lost purchase.
+    // A null here would read as "never paid" and hide a purchase whose id was lost.
     it('propagates an unreadable saved id instead of returning null', async () => {
       mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('garbage'));
 

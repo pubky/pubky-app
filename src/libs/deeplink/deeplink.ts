@@ -7,3 +7,7 @@ export const generatePubkyRingDeeplink = (value: string, options: GenerateDeepli
   const payload = encode ? encodeURIComponent(value) : value;
   return `pubkyring://${payload}`;
 };
+
+// Bitkit rejects the link unless `pubky` is its only query parameter, so nothing may be appended to it.
+export const generateBitkitContactDeeplink = (pubky: string): string =>
+  `bitkit://contact?pubky=${encodeURIComponent(pubky)}`;

@@ -1,0 +1,2884 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DialogPayToUnlock - Snapshots > matches snapshot for the blocked stage 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8 sm:border-b w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+  data-cy="dialog-content"
+  data-slot="dialog-content"
+  data-state="open"
+  data-testid="dialog-content"
+  id="radix-normalized"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
+>
+  <div
+    class="flex flex-col gap-1.5 pr-6"
+    data-slot="dialog-header"
+    data-testid="dialog-header"
+  >
+    <h2
+      class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+      data-slot="dialog-title"
+      data-testid="dialog-title"
+      id="radix-normalized"
+    >
+      Pay to Unlock
+    </h2>
+  </div>
+  <div
+    class="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-newspaper size-6 shrink-0 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 18h-5"
+      />
+      <path
+        d="M18 14h-8"
+      />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+      <rect
+        height="4"
+        rx="1"
+        width="8"
+        x="10"
+        y="6"
+      />
+    </svg>
+    <p
+      class="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground"
+      data-testid="typography"
+    >
+      My locked post
+    </p>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+      href="/profile/pubkycreator"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            class="facehash h-full w-full rounded-full text-background"
+            data-facehash=""
+            data-interactive="true"
+            style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+          >
+            <div
+              data-facehash-gradient=""
+              style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+            />
+            <div
+              data-facehash-face=""
+              style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+            >
+              <svg
+                aria-hidden="true"
+                fill="none"
+                style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                viewBox="0 0 71 23"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="8"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="0"
+                    y="8"
+                  />
+                </g>
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="55.2"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="47.3"
+                    y="8"
+                  />
+                </g>
+              </svg>
+              <div
+                data-facehash-mouth=""
+                style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+              >
+                <span
+                  data-testid="avatar-fallback-initial"
+                  style="font-size: 26cqw; line-height: 1;"
+                >
+                  J
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </span>
+    </a>
+  </div>
+  <div
+    class="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-3"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-1"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          COST TO UNLOCK
+        </p>
+        <p
+          class="text-2xl font-bold text-foreground"
+          data-testid="typography"
+        >
+          ₿ 1,000
+        </p>
+      </div>
+      <p
+        class="font-medium text-base text-secondary-foreground"
+        data-testid="typography"
+      >
+        This purchase could not be checked. Close the dialog and try again.
+      </p>
+    </div>
+  </div>
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+    data-slot="dialog-footer"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-cancel"
+      data-size="lg"
+      data-slot="button"
+      data-variant="outline"
+    >
+      Cancel
+    </button>
+  </div>
+  <button
+    class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+    data-slot="dialog-close"
+    data-testid="dialog-close"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+    <span
+      class="sr-only"
+    >
+      Close
+    </span>
+  </button>
+</div>
+`;
+
+exports[`DialogPayToUnlock - Snapshots > matches snapshot for the checking stage 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8 sm:border-b w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+  data-cy="dialog-content"
+  data-slot="dialog-content"
+  data-state="open"
+  data-testid="dialog-content"
+  id="radix-normalized"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
+>
+  <div
+    class="flex flex-col gap-1.5 pr-6"
+    data-slot="dialog-header"
+    data-testid="dialog-header"
+  >
+    <h2
+      class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+      data-slot="dialog-title"
+      data-testid="dialog-title"
+      id="radix-normalized"
+    >
+      Pay to Unlock
+    </h2>
+  </div>
+  <div
+    class="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-newspaper size-6 shrink-0 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 18h-5"
+      />
+      <path
+        d="M18 14h-8"
+      />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+      <rect
+        height="4"
+        rx="1"
+        width="8"
+        x="10"
+        y="6"
+      />
+    </svg>
+    <p
+      class="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground"
+      data-testid="typography"
+    >
+      My locked post
+    </p>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+      href="/profile/pubkycreator"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            class="facehash h-full w-full rounded-full text-background"
+            data-facehash=""
+            data-interactive="true"
+            style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+          >
+            <div
+              data-facehash-gradient=""
+              style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+            />
+            <div
+              data-facehash-face=""
+              style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+            >
+              <svg
+                aria-hidden="true"
+                fill="none"
+                style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                viewBox="0 0 71 23"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="8"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="0"
+                    y="8"
+                  />
+                </g>
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="55.2"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="47.3"
+                    y="8"
+                  />
+                </g>
+              </svg>
+              <div
+                data-facehash-mouth=""
+                style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+              >
+                <span
+                  data-testid="avatar-fallback-initial"
+                  style="font-size: 26cqw; line-height: 1;"
+                >
+                  J
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </span>
+    </a>
+  </div>
+  <div
+    class="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-3"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-1"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          COST TO UNLOCK
+        </p>
+        <p
+          class="text-2xl font-bold text-foreground"
+          data-testid="typography"
+        >
+          ₿ 1,000
+        </p>
+      </div>
+    </div>
+    <div
+      class="flex shrink-0 flex-col items-center gap-3 self-center lg:size-24 lg:justify-center"
+      data-testid="container"
+    >
+      <div
+        aria-label="Loading"
+        class="animate-spin rounded-full border-b-2 border-brand h-8 w-8"
+        data-testid="spinner"
+        role="status"
+      />
+    </div>
+  </div>
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+    data-slot="dialog-footer"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-cancel"
+      data-size="lg"
+      data-slot="button"
+      data-variant="outline"
+    >
+      Cancel
+    </button>
+  </div>
+  <button
+    class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+    data-slot="dialog-close"
+    data-testid="dialog-close"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+    <span
+      class="sr-only"
+    >
+      Close
+    </span>
+  </button>
+</div>
+`;
+
+exports[`DialogPayToUnlock - Snapshots > matches snapshot for the install stage 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8 sm:border-b w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+  data-cy="dialog-content"
+  data-slot="dialog-content"
+  data-state="open"
+  data-testid="dialog-content"
+  id="radix-normalized"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
+>
+  <div
+    class="flex flex-col gap-1.5 pr-6"
+    data-slot="dialog-header"
+    data-testid="dialog-header"
+  >
+    <h2
+      class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+      data-slot="dialog-title"
+      data-testid="dialog-title"
+      id="radix-normalized"
+    >
+      Pay to Unlock
+    </h2>
+  </div>
+  <div
+    class="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-newspaper size-6 shrink-0 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 18h-5"
+      />
+      <path
+        d="M18 14h-8"
+      />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+      <rect
+        height="4"
+        rx="1"
+        width="8"
+        x="10"
+        y="6"
+      />
+    </svg>
+    <p
+      class="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground"
+      data-testid="typography"
+    >
+      My locked post
+    </p>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+      href="/profile/pubkycreator"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            class="facehash h-full w-full rounded-full text-background"
+            data-facehash=""
+            data-interactive="true"
+            style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+          >
+            <div
+              data-facehash-gradient=""
+              style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+            />
+            <div
+              data-facehash-face=""
+              style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+            >
+              <svg
+                aria-hidden="true"
+                fill="none"
+                style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                viewBox="0 0 71 23"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="8"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="0"
+                    y="8"
+                  />
+                </g>
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="55.2"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="47.3"
+                    y="8"
+                  />
+                </g>
+              </svg>
+              <div
+                data-facehash-mouth=""
+                style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+              >
+                <span
+                  data-testid="avatar-fallback-initial"
+                  style="font-size: 26cqw; line-height: 1;"
+                >
+                  J
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </span>
+    </a>
+  </div>
+  <div
+    class="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-3"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-1"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          COST TO UNLOCK
+        </p>
+        <p
+          class="text-2xl font-bold text-foreground"
+          data-testid="typography"
+        >
+          ₿ 1,000
+        </p>
+      </div>
+      <div
+        class="flex flex-wrap gap-x-3 gap-y-1"
+        data-testid="container"
+      >
+        <p
+          class="font-medium text-base text-secondary-foreground"
+          data-testid="typography"
+        >
+          <span
+            class="font-bold"
+          >
+            1) 
+          </span>
+          Install Bitkit
+        </p>
+        <p
+          class="font-medium text-base text-secondary-foreground"
+          data-testid="typography"
+        >
+          <span
+            class="font-bold"
+          >
+            2) 
+          </span>
+          Set up profile
+        </p>
+        <p
+          class="font-medium text-base text-secondary-foreground"
+          data-testid="typography"
+        >
+          <span
+            class="font-bold"
+          >
+            3) 
+          </span>
+          Fund wallet
+        </p>
+      </div>
+      <div
+        class="flex flex-wrap items-center gap-3.5"
+        data-testid="container"
+      >
+        <img
+          alt="Bitkit"
+          class="h-auto max-w-full"
+          data-nimg="1"
+          decoding="async"
+          height="32"
+          loading="lazy"
+          src="/images/bitkit-logo.svg"
+          style="color: transparent;"
+          width="110"
+        />
+        <a
+          class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+          href="https://get.bitkit.to/iOS"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <img
+            alt="App Store"
+            class="h-auto max-w-full"
+            data-nimg="1"
+            decoding="async"
+            height="24"
+            loading="lazy"
+            src="/images/badge-apple.webp"
+            style="color: transparent;"
+            width="72"
+          />
+        </a>
+        <a
+          class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+          href="https://get.bitkit.to/PlayStore"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <img
+            alt="Google Play"
+            class="h-auto max-w-full"
+            data-nimg="1"
+            decoding="async"
+            height="24"
+            loading="lazy"
+            src="/images/badge-android.webp"
+            style="color: transparent;"
+            width="81"
+          />
+        </a>
+      </div>
+    </div>
+  </div>
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+    data-slot="dialog-footer"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-cancel"
+      data-size="lg"
+      data-slot="button"
+      data-variant="outline"
+    >
+      Cancel
+    </button>
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-retry"
+      data-size="lg"
+      data-slot="button"
+      data-variant="default"
+    >
+      I completed the steps
+    </button>
+  </div>
+  <button
+    class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+    data-slot="dialog-close"
+    data-testid="dialog-close"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+    <span
+      class="sr-only"
+    >
+      Close
+    </span>
+  </button>
+</div>
+`;
+
+exports[`DialogPayToUnlock - Snapshots > matches snapshot for the paid stage 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8 sm:border-b w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+  data-cy="dialog-content"
+  data-slot="dialog-content"
+  data-state="open"
+  data-testid="dialog-content"
+  id="radix-normalized"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
+>
+  <div
+    class="flex flex-col gap-1.5 pr-6"
+    data-slot="dialog-header"
+    data-testid="dialog-header"
+  >
+    <h2
+      class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+      data-slot="dialog-title"
+      data-testid="dialog-title"
+      id="radix-normalized"
+    >
+      Unlocked
+    </h2>
+  </div>
+  <div
+    class="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-newspaper size-6 shrink-0 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 18h-5"
+      />
+      <path
+        d="M18 14h-8"
+      />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+      <rect
+        height="4"
+        rx="1"
+        width="8"
+        x="10"
+        y="6"
+      />
+    </svg>
+    <p
+      class="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground"
+      data-testid="typography"
+    >
+      My locked post
+    </p>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+      href="/profile/pubkycreator"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            class="facehash h-full w-full rounded-full text-background"
+            data-facehash=""
+            data-interactive="true"
+            style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+          >
+            <div
+              data-facehash-gradient=""
+              style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+            />
+            <div
+              data-facehash-face=""
+              style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+            >
+              <svg
+                aria-hidden="true"
+                fill="none"
+                style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                viewBox="0 0 71 23"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="8"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="0"
+                    y="8"
+                  />
+                </g>
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="55.2"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="47.3"
+                    y="8"
+                  />
+                </g>
+              </svg>
+              <div
+                data-facehash-mouth=""
+                style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+              >
+                <span
+                  data-testid="avatar-fallback-initial"
+                  style="font-size: 26cqw; line-height: 1;"
+                >
+                  J
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </span>
+    </a>
+  </div>
+  <div
+    class="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-3"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-1"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest uppercase text-brand"
+          data-testid="typography"
+        >
+          PAYMENT RECEIVED
+        </p>
+        <p
+          class="text-2xl font-bold text-foreground"
+          data-testid="typography"
+        >
+          ₿ 1,000
+        </p>
+      </div>
+      <p
+        class="font-medium text-base text-secondary-foreground"
+        data-testid="typography"
+      >
+        <span
+          class="hidden lg:inline"
+        >
+          Unlocked. 
+        </span>
+        Thank you for supporting creators!
+      </p>
+    </div>
+    <div
+      aria-hidden="true"
+      class="flex size-24 shrink-0 items-center justify-center self-center"
+      data-testid="container"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-circle-check size-[72px] text-brand"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="0.5"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <path
+          d="m16 9-5.5 5.5L8 12"
+        />
+      </svg>
+    </div>
+  </div>
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+    data-slot="dialog-footer"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-view-content"
+      data-size="lg"
+      data-slot="button"
+      data-variant="default"
+    >
+      View Content
+    </button>
+  </div>
+  <button
+    class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+    data-slot="dialog-close"
+    data-testid="dialog-close"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+    <span
+      class="sr-only"
+    >
+      Close
+    </span>
+  </button>
+</div>
+`;
+
+exports[`DialogPayToUnlock - Snapshots > matches snapshot for the parked waiting stage 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8 sm:border-b w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+  data-cy="dialog-content"
+  data-slot="dialog-content"
+  data-state="open"
+  data-testid="dialog-content"
+  id="radix-normalized"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
+>
+  <div
+    class="flex flex-col gap-1.5 pr-6"
+    data-slot="dialog-header"
+    data-testid="dialog-header"
+  >
+    <h2
+      class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+      data-slot="dialog-title"
+      data-testid="dialog-title"
+      id="radix-normalized"
+    >
+      Pay to Unlock
+    </h2>
+  </div>
+  <div
+    class="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-newspaper size-6 shrink-0 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 18h-5"
+      />
+      <path
+        d="M18 14h-8"
+      />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+      <rect
+        height="4"
+        rx="1"
+        width="8"
+        x="10"
+        y="6"
+      />
+    </svg>
+    <p
+      class="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground"
+      data-testid="typography"
+    >
+      My locked post
+    </p>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+      href="/profile/pubkycreator"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            class="facehash h-full w-full rounded-full text-background"
+            data-facehash=""
+            data-interactive="true"
+            style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+          >
+            <div
+              data-facehash-gradient=""
+              style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+            />
+            <div
+              data-facehash-face=""
+              style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+            >
+              <svg
+                aria-hidden="true"
+                fill="none"
+                style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                viewBox="0 0 71 23"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="8"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="0"
+                    y="8"
+                  />
+                </g>
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="55.2"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="47.3"
+                    y="8"
+                  />
+                </g>
+              </svg>
+              <div
+                data-facehash-mouth=""
+                style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+              >
+                <span
+                  data-testid="avatar-fallback-initial"
+                  style="font-size: 26cqw; line-height: 1;"
+                >
+                  J
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </span>
+    </a>
+  </div>
+  <div
+    class="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-3"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-1"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          COST TO UNLOCK
+        </p>
+        <p
+          class="text-2xl font-bold text-foreground"
+          data-testid="typography"
+        >
+          ₿ 1,000
+        </p>
+      </div>
+      <div
+        class="flex flex-col items-start gap-3"
+        data-testid="container"
+      >
+        <p
+          class="font-medium text-base text-secondary-foreground"
+          data-testid="typography"
+        >
+          Still waiting for the payment. Pay in Bitkit, then check again.
+        </p>
+        <button
+          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal"
+          data-cy="pay-to-unlock-recheck"
+          data-size="lg"
+          data-slot="button"
+          data-variant="outline"
+        >
+          Check again
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+    data-slot="dialog-footer"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-cancel"
+      data-size="lg"
+      data-slot="button"
+      data-variant="outline"
+    >
+      Close
+    </button>
+  </div>
+  <button
+    class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+    data-slot="dialog-close"
+    data-testid="dialog-close"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+    <span
+      class="sr-only"
+    >
+      Close
+    </span>
+  </button>
+</div>
+`;
+
+exports[`DialogPayToUnlock - Snapshots > matches snapshot for the retry stage 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8 sm:border-b w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+  data-cy="dialog-content"
+  data-slot="dialog-content"
+  data-state="open"
+  data-testid="dialog-content"
+  id="radix-normalized"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
+>
+  <div
+    class="flex flex-col gap-1.5 pr-6"
+    data-slot="dialog-header"
+    data-testid="dialog-header"
+  >
+    <h2
+      class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+      data-slot="dialog-title"
+      data-testid="dialog-title"
+      id="radix-normalized"
+    >
+      Pay to Unlock
+    </h2>
+  </div>
+  <div
+    class="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-newspaper size-6 shrink-0 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 18h-5"
+      />
+      <path
+        d="M18 14h-8"
+      />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+      <rect
+        height="4"
+        rx="1"
+        width="8"
+        x="10"
+        y="6"
+      />
+    </svg>
+    <p
+      class="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground"
+      data-testid="typography"
+    >
+      My locked post
+    </p>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+      href="/profile/pubkycreator"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            class="facehash h-full w-full rounded-full text-background"
+            data-facehash=""
+            data-interactive="true"
+            style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+          >
+            <div
+              data-facehash-gradient=""
+              style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+            />
+            <div
+              data-facehash-face=""
+              style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+            >
+              <svg
+                aria-hidden="true"
+                fill="none"
+                style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                viewBox="0 0 71 23"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="8"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="0"
+                    y="8"
+                  />
+                </g>
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="55.2"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="47.3"
+                    y="8"
+                  />
+                </g>
+              </svg>
+              <div
+                data-facehash-mouth=""
+                style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+              >
+                <span
+                  data-testid="avatar-fallback-initial"
+                  style="font-size: 26cqw; line-height: 1;"
+                >
+                  J
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </span>
+    </a>
+  </div>
+  <div
+    class="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-3"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-1"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          COST TO UNLOCK
+        </p>
+        <p
+          class="text-2xl font-bold text-foreground"
+          data-testid="typography"
+        >
+          ₿ 1,000
+        </p>
+      </div>
+      <p
+        class="font-medium text-base text-secondary-foreground"
+        data-testid="typography"
+      >
+        The payment could not continue. Try again when Bitkit is ready.
+      </p>
+      <div
+        class="flex flex-wrap items-center gap-3.5"
+        data-testid="container"
+      >
+        <img
+          alt="Bitkit"
+          class="h-auto max-w-full"
+          data-nimg="1"
+          decoding="async"
+          height="32"
+          loading="lazy"
+          src="/images/bitkit-logo.svg"
+          style="color: transparent;"
+          width="110"
+        />
+        <a
+          class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+          href="https://get.bitkit.to/iOS"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <img
+            alt="App Store"
+            class="h-auto max-w-full"
+            data-nimg="1"
+            decoding="async"
+            height="24"
+            loading="lazy"
+            src="/images/badge-apple.webp"
+            style="color: transparent;"
+            width="72"
+          />
+        </a>
+        <a
+          class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+          href="https://get.bitkit.to/PlayStore"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <img
+            alt="Google Play"
+            class="h-auto max-w-full"
+            data-nimg="1"
+            decoding="async"
+            height="24"
+            loading="lazy"
+            src="/images/badge-android.webp"
+            style="color: transparent;"
+            width="81"
+          />
+        </a>
+      </div>
+    </div>
+  </div>
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+    data-slot="dialog-footer"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-cancel"
+      data-size="lg"
+      data-slot="button"
+      data-variant="outline"
+    >
+      Cancel
+    </button>
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-retry"
+      data-size="lg"
+      data-slot="button"
+      data-variant="default"
+    >
+      Try again
+    </button>
+  </div>
+  <button
+    class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+    data-slot="dialog-close"
+    data-testid="dialog-close"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+    <span
+      class="sr-only"
+    >
+      Close
+    </span>
+  </button>
+</div>
+`;
+
+exports[`DialogPayToUnlock - Snapshots > matches snapshot for the unopened stage 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8 sm:border-b w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+  data-cy="dialog-content"
+  data-slot="dialog-content"
+  data-state="open"
+  data-testid="dialog-content"
+  id="radix-normalized"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
+>
+  <div
+    class="flex flex-col gap-1.5 pr-6"
+    data-slot="dialog-header"
+    data-testid="dialog-header"
+  >
+    <h2
+      class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+      data-slot="dialog-title"
+      data-testid="dialog-title"
+      id="radix-normalized"
+    >
+      Pay to Unlock
+    </h2>
+  </div>
+  <div
+    class="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-newspaper size-6 shrink-0 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 18h-5"
+      />
+      <path
+        d="M18 14h-8"
+      />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+      <rect
+        height="4"
+        rx="1"
+        width="8"
+        x="10"
+        y="6"
+      />
+    </svg>
+    <p
+      class="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground"
+      data-testid="typography"
+    >
+      My locked post
+    </p>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+      href="/profile/pubkycreator"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            class="facehash h-full w-full rounded-full text-background"
+            data-facehash=""
+            data-interactive="true"
+            style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+          >
+            <div
+              data-facehash-gradient=""
+              style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+            />
+            <div
+              data-facehash-face=""
+              style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+            >
+              <svg
+                aria-hidden="true"
+                fill="none"
+                style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                viewBox="0 0 71 23"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="8"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="0"
+                    y="8"
+                  />
+                </g>
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="55.2"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="47.3"
+                    y="8"
+                  />
+                </g>
+              </svg>
+              <div
+                data-facehash-mouth=""
+                style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+              >
+                <span
+                  data-testid="avatar-fallback-initial"
+                  style="font-size: 26cqw; line-height: 1;"
+                >
+                  J
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </span>
+    </a>
+  </div>
+  <div
+    class="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-3"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-1"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest uppercase text-brand"
+          data-testid="typography"
+        >
+          PAYMENT RECEIVED
+        </p>
+        <p
+          class="text-2xl font-bold text-foreground"
+          data-testid="typography"
+        >
+          ₿ 1,000
+        </p>
+      </div>
+      <div
+        class="flex flex-col items-center gap-3 py-4"
+        data-testid="container"
+      >
+        <p
+          class="font-medium text-center text-base text-secondary-foreground"
+          data-testid="typography"
+        >
+          Payment received. The content could not be opened — nothing is lost.
+        </p>
+        <button
+          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal"
+          data-cy="pay-to-unlock-recheck"
+          data-size="lg"
+          data-slot="button"
+          data-variant="outline"
+        >
+          Check again
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+    data-slot="dialog-footer"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-cancel"
+      data-size="lg"
+      data-slot="button"
+      data-variant="outline"
+    >
+      Close
+    </button>
+  </div>
+  <button
+    class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+    data-slot="dialog-close"
+    data-testid="dialog-close"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+    <span
+      class="sr-only"
+    >
+      Close
+    </span>
+  </button>
+</div>
+`;
+
+exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8 sm:border-b w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+  data-cy="dialog-content"
+  data-slot="dialog-content"
+  data-state="open"
+  data-testid="dialog-content"
+  id="radix-normalized"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
+>
+  <div
+    class="flex flex-col gap-1.5 pr-6"
+    data-slot="dialog-header"
+    data-testid="dialog-header"
+  >
+    <h2
+      class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+      data-slot="dialog-title"
+      data-testid="dialog-title"
+      id="radix-normalized"
+    >
+      Pay to Unlock
+    </h2>
+  </div>
+  <div
+    class="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-newspaper size-6 shrink-0 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 18h-5"
+      />
+      <path
+        d="M18 14h-8"
+      />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+      <rect
+        height="4"
+        rx="1"
+        width="8"
+        x="10"
+        y="6"
+      />
+    </svg>
+    <p
+      class="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground"
+      data-testid="typography"
+    >
+      My locked post
+    </p>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+      href="/profile/pubkycreator"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            class="facehash h-full w-full rounded-full text-background"
+            data-facehash=""
+            data-interactive="true"
+            style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+          >
+            <div
+              data-facehash-gradient=""
+              style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+            />
+            <div
+              data-facehash-face=""
+              style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+            >
+              <svg
+                aria-hidden="true"
+                fill="none"
+                style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                viewBox="0 0 71 23"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="8"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="0"
+                    y="8"
+                  />
+                </g>
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="55.2"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="47.3"
+                    y="8"
+                  />
+                </g>
+              </svg>
+              <div
+                data-facehash-mouth=""
+                style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+              >
+                <span
+                  data-testid="avatar-fallback-initial"
+                  style="font-size: 26cqw; line-height: 1;"
+                >
+                  J
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </span>
+    </a>
+  </div>
+  <div
+    class="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-3"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-1"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          COST TO UNLOCK
+        </p>
+        <p
+          class="text-2xl font-bold text-foreground"
+          data-testid="typography"
+        >
+          ₿ 1,000
+        </p>
+      </div>
+      <p
+        class="font-medium text-base text-secondary-foreground"
+        data-testid="typography"
+      >
+        <span
+          class="hidden lg:inline"
+        >
+          Awaiting payment. 
+        </span>
+        Please confirm in Bitkit.
+      </p>
+    </div>
+    <div
+      class="flex shrink-0 flex-col items-center gap-3 self-center lg:size-24 lg:justify-center"
+      data-testid="container"
+    >
+      <div
+        aria-label="Loading"
+        class="animate-spin rounded-full border-b-2 border-brand h-8 w-8"
+        data-testid="spinner"
+        role="status"
+      />
+      <p
+        class="text-xs font-medium tracking-widest text-muted-foreground uppercase lg:hidden"
+        data-testid="typography"
+      >
+        AWAITING PAYMENT
+      </p>
+    </div>
+  </div>
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+    data-slot="dialog-footer"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-cancel"
+      data-size="lg"
+      data-slot="button"
+      data-variant="outline"
+    >
+      Close
+    </button>
+  </div>
+  <button
+    class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+    data-slot="dialog-close"
+    data-testid="dialog-close"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+    <span
+      class="sr-only"
+    >
+      Close
+    </span>
+  </button>
+</div>
+`;
+
+exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage with a blocked link notice 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8 sm:border-b w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+  data-cy="dialog-content"
+  data-slot="dialog-content"
+  data-state="open"
+  data-testid="dialog-content"
+  id="radix-normalized"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
+>
+  <div
+    class="flex flex-col gap-1.5 pr-6"
+    data-slot="dialog-header"
+    data-testid="dialog-header"
+  >
+    <h2
+      class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+      data-slot="dialog-title"
+      data-testid="dialog-title"
+      id="radix-normalized"
+    >
+      Pay to Unlock
+    </h2>
+  </div>
+  <div
+    class="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-newspaper size-6 shrink-0 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 18h-5"
+      />
+      <path
+        d="M18 14h-8"
+      />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+      <rect
+        height="4"
+        rx="1"
+        width="8"
+        x="10"
+        y="6"
+      />
+    </svg>
+    <p
+      class="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground"
+      data-testid="typography"
+    >
+      My locked post
+    </p>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+      href="/profile/pubkycreator"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            class="facehash h-full w-full rounded-full text-background"
+            data-facehash=""
+            data-interactive="true"
+            style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+          >
+            <div
+              data-facehash-gradient=""
+              style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+            />
+            <div
+              data-facehash-face=""
+              style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+            >
+              <svg
+                aria-hidden="true"
+                fill="none"
+                style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                viewBox="0 0 71 23"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="8"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="0"
+                    y="8"
+                  />
+                </g>
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="55.2"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="47.3"
+                    y="8"
+                  />
+                </g>
+              </svg>
+              <div
+                data-facehash-mouth=""
+                style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+              >
+                <span
+                  data-testid="avatar-fallback-initial"
+                  style="font-size: 26cqw; line-height: 1;"
+                >
+                  J
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </span>
+    </a>
+  </div>
+  <div
+    class="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-3"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-1"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          COST TO UNLOCK
+        </p>
+        <p
+          class="text-2xl font-bold text-foreground"
+          data-testid="typography"
+        >
+          ₿ 1,000
+        </p>
+      </div>
+      <p
+        class="font-medium text-base text-secondary-foreground"
+        data-testid="typography"
+      >
+        This creator cannot receive payments from you right now. Please contact support.
+      </p>
+    </div>
+  </div>
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+    data-slot="dialog-footer"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-cancel"
+      data-size="lg"
+      data-slot="button"
+      data-variant="outline"
+    >
+      Close
+    </button>
+  </div>
+  <button
+    class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+    data-slot="dialog-close"
+    data-testid="dialog-close"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+    <span
+      class="sr-only"
+    >
+      Close
+    </span>
+  </button>
+</div>
+`;
+
+exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage with a recovery_required link notice 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8 sm:border-b w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+  data-cy="dialog-content"
+  data-slot="dialog-content"
+  data-state="open"
+  data-testid="dialog-content"
+  id="radix-normalized"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
+>
+  <div
+    class="flex flex-col gap-1.5 pr-6"
+    data-slot="dialog-header"
+    data-testid="dialog-header"
+  >
+    <h2
+      class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+      data-slot="dialog-title"
+      data-testid="dialog-title"
+      id="radix-normalized"
+    >
+      Pay to Unlock
+    </h2>
+  </div>
+  <div
+    class="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-newspaper size-6 shrink-0 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 18h-5"
+      />
+      <path
+        d="M18 14h-8"
+      />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+      <rect
+        height="4"
+        rx="1"
+        width="8"
+        x="10"
+        y="6"
+      />
+    </svg>
+    <p
+      class="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground"
+      data-testid="typography"
+    >
+      My locked post
+    </p>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+      href="/profile/pubkycreator"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            class="facehash h-full w-full rounded-full text-background"
+            data-facehash=""
+            data-interactive="true"
+            style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+          >
+            <div
+              data-facehash-gradient=""
+              style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+            />
+            <div
+              data-facehash-face=""
+              style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+            >
+              <svg
+                aria-hidden="true"
+                fill="none"
+                style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                viewBox="0 0 71 23"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="8"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="0"
+                    y="8"
+                  />
+                </g>
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="55.2"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="47.3"
+                    y="8"
+                  />
+                </g>
+              </svg>
+              <div
+                data-facehash-mouth=""
+                style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+              >
+                <span
+                  data-testid="avatar-fallback-initial"
+                  style="font-size: 26cqw; line-height: 1;"
+                >
+                  J
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </span>
+    </a>
+  </div>
+  <div
+    class="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-3"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-1"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          COST TO UNLOCK
+        </p>
+        <p
+          class="text-2xl font-bold text-foreground"
+          data-testid="typography"
+        >
+          ₿ 1,000
+        </p>
+      </div>
+      <p
+        class="font-medium text-base text-secondary-foreground"
+        data-testid="typography"
+      >
+        Your Bitkit connection to this creator is being restored. Keep Bitkit open while we reconnect.
+      </p>
+    </div>
+  </div>
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+    data-slot="dialog-footer"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-cancel"
+      data-size="lg"
+      data-slot="button"
+      data-variant="outline"
+    >
+      Close
+    </button>
+  </div>
+  <button
+    class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+    data-slot="dialog-close"
+    data-testid="dialog-close"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+    <span
+      class="sr-only"
+    >
+      Close
+    </span>
+  </button>
+</div>
+`;
+
+exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage with the handshake QR and the Bitkit handoff 1`] = `
+<div
+  aria-labelledby="radix-normalized"
+  class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto border p-6 shadow-lg sm:rounded-xl sm:rounded-b-lg sm:p-8 sm:border-b w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+  data-cy="dialog-content"
+  data-slot="dialog-content"
+  data-state="open"
+  data-testid="dialog-content"
+  id="radix-normalized"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
+>
+  <div
+    class="flex flex-col gap-1.5 pr-6"
+    data-slot="dialog-header"
+    data-testid="dialog-header"
+  >
+    <h2
+      class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+      data-slot="dialog-title"
+      data-testid="dialog-title"
+      id="radix-normalized"
+    >
+      Pay to Unlock
+    </h2>
+  </div>
+  <div
+    class="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-newspaper size-6 shrink-0 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15 18h-5"
+      />
+      <path
+        d="M18 14h-8"
+      />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+      <rect
+        height="4"
+        rx="1"
+        width="8"
+        x="10"
+        y="6"
+      />
+    </svg>
+    <p
+      class="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground"
+      data-testid="typography"
+    >
+      My locked post
+    </p>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+      href="/profile/pubkycreator"
+    >
+      <span
+        class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+      >
+        <span
+          class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+        >
+          <div
+            class="facehash h-full w-full rounded-full text-background"
+            data-facehash=""
+            data-interactive="true"
+            style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+          >
+            <div
+              data-facehash-gradient=""
+              style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+            />
+            <div
+              data-facehash-face=""
+              style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+            >
+              <svg
+                aria-hidden="true"
+                fill="none"
+                style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                viewBox="0 0 71 23"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="8"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="0"
+                    y="8"
+                  />
+                </g>
+                <g
+                  style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                >
+                  <rect
+                    fill="currentColor"
+                    height="23"
+                    rx="3.5"
+                    width="7"
+                    x="55.2"
+                    y="0"
+                  />
+                  <rect
+                    fill="currentColor"
+                    height="7"
+                    rx="3.5"
+                    width="23"
+                    x="47.3"
+                    y="8"
+                  />
+                </g>
+              </svg>
+              <div
+                data-facehash-mouth=""
+                style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+              >
+                <span
+                  data-testid="avatar-fallback-initial"
+                  style="font-size: 26cqw; line-height: 1;"
+                >
+                  J
+                </span>
+              </div>
+            </div>
+          </div>
+        </span>
+      </span>
+    </a>
+  </div>
+  <div
+    class="flex flex-col gap-6 rounded-md border border-dashed border-input p-6 lg:flex-row lg:items-start"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-3"
+      data-testid="container"
+    >
+      <div
+        class="flex flex-col gap-1"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          COST TO UNLOCK
+        </p>
+        <p
+          class="text-2xl font-bold text-foreground"
+          data-testid="typography"
+        >
+          ₿ 1,000
+        </p>
+      </div>
+      <p
+        class="font-medium text-base text-secondary-foreground"
+        data-testid="typography"
+      >
+        Scan with Bitkit and pay to unlock.
+      </p>
+      <a
+        class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal w-full lg:hidden"
+        data-cy="pay-to-unlock-bitkit-link"
+        data-size="lg"
+        data-slot="button"
+        data-variant="default"
+        href="bitkit://contact?pubky=pubkylockcreator"
+      >
+        Pay with Bitkit
+      </a>
+    </div>
+    <div
+      aria-label="Creator Pubky QR code"
+      class="hidden shrink-0 self-center rounded-md bg-foreground p-2 lg:block"
+      data-cy="pay-to-unlock-handshake-qr"
+      data-testid="container"
+      role="img"
+    >
+      <div
+        data-size="112"
+        data-testid="qr-code"
+        data-value="pubkylockcreator"
+      />
+    </div>
+  </div>
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+    data-slot="dialog-footer"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      data-cy="pay-to-unlock-cancel"
+      data-size="lg"
+      data-slot="button"
+      data-variant="outline"
+    >
+      Close
+    </button>
+  </div>
+  <button
+    class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+    data-slot="dialog-close"
+    data-testid="dialog-close"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+    <span
+      class="sr-only"
+    >
+      Close
+    </span>
+  </button>
+</div>
+`;

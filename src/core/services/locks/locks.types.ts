@@ -284,18 +284,28 @@ export interface TSubmittedProofBundle {
   proofs: TProof[];
 }
 
-export type TVerificationStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'expired';
+export const verificationStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'expired']);
+export type TVerificationStatus = z.infer<typeof verificationStatusSchema>;
 
-/** Verification lifecycle state, tracked server-side by `{ creator, bundle_id }`. */
-export interface TVerificationTask {
-  creator: string;
-  bundle_id: string;
-  status: TVerificationStatus;
-  submitted_at: string;
-  started_at: string | null;
-  completed_at: string | null;
-  failure_message: string | null;
-}
+/**
+ * Reader-to-creator Paykit Noise link, read by its own lookup. `blocked` is a policy switch on the
+ * reader-creator pair, so a fresh bundle id does not clear it and only an operator can. Not yet
+ * discussed with the locks side — raise it there if a reader actually hits it.
+ */
+const paykitConnectionStateSchema = z.enum(['none', 'handshake', 'connected', 'recovery_required', 'blocked']);
+export type TPaykitConnectionState = z.infer<typeof paykitConnectionStateSchema>;
+
+/** Connection-state lookup response. Bound to an existing task, so it says nothing about payment. */
+export const paykitConnectionStateResponseSchema = z.object({ state: paykitConnectionStateSchema });
+
+/** Verification lifecycle fields consumed by the app from a task lookup. */
+export type TVerificationTask = { status: TVerificationStatus };
+
+/** Proof-submission response fields used by the app. Connection state has its own lookup. */
+export const submitProofResultSchema = z.object({
+  status: verificationStatusSchema,
+});
+export type TSubmitProofResult = z.infer<typeof submitProofResultSchema>;
 
 /** Bearer credential issued after a completed verification; shown once. */
 export interface TAccessCredential {

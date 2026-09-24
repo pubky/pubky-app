@@ -25,7 +25,7 @@ export type TStartPaymentParams = TPaymentLockParams & {
   rejectBundleId: string | null;
 };
 
-/** The bundle id the proof was submitted with, and the verification status the server answered. */
+/** The bundle id and lifecycle status returned by proof submission. */
 export type TStartPaymentResult = {
   bundleId: string;
   status: TVerificationStatus;

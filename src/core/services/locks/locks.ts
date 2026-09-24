@@ -10,7 +10,7 @@ import {
   VerificationTaskHandleOptions,
   type Viewer,
 } from '@pubky/locks-sdk';
-import { AuthErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
@@ -25,11 +25,14 @@ import type {
   TGeneratePaykitSetupUrlParams,
   TGuardedResource,
   TLocksSessionResult,
+  TPaykitConnectionState,
   TRegisterGuardedResourceParams,
   TRegisterGuardedResourceResult,
+  TSubmitProofResult,
   TSubmittedProofBundle,
   TVerificationTask,
 } from './locks.types';
+import { paykitConnectionStateResponseSchema, submitProofResultSchema, verificationStatusSchema } from './locks.types';
 import {
   buildLocksOptions,
   ensureLocksSdkReady,
@@ -135,18 +138,49 @@ export class LocksService {
   }
 
   // Reader calls are public (no session) → `toAppError`, not `toLocksError` (a 401 isn't an expired session).
-  static async submitProof(bundle: TSubmittedProofBundle): Promise<TVerificationTask> {
+  static async submitProof(bundle: TSubmittedProofBundle): Promise<TSubmitProofResult> {
     try {
       const viewer = await this.getViewer();
-      return (await viewer.submitProofBundle(bundle)) as TVerificationTask;
+      const result = submitProofResultSchema.safeParse(await viewer.submitProofBundle(bundle));
+      if (!result.success) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'proof submission response is invalid', {
+          service: ErrorService.Locks,
+          operation: 'LocksService.submitProof',
+          cause: result.error,
+        });
+      }
+      return result.data;
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksService.submitProof');
     }
   }
 
   /**
+   * One read of the Paykit link between this reader and the lock's creator. Bound to an existing
+   * verification task, so it must not be called before a proof submission has landed.
+   */
+  static async lookupPaykitConnectionState(creator: string, bundleId: string): Promise<TPaykitConnectionState> {
+    try {
+      const viewer = await this.getViewer();
+      const response = paykitConnectionStateResponseSchema.safeParse(
+        await viewer.lookupPaykitConnectionState(new VerificationTaskHandleOptions(creator, bundleId)),
+      );
+      if (!response.success) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'paykit connection state response is invalid', {
+          service: ErrorService.Locks,
+          operation: 'LocksService.lookupPaykitConnectionState',
+          cause: response.error,
+        });
+      }
+      return response.data.state;
+    } catch (error) {
+      throw toAppError(error, ErrorService.Locks, 'LocksService.lookupPaykitConnectionState');
+    }
+  }
+
+  /**
    * Whether the reader has published anything under their public Paykit namespace — the gate
-   * between the pay screen and the install-Bitkit screen. Presence only: it does not prove the
+   * between submitting the payment and the install-Bitkit screen. Presence only: it does not prove the
    * receiver is valid or ready, so a submission can still fail after this returns true.
    */
   static async hasPaykitReceiver(readerPubky: string): Promise<boolean> {
@@ -160,14 +194,25 @@ export class LocksService {
 
   /**
    * Null when the Lock Server has no task for this bundle id (the submission never landed). The SDK
-   * exposes no status field, so the 404 is read from the message, like `toLocksError` does for 401.
+   * error exposes no HTTP status code, so the 404 is read from the message, like `toLocksError` does for 401.
    */
   static async lookupVerificationTask(creator: string, bundleId: string): Promise<TVerificationTask | null> {
     try {
       const viewer = await this.getViewer();
-      return (await viewer.lookupVerificationTask(
+      const response: unknown = await viewer.lookupVerificationTask(
         new VerificationTaskHandleOptions(creator, bundleId),
-      )) as TVerificationTask;
+      );
+      const status = verificationStatusSchema.safeParse(
+        typeof response === 'object' && response !== null && 'status' in response ? response.status : undefined,
+      );
+      if (!status.success) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'verification task response is invalid', {
+          service: ErrorService.Locks,
+          operation: 'LocksService.lookupVerificationTask',
+          cause: status.error,
+        });
+      }
+      return { status: status.data };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('HTTP 404')) return null;
