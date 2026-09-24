@@ -82,7 +82,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.CLOUD_RUN_SA_KEY }}
 
@@ -143,7 +143,7 @@ jobs:
           echo "service_name=pubky-app-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
 
       - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.CLOUD_RUN_SA_KEY }}
 
