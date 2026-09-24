@@ -498,14 +498,13 @@ describe('DiscoverCollections', () => {
       expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
     });
 
-    it('keeps the grid when the reload fails, then retries it after the next Show More', async () => {
+    it('keeps the grid when the reload fails, then retries the reload on the next Show More click', async () => {
       bookmarks = ['x:followed'];
       mockGetOrFetchStreamSlice
         .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: false, nextCursor: 3 }))
         .mockRejectedValueOnce(new Error('boom'))
-        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['c:3'], reachedEnd: false, nextCursor: 6 }))
         .mockResolvedValueOnce(
-          makeSlice({ nextPageIds: ['a:1', 'x:followed', 'b:2', 'c:3'], reachedEnd: false, nextCursor: 7 }),
+          makeSlice({ nextPageIds: ['a:1', 'x:followed', 'b:2'], reachedEnd: false, nextCursor: 3 }),
         );
       const { rerender } = await act(async () => render(<DiscoverCollections />));
       await waitFor(() => expect(cardIds()).toEqual(['1', '2']));
@@ -515,14 +514,49 @@ describe('DiscoverCollections', () => {
       await waitFor(() => expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2));
       expect(cardIds()).toEqual(['1', '2']);
       expect(vi.mocked(toast)).not.toHaveBeenCalled();
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Show more' })).toBeEnabled());
 
       await clickShowMore();
 
-      await waitFor(() => expect(cardIds()).toEqual(['1', 'followed', '2', '3']));
+      await waitFor(() => expect(cardIds()).toEqual(['1', 'followed', '2']));
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(3);
       expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 0 });
     });
 
-    it('waits for an in-flight Show More before reloading, keeping the page it loaded', async () => {
+    it('offers Show More at the stream end after a failed reload, and its click retries the reload', async () => {
+      bookmarks = ['x:followed'];
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true, nextCursor: 3 }))
+        .mockRejectedValueOnce(new Error('boom'))
+        .mockResolvedValueOnce(
+          makeSlice({ nextPageIds: ['a:1', 'x:followed', 'b:2'], reachedEnd: true, nextCursor: 3 }),
+        );
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+      await waitFor(() => expect(cardIds()).toEqual(['1', '2']));
+      expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+
+      await setBookmarks([], rerender);
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Show more' })).toBeEnabled());
+
+      await clickShowMore();
+
+      await waitFor(() => expect(cardIds()).toEqual(['1', 'followed', '2']));
+      expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
+    });
+
+    it('ignores bookmark removals seen before auth hydration starts the first load', async () => {
+      mockAuthState = { hasHydrated: false, currentUserPubky: null };
+      bookmarks = ['x:followed'];
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+
+      await setBookmarks([], rerender);
+      await act(async () => {});
+
+      expect(mockGetDetailsByIds).not.toHaveBeenCalled();
+      expect(mockGetOrFetchStreamSlice).not.toHaveBeenCalled();
+    });
+
+    it('lets an unfollow reload supersede an in-flight Show More, which then resumes from the reloaded offset', async () => {
       bookmarks = ['x:followed'];
       mockGetOrFetchStreamSlice.mockResolvedValueOnce(
         makeSlice({ nextPageIds: ['a:1'], reachedEnd: false, nextCursor: 20 }),
@@ -530,36 +564,106 @@ describe('DiscoverCollections', () => {
       const resolveShowMore = deferNextSlice();
       mockGetOrFetchStreamSlice
         .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1', 'x:followed'], reachedEnd: false, nextCursor: 21 }))
-        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['b:2'], reachedEnd: false, nextCursor: 41 }));
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['b:2'], reachedEnd: true, nextCursor: 41 }));
       const { rerender } = await act(async () => render(<DiscoverCollections />));
       await clickShowMore();
 
       await setBookmarks([], rerender);
-      await waitFor(() => expect(mockGetDetailsByIds).toHaveBeenCalled());
-      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+      await waitFor(() => expect(cardIds()).toEqual(['1', 'followed']));
+      expect(mockGetOrFetchStreamSlice.mock.calls[2]?.[0]).toMatchObject({ streamTail: 0 });
 
-      await resolveShowMore(makeSlice({ nextPageIds: ['b:2'], reachedEnd: false, nextCursor: 40 }));
+      // The superseded Show More settles last; its page (and its would-be
+      // "no new collections" toast) must not land on the reloaded grid.
+      await resolveShowMore(makeSlice({ nextPageIds: [], reachedEnd: false, nextCursor: 40 }));
+      expect(cardIds()).toEqual(['1', 'followed']);
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
 
+      await clickShowMore();
       await waitFor(() => expect(cardIds()).toEqual(['1', 'followed', '2']));
-      expect(mockGetOrFetchStreamSlice.mock.calls.slice(2).map(([params]) => params.streamTail)).toEqual([0, 21]);
+      expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 21 });
     });
 
-    it('waits for the initial load before reloading', async () => {
+    it('restarts an in-flight initial load when a collection is unfollowed during it', async () => {
       bookmarks = ['x:followed'];
       const resolveInitial = deferNextSlice();
       mockGetOrFetchStreamSlice.mockResolvedValueOnce(
-        makeSlice({ nextPageIds: ['a:1', 'x:followed', 'b:2'], reachedEnd: false, nextCursor: 3 }),
+        makeSlice({ nextPageIds: ['a:1', 'x:followed', 'b:2'], reachedEnd: true, nextCursor: 3 }),
       );
       const { rerender } = await act(async () => render(<DiscoverCollections />));
 
       await setBookmarks([], rerender);
-      await waitFor(() => expect(mockGetDetailsByIds).toHaveBeenCalled());
-      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
-
-      await resolveInitial(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: false, nextCursor: 3 }));
-
       await waitFor(() => expect(cardIds()).toEqual(['1', 'followed', '2']));
-      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+      expect(mockPrepareStreamForInitialLoad).toHaveBeenCalledTimes(2);
+
+      // The superseded initial load settles last with the pre-unfollow page.
+      await resolveInitial(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true, nextCursor: 3 }));
+      expect(cardIds()).toEqual(['1', 'followed', '2']);
+    });
+
+    it('drops an in-flight Show More when the viewer switches, and keeps loading normally afterwards', async () => {
+      mockGetOrFetchStreamSlice.mockResolvedValueOnce(
+        makeSlice({ nextPageIds: ['a:1'], reachedEnd: false, nextCursor: 20 }),
+      );
+      const resolveShowMore = deferNextSlice();
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['c:3'], reachedEnd: false, nextCursor: 5 }))
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['d:4'], reachedEnd: true, nextCursor: 9 }));
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+      await clickShowMore();
+
+      mockAuthState = { hasHydrated: true, currentUserPubky: 'someone-else' };
+      await act(async () => {
+        rerender(<DiscoverCollections />);
+      });
+      await waitFor(() => expect(cardIds()).toEqual(['3']));
+
+      await resolveShowMore(makeSlice({ nextPageIds: ['b:2'], reachedEnd: false, nextCursor: 40 }));
+      expect(cardIds()).toEqual(['3']);
+      expect(screen.getByRole('button', { name: 'Show more' })).toBeEnabled();
+
+      await clickShowMore();
+      await waitFor(() => expect(cardIds()).toEqual(['3', '4']));
+      expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 5 });
+    });
+
+    it('does not reload when the collection is re-followed before its kind is read', async () => {
+      bookmarks = ['x:followed'];
+      let resolveDetails: (details: (PostDetailsModelSchema | undefined)[]) => void = () => {};
+      mockGetDetailsByIds.mockImplementationOnce(
+        () =>
+          new Promise((res) => {
+            resolveDetails = res;
+          }),
+      );
+      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1'], reachedEnd: true }));
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+      await waitFor(() => expect(cardIds()).toEqual(['1']));
+
+      await setBookmarks([], rerender);
+      await setBookmarks(['x:followed'], rerender);
+      await act(async () => resolveDetails([detailsOfKind('collection')]));
+
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not reload after unmounting while the kind is read', async () => {
+      bookmarks = ['x:followed'];
+      let resolveDetails: (details: (PostDetailsModelSchema | undefined)[]) => void = () => {};
+      mockGetDetailsByIds.mockImplementationOnce(
+        () =>
+          new Promise((res) => {
+            resolveDetails = res;
+          }),
+      );
+      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1'], reachedEnd: true }));
+      const { rerender, unmount } = await act(async () => render(<DiscoverCollections />));
+      await waitFor(() => expect(cardIds()).toEqual(['1']));
+
+      await setBookmarks([], rerender);
+      unmount();
+      await act(async () => resolveDetails([detailsOfKind('collection')]));
+
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
     });
 
     it('does not reload when an ordinary post is unbookmarked', async () => {
