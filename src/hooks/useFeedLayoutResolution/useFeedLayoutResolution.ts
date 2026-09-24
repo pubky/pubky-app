@@ -43,11 +43,7 @@ export function resolveFeedLayout({
   const isRichLayoutSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
   const isCollectionVariant = variant === TIMELINE_FEED_VARIANT.COLLECTION;
   const isCardsRequested = requestedLayout === LAYOUT.CARDS;
-  const isCardsSupported =
-    isCollectionVariant ||
-    variant === TIMELINE_FEED_VARIANT.BOOKMARKS ||
-    variant === TIMELINE_FEED_VARIANT.HOME ||
-    variant === TIMELINE_FEED_VARIANT.SEARCH;
+  const isCardsSupported = isCollectionVariant || variant === TIMELINE_FEED_VARIANT.BOOKMARKS || isRichLayoutSupported;
   const isVisualRequested = requestedLayout === LAYOUT.VISUAL;
   const isVisualSupported = !isPhoneViewport && (isRichLayoutSupported || isCollectionVariant);
   const isWideRequested = requestedLayout === LAYOUT.WIDE;

@@ -1,8 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isCollectionLayout } from '@/config/collections';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
-import { resolveFeedLayout } from './useFeedLayoutResolution';
+import { resolveFeedLayout, useFeedLayoutResolution } from './useFeedLayoutResolution';
+
+vi.mock('@/hooks/useCustomFeed/useCustomFeed');
+vi.mock('@/hooks/useIsMobile/useIsMobile');
+
+afterEach(() => {
+  vi.resetAllMocks();
+  useHomeStore.getState().reset();
+});
 
 describe('resolveFeedLayout', () => {
   it('keeps visual layout active for supported feeds on desktop/tablet', () => {
@@ -245,7 +258,7 @@ describe('Cards scope', () => {
     expect(isCollectionLayout('cards')).toBe(false);
   });
   it.each(Object.values(TIMELINE_FEED_VARIANT))(
-    'supports Cards in Collections, Bookmarks, Home and Search: %s',
+    'supports Cards in Collections, Bookmarks, Home, Search and custom feeds: %s',
     (variant) => {
       for (const isPhoneViewport of [false, true]) {
         const result = resolveFeedLayout({ requestedLayout: 'cards', variant, isPhoneViewport });
@@ -254,6 +267,7 @@ describe('Cards scope', () => {
           TIMELINE_FEED_VARIANT.BOOKMARKS,
           TIMELINE_FEED_VARIANT.HOME,
           TIMELINE_FEED_VARIANT.SEARCH,
+          TIMELINE_FEED_VARIANT.CUSTOM,
         ].some((value) => value === variant);
         expect(result.isCardsActive).toBe(supported);
         expect(result.effectiveLayout).toBe(supported ? 'cards' : LAYOUT.COLUMNS);
@@ -262,4 +276,30 @@ describe('Cards scope', () => {
       }
     },
   );
+});
+
+describe('saved custom feed layout', () => {
+  it.each([false, true])('uses saved Cards instead of the Home layout (phone: %s)', (isPhoneViewport) => {
+    useHomeStore.getState().setLayout(LAYOUT.WIDE);
+    vi.mocked(useIsMobile).mockReturnValue(isPhoneViewport);
+    vi.mocked(useCustomFeed).mockReturnValue({
+      id: 'cards-feed',
+      name: 'Cards feed',
+      tags: [],
+      domain_tags: [],
+      reach: PubkyAppFeedReach.All,
+      sort: PubkyAppFeedSort.Recent,
+      content: null,
+      layout: PubkyAppFeedLayout.Cards,
+      created_at: 0,
+      updated_at: 0,
+    });
+
+    const { result } = renderHook(() => useFeedLayoutResolution(TIMELINE_FEED_VARIANT.CUSTOM));
+
+    expect(result.current.effectiveLayout).toBe(LAYOUT.CARDS);
+    expect(result.current.isCardsActive).toBe(true);
+    expect(result.current.isGridActive).toBe(false);
+    expect(useHomeStore.getState().layout).toBe(LAYOUT.WIDE);
+  });
 });

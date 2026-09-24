@@ -11,6 +11,7 @@ import {
   Grid2X2,
   Image,
   Layers,
+  LayoutDashboard,
   Library,
   Link,
   Newspaper,
@@ -80,11 +81,7 @@ function parseReachValue(value: string): CustomFeedFormReach {
 /** Shown for a stored reach/content this dialog cannot offer as a choice. */
 const UNSUPPORTED_OPTION_LABEL = 'Unsupported (set elsewhere)';
 
-/**
- * Layouts are desktop-only: the same feed opened on a phone ignores its layout,
- * so the Layout heading carries this hint for whoever picks one on mobile.
- */
-const LAYOUT_DESKTOP_ONLY_HINT = 'Layout settings only affect how your feed appears on desktop.';
+const LAYOUT_HINT = 'Cards and List also apply on mobile. Other layouts use a single column on mobile.';
 
 const REACH_OPTION_VALUES: CustomFeedFormReach[] = [
   PubkyAppFeedReach.Wot,
@@ -160,6 +157,11 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
       value: PubkyAppFeedLayout.List,
       label: 'List',
       icon: Rows4,
+    },
+    {
+      value: PubkyAppFeedLayout.Cards,
+      label: 'Cards',
+      icon: LayoutDashboard,
     },
   ];
   const allContentFilters: Array<{
@@ -455,7 +457,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                 </TooltipTrigger>
 
                 <TooltipPortal>
-                  <TooltipContent>{LAYOUT_DESKTOP_ONLY_HINT}</TooltipContent>
+                  <TooltipContent>{LAYOUT_HINT}</TooltipContent>
                 </TooltipPortal>
               </Tooltip>
             </Container>
