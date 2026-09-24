@@ -144,17 +144,19 @@ describe('Search', () => {
     expect(screen.getByTestId('search-content-tags')).toBeInTheDocument();
     expect(screen.queryByTestId('search-people')).not.toBeInTheDocument();
     expect(screen.queryByTestId('search-collections')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Posts' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Posts', level: 2 })).toBeInTheDocument();
   });
 
-  it('renders the Tags pivot row above the full-text feed', () => {
+  it('renders the Tags pivot row above the Posts heading and full-text feed', () => {
     mockUseSearchCriteria.mockReturnValue({ mode: 'content', query: 'bitcoin wallet' });
 
     render(<Search />);
 
     const tagsRow = screen.getByTestId('search-content-tags');
+    const postsHeading = screen.getByRole('heading', { name: 'Posts', level: 2 });
     const feed = screen.getByTestId('timeline-feed');
-    expect(tagsRow.compareDocumentPosition(feed) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tagsRow.compareDocumentPosition(postsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(postsHeading.compareDocumentPosition(feed) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('mounts the Tags pivot row only for full-text results', () => {
