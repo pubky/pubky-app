@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`TimelineCardsPosts composition - Mobile Snapshots > renders the same complete Cards post on mobile 1`] = `
+exports[`TimelineCardsPosts - Mobile Snapshots > renders the same complete Cards post on mobile 1`] = `
 <div
   class="mx-auto w-full flex-col flex"
   data-cy="timeline-container"
@@ -463,7 +463,7 @@ exports[`TimelineCardsPosts composition - Mobile Snapshots > renders the same co
 </div>
 `;
 
-exports[`TimelineCardsPosts composition - Snapshots > renders a complete Cards post 1`] = `
+exports[`TimelineCardsPosts - Snapshots > renders a complete Cards post 1`] = `
 <div
   class="mx-auto w-full flex-col flex"
   data-cy="timeline-container"
