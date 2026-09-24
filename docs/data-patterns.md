@@ -286,6 +286,7 @@ bookmarks          — Bookmarked post references
 hot_tags           — Trending tag snapshots
 feeds              — Custom feed definitions
 moderation         — Content moderation state
+locks              — Cached lock descriptors and readable post metadata
 ```
 
 ## Quick Checklist

@@ -17,6 +17,7 @@ import { sleep } from '@/libs/utils/utils';
 import { LockContentParser, LockFileParser } from '@/pipes/locks/locks.parser';
 import type {
   LockPostContent,
+  ReplicatedPost,
   TCreateContentLockResult,
   TExchangeSessionCodeParams,
   TFetchLockFileParams,
@@ -170,6 +171,26 @@ export class LocksController {
       lockFile,
       priceSats: LockFileParser.resolvePriceSats(lockFile),
     };
+  }
+
+  static async getOrFetchLockFile(params: TFetchLockFileParams): Promise<TFetchLockFileResult> {
+    const lockFile = await LocksApplication.getOrFetchLockFile(params);
+    return {
+      lockFile,
+      priceSats: LockFileParser.resolvePriceSats(lockFile),
+    };
+  }
+
+  static getUnlockedPost(params: TFetchLockFileParams): Promise<ReplicatedPost | null> {
+    return LocksApplication.getUnlockedPost(params);
+  }
+
+  static getOwnPost(params: TFetchLockFileParams): Promise<ReplicatedPost | null> {
+    return LocksApplication.getOwnPost(params);
+  }
+
+  static getUnlockedList(): Promise<TUnlockedListItem[]> {
+    return LocksApplication.getUnlockedList();
   }
 
   /** Announcement content of a lock post; null when the post's `content` isn't valid announcement JSON. */

@@ -5,7 +5,7 @@ import type { TUnlockedListItem } from '@/services/locks/locks.types';
 import { useUnlockedList } from './useUnlockedList';
 
 vi.mock('@/controllers/locks/locks', () => ({
-  LocksController: { fetchUnlockedList: vi.fn().mockResolvedValue([]) },
+  LocksController: { getUnlockedList: vi.fn().mockResolvedValue([]), fetchUnlockedList: vi.fn().mockResolvedValue([]) },
 }));
 // Mutable so a test can sign the user out or hold the session restore; vi.hoisted beats the vi.mock
 // hoist (plain const would be TDZ).
@@ -24,6 +24,7 @@ describe('useUnlockedList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(LocksController.fetchUnlockedList).mockResolvedValue([]);
+    vi.mocked(LocksController.getUnlockedList).mockResolvedValue([]);
     authState.currentUserPubky = 'me';
     authState.session = {};
   });
@@ -36,7 +37,62 @@ describe('useUnlockedList', () => {
 
     await waitFor(() => expect(result.current.count).toBe(2));
     expect(result.current.items).toEqual(items);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+  });
+
+  it('merges matching cached and homeserver entries, with the homeserver entry winning', async () => {
+    vi.mocked(LocksController.getUnlockedList).mockResolvedValue([item('LOCK1', 1)]);
+    vi.mocked(LocksController.fetchUnlockedList).mockResolvedValue([item('LOCK1', 2)]);
+
+    const { result } = renderHook(() => useUnlockedList());
+
+    await waitFor(() => expect(result.current.items).toEqual([item('LOCK1', 2)]));
+    expect(result.current.count).toBe(1);
+  });
+
+  it('shows cached unlocks before the homeserver list fetch finishes', async () => {
+    vi.mocked(LocksController.getUnlockedList).mockResolvedValue([item('CACHED', 3)]);
+    vi.mocked(LocksController.fetchUnlockedList).mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() => useUnlockedList());
+
+    await waitFor(() => expect(result.current.items).toEqual([item('CACHED', 3)]));
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('keeps an empty cache loading until the homeserver list fetch finishes', async () => {
+    vi.mocked(LocksController.fetchUnlockedList).mockReturnValue(new Promise(() => {}));
+    const { result } = renderHook(() => useUnlockedList());
+    await waitFor(() => expect(LocksController.getUnlockedList).toHaveBeenCalledOnce());
+    expect(result.current.items).toEqual([]);
+    expect(result.current.isLoading).toBe(true);
+  });
+
+  it('finishes loading when the homeserver returns an empty list', async () => {
+    const { result } = renderHook(() => useUnlockedList());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.items).toEqual([]);
+  });
+
+  it('keeps cached unlocks visible when the homeserver list fetch fails', async () => {
+    vi.mocked(LocksController.getUnlockedList).mockResolvedValue([item('CACHED', 3)]);
+    vi.mocked(LocksController.fetchUnlockedList).mockRejectedValue(new Error('offline'));
+
+    const { result } = renderHook(() => useUnlockedList());
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.items).toEqual([item('CACHED', 3)]);
+  });
+
+  it('shows the homeserver list when the IndexedDB read fails', async () => {
+    vi.mocked(LocksController.getUnlockedList).mockRejectedValue(new Error('IndexedDB unavailable'));
+    vi.mocked(LocksController.fetchUnlockedList).mockResolvedValue([item('REMOTE', 3)]);
+
+    const { result } = renderHook(() => useUnlockedList());
+
+    await waitFor(() => expect(result.current.items).toEqual([item('REMOTE', 3)]));
+    expect(result.current.isError).toBe(false);
   });
 
   it('waits for the restored session before reading from /priv', async () => {
@@ -62,7 +118,7 @@ describe('useUnlockedList', () => {
     await Promise.resolve();
     expect(LocksController.fetchUnlockedList).not.toHaveBeenCalled();
     // Disabled is settled, not pending — the tab is hidden rather than showing a spinner.
-    expect(result.current.isLoading).toBe(false);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 
   it('reports isError on failure, so an empty list is not read as "nothing unlocked"', async () => {

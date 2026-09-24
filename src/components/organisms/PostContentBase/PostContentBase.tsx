@@ -50,6 +50,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
   if (isLock)
     return (
       <LockedPostContent
+        key={postDetails.lock}
         content={postDetails.content}
         lock={postDetails.lock}
         authorId={parseCompositeId(postId).pubky}
