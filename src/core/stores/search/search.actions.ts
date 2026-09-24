@@ -1,6 +1,7 @@
+import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
 import { ZustandSet } from '../stores.types';
-import { MAX_ACTIVE_SEARCH_TAGS, MAX_RECENT_SEARCHES } from './search.constants';
+import { MAX_RECENT_SEARCHES } from './search.constants';
 import {
   RecentQuerySearch,
   RecentTagSearch,
@@ -89,13 +90,14 @@ export const createSearchActions = (set: ZustandSet<SearchStore>): SearchActions
 
   /**
    * Set active tags (used for URL → store sync)
-   * Replaces all active tags with the provided array
+   * Replaces all active tags with the provided array, capped like the URL
+   * parser (`getMaxStreamTags()`) so no searched tag is left without a chip
    * Note: Tags should be normalized (lowercase, trimmed) before calling
    */
   setActiveTags: (tags: string[]) => {
     set(
       () => ({
-        activeTags: tags.slice(0, MAX_ACTIVE_SEARCH_TAGS),
+        activeTags: tags.slice(0, getMaxStreamTags()),
       }),
       false,
       SearchActionTypes.SET_ACTIVE_TAGS,
