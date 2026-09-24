@@ -211,13 +211,17 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 // stable fixture slice.
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
   const f = await fixtures;
-  const cache = new Map<string, unknown>();
+  const cache = new Map<string | undefined, unknown>();
   return {
-    useStreamPagination: ({ streamId }: { streamId: string }) => {
+    useStreamPagination: ({ streamId }: { streamId: string | undefined }) => {
       const cached = cache.get(streamId);
       if (cached) return cached;
       const result = {
-        postIds: streamId.includes(':collection:') ? f.searchCollectionIds : f.taggedSearchCompositeIds,
+        postIds: !streamId
+          ? []
+          : streamId.includes(':collection:')
+            ? f.searchCollectionIds
+            : f.taggedSearchCompositeIds,
         loading: false,
         loadingMore: false,
         error: null,

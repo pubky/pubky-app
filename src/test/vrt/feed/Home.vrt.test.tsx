@@ -481,6 +481,18 @@ vi.mock('@/application/feed/feed', async () => {
   return { FeedApplication: f.mockFeedApplication };
 });
 
+vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', async () => {
+  const f = await fixtures;
+  return {
+    useAttachmentsMetadata: ({ fileUris }: { fileUris: readonly string[] }) => ({
+      files: fileUris.flatMap((uri) => {
+        const metadata = f.articleCoverByUri.get(uri);
+        return metadata ? [metadata] : [];
+      }),
+    }),
+  };
+});
+
 vi.mock('@/controllers/file/file', async () => {
   const f = await fixtures;
   return {

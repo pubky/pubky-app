@@ -5,7 +5,7 @@
 import { page } from 'vitest/browser';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
-import { describe, expect, it, onTestFinished, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT, waitForImagesReady } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
@@ -902,31 +902,6 @@ describe('Cards cards — browser coverage', () => {
     ['desktop', VRT_VIEWPORT_DESKTOP],
     ['mobile', VRT_VIEWPORT_MOBILE],
   ] as const)('loads three pages through the real Cards sentinel on %s', async (_name, viewport) => {
-    const observerEvents: object[] = [];
-    const NativeIntersectionObserver = window.IntersectionObserver;
-    vi.stubGlobal(
-      'IntersectionObserver',
-      class extends NativeIntersectionObserver {
-        constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
-          super((entries, observer) => {
-            if (options?.rootMargin === '3000px') {
-              observerEvents.push({
-                entries: entries.map((entry) => ({
-                  intersecting: entry.isIntersecting,
-                  ratio: entry.intersectionRatio,
-                  rect: entry.boundingClientRect.toJSON(),
-                  clip: entry.intersectionRect.toJSON(),
-                })),
-              });
-            }
-            callback(entries, observer);
-          }, options);
-        }
-      },
-    );
-    onTestFinished(() => {
-      vi.unstubAllGlobals();
-    });
     const { useState } = await import('react');
     const { PostMainLayoutProvider } = await import('@/organisms/PostMain/PostMainLayoutContext');
     const { TimelineCardsPosts } = await import('@/organisms/Timeline/Posts/CardsPosts/CardsPosts');
@@ -1014,23 +989,7 @@ describe('Cards cards — browser coverage', () => {
         .map((card) => card.getBoundingClientRect().left),
     ).toEqual(initialColumns);
     scroller.scrollTop = scroller.scrollHeight;
-    try {
-      await expect.poll(() => fetchPage.mock.calls.length).toBe(2);
-    } catch (error) {
-      console.error('Cards pagination diagnostics', {
-        observerEvents,
-        scrollTop: scroller.scrollTop,
-        scrollHeight: scroller.scrollHeight,
-        clientHeight: scroller.clientHeight,
-        clientWidth: scroller.clientWidth,
-        scroller: scroller.getBoundingClientRect().toJSON(),
-        sentinel: sentinel.getBoundingClientRect().toJSON(),
-        windowHeight: innerHeight,
-        documentScrollTop: document.documentElement.scrollTop,
-        bodyScrollTop: document.body.scrollTop,
-      });
-      throw error;
-    }
+    await expect.poll(() => fetchPage.mock.calls.length).toBe(2);
 
     const captionCard = cards()[1];
     const collapsedHeight = captionCard.getBoundingClientRect().height;

@@ -157,16 +157,28 @@ describe('useInfiniteScroll - unproductive-load budget', () => {
   }
 
   /** Fires the latest observer callback and lets the debounce elapse. */
-  const intersect = () => {
+  const intersect = (states = [true]) => {
     const observerCalls = asOpaque<Array<[(entries: Array<{ isIntersecting: boolean }>) => void]>>(
       mockIntersectionObserver.mock.calls,
     );
     const observerCallback = observerCalls.at(-1)![0];
     act(() => {
-      observerCallback([{ isIntersecting: true }]);
+      observerCallback(states.map((isIntersecting) => ({ isIntersecting })));
       vi.advanceTimersByTime(DEBOUNCE_MS);
     });
   };
+
+  it.each([
+    { states: [false, true], loads: 1 },
+    { states: [true, false], loads: 0 },
+    { states: [false, true, true], loads: 1 },
+  ])('uses the latest sentinel state when observer events are batched: $states', ({ states, loads }) => {
+    renderWithSentinel(2, 3);
+
+    intersect(states);
+
+    expect(mockOnLoadMore).toHaveBeenCalledTimes(loads);
+  });
 
   it('stalls instead of loading once the consecutive unproductive loads exceed the budget', () => {
     const { result } = renderWithSentinel(1, 3);
