@@ -19,6 +19,27 @@ describe('Tooltip', () => {
 
     expect(screen.getByRole('tooltip')).toHaveTextContent('Tooltip body');
   });
+
+  it('keeps a consumer className alongside the accent variant classes', () => {
+    render(
+      <TooltipProvider delayDuration={0}>
+        <Tooltip open>
+          <TooltipTrigger asChild>
+            <button type="button">Hover me</button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent variant="accent" className="wrap-anywhere">
+              Tooltip body
+            </TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+      </TooltipProvider>,
+    );
+
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveClass('bg-accent', 'font-medium', 'text-foreground', 'wrap-anywhere');
+    expect(tooltip).not.toHaveClass('bg-primary', 'font-normal', 'text-primary-foreground');
+  });
 });
 
 describe('Tooltip - Snapshots', () => {
