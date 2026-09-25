@@ -27,6 +27,16 @@ describe('SocialGraphBadge', () => {
     expect(badge).not.toHaveClass('border-transparent');
   });
 
+  it('renders as a pill, per the design', () => {
+    render(<SocialGraphBadge status={NexusSocialGraphStatus.NETWORKED} />);
+
+    const badge = screen.getByText('Networked');
+    // The design draws the status badge with semicircular ends; the Badge atom's
+    // rounded-md would otherwise win as the only radius class on the element.
+    expect(badge).toHaveClass('rounded-full');
+    expect(badge).not.toHaveClass('rounded-md');
+  });
+
   it('merges a custom className', () => {
     render(<SocialGraphBadge status={NexusSocialGraphStatus.NEW} className="custom-class" />);
 

@@ -64,7 +64,7 @@ exports[`ProfilePageSidebar - Snapshots > matches snapshot with a social graph t
       </button>
     </div>
     <div
-      class="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden bg-background [a&]:hover:bg-accent [a&]:hover:text-accent-foreground font-semibold uppercase border-chart-3 text-chart-3"
+      class="inline-flex items-center justify-center border px-2 py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden bg-background [a&]:hover:bg-accent [a&]:hover:text-accent-foreground rounded-full font-semibold uppercase border-chart-3 text-chart-3"
       data-cy="social-graph-badge"
       data-slot="badge"
       data-status="established"
