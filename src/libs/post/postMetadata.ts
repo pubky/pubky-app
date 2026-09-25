@@ -7,6 +7,7 @@ import { httpResponseToError } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { resolveUserDisplayName } from '@/libs/utils/utils';
 import type { NexusPostDetails, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { postApi } from '@/services/nexus/post/post.api';
 import { userApi } from '@/services/nexus/user/user.api';
@@ -81,7 +82,9 @@ async function fetchMentionedUserName(pubky: string): Promise<MentionLookup> {
       return { name: null, failure: res.status === HttpStatusCode.NOT_FOUND ? undefined : `HTTP ${res.status}` };
     }
     const user: NexusUserDetails = await res.json();
-    return { name: user.name || null };
+    // A tombstone resolves to `[DELETED]` (as `PostMentions` renders it); a live user without a
+    // name resolves to `''` and stays a shortened key via `formatMentionLabel`.
+    return { name: resolveUserDisplayName(user) || null };
   } catch (error) {
     return { name: null, failure: describeFailure(error) };
   }

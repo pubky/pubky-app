@@ -82,7 +82,7 @@ describe('MutedUsersList', () => {
     expect(screen.getByText('Unmute')).toBeInTheDocument();
   });
 
-  it('renders a deleted muted user as [DELETED] with a seed initial, never a bare `[`', () => {
+  it('renders a deleted muted user as [DELETED] with the deleted-user glyph, never a seed letter', () => {
     mockUseMutedUsers.mockReturnValue({
       mutedUserIds: ['user-123'],
       mutedUserIdSet: new Set(['user-123']),
@@ -97,7 +97,8 @@ describe('MutedUsersList', () => {
     render(<MutedUsersList />);
 
     expect(screen.getByText('[DELETED]')).toBeInTheDocument();
-    expect(screen.getByTestId('facehash-avatar')).toHaveTextContent('U');
+    expect(screen.getByTestId('avatar-deleted-placeholder')).toBeInTheDocument();
+    expect(screen.queryByTestId('facehash-avatar')).not.toBeInTheDocument();
   });
 
   it('calls toggleMute when clicking unmute and confirms with a generic toast', async () => {

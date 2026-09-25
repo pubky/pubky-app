@@ -62,7 +62,10 @@ export function resolveDisplayName(user: { name: string; id: string; deleted?: b
 /**
  * Display label for a user: `[DELETED]` for a tombstone, the user's own name otherwise, and
  * an empty string when a live user has none. Empty lets the caller keep its own fallback
- * (public key, "Unknown User", …) while a deleted user never degrades into one.
+ * (public key, "Unknown User", …) while a deleted user never degrades into one. Surfaces
+ * that key on the label (`AvatarWithFallback` picks its glyph from it) must pass the resolved
+ * value, not a raw row name: a new-shape tombstone's row has `name: ''`, which renders a seed
+ * letter instead of the glyph.
  */
 export function resolveUserDisplayName(user: { name?: string | null; deleted?: boolean } | null | undefined): string {
   if (isUserDeleted(user)) return DELETED_USER_NAME;
