@@ -334,9 +334,7 @@ function CollectionHeroContent({
                   </span>
                 </TooltipTrigger>
                 <TooltipPortal>
-                  <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
-                    Copy link
-                  </TooltipContent>
+                  <TooltipContent variant="accent">Copy link</TooltipContent>
                 </TooltipPortal>
               </Tooltip>
               {reorder &&
@@ -388,9 +386,7 @@ function CollectionHeroContent({
                       </span>
                     </TooltipTrigger>
                     <TooltipPortal>
-                      <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
-                        Reorder
-                      </TooltipContent>
+                      <TooltipContent variant="accent">Reorder</TooltipContent>
                     </TooltipPortal>
                   </Tooltip>
                 ))}
@@ -410,9 +406,7 @@ function CollectionHeroContent({
                   </span>
                 </TooltipTrigger>
                 <TooltipPortal>
-                  <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
-                    Edit
-                  </TooltipContent>
+                  <TooltipContent variant="accent">Edit</TooltipContent>
                 </TooltipPortal>
               </Tooltip>
               <Tooltip>
@@ -431,9 +425,7 @@ function CollectionHeroContent({
                   </span>
                 </TooltipTrigger>
                 <TooltipPortal>
-                  <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
-                    Delete
-                  </TooltipContent>
+                  <TooltipContent variant="accent">Delete</TooltipContent>
                 </TooltipPortal>
               </Tooltip>
             </>
@@ -479,9 +471,7 @@ function CollectionHeroContent({
                   </span>
                 </TooltipTrigger>
                 <TooltipPortal>
-                  <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
-                    Copy link
-                  </TooltipContent>
+                  <TooltipContent variant="accent">Copy link</TooltipContent>
                 </TooltipPortal>
               </Tooltip>
             </>

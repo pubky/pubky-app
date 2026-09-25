@@ -72,9 +72,7 @@ export function PostTagToggleButton({
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipPortal>
-        <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
-          {expanded ? 'Hide tags' : 'Show tags'}
-        </TooltipContent>
+        <TooltipContent variant="accent">{expanded ? 'Hide tags' : 'Show tags'}</TooltipContent>
       </TooltipPortal>
     </Tooltip>
   );

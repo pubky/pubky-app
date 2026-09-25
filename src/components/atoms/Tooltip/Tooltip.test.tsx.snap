@@ -1,5 +1,36 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`Tooltip - Snapshots > matches snapshot for accent variant 1`] = `
+<div
+  class="z-50 max-w-sm rounded-md px-3 py-1.5 text-xs leading-4 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 bg-accent font-medium text-foreground [&_svg]:fill-accent"
+  data-align="center"
+  data-side="top"
+  data-slot="tooltip-content"
+  data-state="instant-open"
+  id="radix-normalized"
+  role="tooltip"
+  style="--radix-tooltip-content-transform-origin: var(--radix-popper-transform-origin); --radix-tooltip-content-available-width: var(--radix-popper-available-width); --radix-tooltip-content-available-height: var(--radix-popper-available-height); --radix-tooltip-trigger-width: var(--radix-popper-anchor-width); --radix-tooltip-trigger-height: var(--radix-popper-anchor-height); animation: none;"
+>
+  Accent label
+  <span
+    style="position: absolute; bottom: 0px; transform: translateY(100%); visibility: hidden;"
+  >
+    <svg
+      class="fill-primary"
+      height="6"
+      preserveAspectRatio="none"
+      style="display: block;"
+      viewBox="0 0 30 10"
+      width="12"
+    >
+      <polygon
+        points="0,0 30,0 15,10"
+      />
+    </svg>
+  </span>
+</div>
+`;
+
 exports[`Tooltip - Snapshots > matches snapshot when open with trigger and content 1`] = `
 <button
   aria-describedby="radix-normalized"
@@ -14,7 +45,7 @@ exports[`Tooltip - Snapshots > matches snapshot when open with trigger and conte
 
 exports[`Tooltip - Snapshots > matches snapshot when open with trigger and content 2`] = `
 <div
-  class="z-50 max-w-sm rounded-md bg-primary px-3 py-1.5 text-xs leading-4 font-normal text-primary-foreground data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+  class="z-50 max-w-sm rounded-md px-3 py-1.5 text-xs leading-4 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 bg-primary font-normal text-primary-foreground"
   data-align="center"
   data-side="top"
   data-slot="tooltip-content"
