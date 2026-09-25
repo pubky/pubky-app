@@ -16,8 +16,8 @@ import { cn } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostText } from '@/molecules/PostText/PostText';
+import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useHomeStore } from '@/stores/home/home.store';
-import { LAYOUT } from '@/stores/home/home.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { DialogCheckLink } from '../DialogCheckLink/DialogCheckLink';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
@@ -36,11 +36,13 @@ interface PostArticleDetailProps {
 
 /**
  * Displays an article post detail page.
- * Columns reuses the regular post inline tags/actions; other layouts use a side tags column.
+ * Columns reuses the regular post inline tags/actions; wide and list use a side tags column.
+ * Any other layout value (visual, or a future one) renders as columns, the same rule
+ * `getTagsLayoutForSurfaceLayout` applies to the rest of the single-post surface.
  */
 export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: PostArticleDetailProps) => {
   const layout = useHomeStore((state) => state.layout);
-  const isColumnsLayout = layout === LAYOUT.COLUMNS;
+  const isColumnsLayout = getTagsLayoutForSurfaceLayout(layout) === 'inline';
   const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
