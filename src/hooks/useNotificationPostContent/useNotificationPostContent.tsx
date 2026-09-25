@@ -25,8 +25,8 @@ interface UseNotificationPostContentOptions {
  *
  * Reads live and local-first through `usePostDetails` (ADR-0011) — a post edited while
  * the row is mounted re-renders with the new title — then picks the best label for the
- * post kind: the article title, the collection name, or the raw content with pubky
- * mentions resolved to display names.
+ * post kind: the lock title, the article title, the collection name, or the raw content
+ * with pubky mentions resolved to display names.
  */
 export function useNotificationPostContent({
   compositeId,
@@ -41,6 +41,7 @@ export function useNotificationPostContent({
 
   const rawContent = postDetails?.content ?? null;
   const kind = postDetails?.kind;
+  const lock = postDetails?.lock ?? null;
 
   const isDeleted = rawContent !== null && isPostDeleted(rawContent);
   // The post is gone entirely (never resolvable), as opposed to content that merely
@@ -52,28 +53,34 @@ export function useNotificationPostContent({
   // content) detectable and never rendered.
   const [mentionResolution, setMentionResolution] = useState<{ source: string; content: string | null } | null>(null);
 
-  const needsMentionResolution = rawContent !== null && !isDeleted && kind !== 'long' && kind !== 'collection';
+  // Deleted notices, lock titles, article titles and collection names follow the app-wide preview
+  // policy, kept in postPreview so the surfaces never drift apart.
+  const preview = rawContent === null ? null : deriveTextPreview({ content: rawContent, kind: kind ?? '', lock });
+
+  // Mentions are resolved on the derived label, not the stored content: a lock announcement's title
+  // and teaser are composer text that can carry them. Article titles and collection names never do.
+  const needsMentionResolution = preview !== null && !isDeleted && kind !== 'long' && kind !== 'collection';
 
   useEffect(() => {
-    if (!needsMentionResolution || rawContent === null) return;
+    if (!needsMentionResolution || preview === null) return;
 
     let isCancelled = false;
 
-    resolvePubkyToNames(rawContent)
+    resolvePubkyToNames(preview)
       .then((resolved) => {
-        if (!isCancelled) setMentionResolution({ source: rawContent, content: resolved });
+        if (!isCancelled) setMentionResolution({ source: preview, content: resolved });
       })
       .catch((error) => {
         if (!isCancelled) {
           Logger.warn('Failed to resolve notification post mentions:', { postCompositeId: compositeId, error });
-          setMentionResolution({ source: rawContent, content: null });
+          setMentionResolution({ source: preview, content: null });
         }
       });
 
     return () => {
       isCancelled = true;
     };
-  }, [needsMentionResolution, rawContent, compositeId]);
+  }, [needsMentionResolution, preview, compositeId]);
 
   const collectionParseFailed =
     rawContent !== null && kind === 'collection' && !isDeleted && !parseCollectionContent(rawContent);
@@ -92,12 +99,10 @@ export function useNotificationPostContent({
   let content: string | null = null;
   let isResolvingMentions = false;
 
-  if (rawContent !== null) {
+  if (preview !== null) {
     if (!needsMentionResolution) {
-      // Deleted notices, article titles and collection names follow the app-wide
-      // preview policy, kept in postPreview so the surfaces never drift apart.
-      content = deriveTextPreview({ content: rawContent, kind: kind ?? '' });
-    } else if (mentionResolution?.source === rawContent) {
+      content = preview;
+    } else if (mentionResolution?.source === preview) {
       content = mentionResolution.content;
     } else {
       isResolvingMentions = true;

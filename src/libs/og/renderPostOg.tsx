@@ -35,7 +35,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
 
     const name = resolveDisplayName(user);
     const isDeleted = isPostDeleted(post.content);
-    const preview = deriveTextPreview({ content: post.content, kind: post.kind });
+    const preview = deriveTextPreview({ content: post.content, kind: post.kind, lock: post.lock ?? null });
 
     // Feed variant is sufficient — the image only ever renders in this small
     // preview card, so the full-res MAIN variant would be wasted bytes. Fetched
