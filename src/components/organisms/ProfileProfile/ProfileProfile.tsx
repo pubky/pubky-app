@@ -8,6 +8,7 @@ import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSocialGraphStatus } from '@/hooks/useSocialGraphStatus/useSocialGraphStatus';
 import { useTagged } from '@/hooks/useTagged/useTagged';
+import { AvatarZoomModal } from '@/molecules/AvatarZoomModal/AvatarZoomModal';
 import { ProfilePageLinks } from '@/molecules/ProfilePageLinks/ProfilePageLinks';
 import { ProfilePageSocialGraph } from '@/molecules/ProfilePageSocialGraph/ProfilePageSocialGraph';
 import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
@@ -26,6 +27,10 @@ export function ProfileProfile() {
   // Get the profile pubky and isOwnProfile from context
   const { pubky, isOwnProfile } = useProfileContext();
 
+  // The layout header (which owns the zoom modal for desktop) is hidden on mobile,
+  // so this mobile summary owns its own modal instance.
+  const [isAvatarZoomOpen, setIsAvatarZoomOpen] = React.useState(false);
+
   // Note: useProfileHeader guarantees a non-null profile with default values during loading
   const { profile, stats, actions, isProfileLoading } = useProfileHeader(pubky ?? '');
 
@@ -40,11 +45,13 @@ export function ProfileProfile() {
   // Get tags for the user
   const {
     tags: allTags,
+    count: tagsCount,
     isLoading: isLoadingTags,
+    handleTagAdd,
     handleTagToggle,
   } = useTagged(pubky, {
     enablePagination: false,
-    enableStats: false,
+    enableStats: true,
   });
 
   // Show only top 3 most popular tags (sorted by taggers_count)
@@ -59,8 +66,17 @@ export function ProfileProfile() {
     });
   };
 
+  const handleAvatarClick = () => {
+    setIsAvatarZoomOpen(true);
+  };
+
+  const handleCloseAvatarZoom = () => {
+    setIsAvatarZoomOpen(false);
+  };
+
   const mergedActions = {
     ...actions,
+    onAvatarClick: handleAvatarClick,
     onFollowToggle: handleFollowToggle,
     isFollowLoading,
     followLoadingAction,
@@ -68,25 +84,44 @@ export function ProfileProfile() {
   };
 
   return (
-    <Container overrideDefaults={true} className="flex min-w-0 flex-col gap-6 overflow-hidden lg:hidden">
-      {!isProfileLoading && (
-        <ProfilePageHeader
-          profile={profile}
-          actions={mergedActions}
-          isOwnProfile={isOwnProfile}
-          userId={pubky ?? ''}
-          stats={stats}
+    <>
+      <Container overrideDefaults={true} className="flex min-w-0 flex-col gap-6 overflow-hidden lg:hidden">
+        {!isProfileLoading && (
+          <ProfilePageHeader
+            profile={profile}
+            actions={mergedActions}
+            isOwnProfile={isOwnProfile}
+            userId={pubky ?? ''}
+            stats={stats}
+          />
+        )}
+
+        {/* Social graph section */}
+        {socialGraphStatus && <ProfilePageSocialGraph status={socialGraphStatus} />}
+
+        {/* Tagged section */}
+        <ProfilePageTaggedAs
+          tags={tags}
+          allTags={allTags}
+          count={tagsCount}
+          isLoading={isLoadingTags}
+          onTagClick={handleTagToggle}
+          onTagAdd={handleTagAdd}
+          variant="mobile"
+          pubky={pubky ?? ''}
         />
-      )}
 
-      {/* Social graph section */}
-      {socialGraphStatus && <ProfilePageSocialGraph status={socialGraphStatus} />}
+        {/* Links section */}
+        <ProfilePageLinks links={profile?.links} isOwnProfile={isOwnProfile} />
+      </Container>
 
-      {/* Tagged as section */}
-      <ProfilePageTaggedAs tags={tags} isLoading={isLoadingTags} onTagClick={handleTagToggle} pubky={pubky ?? ''} />
-
-      {/* Links section */}
-      <ProfilePageLinks links={profile?.links} isOwnProfile={isOwnProfile} />
-    </Container>
+      <AvatarZoomModal
+        open={isAvatarZoomOpen}
+        onClose={handleCloseAvatarZoom}
+        avatarUrl={profile.avatarUrl}
+        name={profile.name}
+        fallbackSeed={pubky ?? ''}
+      />
+    </>
   );
 }

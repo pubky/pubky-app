@@ -12,6 +12,8 @@ export class UserDetailsModel extends RecordModelBase<Pubky, UserDetailsModelSch
   bio: string;
   image: string | null;
   indexed_at: number;
+  nexusIndexedAt?: number;
+  localUpdatedAt?: number;
   links: NexusUserLink[] | null;
   status: string | null;
   social_graph_status?: NexusSocialGraphStatus | null;
@@ -23,6 +25,8 @@ export class UserDetailsModel extends RecordModelBase<Pubky, UserDetailsModelSch
     this.bio = userDetails.bio;
     this.image = userDetails.image;
     this.indexed_at = userDetails.indexed_at;
+    this.nexusIndexedAt = userDetails.nexusIndexedAt;
+    this.localUpdatedAt = userDetails.localUpdatedAt;
     this.links = userDetails.links;
     this.status = userDetails.status;
     this.social_graph_status = userDetails.social_graph_status;

@@ -172,7 +172,10 @@ describe('Header Components', () => {
       return selector(state as never);
     });
     vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
-    vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
+    vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+      query: deps?.[0],
+      data: { name: 'Test User', image: 'test-image.jpg' },
+    }));
   });
 
   afterEach(() => {
@@ -544,7 +547,10 @@ describe('Header Components', () => {
     });
 
     it('passes name to AvatarWithFallback for valid name', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: 'Test User', image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -552,7 +558,10 @@ describe('Header Components', () => {
     });
 
     it('uses default fallback name when name is undefined', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: undefined, image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: undefined, image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -561,7 +570,10 @@ describe('Header Components', () => {
     });
 
     it('passes empty name to AvatarWithFallback for empty name', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: '', image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: '', image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -569,7 +581,10 @@ describe('Header Components', () => {
     });
 
     it('passes whitespace-only name to AvatarWithFallback', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: '   ', image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: '   ', image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -577,7 +592,10 @@ describe('Header Components', () => {
     });
 
     it('passes name with whitespace to AvatarWithFallback', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: '  Sarah Jones  ', image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: '  Sarah Jones  ', image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -585,7 +603,10 @@ describe('Header Components', () => {
     });
 
     it('renders AvatarWithFallback when no image provided', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: 'Test User', image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -594,7 +615,10 @@ describe('Header Components', () => {
     });
 
     it('renders AvatarWithFallback with name when image is provided', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'custom-avatar.jpg' });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: 'Test User', image: 'custom-avatar.jpg' },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -621,7 +645,10 @@ describe('Header Components - Snapshots', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
     vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
     vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
-    vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
+    vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+      query: deps?.[0],
+      data: { name: 'Test User', image: 'test-image.jpg' },
+    }));
   });
 
   it('matches snapshot for HeaderContainer', () => {

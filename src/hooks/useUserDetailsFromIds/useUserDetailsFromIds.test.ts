@@ -145,6 +145,37 @@ describe('useUserDetailsFromIds', () => {
       expect(result.current.users[0].avatarUrl).toBeUndefined();
     });
 
+    it('versions the avatar URL with the details indexed_at', () => {
+      setMockUserDetailsMap(
+        new Map([
+          ['user1', { id: 'user1', name: 'Alice', image: 'avatar.jpg', indexed_at: 1704067200000 } as NexusUserDetails],
+        ]),
+      );
+
+      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1'] as Pubky[] }));
+
+      expect(mockGetAvatarUrl).toHaveBeenCalledWith('user1', 1704067200000);
+      expect(result.current.users[0].avatarUrl).toBe('https://example.com/user1/avatar');
+    });
+
+    it('recomputes the avatar URL when the same user is re-indexed after a profile edit', () => {
+      setMockUserDetailsMap(
+        new Map([['user1', { id: 'user1', name: 'Alice', image: 'avatar.jpg', indexed_at: 1 } as NexusUserDetails]]),
+      );
+      mockGetAvatarUrl.mockImplementation((id: string, version?: string | number) => `avatar:${id}:${version}`);
+
+      const { result, rerender } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1'] as Pubky[] }));
+
+      expect(result.current.users[0].avatarUrl).toBe('avatar:user1:1');
+
+      setMockUserDetailsMap(
+        new Map([['user1', { id: 'user1', name: 'Alice', image: 'avatar.jpg', indexed_at: 2 } as NexusUserDetails]]),
+      );
+      rerender();
+
+      expect(result.current.users[0].avatarUrl).toBe('avatar:user1:2');
+    });
+
     it('skips users not found in details map', () => {
       setMockUserDetailsMap(
         new Map([

@@ -233,7 +233,7 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
       return {
         id,
         name: resolveUserDisplayName(details),
-        avatarUrl: details.image ? FileController.getAvatarUrl(id) : null,
+        avatarUrl: details.image ? FileController.getAvatarUrl(id, details.indexed_at) : null,
         stats: {
           tags: counts?.tagged ?? 0,
           posts: counts?.posts ?? 0,

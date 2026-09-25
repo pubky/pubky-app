@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DialogTitle } from '@/atoms/Dialog/Dialog';
 import { REPORT_POST_STEPS } from '@/hooks/useReportPost/useReportPost.constants';
 import { REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
 import { DialogReportPost } from './DialogReportPost';
@@ -23,6 +24,7 @@ vi.mock('./DialogReportPostIssueStep/DialogReportPostIssueStep', () => ({
       data-testid="dialog-report-post-issue-step"
       onClick={() => onSelectIssueType(REPORT_ISSUE_TYPES.PERSONAL_INFO)}
     >
+      <DialogTitle>Report Post</DialogTitle>
       DialogReportPostIssueStep
     </div>
   ),
@@ -31,6 +33,7 @@ vi.mock('./DialogReportPostIssueStep/DialogReportPostIssueStep', () => ({
 vi.mock('./DialogReportPostReasonStep/DialogReportPostReasonStep', () => ({
   DialogReportPostReasonStep: ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: () => void }) => (
     <div data-testid="dialog-report-post-reason-step">
+      <DialogTitle>Report Post</DialogTitle>
       <button data-testid="back-button" onClick={onCancel}>
         Back
       </button>
@@ -45,6 +48,7 @@ vi.mock('./DialogReportPostReasonStep/DialogReportPostReasonStep', () => ({
 vi.mock('./DialogReportPostSuccess/DialogReportPostSuccess', () => ({
   DialogReportPostSuccess: ({ onOpenChange }: { onOpenChange: (open: boolean) => void }) => (
     <div data-testid="dialog-report-post-success" onClick={() => onOpenChange(false)}>
+      <DialogTitle>Report Sent</DialogTitle>
       DialogReportPostSuccess
     </div>
   ),
@@ -83,7 +87,7 @@ describe('DialogReportPost', () => {
   it('renders with required props', () => {
     render(<DialogReportPost open={true} onOpenChange={mockOnOpenChange} postId={TEST_POST_ID} />);
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Report Post' })).toBeInTheDocument();
   });
 
   it('renders issue selection step when step is ISSUE_SELECTION', () => {
@@ -113,6 +117,7 @@ describe('DialogReportPost', () => {
     render(<DialogReportPost open={true} onOpenChange={mockOnOpenChange} postId={TEST_POST_ID} />);
 
     expect(screen.getByTestId('dialog-report-post-success')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Report Sent' })).toBeInTheDocument();
   });
 
   it('calls reset when dialog closes', () => {

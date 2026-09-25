@@ -55,6 +55,10 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
     set({ isRestoringSession }, false, AuthActionTypes.SET_IS_RESTORING_SESSION);
   },
 
+  setIsResolvingProfile: (isResolvingProfile: boolean) => {
+    set({ isResolvingProfile }, false, AuthActionTypes.SET_IS_RESOLVING_PROFILE);
+  },
+
   setHasProfile: (hasProfile: boolean) => {
     set({ hasProfile }, false, AuthActionTypes.SET_HAS_PROFILE);
   },

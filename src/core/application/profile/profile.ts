@@ -40,15 +40,18 @@ export class ProfileApplication {
       await HomeserverService.request({ method: HttpMethod.PUT, url, bodyJson: profile.toJson() });
       // Persist the successfully-created profile immediately so onboarding revisit
       // and the welcome dialog do not depend on Nexus indexing catching up first.
-      await LocalProfileService.upsertDetails({
-        id: pubky,
-        name: profile.name,
-        bio: profile.bio ?? '',
-        image: profile.image ?? null,
-        links: profile.links?.map((link) => ({ title: link.title, url: link.url })) ?? [],
-        status: profile.status || null,
-        indexed_at: Date.now(),
-      });
+      await LocalProfileService.upsertDetails(
+        {
+          id: pubky,
+          name: profile.name,
+          bio: profile.bio ?? '',
+          image: profile.image ?? null,
+          links: profile.links?.map((link) => ({ title: link.title, url: link.url })) ?? [],
+          status: profile.status || null,
+          indexed_at: Date.now(),
+        },
+        'local',
+      );
       // Tell Nexus this user exists (best-effort, never rejects; see NexusBootstrapService.ingest).
       void NexusBootstrapService.ingest(pubky);
       const authStore = useAuthStore.getState();
