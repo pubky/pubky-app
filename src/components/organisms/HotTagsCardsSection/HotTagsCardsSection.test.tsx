@@ -124,6 +124,22 @@ describe('HotTagsCardsSection', () => {
     expect(screen.getByText('No tags to show')).toBeInTheDocument();
   });
 
+  it('shows the heading on desktop only in every state', () => {
+    mockUseHotTags.mockReturnValue({ rawTags: [], isLoading: false, error: null });
+    const { unmount: unmountEmpty } = render(<HotTagsCardsSection />);
+    expect(screen.getByText('Hot tags')).toHaveClass('hidden', 'lg:block');
+    unmountEmpty();
+
+    mockUseHotTags.mockReturnValue({ rawTags: [], isLoading: true, error: null });
+    const { unmount: unmountLoading } = render(<HotTagsCardsSection />);
+    expect(screen.getByText('Hot tags')).toHaveClass('hidden', 'lg:block');
+    unmountLoading();
+
+    mockUseHotTags.mockReturnValue({ rawTags: [], isLoading: false, error: 'Network error' });
+    render(<HotTagsCardsSection />);
+    expect(screen.getByText('Hot tags')).toHaveClass('hidden', 'lg:block');
+  });
+
   it('renders tag cards when tags are available', () => {
     mockUseHotTags.mockReturnValue({
       rawTags: [

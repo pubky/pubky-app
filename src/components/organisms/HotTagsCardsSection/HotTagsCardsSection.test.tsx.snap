@@ -6,7 +6,7 @@ exports[`HotTagsCardsSection - Mobile Snapshots > matches snapshot on mobile vie
   data-testid="hot-tags-cards-section"
 >
   <h5
-    class="text-2xl font-light text-muted-foreground"
+    class="text-2xl hidden font-light text-muted-foreground lg:block"
     data-testid="heading-5"
   >
     Hot tags
@@ -1189,7 +1189,7 @@ exports[`HotTagsCardsSection - Snapshots > matches snapshot with featured tags 1
   data-testid="hot-tags-cards-section"
 >
   <h5
-    class="text-2xl font-light text-muted-foreground"
+    class="text-2xl hidden font-light text-muted-foreground lg:block"
     data-testid="heading-5"
   >
     Hot tags

@@ -141,8 +141,10 @@ vi.mock('@/atoms/Container/Container', () => {
 
 vi.mock('@/atoms/Heading/Heading', () => {
   return {
-    Heading: ({ children, level }: { children: React.ReactNode; level: number }) => (
-      <div data-testid={`heading-${level}`}>{children}</div>
+    Heading: ({ children, level, className }: { children: React.ReactNode; level: number; className?: string }) => (
+      <div data-testid={`heading-${level}`} className={className}>
+        {children}
+      </div>
     ),
   };
 });
@@ -190,6 +192,11 @@ describe('Hot', () => {
   it('displays Trending posts heading', () => {
     render(<Hot />);
     expect(screen.getByText('Trending posts')).toBeInTheDocument();
+  });
+
+  it('shows the Trending posts heading on desktop only', () => {
+    render(<Hot />);
+    expect(screen.getByText('Trending posts')).toHaveClass('hidden', 'lg:block');
   });
 
   it('passes hasGradientBackground={false} to ContentLayout', () => {

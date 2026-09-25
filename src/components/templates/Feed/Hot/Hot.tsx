@@ -55,7 +55,8 @@ export function Hot() {
 
       {/* Trending Posts - hidden via CSS when another tab is active on mobile */}
       <Container overrideDefaults className={cn('flex flex-col gap-2', hidePosts && 'hidden')}>
-        <Heading level={5} size="lg" className="font-light text-muted-foreground">
+        {/* Section heading is desktop-only: on mobile the tab menu already names the section */}
+        <Heading level={5} size="lg" className="hidden font-light text-muted-foreground lg:block">
           {'Trending posts'}
         </Heading>
         <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOT} />

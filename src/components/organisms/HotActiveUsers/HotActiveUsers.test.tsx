@@ -63,7 +63,9 @@ vi.mock('@/atoms/Container/Container', () => ({
 }));
 
 vi.mock('@/atoms/Heading/Heading', () => ({
-  Heading: ({ children }: { children: React.ReactNode }) => <h5>{children}</h5>,
+  Heading: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <h5 className={className}>{children}</h5>
+  ),
 }));
 
 vi.mock('@/atoms/Typography/Typography', () => ({
@@ -145,5 +147,46 @@ describe('HotActiveUsers', () => {
 
     expect(screen.queryByTestId('hot-active-user-only-user')).not.toBeInTheDocument();
     expect(screen.getByText('No users to show')).toBeInTheDocument();
+  });
+
+  it('shows the heading on desktop only', () => {
+    hooksMocks.useUserStream.mockReturnValue({
+      ...baseStreamResult,
+      users: [{ id: 'visible-user', name: 'Visible Person', image: null, avatarUrl: null, isFollowing: false }],
+      isLoading: false,
+      error: null,
+    });
+
+    render(<HotActiveUsers />);
+
+    expect(screen.getByText('Active users')).toHaveClass('hidden', 'lg:block');
+  });
+});
+
+describe('HotActiveUsers - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    hooksMocks.useUserStream.mockReset();
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: [],
+      mutedUserIdSet: new Set(),
+      isMuted: (_userId: Pubky) => false,
+      isLoading: false,
+    }));
+  });
+
+  it('matches snapshot with active users', () => {
+    hooksMocks.useUserStream.mockReturnValue({
+      ...baseStreamResult,
+      users: [
+        { id: 'user-1', name: 'Alice', image: null, avatarUrl: null, isFollowing: false },
+        { id: 'user-2', name: 'Bob', image: null, avatarUrl: null, isFollowing: true },
+      ],
+      isLoading: false,
+      error: null,
+    });
+
+    const { container } = render(<HotActiveUsers />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

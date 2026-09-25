@@ -1,0 +1,28 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`HotActiveUsers - Snapshots > matches snapshot with active users 1`] = `
+<div
+  class="flex w-full flex-col gap-2"
+  data-testid="hot-active-users"
+>
+  <h5
+    class="hidden font-light text-muted-foreground lg:block"
+  >
+    Active users
+  </h5>
+  <div
+    class="gap-3.5 rounded-md py-2 lg:gap-3"
+  >
+    <div
+      data-testid="hot-active-user-user-1"
+    >
+      Alice
+    </div>
+    <div
+      data-testid="hot-active-user-user-2"
+    >
+      Bob
+    </div>
+  </div>
+</div>
+`;
