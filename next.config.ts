@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION ?? packageJson.version,
   },
   reactCompiler: true,
+  // `next dev` otherwise upserts a managed "nextjs-agent-rules" block into AGENTS.md on every run.
+  // That file is hand-maintained (see its Tooling map), so the generator stays off.
+  agentRules: false,
   // Source maps are generated for every build (browser + server), but the Sentry plugin upload
   // is disabled below. Docker builds inject Debug IDs and optionally upload maps when Sentry
   // build credentials are provided; public builds without those credentials skip upload.

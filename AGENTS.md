@@ -140,7 +140,7 @@ are owned by QA: flag an invalidated spec, do not edit or run e2e yourself. `doc
 ## Tooling map
 
 - `CLAUDE.md` imports this file for Claude Code; Codex and Cursor read it directly. Keep it within 150 lines; details go
-  in `docs/`.
+  in `docs/`; `agentRules` is off in `next.config.ts` so `next dev` never writes here. Next.js docs: `node_modules/next/dist/docs/`.
 - `.cursor/rules/*.mdc` and `.claude/rules/*.md` attach the matching doc when a file under their glob is edited; their
   bodies only point at `docs/`.
 - Skills live in `.agents/skills/<name>/` (read natively by Codex and Cursor, symlinked from `.claude/skills/` for Claude
