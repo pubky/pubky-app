@@ -18,6 +18,7 @@ import { parseCompositeId } from '@/models/models.utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { DialogPayToUnlock } from '@/molecules/DialogPayToUnlock/DialogPayToUnlock';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
+import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { toast } from '@/molecules/Toaster/toast';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { LockContentParser } from '@/pipes/locks/locks.parser';
@@ -53,9 +54,13 @@ export function LockedPostContent({
 }: LockedPostContentProps) {
   const [isPayOpen, setIsPayOpen] = useState(false);
   const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
-  // Exact route match so embeds and thread parents on this page stay preview cards.
+  const isNestedPostPreview = useIsNestedPostPreview();
   const routeParams = matchPostRoute(usePathname());
-  const isFocusedPostPage = routeParams?.userId === authorId && routeParams?.postId === rawPostId;
+  // Only the post the route names opens in full: the same page renders embeds and thread parents
+  // through this component, and the reply/repost dialogs preview the focused post itself — which
+  // matches the route ids, so the nesting flag is what keeps those compact.
+  const isFocusedPostPage =
+    routeParams?.userId === authorId && routeParams?.postId === rawPostId && !isNestedPostPreview;
   const lockContent = LocksController.getLockContent(content);
   const { lockFile, priceSats } = useLockFile(lock);
   const { unlockedPost, applyUnlockedContent, media, isOwnLock, isResolvingReplica } = useUnlockedContent({

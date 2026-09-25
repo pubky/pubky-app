@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
+import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import type { LockFile, LockPostContent } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LockedPostContent } from './LockedPostContent';
@@ -375,6 +376,23 @@ describe('LockedPostContent', () => {
     pathname.value = '/post/pubkycreator/POST1';
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'full');
+  });
+
+  it('keeps the focused post compact inside a preview, as the reply and repost dialogs render it', async () => {
+    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
+      post: { content: JSON.stringify({ title: 'My Essay', body: 'the body' }), kind: 'long', attachments: null },
+      attachments: [],
+    });
+    pathname.value = '/post/pubkycreator/POST1';
+
+    render(
+      <PostPreviewNestingProvider>
+        <LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />
+      </PostPreviewNestingProvider>,
+    );
+
+    expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'preview');
   });
 
   it('keeps an embed or thread parent a preview on someone else post page', async () => {
