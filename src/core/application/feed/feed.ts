@@ -6,6 +6,7 @@ import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { FeedModel } from '@/models/feed/feed';
@@ -269,14 +270,34 @@ export class FeedApplication {
   /**
    * Persist feed locally and sync to homeserver
    * Extracted to avoid duplication between handlePut and handleUpdate
+   *
+   * Local-first with compensation: the row is written before the PUT, and a failed PUT
+   * rolls it back so a feed that never reached the homeserver leaves no tab behind. A
+   * create (no prior row for this ID) deletes the row; a same-ID update (name or icon
+   * only) restores the prior row so the local values match what the homeserver still has.
    */
   private static async commit({ userId, feedSchema, normalizedFeed }: PersistAndSyncParams): Promise<FeedModelSchema> {
+    const priorFeed = await LocalFeedService.read({ feedId: feedSchema.id });
     const persistedFeed = await LocalFeedService.createOrUpdate(feedSchema);
 
     const feedUrl = feedUriBuilder(userId, persistedFeed.id);
     const feedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
 
-    await HomeserverService.request({ method: HttpMethod.PUT, url: feedUrl, bodyJson: feedJson });
+    try {
+      await HomeserverService.request({ method: HttpMethod.PUT, url: feedUrl, bodyJson: feedJson });
+    } catch (error) {
+      try {
+        if (priorFeed) {
+          await LocalFeedService.createOrUpdate(priorFeed);
+        } else {
+          await LocalFeedService.delete({ feedId: persistedFeed.id });
+        }
+      } catch (rollbackError) {
+        if (!isAppError(rollbackError))
+          Logger.error('Failed to rollback local feed write', { feedId: persistedFeed.id, rollbackError });
+      }
+      throw error;
+    }
 
     return persistedFeed;
   }
