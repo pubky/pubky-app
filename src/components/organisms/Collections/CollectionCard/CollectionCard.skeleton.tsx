@@ -3,6 +3,7 @@
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
+import { POST_CONTENT_PENDING_PROPS } from '@/hooks/useCardsLayout/useCardsLayout.utils';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { cn } from '@/libs/utils/utils';
 
@@ -22,7 +23,7 @@ export function CollectionCardSkeleton({ className }: CollectionCardSkeletonProp
 
   return (
     <Container
-      data-post-content-pending
+      {...POST_CONTENT_PENDING_PROPS}
       overrideDefaults
       data-testid="collection-card-skeleton"
       className={cn('relative block w-full', className)}

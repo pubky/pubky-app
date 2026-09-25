@@ -4,6 +4,7 @@ import { Newspaper } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
+import { POST_CONTENT_PENDING_PROPS } from '@/hooks/useCardsLayout/useCardsLayout.utils';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { cn } from '@/libs/utils/utils';
@@ -58,7 +59,9 @@ export const PostArticle = ({
           className,
         )}
       >
-        {presentation === 'cards' && isCoverLoading && !localCoverImage && <span hidden data-post-content-pending />}
+        {presentation === 'cards' && isCoverLoading && !localCoverImage && (
+          <span hidden {...POST_CONTENT_PENDING_PROPS} />
+        )}
         <Container className="gap-y-1">
           <Container className="flex-row items-start gap-2">
             <Newspaper aria-hidden="true" className="mt-1 size-5 shrink-0" />

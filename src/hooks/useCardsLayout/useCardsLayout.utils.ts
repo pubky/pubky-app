@@ -1,3 +1,18 @@
+/**
+ * Marker attribute for card content that has not resolved yet.
+ *
+ * A card that contains an element carrying this attribute is not ready: `useCardsLayout` measures it
+ * but does not pin its column until the marker is gone, and it observes the insertion and removal of
+ * the marker to re-run the layout. Render it through `POST_CONTENT_PENDING_PROPS` and query it through
+ * `POST_CONTENT_PENDING_SELECTOR` so every call site shares one spelling.
+ */
+export const POST_CONTENT_PENDING_ATTR = 'data-post-content-pending' as const;
+
+export const POST_CONTENT_PENDING_SELECTOR = `[${POST_CONTENT_PENDING_ATTR}]`;
+
+/** Spread onto the marker element: `<span hidden {...POST_CONTENT_PENDING_PROPS} />`. */
+export const POST_CONTENT_PENDING_PROPS = { [POST_CONTENT_PENDING_ATTR]: true } as const;
+
 export interface CardsPlacement {
   columns: number;
   items: Array<{ id: string; column: number; top: number; pending?: boolean }>;
