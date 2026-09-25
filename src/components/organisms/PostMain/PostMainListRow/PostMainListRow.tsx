@@ -14,6 +14,7 @@ import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
+import { DEFAULT_LOCK_TITLE, parseLockTeaserContent } from '@/libs/post/lockTeaser';
 import { cn, formatPublicKey, isPostDeleted } from '@/libs/utils/utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostListMediaThumbnail } from '@/molecules/PostListMediaThumbnail/PostListMediaThumbnail';
@@ -35,10 +36,19 @@ const LIST_SNIPPET_MAX_CHARS = 120;
 
 const stopCardPropagation = (event: React.MouseEvent) => event.stopPropagation();
 
-function getListPostSnippet(content: string, kind: string): string {
+function getListPostSnippet(content: string, kind: string, lock: string | null): string {
   const trimmed = content.trim();
   if (!trimmed) {
     return '';
+  }
+
+  // A lock announcement's `kind` is the teaser's own, so only the `lock` url identifies the
+  // envelope. Title only, as `LockedPostCard` labels it — the teaser body belongs to the card.
+  if (lock) {
+    const teaser = parseLockTeaserContent(trimmed);
+    if (teaser) {
+      return teaser.lock_title.trim() || DEFAULT_LOCK_TITLE;
+    }
   }
 
   if (kind === 'long') {
@@ -87,7 +97,11 @@ export function PostMainListRow({
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { isRepost, isReply, originalPostId } = useRepostInfo(postId);
   const { postDetails: originalPostDetails } = usePostDetails(originalPostId);
-  const ownContentSnippet = getListPostSnippet(postDetails?.content ?? '', postDetails?.kind ?? '');
+  const ownContentSnippet = getListPostSnippet(
+    postDetails?.content ?? '',
+    postDetails?.kind ?? '',
+    postDetails?.lock ?? null,
+  );
   const hasOwnAttachments = (postDetails?.attachments?.length ?? 0) > 0;
   const shouldPreviewOriginal =
     !showFullContent &&
@@ -132,7 +146,11 @@ export function PostMainListRow({
   const indexedAt = new Date(displayPostDetails.indexed_at);
   const timeAgo = formatRelativeTime(indexedAt);
   const formattedPublicKey = formatPublicKey({ key: displayUserId });
-  const contentSnippet = getListPostSnippet(previewPostDetails.content, previewPostDetails.kind);
+  const contentSnippet = getListPostSnippet(
+    previewPostDetails.content,
+    previewPostDetails.kind,
+    previewPostDetails.lock ?? null,
+  );
   const snippet = showFullContent ? '' : truncateAtWordBoundary(contentSnippet, LIST_SNIPPET_MAX_CHARS);
   const profileUrl = getUserProfileUrl(displayUserId, currentUserPubky);
   const shouldShowDisplayHeader = shouldShowPostHeader || shouldUseOriginalPost;
