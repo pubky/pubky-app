@@ -1849,6 +1849,138 @@ describe('LocalStreamPostsService', () => {
     });
   });
 
+  describe('markHydratedUnreadPostsAsRead', () => {
+    const createDetails = async (id: string, content = `Content for ${id}`) => {
+      await PostDetailsModel.create({
+        id,
+        content,
+        kind: 'short',
+        indexed_at: BASE_TIMESTAMP + 1,
+        uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${id}`,
+        attachments: null,
+      });
+    };
+
+    it('merges the unread ids with cached details, keeping the rest unread and the tail cursor', async () => {
+      const ready = postId('ready');
+      const pending = postId('pending');
+      const existing = postId('existing');
+      await LocalStreamPostsService.upsert({ streamId, stream: [existing], tailCursor: BASE_TIMESTAMP });
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending, ready]);
+      await createDetails(ready);
+
+      await LocalStreamPostsService.markHydratedUnreadPostsAsRead({ streamId });
+
+      const postStream = await LocalStreamPostsService.read({ streamId });
+      expect(postStream?.stream).toEqual([ready, existing]);
+      expect(postStream?.tailCursor).toBe(BASE_TIMESTAMP);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending]);
+    });
+
+    it('acknowledges a tombstoned unread id without merging it', async () => {
+      const deleted = postId('deleted');
+      const pending = postId('pending');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [deleted, pending]);
+      await createDetails(deleted, DELETED);
+
+      await LocalStreamPostsService.markHydratedUnreadPostsAsRead({ streamId });
+
+      await verifyStream([existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending]);
+    });
+
+    it('leaves both rows untouched when no unread id has details yet', async () => {
+      const pending = postId('pending');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending]);
+      const upsertPostStream = vi.spyOn(PostStreamModel, 'upsert');
+      const upsertUnread = vi.spyOn(UnreadPostStreamModel, 'upsert');
+
+      await LocalStreamPostsService.markHydratedUnreadPostsAsRead({ streamId });
+
+      expect(upsertPostStream).not.toHaveBeenCalled();
+      expect(upsertUnread).not.toHaveBeenCalled();
+      await verifyStream([existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending]);
+    });
+
+    it('drops the unread row without seeding a main row when the cache is empty', async () => {
+      const ready = postId('ready');
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready]);
+      await createDetails(ready);
+
+      await LocalStreamPostsService.markHydratedUnreadPostsAsRead({ streamId });
+
+      await verifyStreamDoesNotExist();
+      expect(await UnreadPostStreamModel.findById(streamId as PostStreamId)).toBeNull();
+    });
+
+    it('rolls back the merge if acknowledgement fails', async () => {
+      const ready = postId('ready');
+      const pending = postId('pending');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready, pending]);
+      await createDetails(ready);
+      const error = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Could not acknowledge posts', {
+        service: ErrorService.Local,
+        operation: 'markHydratedUnreadPostsAsRead',
+      });
+      vi.spyOn(UnreadPostStreamModel, 'upsert').mockRejectedValueOnce(error);
+
+      await expect(LocalStreamPostsService.markHydratedUnreadPostsAsRead({ streamId })).rejects.toBe(error);
+
+      await verifyStream([existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([ready, pending]);
+    });
+
+    it('leaves the main row alone when there is no unread row', async () => {
+      const existing = postId('existing');
+      await createStream([existing]);
+      const upsertPostStream = vi.spyOn(PostStreamModel, 'upsert');
+
+      await LocalStreamPostsService.markHydratedUnreadPostsAsRead({ streamId });
+
+      expect(upsertPostStream).not.toHaveBeenCalled();
+      await verifyStream([existing]);
+    });
+
+    it('serializes a concurrent poll with the merge so a new arrival is neither lost nor acknowledged', async () => {
+      const ready = postId('ready');
+      const pending = postId('pending');
+      const later = postId('later');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready, pending]);
+      await createDetails(ready);
+
+      await Promise.all([
+        LocalStreamPostsService.persistUnreadNewStreamChunk({ streamId, stream: [later] }),
+        LocalStreamPostsService.markHydratedUnreadPostsAsRead({ streamId }),
+      ]);
+
+      await verifyStream([ready, existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([later, pending]);
+    });
+
+    it('classifies inside the transaction so an id hydrated meanwhile ends up in exactly one row', async () => {
+      const pending = postId('pending');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending]);
+
+      await Promise.all([createDetails(pending), LocalStreamPostsService.markHydratedUnreadPostsAsRead({ streamId })]);
+
+      const mainHolds = (await LocalStreamPostsService.read({ streamId }))?.stream.includes(pending) ?? false;
+      const unreadHolds =
+        (await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream.includes(pending) ?? false;
+      expect([mainHolds, unreadHolds].filter(Boolean)).toHaveLength(1);
+    });
+  });
+
   describe('clearUnreadStream', () => {
     it('acknowledges only the selected IDs and preserves later arrivals', async () => {
       const selectedId = postId('selected');

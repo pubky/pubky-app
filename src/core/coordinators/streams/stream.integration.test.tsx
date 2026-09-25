@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { APP_ROUTES } from '@/app/routes';
 import { PostStreamApplication } from '@/application/stream/posts/post';
+import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
@@ -302,4 +303,50 @@ it('waits for unread hydration when no cursor is cached and re-reads rows replac
 
   expect(await head).toBe(fresh.details.indexed_at);
   expect(await StreamPostsController.getUnreadStream({ streamId })).toBeNull();
+});
+
+it('keeps polling after an initial load when an unread id still has no details (#2608)', async () => {
+  const main = nexusPost('main', Date.now());
+  const mainId = buildCompositeId({ pubky: 'author', id: main.details.id });
+  const pendingId = buildCompositeId({ pubky: 'author', id: 'unavailable' });
+  await PostDetailsModel.create({ ...main.details, id: mainId });
+  await PostStreamModel.upsert(streamId as PostStreamId, [mainId]);
+  await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pendingId]);
+  const hydrate = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus');
+  const fetchByIds = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
+
+  await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+
+  // The id Nexus listed but never served stays unread, where each poll retries it;
+  // merged to the main head it would have no timestamp and polling would stop.
+  expect((await StreamPostsController.getLocalStream({ streamId }))?.stream).toEqual([mainId]);
+  expect((await StreamPostsController.getUnreadStream({ streamId }))?.stream).toEqual([pendingId]);
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(main.details.indexed_at);
+  await hydrate.mock.results[0].value;
+  expect(fetchByIds).toHaveBeenCalledWith(expect.objectContaining({ post_ids: [pendingId] }));
+
+  await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+
+  expect((await StreamPostsController.getUnreadStream({ streamId }))?.stream).toEqual([pendingId]);
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(main.details.indexed_at);
+  await waitFor(() => expect(hydrate).toHaveBeenCalledTimes(2));
+  await hydrate.mock.results[1].value;
+  expect(fetchByIds).toHaveBeenCalledTimes(2);
+});
+
+it('rebuilds a main row whose head has no details on the next initial load, so polling can resume (#2608)', async () => {
+  const main = nexusPost('main', Date.now());
+  const mainId = buildCompositeId({ pubky: 'author', id: main.details.id });
+  const unavailableId = buildCompositeId({ pubky: 'author', id: 'unavailable' });
+  await PostDetailsModel.create({ ...main.details, id: mainId });
+  // The row an earlier build left behind: its whole-row merge put an unserved id at the head.
+  await PostStreamModel.upsert(streamId as PostStreamId, [unavailableId, mainId]);
+  vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
+
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(SKIP_FETCH_NEW_POSTS);
+
+  await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+
+  expect(await StreamPostsController.getLocalStream({ streamId })).toBeNull();
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(FORCE_FETCH_NEW_POSTS);
 });

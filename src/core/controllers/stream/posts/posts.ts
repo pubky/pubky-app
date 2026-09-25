@@ -220,9 +220,12 @@ export class StreamPostsController {
    *
    * This method should be called before fetching the initial stream slice to ensure
    * the stream state is consistent. It performs the following operations:
-   * 1. Clears stale cache if the stream head is older than configured max age
-   * 2. Merges any existing unread posts into the main stream
-   * 3. Clears the unread stream
+   * 1. Clears the cache if the main head is older than the configured max age, or has no
+   *    details: such a head can be neither aged nor polled from (#2608)
+   * 2. Merges the unread posts whose details are cached into the main stream
+   * 3. Clears those posts from the unread stream (ids still without details stay unread);
+   *    with no cached main row nothing is merged and the whole unread row is dropped, so
+   *    the first page comes from Nexus
    *
    * This prevents race conditions where the StreamCoordinator might fetch posts
    * that are already in the main stream (due to stale unread stream head).

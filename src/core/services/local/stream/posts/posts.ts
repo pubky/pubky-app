@@ -235,6 +235,34 @@ export class LocalStreamPostsService {
   }
 
   /**
+   * Merge and acknowledge the unread ids whose details are cached, classifying them inside
+   * the transaction so an id hydrated meanwhile is merged rather than acknowledged unread.
+   * Ids still without details stay unread for the poll-time hydration to retry: merged to
+   * the main head they would resolve no timestamp and polling would stop (#2608). Without
+   * a main row nothing is merged and the unread row is dropped, so the first page comes
+   * from Nexus with a real cursor instead of a cursor-less row seeded from the unread ids.
+   */
+  static async markHydratedUnreadPostsAsRead({ streamId }: TStreamIdParams): Promise<void> {
+    await db.transaction(
+      'rw',
+      [PostStreamModel.table, UnreadPostStreamModel.table, PostDetailsModel.table],
+      async () => {
+        const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
+        if (!unreadPostStream) return;
+        if (!(await PostStreamModel.findById(streamId))) {
+          await this.clearUnreadStream({ streamId });
+          return;
+        }
+        const details = await PostDetailsModel.findByIdsPreserveOrder(unreadPostStream.stream);
+        await this.markUnreadPostsAsRead({
+          streamId,
+          postIds: unreadPostStream.stream.filter((_postId, index) => details[index] !== undefined),
+        });
+      },
+    );
+  }
+
+  /**
    * Acknowledge selected unread IDs, or clear the entire stream when omitted.
    * The transaction preserves other IDs that arrived while the UI was loading.
    * @param streamId - The stream ID to clear the unread stream for

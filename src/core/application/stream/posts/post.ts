@@ -315,9 +315,12 @@ export class PostStreamApplication {
    *
    * This method should be called before fetching the initial stream slice to ensure
    * the stream state is consistent. It performs the following operations:
-   * 1. Clears stale cache if the stream head is older than configured max age
-   * 2. Merges any existing unread posts into the main stream
-   * 3. Clears the unread stream
+   * 1. Clears the cache if the main head is older than the configured max age, or has no
+   *    details: such a head can be neither aged nor polled from (#2608)
+   * 2. Merges the unread posts whose details are cached into the main stream
+   * 3. Clears those posts from the unread stream (ids still without details stay unread);
+   *    with no cached main row nothing is merged and the whole unread row is dropped, so
+   *    the first page comes from Nexus
    *
    * This prevents race conditions where the StreamCoordinator might fetch posts
    * that are already in the main stream (due to stale unread stream head).
@@ -346,9 +349,11 @@ export class PostStreamApplication {
 
     const now = Date.now();
 
-    // 1. Check if main stream cache is stale
+    // 1. Check if main stream cache is stale. A head without details resolves no timestamp,
+    // so the age check would keep the row forever while no poll can start from it (#2608):
+    // rebuild it from Nexus like a stale one.
     const mainStreamHead = await this.getMainStreamHeadTimestamp({ streamId });
-    if (this.isTimestampStale(mainStreamHead, now)) {
+    if (mainStreamHead === SKIP_FETCH_NEW_POSTS || this.isTimestampStale(mainStreamHead, now)) {
       // Main cache is stale - clear both main stream and unread stream (both are outdated)
       Logger.debug('[PostStreamApplication] Main stream cache is stale, clearing both streams', {
         streamId,
@@ -377,9 +382,9 @@ export class PostStreamApplication {
       return;
     }
 
-    // 3. Both streams are fresh - merge unread posts into main stream and clear unread
-    await LocalStreamPostsService.mergeUnreadStreamWithPostStream({ streamId });
-    await LocalStreamPostsService.clearUnreadStream({ streamId });
+    // 3. Both streams are fresh - merge and acknowledge the unread posts whose details are
+    // cached; the rest stay unread for the poll-time retry (#2608, see the service method).
+    await LocalStreamPostsService.markHydratedUnreadPostsAsRead({ streamId });
   }
 
   /**
