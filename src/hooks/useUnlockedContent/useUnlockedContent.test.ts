@@ -39,7 +39,7 @@ describe('useUnlockedContent (replica resolution)', () => {
       }),
     );
 
-    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, authorId: 'other' }));
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1' }));
     expect(result.current.isResolvingReplica).toBe(true);
 
     settle(null);
@@ -49,14 +49,14 @@ describe('useUnlockedContent (replica resolution)', () => {
   it('stops resolving when the replica read fails', async () => {
     vi.mocked(LocksController.fetchReplicatedContent).mockRejectedValue(new Error('offline'));
 
-    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, authorId: 'other' }));
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1' }));
 
     await waitFor(() => expect(result.current.isResolvingReplica).toBe(false));
   });
 
   // An own post has no replica to wait for, so nothing should be gated on one.
   it('is not resolving for the reader own post', async () => {
-    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, authorId: 'me' }));
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'me:POST1' }));
 
     await waitFor(() => expect(result.current.isResolvingReplica).toBe(false));
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
@@ -78,7 +78,7 @@ describe('useUnlockedContent', () => {
     authState.session = null;
     const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
 
-    const { rerender } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'author' }));
+    const { rerender } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1' }));
 
     await Promise.resolve();
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
@@ -90,7 +90,7 @@ describe('useUnlockedContent', () => {
   });
 
   it('reads nothing without a lock url', async () => {
-    renderHook(() => useUnlockedContent({ lock: null, lockFile: null, authorId: 'author' }));
+    renderHook(() => useUnlockedContent({ lock: null, lockFile: null, postId: 'author:POST1' }));
 
     await Promise.resolve();
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
@@ -104,7 +104,7 @@ describe('useUnlockedContent', () => {
       useUnlockedContent({
         lock: LOCK_URL,
         lockFile: asOpaque<LockFile>({ creator: 'pubkyother' }),
-        authorId: 'author',
+        postId: 'author:POST1',
       }),
     );
 
@@ -117,7 +117,7 @@ describe('useUnlockedContent', () => {
     const lockFile = asOpaque<LockFile>({ creator: 'pubkyme' }); // stripPubkyPrefix → 'me' === currentUserPubky
     vi.mocked(LocksController.fetchOwnContent).mockResolvedValue(content);
 
-    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'me' }));
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'me:POST1' }));
 
     await waitFor(() => expect(result.current.unlockedPost).toEqual(content.post));
     expect(result.current.isOwnLock).toBe(true);
@@ -129,7 +129,7 @@ describe('useUnlockedContent', () => {
     const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
     vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue(content);
 
-    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'author' }));
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1' }));
 
     await waitFor(() => expect(result.current.unlockedPost).toEqual(content.post));
     expect(result.current.isOwnLock).toBe(false);
@@ -141,7 +141,7 @@ describe('useUnlockedContent', () => {
     // owner ('other') !== me, but I'm the author → phase-2 blocker; leave it locked.
     const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
 
-    renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'me' }));
+    renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'me:POST1' }));
 
     await Promise.resolve();
     expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
@@ -153,7 +153,7 @@ describe('useUnlockedContent', () => {
     // read may run — reading my original here would render my private content under their teaser.
     const lockFile = asOpaque<LockFile>({ creator: 'pubkyme' });
 
-    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'attacker' }));
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'attacker:POST1' }));
 
     await Promise.resolve();
     expect(result.current.isOwnLock).toBe(false);
@@ -163,7 +163,7 @@ describe('useUnlockedContent', () => {
   it('checks the replicated copy exactly once, not again when the lock file arrives', async () => {
     const { rerender } = renderHook(
       ({ lockFile }: { lockFile: LockFile | null }) =>
-        useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'author' }),
+        useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1' }),
       { initialProps: { lockFile: null as LockFile | null } },
     );
 
@@ -177,7 +177,8 @@ describe('useUnlockedContent', () => {
 
   it('never checks for a replicated copy of my own post (unlocking only happens on other people’s posts)', async () => {
     const { rerender } = renderHook(
-      ({ lockFile }: { lockFile: LockFile | null }) => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'me' }),
+      ({ lockFile }: { lockFile: LockFile | null }) =>
+        useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'me:POST1' }),
       { initialProps: { lockFile: null as LockFile | null } },
     );
 
@@ -193,7 +194,7 @@ describe('useUnlockedContent', () => {
 
   it('applyUnlockedContent swaps in the content and replicates it into the reader priv', async () => {
     const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
-    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'author' }));
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1' }));
 
     act(() => result.current.applyUnlockedContent(content));
 
@@ -202,6 +203,7 @@ describe('useUnlockedContent', () => {
       lockUrl: LOCK_URL,
       readerPubky: 'me',
       content,
+      postId: 'author:POST1',
     });
   });
 });

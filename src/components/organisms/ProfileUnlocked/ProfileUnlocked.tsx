@@ -5,7 +5,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useUnlockedListContext } from '@/providers/UnlockedListProvider/UnlockedListProvider';
 import { ProfileUnlockedSkeleton } from './ProfileUnlocked.skeleton';
-import { ProfileUnlockedCard } from './ProfileUnlockedCard';
+import { ProfileUnlockedItem } from './ProfileUnlockedItem';
 
 /**
  * The signed-in user's unlocked content, newest unlock first. Reads the list from
@@ -36,7 +36,7 @@ export function ProfileUnlocked() {
       </Container>
 
       {items.map((item) => (
-        <ProfileUnlockedCard key={item.lockId} post={item.post} />
+        <ProfileUnlockedItem key={item.lockId} post={item.post} announcementPostId={item.announcementPostId} />
       ))}
     </Container>
   );

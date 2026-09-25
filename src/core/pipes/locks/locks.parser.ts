@@ -235,6 +235,7 @@ export class GuardedContentParser {
     readerPubky: string,
     lockId: string,
     attachments: Array<{ id: string; contentType: string }>,
+    announcementUri: string,
   ): string {
     const rewritten = attachments.map(({ id, contentType }) => ({
       url: this.unlockedUrl(readerPubky, lockId, id),
@@ -244,6 +245,7 @@ export class GuardedContentParser {
       content: post.content,
       kind: post.kind,
       attachments: rewritten.length > 0 ? rewritten : null,
+      announcement: announcementUri,
     });
   }
 

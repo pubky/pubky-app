@@ -4,6 +4,8 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isNotFound, isValidationError, toAppError } from '@/libs/error/error.utils';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocksService } from '@/services/locks/locks';
@@ -308,6 +310,7 @@ export class LocksApplication {
     lockUrl,
     readerPubky,
     content,
+    announcementUri,
   }: TReplicateUnlockedContentParams): Promise<void> {
     const lockId = this.requireLockId(lockUrl, 'replicateUnlockedContent');
 
@@ -321,7 +324,7 @@ export class LocksApplication {
     await HomeserverService.putBlob({
       url: GuardedContentParser.unlockedPostUrl(readerPubky, lockId),
       blob: new TextEncoder().encode(
-        GuardedContentParser.buildUnlockedPost(content.post, readerPubky, lockId, content.attachments),
+        GuardedContentParser.buildUnlockedPost(content.post, readerPubky, lockId, content.attachments, announcementUri),
       ),
     });
   }
@@ -344,7 +347,15 @@ export class LocksApplication {
       GuardedContentParser.completedLockIds(files).map(async (lockId) => {
         try {
           const replicatedPost = await this.readReplicatedMarker(readerPubky, lockId, 'fetchUnlockedList');
-          return replicatedPost ? { lockId, ...replicatedPost } : null;
+          if (!replicatedPost) return null;
+          // A marker from before the announcement was recorded, or an unparseable URI, still lists —
+          // it just renders without its announcement post.
+          // Spread rather than an `undefined` value: the key stays absent, which is what the optional
+          // field and the narrowing filter below both expect.
+          const announcementPostId = replicatedPost.post.announcement
+            ? buildCompositeIdFromPubkyUri({ uri: replicatedPost.post.announcement, domain: CompositeIdDomain.POSTS })
+            : null;
+          return { lockId, ...replicatedPost, ...(announcementPostId ? { announcementPostId } : {}) };
         } catch (error) {
           // Validation = corrupt marker, already reported — drop this item only.
           // So user will see validated locks but not invalid ones.

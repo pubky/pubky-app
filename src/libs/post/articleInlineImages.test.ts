@@ -4,6 +4,7 @@ import {
   collectAttachmentRefIndexes,
   countInlineImageUris,
   deserializeArticleBody,
+  hasAuthorUploadUri,
   isAttachmentRefScheme,
   isAuthorFileUri,
   parseAttachmentRef,
@@ -356,6 +357,50 @@ describe('deserializeArticleBody', () => {
     const result = deserialize(body, [fileUri('a')]);
 
     expect(result).toEqual({ body, warnings: [] });
+  });
+});
+
+describe('hasAuthorUploadUri', () => {
+  it('finds an author file URI in an image destination', () => {
+    expect(hasAuthorUploadUri(`![a](${fileUri('a')})`, AUTHOR)).toBe(true);
+  });
+
+  it('finds one hidden in a reference-style definition', () => {
+    expect(hasAuthorUploadUri(`![a][ref]\n\n[ref]: ${fileUri('a')}`, AUTHOR)).toBe(true);
+  });
+
+  it('finds one hidden in raw HTML, whatever the case of the scheme', () => {
+    const upper = fileUri('a').replace('pubky://', 'PUBKY://');
+
+    expect(hasAuthorUploadUri(`<img src="${upper}" />`, AUTHOR)).toBe(true);
+  });
+
+  it('ignores external images, other owners, and code fences', () => {
+    const body = [
+      '![ext](https://example.com/pic.png)',
+      '',
+      `![other](${fileUri('f', OTHER)})`,
+      '',
+      '```',
+      `![fenced](${fileUri('fenced')})`,
+      '```',
+    ].join('\n');
+
+    expect(hasAuthorUploadUri(body, AUTHOR)).toBe(false);
+  });
+
+  it('finds an author blob URI, which also lives in public storage', () => {
+    const blobUri = `pubky://${AUTHOR}/pub/pubky.app/blobs/b1`;
+
+    expect(hasAuthorUploadUri(`![a](${blobUri})`, AUTHOR)).toBe(true);
+  });
+
+  it('ignores a browser object URL, which cannot leak', () => {
+    expect(hasAuthorUploadUri('![a](blob:http://localhost/abc)', AUTHOR)).toBe(false);
+  });
+
+  it('returns false for an empty body', () => {
+    expect(hasAuthorUploadUri('', AUTHOR)).toBe(false);
   });
 });
 

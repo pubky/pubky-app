@@ -18,19 +18,31 @@ interface PostArticleProps {
   attachments: PostDetailsModel['attachments'];
   localAttachments: AttachmentConstructed[] | undefined;
   className?: string;
+  /** 'full' reads the whole article, as the post page does; 'preview' clamps it to a card. */
+  variant?: 'preview' | 'full';
 }
 
-export const PostArticle = ({ content, attachments, localAttachments, className }: PostArticleProps) => {
+export const PostArticle = ({
+  content,
+  attachments,
+  localAttachments,
+  className,
+  variant = 'preview',
+}: PostArticleProps) => {
+  const isFull = variant === 'full';
   const { title, body, coverImage, hasCover } = usePostArticle({
     content,
     attachments,
     coverImageVariant: FileVariant.FEED,
+    localAttachmentCount: localAttachments?.length,
   });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
   // Local entries are index-aligned with attachments; slot 0 is the cover
   // only when the slot-0 rule says so (otherwise it's an inline image).
+  // TODO:[Locks] #2660 — the other half of the cover rule: the hook says a slot 0 exists, this says
+  // whether it is an image, so a video in slot 0 reports a cover that never renders.
   const localCoverImage =
     hasCover && localAttachments?.[0]?.type.startsWith('image')
       ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }
@@ -40,7 +52,16 @@ export const PostArticle = ({ content, attachments, localAttachments, className 
 
   return (
     <>
-      <Container className={cn('justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!', className)}>
+      <Container className={cn('justify-between gap-6', !isFull && 'lg:flex-row @max-xl/grid:flex-col!', className)}>
+        {/* A full read puts the cover above the title, the way the article page does; the preview
+            card keeps it beside the text. */}
+        {isFull && finalCoverImage && (
+          <Image
+            src={finalCoverImage.src}
+            alt={finalCoverImage.alt}
+            className="mb-2 aspect-video w-full rounded-md object-cover object-center"
+          />
+        )}
         <Container className="gap-y-1">
           <Container className="flex-row items-start gap-2">
             <Newspaper aria-hidden="true" className="mt-1 size-5 shrink-0" />
@@ -49,10 +70,16 @@ export const PostArticle = ({ content, attachments, localAttachments, className 
             </Typography>
           </Container>
 
-          <PostText content={body} isArticle onLinkClick={handleLinkClick} className="line-clamp-3" />
+          <PostText
+            content={body}
+            isArticle
+            fullArticle={isFull}
+            onLinkClick={handleLinkClick}
+            className={isFull ? undefined : 'line-clamp-3'}
+          />
         </Container>
 
-        {finalCoverImage && (
+        {!isFull && finalCoverImage && (
           <Image
             src={finalCoverImage.src}
             alt={finalCoverImage.alt}

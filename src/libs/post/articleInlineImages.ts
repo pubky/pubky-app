@@ -382,6 +382,31 @@ export function collectAttachmentRefIndexes(body: string): Set<number> {
 }
 
 /**
+ * True when the body references an upload the author owns on their **public** homeserver — a file or a
+ * blob URI — in any of the three places a body can hide one: an image destination, a reference-style
+ * definition, or raw HTML. A `blob:` object URL is deliberately out of scope: it points at nothing on a
+ * server, so it cannot leak.
+ *
+ * TODO:[Locks] #2655 — its only caller is the temporary guard that refuses to lock an article whose
+ * body images would stay publicly readable; remove this with that guard.
+ */
+export function hasAuthorUploadUri(body: string, authorPubky: string): boolean {
+  // Cheap pre-check, same rule as `collectAttachmentRefIndexes`: callers run this per render on bodies
+  // up to 50k chars, and any entity reference can decode into the scheme, so '&' forfeits the shortcut.
+  if (!/pubky:/i.test(body) && !body.includes('&')) return false;
+
+  const isAuthorUpload = (uri: string | null | undefined) =>
+    isAuthorFileUri(uri, authorPubky) || (!!uri && isAuthorBlobUri(uri, authorPubky));
+
+  const { images, definitions, htmlNodes } = collectNodes(parseBody(body));
+
+  if (images.some((image) => isAuthorUpload(image.url))) return true;
+  if (definitions.some((definition) => isAuthorUpload(definition.url))) return true;
+
+  return htmlNodes.some((htmlNode) => (htmlNode.value.match(PUBKY_URI_PATTERN) ?? []).some(isAuthorUpload));
+}
+
+/**
  * Slot-0 cover rule: when the published body references `attachment:0`,
  * slot 0 is an inline image and the article has no cover.
  */

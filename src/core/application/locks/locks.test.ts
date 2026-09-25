@@ -659,6 +659,7 @@ describe('LocksApplication.fetchUnlockedContent', () => {
 describe('LocksApplication.replicateUnlockedContent', () => {
   const READER = 'pubkyreader123';
   const LOCK_URL = 'pubky://pubkycreator123/pub/locks.app/LOCK1.json';
+  const ANNOUNCEMENT_URI = 'pubky://pubkycreator123/pub/pubky.app/posts/POST1';
   const content: TUnlockedContent = {
     post: { content: 'secret body', kind: 'image', attachments: ['pubky://b/priv/locks.app/content/img1'] },
     attachments: [
@@ -673,7 +674,12 @@ describe('LocksApplication.replicateUnlockedContent', () => {
   });
 
   it('uploads every attachment before post.json, so the marker only lands once they are stored', async () => {
-    await LocksApplication.replicateUnlockedContent({ lockUrl: LOCK_URL, readerPubky: READER, content });
+    await LocksApplication.replicateUnlockedContent({
+      lockUrl: LOCK_URL,
+      readerPubky: READER,
+      content,
+      announcementUri: ANNOUNCEMENT_URI,
+    });
 
     const urls = mocks.putBlob.mock.calls.map(([params]) => params.url);
     expect(urls).toEqual([
@@ -684,7 +690,12 @@ describe('LocksApplication.replicateUnlockedContent', () => {
   });
 
   it('repoints attachments in post.json at the reader copy with inline content types', async () => {
-    await LocksApplication.replicateUnlockedContent({ lockUrl: LOCK_URL, readerPubky: READER, content });
+    await LocksApplication.replicateUnlockedContent({
+      lockUrl: LOCK_URL,
+      readerPubky: READER,
+      content,
+      announcementUri: ANNOUNCEMENT_URI,
+    });
 
     const postCall = mocks.putBlob.mock.calls.at(-1)?.[0];
     expect(JSON.parse(new TextDecoder().decode(postCall.blob))).toEqual({
@@ -694,6 +705,7 @@ describe('LocksApplication.replicateUnlockedContent', () => {
         { url: `pubky://${READER}/priv/social/unlocked/LOCK1/img1`, content_type: 'image/png' },
         { url: `pubky://${READER}/priv/social/unlocked/LOCK1/img2`, content_type: 'image/png' },
       ],
+      announcement: ANNOUNCEMENT_URI,
     });
   });
 
@@ -703,6 +715,7 @@ describe('LocksApplication.replicateUnlockedContent', () => {
         lockUrl: 'pubky://creator/pub/locks.app/',
         readerPubky: READER,
         content,
+        announcementUri: ANNOUNCEMENT_URI,
       }),
     ).rejects.toThrow();
     expect(mocks.putBlob).not.toHaveBeenCalled();
@@ -792,8 +805,8 @@ describe('LocksApplication.fetchReplicatedContent', () => {
 describe('LocksApplication.fetchUnlockedList', () => {
   const READER = 'pubkyreader123';
   const markerUrl = (lockId: string) => `pubky://${READER}/priv/social/unlocked/${lockId}/post.json`;
-  const marker = (content: string, modifiedAt: number | null) => ({
-    bytes: new TextEncoder().encode(JSON.stringify({ content, kind: 'short', attachments: null })),
+  const marker = (content: string, modifiedAt: number | null, announcement?: string) => ({
+    bytes: new TextEncoder().encode(JSON.stringify({ content, kind: 'short', attachments: null, announcement })),
     modifiedAt,
   });
 
@@ -821,6 +834,24 @@ describe('LocksApplication.fetchUnlockedList', () => {
       ['NEW', 900],
       ['OLD', 100],
     ]);
+  });
+
+  it('exposes the announcement post as a composite id', async () => {
+    mocks.listAll.mockResolvedValueOnce([markerUrl('LOCK1')]);
+    mocks.getBytesIfExists.mockResolvedValueOnce(marker('a', 1, 'pubky://author1/pub/pubky.app/posts/POST1'));
+
+    const result = await LocksApplication.fetchUnlockedList({ readerPubky: READER });
+
+    expect(result[0].announcementPostId).toBe('author1:POST1');
+  });
+
+  it('lists a marker with no announcement, or an unparseable one, without a post id', async () => {
+    mocks.listAll.mockResolvedValueOnce([markerUrl('OLD'), markerUrl('BROKEN')]);
+    mocks.getBytesIfExists.mockResolvedValueOnce(marker('a', 2)).mockResolvedValueOnce(marker('b', 1, 'not a uri'));
+
+    const result = await LocksApplication.fetchUnlockedList({ readerPubky: READER });
+
+    expect(result.map((item) => item.announcementPostId)).toEqual([undefined, undefined]);
   });
 
   it('sorts a marker with no Last-Modified header oldest instead of dropping it', async () => {

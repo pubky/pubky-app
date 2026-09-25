@@ -52,7 +52,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
       <LockedPostContent
         content={postDetails.content}
         lock={postDetails.lock}
-        authorId={parseCompositeId(postId).pubky}
+        postId={postId}
         attachments={postDetails.attachments}
         localAttachments={localAttachments}
         className={className}

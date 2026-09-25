@@ -68,17 +68,20 @@ vi.mock('@/molecules/PostText/PostText', () => {
     PostText: ({
       content,
       isArticle,
+      fullArticle,
       onLinkClick,
       className,
     }: {
       content: string;
       isArticle?: boolean;
+      fullArticle?: boolean;
       onLinkClick?: (url: string, e: React.MouseEvent) => void;
       className?: string;
     }) => (
       <div
         data-testid="post-text"
         data-is-article={isArticle}
+        data-full-article={String(Boolean(fullArticle))}
         data-has-link-click={!!onLinkClick}
         className={className}
       >
@@ -352,6 +355,35 @@ describe('PostArticle', () => {
     });
   });
 
+  describe('Full article', () => {
+    it('drops the preview clamp and renders the article typography', () => {
+      render(<PostArticle {...defaultProps} variant="full" />);
+
+      const text = screen.getByTestId('post-text');
+      expect(text).toHaveAttribute('data-full-article', 'true');
+      expect(text).not.toHaveClass('line-clamp-3');
+    });
+
+    it('keeps the three-line preview by default', () => {
+      render(<PostArticle {...defaultProps} />);
+
+      const text = screen.getByTestId('post-text');
+      expect(text).toHaveAttribute('data-full-article', 'false');
+      expect(text).toHaveClass('line-clamp-3');
+    });
+
+    it('counts local attachments so a cover with no Nexus copy still shows', () => {
+      render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
+
+      expect(mockUsePostArticle).toHaveBeenCalledWith({
+        content: defaultProps.content,
+        attachments: defaultProps.attachments,
+        coverImageVariant: FileVariant.FEED,
+        localAttachmentCount: 1,
+      });
+    });
+  });
+
   describe('Snapshots', () => {
     it('matches snapshot with cover image', () => {
       const { container } = render(<PostArticle {...defaultProps} />);
@@ -387,6 +419,12 @@ describe('PostArticle', () => {
 
     it('matches snapshot with local cover image', () => {
       const { container } = render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
+
+      expect(container).toMatchSnapshot();
+    });
+
+    it('matches snapshot as a full article', () => {
+      const { container } = render(<PostArticle {...defaultProps} variant="full" />);
 
       expect(container).toMatchSnapshot();
     });

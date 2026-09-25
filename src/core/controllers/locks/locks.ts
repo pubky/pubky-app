@@ -1,3 +1,4 @@
+import { postUriBuilder } from 'pubky-app-specs';
 import { LocksApplication } from '@/application/locks/locks';
 import type {
   TCreateLockContentParams,
@@ -14,6 +15,7 @@ import type {
 } from '@/application/locks/locks.types';
 import { isAppError, isAuthError } from '@/libs/error/error.utils';
 import { sleep } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import { LockContentParser, LockFileParser } from '@/pipes/locks/locks.parser';
 import type {
   LockPostContent,
@@ -218,8 +220,15 @@ export class LocksController {
   }
 
   /** Copies unlocked content into the reader's own `/priv`, so later reads need no credential. */
-  static replicateUnlockedContent(params: TReplicateUnlockedContentParams): Promise<void> {
-    return LocksApplication.replicateUnlockedContent(params);
+  static replicateUnlockedContent({
+    postId,
+    ...params
+  }: Omit<TReplicateUnlockedContentParams, 'announcementUri'> & { postId: string }): Promise<void> {
+    const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
+    return LocksApplication.replicateUnlockedContent({
+      ...params,
+      announcementUri: postUriBuilder(authorId, rawPostId),
+    });
   }
 
   /** Loads already-unlocked content from the reader's `/priv`, or null if this lock isn't unlocked yet. */

@@ -7,6 +7,7 @@ import { Image } from '@/atoms/Image/Image';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
 import { formatSats } from '@/libs/utils/formatSats';
 import { cn } from '@/libs/utils/utils';
+import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 
 interface LockedPostCardProps {
   /** Creator-typed lock title for the reader/preview view. Ignored when `editableTitle` is set. */
@@ -53,6 +54,7 @@ export function LockedPostCard({
   const isDisabled = disabled ?? !onUnlock;
   const priceLabel = priceSats ? formatSats(priceSats) : HIDDEN_REQUIREMENT_MASK;
 
+  const isNested = useIsNestedPostPreview();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const lockInfoRef = useRef<HTMLDivElement>(null);
   const slideTimer = useRef<number | null>(null);
@@ -94,7 +96,13 @@ export function LockedPostCard({
     <div
       // Don't redirect to the post detail on card clicks — only Unlock acts.
       onClick={(event) => event.stopPropagation()}
-      className={cn('flex cursor-default items-start justify-between gap-4 rounded-md bg-muted p-6', className)}
+      // A quote-repost preview is itself `bg-muted`, so the card has to step down a shade there or the
+      // two read as one block. The price pill steps down with it to keep its own contrast.
+      className={cn(
+        'flex cursor-default items-start justify-between gap-4 rounded-md p-6',
+        isNested ? 'bg-card' : 'bg-muted',
+        className,
+      )}
       data-testid="locked-post-card"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-4">
@@ -140,7 +148,8 @@ export function LockedPostCard({
 
         <div
           className={cn(
-            'relative flex w-fit items-center gap-1 rounded-full bg-card p-1',
+            'relative flex w-fit items-center gap-1 rounded-full p-1',
+            isNested ? 'bg-background' : 'bg-card',
             isDisabled && 'cursor-not-allowed opacity-50',
           )}
         >
