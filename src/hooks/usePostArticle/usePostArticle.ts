@@ -13,6 +13,12 @@ interface CoverImage {
   src: string;
   /** Set when a desktop variant was requested: the same file at its larger size. */
   desktopSrc?: string;
+  /**
+   * Set alongside `desktopSrc`: the size to use when `desktopSrc` fails to load. The article
+   * hero swaps the desktop `<source>` to it on the cover's `error` event, so a desktop variant
+   * Nexus cannot serve yet (`large` before its deploy) degrades to a usable image.
+   */
+  desktopFallbackSrc?: string;
   alt: string;
 }
 
@@ -25,6 +31,11 @@ interface UsePostArticleParams {
    * Left unset by feed-sized surfaces, which never want the original upload.
    */
   coverImageDesktopVariant?: FileVariant;
+  /**
+   * Size to swap to when {@link coverImageDesktopVariant} fails to load. Left unset by surfaces
+   * that render a variant they know Nexus serves.
+   */
+  coverImageDesktopFallbackVariant?: FileVariant;
 }
 
 interface UsePostArticleResult {
@@ -65,6 +76,7 @@ export function usePostArticle({
   attachments,
   coverImageVariant,
   coverImageDesktopVariant,
+  coverImageDesktopFallbackVariant,
 }: UsePostArticleParams): UsePostArticleResult {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -106,6 +118,9 @@ export function usePostArticle({
           src: FileController.getFileUrl({ fileId: coverFile.id, variant: coverImageVariant }),
           desktopSrc: coverImageDesktopVariant
             ? FileController.getFileUrl({ fileId: coverFile.id, variant: coverImageDesktopVariant })
+            : undefined,
+          desktopFallbackSrc: coverImageDesktopFallbackVariant
+            ? FileController.getFileUrl({ fileId: coverFile.id, variant: coverImageDesktopFallbackVariant })
             : undefined,
           alt: coverFile.name,
         }

@@ -8,6 +8,7 @@ export enum FileVariant {
   SMALL = 'small',
   FEED = 'feed',
   MAIN = 'main',
+  LARGE = 'large',
 }
 
 export type TFileParams = {

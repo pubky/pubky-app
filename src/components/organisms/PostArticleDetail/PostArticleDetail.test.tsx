@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import {
+  POST_COVER_DESKTOP_FALLBACK_VARIANT,
   POST_COVER_DESKTOP_MEDIA,
   POST_COVER_DESKTOP_VARIANT,
   POST_COVER_MOBILE_VARIANT,
@@ -376,6 +377,71 @@ describe('PostArticleDetail', () => {
     expect(getCoverImage()).toHaveAttribute('src', 'https://example.com/cover-feed.webp');
   });
 
+  it('falls back to the main desktop source when the large source fails to load', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://example.com/cover-feed.webp',
+        desktopSrc: 'https://example.com/cover-large.webp',
+        desktopFallbackSrc: 'https://example.com/cover-main.png',
+        alt: 'Cover image',
+      },
+      hasCover: true,
+    });
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    const source = () => document.querySelector('picture source');
+    expect(source()).toHaveAttribute('srcset', 'https://example.com/cover-large.webp');
+
+    // Nexus only serves `large` once the deploy behind pubky/pubky-nexus#1085 lands; until then
+    // the desktop request 400s and the browser fires `error` on the `<img>` carrying the selected
+    // source. The desktop candidate must then drop to `main` (the pre-#2666 behaviour) instead of
+    // showing a broken image, while the phone candidate stays `feed` so a phone never downloads
+    // the multi-megabyte upload.
+    fireEvent.error(getCoverImage()!);
+
+    expect(source()).toHaveAttribute('srcset', 'https://example.com/cover-main.png');
+    expect(getCoverImage()).toHaveAttribute('src', 'https://example.com/cover-feed.webp');
+  });
+
+  it('starts a later cover on the large source again after an earlier one fell back', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://example.com/a-feed.webp',
+        desktopSrc: 'https://example.com/a-large.webp',
+        desktopFallbackSrc: 'https://example.com/a-main.png',
+        alt: 'A',
+      },
+      hasCover: true,
+    });
+
+    const { rerender } = render(<PostArticleDetail {...defaultProps} />);
+    fireEvent.error(getCoverImage()!);
+    expect(document.querySelector('picture source')).toHaveAttribute('srcset', 'https://example.com/a-main.png');
+
+    // A cover change on the same mount must not inherit the previous cover's downgrade: the
+    // remembered failure is keyed to the URL that failed, not to the component.
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://example.com/b-feed.webp',
+        desktopSrc: 'https://example.com/b-large.webp',
+        desktopFallbackSrc: 'https://example.com/b-main.png',
+        alt: 'B',
+      },
+      hasCover: true,
+    });
+
+    rerender(<PostArticleDetail {...defaultProps} />);
+
+    expect(document.querySelector('picture source')).toHaveAttribute('srcset', 'https://example.com/b-large.webp');
+  });
+
   it('places inline tags and actions between the user header and cover image in columns layout', () => {
     mockUsePostArticle.mockReturnValue({
       title: 'Test Title',
@@ -610,6 +676,7 @@ describe('PostArticleDetail', () => {
       attachments: propsWithAttachments.attachments,
       coverImageVariant: POST_COVER_MOBILE_VARIANT,
       coverImageDesktopVariant: POST_COVER_DESKTOP_VARIANT,
+      coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
     });
   });
 

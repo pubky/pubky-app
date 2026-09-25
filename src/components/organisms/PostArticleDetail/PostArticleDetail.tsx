@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
@@ -8,6 +8,7 @@ import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirma
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import {
+  POST_COVER_DESKTOP_FALLBACK_VARIANT,
   POST_COVER_DESKTOP_MEDIA,
   POST_COVER_DESKTOP_VARIANT,
   POST_COVER_MOBILE_VARIANT,
@@ -65,6 +66,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     // preloaded URL is the one this image asks for and the cover downloads once.
     coverImageVariant: POST_COVER_MOBILE_VARIANT,
     coverImageDesktopVariant: POST_COVER_DESKTOP_VARIANT,
+    coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
   });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
@@ -78,11 +80,25 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
       ? {
           src: localAttachments[0].urls.feed ?? localAttachments[0].urls.main,
           desktopSrc: localAttachments[0].urls.main,
+          // A local file is served from memory, not Nexus, so it has no derived-size fallback.
+          desktopFallbackSrc: undefined,
           alt: localAttachments[0].name,
         }
       : null;
 
   const finalCoverImage = localCoverImage || coverImage;
+
+  // `large` is derived on request and 400s until the Nexus deploy that carries it is out, so the
+  // hero drops the desktop candidate to `main` when it fails to load. The phone candidate is
+  // `feed` and is left alone: one failed request, and no multi-megabyte upload pulled onto a
+  // phone. The failed URL (not a bare boolean) is remembered, so a later cover on the same mount
+  // starts on `large` again, and re-firing `error` for a URL already recorded is a no-op: no loop.
+  const [failedDesktopSrc, setFailedDesktopSrc] = useState<string | null>(null);
+  const handleCoverError = () => setFailedDesktopSrc(finalCoverImage?.desktopSrc ?? null);
+  const desktopCoverFailed = Boolean(finalCoverImage?.desktopSrc) && failedDesktopSrc === finalCoverImage?.desktopSrc;
+  const desktopCoverSrc = desktopCoverFailed
+    ? (finalCoverImage?.desktopFallbackSrc ?? finalCoverImage?.desktopSrc)
+    : finalCoverImage?.desktopSrc;
 
   const articleAuthorId = (() => {
     try {
@@ -128,7 +144,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
         // it is `unoptimized` (every external CDN URL is), and a breakpoint is the only way to
         // keep a high-DPR phone off the original upload. See POST_COVER_MOBILE_VARIANT.
         <picture>
-          <source media={POST_COVER_DESKTOP_MEDIA} srcSet={finalCoverImage.desktopSrc} />
+          <source media={POST_COVER_DESKTOP_MEDIA} srcSet={desktopCoverSrc} />
           <img
             src={finalCoverImage.src}
             alt={finalCoverImage.alt}
@@ -139,6 +155,9 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
             loading="eager"
             fetchPriority="high"
             decoding="async"
+            // Fires for whichever candidate the browser selected. On a wide screen that is the
+            // desktop `<source>`, and this is what swaps it to `main` when `large` is not served.
+            onError={handleCoverError}
             className="mb-6 aspect-video w-full rounded-md object-cover object-center"
           />
         </picture>
