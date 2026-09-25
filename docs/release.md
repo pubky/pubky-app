@@ -24,7 +24,7 @@ dev  ─────────────────────────
 4. Make every pipeline check green, including VRT and e2e. Fix failures before cutting.
 5. During this window the branch is a **release candidate**. Bring in further `dev` work by rebasing onto `dev`, or by cherry-picking individual commits when not everything on `dev` should ship.
 6. When ready, bump `package.json` `version` on the release branch, then merge into `master` with a **merge commit** (do **not** squash).
-7. Create the tag locally on `master` (for example `v1.8.0`) and push it.
+7. Create the tag locally on `master` (for example `v1.8.0`), push it, then publish the GitHub Release from it.
 8. Open a PR merging `master` into `dev` and merge it. The only file change should be the version bump.
 
 Substitute `1.8.0` / `v1.8.0` with the version being released.
@@ -192,7 +192,12 @@ Tag **`master`**, annotated, matching `v<semver>`. Do not tag the release branch
 
 Pushing the tag starts [What the tag publishes](#what-the-tag-publishes).
 
-Creating a GitHub Release from the tag is optional. The `v*` tag is what publishes the image.
+Then publish the GitHub Release for the tag. Every release has one, and it is where the changelog lives; the tag alone
+only publishes the image:
+
+1. Releases → **Draft a new release**.
+2. Choose the tag you just pushed (`v1.8.0`, target `master`) and use the same string as the title.
+3. **Generate release notes**, then **Publish release** (not a pre-release).
 
 ## 8. Back-merge `master` into `dev`
 
@@ -246,5 +251,6 @@ The `release-<version>` branch can be deleted after this PR is merged.
 - [ ] PR marked ready; merged with **Create a merge commit** (not squash, not rebase-and-merge)
 - [ ] Annotated tag `v<version>` created on `master` and pushed
 - [ ] Docker Hub image build for the tag succeeded
+- [ ] GitHub Release `v<version>` published from the tag with generated notes
 - [ ] PR `master` → `dev` opened; only file change is the version bump; merged with a merge commit
 - [ ] Release branch deleted
