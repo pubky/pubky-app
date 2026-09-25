@@ -39,7 +39,10 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     }
 
     const username = resolveDisplayName(user);
-    const description = truncateByGraphemes(deriveTextPreview({ content: post.content, kind: post.kind }), 200);
+    const description = truncateByGraphemes(
+      deriveTextPreview({ content: post.content, kind: post.kind, lock: post.lock ?? null }),
+      200,
+    );
     const title = `${username} on Pubky`;
 
     // Static OG/Twitter images are omitted so the dynamic `opengraph-image` /

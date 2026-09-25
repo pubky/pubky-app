@@ -215,7 +215,13 @@ vi.mock('../../PostTagsPanel/PostTagsPanel', () => {
 });
 
 describe('PostMainListRow', () => {
-  const createPostDetails = (postId: string, content: string, indexedAt = Date.now(), kind = 'short') => ({
+  const createPostDetails = (
+    postId: string,
+    content: string,
+    indexedAt = Date.now(),
+    kind = 'short',
+    lock: string | null = null,
+  ) => ({
     id: postId,
     indexed_at: indexedAt,
     kind,
@@ -224,9 +230,10 @@ describe('PostMainListRow', () => {
     attachments: [],
     is_moderated: false,
     is_blurred: false,
+    lock,
   });
 
-  const mockPostDetails = (content: string, kind = 'short') => {
+  const mockPostDetails = (content: string, kind = 'short', lock: string | null = null) => {
     vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(null));
     vi.mocked(useAvatarUrl).mockReturnValue('https://example.com/avatar.png');
     vi.mocked(useRelativeTime).mockReturnValue({ formatRelativeTime: () => '1m' });
@@ -252,7 +259,8 @@ describe('PostMainListRow', () => {
       isLoading: false,
     });
     vi.mocked(usePostDetails).mockImplementation((postId) => ({
-      postDetails: postId === 'author:post' ? createPostDetails('author:post', content, Date.now(), kind) : undefined,
+      postDetails:
+        postId === 'author:post' ? createPostDetails('author:post', content, Date.now(), kind, lock) : undefined,
       isLoading: false,
     }));
   };
@@ -362,6 +370,26 @@ describe('PostMainListRow', () => {
     );
     expect(screen.getByTestId('post-content')).toHaveAttribute('data-media-variant', 'list');
     expect(screen.queryByTestId('post-list-media-thumbnail')).not.toBeInTheDocument();
+  });
+
+  it('labels a lock announcement with its lock title instead of the teaser envelope', () => {
+    mockPostDetails(
+      JSON.stringify({ lock_title: 'BBC', teaser_description: 'A peek' }),
+      'short',
+      'pubky://hs/pub/locks.app/lock1.json',
+    );
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('BBC')).toBeInTheDocument();
   });
 
   it('keeps compact list row content truncated', () => {

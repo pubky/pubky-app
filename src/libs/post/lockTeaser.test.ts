@@ -4,7 +4,7 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
-import { buildLockTeaserContent, isLockTeaserWithinLimit } from './lockTeaser';
+import { buildLockTeaserContent, isLockTeaserWithinLimit, parseLockTeaserContent } from './lockTeaser';
 
 const teaser = (lock_title: string, teaser_description: string) => ({ lock_title, teaser_description });
 
@@ -86,5 +86,41 @@ describe('isLockTeaserWithinLimit', () => {
     const over = teaser('', '👍'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH + LOCK_TITLE_MAX_CHARACTER_LENGTH + 1));
 
     expect(isLockTeaserWithinLimit(over)).toBe(false);
+  });
+});
+
+describe('parseLockTeaserContent', () => {
+  it('reads back what buildLockTeaserContent wrote', () => {
+    expect(parseLockTeaserContent(buildLockTeaserContent(teaser('Title', 'Body')))).toEqual(teaser('Title', 'Body'));
+  });
+
+  it('returns null for empty content', () => {
+    expect(parseLockTeaserContent('')).toBeNull();
+  });
+
+  it('returns null for content that is not JSON', () => {
+    expect(parseLockTeaserContent('plain text')).toBeNull();
+  });
+
+  it('returns null for JSON that is not an object', () => {
+    expect(parseLockTeaserContent('"just a string"')).toBeNull();
+  });
+
+  it('returns null for a JSON object that carries neither envelope field', () => {
+    expect(parseLockTeaserContent(JSON.stringify({ title: 'My Article', body: 'Body text' }))).toBeNull();
+  });
+
+  it('accepts an envelope whose fields are both empty', () => {
+    expect(parseLockTeaserContent(JSON.stringify({ lock_title: '', teaser_description: '' }))).toEqual(teaser('', ''));
+  });
+
+  it('falls back to empty strings for missing or wrongly typed fields', () => {
+    expect(parseLockTeaserContent(JSON.stringify({ lock_title: 42 }))).toEqual(teaser('', ''));
+  });
+
+  it('ignores fields the envelope does not define', () => {
+    expect(
+      parseLockTeaserContent(JSON.stringify({ lock_title: 'Title', teaser_description: 'Body', extra: 1 })),
+    ).toEqual(teaser('Title', 'Body'));
   });
 });
