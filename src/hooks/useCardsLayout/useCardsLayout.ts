@@ -1,7 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState } from 'react';
-import { type CardsPlacement, placeCardsItems } from './useCardsLayout.utils';
+import { type CardsPlacement, placeCardsItems, POST_CONTENT_PENDING_SELECTOR } from './useCardsLayout.utils';
 
 /** Batched measurements preserve source DOM order and commit columns after initial content resolves. */
 export function useCardsLayout(itemIds: string[], hasTrailing: boolean) {
@@ -42,7 +42,7 @@ export function useCardsLayout(itemIds: string[], hasTrailing: boolean) {
       const items = cards.slice(0, ids.length).map((card, index) => ({
         id: ids[index],
         height: card.getBoundingClientRect().height,
-        ready: !card.querySelector('[data-post-content-pending]'),
+        ready: !card.querySelector(POST_CONTENT_PENDING_SELECTOR),
       }));
       const layout = placeCardsItems(items, columns, gap, previous.current);
       previous.current = layout;
@@ -78,7 +78,7 @@ export function useCardsLayout(itemIds: string[], hasTrailing: boolean) {
     // insertion/removal of explicit content placeholders, not arbitrary skeletons.
     const containsPendingContent = (node: Node) =>
       node instanceof Element &&
-      (node.matches('[data-post-content-pending]') || Boolean(node.querySelector('[data-post-content-pending]')));
+      (node.matches(POST_CONTENT_PENDING_SELECTOR) || Boolean(node.querySelector(POST_CONTENT_PENDING_SELECTOR)));
     const contentObserver = new MutationObserver((records) => {
       if (
         records.some(({ addedNodes, removedNodes }) => [...addedNodes, ...removedNodes].some(containsPendingContent))

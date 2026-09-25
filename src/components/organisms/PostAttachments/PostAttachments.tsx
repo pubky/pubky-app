@@ -1,6 +1,7 @@
 'use client';
 import { Container } from '@/atoms/Container/Container';
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
+import { POST_CONTENT_PENDING_PROPS } from '@/hooks/useCardsLayout/useCardsLayout.utils';
 import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { cn } from '@/libs/utils/utils';
 import { PostAttachmentsAudios } from '@/molecules/PostAttachmentsAudios/PostAttachmentsAudios';
@@ -40,7 +41,7 @@ export const PostAttachments = ({
       ref={mediaVariant !== 'cards' || audios.length > 0 ? mediaContainerRef : undefined}
       className={cn(mediaVariant === 'cards' ? 'gap-6' : 'gap-3', className)}
     >
-      {isContentPending && <span hidden data-post-content-pending />}
+      {isContentPending && <span hidden {...POST_CONTENT_PENDING_PROPS} />}
       {imagesAndVideos.length ? (
         <PostAttachmentsImagesAndVideos
           imagesAndVideos={imagesAndVideos}
