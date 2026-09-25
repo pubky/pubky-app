@@ -20,14 +20,18 @@ const mocks = vi.hoisted(() => ({
   clearSession: vi.fn(),
   handleSubmit: vi.fn(), // the normal (non-lock) publish path
   toast: vi.fn(),
+  // Null by default, which keeps PostHeader (db-backed) out of the render.
+  currentUserPubky: null as string | null,
   // Test handle into the fake composer state, refreshed on every render.
   composer: {} as {
     content: string;
     setContent: (value: string) => void;
     tags: string[];
     attachments: File[];
+    setAttachments: (files: File[]) => void;
     lockTitle: string;
     setLockTitle: (value: string) => void;
+    setIsArticle: (value: boolean) => void;
   },
 }));
 
@@ -71,7 +75,16 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
       const [isArticle, setIsArticle] = useState(false);
       const [articleTitle, setArticleTitle] = useState('');
       const [lockTitle, setLockTitle] = useState('');
-      mocks.composer = { content, setContent, tags, attachments, lockTitle, setLockTitle };
+      mocks.composer = {
+        content,
+        setContent,
+        tags,
+        attachments,
+        setAttachments,
+        lockTitle,
+        setLockTitle,
+        setIsArticle,
+      };
       return {
         textareaRef: useRef(null),
         markdownEditorRef: useRef(null),
@@ -101,7 +114,7 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         showEmojiPicker: false,
         setShowEmojiPicker: vi.fn(),
         displayPlaceholder: 'placeholder',
-        currentUserPubky: null, // keeps PostHeader (db-backed) out of the render
+        currentUserPubky: mocks.currentUserPubky,
         handleExpand: vi.fn(),
         handleSubmit: mocks.handleSubmit,
         handleChange: (event: { target: { value: string } }) => setContent(event.target.value),
@@ -148,7 +161,7 @@ vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
 // Probes: slim stand-ins exposing the wiring under test.
 vi.mock('../PostInputExpandableSection/PostInputExpandableSection', () => ({
   PostInputExpandableSection: (props: {
-    lockSwitch?: { checked: boolean; onCheckedChange: (checked: boolean) => void };
+    lockSwitch?: { checked: boolean; onCheckedChange: (checked: boolean) => void; disabled?: boolean };
     lockCard?: React.ReactNode;
     onSubmit: () => void;
     isPostDisabled: boolean;
@@ -159,6 +172,7 @@ vi.mock('../PostInputExpandableSection/PostInputExpandableSection', () => ({
         <button
           data-testid="lock-switch"
           data-checked={props.lockSwitch.checked}
+          disabled={props.lockSwitch.disabled}
           onClick={() => props.lockSwitch?.onCheckedChange(!props.lockSwitch.checked)}
         />
       )}
@@ -251,12 +265,93 @@ const configureLock = async (body = 'secret body') => {
 describe('PostInput lock wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.currentUserPubky = null;
     mocks.createLockContent.mockResolvedValue({
       lock_id: 'L1',
       content_lock_path: '/pub/locks.app/L1.json',
       creator: 'pubkybob',
     });
     mocks.commitCreate.mockResolvedValue('alice:POST1');
+  });
+
+  // TODO:[Locks] #2655 — this whole describe covers the temporary guard; delete it with the guard.
+  describe('article body images', () => {
+    const AUTHOR = 'pubkyauthor';
+    const IMAGE_BODY = `intro ![shot](pubky://${AUTHOR}/pub/pubky.app/files/FILE1)`;
+    const NOTICE = 'Locked articles cannot include images in the body yet. Remove them to turn on the lock.';
+
+    const renderArticleWith = (body: string) => {
+      mocks.currentUserPubky = AUTHOR;
+      renderComposer();
+      act(() => {
+        mocks.composer.setIsArticle(true);
+        mocks.composer.setContent(body);
+      });
+    };
+
+    it('refuses the lock switch and says why while the body holds an uploaded image', () => {
+      renderArticleWith(IMAGE_BODY);
+
+      expect(screen.getByTestId('lock-switch')).toBeDisabled();
+      expect(screen.getByText(NOTICE)).toBeInTheDocument();
+    });
+
+    it.each([
+      ['an uppercase scheme', `intro ![shot](PUBKY://${AUTHOR}/pub/pubky.app/files/FILE1)`],
+      ['an entity-escaped scheme', `intro ![shot](pubky&#58;//${AUTHOR}/pub/pubky.app/files/FILE1)`],
+      ['a reference-style definition', `intro ![shot][ref]\n\n[ref]: pubky://${AUTHOR}/pub/pubky.app/files/FILE1`],
+      ['raw HTML', `intro <img src="pubky://${AUTHOR}/pub/pubky.app/files/FILE1" />`],
+      ['a blob URI in public storage', `intro ![shot](pubky://${AUTHOR}/pub/pubky.app/blobs/BLOB1)`],
+    ])('refuses the lock switch for %s', (_label, body) => {
+      renderArticleWith(body);
+
+      expect(screen.getByTestId('lock-switch')).toBeDisabled();
+    });
+
+    it('leaves a cover image alone: only the body is inspected', () => {
+      mocks.currentUserPubky = AUTHOR;
+      renderComposer();
+      act(() => {
+        mocks.composer.setIsArticle(true);
+        mocks.composer.setContent('intro only');
+        mocks.composer.setAttachments([new File(['x'], 'cover.png', { type: 'image/png' })]);
+      });
+
+      expect(screen.getByTestId('lock-switch')).toBeEnabled();
+      expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+    });
+
+    it('does not gate a normal post, whatever it attaches', () => {
+      mocks.currentUserPubky = AUTHOR;
+      renderComposer();
+      act(() => {
+        mocks.composer.setContent(IMAGE_BODY);
+        mocks.composer.setAttachments([new File(['x'], 'pic.png', { type: 'image/png' })]);
+      });
+
+      expect(screen.getByTestId('lock-switch')).toBeEnabled();
+      expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+    });
+
+    it('stays quiet where there is no lock switch to explain', () => {
+      mocks.currentUserPubky = AUTHOR;
+      renderEditLock();
+      act(() => {
+        mocks.composer.setIsArticle(true);
+        mocks.composer.setContent(IMAGE_BODY);
+      });
+
+      expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+    });
+
+    it('allows the lock once the image is removed', () => {
+      renderArticleWith(IMAGE_BODY);
+
+      act(() => mocks.composer.setContent('intro only'));
+
+      expect(screen.getByTestId('lock-switch')).toBeEnabled();
+      expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+    });
   });
 
   it('shows the price on the composer card after a paid lock is applied', () => {

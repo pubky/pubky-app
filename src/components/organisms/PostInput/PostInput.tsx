@@ -25,7 +25,7 @@ import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePo
 import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { deserializeArticleBody } from '@/libs/post/articleInlineImages';
+import { deserializeArticleBody, hasAuthorUploadUri } from '@/libs/post/articleInlineImages';
 import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
@@ -193,6 +193,13 @@ export function PostInput({
     setArticleTitle('');
   };
 
+  // TODO:[Locks] #2655 — temporary: an article's body images are uploaded to public storage while the
+  // author types, so locking one would leave paid images readable without paying. Blocking the switch
+  // is the stopgap until those images are stored inside the lock. Remove with the notice below.
+  // Only the toggle needs guarding: applying a lock clears the composer and dismissing its dialog
+  // reverts the lock, so the captured body can never gain an image afterwards.
+  const hasUnlockableBodyImages = !!isArticle && hasAuthorUploadUri(content, currentUserPubky ?? '');
+
   const {
     lockSwitch,
     isLockEnabled,
@@ -212,7 +219,7 @@ export function PostInput({
   } = usePostInputLock({
     isEnabled: isPostVariant,
     // Something to lock: any body text or at least one attachment.
-    canEnable: content.trim().length > 0 || attachments.length > 0,
+    canEnable: (content.trim().length > 0 || attachments.length > 0) && !hasUnlockableBodyImages,
     captureComposer: () => ({ content, attachments, isArticle, articleTitle }),
     restoreComposer: (draft) => {
       setContent(draft.content);
@@ -557,6 +564,14 @@ export function PostInput({
                   readOnly={isSubmitting || !isAuthenticated}
                   inlineImages={{ ...inlineImages, uploadingCount }}
                 />
+              )}
+
+              {/* TODO:[Locks] #2655 — temporary: says why the lock switch is disabled. A tooltip would
+                  not work here — the switch is disabled, and the composer is used on touch devices. */}
+              {lockSwitch && hasUnlockableBodyImages && (
+                <Typography size="sm" className="text-muted-foreground">
+                  {'Locked articles cannot include images in the body yet. Remove them to turn on the lock.'}
+                </Typography>
               )}
 
               {/* Show original post preview for reposts */}

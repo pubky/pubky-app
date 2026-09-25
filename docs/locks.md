@@ -375,6 +375,11 @@ the amount in sats as a string, and `BTC` as the asset. A reader unlocks it by p
 Bitkit (see [Reading a lock post](#reading-a-lock-post)). Creator-configurable credential
 TTLs and IndexedDB caching still come later.
 
+One temporary restriction is worth knowing before testing: an article whose body references an image
+the author uploaded cannot be locked, because those uploads land in public storage while the author
+types (`TODO:[Locks] #2655`). The lock switch stays off and the composer says why. A cover image is
+unaffected — it travels as a lock attachment.
+
 Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.
 Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
