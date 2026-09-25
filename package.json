@@ -50,6 +50,7 @@
     "@prelude.so/js-sdk": "0.14.0",
     "@sentry/nextjs": "10.71.0",
     "@serwist/next": "9.5.12",
+    "@synonymdev/locks-sdk": "0.1.0-rc5",
     "@synonymdev/pubky": "0.11.0",
     "@tanstack/react-query": "5.102.8",
     "@vitest/browser": "4.1.11",
