@@ -6,7 +6,7 @@
  * the marker to re-run the layout. Render it through `POST_CONTENT_PENDING_PROPS` and query it through
  * `POST_CONTENT_PENDING_SELECTOR` so every call site shares one spelling.
  */
-export const POST_CONTENT_PENDING_ATTR = 'data-post-content-pending' as const;
+const POST_CONTENT_PENDING_ATTR = 'data-post-content-pending' as const;
 
 export const POST_CONTENT_PENDING_SELECTOR = `[${POST_CONTENT_PENDING_ATTR}]`;
 
