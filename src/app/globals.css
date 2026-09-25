@@ -169,11 +169,12 @@ body {
 
   /**
    * Mobile tab bar height (icon row)
-   * - Matches MobileTabBar tab cell + button + icon stack
+   * - Matches MobileTabBar tab cell + button + icon stack (48px) plus the
+   *   1px tab cell bottom border, so content offset by it starts below the border
    * - Applied: Settings content top padding below header + tab bar
    * - Responsive: Mobile only (hidden on desktop via lg:hidden)
    */
-  --mobile-tab-bar-height: 48px;
+  --mobile-tab-bar-height: 49px;
 
   /**
    * Settings mobile chrome height (header + tab bar)

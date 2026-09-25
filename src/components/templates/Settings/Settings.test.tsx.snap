@@ -1,7 +1,26 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`Settings - Snapshots > matches snapshot 1`] = `
-<div
-  data-testid="mobile-header"
-/>
+<div>
+  <div
+    data-testid="mobile-header"
+  />
+  <div
+    data-testid="settings-mobile-menu"
+  />
+  <div
+    class="pt-(--settings-mobile-chrome-height) lg:pt-0"
+    data-disable-wide-shell-layout="true"
+    data-testid="content-layout"
+  >
+    <div
+      class="pt-6 lg:pt-0"
+      data-testid="content-layout-content"
+    >
+      <div>
+        Test content
+      </div>
+    </div>
+  </div>
+</div>
 `;
