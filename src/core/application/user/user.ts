@@ -11,7 +11,8 @@ import type { TFetchUserDetailsParams, TFetchUserParams, TPubkyListParams } from
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { HttpMethod } from '@/libs/http/http.types';
+import { hasHttpStatus, isAppError } from '@/libs/error/error.utils';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
@@ -291,7 +292,9 @@ export class UserApplication {
 
   /**
    * Handles following or unfollowing a user.
-   * Performs local database operations and syncs with the homeserver.
+   * Writes the relationship locally first and syncs it to the homeserver; a failed sync runs the
+   * inverse local write so the live queries behind the Follow button, counts and friendship state
+   * revert instead of diverging from the homeserver (#2065).
    * @param params - Parameters containing event type, URLs, JSON data, and user IDs
    */
   static async commitFollow({
@@ -312,7 +315,26 @@ export class UserApplication {
 
     if (signal?.aborted) return;
 
-    await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
+    try {
+      await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
+    } catch (error) {
+      // An already absent homeserver record agrees with the optimistic unfollow.
+      if (eventType === HttpMethod.DELETE && hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return;
+      // A torn-down session skips the compensation: its local rows no longer belong to this flow.
+      if (!signal?.aborted) {
+        try {
+          if (eventType === HttpMethod.PUT) {
+            await LocalFollowService.delete({ follower, followee });
+          } else if (eventType === HttpMethod.DELETE) {
+            await LocalFollowService.create({ follower, followee });
+          }
+        } catch (rollbackError) {
+          if (!isAppError(rollbackError))
+            Logger.error('Failed to rollback local follow write', { eventType, follower, followee, rollbackError });
+        }
+      }
+      throw error;
+    }
   }
 
   /**
