@@ -1,4 +1,4 @@
-import { Locks, LocksOptions, type Session as LocksSdkSession } from '@pubky/locks-sdk';
+import { Locks, LocksOptions, type Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { getLockServer, getPaykitServerUrl, getPkarrRelays } from '@/config/network';
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -42,7 +42,7 @@ let sdkReady: Promise<void> | null = null;
  */
 export function ensureLocksSdkReady(): Promise<void> {
   if (!sdkReady) {
-    sdkReady = import('@pubky/locks-sdk')
+    sdkReady = import('@synonymdev/locks-sdk')
       .then(async ({ default: init }) => {
         await init();
       })

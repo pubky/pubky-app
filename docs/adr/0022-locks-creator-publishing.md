@@ -10,7 +10,7 @@ Covers the creator side of Locks Phase 1. The reader/unlock side is a separate, 
 
 Locks lets a creator publish content that readers can only open after satisfying a payment proof.
 The condition is enforced by a **Lock Server** — a separate service, not the
-homeserver and not Nexus — accessed through the `@pubky/locks-sdk` WASM package (epic #1998,
+homeserver and not Nexus — accessed through the `@synonymdev/locks-sdk` WASM package (epic #1998,
 publishing #2002).
 
 Constraints that shaped the frontend design:

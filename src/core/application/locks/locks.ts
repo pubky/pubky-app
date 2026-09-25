@@ -1,4 +1,4 @@
-import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
+import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';

@@ -41,6 +41,5 @@ public/
 
 # Generated files
 next-env.d.ts
-vendor/
 
 tsconfig.json

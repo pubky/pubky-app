@@ -9,7 +9,7 @@ import {
   SetLockServicePointerOptions,
   VerificationTaskHandleOptions,
   type Viewer,
-} from '@pubky/locks-sdk';
+} from '@synonymdev/locks-sdk';
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';

@@ -355,29 +355,13 @@ Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
 
 ## Testing & local demo
 
-**The Lock SDK is not on npm yet** (as of 2026-08). `@pubky/locks-sdk` is deliberately
-missing from `package.json` — you build it from the `pubky/locks` repo and copy it into
-`node_modules` by hand:
+The Lock SDK is an ordinary dependency: `@synonymdev/locks-sdk`, pinned exactly in
+`package.json` and installed by `npm ci` like anything else. Note the scope — the package is
+published under `@synonymdev`, while the crate it is built from is `locks-sdk-wasm`.
 
-Build the SDK from `pubky/locks` master: the payment flow needs `Locks.hasPaykitDataWithOptions`
-(`pubky/locks#42`) and `lookupPaykitConnectionState` (`pubky/locks#54`).
-
-```bash
-cd <locks repo>/locks-sdk/bindings/js
-npm run build                       # wasm-pack build --target web → ./pkg
-cp pkg/* <pubky-app>/vendor/locks-sdk/
-```
-
-`vendor/locks-sdk/README.md` carries the two steps that are easy to miss — deleting the
-`.gitignore` wasm-pack emits, and keeping the package name scoped.
-
-This replaces the previous instruction to copy the package into `node_modules` by hand.
-That could never work in a container: the Dockerfile's dependency stage runs `npm ci`, which
-erases anything placed in `node_modules` beforehand. A `file:` dependency survives it, and
-the Dockerfile copies `vendor/` in before `npm ci` so the path resolves.
-
-Vendoring is temporary. Once the SDK is published to a registry, the dependency becomes an
-ordinary version pin and `vendor/` is deleted.
+Upgrading it is `npm i --save-exact @synonymdev/locks-sdk@<version>`. The published version
+is what `locks-sdk/bindings/js/package.json` declares in `pubky/locks`; releases are tagged
+there (`v0.1.0-rc4`, …), and a version can be ahead of the newest tag.
 
 - Tests are co-located with each file. Shared sample data (a `LockFile` + an author pubky)
   lives in `src/test-utils/locks.ts` (`mockLockFile()`, `MOCK_LOCK_AUTHOR_PUBKY`).
