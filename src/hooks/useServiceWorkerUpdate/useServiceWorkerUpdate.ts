@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import type {} from '@serwist/next/typings';
 import { SW_UPDATE_CHECK_MIN_INTERVAL_MS } from '@/config/pwa';
+import { isServiceWorkerEnabled } from '@/libs/pwa/platform';
 import { toast, type ToastHandle, type ToastOptions } from '@/molecules/Toaster/toast';
 
 /**
@@ -25,12 +25,12 @@ import { toast, type ToastHandle, type ToastOptions } from '@/molecules/Toaster/
  * - On every return to the tab the registration is re-checked for a newer waiting worker,
  *   and `registration.update()` is requested at most once per `SW_UPDATE_CHECK_MIN_INTERVAL_MS`.
  *
- * No-op when Serwist is disabled (dev without `SERWIST_DEV`) or the browser has no service
- * worker support: `window.serwist` is undefined in both cases.
+ * No-op wherever ServiceWorkerRegistrationProvider does not register the worker: outside
+ * production builds, and in browsers without service worker or Cache API support.
  */
 export function useServiceWorkerUpdate() {
   useEffect(() => {
-    if (!window.serwist || !('serviceWorker' in navigator)) return;
+    if (!isServiceWorkerEnabled()) return;
     const container = navigator.serviceWorker;
 
     let disposed = false;

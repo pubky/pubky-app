@@ -1,7 +1,7 @@
 /**
  * PWA (installed web app) configuration.
  *
- * Service worker build options live in `next.config.ts`; the worker itself is
+ * Service worker build options live in `serwist.config.mjs`; the worker itself is
  * `src/sw.ts`. See `docs/pwa.md`.
  */
 

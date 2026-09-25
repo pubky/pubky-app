@@ -53,7 +53,6 @@ function installServiceWorker(options: { controlled: boolean; registration: Fake
     ready: Promise.resolve(options.registration),
   });
   Object.defineProperty(window.navigator, 'serviceWorker', { configurable: true, value: container });
-  Object.defineProperty(window, 'serwist', { configurable: true, writable: true, value: {} });
   return container;
 }
 
@@ -84,23 +83,30 @@ describe('useServiceWorkerUpdate', () => {
   const originalLocation = window.location;
 
   beforeEach(() => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubGlobal('caches', {});
     Object.defineProperty(window, 'location', { configurable: true, value: { ...originalLocation, reload } });
     reload.mockClear();
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    Reflect.deleteProperty(window, 'serwist');
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
     Reflect.deleteProperty(window.navigator, 'serviceWorker');
     Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
   });
 
-  it('is a no-op when window.serwist is undefined', async () => {
+  it.each([
+    ['in development', () => vi.stubEnv('NODE_ENV', 'development')],
+    ['in tests', () => vi.stubEnv('NODE_ENV', 'test')],
+    ['without Cache API support', () => vi.stubGlobal('caches', undefined)],
+  ])('is a no-op %s', async (_, disable) => {
     const registration = createRegistration();
     registration.waiting = createWorker('installed');
     installServiceWorker({ controlled: true, registration });
-    Reflect.deleteProperty(window, 'serwist');
+    disable();
 
     renderHook(() => useServiceWorkerUpdate());
     await flushReady();

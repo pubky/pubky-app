@@ -68,7 +68,7 @@
     },
     {
       "id": "no-suppressed-lints",
-      "rule": "Every eslint-disable, eslint-disable-next-line, @ts-ignore, and @ts-expect-error must have an adjacent comment explaining WHY the suppression is needed. Bare suppressions hide real bugs. If a rule is wrong for the whole file, use a top-level eslint-disable with rationale rather than sprinkling inline ignores.",
+      "rule": "Every oxlint-disable, oxlint-disable-next-line, eslint-disable, eslint-disable-next-line, @ts-ignore, and @ts-expect-error must have an adjacent comment explaining WHY the suppression is needed. Bare suppressions hide real bugs. If a rule is wrong for the whole file, use a top-level oxlint-disable with rationale rather than sprinkling inline ignores. The eslint-disable form is only for react-hooks/exhaustive-deps and react-hooks/rules-of-hooks, because the React Compiler skips components suppressed that way (docs/development-workflow.md); every other suppression uses oxlint-disable with the rule names from .oxlintrc.json.",
       "scope": ["src/**"],
       "severity": "high"
     },
@@ -174,8 +174,8 @@
     },
     {
       "id": "sw-shell-only",
-      "rule": "The service worker owns the app shell only: precache, the share target and the static offline fallback. Do not add runtime caching for homeserver, pkarr, httprelay, Nexus, CDN or any data (Dexie is the only data cache; TTL is the only freshness mechanism), no defaultCache, and keep skipWaiting false (updates are user-consented via useServiceWorkerUpdate). Public precache entries are an allow-list in globPublicPatterns. See docs/pwa.md and ADR-0021.",
-      "scope": ["src/sw.ts", "next.config.ts", "src/hooks/useServiceWorkerUpdate/**"],
+      "rule": "The service worker owns the app shell only: precache, the share target and the static offline fallback. Do not add runtime caching for homeserver, pkarr, httprelay, Nexus, CDN or any data (Dexie is the only data cache; TTL is the only freshness mechanism), no defaultCache, and keep skipWaiting false (updates are user-consented via useServiceWorkerUpdate). Public precache entries are an allow-list in serwist.config.mjs. See docs/pwa.md and ADR-0021.",
+      "scope": ["src/sw.ts", "serwist.config.mjs", "src/hooks/useServiceWorkerUpdate/**"],
       "severity": "high"
     }
   ]

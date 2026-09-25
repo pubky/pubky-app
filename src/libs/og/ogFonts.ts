@@ -18,6 +18,10 @@ import { fileURLToPath } from 'node:url';
  * string to `readFileSync` (avoiding a cross-realm `URL instanceof` failure seen
  * in the bundled server runtime) while keeping the `import.meta.url` reference so
  * the bundler traces the assets into the server output.
+ *
+ * Each URL must be a string literal. Turbopack resolves a template-literal path
+ * (`./assets/${file}`) to a single matching asset, so every weight would silently
+ * receive the same font file.
  */
 
 type OgFont = {
@@ -29,16 +33,31 @@ type OgFont = {
 
 let cachedFonts: OgFont[] | null = null;
 
-function readFont(file: string): Buffer {
-  return readFileSync(fileURLToPath(new URL(`./assets/${file}`, import.meta.url)));
+function readFont(url: URL): Buffer {
+  return readFileSync(fileURLToPath(url));
 }
 
 export function getOgFonts(): OgFont[] {
   if (!cachedFonts) {
     cachedFonts = [
-      { name: 'Inter Tight', data: readFont('InterTight-Regular.ttf'), weight: 400, style: 'normal' },
-      { name: 'Inter Tight', data: readFont('InterTight-Medium.ttf'), weight: 500, style: 'normal' },
-      { name: 'Inter Tight', data: readFont('InterTight-Bold.ttf'), weight: 700, style: 'normal' },
+      {
+        name: 'Inter Tight',
+        data: readFont(new URL('./assets/InterTight-Regular.ttf', import.meta.url)),
+        weight: 400,
+        style: 'normal',
+      },
+      {
+        name: 'Inter Tight',
+        data: readFont(new URL('./assets/InterTight-Medium.ttf', import.meta.url)),
+        weight: 500,
+        style: 'normal',
+      },
+      {
+        name: 'Inter Tight',
+        data: readFont(new URL('./assets/InterTight-Bold.ttf', import.meta.url)),
+        weight: 700,
+        style: 'normal',
+      },
     ];
   }
   return cachedFonts;

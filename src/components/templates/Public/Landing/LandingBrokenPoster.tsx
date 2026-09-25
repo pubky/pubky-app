@@ -72,7 +72,11 @@ export function LandingBrokenPoster({ alt, className, image, video }: LandingBro
   }
 
   return (
-    <div className={cn('relative block overflow-hidden', className)} onPointerEnter={handlePointerEnter} onPointerLeave={handlePointerLeave}>
+    <div
+      className={cn('relative block overflow-hidden', className)}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
+    >
       <Image src={image} alt={alt} width={1516} height={1516} className="absolute inset-0 size-full object-cover" />
       <video
         ref={videoRef}

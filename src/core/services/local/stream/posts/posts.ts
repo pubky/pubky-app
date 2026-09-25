@@ -341,8 +341,7 @@ export class LocalStreamPostsService {
       }
 
       // Remove author from details as it's in the composite ID
-      // eslint-disable-next-line
-      const { author, ...detailsWithoutAuthor } = post.details;
+      const { author: _author, ...detailsWithoutAuthor } = post.details;
       postDetails.push({ ...detailsWithoutAuthor, id: postId });
 
       // Record TTL for freshness tracking

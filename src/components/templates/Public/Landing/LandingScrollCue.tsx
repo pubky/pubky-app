@@ -97,7 +97,7 @@ export function LandingScrollCue() {
     <button
       type="button"
       className={cn(
-        'landing-scroll-cue group fixed bottom-12 left-1/2 z-20 flex size-12 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-300 hover:text-brand focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none sm:bottom-6',
+        'landing-scroll-cue group fixed bottom-12 left-1/2 z-20 flex size-12 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-300 hover:text-brand focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none sm:bottom-6',
         !showCueOnMobile && 'max-sm:hidden',
       )}
       aria-label={isBackToTop ? 'Scroll to top' : 'Scroll to next section'}

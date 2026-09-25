@@ -504,7 +504,7 @@ export function useStreamPagination({
       clearState();
     }
     fetchStreamSlice(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when the stream changes, not when pagination state recreates the fetch function
   }, [streamId]);
 
   // Inert result: an undefined `streamId` means the consumer is not paginating

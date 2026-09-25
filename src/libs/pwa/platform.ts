@@ -23,3 +23,18 @@ export function isIosDevice(): boolean {
 export function isAppBadgeSupported(): boolean {
   return typeof navigator !== 'undefined' && 'setAppBadge' in navigator && 'clearAppBadge' in navigator;
 }
+
+/**
+ * Where the service worker runs: production builds (`npm run build` emits `public/sw.js` after
+ * `next build`; `next dev` never builds it) in browsers with service worker and Cache API support.
+ * ServiceWorkerRegistrationProvider registers only when this is true and useServiceWorkerUpdate is
+ * a no-op otherwise, so both must read this one gate.
+ */
+export function isServiceWorkerEnabled(): boolean {
+  return (
+    process.env.NODE_ENV === 'production' &&
+    typeof navigator !== 'undefined' &&
+    'serviceWorker' in navigator &&
+    typeof caches !== 'undefined'
+  );
+}

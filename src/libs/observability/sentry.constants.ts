@@ -49,7 +49,10 @@ export const OBSERVABILITY_IGNORE_ERRORS: readonly (string | RegExp)[] = [
   'ResizeObserver loop limit exceeded',
   'ResizeObserver loop completed with undelivered notifications',
   'Failed to fetch',
+  // Stale chunks after a deploy (src/libs/chunk-load): webpack's message, then Turbopack's, which
+  // production builds now use (`Failed to load chunk <path> from module <id>`).
   /Loading chunk \d+ failed/,
+  /Failed to load chunk \S+ (?:from module|as a runtime dependency of chunk) /,
   'AbortError',
   'Non-Error promise rejection captured',
   // Expected article inline-image upload rejections: surfaced to the user

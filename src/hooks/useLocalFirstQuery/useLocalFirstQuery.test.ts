@@ -44,7 +44,7 @@ vi.mock('@/libs/logger/logger', () => ({
 
 /**
  * Helper to build typed `useLocalFirstQuery` params from untyped vi.fn() mocks.
- * The opaque cast routes through the named helper so the ESLint ban on raw
+ * The opaque cast routes through the named helper so the Oxlint ban on raw
  * double casts in test files stays active.
  */
 function createParams(overrides: {

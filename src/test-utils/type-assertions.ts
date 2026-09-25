@@ -4,7 +4,7 @@
  * verify the production code guards against it.
  *
  * Using this named helper preserves the "this is intentional" signal while
- * keeping the ESLint ban on `as any` / `as unknown as …` in test files active,
+ * keeping the Oxlint ban on `as any` / `as unknown as …` in test files active,
  * so accidental casts stand out.
  */
 export const asInvalid = <T>(value: unknown): T => value as T;

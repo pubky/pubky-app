@@ -48,9 +48,10 @@ The two route-segment error boundaries (`app/error.tsx`, `app/global-error.tsx`)
 
 ### Stale chunk recovery after a deploy
 
-A tab left open across a deploy keeps the previous build's asset manifest, so a chunk it lazily loads can fail with `ChunkLoadError` (`Loading chunk <id> failed.`). Both boundaries recognise it (`isChunkLoadError`) and reload the page once to pick up the current build, so the missing chunk exists again.
+A tab left open across a deploy keeps the previous build's asset manifest, so a chunk it lazily loads can fail with `ChunkLoadError` (Turbopack, which production builds use: `Failed to load chunk <path> from module <id>`; webpack: `Loading chunk <id> failed.`). `OBSERVABILITY_IGNORE_ERRORS` drops both messages as expected deploy noise, so a failure that escapes the boundaries is not reported. Both boundaries recognise it (`isChunkLoadError`) and reload the page once to pick up the current build, so the missing chunk exists again.
 
 - The reload is a `chunk-load` breadcrumb, never a captured error: it is expected after a deploy and self-heals. The usual `Logger.error` line and `captureException` call are skipped for it.
+- When the reload cannot recover (the same build fails again, or storage is unavailable), the boundary reports `toChunkLoadRecoveryError(error)`: a `ChunkLoadRecoveryError` with the original as `cause`. Its own message does not match the noise filter, so a genuinely broken deploy still reaches Sentry and Pulse as one issue.
 - `claimStaleChunkReload` writes the running `NEXT_PUBLIC_APP_VERSION` to `pubky-app:chunk-load-recovery` in `sessionStorage` **before** reloading. A genuinely broken build (the chunk is missing from the deployed artifact too) therefore reloads once, fails again, and stays on the terminal error UI instead of looping; a tab that survives a second deploy can recover again.
 - When `sessionStorage` is unavailable (private mode, disabled storage) nothing is written and no reload happens: without a durable guard the reload could loop forever, so the boundary keeps its terminal error state.
 - `src/libs/chunk-load/chunkLoadRecovery.ts`
@@ -133,9 +134,10 @@ All Sentry and Pulse values are part of the **optional runtime-config tier** ([A
 The public Docker image remains buildable **without** Sentry credentials. Docker builds always inject Debug IDs, and upload source maps only when Sentry build credentials are provided ([ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md)):
 
 1. `next.config.ts` generates maps for every build (`productionBrowserSourceMaps` + `experimental.serverSourceMaps`) and disables the plugin upload (`sourcemaps.disable: true`, `release.create: false`).
+   Production uses Turbopack. `compiler.define.__SENTRY_DEBUG__ = false` preserves debug-log removal without the deprecated Webpack-only `disableLogger` option.
 2. The Dockerfile builder stage runs `npx sentry-cli sourcemaps inject` over `.next` and over the nested `.next/standalone/.next` (hidden directories are skipped by the walker) — offline, deterministic Debug-ID stamping of chunks and maps.
 3. If `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are present, the Dockerfile uploads `.next` source maps with `--release="$NEXT_PUBLIC_APP_VERSION"`.
-4. The runner stage deletes `*.map` under `.next/static` (browser maps must not be publicly served); standalone server maps stay for readable Node stack traces.
+4. The builder deletes `*.map` under `.next/static` before copying assets into the runner (browser maps must not be publicly served); standalone server maps stay for readable Node stack traces.
 
 Third-party deployers get unsymbolicated events unless they obtain the maps for their image version and upload them to their own org (publishing maps as a release artifact is the recommended follow-up).
 

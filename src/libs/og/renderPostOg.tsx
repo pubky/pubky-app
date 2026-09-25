@@ -165,7 +165,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
               }}
             />
             <div style={{ display: 'flex', flex: 1, width: '100%', borderRadius: 24, overflow: 'hidden' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {/* oxlint-disable-next-line nextjs/no-img-element -- Satori requires plain img elements */}
               <img src={imageSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           </div>

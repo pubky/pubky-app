@@ -53,7 +53,7 @@ Setting `additionalPrecacheEntries` disables the public glob, the route has no c
 
 ## Implementation Notes
 
-- Options: `next.config.ts` (`withSerwistInit`); worker: `src/sw.ts`; hooks under `src/hooks/useServiceWorkerUpdate/`, `useNetworkStatusToasts/`, `useAppBadge/`, `useInstallPrompt/`; mounted by `src/components/organisms/PwaManager/PwaManager.tsx` outside the DB/auth gates.
+- Options: `serwist.config.mjs` (`@serwist/next` configurator mode, built by `@serwist/cli` after `next build`; originally `withSerwistInit` in `next.config.ts`); worker: `src/sw.ts`; hooks under `src/hooks/useServiceWorkerUpdate/`, `useNetworkStatusToasts/`, `useAppBadge/`, `useInstallPrompt/`; mounted by `src/components/organisms/PwaManager/PwaManager.tsx` outside the DB/auth gates.
 - `src/sw.test.ts` asserts the worker's configuration; `src/libs/pwa/manifest.test.ts` guards the manifest.
 - Full guide: `docs/pwa.md`.
 

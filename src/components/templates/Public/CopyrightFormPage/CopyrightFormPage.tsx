@@ -1,6 +1,5 @@
 import { CopyrightForm } from '@/organisms/CopyrightForm/CopyrightForm';
 
-
 /**
  * Copyright/DMCA Takedown Request page template
  *

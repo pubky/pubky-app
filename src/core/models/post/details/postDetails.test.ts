@@ -30,8 +30,7 @@ describe('PostDetailsModel', () => {
     nexusDetails: typeof MOCK_NEXUS_POST_DETAILS,
   ): PostDetailsModelSchema => {
     const compositeId = buildCompositeId({ pubky: nexusDetails.author, id: originalId });
-    // eslint-disable-next-line
-    const { author, ...detailsWithoutAuthor } = nexusDetails;
+    const { author: _author, ...detailsWithoutAuthor } = nexusDetails;
     return { ...detailsWithoutAuthor, id: compositeId };
   };
 

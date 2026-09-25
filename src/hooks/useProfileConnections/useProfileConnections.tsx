@@ -309,7 +309,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
   useEffect(() => {
     clearState();
     fetchStreamSlice(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when the stream changes, not when pagination state recreates the fetch function
   }, [streamId]);
 
   return {

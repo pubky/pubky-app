@@ -5,7 +5,7 @@ import * as Sentry from '@sentry/nextjs';
 import { Pulse } from '@synonymdev/pubky-pulse-web';
 import { APP_VERSION } from '@/config/app';
 import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
-import { claimStaleChunkReload, isChunkLoadError } from '@/libs/chunk-load/chunkLoadRecovery';
+import { claimStaleChunkReload, isChunkLoadError, toChunkLoadRecoveryError } from '@/libs/chunk-load/chunkLoadRecovery';
 import { AppError } from '@/libs/error/error';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
@@ -31,8 +31,12 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     // AppError instances are already captured once by Err.* factories via captureAppError;
     // capturing again here would create duplicate events with the same fingerprint.
     if (!(error instanceof AppError)) {
-      Sentry.captureException(error);
-      Pulse.captureException(error);
+      // A chunk error that reaches this point was not recovered by the one-time reload (already used
+      // for this build, or storage unavailable); report it wrapped so the stale-chunk noise filter
+      // does not hide a genuinely broken deploy.
+      const reported = isChunkLoadError(error) ? toChunkLoadRecoveryError(error) : error;
+      Sentry.captureException(reported);
+      Pulse.captureException(reported);
     }
   }, [error]);
 

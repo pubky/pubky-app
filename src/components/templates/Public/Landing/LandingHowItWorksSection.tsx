@@ -38,7 +38,7 @@ export function LandingHowItWorksSection() {
     <section id={LANDING_HOW_SECTION_ID} className="relative z-0 min-h-svh scroll-mt-[48px] py-10 sm:py-24">
       <Container size="container" className={cn('gap-10', PAGE_GUTTER_CLASS)}>
         <Container className="mx-0 max-w-[760px] gap-5">
-          <Typography as="span" size="xs" className="text-brand tracking-[1.2px] uppercase">
+          <Typography as="span" size="xs" className="tracking-[1.2px] text-brand uppercase">
             {'The solution'}
           </Typography>
           <Heading level={2} size="xl" className="max-w-[680px] text-4xl sm:text-6xl">

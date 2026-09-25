@@ -81,9 +81,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy public assets
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
 # Set correct permissions for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
@@ -91,7 +88,12 @@ RUN chown nextjs:nodejs .next
 # 1. Copy standalone server files (Next.js automatically links to .next/static from here)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
-# 2. Copy the client-side static assets from the root .next/static folder
+# 2. Copy public assets after the standalone tree. The standalone output carries the public files
+# `next build` traced, and `public/sw.js` is generated only afterwards by `npm run build:sw`, so the
+# fresh worker must be the last copy written.
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# 3. Copy the client-side static assets from the root .next/static folder
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Switch to non-root user

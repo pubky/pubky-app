@@ -196,7 +196,7 @@ Component tests must use **real** `lucide-react` and `@/icons` implementations (
 
 Stack: atom [`Toast`](src/components/atoms/Toast/Toast.tsx) + [`Toast.variants.ts`](src/components/atoms/Toast/Toast.variants.ts) + [`Toast.icons.tsx`](src/components/atoms/Toast/Toast.icons.tsx), molecule [`Toaster`](src/components/molecules/Toaster/Toaster.tsx), public API [`toast()`](src/components/molecules/Toaster/toast.ts). `<Toaster />` is mounted in the app layout.
 
-`toast()` from `@/molecules/Toaster/toast` is the **only** public producer API. The state store (`toast.store.ts`), the state hook (`useToastState.ts`), and the Radix renderer atoms in `@/atoms/Toast/*` are private to the Toaster module — an ESLint `no-restricted-imports` rule blocks application code from importing them.
+`toast()` from `@/molecules/Toaster/toast` is the **only** public producer API. The state store (`toast.store.ts`), the state hook (`useToastState.ts`), and the Radix renderer atoms in `@/atoms/Toast/*` are private to the Toaster module — an Oxlint `no-restricted-imports` rule blocks application code from importing them.
 
 ### Variants (`ToastVariant`)
 

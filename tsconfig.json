@@ -19,7 +19,8 @@
     "incremental": true,
     "plugins": [
       {
-        "name": "next"
+        "name": "next",
+        "enabled": false
       }
     ],
     "paths": {
