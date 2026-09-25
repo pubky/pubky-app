@@ -64,9 +64,7 @@ export function resolveDisplayName(user: { name: string; id: string; deleted?: b
  * an empty string when a live user has none. Empty lets the caller keep its own fallback
  * (public key, "Unknown User", …) while a deleted user never degrades into one.
  */
-export function resolveUserDisplayName(
-  user: { name?: string | null; deleted?: boolean } | null | undefined,
-): string {
+export function resolveUserDisplayName(user: { name?: string | null; deleted?: boolean } | null | undefined): string {
   if (isUserDeleted(user)) return DELETED_USER_NAME;
   return user?.name ?? '';
 }

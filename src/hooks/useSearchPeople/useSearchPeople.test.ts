@@ -117,11 +117,7 @@ function scored(ids: Pubky[]): { user_id: Pubky; score: number }[] {
   return ids.map((user_id, index) => ({ user_id, score: 100 - index }));
 }
 
-function seedUser(
-  id: Pubky,
-  name: string,
-  { following = false, image = null as string | null, deleted = false } = {},
-) {
+function seedUser(id: Pubky, name: string, { following = false, image = null as string | null, deleted = false } = {}) {
   mockUserDetailsMap.set(id, asOpaque<NexusUserDetails>({ ...detailsFixture(name, image), deleted }));
   mockUserCountsMap.set(id, countsFixture(5, 10));
   mockUserRelationshipsMap.set(id, relationshipFixture(following));

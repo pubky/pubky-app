@@ -227,9 +227,7 @@ describe('UserListItem - card variant', () => {
 
 describe('UserListItem - deleted users', () => {
   it('renders [DELETED] instead of the pubky fallback', () => {
-    render(
-      <UserListItem user={{ ...mockUser, name: '', deleted: true }} variant="card" onFollowClick={vi.fn()} />,
-    );
+    render(<UserListItem user={{ ...mockUser, name: '', deleted: true }} variant="card" onFollowClick={vi.fn()} />);
 
     expect(screen.getByText('[DELETED]')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Follow \[DELETED\]/i })).toBeInTheDocument();
