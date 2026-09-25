@@ -39,4 +39,21 @@ describe('Tooltip - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
     expect(screen.getByRole('tooltip')).toMatchSnapshot();
   });
+
+  it('matches snapshot for accent variant', () => {
+    render(
+      <TooltipProvider delayDuration={0}>
+        <Tooltip open>
+          <TooltipTrigger asChild>
+            <button type="button">Accent trigger</button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent variant="accent">Accent label</TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByRole('tooltip')).toMatchSnapshot();
+  });
 });

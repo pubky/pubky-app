@@ -66,7 +66,7 @@ export function PostTextLink({
           full URL. It would otherwise flash open on every tap: Radix opens on focus,
           and on touch the focus lands after its pointer-down guard has been cleared.
         */}
-        <TooltipContent className="bg-accent font-medium wrap-anywhere text-foreground pointer-coarse:hidden [&_svg]:fill-accent">
+        <TooltipContent variant="accent" className="wrap-anywhere pointer-coarse:hidden">
           {compacted.fullUrl}
         </TooltipContent>
       </TooltipPortal>

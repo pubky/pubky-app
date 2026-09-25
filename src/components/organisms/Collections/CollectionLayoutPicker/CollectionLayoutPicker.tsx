@@ -149,13 +149,7 @@ export function CollectionLayoutPicker({ layout, onLayoutChange }: CollectionLay
             {trigger}
           </TooltipTrigger>
         </DropdownMenuTrigger>
-        <TooltipPortal>
-          {!open && (
-            <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
-              Change layout
-            </TooltipContent>
-          )}
-        </TooltipPortal>
+        <TooltipPortal>{!open && <TooltipContent variant="accent">Change layout</TooltipContent>}</TooltipPortal>
       </Tooltip>
       <DropdownMenuContent
         align="end"
