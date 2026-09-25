@@ -7,6 +7,9 @@ import { asOpaque } from '@/test-utils/type-assertions';
 import { LockedPostContent } from './LockedPostContent';
 
 const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }));
+const pathname = vi.hoisted(() => ({ value: '/home' }));
+
+vi.mock('next/navigation', () => ({ usePathname: () => pathname.value }));
 
 vi.mock('@/hooks/useLockFile/useLockFile', () => ({ useLockFile: vi.fn() }));
 // The pay hook has its own tests; here only the wiring matters. `payMocks.params` captures what the
@@ -101,7 +104,11 @@ vi.mock('@/stores/auth/auth.store', () => ({
     selector({ currentUserPubky: 'pubkyreader', session: {} }),
 }));
 vi.mock('../PostArticle/PostArticle', () => ({
-  PostArticle: ({ content }: { content: string }) => <div data-testid="post-article">{content}</div>,
+  PostArticle: ({ content, variant }: { content: string; variant?: 'preview' | 'full' }) => (
+    <div data-testid="post-article" data-variant={variant ?? 'preview'}>
+      {content}
+    </div>
+  ),
 }));
 vi.mock('../PostBody/PostBody', () => ({
   PostBody: ({ content, localAttachments }: { content: string; localAttachments?: unknown[] }) => (
@@ -154,11 +161,12 @@ describe('LockedPostContent', () => {
     authMocks.setShowSignInDialog.mockClear();
     vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue(null);
     vi.mocked(LocksController.replicateUnlockedContent).mockResolvedValue(undefined);
+    pathname.value = '/home';
   });
 
   it('renders the teaser body and the lock card from the parsed lock content', () => {
     mockLockData({});
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
     expect(LocksController.getLockContent).toHaveBeenCalledWith('{}');
     expect(useLockFile).toHaveBeenCalledWith(LOCK_URL);
@@ -168,13 +176,13 @@ describe('LockedPostContent', () => {
 
   it('shows the price on the card for a payment lock', () => {
     mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }), priceSats: '1000' });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(screen.getByText('₿1,000')).toBeInTheDocument();
   });
 
   it('shows the mask on the card for an unsupported legacy lock', () => {
     mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(screen.getByText('••••••')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
   });
@@ -182,7 +190,7 @@ describe('LockedPostContent', () => {
   // The price only becomes known with the lock file, so until then the card keeps it masked.
   it('shows the mask while the lock file is still loading', () => {
     mockLockData({ lockFile: null, priceSats: null });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(screen.getByText('••••••')).toBeInTheDocument();
   });
 
@@ -192,7 +200,7 @@ describe('LockedPostContent', () => {
 
     it('opens the pay dialog behind the auth gate', async () => {
       paymentData();
-      render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
       // The card defers onUnlock until its slide-over finishes; findBy waits that out.
@@ -208,7 +216,7 @@ describe('LockedPostContent', () => {
       try {
         authMocks.isAuthenticated = false;
         paymentData();
-        render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+        render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
         fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
         await waitFor(() => expect(authMocks.setShowSignInDialog).toHaveBeenCalledWith(true));
@@ -223,7 +231,7 @@ describe('LockedPostContent', () => {
     // Paid while away: the content arrives without the reader pressing anything.
     it('renders content recovered by the resume hook, with no interaction', async () => {
       paymentData();
-      render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
       expect(resumeMocks.params?.hasContent).toBe(false);
 
@@ -243,27 +251,27 @@ describe('LockedPostContent', () => {
 
     it('enables the purchase listing only for supported payment locks', () => {
       paymentData();
-      render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
       expect(purchasedMocks.params?.enabled).toBe(true);
 
       mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
-      render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
       expect(purchasedMocks.params?.enabled).toBe(false);
     });
 
     it('tells the recovery hook the lock is purchased from the listing', () => {
       paymentData();
-      render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
       expect(resumeMocks.params?.isPurchased).toBe(true);
 
       purchasedMocks.hasPurchase.mockReturnValue(false);
-      render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
       expect(resumeMocks.params?.isPurchased).toBe(false);
     });
 
     it('leaves purchase recovery to the pay hook while its dialog is open', async () => {
       paymentData();
-      render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
       expect(resumeMocks.params?.isPurchased).toBe(true);
 
       fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
@@ -274,7 +282,7 @@ describe('LockedPostContent', () => {
 
     it('records a new purchase in the session listing', () => {
       paymentData();
-      render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
       payMocks.params?.onPurchased('lock1');
       expect(purchasedMocks.markPurchased).toHaveBeenCalledWith('lock1');
@@ -282,7 +290,7 @@ describe('LockedPostContent', () => {
 
     it('connects the pay dialog view action to the pay hook', async () => {
       paymentData();
-      render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
       await screen.findByTestId('pay-dialog');
@@ -293,7 +301,7 @@ describe('LockedPostContent', () => {
 
     it('renders available media and warns about dropped attachments once payment completes', async () => {
       paymentData();
-      render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
       await screen.findByTestId('pay-dialog');
@@ -313,26 +321,26 @@ describe('LockedPostContent', () => {
 
   it('renders nothing when the teaser content is unparseable', () => {
     mockLockData({ lockContent: null });
-    const { container } = render(<LockedPostContent content="not json" lock={LOCK_URL} authorId="pubkycreator" />);
+    const { container } = render(<LockedPostContent content="not json" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it('enables Unlock when the lock file resolved', () => {
     mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }), priceSats: '1000' });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
   });
 
   it('disables Unlock when the lock file fetch failed', () => {
     mockLockData({ hasError: true });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
   });
 
   it('disables Unlock while the lock file is loading', () => {
     // Submitting without a lock file returns silently — the dialog would look broken.
     mockLockData({ lockFile: null, hasError: false });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
   });
 
@@ -344,12 +352,44 @@ describe('LockedPostContent', () => {
       attachments: [],
     });
 
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
     expect(await screen.findByTestId('post-article')).toHaveTextContent('My Essay');
     // Only the teaser stays on PostBody — the unlocked article must not also render there.
     expect(screen.getAllByTestId('post-body')).toHaveLength(1);
     expect(screen.getByTestId('post-body')).not.toHaveTextContent(article);
+  });
+
+  it('renders an unlocked article in full on the post page, and as a preview elsewhere', async () => {
+    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
+    const article = JSON.stringify({ title: 'My Essay', body: 'the body' });
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
+      post: { content: article, kind: 'long', attachments: null },
+      attachments: [],
+    });
+
+    const { unmount } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+    expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'preview');
+    unmount();
+
+    pathname.value = '/post/pubkycreator/POST1';
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+    expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'full');
+  });
+
+  it('keeps an embed or thread parent a preview on someone else post page', async () => {
+    // The post page also renders embeds and parents through the same component; only the post the
+    // route names may open in full.
+    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
+      post: { content: JSON.stringify({ title: 'My Essay', body: 'the body' }), kind: 'long', attachments: null },
+      attachments: [],
+    });
+    pathname.value = '/post/pubkycreator/OTHERPOST';
+
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+    expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'preview');
   });
 
   it('keeps plain body text on the body renderer even when the kind is long', async () => {
@@ -359,7 +399,7 @@ describe('LockedPostContent', () => {
       attachments: [],
     });
 
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
     expect(await screen.findByText('not article json')).toBeInTheDocument();
     expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
@@ -371,7 +411,7 @@ describe('LockedPostContent', () => {
       post: { content: 'previously unlocked', kind: 'short', attachments: null },
       attachments: [],
     });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
     await waitFor(() => expect(screen.getByText('previously unlocked')).toBeInTheDocument());
     expect(LocksController.fetchReplicatedContent).toHaveBeenCalledWith({
@@ -389,7 +429,7 @@ describe('LockedPostContent', () => {
       post: { content: 'my own locked content', kind: 'short', attachments: null },
       attachments: [],
     });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkyreader" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkyreader:POST1" />);
 
     await waitFor(() => expect(screen.getByText('my own locked content')).toBeInTheDocument());
     expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockFile });
@@ -405,7 +445,7 @@ describe('LockedPostContent', () => {
     // owner ('other') !== me, but I'm the author → my post, other lock account. Phase-2 blocker.
     const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
     mockLockData({ lockFile });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkyreader" />);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkyreader:POST1" />);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Unlock' })).toBeInTheDocument());
     expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();

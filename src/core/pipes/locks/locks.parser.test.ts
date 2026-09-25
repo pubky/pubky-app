@@ -243,6 +243,7 @@ describe('GuardedContentParser', () => {
   });
 
   describe('buildUnlockedPost', () => {
+    const ANNOUNCEMENT_URI = 'pubky://author1/pub/pubky.app/posts/POST1';
     const post: GuardedPost = {
       content: 'secret',
       kind: 'image',
@@ -250,18 +251,29 @@ describe('GuardedContentParser', () => {
     };
 
     it('repoints attachments at the reader copy with inline content types', () => {
-      const json = GuardedContentParser.buildUnlockedPost(post, 'readerpubky', 'LOCK1', [
-        { id: 'img1', contentType: 'image/png' },
-      ]);
+      const json = GuardedContentParser.buildUnlockedPost(
+        post,
+        'readerpubky',
+        'LOCK1',
+        [{ id: 'img1', contentType: 'image/png' }],
+        ANNOUNCEMENT_URI,
+      );
       expect(JSON.parse(json)).toEqual({
         content: 'secret',
         kind: 'image',
         attachments: [{ url: 'pubky://readerpubky/priv/social/unlocked/LOCK1/img1', content_type: 'image/png' }],
+        announcement: ANNOUNCEMENT_URI,
       });
     });
 
     it('keeps attachments null when the post has none', () => {
-      const json = GuardedContentParser.buildUnlockedPost({ ...post, attachments: null }, 'readerpubky', 'LOCK1', []);
+      const json = GuardedContentParser.buildUnlockedPost(
+        { ...post, attachments: null },
+        'readerpubky',
+        'LOCK1',
+        [],
+        ANNOUNCEMENT_URI,
+      );
       expect(JSON.parse(json).attachments).toBeNull();
     });
   });
@@ -280,6 +292,26 @@ describe('GuardedContentParser', () => {
         kind: 'image',
         attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png' }],
       });
+    });
+
+    it('parses a marker written before the announcement was recorded', () => {
+      const bytes = encode({ content: 'body', kind: 'short', attachments: null });
+
+      // Assert the parse succeeded too: a rejected marker would also read as an absent announcement.
+      expect(GuardedContentParser.parseReplicatedPost(bytes)).toEqual({
+        content: 'body',
+        kind: 'short',
+        attachments: null,
+      });
+    });
+
+    it('drops a non-pubky announcement instead of rejecting the whole marker', () => {
+      const bytes = encode({ content: 'body', kind: 'short', attachments: null, announcement: 'https://evil/posts/x' });
+
+      const parsed = GuardedContentParser.parseReplicatedPost(bytes);
+
+      expect(parsed?.content).toBe('body');
+      expect(parsed?.announcement).toBeUndefined();
     });
 
     it('returns null for non-JSON bytes', () => {

@@ -146,6 +146,13 @@ The `lock` URL survives either way — `toEdit` reads it from the stored row, no
   fields degrade to empty strings so the teaser still renders. The edit composer reads it with
   the same parse, so what the creator edits is what the reader sees (see
   [Editing an announcement](#editing-an-announcement)).
+- The reader's replica marker (`/priv/social/unlocked/<lockId>/post.json`, `replicatedPostSchema`) is
+  not a `PubkyAppPost`: each attachment carries its `content_type` inline so the copy renders without
+  the creator's lock file, and `announcement` holds the `pubky://…/posts/<id>` URI of the post the
+  content was unlocked from. Nexus cannot look a post up by its lock URL, so without that URI the
+  Unlocked screen has no way back to the announcement. The field is optional, and a value that is not
+  a `pubky://` URI is dropped rather than rejected — failing the schema would lose the reader's
+  unlocked content over a bad link. Either way the row renders as a bare replica card.
 - `LockFile` mirrors the Lock server's public `lock.json` (`version`, `creator`,
   `primary_resource`, `secondary_resources`, `criteria`, `lock_logic`, `access_policy`,
   `lock_server`). It is the **Lock server's contract**, not FE-owned — it should come from
@@ -155,7 +162,7 @@ The `lock` URL survives either way — `toEdit` reads it from the stored row, no
 ## Render flow (shared by feed and detail)
 
 Both the feed and the post-detail page render post content through the **same
-`PostContentBase`**, so lock support reaches both with **no detail-specific code**:
+`PostContentBase`**, so lock support reaches both from one place:
 
 ```
 feed card   ─┐
@@ -166,6 +173,13 @@ detail page ─┴─→ PostContentBase ──(isLock)──→ LockedPostConte
 
 `LockedPostContent` renders the teaser body (via the shared `PostBody`) + a lock card,
 and swaps in the guarded post once it becomes readable.
+
+The one route-dependent bit lives there too: an unlocked **article** is a three-line preview
+everywhere except the post page of that same post, where it renders in full (`PostArticle full`).
+A lock post's own content is the lock envelope, not article JSON, so `SinglePostContent` never
+routes it to the article page — the route is the only thing that says the reader opened this post
+to read it. The match is on the route's own ids, because that page also renders embeds and thread
+parents through this component and those stay previews (#2401, absorbed into #2432).
 
 | File                                                           | Role                                                                                |
 | -------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
@@ -190,7 +204,7 @@ LockedPostContent
   ├─ useLockFile(lock)                       → lock.json (LockFile | null)
   │    └─ LocksController.fetchLockFile      → LocksApplication → LocksService.readContentLock
   │
-  ├─ useUnlockedContent(lock, lockFile, authorId)
+  ├─ useUnlockedContent(lock, lockFile, postId)
   │    ├─ 1) already unlocked as a reader → fetchReplicatedContent  (my HS /priv copy)
   │    ├─ 2) my own post (a == b)         → fetchOwnContent         (my HS /priv original)
   │    ├─ 3) valid payment price → lock card → DialogPayToUnlock (sign-in required first)
@@ -325,7 +339,9 @@ profile/(own)/layout.tsx → ProfilePageContainer
   │         └─ listAll(/priv/social/unlocked/) → completedLockIds → read each post.json
   ├─ unlockedCount → ProfilePageFilterBar (sidebar badge)
   └─ UnlockedListProvider → ProfileUnlocked (the page)
-       └─ ProfileUnlockedCard → fetchReplicatedAttachments → PostArticle | PostBody
+       └─ ProfileUnlockedItem
+            ├─ PostMain (announcement post, when its id resolves)
+            └─ ProfileUnlockedCard → fetchReplicatedAttachments → PostArticle | PostBody
 ```
 
 - **One read, two consumers.** The layout survives profile tab navigation, so the hook lives
@@ -337,8 +353,18 @@ profile/(own)/layout.tsx → ProfilePageContainer
   so the ordering key is server-authoritative rather than a number the client puts in the body.
   It costs no extra request — the header rides along with the marker read. (Path order is no help:
   `list` sorts by path and a lock id is a hash.)
-- **Media loads per card, not per list.** The list holds only markers; pulling every
-  attachment up front would download the reader's whole unlocked library at once.
+- **The announcement post is the preferred row.** It carries the author, the timestamp and the
+  teaser, and swaps its own lock card for this reader's replica, so rendering it gives the whole row.
+  Its id comes from the marker's `announcement` URI (see [Data shape](#data-shape)); a marker without one, a
+  post that 404s, and a deleted post all fall back to the bare replica card. A temporary load failure
+  is deliberately not told apart from a deletion (#2432).
+- **Media loads per row, not per list.** The list holds only markers; pulling every attachment up
+  front would download the reader's whole unlocked library at once. The announcement branch costs
+  more than the fallback card: `LockedPostContent` re-reads the marker and fetches the lock file for
+  each row. #2296 turns the marker read local.
+- **An unlocked article's cover comes from the reader's own copy.** It has no Nexus attachments at
+  all, so `usePostArticle` counts the caller's local attachments when deciding whether slot 0 is a
+  cover; the slot-0 rule (a body that references `attachment:0` has no cover) still applies.
 - **Not cached.** Re-entering the profile re-lists the root and re-reads each marker; #2296
   moves this to IndexedDB.
 

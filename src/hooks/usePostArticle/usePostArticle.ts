@@ -17,6 +17,14 @@ interface UsePostArticleParams {
   content: string;
   attachments: PostDetailsModel['attachments'];
   coverImageVariant: FileVariant;
+  /**
+   * Attachments the caller holds locally. Unlocked content has no Nexus attachments at all — the
+   * bytes live in the reader's own `/priv` — so without this its cover would never count as one.
+   *
+   * TODO:[Locks] #2660 — a count only answers "is there a slot 0"; whether slot 0 is an image is
+   * decided again in `PostArticle`, so the two can disagree. Take the attachments here instead.
+   */
+  localAttachmentCount?: number;
 }
 
 interface UsePostArticleResult {
@@ -52,6 +60,7 @@ export function usePostArticle({
   content,
   attachments,
   coverImageVariant,
+  localAttachmentCount,
 }: UsePostArticleParams): UsePostArticleResult {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -76,7 +85,7 @@ export function usePostArticle({
   // Slot-0 cover rule, computed synchronously from the published body so the
   // cover never flashes for articles whose slot 0 is an inline image.
   const hasInlineSlotZero = articleHasInlineSlotZero(parseArticleContent(content)?.body ?? '');
-  const hasCover = Boolean(attachments?.length) && !hasInlineSlotZero;
+  const hasCover = Boolean(attachments?.length || localAttachmentCount) && !hasInlineSlotZero;
 
   useEffect(() => {
     let cancelled = false;

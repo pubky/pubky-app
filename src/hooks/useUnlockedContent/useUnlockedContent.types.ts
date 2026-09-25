@@ -6,8 +6,8 @@ export interface UseUnlockedContentParams {
   lock: string | null | undefined;
   /** The resolved lock file (null while loading), used to detect the creator's own lock. */
   lockFile: LockFile | null;
-  /** Post author (pubky.app account). */
-  authorId: string;
+  /** Composite id of the announcement post. Its author is the pubky.app account that posted the lock. */
+  postId: string;
 }
 
 export interface UseUnlockedContentResult {

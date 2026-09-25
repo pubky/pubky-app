@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Check, Lock } from 'lucide-react';
+import { matchPostRoute } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
@@ -12,6 +14,7 @@ import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUnlockedContent } from '@/hooks/useUnlockedContent/useUnlockedContent';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { cn } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { DialogPayToUnlock } from '@/molecules/DialogPayToUnlock/DialogPayToUnlock';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
@@ -25,8 +28,8 @@ import { PostBody } from '../PostBody/PostBody';
 interface LockedPostContentProps {
   content: string;
   lock: string | null | undefined;
-  /** Post author (pubky.app account). Matches the signed-in user for a creator's own lock post. */
-  authorId: string;
+  /** Composite id of this announcement post. Its author matches the signed-in user for an own lock. */
+  postId: string;
   attachments?: PostDetailsModel['attachments'];
   /** Creator's local (not-yet-remote) attachments, so their own just-published media shows. */
   localAttachments?: AttachmentConstructed[];
@@ -42,19 +45,23 @@ interface LockedPostContentProps {
 export function LockedPostContent({
   content,
   lock,
-  authorId,
+  postId,
   attachments,
   localAttachments,
   className,
   textClassName,
 }: LockedPostContentProps) {
   const [isPayOpen, setIsPayOpen] = useState(false);
+  const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
+  // Exact route match so embeds and thread parents on this page stay preview cards.
+  const routeParams = matchPostRoute(usePathname());
+  const isFocusedPostPage = routeParams?.userId === authorId && routeParams?.postId === rawPostId;
   const lockContent = LocksController.getLockContent(content);
   const { lockFile, priceSats } = useLockFile(lock);
   const { unlockedPost, applyUnlockedContent, media, isOwnLock, isResolvingReplica } = useUnlockedContent({
     lock,
     lockFile,
-    authorId,
+    postId,
   });
   const { requireAuth, isAuthenticated } = useRequireAuth();
 
@@ -126,7 +133,12 @@ export function LockedPostContent({
               </span>
             </div>
             {unlockedPost.kind === 'long' && isArticleContent(unlockedPost.content) ? (
-              <PostArticle content={unlockedPost.content} attachments={null} localAttachments={media} />
+              <PostArticle
+                content={unlockedPost.content}
+                attachments={null}
+                localAttachments={media}
+                variant={isFocusedPostPage ? 'full' : 'preview'}
+              />
             ) : (
               <PostBody
                 content={unlockedPost.content}

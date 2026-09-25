@@ -5,6 +5,7 @@ import { LocksController } from '@/controllers/locks/locks';
 import { Logger } from '@/libs/logger/logger';
 import { toUnlockedMedia } from '@/libs/utils/unlockedMedia';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import type { GuardedPost, TUnlockedContent } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -21,7 +22,8 @@ import type { UseUnlockedContentParams, UseUnlockedContentResult } from './useUn
  * then dropped — only the post text and the media URLs live in state. The feed isn't virtualized, so
  * keeping raw bytes AND their blobs per card would double every scrolled-past post's memory.
  */
-export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedContentParams): UseUnlockedContentResult {
+export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedContentParams): UseUnlockedContentResult {
+  const { pubky: authorId } = parseCompositeId(postId);
   const [unlockedPost, setUnlockedPost] = useState<GuardedPost | null>(null);
   const [media, setMedia] = useState<AttachmentConstructed[]>([]);
   // Until the replica read settles, "no content" means "not known yet". Callers that would act on
@@ -113,9 +115,12 @@ export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedCont
   const applyUnlockedContent = (content: TUnlockedContent) => {
     applyContent(content);
     if (lock && currentUserPubky) {
-      void LocksController.replicateUnlockedContent({ lockUrl: lock, readerPubky: currentUserPubky, content }).catch(
-        () => undefined,
-      );
+      void LocksController.replicateUnlockedContent({
+        lockUrl: lock,
+        readerPubky: currentUserPubky,
+        content,
+        postId,
+      }).catch(() => undefined);
     }
   };
 
