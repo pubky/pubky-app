@@ -28,6 +28,7 @@ import {
   hoursAgo,
   isPostDeleted,
   isPubkyIdentifier,
+  isReservedUserName,
   isSameDomain,
   isStarterPackReservedTag,
   isUserDeleted,
@@ -941,6 +942,19 @@ describe('Utils', () => {
     it('requires an exact sentinel match', () => {
       expect(isUserDeleted({ name: '[deleted]' })).toBe(false);
       expect(isUserDeleted({ name: 'Alice [DELETED]' })).toBe(false);
+    });
+  });
+
+  describe('isReservedUserName', () => {
+    it('reserves the tombstone label, with or without surrounding whitespace', () => {
+      expect(isReservedUserName('[DELETED]')).toBe(true);
+      expect(isReservedUserName('  [DELETED]  ')).toBe(true);
+    });
+
+    it('leaves a live name alone', () => {
+      expect(isReservedUserName('Alice')).toBe(false);
+      expect(isReservedUserName('[deleted]')).toBe(false);
+      expect(isReservedUserName('Alice [DELETED]')).toBe(false);
     });
   });
 

@@ -466,6 +466,14 @@ export const isUserDeleted = (user: { name?: string | null; deleted?: boolean } 
   user?.deleted === true || user?.name === DELETED_USER_NAME;
 
 /**
+ * Whether a profile name is reserved for the tombstone label. `[DELETED]` is what the app shows for
+ * a deleted user, so a live profile must not be able to take it: it would render as deleted and
+ * `commitUpdateStatus` refuses the status updates of a row carrying it. Reserved at input by
+ * `UserValidator` and the profile form, both of which gate the name on this.
+ */
+export const isReservedUserName = (name: string) => name.trim() === DELETED_USER_NAME;
+
+/**
  * Get tags that fit within the character budget.
  * Shows fewer tags if they would exceed the total character limit.
  *

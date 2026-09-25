@@ -14,7 +14,7 @@ import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSiz
 import { Logger } from '@/libs/logger/logger';
 import { normalizeProfileLinkUrl } from '@/libs/profile/profileLinks';
 import { safeExternalUrlSchema } from '@/libs/utils/safeExternalUrl';
-import { generateRandomUsername } from '@/libs/utils/utils';
+import { generateRandomUsername, isReservedUserName } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
 import { UserValidator } from '@/pipes/user/user.validator';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
@@ -36,7 +36,10 @@ const nameSchema = z
   .string()
   .trim()
   .min(USER_NAME_MIN_LENGTH, `Name must be at least ${USER_NAME_MIN_LENGTH} characters`)
-  .max(USER_NAME_MAX_LENGTH, `Name must be no more than ${USER_NAME_MAX_LENGTH} characters`);
+  .max(USER_NAME_MAX_LENGTH, `Name must be no more than ${USER_NAME_MAX_LENGTH} characters`)
+  // `[DELETED]` is the label the app shows for a tombstoned user, so a live profile cannot take it.
+  // Mirrors `UserValidator` (the submit gate); both read the rule from `isReservedUserName`.
+  .refine((value) => !isReservedUserName(value), { message: 'This name is reserved' });
 const bioSchema = z
   .string()
   .trim()

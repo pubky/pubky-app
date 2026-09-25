@@ -112,6 +112,40 @@ describe('useProfileForm profile link safety', () => {
   });
 });
 
+describe('useProfileForm reserved name', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('refuses the [DELETED] label, which belongs to a tombstoned profile', async () => {
+    const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+
+    act(() => {
+      result.current.handlers.setName('[DELETED]');
+    });
+
+    expect(result.current.errors.nameError).toBe('This name is reserved');
+    expect(result.current.isSubmitDisabled).toBe(true);
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(ProfileController.commitCreate).not.toHaveBeenCalled();
+  });
+
+  it('still accepts a live name', async () => {
+    const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+
+    act(() => {
+      result.current.handlers.setName('Alice');
+    });
+
+    expect(result.current.errors.nameError).toBeNull();
+    expect(result.current.isSubmitDisabled).toBe(false);
+  });
+});
+
 describe('useProfileForm post-save navigation', () => {
   const userDetails: NexusUserDetails = {
     id: pubky,
