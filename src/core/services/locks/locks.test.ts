@@ -1,4 +1,4 @@
-import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
+import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
@@ -63,7 +63,7 @@ vi.mock('@/config/network', () => ({
   getPaykitServerUrl: mocks.getPaykitServerUrl,
 }));
 
-vi.mock('@pubky/locks-sdk', () => {
+vi.mock('@synonymdev/locks-sdk', () => {
   class LocksOptions {
     addPkarrRelay = mocks.addPkarrRelay;
     setLocalTestnetHomeserver = mocks.setLocalTestnetHomeserver;

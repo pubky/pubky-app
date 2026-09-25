@@ -386,21 +386,15 @@ Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
 
 ## Testing & local demo
 
-**The Lock SDK is not on npm yet** (as of 2026-08). `@pubky/locks-sdk` is deliberately
-missing from `package.json` — you build it from the `pubky/locks` repo and copy it into
-`node_modules` by hand:
+The Lock SDK is an ordinary dependency: `@synonymdev/locks-sdk`, pinned exactly in
+`package.json` and installed by `npm ci` like anything else. Nothing has to be built or
+copied by hand, and the container build needs no special step.
 
-Build the SDK from `pubky/locks` master: the payment flow needs `Locks.hasPaykitDataWithOptions`
-(`pubky/locks#42`) and `lookupPaykitConnectionState` (`pubky/locks#54`).
-
-```bash
-cd <locks repo>/locks-sdk/bindings/js
-npm run build                       # wasm-pack build --target web → ./pkg
-cp pkg/* <pubky-app>/node_modules/@pubky/locks-sdk/
-```
-
-Anything that reinstalls `node_modules` (`npm install`, `npm ci`, lockfile changes) wipes
-the copy — if lock imports suddenly fail or behave stale, re-copy first.
+Note the scope — the package is published under `@synonymdev`, while the crate it is built
+from is `locks-sdk-wasm`. Upgrading it is
+`npm i --save-exact @synonymdev/locks-sdk@<version>`; the available version is what
+`locks-sdk/bindings/js/package.json` declares in `pubky/locks`, which can be ahead of that
+repo's newest tag.
 
 - Tests are co-located with each file. Shared sample data (a `LockFile` + an author pubky)
   lives in `src/test-utils/locks.ts` (`mockLockFile()`, `MOCK_LOCK_AUTHOR_PUBKY`).
