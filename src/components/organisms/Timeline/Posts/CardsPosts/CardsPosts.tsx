@@ -20,7 +20,7 @@ import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { PostMain } from '@/organisms/PostMain/PostMain';
-import { CardsPostsSkeleton } from './CardsPosts.skeleton';
+import { CardsPostSkeleton, CardsPostsSkeleton } from './CardsPosts.skeleton';
 
 interface TimelineCardsPostsProps {
   postIds: string[];
@@ -54,9 +54,11 @@ function CardsPost({
   totalCount: number;
   setCardRef: UsePostListKeyboardResult['setCardRef'];
 }) {
-  const { postDetails } = usePostDetails(postId);
+  const { postDetails, isLoading } = usePostDetails(postId);
   const identity = parseCompositeId(postId);
-  const visibility = usePostHeaderVisibility(postId);
+  // Resolve the envelope before mounting other local-first readers of this post.
+  // Passing an empty id keeps the visibility hook's details/relationship queries disabled.
+  const visibility = usePostHeaderVisibility(postDetails ? postId : '');
   const displayedPostId = getDisplayedPostId(postId, visibility);
   const { handlePostKeyDown } = usePostNavigation();
   return (
@@ -70,10 +72,12 @@ function CardsPost({
       onKeyDown={(e) => handlePostKeyDown(displayedPostId, e)}
       className="@container/grid min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      {postDetails?.kind === 'collection' && !isPostDeleted(postDetails.content) ? (
+      {postDetails === undefined || isLoading ? (
+        <CardsPostSkeleton index={index} />
+      ) : postDetails?.kind === 'collection' && !isPostDeleted(postDetails.content) ? (
         <CollectionCard authorPubky={identity.pubky} postId={identity.id} />
       ) : (
-        <PostMain postId={postId} isReply={false} presentation="cards" />
+        <PostMain postId={postId} postDetails={postDetails} isReply={false} presentation="cards" />
       )}
     </Container>
   );

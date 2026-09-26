@@ -114,7 +114,7 @@ export function CollectionLayoutPicker({ layout, onLayoutChange }: CollectionLay
   const ActiveIcon = activeOption.icon;
 
   const handleSelect = (nextLayout: CollectionLayout) => {
-    if (nextLayout !== layout) onLayoutChange(nextLayout);
+    if (nextLayout !== displayedLayout) onLayoutChange(nextLayout);
     setOpen(false);
   };
 

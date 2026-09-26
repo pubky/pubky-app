@@ -1,9 +1,13 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import Dexie from 'dexie';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { GRID_FEED_SKELETON_COUNT } from '@/config/feed';
+import { PostController } from '@/controllers/post/post';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { PostMain } from '@/organisms/PostMain/PostMain';
 import { VRT_FEED_POSTS } from '@/test/fixtures/feed/posts';
 import { VRT_AUTHOR_PROFILES } from '@/test/fixtures/feed/profiles';
@@ -21,7 +25,7 @@ vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({
 }));
 vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({ useInfiniteScroll: vi.fn() }));
 vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => ({
-  usePostHeaderVisibility: () => ({ showRepostHeader: false, shouldShowPostHeader: true, originalPostId: null }),
+  usePostHeaderVisibility: vi.fn(() => ({ showRepostHeader: false, shouldShowPostHeader: true, originalPostId: null })),
 }));
 const navigate = vi.hoisted(() => vi.fn());
 vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
@@ -97,6 +101,7 @@ const resume = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(PostMain).mockReset();
+  vi.mocked(usePostHeaderVisibility).mockReset();
   vi.mocked(usePostDetails).mockImplementation((id) => {
     const details = VRT_FEED_POSTS.find((post) => post.compositeId === id)?.details;
     return {
@@ -112,6 +117,20 @@ describe('TimelineCardsPosts', () => {
     vi.mocked(PostMain).mockImplementation(({ postId, presentation }) => (
       <div data-presentation={presentation}>{postId}</div>
     ));
+  });
+
+  it.each([undefined, null])('waits for pending details (%s) before mounting the card body', (postDetails) => {
+    vi.mocked(usePostDetails).mockReturnValue({ postDetails, isLoading: true });
+    const { rerender } = render(<TimelineCardsPosts {...props} postIds={['a:1']} />);
+    expect(screen.getByRole('article').querySelector('[data-post-content-pending]')).toBeInTheDocument();
+    expect(PostMain).not.toHaveBeenCalled();
+    expect(usePostHeaderVisibility).toHaveBeenCalledWith('');
+
+    vi.mocked(usePostDetails).mockReturnValue({ postDetails: asOpaque({ kind: 'collection' }), isLoading: false });
+    rerender(<TimelineCardsPosts {...props} postIds={['a:1']} />);
+    expect(screen.getByTestId('standalone-collection')).toBeInTheDocument();
+    expect(PostMain).not.toHaveBeenCalled();
+    expect(screen.getByRole('article').querySelector('[data-post-content-pending]')).not.toBeInTheDocument();
   });
 
   it('keeps accessible cards and keyboard navigation in source order', () => {
@@ -180,6 +199,55 @@ describe('TimelineCardsPosts', () => {
 });
 
 const snapshotProps = { ...props, postIds: [VRT_FEED_POSTS[0].compositeId] };
+
+describe('TimelineCardsPosts cold reads', () => {
+  it.each(['short', 'collection', null] as const)(
+    'fetches a missing %s envelope once before mounting its body',
+    async (kind) => {
+      const actualDetails = await vi.importActual<typeof import('@/hooks/usePostDetails/usePostDetails')>(
+        '@/hooks/usePostDetails/usePostDetails',
+      );
+      const actualVisibility = await vi.importActual<
+        typeof import('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility')
+      >('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility');
+      vi.mocked(usePostDetails).mockImplementation(actualDetails.usePostDetails);
+      vi.mocked(usePostHeaderVisibility).mockImplementation(actualVisibility.usePostHeaderVisibility);
+      const db = new Dexie(`cards-cold-${kind}`);
+      db.version(1).stores({ posts: 'id' });
+      const posts = db.table<EnrichedPostDetails, string>('posts');
+      const id = snapshotProps.postIds[0];
+      const response = Promise.withResolvers<void>();
+      const read = vi.spyOn(PostController, 'getDetails').mockImplementation(async ({ compositeId }) => {
+        return (await posts.get(compositeId)) ?? null;
+      });
+      const fetch = vi.spyOn(PostController, 'fetch').mockImplementation(async () => {
+        await response.promise;
+        if (kind === null) return null;
+        const details = { ...VRT_FEED_POSTS[0].details, id, kind, is_moderated: false, is_blurred: false };
+        await posts.put(details);
+        return details;
+      });
+      const view = render(<TimelineCardsPosts {...snapshotProps} />, { wrapper: TooltipProvider });
+      try {
+        await waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+        expect(PostMain).not.toHaveBeenCalled();
+        expect(screen.getByRole('article').querySelector('[data-post-content-pending]')).toBeInTheDocument();
+        await act(async () => response.resolve());
+        await screen.findByText(
+          kind === null ? 'Post not found.' : kind === 'short' ? VRT_FEED_POSTS[0].details.content : id,
+        );
+        expect(screen.getByRole('article').querySelector('[data-post-content-pending]')).not.toBeInTheDocument();
+        expect(fetch).toHaveBeenCalledOnce();
+      } finally {
+        response.resolve();
+        view.unmount();
+        read.mockRestore();
+        fetch.mockRestore();
+        await db.delete();
+      }
+    },
+  );
+});
 
 describe('TimelineCardsPosts - Snapshots', () => {
   it('renders a complete Cards post', () => {

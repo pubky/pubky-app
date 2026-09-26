@@ -98,6 +98,7 @@ function UndoableRepostHeader({
 
 export function PostMain({
   postId,
+  postDetails: providedPostDetails,
   className,
   isReply = false,
   isLastReply = false,
@@ -110,7 +111,9 @@ export function PostMain({
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
   const isListLayout = effectiveTagsLayout === 'list';
-  const { postDetails, isLoading } = usePostDetails(postId);
+  const detailsQuery = usePostDetails(postId, { enabled: providedPostDetails === undefined });
+  const postDetails = providedPostDetails === undefined ? detailsQuery.postDetails : providedPostDetails;
+  const isLoading = providedPostDetails === undefined && detailsQuery.isLoading;
   const isDeleted = isPostDeleted(postDetails?.content);
   // A settled `null` (cache miss after the fetch resolved) means the post 404'd.
   // Without this branch the card below would skeleton forever (PostHeader /
@@ -119,7 +122,7 @@ export function PostMain({
 
   const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
-  const headerVisibility = usePostHeaderVisibility(postId);
+  const headerVisibility = usePostHeaderVisibility(postDetails ? postId : '');
   const { showRepostHeader, shouldShowPostHeader, originalPostId } = headerVisibility;
   // A contentless repost adds a bar above the original post, not another card
   // around it. Undo and saved membership retain the repost's identity.

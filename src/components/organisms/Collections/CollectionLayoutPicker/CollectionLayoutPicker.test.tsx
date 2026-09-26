@@ -116,12 +116,12 @@ describe('CollectionLayoutPicker - Mobile', () => {
     const gridOption = await screen.findByRole('menuitem', { name: 'Cards' });
     expect(gridOption.querySelector('.lucide-check')).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Visual' })).not.toBeInTheDocument();
+    fireEvent.click(gridOption);
+    expect(onLayoutChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     resetViewport();
     fireEvent(window, new Event('resize'));
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Layout: Visual', hidden: true })).toBeInTheDocument(),
-    );
-    expect(screen.getByRole('menuitem', { name: 'Visual' }).querySelector('.lucide-check')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Layout: Visual' })).toBeInTheDocument());
     expect(onLayoutChange).not.toHaveBeenCalled();
   });
 });

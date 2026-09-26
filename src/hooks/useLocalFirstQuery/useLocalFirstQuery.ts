@@ -61,6 +61,7 @@ export function useLocalFirstQuery<T>({
   // dependency/enable transition its own identity so neither a stale hit nor a
   // stale miss can be consumed before the new local read completes.
   const [query, setQuery] = useState(() => ({ deps: [...deps], enabled }));
+  const [settledQuery, setSettledQuery] = useState<typeof query | null>(null);
   if (
     query.enabled !== enabled ||
     query.deps.length !== deps.length ||
@@ -117,6 +118,7 @@ export function useLocalFirstQuery<T>({
     // `isFetching` when `data` is non-null, stale state is a latent bug.
     if (data !== null) {
       setIsFetching(false);
+      setSettledQuery(null);
       return;
     }
 
@@ -133,6 +135,7 @@ export function useLocalFirstQuery<T>({
       .finally(() => {
         if (!cancelled) {
           setIsFetching(false);
+          setSettledQuery(query);
         }
       });
 
@@ -150,6 +153,8 @@ export function useLocalFirstQuery<T>({
   // regardless of `isFetching` — we already have data to render.
   return {
     data,
-    isLoading: data === undefined || (data === null && isFetching),
+    // A miss is pending even in the render before the fetch effect starts.
+    // A later miss after a cache hit starts a fresh attempt in the same lifetime.
+    isLoading: data === undefined || (enabled && data === null && (isFetching || settledQuery !== query)),
   };
 }

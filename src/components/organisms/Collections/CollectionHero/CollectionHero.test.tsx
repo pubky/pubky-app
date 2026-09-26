@@ -13,6 +13,7 @@ import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscriptio
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { CollectionHero } from './CollectionHero';
 import type { CollectionHeroProps } from './CollectionHero.types';
 
@@ -1027,6 +1028,31 @@ describe('CollectionHero - Snapshots', () => {
 
     const { container } = renderHero();
     expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('CollectionHero - Mobile Snapshots', () => {
+  beforeEach(() => {
+    mockViewportState.isMobile = true;
+    setMobileViewport();
+    setAuthStore(AUTHOR_PUBKY);
+  });
+  afterEach(() => {
+    mockViewportState.isMobile = false;
+    resetViewport();
+  });
+
+  it('matches the snapshot for the owner state', () => {
+    const { container } = renderHero();
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('shows Cards for a Visual preference without changing it', async () => {
+    const onLayoutChange = vi.fn();
+    renderHero({ layout: COLLECTION_LAYOUT.VISUAL, onLayoutChange });
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Layout: Cards' }), { button: 0, ctrlKey: false });
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Cards' }));
+    expect(onLayoutChange).not.toHaveBeenCalled();
   });
 });
 

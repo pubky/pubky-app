@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import Dexie from 'dexie';
 import { describe, expect, it, vi } from 'vitest';
 import { useLocalFirstQuery } from './useLocalFirstQuery';
 
@@ -11,6 +12,64 @@ function deferred<T>() {
 }
 
 describe('useLocalFirstQuery with real Dexie subscriptions', () => {
+  it('keeps every cache-miss render loading until its fetch settles, including after a later deletion', async () => {
+    const db = new Dexie('local-first-loading-lifecycle');
+    db.version(1).stores({ entries: 'id' });
+    const entries = db.table<{ id: string }, string>('entries');
+    const pending = Promise.withResolvers<void>();
+    const fetch = vi.fn().mockResolvedValueOnce(undefined).mockReturnValue(pending.promise);
+    const missingFrames: boolean[] = [];
+    const { result, unmount } = renderHook(() => {
+      const value = useLocalFirstQuery({
+        queryFn: async () => (await entries.get('post')) ?? null,
+        fetchFn: fetch,
+        deps: ['post'],
+      });
+      if (value.data === null) missingFrames.push(value.isLoading);
+      return value;
+    });
+    try {
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(missingFrames[0]).toBe(true);
+      await act(async () => {
+        await entries.put({ id: 'post' });
+      });
+      await waitFor(() => expect(result.current.data).toEqual({ id: 'post' }));
+      missingFrames.length = 0;
+      await act(async () => {
+        await entries.delete('post');
+      });
+      await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+      expect(missingFrames.length).toBeGreaterThan(0);
+      expect(missingFrames.every(Boolean)).toBe(true);
+      await act(async () => pending.resolve());
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current.data).toBeNull();
+    } finally {
+      pending.resolve();
+      unmount();
+      await db.delete();
+    }
+  });
+
+  it('does not let an old fetch settle a newer cache miss', async () => {
+    const old = Promise.withResolvers<void>();
+    const current = Promise.withResolvers<void>();
+    const fetch = vi.fn((id: string) => (id === 'old' ? old.promise : current.promise));
+    const { result, rerender } = renderHook(
+      ({ id }) => useLocalFirstQuery({ queryFn: async () => null, fetchFn: () => fetch(id), deps: [id] }),
+      { initialProps: { id: 'old' } },
+    );
+    await waitFor(() => expect(fetch).toHaveBeenCalledExactlyOnceWith('old'));
+    rerender({ id: 'current' });
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    await act(async () => old.resolve());
+    expect(result.current.isLoading).toBe(true);
+    await act(async () => current.resolve());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+  });
+
   it.each([null, { id: 'old' }])('waits for the new local read after a previous snapshot of %j', async (previous) => {
     const pending = deferred<{ id: string } | null>();
     const read = vi.fn((id: string) => (id === 'old' ? Promise.resolve(previous) : pending.promise));
