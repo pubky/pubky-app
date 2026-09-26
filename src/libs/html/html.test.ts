@@ -106,6 +106,12 @@ describe('html', () => {
         expect(result).toBe('Page Title');
       });
 
+      it('extracts title when a quoted attribute contains an angle bracket', () => {
+        const html = '<title data-label="a<b" lang=\'c>d\'>Page Title</title>';
+        const result = extractFromHtml(html, [OG_PATTERNS.TITLE_TAG]);
+        expect(result).toBe('Page Title');
+      });
+
       it('handles title with special characters', () => {
         const html = '<title>Test & Title - Example.com</title>';
         const result = extractFromHtml(html, [OG_PATTERNS.TITLE_TAG]);
@@ -194,13 +200,16 @@ describe('html', () => {
         expect(result).toBeNull();
       });
 
-      it('scans a body of unclosed <title tokens in linear time', () => {
-        // The attribute class excludes `<`, so each `<title` start fails at the next token instead
-        // of backtracking over the rest of the body; the old class made this quadratic.
-        const html = '<title'.repeat(200_000);
-        const startedAt = performance.now();
-        expect(extractFromHtml(html, [OG_PATTERNS.TITLE_TAG])).toBeNull();
-        expect(performance.now() - startedAt).toBeLessThan(500);
+      it('scans a body of unclosed <title tokens or quotes in linear time', () => {
+        // Unquoted attribute text excludes `<` and a quoted value ends at its own quote, so each
+        // `<title` start fails at the next token instead of backtracking over the rest of the body;
+        // the old `[^>]*` attribute run made this quadratic.
+        const bodies = ['<title'.repeat(200_000), '<title"'.repeat(200_000), `<title"${'<title'.repeat(200_000)}`];
+        for (const html of bodies) {
+          const startedAt = performance.now();
+          expect(extractFromHtml(html, [OG_PATTERNS.TITLE_TAG])).toBeNull();
+          expect(performance.now() - startedAt).toBeLessThan(500);
+        }
       });
 
       it('handles empty content attribute', () => {

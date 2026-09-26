@@ -23,10 +23,11 @@ export const OG_PATTERNS = {
   /**
    * Pattern for matching the HTML <title> tag.
    * Not global: a document has one title, and a later <title> is an SVG label in the body, not a
-   * second candidate. The attribute run excludes `<` so a body of unclosed `<title` tokens cannot
+   * second candidate. Attributes are matched as unquoted text without `<` / `>` or as quoted values
+   * (which browsers let contain either), so a body of unclosed `<title` tokens or quotes cannot
    * backtrack quadratically on the server.
    */
-  TITLE_TAG: /<title[^<>]*>([^<]+)<\/title>/i,
+  TITLE_TAG: /<title(?:[^<>"']|"[^"]*"|'[^']*')*>([^<]+)<\/title>/i,
 
   /**
    * Patterns for matching og:image meta tags
