@@ -178,6 +178,67 @@ exports[`SearchFeedFilters - Mobile Snapshots > matches full-text sidebar filter
                 List
               </span>
             </button>
+            <button
+              aria-checked="false"
+              aria-label="Cards"
+              aria-pressed="false"
+              class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+              data-cy="cards-layout-toggle"
+              data-selected="false"
+              data-slot="filter-item"
+              data-testid="filter-item"
+              role="radio"
+              tabindex="-1"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-dashboard h-5 w-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="12"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="16"
+                />
+              </svg>
+              <span
+                class=""
+              >
+                Cards
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -745,7 +806,53 @@ exports[`SearchFeedFilters - Snapshots > matches full-text drawer filters snapsh
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-layout-grid h-5 w-5"
+              class="lucide lucide-grid2x2 lucide-grid-2x2 h-5 w-5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 3v18"
+              />
+              <path
+                d="M3 12h18"
+              />
+              <rect
+                height="18"
+                rx="2"
+                width="18"
+                x="3"
+                y="3"
+              />
+            </svg>
+            <span
+              class=""
+            >
+              Visual
+            </span>
+          </button>
+          <button
+            aria-checked="false"
+            aria-label="Cards"
+            aria-pressed="false"
+            class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+            data-cy="cards-layout-toggle"
+            data-selected="false"
+            data-slot="filter-item"
+            data-testid="filter-item"
+            role="radio"
+            tabindex="-1"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-layout-dashboard h-5 w-5"
               fill="none"
               height="24"
               stroke="currentColor"
@@ -757,38 +864,38 @@ exports[`SearchFeedFilters - Snapshots > matches full-text drawer filters snapsh
               xmlns="http://www.w3.org/2000/svg"
             >
               <rect
-                height="7"
+                height="9"
                 rx="1"
                 width="7"
                 x="3"
                 y="3"
               />
               <rect
-                height="7"
+                height="5"
                 rx="1"
                 width="7"
                 x="14"
                 y="3"
               />
               <rect
-                height="7"
+                height="9"
                 rx="1"
                 width="7"
                 x="14"
-                y="14"
+                y="12"
               />
               <rect
-                height="7"
+                height="5"
                 rx="1"
                 width="7"
                 x="3"
-                y="14"
+                y="16"
               />
             </svg>
             <span
               class=""
             >
-              Visual
+              Cards
             </span>
           </button>
         </div>
@@ -1361,7 +1468,53 @@ exports[`SearchFeedFilters - Snapshots > matches full-text filters snapshot with
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-layout-grid h-5 w-5"
+                class="lucide lucide-grid2x2 lucide-grid-2x2 h-5 w-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 3v18"
+                />
+                <path
+                  d="M3 12h18"
+                />
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+              </svg>
+              <span
+                class=""
+              >
+                Visual
+              </span>
+            </button>
+            <button
+              aria-checked="false"
+              aria-label="Cards"
+              aria-pressed="false"
+              class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+              data-cy="cards-layout-toggle"
+              data-selected="false"
+              data-slot="filter-item"
+              data-testid="filter-item"
+              role="radio"
+              tabindex="-1"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-dashboard h-5 w-5"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1373,38 +1526,38 @@ exports[`SearchFeedFilters - Snapshots > matches full-text filters snapshot with
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <rect
-                  height="7"
+                  height="9"
                   rx="1"
                   width="7"
                   x="3"
                   y="3"
                 />
                 <rect
-                  height="7"
+                  height="5"
                   rx="1"
                   width="7"
                   x="14"
                   y="3"
                 />
                 <rect
-                  height="7"
+                  height="9"
                   rx="1"
                   width="7"
                   x="14"
-                  y="14"
+                  y="12"
                 />
                 <rect
-                  height="7"
+                  height="5"
                   rx="1"
                   width="7"
                   x="3"
-                  y="14"
+                  y="16"
                 />
               </svg>
               <span
                 class=""
               >
-                Visual
+                Cards
               </span>
             </button>
           </div>
@@ -2476,7 +2629,53 @@ exports[`SearchFeedFilters - Snapshots > matches tag-search filters snapshot 1`]
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-layout-grid h-5 w-5"
+                class="lucide lucide-grid2x2 lucide-grid-2x2 h-5 w-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 3v18"
+                />
+                <path
+                  d="M3 12h18"
+                />
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+              </svg>
+              <span
+                class=""
+              >
+                Visual
+              </span>
+            </button>
+            <button
+              aria-checked="false"
+              aria-label="Cards"
+              aria-pressed="false"
+              class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+              data-cy="cards-layout-toggle"
+              data-selected="false"
+              data-slot="filter-item"
+              data-testid="filter-item"
+              role="radio"
+              tabindex="-1"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-dashboard h-5 w-5"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2488,38 +2687,38 @@ exports[`SearchFeedFilters - Snapshots > matches tag-search filters snapshot 1`]
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <rect
-                  height="7"
+                  height="9"
                   rx="1"
                   width="7"
                   x="3"
                   y="3"
                 />
                 <rect
-                  height="7"
+                  height="5"
                   rx="1"
                   width="7"
                   x="14"
                   y="3"
                 />
                 <rect
-                  height="7"
+                  height="9"
                   rx="1"
                   width="7"
                   x="14"
-                  y="14"
+                  y="12"
                 />
                 <rect
-                  height="7"
+                  height="5"
                   rx="1"
                   width="7"
                   x="3"
-                  y="14"
+                  y="16"
                 />
               </svg>
               <span
                 class=""
               >
-                Visual
+                Cards
               </span>
             </button>
           </div>

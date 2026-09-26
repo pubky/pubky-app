@@ -521,7 +521,7 @@ describe('PostNormalizer', () => {
         'Bitcoin writing',
         [buildPubkyUri(TEST_PUBKY.USER_2, 'posts/post-1')],
         undefined,
-        COLLECTION_LAYOUT.GRID,
+        COLLECTION_LAYOUT.CARDS,
       );
     });
 

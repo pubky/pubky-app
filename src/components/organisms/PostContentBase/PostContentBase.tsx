@@ -51,6 +51,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
         content={postDetails.content}
         attachments={postDetails.attachments}
         localAttachments={localAttachments}
+        {...(mediaVariant === 'cards' ? { presentation: 'cards' as const } : {})}
         className={className}
       />
     );
@@ -63,6 +64,20 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
   }
 
   if (!hasContent && !hasAttachments) return null;
+
+  if (mediaVariant === 'cards') {
+    return (
+      <PostAttachments
+        attachments={postDetails.attachments}
+        localAttachments={localAttachments}
+        mediaVariant="cards"
+        className={cn('min-w-0', className)}
+      >
+        {hasContent && <PostText content={postDetails.content} className={textClassName} />}
+        {hasContent && <PostLinkEmbeds content={postDetails.content} />}
+      </PostAttachments>
+    );
+  }
 
   return (
     <Container className={cn('min-w-0 gap-3', className)}>

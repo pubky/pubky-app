@@ -1,7 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { COLLECTION_LAYOUT } from '@/config/collections';
 import { getDefaultUrl } from '@/config/metadata';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
@@ -11,6 +13,7 @@ import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscriptio
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { CollectionHero } from './CollectionHero';
 import type { CollectionHeroProps } from './CollectionHero.types';
 
@@ -276,7 +279,7 @@ function renderHero(overrides: Partial<CollectionHeroProps> = {}) {
     authorPubky: overrides.authorPubky ?? AUTHOR_PUBKY,
     postId: overrides.postId ?? POST_ID,
     postDetails: 'postDetails' in overrides ? overrides.postDetails : currentPostDetails,
-    layout: overrides.layout ?? COLLECTION_LAYOUT.GRID,
+    layout: overrides.layout ?? COLLECTION_LAYOUT.CARDS,
     onLayoutChange: overrides.onLayoutChange ?? vi.fn(),
   };
 
@@ -361,7 +364,7 @@ describe('CollectionHero', () => {
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
     const countBadge = screen.getByLabelText('2 posts');
     expect(countBadge).toBeInTheDocument(); // compact-formatted item count
-    expect(within(countBadge).getByText('posts', { exact: false })).toHaveClass('inline');
+    expect(within(countBadge).getByText('posts', { exact: false })).toHaveClass('hidden', 'sm:inline');
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
@@ -426,7 +429,7 @@ describe('CollectionHero', () => {
     const onLayoutChange = vi.fn();
     renderHero({ onLayoutChange });
 
-    fireEvent.pointerDown(screen.getByRole('button', { name: /Layout: Grid/ }), {
+    fireEvent.pointerDown(screen.getByRole('button', { name: /Layout: Cards/ }), {
       button: 0,
       ctrlKey: false,
     });
@@ -436,20 +439,19 @@ describe('CollectionHero', () => {
     expect(onLayoutChange).toHaveBeenCalledWith(COLLECTION_LAYOUT.LIST);
   });
 
-  it('keeps the tag action last in the viewer action row', () => {
+  it('places the tag action last in the viewer action row', () => {
     renderHero();
 
-    const layoutButton = screen.getByRole('button', { name: /Layout: Grid/ });
     const tagButton = screen.getByLabelText('Tag post (3)');
-    expect(layoutButton.compareDocumentPosition(tagButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tagButton.parentElement?.lastElementChild).toBe(tagButton);
   });
 
-  it('hides the temporary layout override from the collection owner', () => {
+  it('shows the temporary layout override to the collection owner', () => {
     setAuthStore(AUTHOR_PUBKY);
 
     renderHero();
 
-    expect(screen.queryByRole('button', { name: /Layout: Grid/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Layout: Cards/ })).toBeInTheDocument();
   });
 
   it('shows a skeleton (not the raw pubky) for the owner name while the profile is null', () => {
@@ -529,13 +531,11 @@ describe('CollectionHero', () => {
       expect(screen.getByLabelText('Edit')).toBeInTheDocument();
       expect(screen.getByLabelText('Delete')).toBeInTheDocument();
       expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Delete').compareDocumentPosition(screen.getByLabelText('Tag post (3)')) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
+      const tagButton = screen.getByLabelText('Tag post (3)');
+      expect(tagButton.parentElement?.lastElementChild).toBe(tagButton);
       expect(screen.getByText('Share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
-      expect(screen.getByText('Edit', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
-      expect(screen.getByText('Delete', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
+      expect(screen.queryByText('Edit', { selector: 'span' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Delete', { selector: 'span' })).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Follow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Unfollow')).not.toBeInTheDocument();
     });
@@ -659,6 +659,22 @@ describe('CollectionHero', () => {
   });
 
   describe('CTA — reorder', () => {
+    it.each([
+      ['Copy link', 'Copy link'],
+      ['Reorder', 'Reorder'],
+      ['Edit', 'Edit'],
+      ['Delete', 'Delete'],
+      ['Layout: Cards', 'Change layout'],
+      ['Tag post (3)', 'Show tags'],
+    ])('shows a tooltip when %s receives keyboard focus', async (label, tooltip) => {
+      setAuthStore(AUTHOR_PUBKY);
+      renderHero({ reorder: buildReorderProps() });
+
+      fireEvent.focus(screen.getByRole('button', { name: label }));
+
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(tooltip);
+    });
+
     function buildReorderProps(overrides: Partial<NonNullable<CollectionHeroProps['reorder']>> = {}) {
       return {
         isActive: false,
@@ -869,13 +885,14 @@ describe('CollectionHero', () => {
       Reflect.deleteProperty(window.navigator, 'canShare');
     });
 
-    it('sits right after Share for the owner and stays icon-only below lg', () => {
+    it('sits after Share for the owner and stays icon-only', () => {
       setAuthStore(AUTHOR_PUBKY);
 
       renderHero();
 
       const copyLink = screen.getByLabelText('Copy link');
-      expect(screen.getByText('Copy link', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
+      expect(copyLink).toHaveTextContent('');
+      expect(screen.queryByText('Copy link', { selector: 'span' })).not.toBeInTheDocument();
       expect(
         screen.getByLabelText('Share').compareDocumentPosition(copyLink) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
@@ -1013,3 +1030,32 @@ describe('CollectionHero - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 });
+
+describe('CollectionHero - Mobile Snapshots', () => {
+  beforeEach(() => {
+    mockViewportState.isMobile = true;
+    setMobileViewport();
+    setAuthStore(AUTHOR_PUBKY);
+  });
+  afterEach(() => {
+    mockViewportState.isMobile = false;
+    resetViewport();
+  });
+
+  it('matches the snapshot for the owner state', () => {
+    const { container } = renderHero();
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('shows Cards for a Visual preference without changing it', async () => {
+    const onLayoutChange = vi.fn();
+    renderHero({ layout: COLLECTION_LAYOUT.VISUAL, onLayoutChange });
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Layout: Cards' }), { button: 0, ctrlKey: false });
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Cards' }));
+    expect(onLayoutChange).not.toHaveBeenCalled();
+  });
+});
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: TooltipProvider });
+}

@@ -15,8 +15,8 @@ import { buildCollectionItemsStreamId } from '@/models/stream/post/postStream.ty
 import { SinglePostContent } from '@/organisms/SinglePostContent/SinglePostContent';
 import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+import { TimelineCardsPosts } from '@/organisms/Timeline/Posts/CardsPosts/CardsPosts';
 import { TimelineFeedItem } from '@/organisms/Timeline/Posts/FeedItem/TimelineFeedItem';
-import { TimelineGridPosts } from '@/organisms/Timeline/Posts/GridPosts/GridPosts';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMain } from './PostMain';
 import { PostMainLayoutProvider } from './PostMainLayoutContext';
@@ -29,7 +29,7 @@ const { mockPostHeader } = vi.hoisted(() => ({
       postId,
     }: {
       postId: string;
-      size?: 'normal' | 'large' | 'extraLarge';
+      size?: 'compact' | 'normal' | 'large' | 'extraLarge';
       timeAgoPlacement?: 'top-right' | 'bottom-left';
     }) => <div data-testid="post-header">PostHeader {postId}</div>,
   ),
@@ -229,7 +229,7 @@ vi.mock('@/organisms/PostHeader/PostHeader', () => {
       timeAgoPlacement,
     }: {
       postId: string;
-      size?: 'normal' | 'large' | 'extraLarge';
+      size?: 'compact' | 'normal' | 'large' | 'extraLarge';
       timeAgoPlacement?: 'top-right' | 'bottom-left';
     }) => mockPostHeader({ postId, size, timeAgoPlacement }),
   };
@@ -443,6 +443,13 @@ describe('PostMain', () => {
     });
   });
 
+  it('uses the default author header and a natural-height body for Cards', () => {
+    render(<PostMain postId="post-123" presentation="cards" />);
+    expect(mockPostHeader).toHaveBeenCalledWith(expect.objectContaining({ postId: 'post-123', size: undefined }));
+    expect(screen.getByTestId('card-content')).toHaveAttribute('data-class-name', expect.stringContaining('gap-6 p-6'));
+    expect(screen.getByTestId('card-content').getAttribute('data-class-name')).not.toContain('flex-1');
+  });
+
   it('renders header, content, tags and actions', () => {
     render(<PostMain postId="post-123" />);
 
@@ -587,13 +594,13 @@ describe('PostMain', () => {
     expect(screen.getByTestId('post-unavailable')).toHaveAttribute('data-is-removing', 'true');
   });
 
-  it('renders PostUnavailable when the post is not found (settled null)', () => {
+  it.each(['default', 'cards'] as const)('renders a settled missing post in %s', (presentation) => {
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: null,
       isLoading: false,
     });
 
-    render(<PostMain postId="post-missing" />);
+    render(<PostMain postId="post-missing" presentation={presentation} />);
 
     const unavailable = screen.getByTestId('post-unavailable');
     expect(unavailable).toHaveAttribute('data-message', 'Post not found.');
@@ -965,14 +972,14 @@ describe('PostMain', () => {
     });
   };
 
-  it.each(['inline', 'side'] as const)(
+  it.each(['inline', 'side', 'cards'] as const)(
     'renders the original directly below the repost bar in %s layout',
     (tagsLayout) => {
       mockPlainRepost();
 
       render(
-        <PostMainLayoutProvider tagsLayout={tagsLayout}>
-          <PostMain postId="me:simple-repost-1" />
+        <PostMainLayoutProvider tagsLayout={tagsLayout === 'cards' ? 'inline' : tagsLayout}>
+          <PostMain postId="me:simple-repost-1" presentation={tagsLayout === 'cards' ? 'cards' : 'default'} />
         </PostMainLayoutProvider>,
       );
 
@@ -982,7 +989,7 @@ describe('PostMain', () => {
       expect(screen.getByTestId('post-content')).toHaveTextContent('PostContent author:original-1');
       expect(screen.getByTestId('post-actions')).toHaveTextContent('Actions author:original-1');
       expect(screen.getByTestId('post-actions')).toHaveAttribute('data-save-post-id', 'me:simple-repost-1');
-      if (tagsLayout === 'inline') {
+      if (tagsLayout !== 'side') {
         expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-tagged-id', 'author:original-1');
       } else {
         for (const panel of screen.getAllByTestId('post-tags-panel')) {
@@ -1051,7 +1058,7 @@ describe('PostMain', () => {
     const onKeyDown = vi.fn();
     vi.mocked(usePostNavigation).mockReturnValue({ ...vi.mocked(usePostNavigation)(), handlePostKeyDown: onKeyDown });
     render(
-      <TimelineGridPosts
+      <TimelineCardsPosts
         postIds={['me:simple-repost-1']}
         loading={false}
         loadingMore={false}

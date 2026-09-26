@@ -111,7 +111,7 @@ describe('DialogEditCollection', () => {
         expect.objectContaining({
           compositeCollectionId: COMPOSITE_ID,
           name: 'New name',
-          layout: COLLECTION_LAYOUT.GRID,
+          layout: COLLECTION_LAYOUT.CARDS,
         }),
       );
     });

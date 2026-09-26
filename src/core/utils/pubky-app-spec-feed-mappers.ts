@@ -44,6 +44,8 @@ export function pubkyLayoutToHomeLayout(layout: PubkyAppFeedLayout): LayoutType 
       return LAYOUT.LIST;
     case PubkyAppFeedLayout.Visual:
       return LAYOUT.VISUAL;
+    case PubkyAppFeedLayout.Cards:
+      return LAYOUT.CARDS;
     default:
       return undefined;
   }
@@ -62,6 +64,8 @@ export function homeLayoutToPubkyLayout(layout: LayoutType): PubkyAppFeedLayout 
       return PubkyAppFeedLayout.List;
     case LAYOUT.VISUAL:
       return PubkyAppFeedLayout.Visual;
+    case LAYOUT.CARDS:
+      return PubkyAppFeedLayout.Cards;
     default:
       return undefined;
   }

@@ -1,0 +1,934 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TimelineCardsPosts - Mobile Snapshots > renders the same complete Cards post on mobile 1`] = `
+<div
+  class="mx-auto w-full flex-col flex"
+  data-cy="timeline-container"
+  data-testid="container"
+>
+  <div
+    class="relative grid items-start gap-3 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+    data-cy="timeline-posts-cards"
+    data-testid="container"
+    role="feed"
+  >
+    <div
+      aria-posinset="1"
+      aria-setsize="1"
+      class="mx-auto w-full flex-col flex @container/grid min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      data-cy="post-card"
+      data-testid="container"
+      role="article"
+      tabindex="0"
+    >
+      <div
+        class="relative flex min-w-0 cursor-pointer"
+        data-testid="container"
+      >
+        <div
+          class="flex flex-col bg-card text-card-foreground shadow-sm min-w-0 flex-1 gap-0 rounded-md py-0"
+          data-slot="card"
+          data-testid="card"
+        >
+          <div
+            class="flex min-w-0 flex-col gap-6 p-6"
+            data-slot="card-content"
+          >
+            <div
+              class="grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-3 items-start"
+              data-testid="container"
+            >
+              <div
+                class="w-full max-w-full min-w-0"
+              >
+                <div
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  class="grid max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center w-fit gap-3"
+                  data-as-child="true"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-testid="popover-trigger"
+                  type="button"
+                >
+                  <a
+                    class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+                    href="/profile/vrt000000000000000000000000000000000000000000alice01"
+                  >
+                    <span
+                      class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+                    >
+                      <span
+                        class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+                      >
+                        <div
+                          class="facehash h-full w-full rounded-full text-background"
+                          data-facehash=""
+                          data-interactive="true"
+                          style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(255, 153, 0);"
+                        >
+                          <div
+                            data-facehash-gradient=""
+                            style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                          />
+                          <div
+                            data-facehash-face=""
+                            style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(0deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                          >
+                            <svg
+                              aria-hidden="true"
+                              fill="none"
+                              style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                              viewBox="0 0 71 23"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <g
+                                style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                              >
+                                <rect
+                                  fill="currentColor"
+                                  height="23"
+                                  rx="3.5"
+                                  width="7"
+                                  x="8"
+                                  y="0"
+                                />
+                                <rect
+                                  fill="currentColor"
+                                  height="7"
+                                  rx="3.5"
+                                  width="23"
+                                  x="0"
+                                  y="8"
+                                />
+                              </g>
+                              <g
+                                style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                              >
+                                <rect
+                                  fill="currentColor"
+                                  height="23"
+                                  rx="3.5"
+                                  width="7"
+                                  x="55.2"
+                                  y="0"
+                                />
+                                <rect
+                                  fill="currentColor"
+                                  height="7"
+                                  rx="3.5"
+                                  width="23"
+                                  x="47.3"
+                                  y="8"
+                                />
+                              </g>
+                            </svg>
+                            <div
+                              data-facehash-mouth=""
+                              style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                            >
+                              <span
+                                data-testid="avatar-fallback-initial"
+                                style="font-size: 26cqw; line-height: 1;"
+                              >
+                                A
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </span>
+                    </span>
+                  </a>
+                  <div
+                    class="max-w-full min-w-0"
+                    data-testid="container"
+                  >
+                    <a
+                      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm block w-fit max-w-full min-w-0 overflow-hidden"
+                      href="/profile/vrt000000000000000000000000000000000000000000alice01"
+                    >
+                      <p
+                        class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+                        data-testid="typography"
+                      >
+                        Alice Mercado
+                      </p>
+                    </a>
+                    <div
+                      class="flex min-w-0 flex-wrap items-center gap-2"
+                      data-testid="container"
+                    >
+                      <p
+                        class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground uppercase"
+                        data-testid="typography"
+                      >
+                        vrt0...ce01
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="flex flex-shrink-0 items-center gap-1"
+                data-testid="container"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-clock size-4 text-muted-foreground"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                  />
+                  <path
+                    d="M12 6v6l4 2"
+                  />
+                </svg>
+                <span
+                  class="text-xs leading-4 font-medium tracking-widest whitespace-nowrap text-muted-foreground"
+                  data-testid="typography"
+                >
+                  2h
+                </span>
+              </div>
+            </div>
+            <div
+              class="mx-auto w-full flex-col flex gap-6 min-w-0"
+              data-testid="container"
+            >
+              <div
+                class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
+                data-cy="post-text"
+                data-testid="container"
+              >
+                <p>
+                  Shipping the v1 of our local-first feed. We render on the client, sync over Pubky, and the server only stores blobs. Long thread incoming.
+                </p>
+              </div>
+            </div>
+            <div
+              class="mx-auto w-full flex flex-col items-start gap-3"
+              data-testid="container"
+            >
+              <div
+                class="flex flex-wrap gap-2 w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
+                data-testid="container"
+              >
+                <button
+                  aria-label="Tag post (0)"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
+                  data-cy="post-tag-btn"
+                  data-size="sm"
+                  data-slot="button"
+                  data-variant="secondary"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-tag"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+                    />
+                    <circle
+                      cx="7.5"
+                      cy="7.5"
+                      fill="currentColor"
+                      r=".5"
+                    />
+                  </svg>
+                  <span
+                    class="text-xs leading-4 font-bold text-muted-foreground"
+                    data-testid="typography"
+                  >
+                    0
+                  </span>
+                </button>
+                <button
+                  aria-label="Reply to post (2)"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
+                  data-cy="post-reply-btn"
+                  data-size="sm"
+                  data-slot="button"
+                  data-variant="secondary"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-message-circle"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"
+                    />
+                  </svg>
+                  <span
+                    class="text-xs leading-4 font-bold text-muted-foreground"
+                    data-testid="typography"
+                  >
+                    2
+                  </span>
+                </button>
+                <button
+                  aria-label="Repost (3)"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
+                  data-cy="post-repost-btn"
+                  data-size="sm"
+                  data-slot="button"
+                  data-variant="secondary"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-repeat"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m17 2 4 4-4 4"
+                    />
+                    <path
+                      d="M3 11v-1a4 4 0 0 1 4-4h14"
+                    />
+                    <path
+                      d="m7 22-4-4 4-4"
+                    />
+                    <path
+                      d="M21 13v1a4 4 0 0 1-4 4H3"
+                    />
+                  </svg>
+                  <span
+                    class="text-xs leading-4 font-bold text-muted-foreground"
+                    data-testid="typography"
+                  >
+                    3
+                  </span>
+                </button>
+                <button
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="Save post"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs w-10"
+                  data-cy="post-bookmark-btn"
+                  data-size="sm"
+                  data-slot="button"
+                  data-state="closed"
+                  data-variant="secondary"
+                  type="button"
+                >
+                  <span
+                    class="relative size-4"
+                    data-cy="post-save-trigger-icon"
+                    data-state="saved"
+                    data-testid="typography"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-library absolute inset-0 transition-[opacity,transform] duration-150 ease-out scale-75 opacity-0"
+                      fill="none"
+                      height="24"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="m16 6 4 14"
+                      />
+                      <path
+                        d="M12 6v14"
+                      />
+                      <path
+                        d="M8 8v12"
+                      />
+                      <path
+                        d="M4 4v16"
+                      />
+                    </svg>
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-square-library absolute inset-0 transition-[opacity,transform] duration-150 ease-out scale-100 opacity-100 text-brand"
+                      fill="none"
+                      height="24"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <rect
+                        height="18"
+                        rx="2"
+                        width="18"
+                        x="3"
+                        y="3"
+                      />
+                      <path
+                        d="M7 7v10"
+                      />
+                      <path
+                        d="M11 7v10"
+                      />
+                      <path
+                        d="m15 7 2 10"
+                      />
+                    </svg>
+                  </span>
+                </button>
+                <button
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  aria-label="More options"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
+                  data-cy="post-more-btn"
+                  data-size="sm"
+                  data-slot="button"
+                  data-state="closed"
+                  data-variant="secondary"
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-ellipsis"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="1"
+                    />
+                    <circle
+                      cx="19"
+                      cy="12"
+                      r="1"
+                    />
+                    <circle
+                      cx="5"
+                      cy="12"
+                      r="1"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`TimelineCardsPosts - Snapshots > renders a complete Cards post 1`] = `
+<div
+  class="mx-auto w-full flex-col flex"
+  data-cy="timeline-container"
+  data-testid="container"
+>
+  <div
+    class="relative grid items-start gap-3 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+    data-cy="timeline-posts-cards"
+    data-testid="container"
+    role="feed"
+  >
+    <div
+      aria-posinset="1"
+      aria-setsize="1"
+      class="mx-auto w-full flex-col flex @container/grid min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      data-cy="post-card"
+      data-testid="container"
+      role="article"
+      tabindex="0"
+    >
+      <div
+        class="relative flex min-w-0 cursor-pointer"
+        data-testid="container"
+      >
+        <div
+          class="flex flex-col bg-card text-card-foreground shadow-sm min-w-0 flex-1 gap-0 rounded-md py-0"
+          data-slot="card"
+          data-testid="card"
+        >
+          <div
+            class="flex min-w-0 flex-col gap-6 p-6"
+            data-slot="card-content"
+          >
+            <div
+              class="grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-3 items-start"
+              data-testid="container"
+            >
+              <div
+                class="w-full max-w-full min-w-0"
+              >
+                <div
+                  aria-expanded="false"
+                  aria-haspopup="dialog"
+                  class="grid max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center w-fit gap-3"
+                  data-as-child="true"
+                  data-slot="popover-trigger"
+                  data-state="closed"
+                  data-testid="popover-trigger"
+                  type="button"
+                >
+                  <a
+                    class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm shrink-0"
+                    href="/profile/vrt000000000000000000000000000000000000000000alice01"
+                  >
+                    <span
+                      class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+                    >
+                      <span
+                        class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+                      >
+                        <div
+                          class="facehash h-full w-full rounded-full text-background"
+                          data-facehash=""
+                          data-interactive="true"
+                          style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(255, 153, 0);"
+                        >
+                          <div
+                            data-facehash-gradient=""
+                            style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                          />
+                          <div
+                            data-facehash-face=""
+                            style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(0deg) rotateY(0deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                          >
+                            <svg
+                              aria-hidden="true"
+                              fill="none"
+                              style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                              viewBox="0 0 71 23"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <g
+                                style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                              >
+                                <rect
+                                  fill="currentColor"
+                                  height="23"
+                                  rx="3.5"
+                                  width="7"
+                                  x="8"
+                                  y="0"
+                                />
+                                <rect
+                                  fill="currentColor"
+                                  height="7"
+                                  rx="3.5"
+                                  width="23"
+                                  x="0"
+                                  y="8"
+                                />
+                              </g>
+                              <g
+                                style="animation: facehash-blink 5.1s ease-in-out 3.1s infinite; transform-origin: center center;"
+                              >
+                                <rect
+                                  fill="currentColor"
+                                  height="23"
+                                  rx="3.5"
+                                  width="7"
+                                  x="55.2"
+                                  y="0"
+                                />
+                                <rect
+                                  fill="currentColor"
+                                  height="7"
+                                  rx="3.5"
+                                  width="23"
+                                  x="47.3"
+                                  y="8"
+                                />
+                              </g>
+                            </svg>
+                            <div
+                              data-facehash-mouth=""
+                              style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                            >
+                              <span
+                                data-testid="avatar-fallback-initial"
+                                style="font-size: 26cqw; line-height: 1;"
+                              >
+                                A
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </span>
+                    </span>
+                  </a>
+                  <div
+                    class="max-w-full min-w-0"
+                    data-testid="container"
+                  >
+                    <a
+                      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm block w-fit max-w-full min-w-0 overflow-hidden"
+                      href="/profile/vrt000000000000000000000000000000000000000000alice01"
+                    >
+                      <p
+                        class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+                        data-testid="typography"
+                      >
+                        Alice Mercado
+                      </p>
+                    </a>
+                    <div
+                      class="flex min-w-0 flex-wrap items-center gap-2"
+                      data-testid="container"
+                    >
+                      <p
+                        class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground uppercase"
+                        data-testid="typography"
+                      >
+                        vrt0...ce01
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="flex flex-shrink-0 items-center gap-1"
+                data-testid="container"
+              >
+                <span
+                  class="flex flex-shrink-0 items-center gap-1"
+                  data-state="closed"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-clock size-4 text-muted-foreground"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                    />
+                    <path
+                      d="M12 6v6l4 2"
+                    />
+                  </svg>
+                  <span
+                    class="text-xs leading-4 font-medium tracking-widest whitespace-nowrap text-muted-foreground"
+                    data-testid="typography"
+                  >
+                    2h
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div
+              class="mx-auto w-full flex-col flex gap-6 min-w-0"
+              data-testid="container"
+            >
+              <div
+                class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
+                data-cy="post-text"
+                data-testid="container"
+              >
+                <p>
+                  Shipping the v1 of our local-first feed. We render on the client, sync over Pubky, and the server only stores blobs. Long thread incoming.
+                </p>
+              </div>
+            </div>
+            <div
+              class="mx-auto w-full flex flex-col items-start gap-3"
+              data-testid="container"
+            >
+              <div
+                class="flex flex-wrap gap-2 w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
+                data-testid="container"
+              >
+                <button
+                  aria-label="Tag post (0)"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
+                  data-cy="post-tag-btn"
+                  data-size="sm"
+                  data-slot="button"
+                  data-variant="secondary"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-tag"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+                    />
+                    <circle
+                      cx="7.5"
+                      cy="7.5"
+                      fill="currentColor"
+                      r=".5"
+                    />
+                  </svg>
+                  <span
+                    class="text-xs leading-4 font-bold text-muted-foreground"
+                    data-testid="typography"
+                  >
+                    0
+                  </span>
+                </button>
+                <button
+                  aria-label="Reply to post (2)"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
+                  data-cy="post-reply-btn"
+                  data-size="sm"
+                  data-slot="button"
+                  data-variant="secondary"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-message-circle"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"
+                    />
+                  </svg>
+                  <span
+                    class="text-xs leading-4 font-bold text-muted-foreground"
+                    data-testid="typography"
+                  >
+                    2
+                  </span>
+                </button>
+                <button
+                  aria-label="Repost (3)"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
+                  data-cy="post-repost-btn"
+                  data-size="sm"
+                  data-slot="button"
+                  data-variant="secondary"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-repeat"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m17 2 4 4-4 4"
+                    />
+                    <path
+                      d="M3 11v-1a4 4 0 0 1 4-4h14"
+                    />
+                    <path
+                      d="m7 22-4-4 4-4"
+                    />
+                    <path
+                      d="M21 13v1a4 4 0 0 1-4 4H3"
+                    />
+                  </svg>
+                  <span
+                    class="text-xs leading-4 font-bold text-muted-foreground"
+                    data-testid="typography"
+                  >
+                    3
+                  </span>
+                </button>
+                <button
+                  aria-expanded="false"
+                  aria-haspopup="menu"
+                  aria-label="Save post"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs w-10"
+                  data-cy="post-bookmark-btn"
+                  data-size="sm"
+                  data-slot="button"
+                  data-state="closed"
+                  data-variant="secondary"
+                  id="radix-normalized"
+                  type="button"
+                >
+                  <span
+                    class="relative size-4"
+                    data-cy="post-save-trigger-icon"
+                    data-state="saved"
+                    data-testid="typography"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-library absolute inset-0 transition-[opacity,transform] duration-150 ease-out scale-75 opacity-0"
+                      fill="none"
+                      height="24"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="m16 6 4 14"
+                      />
+                      <path
+                        d="M12 6v14"
+                      />
+                      <path
+                        d="M8 8v12"
+                      />
+                      <path
+                        d="M4 4v16"
+                      />
+                    </svg>
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-square-library absolute inset-0 transition-[opacity,transform] duration-150 ease-out scale-100 opacity-100 text-brand"
+                      fill="none"
+                      height="24"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <rect
+                        height="18"
+                        rx="2"
+                        width="18"
+                        x="3"
+                        y="3"
+                      />
+                      <path
+                        d="M7 7v10"
+                      />
+                      <path
+                        d="M11 7v10"
+                      />
+                      <path
+                        d="m15 7 2 10"
+                      />
+                    </svg>
+                  </span>
+                </button>
+                <button
+                  aria-expanded="false"
+                  aria-haspopup="menu"
+                  aria-label="More options"
+                  class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
+                  data-cy="post-more-btn"
+                  data-size="sm"
+                  data-slot="button"
+                  data-state="closed"
+                  data-variant="secondary"
+                  id="radix-normalized"
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-ellipsis"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="1"
+                    />
+                    <circle
+                      cx="19"
+                      cy="12"
+                      r="1"
+                    />
+                    <circle
+                      cx="5"
+                      cy="12"
+                      r="1"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

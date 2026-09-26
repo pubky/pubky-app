@@ -56,6 +56,27 @@ describe('useAttachmentsMetadata with real Dexie subscriptions', () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
+  it('stays pending until a cold metadata read resolves', async () => {
+    const pending = deferred<NexusFileDetails[]>();
+    vi.spyOn(FileController, 'getMetadata').mockReturnValue(pending.promise);
+    const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1')] }));
+    expect(result.current.isLoading).toBe(true);
+    await act(async () => {
+      pending.resolve([createFileRow('image1')]);
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.files).toEqual([createFileRow('image1')]);
+    expect(NexusFileService.fetchFiles).not.toHaveBeenCalled();
+  });
+
+  it('releases readiness when metadata is permanently omitted', async () => {
+    const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('missing')] }));
+    expect(result.current.isLoading).toBe(true);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.files).toEqual([]);
+    expect(NexusFileService.fetchFiles).toHaveBeenCalledTimes(1);
+  });
+
   it('renders a file row that lands after the post details did', async () => {
     const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1')] }));
     await waitFor(() => expect(NexusFileService.fetchFiles).toHaveBeenCalledWith([fileUri('image1')]));
@@ -74,21 +95,91 @@ describe('useAttachmentsMetadata with real Dexie subscriptions', () => {
     const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1'), fileUri('image2')] }));
     await waitFor(() => expect(result.current.files).toEqual([createFileRow('image1')]));
     expect(NexusFileService.fetchFiles).toHaveBeenCalledWith([fileUri('image2')]);
+    expect(result.current.isLoading).toBe(true);
 
     await act(async () => {
       pending.resolve([createFileRow('image2')]);
     });
-    await waitFor(() => expect(result.current.files).toEqual([createFileRow('image1'), createFileRow('image2')]));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.files).toEqual([createFileRow('image1'), createFileRow('image2')]);
   });
 
   it('does not re-request a URI whose fetch settled with no row', async () => {
-    const read = vi.spyOn(FileController, 'getMetadata');
-    renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1'), fileUri('image2')] }));
+    const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1'), fileUri('image2')] }));
     await waitFor(() => expect(NexusFileService.fetchFiles).toHaveBeenCalledTimes(1));
     await act(async () => {
       await FileDetailsModel.table.put(createFileRow('image2'));
     });
+    await waitFor(() => expect(result.current.files).toEqual([createFileRow('image2')]));
+    expect(NexusFileService.fetchFiles).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps visible rows while a successful missing-file request performs its final reread', async () => {
+    await FileDetailsModel.table.put(createFileRow('image1'));
+    const pending = deferred<NexusFileDetails[]>();
+    vi.mocked(NexusFileService.fetchFiles).mockReturnValue(pending.promise);
+    const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1'), fileUri('missing')] }));
+    await waitFor(() => expect(result.current.files).toEqual([createFileRow('image1')]));
+    const reread = deferred<NexusFileDetails[]>();
+    vi.spyOn(FileController, 'getMetadata').mockReturnValue(reread.promise);
+    await act(async () => {
+      pending.resolve([]);
+    });
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.files).toEqual([createFileRow('image1')]);
+    await act(async () => {
+      reread.resolve([createFileRow('image1')]);
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.files).toEqual([createFileRow('image1')]);
+    expect(NexusFileService.fetchFiles).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry the current failed read when an obsolete request succeeds', async () => {
+    const oldRequest = deferred<NexusFileDetails[]>();
+    vi.mocked(NexusFileService.fetchFiles).mockImplementation((uris) =>
+      uris.includes(fileUri('old')) ? oldRequest.promise : Promise.resolve([]),
+    );
+    const read = vi.spyOn(FileController, 'getMetadata').mockImplementation(async ({ fileAttachments }) => {
+      if (fileAttachments.includes(fileUri('current'))) throw new Error('unavailable local read');
+      return [];
+    });
+    const { result, rerender } = renderHook(({ id }) => useAttachmentsMetadata({ fileUris: [fileUri(id)] }), {
+      initialProps: { id: 'old' },
+    });
+    await waitFor(() => expect(NexusFileService.fetchFiles).toHaveBeenCalledWith([fileUri('old')]));
+    rerender({ id: 'current' });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(read).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      oldRequest.resolve([]);
+    });
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('waits for the current snapshot when an older request resolves a retained attachment', async () => {
+    const pending = deferred<NexusFileDetails[]>();
+    vi.mocked(NexusFileService.fetchFiles).mockReturnValue(pending.promise);
+    const read = vi.spyOn(FileController, 'getMetadata');
+    const { result, rerender } = renderHook(({ ids }) => useAttachmentsMetadata({ fileUris: ids.map(fileUri) }), {
+      initialProps: { ids: ['retained', 'removed'] },
+    });
+    await waitFor(() => expect(NexusFileService.fetchFiles).toHaveBeenCalledTimes(1));
+    rerender({ ids: ['retained'] });
     await waitFor(() => expect(read).toHaveBeenCalledTimes(2));
+    expect(result.current.isLoading).toBe(true);
+    const reread = deferred<NexusFileDetails[]>();
+    read.mockReturnValue(reread.promise);
+    await act(async () => {
+      pending.resolve([createFileRow('retained')]);
+    });
+    expect(result.current.isLoading).toBe(true);
+    await act(async () => {
+      reread.resolve([createFileRow('retained')]);
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.files).toEqual([createFileRow('retained')]);
     expect(NexusFileService.fetchFiles).toHaveBeenCalledTimes(1);
   });
 
@@ -102,6 +193,7 @@ describe('useAttachmentsMetadata with real Dexie subscriptions', () => {
       useAttachmentsMetadata({ fileUris: [fileUri('image1'), fileUri('image2')], onError }),
     );
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     await act(async () => {
       await FileDetailsModel.table.put(createFileRow('image2'));
     });
@@ -130,6 +222,7 @@ describe('useAttachmentsMetadata with real Dexie subscriptions', () => {
       await FileDetailsModel.table.put(createFileRow('image1'));
     });
     expect(result.current.files).toEqual([]);
+    expect(result.current.isLoading).toBe(false);
     expect(read).not.toHaveBeenCalled();
     expect(NexusFileService.fetchFiles).not.toHaveBeenCalled();
   });

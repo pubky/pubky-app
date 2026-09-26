@@ -958,7 +958,7 @@ describe('CustomFeedDialog', () => {
     expect(within(section).getByText('Visual')).toBeInTheDocument();
   });
 
-  it('keeps the layout section visible with the desktop-only hint collapsed', () => {
+  it('keeps the layout section visible with the responsive layout hint collapsed', () => {
     render(
       <CustomFeedDialog mode="create">
         <button>Create Feed</button>
@@ -973,7 +973,7 @@ describe('CustomFeedDialog', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
-  it('shows the desktop-only hint when the layout info affordance is hovered', async () => {
+  it('shows the responsive layout hint when the layout info affordance is hovered', async () => {
     const user = userEvent.setup();
 
     render(
@@ -986,7 +986,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('tooltip')).toHaveTextContent(
-        'Layout settings only affect how your feed appears on desktop.',
+        'Cards also applies on mobile. Other layouts use a single column on mobile.',
       );
     });
   });
@@ -1005,7 +1005,7 @@ describe('CustomFeedDialog', () => {
     if (synthesizeClick) fireEvent.click(trigger);
     await waitFor(() => {
       expect(screen.getByRole('tooltip')).toHaveTextContent(
-        'Layout settings only affect how your feed appears on desktop.',
+        'Cards also applies on mobile. Other layouts use a single column on mobile.',
       );
     });
 
@@ -1055,6 +1055,27 @@ describe('CustomFeedDialog', () => {
       expect(within(section).queryByText('Links')).not.toBeInTheDocument();
       expect(within(section).queryByText('Files')).not.toBeInTheDocument();
     });
+  });
+
+  it('offers Cards with all content types and preserves the selected content', () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+    expect(within(screen.getByTestId('layout-select')).getByText('Cards')).toBeInTheDocument();
+    changeSelectValue('content-select', PubkyAppPostKind.Long);
+    changeSelectValue('layout-select', PubkyAppFeedLayout.Cards);
+
+    expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', String(PubkyAppPostKind.Long));
+    for (const label of ['All', 'Posts', 'Articles', 'Collections', 'Images', 'Videos', 'Links', 'Files']) {
+      expect(within(screen.getByTestId('content-filter-section')).getByText(label)).toBeInTheDocument();
+    }
+  });
+
+  it('loads a saved Cards feed for editing', () => {
+    render(<CustomFeedDialog mode="edit" feed={createMockFeed({ layout: PubkyAppFeedLayout.Cards })} open />);
+    expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String(PubkyAppFeedLayout.Cards));
   });
 
   // -- Default select values in create mode --
@@ -1338,79 +1359,87 @@ describe('CustomFeedDialog', () => {
     });
   });
 
-  it('passes visual layout on create when selected', async () => {
-    const mockCreatedFeed = createMockFeed({
-      id: 'new-visual-feed-123',
-      name: 'My Visual Feed',
-      layout: PubkyAppFeedLayout.Visual,
-      content: null,
-    });
-    mockCommitCreate.mockResolvedValue(mockCreatedFeed);
+  it.each([PubkyAppFeedLayout.Visual, PubkyAppFeedLayout.Cards])(
+    'passes layout %s on create when selected',
+    async (layout) => {
+      const mockCreatedFeed = createMockFeed({
+        id: 'new-feed-123',
+        name: 'My Feed',
+        layout,
+        content: null,
+      });
+      mockCommitCreate.mockResolvedValue(mockCreatedFeed);
 
-    render(
-      <CustomFeedDialog mode="create">
-        <button>Create Feed</button>
-      </CustomFeedDialog>,
-    );
-
-    fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'My Visual Feed' } });
-    fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'images' } });
-    changeSelectValue('layout-select', PubkyAppFeedLayout.Visual);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String(PubkyAppFeedLayout.Visual));
-    });
-
-    await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
-
-    fireEvent.click(screen.getByTestId('save-feed-button'));
-
-    await waitFor(() => {
-      expect(mockCommitCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          layout: PubkyAppFeedLayout.Visual,
-          content: null,
-        }),
+      render(
+        <CustomFeedDialog mode="create">
+          <button>Create Feed</button>
+        </CustomFeedDialog>,
       );
-    });
-  });
+
+      fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'My Feed' } });
+      fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'images' } });
+      changeSelectValue('layout-select', layout);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', String(layout));
+      });
+
+      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+
+      fireEvent.click(screen.getByTestId('save-feed-button'));
+
+      await waitFor(() => {
+        expect(mockCommitCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            layout,
+            content: null,
+          }),
+        );
+      });
+    },
+  );
 
   // -- Edit feed flow --
 
-  it('calls FeedController.commitUpdate with correct params on save in edit mode', async () => {
-    const mockFeed = createMockFeed();
+  it.each([PubkyAppFeedLayout.Wide, PubkyAppFeedLayout.Cards])(
+    'saves layout %s when editing an existing feed',
+    async (layout) => {
+      const mockFeed = createMockFeed();
 
-    const mockUpdatedFeed = createMockFeed({ id: 'feed-abc123', name: 'Bitcoin News' });
-    mockCommitUpdate.mockResolvedValue(mockUpdatedFeed);
+      const mockUpdatedFeed = createMockFeed({ id: 'feed-abc123', name: 'Bitcoin News' });
+      mockCommitUpdate.mockResolvedValue(mockUpdatedFeed);
 
-    render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
-        <button>Edit Feed</button>
-      </CustomFeedDialog>,
-    );
+      render(
+        <CustomFeedDialog mode="edit" feed={mockFeed}>
+          <button>Edit Feed</button>
+        </CustomFeedDialog>,
+      );
 
-    // Add a new tag (existing tags are populated from customFeed)
-    fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'crypto' } });
-    await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
+      changeSelectValue('layout-select', layout);
 
-    fireEvent.click(screen.getByTestId('save-feed-button'));
+      // Add a new tag (existing tags are populated from customFeed)
+      fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'crypto' } });
+      await waitFor(() => expect(screen.getByTestId('save-feed-button')).toBeEnabled());
 
-    await waitFor(() => {
-      expect(mockCommitUpdate).toHaveBeenCalledWith({
-        feedId: 'feed-abc123',
-        changes: {
-          name: 'Bitcoin News',
-          icon: 'activity',
-          reach: PubkyAppFeedReach.Following,
-          sort: PubkyAppFeedSort.Popularity,
-          layout: PubkyAppFeedLayout.Wide,
-          content: PubkyAppPostKind.Short,
-          tags: ['bitcoin', 'lightning', 'crypto'],
-          domain_tags: [],
-        },
+      fireEvent.click(screen.getByTestId('save-feed-button'));
+
+      await waitFor(() => {
+        expect(mockCommitUpdate).toHaveBeenCalledWith({
+          feedId: 'feed-abc123',
+          changes: {
+            name: 'Bitcoin News',
+            icon: 'activity',
+            reach: PubkyAppFeedReach.Following,
+            sort: PubkyAppFeedSort.Popularity,
+            layout,
+            content: PubkyAppPostKind.Short,
+            tags: ['bitcoin', 'lightning', 'crypto'],
+            domain_tags: [],
+          },
+        });
       });
-    });
-  });
+    },
+  );
 
   it('persists a newly selected icon when editing a feed', async () => {
     const mockFeed = createMockFeed({ icon: 'activity' });

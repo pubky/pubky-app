@@ -115,7 +115,7 @@ export function CollectionCard({
   // wins) and mirrors `PostContentBase`'s blur intercept — direct-render
   // surfaces (landing sections) need their own check since they bypass it.
   if (postDetails.is_blurred) {
-    return <CollectionCardBlurred compositeId={compositeId} className={className} />;
+    return <CollectionCardBlurred ref={ttlRef} compositeId={compositeId} className={className} />;
   }
 
   return (

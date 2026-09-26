@@ -1,6 +1,7 @@
 'use client';
 
 import { Library } from 'lucide-react';
+import type { Ref } from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -13,6 +14,7 @@ interface CollectionCardBlurredProps {
   /** `author:postId` composite id — the moderation record key passed to `unBlur`. */
   compositeId: string;
   className?: string;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 /**
@@ -24,9 +26,10 @@ interface CollectionCardBlurredProps {
  * card is a single click-to-unblur button (no navigation), matching how
  * `PostContentBlurred` handles moderated posts.
  */
-export function CollectionCardBlurred({ compositeId, className }: CollectionCardBlurredProps) {
+export function CollectionCardBlurred({ compositeId, className, ref }: CollectionCardBlurredProps) {
   return (
     <Button
+      ref={ref}
       overrideDefaults
       onClick={(e) => {
         e.stopPropagation();

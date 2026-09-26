@@ -21,14 +21,6 @@ vi.mock('@/stores/home/home.store', () => ({
     setContent: vi.fn(),
   }),
 }));
-vi.mock('@/stores/home/home.types', () => ({
-  LAYOUT: {
-    COLUMNS: 'columns',
-    WIDE: 'wide',
-    LIST: 'list',
-    VISUAL: 'visual',
-  },
-}));
 vi.mock('@/utils/pubky-app-spec-feed-mappers', () => ({
   pubkyLayoutToHomeLayout: vi.fn((layout: string) => layout),
 }));
@@ -312,6 +304,29 @@ describe('ContentLayout', () => {
     render(
       <ContentLayout
         feedVariant="home"
+        showLeftSidebar={true}
+        leftSidebarContent={<div>Left Sidebar</div>}
+        leftDrawerContent={<div>Left Drawer</div>}
+        showRightSidebar={true}
+        rightSidebarContent={<div>Right Sidebar</div>}
+        rightDrawerContent={<div>Right Drawer</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(screen.queryByText('Left Sidebar')).not.toBeInTheDocument();
+    expect(screen.queryByText('Right Sidebar')).not.toBeInTheDocument();
+    expect(screen.getByTestId('button-filters-left')).toBeInTheDocument();
+    expect(screen.getByTestId('button-filters-right')).toBeInTheDocument();
+  });
+
+  it.each(['home', 'search'] as const)('uses the wide shell for Cards on %s', (feedVariant) => {
+    mockHomeLayout = 'cards';
+
+    render(
+      <ContentLayout
+        feedVariant={feedVariant}
         showLeftSidebar={true}
         leftSidebarContent={<div>Left Sidebar</div>}
         leftDrawerContent={<div>Left Drawer</div>}

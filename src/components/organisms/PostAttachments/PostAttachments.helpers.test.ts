@@ -47,3 +47,14 @@ describe('splitAttachmentsByMediaType', () => {
     expect(video?.urls.main).toBe(`vid/${FileVariant.MAIN}`);
   });
 });
+
+describe('attachment dimensions', () => {
+  it('passes through metadata dimensions for Cards space reservation', () => {
+    const file = { ...meta('portrait', 'image/png'), metadata: { width: '600', height: '1200' } };
+    expect(splitAttachmentsByMediaType([file]).imagesAndVideos[0]).toMatchObject({ width: 600, height: 1200 });
+  });
+  it('leaves unknown dimensions for the media load event', () => {
+    const file = { ...meta('unknown', 'image/png'), metadata: { width: '0', height: 'unknown' } };
+    expect(splitAttachmentsByMediaType([file]).imagesAndVideos[0].width).toBeUndefined();
+  });
+});

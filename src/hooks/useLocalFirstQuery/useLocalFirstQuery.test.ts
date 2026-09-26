@@ -104,16 +104,15 @@ describe('useLocalFirstQuery', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('returns isLoading false when queryFn resolves with null and fetch has settled (not found anywhere)', () => {
+  it('keeps a cache miss loading before the fetch effect starts', () => {
     queryResult = null;
     queryFn.mockReturnValue(null);
 
     const { result } = renderHook(() => useLocalFirstQuery(createParams({ queryFn, fetchFn, deps: ['id-1'] })));
 
-    // isFetching is false (effect hasn't run in this mock setup) → isLoading derives to false.
-    // This represents the settled state: local DB returned null and fetchFn has completed.
     expect(result.current.data).toBeNull();
-    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isLoading).toBe(true);
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it('returns isLoading true while fetchFn is in-flight and local data is null (cache miss)', () => {

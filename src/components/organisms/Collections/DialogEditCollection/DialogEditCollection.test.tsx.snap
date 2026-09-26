@@ -134,7 +134,7 @@ exports[`DialogEditCollection - Snapshots > matches snapshot when open with the 
           >
             <button
               aria-checked="true"
-              aria-label="Grid"
+              aria-label="Cards"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-foreground text-foreground"
               data-cy="collection-layout-grid"
               data-slot="button"
@@ -144,7 +144,7 @@ exports[`DialogEditCollection - Snapshots > matches snapshot when open with the 
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-grip size-5"
+                class="lucide lucide-layout-dashboard size-5"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -155,50 +155,33 @@ exports[`DialogEditCollection - Snapshots > matches snapshot when open with the 
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <circle
-                  cx="12"
-                  cy="5"
-                  r="1"
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
                 />
-                <circle
-                  cx="19"
-                  cy="5"
-                  r="1"
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
                 />
-                <circle
-                  cx="5"
-                  cy="5"
-                  r="1"
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="12"
                 />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="1"
-                />
-                <circle
-                  cx="19"
-                  cy="12"
-                  r="1"
-                />
-                <circle
-                  cx="5"
-                  cy="12"
-                  r="1"
-                />
-                <circle
-                  cx="12"
-                  cy="19"
-                  r="1"
-                />
-                <circle
-                  cx="19"
-                  cy="19"
-                  r="1"
-                />
-                <circle
-                  cx="5"
-                  cy="19"
-                  r="1"
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="16"
                 />
               </svg>
             </button>
@@ -255,7 +238,7 @@ exports[`DialogEditCollection - Snapshots > matches snapshot when open with the 
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-layout-grid size-5"
+                class="lucide lucide-grid2x2 lucide-grid-2x2 size-5"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -266,33 +249,18 @@ exports[`DialogEditCollection - Snapshots > matches snapshot when open with the 
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
+                <path
+                  d="M12 3v18"
+                />
+                <path
+                  d="M3 12h18"
+                />
                 <rect
-                  height="7"
-                  rx="1"
-                  width="7"
+                  height="18"
+                  rx="2"
+                  width="18"
                   x="3"
                   y="3"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="14"
-                  y="3"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="14"
-                  y="14"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="3"
-                  y="14"
                 />
               </svg>
             </button>

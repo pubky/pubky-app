@@ -1,7 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isCollectionLayout } from '@/config/collections';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
-import { resolveFeedLayout } from './useFeedLayoutResolution';
+import { resolveFeedLayout, useFeedLayoutResolution } from './useFeedLayoutResolution';
+
+vi.mock('@/hooks/useCustomFeed/useCustomFeed');
+vi.mock('@/hooks/useIsMobile/useIsMobile');
+
+afterEach(() => {
+  vi.resetAllMocks();
+  useHomeStore.getState().reset();
+});
 
 describe('resolveFeedLayout', () => {
   it('keeps visual layout active for supported feeds on desktop/tablet', () => {
@@ -30,7 +44,7 @@ describe('resolveFeedLayout', () => {
   });
 
   // The bookmarks route has no layout filter UI; it must not adopt the shared
-  // wide/visual layout. It is a fixed grid (see isGridActive) rendered in columns.
+  // wide/visual layout. The route explicitly requests Cards.
   it.each([LAYOUT.VISUAL, LAYOUT.WIDE])(
     'falls back to columns for %s layout on the bookmarks variant (desktop)',
     (requestedLayout) => {
@@ -135,70 +149,6 @@ describe('resolveFeedLayout', () => {
     expect(result.isVisualActive).toBe(false);
   });
 
-  describe('isGridActive', () => {
-    it('marks the collection variant as grid-active when Grid is requested', () => {
-      const result = resolveFeedLayout({
-        requestedLayout: LAYOUT.COLUMNS,
-        variant: TIMELINE_FEED_VARIANT.COLLECTION,
-        isPhoneViewport: false,
-      });
-
-      expect(result.isGridActive).toBe(true);
-    });
-
-    it('allows the collection variant to use the existing List renderer', () => {
-      const result = resolveFeedLayout({
-        requestedLayout: LAYOUT.LIST,
-        variant: TIMELINE_FEED_VARIANT.COLLECTION,
-        isPhoneViewport: false,
-      });
-
-      expect(result.effectiveLayout).toBe(LAYOUT.LIST);
-      expect(result.isGridActive).toBe(false);
-    });
-
-    it('marks the bookmarks variant as grid-active', () => {
-      const result = resolveFeedLayout({
-        requestedLayout: LAYOUT.COLUMNS,
-        variant: TIMELINE_FEED_VARIANT.BOOKMARKS,
-        isPhoneViewport: false,
-      });
-
-      expect(result.isGridActive).toBe(true);
-    });
-
-    it.each([
-      TIMELINE_FEED_VARIANT.HOME,
-      TIMELINE_FEED_VARIANT.CUSTOM,
-      TIMELINE_FEED_VARIANT.PROFILE,
-      TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS,
-      TIMELINE_FEED_VARIANT.HOT,
-      TIMELINE_FEED_VARIANT.SEARCH,
-    ])('does not mark the %s variant as grid-active', (variant) => {
-      const result = resolveFeedLayout({
-        requestedLayout: LAYOUT.COLUMNS,
-        variant,
-        isPhoneViewport: false,
-      });
-
-      expect(result.isGridActive).toBe(false);
-    });
-
-    it('keeps grid active independently of effectiveLayout (orthogonal to wide)', () => {
-      // The collection variant is not in the rich-layout set, so a WIDE request
-      // falls back to COLUMNS; grid membership must still be derived from the variant.
-      const result = resolveFeedLayout({
-        requestedLayout: LAYOUT.WIDE,
-        variant: TIMELINE_FEED_VARIANT.COLLECTION,
-        isPhoneViewport: false,
-      });
-
-      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
-      expect(result.isVisualActive).toBe(false);
-      expect(result.isGridActive).toBe(true);
-    });
-  });
-
   describe('collection visual layout', () => {
     it('keeps visual layout active for the collection variant on desktop/tablet', () => {
       const result = resolveFeedLayout({
@@ -209,10 +159,9 @@ describe('resolveFeedLayout', () => {
 
       expect(result.effectiveLayout).toBe(LAYOUT.VISUAL);
       expect(result.isVisualActive).toBe(true);
-      expect(result.isGridActive).toBe(false);
     });
 
-    it('falls back to the collection grid for visual layout on phones', () => {
+    it('falls back to the collection Cards for visual layout on phones', () => {
       const result = resolveFeedLayout({
         requestedLayout: LAYOUT.VISUAL,
         variant: TIMELINE_FEED_VARIANT.COLLECTION,
@@ -220,10 +169,10 @@ describe('resolveFeedLayout', () => {
       });
 
       expect(result.requestedLayout).toBe(LAYOUT.VISUAL);
-      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
+      expect(result.effectiveLayout).toBe(LAYOUT.CARDS);
       expect(result.isVisualRequested).toBe(true);
       expect(result.isVisualActive).toBe(false);
-      expect(result.isGridActive).toBe(true);
+      expect(result.isCardsActive).toBe(true);
     });
 
     it('still does not enable wide layout for the collection variant', () => {
@@ -233,7 +182,56 @@ describe('resolveFeedLayout', () => {
         isPhoneViewport: false,
       });
 
-      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
+      expect(result.effectiveLayout).toBe(LAYOUT.CARDS);
     });
+  });
+});
+
+describe('Cards scope', () => {
+  it('keeps Cards out of the persisted collection layout validator', () => {
+    expect(isCollectionLayout('cards')).toBe(false);
+  });
+  it.each(Object.values(TIMELINE_FEED_VARIANT))(
+    'supports Cards in Collections, Bookmarks, Home, Search and custom feeds: %s',
+    (variant) => {
+      for (const isPhoneViewport of [false, true]) {
+        const result = resolveFeedLayout({ requestedLayout: 'cards', variant, isPhoneViewport });
+        const supported = [
+          TIMELINE_FEED_VARIANT.COLLECTION,
+          TIMELINE_FEED_VARIANT.BOOKMARKS,
+          TIMELINE_FEED_VARIANT.HOME,
+          TIMELINE_FEED_VARIANT.SEARCH,
+          TIMELINE_FEED_VARIANT.CUSTOM,
+        ].some((value) => value === variant);
+        expect(result.isCardsActive).toBe(supported);
+        expect(result.effectiveLayout).toBe(supported ? 'cards' : LAYOUT.COLUMNS);
+        expect(result.isVisualActive).toBe(false);
+      }
+    },
+  );
+});
+
+describe('saved custom feed layout', () => {
+  it.each([false, true])('uses saved Cards instead of the Home layout (phone: %s)', (isPhoneViewport) => {
+    useHomeStore.getState().setLayout(LAYOUT.WIDE);
+    vi.mocked(useIsMobile).mockReturnValue(isPhoneViewport);
+    vi.mocked(useCustomFeed).mockReturnValue({
+      id: 'cards-feed',
+      name: 'Cards feed',
+      tags: [],
+      domain_tags: [],
+      reach: PubkyAppFeedReach.All,
+      sort: PubkyAppFeedSort.Recent,
+      content: null,
+      layout: PubkyAppFeedLayout.Cards,
+      created_at: 0,
+      updated_at: 0,
+    });
+
+    const { result } = renderHook(() => useFeedLayoutResolution(TIMELINE_FEED_VARIANT.CUSTOM));
+
+    expect(result.current.effectiveLayout).toBe(LAYOUT.CARDS);
+    expect(result.current.isCardsActive).toBe(true);
+    expect(useHomeStore.getState().layout).toBe(LAYOUT.WIDE);
   });
 });

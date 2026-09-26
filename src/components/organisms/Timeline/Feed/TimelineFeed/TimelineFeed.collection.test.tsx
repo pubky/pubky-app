@@ -41,12 +41,12 @@ vi.mock('@/stores/auth/auth.store', () => ({
     selector(mockAuthState),
 }));
 
-const gridLayoutResolution = (): FeedLayoutResolution => ({
-  requestedLayout: LAYOUT.COLUMNS,
-  effectiveLayout: LAYOUT.COLUMNS,
+const cardsLayoutResolution = (): FeedLayoutResolution => ({
+  requestedLayout: LAYOUT.CARDS,
+  effectiveLayout: LAYOUT.CARDS,
+  isCardsActive: true,
   isVisualRequested: false,
   isVisualActive: false,
-  isGridActive: true,
   isPhoneViewport: false,
 });
 
@@ -74,7 +74,7 @@ const lastProps = () => capturedProps[capturedProps.length - 1];
 describe('CollectionTimelineFeed (COLLECTION variant)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseFeedLayoutResolution.mockReturnValue(gridLayoutResolution());
+    mockUseFeedLayoutResolution.mockReturnValue(cardsLayoutResolution());
     mockUsePostDetails.mockReturnValue({ postDetails: undefined, isLoading: false });
     mockAuthState.currentUserPubky = null;
     mockAuthState.session = null;
@@ -91,7 +91,8 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     expect(props.collectionId).toBe(buildCompositeId({ pubky: 'author-1', id: 'post-1' }));
     expect(props.variant).toBe(TIMELINE_FEED_VARIANT.COLLECTION);
     expect(props.tagsLayout).toBe('inline');
-    expect(props.layoutResolution?.isGridActive).toBe(true);
+    expect(props.layoutResolution?.isCardsActive).toBe(true);
+    expect(mockUseFeedLayoutResolution).toHaveBeenCalledWith(TIMELINE_FEED_VARIANT.COLLECTION, LAYOUT.CARDS);
   });
 
   it('leaves the stream id undefined until both params are present', () => {
@@ -113,28 +114,28 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
   it('forwards the collection-scoped List selection and uses List post styling', () => {
     mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
     mockUseFeedLayoutResolution.mockReturnValue({
-      ...gridLayoutResolution(),
+      ...cardsLayoutResolution(),
       requestedLayout: LAYOUT.LIST,
       effectiveLayout: LAYOUT.LIST,
-      isGridActive: false,
+      isCardsActive: false,
     });
 
     render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.LIST} />);
 
     expect(mockUseFeedLayoutResolution).toHaveBeenCalledWith(TIMELINE_FEED_VARIANT.COLLECTION, LAYOUT.LIST);
     expect(lastProps().tagsLayout).toBe('list');
-    expect(lastProps().layoutResolution?.isGridActive).toBe(false);
+    expect(lastProps().layoutResolution?.isCardsActive).toBe(false);
   });
 
   it('forwards the collection-scoped Visual selection and threads the hidden-items notice', () => {
     mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
     mockUseFeedLayoutResolution.mockReturnValue({
-      ...gridLayoutResolution(),
+      ...cardsLayoutResolution(),
       requestedLayout: LAYOUT.VISUAL,
       effectiveLayout: LAYOUT.VISUAL,
+      isCardsActive: false,
       isVisualRequested: true,
       isVisualActive: true,
-      isGridActive: false,
     });
     const notice = <div data-testid="hidden-items-notice" />;
 

@@ -211,7 +211,7 @@ describe('DialogNewCollection', () => {
         name: 'Cover collection',
         description: '',
         coverImage: file,
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 

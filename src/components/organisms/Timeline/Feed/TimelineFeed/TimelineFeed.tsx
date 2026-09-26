@@ -51,7 +51,11 @@ export function TimelineFeed(props: TimelineFeedProps) {
       return <CustomTimelineFeed>{props.children}</CustomTimelineFeed>;
     case TIMELINE_FEED_VARIANT.BOOKMARKS:
       return (
-        <BookmarksTimelineFeed emptyState={props.emptyState} trailingSlot={props.trailingSlot}>
+        <BookmarksTimelineFeed
+          emptyState={props.emptyState}
+          trailingSlot={props.trailingSlot}
+          requestedLayout={props.requestedLayout}
+        >
           {props.children}
         </BookmarksTimelineFeed>
       );
@@ -132,18 +136,15 @@ function BookmarksTimelineFeed({
   children,
   emptyState,
   trailingSlot,
+  requestedLayout,
 }: {
   children?: TimelineFeedProps['children'];
+  requestedLayout?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }>['requestedLayout'];
   emptyState?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }>['emptyState'];
   trailingSlot?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }>['trailingSlot'];
 }) {
-  // The bookmarks route exposes no filter UI and shows collections in their own
-  // section below, so the feed is always the fixed all-bookmarks stream. It must
-  // not react to the shared home-store content/sort filters. Layout is pinned to
-  // columns (BOOKMARKS is excluded from RICH_LAYOUT_SUPPORTED_FEED_VARIANTS), so
-  // tags are always inline — mirroring the sibling single-collection grid feed.
-  // `layoutResolution` is still required: it carries `isGridActive` for the grid.
-  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.BOOKMARKS);
+  // Keep the library independent of Home filters and persisted layout preferences.
+  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.BOOKMARKS, requestedLayout ?? LAYOUT.CARDS);
   const streamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL;
 
   return (
@@ -235,7 +236,7 @@ function CollectionTimelineFeed({
   const postId = params?.postId;
   const streamId = userId && postId ? buildCollectionItemsStreamId(userId, postId) : undefined;
   const collectionId = userId && postId ? buildCompositeId({ pubky: userId, id: postId }) : undefined;
-  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.COLLECTION, requestedLayout ?? LAYOUT.COLUMNS);
+  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.COLLECTION, requestedLayout ?? LAYOUT.CARDS);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   // The envelope's `items` (a live Dexie query) is the local-first source of

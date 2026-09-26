@@ -110,9 +110,9 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
   };
 });
 
-vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
+vi.mock('@/organisms/Timeline/Posts/CardsPosts/CardsPosts', () => {
   return {
-    TimelineGridPosts: ({
+    TimelineCardsPosts: ({
       postIds,
       showEndMessage,
       emptyState,
@@ -124,11 +124,11 @@ vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
       trailingSlot?: ReactNode;
     }) => (
       <div
-        data-testid="timeline-grid-posts"
+        data-testid="timeline-cards-posts"
         data-show-end-message={String(showEndMessage)}
         data-has-trailing-slot={String(Boolean(trailingSlot))}
       >
-        <span data-testid="grid-post-count">{postIds.length}</span>
+        <span data-testid="cards-post-count">{postIds.length}</span>
         {postIds.length === 0 ? emptyState : null}
         {trailingSlot}
       </div>
@@ -171,33 +171,33 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/VisualTimelinePosts', () => {
 
 const COLLECTION_STREAM_ID = buildCollectionItemsStreamId('author-pubky', 'collection-post');
 
-const gridLayoutResolution: FeedLayoutResolution = {
-  requestedLayout: LAYOUT.COLUMNS,
-  effectiveLayout: LAYOUT.COLUMNS,
+const cardsLayoutResolution: FeedLayoutResolution = {
+  requestedLayout: LAYOUT.CARDS,
+  effectiveLayout: LAYOUT.CARDS,
+  isCardsActive: true,
   isVisualRequested: false,
   isVisualActive: false,
-  isGridActive: true,
   isPhoneViewport: false,
 };
 
-const visualGridLayoutResolution: FeedLayoutResolution = {
-  ...gridLayoutResolution,
+const visualCollectionLayoutResolution: FeedLayoutResolution = {
+  ...cardsLayoutResolution,
   requestedLayout: LAYOUT.VISUAL,
   effectiveLayout: LAYOUT.VISUAL,
+  isCardsActive: false,
   isVisualRequested: true,
   isVisualActive: true,
 };
 
 const visualLayoutResolution: FeedLayoutResolution = {
-  ...visualGridLayoutResolution,
-  isGridActive: false,
+  ...visualCollectionLayoutResolution,
 };
 
 const listLayoutResolution: FeedLayoutResolution = {
-  ...gridLayoutResolution,
+  ...cardsLayoutResolution,
   requestedLayout: LAYOUT.LIST,
   effectiveLayout: LAYOUT.LIST,
-  isGridActive: false,
+  isCardsActive: false,
 };
 
 const mockLoadMore = vi.fn();
@@ -1103,7 +1103,7 @@ describe('TimelineFeedContent', () => {
   });
 });
 
-describe('Grid layout variants (decisions D5/D7)', () => {
+describe('Cards layout dispatch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
@@ -1111,18 +1111,18 @@ describe('Grid layout variants (decisions D5/D7)', () => {
     mockUsePullToRefresh.mockReturnValue({ state: 'idle' as const, pullDistance: 0 });
   });
 
-  it('renders the grid renderer (not the vertical list) when isGridActive', () => {
+  it('renders the Cards renderer (not the vertical list) when isCardsActive', () => {
     render(
       <TimelineFeedWithStream
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
-    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-cards-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
-    expect(screen.getByTestId('grid-post-count')).toHaveTextContent('3');
+    expect(screen.getByTestId('cards-post-count')).toHaveTextContent('3');
   });
 
   it('renders ordinary children and the persistent header before the grid', () => {
@@ -1131,7 +1131,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.HOME}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
         persistentHeader={<div data-testid="persistent-header">Tagged-as headline</div>}
       >
         <div data-testid="child">Post input</div>
@@ -1140,7 +1140,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
 
     const child = screen.getByTestId('child');
     const persistentHeader = screen.getByTestId('persistent-header');
-    const grid = screen.getByTestId('timeline-grid-posts');
+    const grid = screen.getByTestId('timeline-cards-posts');
 
     expect(child.compareDocumentPosition(persistentHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(persistentHeader.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -1152,10 +1152,10 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
-    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
+    expect(screen.getByTestId('timeline-cards-posts')).toHaveAttribute('data-show-end-message', 'false');
   });
 
   it('forwards a custom empty state to the grid renderer', () => {
@@ -1169,7 +1169,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
         emptyState={<div data-testid="custom-empty">Collection is empty</div>}
       />,
     );
@@ -1183,13 +1183,13 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
-        trailingSlot={<div data-testid="grid-trailing-slot">Add content</div>}
+        layoutResolution={cardsLayoutResolution}
+        trailingSlot={<div data-testid="cards-trailing-slot">Add content</div>}
       />,
     );
 
-    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-has-trailing-slot', 'true');
-    expect(screen.getByTestId('grid-trailing-slot')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-cards-posts')).toHaveAttribute('data-has-trailing-slot', 'true');
+    expect(screen.getByTestId('cards-trailing-slot')).toBeInTheDocument();
   });
 
   it('forwards the custom empty state and trailing slot to the List renderer', () => {
@@ -1221,29 +1221,29 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
         variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
 
-    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-cards-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
-    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
+    expect(screen.getByTestId('timeline-cards-posts')).toHaveAttribute('data-show-end-message', 'false');
   });
 
-  it('keeps header children visible for bookmarks when visual layout still resolves to the grid', () => {
+  it('keeps header children visible for bookmarks in Cards', () => {
     render(
       <TimelineFeedWithStream
         streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
         variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
         tagsLayout="inline"
-        layoutResolution={visualGridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       >
         <div data-testid="bookmarks-header">Bookmarks hero</div>
       </TimelineFeedWithStream>,
     );
 
     expect(screen.getByTestId('bookmarks-header')).toBeInTheDocument();
-    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-cards-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('visual-timeline-posts')).not.toBeInTheDocument();
   });
 
@@ -1256,7 +1256,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
       />,
     );
     expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
-    expect(screen.queryByTestId('timeline-grid-posts')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-cards-posts')).not.toBeInTheDocument();
   });
 
   it('enables pull-to-refresh for the collection variant', () => {
@@ -1265,7 +1265,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
     expect(mockUsePullToRefresh).toHaveBeenCalledWith(expect.objectContaining({ disabled: false }));
@@ -1278,7 +1278,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
         pullToRefreshContainerRef={pullToRefreshContainerRef}
       />,
     );
@@ -1294,7 +1294,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
     expect(screen.getByTestId('pull-to-refresh')).toBeInTheDocument();
@@ -1317,7 +1317,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
     expect(mockRemovePosts).not.toHaveBeenCalled();
@@ -1328,7 +1328,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
 
@@ -1359,7 +1359,7 @@ describe('Visual layout variants', () => {
     expect(screen.getByTestId('collection-hero')).toBeInTheDocument();
     expect(screen.getByTestId('visual-timeline-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('timeline-grid-posts')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-cards-posts')).not.toBeInTheDocument();
   });
 
   it('hides header children for the home variant when the Visual mosaic is active', () => {

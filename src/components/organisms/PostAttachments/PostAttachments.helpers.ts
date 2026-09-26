@@ -26,9 +26,15 @@ export function categorizeAttachments(attachments: AttachmentConstructed[]): Cat
 /** Build categorized AttachmentConstructed lists from remote file metadata. */
 export function splitAttachmentsByMediaType(metadata: FileMetadata[]): CategorizedAttachments {
   return categorizeAttachments(
-    metadata.map(({ content_type, name, id }) => ({
+    metadata.map(({ content_type, name, id, metadata }) => ({
       type: content_type,
       name,
+      ...(Number.isFinite(Number(metadata?.width)) &&
+      Number.isFinite(Number(metadata?.height)) &&
+      Number(metadata?.width) > 0 &&
+      Number(metadata?.height) > 0
+        ? { width: Number(metadata.width), height: Number(metadata.height) }
+        : {}),
       urls: {
         main: FileController.getFileUrl({ fileId: id, variant: FileVariant.MAIN }),
         feed: content_type.startsWith('image')

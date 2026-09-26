@@ -2,9 +2,11 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
+import { page } from 'vitest/browser';
+import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { describe, expect, it, vi } from 'vitest';
-import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT, waitForImagesReady } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -15,6 +17,8 @@ import { Collections } from '@/templates/Collections/Collections';
 
 const routeState = vi.hoisted(() => ({
   pathname: '/collections',
+  cardsFixtures: false,
+  failedMedia: false,
   params: {} as { userId?: string; postId?: string },
 }));
 
@@ -157,13 +161,42 @@ vi.mock('@/stores/notification/notification.store', () => ({
   }),
 }));
 
-vi.mock('@/stores/localFiles/localFiles.store', () => ({
-  useLocalFilesStore: createZustandLikeHook({
-    profile: null,
-    posts: {} as Record<string, never>,
-    collections: {} as Record<string, never>,
-  }),
-}));
+vi.mock('@/stores/localFiles/localFiles.store', async () => {
+  const f = await fixtures;
+  const portrait =
+    'data:image/svg+xml,' +
+    encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="800"><rect width="400" height="800" fill="darkslategray"/><circle cx="200" cy="260" r="140" fill="palegreen"/><text x="40" y="550" font-size="40" fill="white">Portrait study</text></svg>',
+    );
+  const landscape = '/images/collections-onboarding.webp';
+  const media: AttachmentConstructed[] = [
+    { type: 'image/svg+xml', name: 'Portrait study', width: 400, height: 800, urls: { main: portrait } },
+    { type: 'image/webp', name: 'Collections on a desk', urls: { main: landscape } },
+  ];
+  const empty = { profile: null, posts: {}, collections: {} };
+  const withMedia = {
+    ...empty,
+    posts: {
+      [f.collectionItemIds[0]]: media,
+      [f.collectionItemIds[1]]: [media[0]],
+      [f.collectionItemIds[5]]: [media[1]],
+      [f.bookmarkPostIds[0]]: media,
+    },
+  };
+  const withFailedMedia = {
+    ...withMedia,
+    posts: {
+      ...withMedia.posts,
+      [f.collectionItemIds[0]]: [
+        { type: 'image/png', name: 'Missing image', urls: { main: 'data:image/png;base64,invalid' } },
+      ],
+    },
+  };
+  return {
+    useLocalFilesStore: <T,>(selector: (state: typeof empty) => T) =>
+      selector(routeState.cardsFixtures ? (routeState.failedMedia ? withFailedMedia : withMedia) : empty),
+  };
+});
 
 vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
   useKeyboardVisible: () => false,
@@ -253,18 +286,36 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', async () => {
   return {
     usePostDetails: (compositeId: string | null) => {
       if (!compositeId) return EMPTY;
-      const cached = cache.get(compositeId);
+      const cacheKey = `${routeState.cardsFixtures}:${compositeId}`;
+      const cached = cache.get(cacheKey);
       if (cached) return cached;
       const fixture = f.entitiesByCompositeId.get(compositeId);
       if (!fixture) {
-        cache.set(compositeId, EMPTY);
+        cache.set(cacheKey, EMPTY);
         return EMPTY;
       }
       const result = {
-        postDetails: { ...fixture.details, is_moderated: false, is_blurred: false },
+        postDetails: {
+          ...fixture.details,
+          ...(routeState.cardsFixtures && compositeId === f.collectionItemIds[5]
+            ? {
+                kind: 'long',
+                content: JSON.stringify({
+                  title: 'Designing a useful collection',
+                  body: 'Keep the original proportions. Let the content determine how much room it needs. This article explains why independent columns make browsing a mixed collection easier.',
+                }),
+                attachments: ['pubky://fixture/pub/pubky.app/files/cover'],
+              }
+            : {}),
+          ...(routeState.cardsFixtures && compositeId === f.collectionItemIds[4]
+            ? { content: 'A longer notebook entry. '.repeat(50) }
+            : {}),
+          is_moderated: false,
+          is_blurred: false,
+        },
         isLoading: false as const,
       };
-      cache.set(compositeId, result);
+      cache.set(cacheKey, result);
       return result;
     },
   };
@@ -633,6 +684,7 @@ async function expectCollectionsOverviewReady(screen: Awaited<ReturnType<typeof 
 }
 
 async function renderCollectionsOverview(viewport: { width: number; height: number }) {
+  routeState.cardsFixtures = false;
   const f = await fixtures;
   routeState.pathname = '/collections';
   routeState.params = {};
@@ -646,7 +698,10 @@ async function renderCollectionsOverview(viewport: { width: number; height: numb
 async function renderSingleCollection(
   layout: keyof Awaited<typeof fixtures>['singleCollections'],
   viewport: { width: number; height: number },
+  cards = false,
 ) {
+  routeState.cardsFixtures = cards;
+  routeState.failedMedia = false;
   const f = await fixtures;
   const collection = f.singleCollections[layout];
   routeState.pathname = `/collections/${collection.details.author}/${collection.postId}`;
@@ -665,7 +720,9 @@ async function renderSingleCollection(
   return screen;
 }
 
-async function renderBookmarks(viewport: { width: number; height: number }) {
+async function renderBookmarks(viewport: { width: number; height: number }, cards = false) {
+  routeState.cardsFixtures = cards;
+  routeState.failedMedia = false;
   routeState.pathname = '/collections/bookmarks';
   routeState.params = {};
 
@@ -715,6 +772,24 @@ describe('Single collection — visual layout — visual regression', () => {
     await renderSingleCollection('visual', VRT_VIEWPORT_DESKTOP);
     await matchVrtFrameScreenshot('single-collection-visual-desktop');
   });
+
+  it('shows the phone Cards fallback and restores the Visual preference after resize', async () => {
+    await renderSingleCollection('visual', VRT_VIEWPORT_MOBILE);
+    await page.getByRole('button', { name: 'Layout: Cards', exact: true }).click();
+    await expect.element(page.getByRole('menuitem', { name: 'Visual', exact: true })).not.toBeInTheDocument();
+    await page.getByRole('menuitem', { name: 'Cards', exact: true }).click();
+    await expect.poll(() => document.querySelector('[data-cy="timeline-posts-cards"]')).not.toBeNull();
+    await page.viewport(VRT_VIEWPORT_DESKTOP.width, VRT_VIEWPORT_DESKTOP.height);
+    await page.getByRole('button', { name: 'Layout: Cards', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Visual', exact: true }).click();
+    const f = await fixtures;
+    await expect.element(page.getByRole('button', { name: `Open post ${f.collectionItemIds[0]}` })).toBeVisible();
+    await page.viewport(VRT_VIEWPORT_MOBILE.width, VRT_VIEWPORT_MOBILE.height);
+    await expect.element(page.getByRole('button', { name: 'Layout: Cards', exact: true })).toBeVisible();
+    await page.viewport(VRT_VIEWPORT_DESKTOP.width, VRT_VIEWPORT_DESKTOP.height);
+    await expect.element(page.getByRole('button', { name: 'Layout: Visual', exact: true })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: `Open post ${f.collectionItemIds[0]}` })).toBeVisible();
+  });
 });
 
 describe('Bookmarks collection — visual regression', () => {
@@ -726,5 +801,288 @@ describe('Bookmarks collection — visual regression', () => {
   it('renders bookmarks at mobile viewport', async () => {
     await renderBookmarks(VRT_VIEWPORT_MOBILE);
     await matchVrtFrameScreenshot('bookmarks-collection-mobile');
+  });
+});
+
+async function expectCards() {
+  await expect.poll(() => document.querySelector('[data-cy="timeline-posts-cards"]')).not.toBeNull();
+}
+
+function assertCardsGeometry() {
+  const feed = document.querySelector<HTMLElement>('[data-cy="timeline-posts-cards"]')!;
+  const cards = Array.from(feed.children).map((node) => node.getBoundingClientRect());
+  expect(cards.length).toBeGreaterThan(1);
+  cards.forEach((card, index) => {
+    expect(card.right).toBeLessThanOrEqual(feed.getBoundingClientRect().right + 1);
+    for (const other of cards.slice(index + 1)) {
+      const overlaps =
+        card.left < other.right - 1 &&
+        card.right > other.left + 1 &&
+        card.top < other.bottom - 1 &&
+        card.bottom > other.top + 1;
+      expect(overlaps).toBe(false);
+    }
+  });
+  expect(feed.getBoundingClientRect().bottom).toBeGreaterThanOrEqual(Math.max(...cards.map((card) => card.bottom)) - 1);
+}
+
+describe('Cards — mixed content and interactions', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders a collection on %s', async (name, viewport) => {
+    await renderSingleCollection('grid', viewport, true);
+    await expectCards();
+    await expect
+      .poll(() => {
+        assertCardsGeometry();
+        return true;
+      })
+      .toBe(true);
+    await matchVrtFrameScreenshot(`single-collection-cards-${name}`);
+  });
+
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders Bookmarks on %s', async (name, viewport) => {
+    await renderBookmarks(viewport, true);
+    await expectCards();
+    await expect
+      .poll(() => {
+        assertCardsGeometry();
+        return true;
+      })
+      .toBe(true);
+    await matchVrtFrameScreenshot(`bookmarks-cards-${name}`);
+  });
+
+  it('keeps its frame stable through carousel navigation and opens the selected media', async () => {
+    await renderBookmarks(VRT_VIEWPORT_DESKTOP, true);
+    await expectCards();
+    const carousel = page.getByRole('group', { name: 'Post media' }).first();
+    const frame = document.querySelector('[data-cy="timeline-posts-cards"] [data-slot="carousel"]')!;
+    const height = frame.getBoundingClientRect().height;
+    await carousel.getByRole('button', { name: 'Next slide' }).click();
+    await expect.element(carousel.getByText('2 / 2', { exact: true })).toBeVisible();
+    expect(frame.getBoundingClientRect().height).toBeCloseTo(height, 0);
+    await carousel.getByRole('button', { name: 'Open image 2 of 2: Collections on a desk' }).click();
+    await expect.element(page.getByRole('dialog')).toBeVisible();
+    await expect.element(page.getByRole('dialog').getByText('2/2', { exact: true })).toBeVisible();
+    assertCardsGeometry();
+  });
+});
+
+async function renderCardsPosts(viewport: { width: number; height: number }, failedMedia = false) {
+  const { PostMainLayoutProvider } = await import('@/organisms/PostMain/PostMainLayoutContext');
+  const { TimelineCardsPosts } = await import('@/organisms/Timeline/Posts/CardsPosts/CardsPosts');
+  routeState.cardsFixtures = true;
+  routeState.failedMedia = failedMedia;
+  routeState.pathname = '/collections';
+  const f = await fixtures;
+  const cardIds = [0, 4, 5, 1, 2, 3].map((index) => f.collectionItemIds[index]);
+  return renderForVRT(
+    <PostMainLayoutProvider tagsLayout="inline">
+      <TimelineCardsPosts
+        postIds={cardIds}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={async () => {}}
+        showEndMessage={false}
+      />
+    </PostMainLayoutProvider>,
+    { viewport },
+  );
+}
+
+describe('Cards cards — browser coverage', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('loads three pages through the real Cards sentinel on %s', async (_name, viewport) => {
+    const { useState } = await import('react');
+    const { PostMainLayoutProvider } = await import('@/organisms/PostMain/PostMainLayoutContext');
+    const { TimelineCardsPosts } = await import('@/organisms/Timeline/Posts/CardsPosts/CardsPosts');
+    const f = await fixtures;
+    routeState.cardsFixtures = true;
+    routeState.failedMedia = false;
+    routeState.pathname = '/collections';
+    const ids = [0, 4, 5, 1, 2, 3].map((index) => f.collectionItemIds[index]);
+    type Page = { postIds: string[]; hasMore: boolean };
+    const secondPage = Promise.withResolvers<Page>();
+    const thirdPage = Promise.withResolvers<Page>();
+    const fetchPage = vi
+      .fn<() => Promise<Page>>()
+      .mockReturnValueOnce(secondPage.promise)
+      .mockReturnValueOnce(thirdPage.promise);
+
+    // Only the page-data boundary is controlled. Both layout/scroll hooks,
+    // observers, card content and pagination controls use their real implementations.
+    function PaginatedCards() {
+      const [postIds, setPostIds] = useState(ids.slice(0, 2));
+      const [loadingMore, setLoadingMore] = useState(false);
+      const [hasMore, setHasMore] = useState(true);
+      const loadMore = async () => {
+        setLoadingMore(true);
+        const next = await fetchPage();
+        setPostIds((current) => [...current, ...next.postIds]);
+        setHasMore(next.hasMore);
+        setLoadingMore(false);
+      };
+      return (
+        <PostMainLayoutProvider tagsLayout="inline">
+          <div aria-hidden="true" className="h-screen" />
+          <TimelineCardsPosts
+            postIds={postIds}
+            loading={false}
+            loadingMore={loadingMore}
+            error={null}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            showEndMessage={false}
+          />
+        </PostMainLayoutProvider>
+      );
+    }
+
+    const screen = await renderForVRT(<PaginatedCards />, { viewport });
+    // The screenshot harness clips its root; make that root scrollable for this interaction test.
+    const scroller = screen.getByTestId('vrt-root').element();
+    scroller.style.overflowY = 'auto';
+    const feed = screen.getByRole('feed').element();
+    const sentinel = feed.parentElement!.lastElementChild!;
+    const cards = () => Array.from(feed.querySelectorAll<HTMLElement>(':scope > [role="article"]'));
+    const assertSentinelPosition = () => {
+      assertCardsGeometry();
+      expect(feed.contains(sentinel)).toBe(false);
+      expect(sentinel.getBoundingClientRect().height).toBeGreaterThan(0);
+      expect(sentinel.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        Math.max(...cards().map((card) => card.getBoundingClientRect().bottom)) - 1,
+      );
+      return true;
+    };
+    // Allow observer delivery and the renderer's 20ms debounce before negative call-count assertions.
+    const settleScroll = () => new Promise((resolve) => setTimeout(resolve, 100));
+    await expect.poll(assertSentinelPosition).toBe(true);
+    await settleScroll();
+    expect(fetchPage).not.toHaveBeenCalled();
+    const initialColumns = cards().map((card) => card.getBoundingClientRect().left);
+
+    scroller.scrollTop = scroller.scrollHeight;
+    await expect.poll(() => fetchPage.mock.calls.length).toBe(1);
+    scroller.scrollTop = 0;
+    await settleScroll();
+    scroller.scrollTop = scroller.scrollHeight;
+    await settleScroll();
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+
+    secondPage.resolve({ postIds: ids.slice(2, 4), hasMore: true });
+    await expect.poll(() => cards().length).toBe(4);
+    // Appended media can change card heights after the initial renderForVRT readiness check.
+    await waitForImagesReady(feed);
+    await expect.poll(assertSentinelPosition).toBe(true);
+    expect(
+      cards()
+        .slice(0, 2)
+        .map((card) => card.getBoundingClientRect().left),
+    ).toEqual(initialColumns);
+    scroller.scrollTop = scroller.scrollHeight;
+    await expect.poll(() => fetchPage.mock.calls.length).toBe(2);
+
+    const captionCard = cards()[1];
+    const collapsedHeight = captionCard.getBoundingClientRect().height;
+    await page.getByRole('button', { name: 'Show full post content', exact: true }).click();
+    await expect.poll(() => captionCard.getBoundingClientRect().height).toBeGreaterThan(collapsedHeight);
+    await expect.poll(assertSentinelPosition).toBe(true);
+    scroller.scrollTop = scroller.scrollHeight;
+    await settleScroll();
+    expect(fetchPage).toHaveBeenCalledTimes(2);
+
+    thirdPage.resolve({ postIds: ids.slice(4), hasMore: false });
+    await expect.poll(() => cards().length).toBe(6);
+    await expect.poll(() => sentinel.isConnected).toBe(false);
+    await expect
+      .poll(() => {
+        assertCardsGeometry();
+        return true;
+      })
+      .toBe(true);
+    scroller.scrollTop = 0;
+    await settleScroll();
+    scroller.scrollTop = scroller.scrollHeight;
+    await settleScroll();
+    expect(fetchPage).toHaveBeenCalledTimes(2);
+  });
+
+  it('pauses a later video slide when its frame scrolls out while the caption stays visible', async () => {
+    const { PostMediaCarousel } = await import('@/molecules/PostMediaCarousel/PostMediaCarousel');
+    const videos = [1, 2, 3].map((number) => ({
+      name: `Video ${number}`,
+      type: 'video/mp4',
+      width: 400,
+      height: 225,
+      urls: { main: '/pubky.mp4' },
+    }));
+    await renderForVRT(
+      <div data-testid="media-scroll" className="h-80 w-80 overflow-y-auto p-4">
+        <PostMediaCarousel media={videos} onOpenPreview={() => {}} isPreviewOpen={false} />
+        <p className="h-160">The caption remains visible below the video.</p>
+      </div>,
+      { viewport: VRT_VIEWPORT_DESKTOP },
+    );
+    await page.getByRole('button', { name: 'Next slide' }).click();
+    await page.getByRole('button', { name: 'Next slide' }).click();
+    await expect.element(page.getByText('3 / 3', { exact: true })).toBeVisible();
+    const video = document.querySelectorAll('video')[2];
+    video.muted = true;
+    await video.play();
+    // Decoding the first frame can exceed the default 1s poll budget on shared CI runners.
+    await expect.poll(() => video.currentTime, { timeout: 5_000 }).toBeGreaterThan(0);
+    const scroller = document.querySelector<HTMLElement>('[data-testid="media-scroll"]')!;
+    scroller.scrollTop = video.getBoundingClientRect().bottom - scroller.getBoundingClientRect().top + 1;
+    await expect.poll(() => video.paused).toBe(true);
+    await expect.element(page.getByText('The caption remains visible below the video.')).toBeVisible();
+  });
+
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('captures the mixed card treatments on %s', async (name, viewport) => {
+    await renderCardsPosts(viewport);
+    await expect.element(page.getByText('Designing a useful collection')).toBeVisible();
+    await expect
+      .poll(() => {
+        assertCardsGeometry();
+        return true;
+      })
+      .toBe(true);
+    await matchVrtFrameScreenshot(`cards-posts-${name}`);
+  });
+
+  it('reflows expanded text without moving cards between columns', async () => {
+    await renderCardsPosts(VRT_VIEWPORT_DESKTOP);
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-cy="timeline-posts-cards"] > [role="article"]'),
+    );
+    const before = cards.map((card) => card.getBoundingClientRect().left);
+    await page.getByRole('button', { name: 'Show full post content', exact: true }).click();
+    await expect
+      .poll(() => {
+        assertCardsGeometry();
+        return true;
+      })
+      .toBe(true);
+    expect(cards.map((card) => card.getBoundingClientRect().left)).toEqual(before);
+  });
+
+  it('keeps failed media usable', async () => {
+    await renderCardsPosts(VRT_VIEWPORT_MOBILE, true);
+    await expect.element(page.getByRole('status')).toHaveTextContent('Media unavailable');
+    await expect.element(page.getByRole('button', { name: 'Open original' })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'Reply to post (22)', exact: true })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'More options' }).first()).toBeVisible();
+    assertCardsGeometry();
   });
 });

@@ -98,17 +98,22 @@ function UndoableRepostHeader({
 
 export function PostMain({
   postId,
+  postDetails: providedPostDetails,
   className,
   isReply = false,
   isLastReply = false,
   pinActionsToBottom = false,
   isNavigable = true,
   showFullContentInListLayout = false,
+  presentation = 'default',
 }: PostMainProps) {
+  const isCards = presentation === 'cards';
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
   const isListLayout = effectiveTagsLayout === 'list';
-  const { postDetails, isLoading } = usePostDetails(postId);
+  const detailsQuery = usePostDetails(postId, { enabled: providedPostDetails === undefined });
+  const postDetails = providedPostDetails === undefined ? detailsQuery.postDetails : providedPostDetails;
+  const isLoading = providedPostDetails === undefined && detailsQuery.isLoading;
   const isDeleted = isPostDeleted(postDetails?.content);
   // A settled `null` (cache miss after the fetch resolved) means the post 404'd.
   // Without this branch the card below would skeleton forever (PostHeader /
@@ -117,7 +122,7 @@ export function PostMain({
 
   const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
-  const headerVisibility = usePostHeaderVisibility(postId);
+  const headerVisibility = usePostHeaderVisibility(postDetails ? postId : '');
   const { showRepostHeader, shouldShowPostHeader, originalPostId } = headerVisibility;
   // A contentless repost adds a bar above the original post, not another card
   // around it. Undo and saved membership retain the repost's identity.
@@ -165,7 +170,12 @@ export function PostMain({
         overrideDefaults
         onClick={isNavigable ? (e) => handlePostClick(displayedPostId, e) : undefined}
         onAuxClick={isNavigable ? (e) => handlePostAuxClick(displayedPostId, e) : undefined}
-        className={cn('relative flex min-w-0 @max-xl/grid:h-full', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
+        className={cn(
+          'relative flex min-w-0',
+          !isCards && '@max-xl/grid:h-full',
+          isNavigable && 'cursor-pointer',
+          isReply && 'pl-3',
+        )}
       >
         {isReply && (
           <Container overrideDefaults className="absolute top-0 bottom-0 left-0 w-3">
@@ -208,8 +218,9 @@ export function PostMain({
               ) : (
                 <CardContent
                   className={cn(
-                    'flex min-w-0 flex-col @max-xl/grid:flex-1',
-                    isWideLayout || isListLayout ? 'p-0' : 'gap-4 p-6',
+                    'flex min-w-0 flex-col',
+                    !isCards && '@max-xl/grid:flex-1',
+                    isWideLayout || isListLayout ? 'p-0' : isCards ? 'gap-6 p-6' : 'gap-4 p-6',
                   )}
                 >
                   {isListLayout ? (
@@ -278,8 +289,9 @@ export function PostMain({
                   ) : (
                     <>
                       {showDisplayedPostHeader && <PostHeader postId={displayedPostId} />}
-                      <PostContent postId={displayedPostId} />
+                      <PostContent postId={displayedPostId} mediaVariant={isCards ? 'cards' : 'default'} />
                       <PostInlineTagsActions
+                        presentation={presentation}
                         postId={displayedPostId}
                         savePostId={postId}
                         onReplyClick={openReplyDialog}

@@ -481,6 +481,18 @@ vi.mock('@/application/feed/feed', async () => {
   return { FeedApplication: f.mockFeedApplication };
 });
 
+vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', async () => {
+  const f = await fixtures;
+  return {
+    useAttachmentsMetadata: ({ fileUris }: { fileUris: readonly string[] }) => ({
+      files: fileUris.flatMap((uri) => {
+        const metadata = f.articleCoverByUri.get(uri);
+        return metadata ? [metadata] : [];
+      }),
+    }),
+  };
+});
+
 vi.mock('@/controllers/file/file', async () => {
   const f = await fixtures;
   return {
@@ -722,5 +734,47 @@ describe('Mobile keyboard navigation visibility', () => {
     await renderForVRT(<HomeWithFab />, { viewport: VRT_VIEWPORT_DESKTOP });
     await expect.element(page.getByTestId('new-post-cta')).toBeVisible();
     feedState.keyboardVisible = false;
+  });
+});
+
+describe('Cards layout — home', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders Cards on %s', async (name, viewport) => {
+    const { useHomeStore } = await import('@/stores/home/home.store');
+    const state = useHomeStore.getState();
+    const previousLayout = state.layout;
+    state.layout = 'cards';
+    feedState.mode = 'default';
+    try {
+      await renderForVRT(<HomeWithLayout />, { viewport });
+      await expect.poll(() => document.querySelector('[data-cy="timeline-posts-cards"]')).not.toBeNull();
+      await expect
+        .poll(() => {
+          const feed = document.querySelector<HTMLElement>('[data-cy="timeline-posts-cards"]')!;
+          const cards = Array.from(feed.children).map((card) => card.getBoundingClientRect());
+          expect(cards.length).toBeGreaterThan(1);
+          expect(feed.getBoundingClientRect().bottom).toBeGreaterThanOrEqual(
+            Math.max(...cards.map((card) => card.bottom)) - 1,
+          );
+          for (const [index, card] of cards.entries()) {
+            expect(card.right).toBeLessThanOrEqual(feed.getBoundingClientRect().right + 1);
+            for (const other of cards.slice(index + 1)) {
+              expect(
+                card.left < other.right - 1 &&
+                  card.right > other.left + 1 &&
+                  card.top < other.bottom - 1 &&
+                  card.bottom > other.top + 1,
+              ).toBe(false);
+            }
+          }
+          return true;
+        })
+        .toBe(true);
+      await matchVrtFrameScreenshot(`home-cards-${name}`);
+    } finally {
+      state.layout = previousLayout;
+    }
   });
 });

@@ -16,7 +16,7 @@ export const createCollectionFormSchema = z.object({
     .refine((value) => value.trim().length > 0, { message: 'Collection title is required.' }),
   [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: z.string().max(COLLECTION_DESCRIPTION_MAX_CHARACTER_LENGTH),
   [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: z.enum([
-    COLLECTION_LAYOUT.GRID,
+    COLLECTION_LAYOUT.CARDS,
     COLLECTION_LAYOUT.LIST,
     COLLECTION_LAYOUT.VISUAL,
   ]),

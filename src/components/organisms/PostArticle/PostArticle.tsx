@@ -4,6 +4,7 @@ import { Newspaper } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
+import { POST_CONTENT_PENDING_PROPS } from '@/hooks/useCardsLayout/useCardsLayout.utils';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { cn } from '@/libs/utils/utils';
@@ -18,10 +19,17 @@ interface PostArticleProps {
   attachments: PostDetailsModel['attachments'];
   localAttachments: AttachmentConstructed[] | undefined;
   className?: string;
+  presentation?: 'default' | 'cards';
 }
 
-export const PostArticle = ({ content, attachments, localAttachments, className }: PostArticleProps) => {
-  const { title, body, coverImage, hasCover } = usePostArticle({
+export const PostArticle = ({
+  content,
+  attachments,
+  localAttachments,
+  className,
+  presentation = 'default',
+}: PostArticleProps) => {
+  const { title, body, coverImage, hasCover, isCoverLoading } = usePostArticle({
     content,
     attachments,
     coverImageVariant: FileVariant.FEED,
@@ -33,14 +41,27 @@ export const PostArticle = ({ content, attachments, localAttachments, className 
   // only when the slot-0 rule says so (otherwise it's an inline image).
   const localCoverImage =
     hasCover && localAttachments?.[0]?.type.startsWith('image')
-      ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }
+      ? {
+          src: localAttachments[0].urls.main,
+          alt: localAttachments[0].name,
+          width: localAttachments[0].width,
+          height: localAttachments[0].height,
+        }
       : null;
 
   const finalCoverImage = localCoverImage || coverImage;
 
   return (
     <>
-      <Container className={cn('justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!', className)}>
+      <Container
+        className={cn(
+          presentation === 'cards' ? 'gap-3' : 'justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!',
+          className,
+        )}
+      >
+        {presentation === 'cards' && isCoverLoading && !localCoverImage && (
+          <span hidden {...POST_CONTENT_PENDING_PROPS} />
+        )}
         <Container className="gap-y-1">
           <Container className="flex-row items-start gap-2">
             <Newspaper aria-hidden="true" className="mt-1 size-5 shrink-0" />
@@ -56,9 +77,13 @@ export const PostArticle = ({ content, attachments, localAttachments, className 
           <Image
             src={finalCoverImage.src}
             alt={finalCoverImage.alt}
-            className="aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!"
-            width={180}
-            height={100}
+            className={
+              presentation === 'cards'
+                ? 'order-first -mx-6 h-auto max-h-160 w-auto max-w-none object-contain'
+                : 'aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!'
+            }
+            width={presentation === 'cards' ? finalCoverImage.width : 180}
+            height={presentation === 'cards' ? finalCoverImage.height : 100}
           />
         )}
       </Container>

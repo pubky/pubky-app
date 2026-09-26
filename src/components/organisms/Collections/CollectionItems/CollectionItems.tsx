@@ -110,7 +110,7 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
   const emptyState = <CollectionItemsEmpty />;
   const isListLayout = viewerLayout === COLLECTION_LAYOUT.LIST;
   const isVisualLayout = viewerLayout === COLLECTION_LAYOUT.VISUAL;
-  const requestedLayout = isListLayout ? LAYOUT.LIST : isVisualLayout ? LAYOUT.VISUAL : LAYOUT.COLUMNS;
+  const requestedLayout = isListLayout ? LAYOUT.LIST : isVisualLayout ? LAYOUT.VISUAL : LAYOUT.CARDS;
   const addContentVariant = isListLayout ? 'list' : isVisualLayout ? 'visual' : 'grid';
 
   if (!isOwn && isConfirmedEmpty) {

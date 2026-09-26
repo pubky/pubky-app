@@ -4,6 +4,7 @@ exports[`BookmarksItems - Snapshots > matches the snapshot 1`] = `
 <div
   data-has-empty-state="true"
   data-has-trailing-slot="true"
+  data-layout="cards"
   data-testid="timeline-feed"
   data-variant="bookmarks"
 >

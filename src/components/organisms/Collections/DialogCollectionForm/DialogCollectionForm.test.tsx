@@ -41,7 +41,7 @@ function Harness({
   disableOpenAutoFocus,
   initialName = '',
   initialDescription = '',
-  initialLayout = COLLECTION_LAYOUT.GRID,
+  initialLayout = COLLECTION_LAYOUT.CARDS,
   coverPreviewUrl = null,
   coverError = null,
   onSubmit = () => {},
@@ -98,16 +98,18 @@ describe('DialogCollectionForm', () => {
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
   });
 
-  it('defaults to Grid and lets the creator select List', () => {
+  it('defaults to Cards and lets the creator select List', () => {
     render(<Harness layoutLabel="Default layout" />);
 
-    const grid = screen.getByRole('radio', { name: 'Grid' });
+    const grid = screen.getByRole('radio', { name: 'Cards' });
     const list = screen.getByRole('radio', { name: 'List' });
     const layoutLabel = screen.getByText('Default layout');
     const backgroundLabel = screen.getByText('Background');
 
     expect(screen.getAllByRole('radio')).toHaveLength(3);
     expect(grid).toHaveAttribute('aria-checked', 'true');
+    expect(grid.querySelector('.lucide-layout-dashboard')).toBeInTheDocument();
+    expect(COLLECTION_LAYOUT.CARDS).toBe('grid');
     expect(list).toHaveAttribute('aria-checked', 'false');
     expect(list.querySelector('.lucide-rows-4')).toBeInTheDocument();
     expect(layoutLabel.compareDocumentPosition(backgroundLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -124,12 +126,12 @@ describe('DialogCollectionForm', () => {
   it('lets the creator select Visual', () => {
     render(<Harness />);
 
-    const grid = screen.getByRole('radio', { name: 'Grid' });
+    const grid = screen.getByRole('radio', { name: 'Cards' });
     const visual = screen.getByRole('radio', { name: 'Visual' });
 
     expect(visual).toHaveAttribute('aria-checked', 'false');
     expect(visual).toHaveAttribute('data-cy', 'collection-layout-visual');
-    expect(visual.querySelector('.lucide-layout-grid')).toBeInTheDocument();
+    expect(visual.querySelector('.lucide-grid-2x2')).toBeInTheDocument();
 
     fireEvent.click(visual);
 
@@ -141,7 +143,7 @@ describe('DialogCollectionForm', () => {
     render(<Harness initialLayout={COLLECTION_LAYOUT.VISUAL} />);
 
     expect(screen.getByRole('radio', { name: 'Visual' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('radio', { name: 'Grid' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('radio', { name: 'Cards' })).toHaveAttribute('aria-checked', 'false');
   });
 
   it('disables the save button while the name is empty', () => {

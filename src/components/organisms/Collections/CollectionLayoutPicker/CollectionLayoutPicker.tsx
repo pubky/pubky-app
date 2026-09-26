@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, ChevronDown, Grip, LayoutGrid, type LucideIcon, Rows4 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Check, Grid2X2, LayoutDashboard, type LucideIcon, Rows4 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -10,8 +10,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/atoms/DropdownMenu/DropdownMenu';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 interface CollectionLayoutPickerProps {
   layout: CollectionLayout;
@@ -28,6 +30,7 @@ interface CollectionLayoutOptionProps {
 }
 
 interface CollectionLayoutPickerContentProps {
+  layouts: readonly CollectionLayout[];
   layout: CollectionLayout;
   onSelect: (layout: CollectionLayout) => void;
 }
@@ -37,9 +40,9 @@ const COLLECTION_LAYOUT_PICKER_OPTIONS: Array<{
   label: string;
   icon: LucideIcon;
 }> = [
-  { value: COLLECTION_LAYOUT.GRID, label: 'Grid', icon: Grip },
+  { value: COLLECTION_LAYOUT.CARDS, label: 'Cards', icon: LayoutDashboard },
   { value: COLLECTION_LAYOUT.LIST, label: 'List', icon: Rows4 },
-  { value: COLLECTION_LAYOUT.VISUAL, label: 'Visual', icon: LayoutGrid },
+  { value: COLLECTION_LAYOUT.VISUAL, label: 'Visual', icon: Grid2X2 },
 ];
 
 function getPickerOption(layout: CollectionLayout) {
@@ -77,10 +80,10 @@ function CollectionLayoutOption({
   );
 }
 
-function CollectionLayoutPickerContent({ layout, onSelect }: CollectionLayoutPickerContentProps) {
+function CollectionLayoutPickerContent({ layout, onSelect, layouts }: CollectionLayoutPickerContentProps) {
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-3">
-      {COLLECTION_LAYOUT_PICKER_OPTIONS.map((option) => (
+      {COLLECTION_LAYOUT_PICKER_OPTIONS.filter((option) => layouts.includes(option.value)).map((option) => (
         <CollectionLayoutOption
           key={option.value}
           value={option.value}
@@ -97,36 +100,74 @@ function CollectionLayoutPickerContent({ layout, onSelect }: CollectionLayoutPic
 
 export function CollectionLayoutPicker({ layout, onLayoutChange }: CollectionLayoutPickerProps) {
   const [open, setOpen] = useState(false);
-  const activeOption = getPickerOption(layout);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const pointerInteraction = useRef(false);
+  const suppressRestoredFocus = useRef(false);
+  const isPhoneViewport = useIsMobile({ breakpoint: 'md' });
+  // Visual falls back to Cards on phones; retain the viewer's preference for larger screens.
+  const displayedLayout = isPhoneViewport && layout === COLLECTION_LAYOUT.VISUAL ? COLLECTION_LAYOUT.CARDS : layout;
+  const availableLayouts = COLLECTION_LAYOUT_PICKER_OPTIONS.map((option) => option.value).filter(
+    (value) => !isPhoneViewport || value !== COLLECTION_LAYOUT.VISUAL,
+  );
+  const activeOption = getPickerOption(displayedLayout);
   const layoutLabel = activeOption.label;
   const ActiveIcon = activeOption.icon;
 
   const handleSelect = (nextLayout: CollectionLayout) => {
-    if (nextLayout !== layout) onLayoutChange(nextLayout);
+    if (nextLayout !== displayedLayout) onLayoutChange(nextLayout);
     setOpen(false);
   };
 
   const trigger = (
-    <Button
-      variant="secondary"
-      size="icon"
-      aria-label={`Layout: ${layoutLabel}`}
-      data-cy="collection-layout-menu"
-      className="hidden lg:inline-flex lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
-    >
+    <Button variant="secondary" size="icon" aria-label={`Layout: ${layoutLabel}`} data-cy="collection-layout-menu">
       <ActiveIcon className="size-4" />
-      <Typography as="span" overrideDefaults className="hidden lg:inline">
-        {layoutLabel}
-      </Typography>
-      <ChevronDown className="hidden size-3.5 lg:block" />
     </Button>
   );
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-70">
-        <CollectionLayoutPickerContent layout={layout} onSelect={handleSelect} />
+    <DropdownMenu
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        setTooltipOpen(false);
+      }}
+    >
+      <Tooltip open={tooltipOpen && !open} onOpenChange={setTooltipOpen}>
+        <DropdownMenuTrigger asChild>
+          <TooltipTrigger
+            asChild
+            onPointerDownCapture={() => {
+              pointerInteraction.current = true;
+            }}
+            onKeyDownCapture={() => {
+              pointerInteraction.current = false;
+            }}
+            onFocus={(event) => {
+              if (suppressRestoredFocus.current) event.preventDefault();
+            }}
+          >
+            {trigger}
+          </TooltipTrigger>
+        </DropdownMenuTrigger>
+        <TooltipPortal>{!open && <TooltipContent variant="accent">Change layout</TooltipContent>}</TooltipPortal>
+      </Tooltip>
+      <DropdownMenuContent
+        align="end"
+        className="w-70"
+        onPointerDownCapture={() => {
+          pointerInteraction.current = true;
+        }}
+        onKeyDownCapture={() => {
+          pointerInteraction.current = false;
+        }}
+        onCloseAutoFocus={() => {
+          suppressRestoredFocus.current = pointerInteraction.current;
+          queueMicrotask(() => {
+            suppressRestoredFocus.current = false;
+          });
+        }}
+      >
+        <CollectionLayoutPickerContent layout={displayedLayout} onSelect={handleSelect} layouts={availableLayouts} />
       </DropdownMenuContent>
     </DropdownMenu>
   );

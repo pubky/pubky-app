@@ -6,6 +6,7 @@ import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { CollectionItemsEmpty } from '@/organisms/Collections/CollectionItemsEmpty/CollectionItemsEmpty';
 import { DialogAddContent } from '@/organisms/Collections/DialogAddContent/DialogAddContent';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
+import { LAYOUT } from '@/stores/home/home.types';
 
 interface BookmarksItemsProps {
   header: ReactNode;
@@ -17,6 +18,7 @@ export function BookmarksItems({ header }: BookmarksItemsProps) {
   return (
     <TimelineFeed
       variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+      requestedLayout={LAYOUT.CARDS}
       emptyState={emptyState}
       trailingSlot={
         <DialogAddContent triggerVariant="grid" target={{ type: 'bookmarks' }} dataCy="bookmarks-add-content-grid" />

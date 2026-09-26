@@ -4,6 +4,7 @@ import { type MouseEvent } from 'react';
 import { Tag } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { cn } from '@/libs/utils/utils';
@@ -14,6 +15,7 @@ interface PostTagToggleButtonProps {
   onToggle: (event: MouseEvent<HTMLButtonElement>) => void;
   disabled?: boolean;
   className?: string;
+  showCount?: boolean;
   /** Elevated `bg-card` treatment for CTAs on a `bg-muted` embed surface. */
   onMutedSurface?: boolean;
 }
@@ -24,19 +26,22 @@ export function PostTagToggleButton({
   onToggle,
   disabled,
   className,
+  showCount = true,
   onMutedSurface = false,
 }: PostTagToggleButtonProps) {
   const { postCounts, isLoading } = usePostCounts(postId);
   const tagCount = postCounts?.unique_tags ?? 0;
 
   if (isLoading) {
-    return <Skeleton data-cy="post-tag-btn-skeleton" className="h-8 w-12 rounded-full" />;
+    return (
+      <Skeleton data-cy="post-tag-btn-skeleton" className={cn('rounded-full', showCount ? 'h-8 w-12' : 'size-9')} />
+    );
   }
 
-  return (
+  const button = (
     <Button
       variant="secondary"
-      size="sm"
+      size={showCount ? 'sm' : 'icon'}
       onClick={onToggle}
       disabled={disabled}
       aria-expanded={expanded}
@@ -49,13 +54,26 @@ export function PostTagToggleButton({
       )}
     >
       <Tag />
-      <Typography
-        as="span"
-        overrideDefaults
-        className={cn('text-xs leading-4 font-bold', onMutedSurface ? 'text-foreground' : 'text-muted-foreground')}
-      >
-        {tagCount}
-      </Typography>
+      {showCount && (
+        <Typography
+          as="span"
+          overrideDefaults
+          className={cn('text-xs leading-4 font-bold', onMutedSurface ? 'text-foreground' : 'text-muted-foreground')}
+        >
+          {tagCount}
+        </Typography>
+      )}
     </Button>
+  );
+
+  if (showCount) return button;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipPortal>
+        <TooltipContent variant="accent">{expanded ? 'Hide tags' : 'Show tags'}</TooltipContent>
+      </TooltipPortal>
+    </Tooltip>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface UseInfiniteScrollOptions {
   onLoadMore: () => void;
@@ -33,7 +33,7 @@ export const useInfiniteScroll = ({
   maxUnproductiveLoads,
 }: UseInfiniteScrollOptions) => {
   // Use state to track sentinel element - this ensures useEffect re-runs when sentinel mounts
-  const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
+  const [sentinel, setSentinel] = useState<HTMLElement | null>(null);
   const [isStalled, setIsStalled] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const onLoadMoreRef = useRef(onLoadMore);
@@ -68,35 +68,6 @@ export const useInfiniteScroll = ({
     }
   }, [budgetEnabled, itemCount]);
 
-  // Callback ref - called when element mounts/unmounts
-  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
-    setSentinel(node);
-  }, []);
-
-  const debouncedLoadMore = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(() => {
-      const budget = budgetRef.current;
-      if (budget.enabled) {
-        const count = budget.itemCount ?? 0;
-        if (count > highWaterRef.current) {
-          highWaterRef.current = count;
-          unproductiveLoadsRef.current = 0;
-        }
-
-        unproductiveLoadsRef.current += 1;
-        if (unproductiveLoadsRef.current > (budget.maxUnproductiveLoads ?? Infinity)) {
-          setIsStalled(true);
-          return;
-        }
-      }
-
-      onLoadMoreRef.current();
-    }, debounceMs);
-  }, [debounceMs]);
-
   /** Clears a stall and immediately loads the next page. Wire to a manual load button. */
   const resumeAutoLoad = () => {
     unproductiveLoadsRef.current = 0;
@@ -107,9 +78,34 @@ export const useInfiniteScroll = ({
   useEffect(() => {
     if (!sentinel || !hasMore || isLoading || isStalled) return;
 
+    const debouncedLoadMore = () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        const budget = budgetRef.current;
+        if (budget.enabled) {
+          const count = budget.itemCount ?? 0;
+          if (count > highWaterRef.current) {
+            highWaterRef.current = count;
+            unproductiveLoadsRef.current = 0;
+          }
+
+          unproductiveLoadsRef.current += 1;
+          if (unproductiveLoadsRef.current > (budget.maxUnproductiveLoads ?? Infinity)) {
+            setIsStalled(true);
+            return;
+          }
+        }
+
+        onLoadMoreRef.current();
+      }, debounceMs);
+    };
+
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
-      const target = entries[0];
-      if (target.isIntersecting) {
+      // One sentinel can cross the threshold more than once before delivery.
+      // Firefox batches those transitions; the final entry is its current state.
+      if (entries.at(-1)?.isIntersecting) {
         debouncedLoadMore();
       }
     };
@@ -129,7 +125,7 @@ export const useInfiniteScroll = ({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [sentinel, hasMore, isLoading, isStalled, threshold, debouncedLoadMore]);
+  }, [sentinel, hasMore, isLoading, isStalled, threshold, debounceMs]);
 
-  return { sentinelRef, isStalled, resumeAutoLoad };
+  return { sentinelRef: setSentinel, isStalled, resumeAutoLoad };
 };

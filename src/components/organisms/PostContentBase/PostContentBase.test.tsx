@@ -145,6 +145,18 @@ describe('PostContentBase', () => {
     mockUseLocalFilesStore.mockReturnValue(undefined);
   });
 
+  it('passes the Cards presentation to an article', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({
+        kind: 'long',
+        content: JSON.stringify({ title: 'Cards article', body: 'Article body' }),
+      }),
+      isLoading: false,
+    });
+    render(<PostContentBase postId="post-123" mediaVariant="cards" />);
+    expect(vi.mocked(PostArticle)).toHaveBeenCalledWith(expect.objectContaining({ presentation: 'cards' }), undefined);
+  });
+
   it('renders content when postDetails are available', () => {
     render(<PostContentBase postId="post-123" />);
 
@@ -219,13 +231,13 @@ describe('PostContentBase', () => {
     );
   });
 
-  it('renders PostContentBlurred when is_blurred is true', () => {
+  it.each(['default', 'cards'] as const)('keeps moderated content hidden in %s', (mediaVariant) => {
     mockUsePostDetails.mockReturnValue({
       postDetails: createMockPostDetails({ content: 'Test content', is_blurred: true }),
       isLoading: false,
     });
 
-    render(<PostContentBase postId="post-123" className="custom-class" />);
+    render(<PostContentBase postId="post-123" className="custom-class" mediaVariant={mediaVariant} />);
 
     expect(screen.getByTestId('post-content-blurred')).toBeInTheDocument();
     expect(mockPostContentBlurred).toHaveBeenCalledWith({ postId: 'post-123', className: 'custom-class' }, undefined);
