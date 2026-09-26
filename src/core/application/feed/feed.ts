@@ -275,6 +275,8 @@ export class FeedApplication {
    * rolls it back so a feed that never reached the homeserver leaves no tab behind. A
    * create (no prior row for this ID) deletes the row; a same-ID update (name or icon
    * only) restores the prior row so the local values match what the homeserver still has.
+   * The rollback only undoes this commit's own write (matched by `updated_at`), never a
+   * newer one that landed while the PUT was in flight.
    */
   private static async commit({ userId, feedSchema, normalizedFeed }: PersistAndSyncParams): Promise<FeedModelSchema> {
     const priorFeed = await LocalFeedService.read({ feedId: feedSchema.id });
@@ -287,11 +289,11 @@ export class FeedApplication {
       await HomeserverService.request({ method: HttpMethod.PUT, url: feedUrl, bodyJson: feedJson });
     } catch (error) {
       try {
-        if (priorFeed) {
-          await LocalFeedService.createOrUpdate(priorFeed);
-        } else {
-          await LocalFeedService.delete({ feedId: persistedFeed.id });
-        }
+        await LocalFeedService.rollback({
+          feedId: persistedFeed.id,
+          expectedUpdatedAt: feedSchema.updated_at,
+          priorFeed,
+        });
       } catch (rollbackError) {
         if (!isAppError(rollbackError))
           Logger.error('Failed to rollback local feed write', { feedId: persistedFeed.id, rollbackError });

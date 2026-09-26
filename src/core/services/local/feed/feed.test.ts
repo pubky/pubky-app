@@ -96,6 +96,67 @@ describe('LocalFeedService', () => {
     });
   });
 
+  describe('rollback', () => {
+    it('restores the prior row while it still carries the failed write', async () => {
+      const prior = createFeedSchema({ id: 'feed-rollback', name: 'Original', updated_at: 1000 });
+      await LocalFeedService.createOrUpdate(prior);
+      await LocalFeedService.createOrUpdate({ ...prior, name: 'Renamed', updated_at: 2000 });
+
+      const changed = await LocalFeedService.rollback({
+        feedId: 'feed-rollback',
+        expectedUpdatedAt: 2000,
+        priorFeed: prior,
+      });
+
+      expect(changed).toBe(true);
+      const saved = await FeedModel.table.get('feed-rollback');
+      expect(saved!.name).toBe('Original');
+      expect(saved!.updated_at).toBe(1000);
+    });
+
+    it('deletes the row when the failed write created it', async () => {
+      await LocalFeedService.createOrUpdate(createFeedSchema({ id: 'feed-created', updated_at: 2000 }));
+
+      const changed = await LocalFeedService.rollback({
+        feedId: 'feed-created',
+        expectedUpdatedAt: 2000,
+        priorFeed: null,
+      });
+
+      expect(changed).toBe(true);
+      expect(await FeedModel.table.get('feed-created')).toBeUndefined();
+    });
+
+    it('leaves a newer write to the same row alone', async () => {
+      const prior = createFeedSchema({ id: 'feed-newer', name: 'Original', updated_at: 1000 });
+      await LocalFeedService.createOrUpdate(prior);
+      await LocalFeedService.createOrUpdate({ ...prior, name: 'Renamed', updated_at: 2000 });
+      await LocalFeedService.createOrUpdate({ ...prior, name: 'Renamed again', updated_at: 3000 });
+
+      const changed = await LocalFeedService.rollback({
+        feedId: 'feed-newer',
+        expectedUpdatedAt: 2000,
+        priorFeed: prior,
+      });
+
+      expect(changed).toBe(false);
+      const saved = await FeedModel.table.get('feed-newer');
+      expect(saved!.name).toBe('Renamed again');
+      expect(saved!.updated_at).toBe(3000);
+    });
+
+    it('does nothing when the row is already gone', async () => {
+      const changed = await LocalFeedService.rollback({
+        feedId: 'feed-missing',
+        expectedUpdatedAt: 2000,
+        priorFeed: createFeedSchema({ id: 'feed-missing' }),
+      });
+
+      expect(changed).toBe(false);
+      expect(await FeedModel.table.get('feed-missing')).toBeUndefined();
+    });
+  });
+
   describe('read', () => {
     it('should find feed by ID', async () => {
       const feed = createFeedSchema({ id: 'feed-read' });
