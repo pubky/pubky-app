@@ -7,6 +7,7 @@ import { StreamUserController } from '@/controllers/stream/users/users';
 import { UserController } from '@/controllers/user/user';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { resolveUserDisplayName } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import type { NexusTag, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
@@ -177,7 +178,7 @@ export function useUserStream({
 
     eligible.push({
       id: details.id,
-      name: details.name,
+      name: resolveUserDisplayName(details),
       bio: details.bio,
       image: details.image,
       avatarUrl: details.image ? FileController.getAvatarUrl(id, details.indexed_at) : null,

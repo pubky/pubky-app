@@ -84,6 +84,19 @@ describe('UserValidator', () => {
         message: 'Name must be no more than 50 characters',
       });
     });
+
+    it.each([
+      ['the tombstone label', '[DELETED]'],
+      ['the tombstone label with surrounding whitespace', '  [DELETED]  '],
+    ])('should reject %s, which is reserved for deleted profiles', (_, name) => {
+      const result = UserValidator.check(name, '', [], null);
+
+      expect(result.error).toContainEqual({
+        type: 'name',
+        message: 'This name is reserved',
+      });
+      expect(result.data).toBeUndefined();
+    });
   });
 
   describe('check - bio validation', () => {

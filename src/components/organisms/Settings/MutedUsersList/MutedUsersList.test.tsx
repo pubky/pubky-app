@@ -82,6 +82,25 @@ describe('MutedUsersList', () => {
     expect(screen.getByText('Unmute')).toBeInTheDocument();
   });
 
+  it('renders a deleted muted user as [DELETED] with the deleted-user glyph, never a seed letter', () => {
+    mockUseMutedUsers.mockReturnValue({
+      mutedUserIds: ['user-123'],
+      mutedUserIdSet: new Set(['user-123']),
+      isMuted: vi.fn((id: string) => id === 'user-123'),
+      isLoading: false,
+    });
+    mockUseBulkUserAvatars.mockReturnValue({
+      usersMap: new Map([['user-123', { id: 'user-123', name: '[DELETED]', avatarUrl: undefined }]]),
+      isLoading: false,
+    });
+
+    render(<MutedUsersList />);
+
+    expect(screen.getByText('[DELETED]')).toBeInTheDocument();
+    expect(screen.getByTestId('avatar-deleted-placeholder')).toBeInTheDocument();
+    expect(screen.queryByTestId('facehash-avatar')).not.toBeInTheDocument();
+  });
+
   it('calls toggleMute when clicking unmute and confirms with a generic toast', async () => {
     const toggleMute = vi.fn().mockResolvedValue(undefined);
     mockUseMutedUsers.mockReturnValue({

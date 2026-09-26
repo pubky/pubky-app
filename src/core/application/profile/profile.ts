@@ -13,6 +13,7 @@ import { hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
+import { DELETED_USER_NAME } from '@/libs/utils/utils.constants';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
@@ -105,6 +106,20 @@ export class ProfileApplication {
     const currentUser = await UserDetailsModel.findById(pubky);
     if (!currentUser) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'User profile not found', {
+        service: ErrorService.Local,
+        operation: 'commitUpdateStatus',
+        context: { pubky },
+      });
+    }
+
+    // The PUT below republishes the whole cached profile, so a tombstoned row would send its
+    // cleared name (`''`, or the legacy `[DELETED]` sentinel) as the user's name and recreate
+    // the profile Nexus has already removed. Nothing here can recover a real name, so refuse.
+    // A row that still carries a name stays writable: the flag alone is stale, and the upsert
+    // below clears it.
+    const cachedName = currentUser.name?.trim() ?? '';
+    if (cachedName === '' || cachedName === DELETED_USER_NAME) {
+      throw Err.client(ClientErrorCode.GONE, 'Cannot update the status of a deleted profile', {
         service: ErrorService.Local,
         operation: 'commitUpdateStatus',
         context: { pubky },

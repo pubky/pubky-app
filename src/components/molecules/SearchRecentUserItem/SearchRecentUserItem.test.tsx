@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { SearchRecentUserItem } from './SearchRecentUserItem';
 
@@ -46,9 +46,15 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
 // Use real utility implementations - formatPublicKey and truncateString are pure functions
 // Pure utility functions should never be mocked per guidelines
 
+const { mockUserDetailsRef } = vi.hoisted(() => ({
+  mockUserDetailsRef: {
+    current: null as null | { id: string; name: string; image?: string; deleted?: boolean },
+  },
+}));
+
 vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
   useUserDetails: (userId: string) => ({
-    userDetails: {
+    userDetails: mockUserDetailsRef.current ?? {
       id: userId,
       name: 'Test User',
       image: 'test-image.jpg',
@@ -56,6 +62,10 @@ vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
     isLoading: false,
   }),
 }));
+
+afterEach(() => {
+  mockUserDetailsRef.current = null;
+});
 
 vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
   useAvatarUrl: () => 'https://example.com/avatar.jpg',
@@ -89,6 +99,15 @@ describe('SearchRecentUserItem', () => {
     const avatar = screen.getByTestId('avatar');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.jpg');
     expect(avatar).toHaveAttribute('data-name', 'Test User');
+  });
+
+  it('renders a deleted user as [DELETED] instead of Unknown User', () => {
+    mockUserDetailsRef.current = { id: mockPubky, name: '', deleted: true };
+
+    render(<SearchRecentUserItem user={mockUser} onClick={vi.fn()} />);
+
+    expect(screen.getByTestId('user-name')).toHaveTextContent('[DELETED]');
+    expect(screen.getByTestId('avatar')).toHaveAttribute('data-name', '[DELETED]');
   });
 
   it('calls onClick with user id when clicked', () => {

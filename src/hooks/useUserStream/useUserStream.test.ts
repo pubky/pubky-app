@@ -128,6 +128,20 @@ describe('useUserStream', () => {
     });
   });
 
+  describe('deleted users', () => {
+    it('labels a tombstoned user as [DELETED]', async () => {
+      mockGetOrFetchStreamSlice.mockResolvedValue({ nextPageIds: ['user-1'], skip: 1 });
+      mockUseLiveQuery.mockReturnValue(
+        new Map([['user-1', { id: 'user-1', name: '', bio: '', image: null, status: null, deleted: true }]]),
+      );
+
+      const { result } = renderHook(() => useUserStream({ streamId: UserStreamTypes.RECOMMENDED }));
+
+      await waitFor(() => expect(result.current.users).toHaveLength(1));
+      expect(result.current.users[0].name).toBe('[DELETED]');
+    });
+  });
+
   describe('user counts mapping', () => {
     it('maps the tags stat from counts.tagged (tags applied by the user)', async () => {
       mockGetOrFetchStreamSlice.mockResolvedValue({

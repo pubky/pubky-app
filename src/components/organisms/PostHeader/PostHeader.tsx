@@ -6,9 +6,8 @@ import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import { isPostDeleted, isUserDeleted } from '@/libs/utils/utils';
+import { isPostDeleted, resolveUserDisplayName } from '@/libs/utils/utils';
 import { cn } from '@/libs/utils/utils';
-import { DELETED_USER_NAME } from '@/libs/utils/utils.constants';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
 import { PostHeaderSkeleton } from './PostHeader.skeleton';
@@ -66,7 +65,7 @@ export function PostHeader({
   const userInfo = (
     <PostHeaderUserInfo
       userId={userId}
-      userName={isUserDeleted(userDetails) ? DELETED_USER_NAME : userDetails?.name || ''}
+      userName={resolveUserDisplayName(userDetails)}
       status={userDetails?.status}
       avatarUrl={avatarUrl}
       showPopover={showPopover}
