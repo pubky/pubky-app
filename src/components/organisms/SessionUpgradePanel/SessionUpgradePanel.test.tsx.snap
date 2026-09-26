@@ -7,7 +7,7 @@ exports[`SessionUpgradePanel - Snapshots > matches snapshot while generating 1`]
 >
   <button
     aria-label="Copy authorization link"
-    class="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 [@media(hover:none)and(pointer:coarse)]:hidden"
+    class="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 pointer-coarse:hidden"
     data-testid="session-upgrade-qr"
     disabled=""
     type="button"
@@ -43,7 +43,7 @@ exports[`SessionUpgradePanel - Snapshots > matches snapshot while generating 1`]
   </button>
   <button
     aria-busy="true"
-    class="items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal hidden w-full [@media(hover:none)and(pointer:coarse)]:flex"
+    class="items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal hidden w-full pointer-coarse:flex"
     data-size="lg"
     data-slot="button"
     disabled=""
@@ -134,7 +134,7 @@ exports[`SessionUpgradePanel - Snapshots > matches snapshot with a ready URL 1`]
 >
   <button
     aria-label="Copy authorization link"
-    class="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 [@media(hover:none)and(pointer:coarse)]:hidden"
+    class="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 pointer-coarse:hidden"
     data-testid="session-upgrade-qr"
     type="button"
   >
@@ -170,7 +170,7 @@ exports[`SessionUpgradePanel - Snapshots > matches snapshot with a ready URL 1`]
   </button>
   <button
     aria-busy="false"
-    class="items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal hidden w-full [@media(hover:none)and(pointer:coarse)]:flex"
+    class="items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal hidden w-full pointer-coarse:flex"
     data-size="lg"
     data-slot="button"
   >

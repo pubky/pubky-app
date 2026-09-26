@@ -55,7 +55,7 @@ export function SessionUpgradePanel() {
         data-testid="session-upgrade-qr"
         // Device split spelled out: Tailwind scans source text, so a class built from a template
         // literal is never generated. A phone cannot scan its own screen, hence the QR/button swap.
-        className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 [@media(hover:none)and(pointer:coarse)]:hidden"
+        className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 pointer-coarse:hidden"
         onClick={isExpired ? fetchUrl : handleQrClick}
         disabled={isLoading || (!url && !isExpired)}
         aria-label={isExpired ? 'Reload authorization QR code' : 'Copy authorization link'}
@@ -71,7 +71,7 @@ export function SessionUpgradePanel() {
       </button>
       <Button
         size="lg"
-        className="hidden w-full [@media(hover:none)and(pointer:coarse)]:flex"
+        className="hidden w-full pointer-coarse:flex"
         onClick={onAuthorizeClick}
         disabled={isLaunching || (!url && !isExpired)}
         aria-busy={isLaunching}
