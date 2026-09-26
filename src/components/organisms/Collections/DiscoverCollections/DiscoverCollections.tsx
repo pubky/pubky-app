@@ -37,6 +37,9 @@ interface DiscoverCursor {
 
 const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
 
+/** `initial`: first page behind skeletons; `more` / `reload`: Show More disabled. */
+type LoadPhase = 'idle' | 'initial' | 'more' | 'reload';
+
 /**
  * DiscoverCollections
  *
@@ -69,6 +72,16 @@ const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
  *      user follows a card — here, from another section, or from a future
  *      surface — the card disappears from Discover without a reload.
  *
+ *   3. **Unfollow reload** — a collection that was already followed when
+ *      its page loaded was dropped by the fetch-time filter, so it is not in
+ *      `visibleIds` and the subtractive overlay cannot bring it back. When a
+ *      bookmark disappears for a collection that is not loaded, the depth
+ *      already loaded is re-pulled from offset 0 and swapped in without
+ *      clearing the grid, returning the collection at its popularity
+ *      position. Every load is ordered by one generation counter (the newest
+ *      reset wins, see `generationRef`), and a failed reload is retried by
+ *      the next Show More click (offered even at the stream end).
+ *
  * If the user follows every visible card mid-session, the grid empties
  * but Show More remains until `reachedEnd` (the global engagement stream
  * is exhausted). This is intentional: it reads as "you've followed
@@ -93,8 +106,12 @@ export function DiscoverCollections() {
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
   const cursorRef = useRef<DiscoverCursor>(EMPTY_CURSOR);
   const [reachedEnd, setReachedEnd] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  // What the section is fetching. Each load sets it when it starts and only a
+  // current load (see `generationRef`) returns it to idle, so a superseded
+  // load can never leave a spinner or skeleton stuck.
+  const [phase, setPhase] = useState<LoadPhase>('initial');
+  const loading = phase === 'initial';
+  const loadingMore = phase === 'more' || phase === 'reload';
 
   // Ref of currently-visible IDs, read inside the async fetch so appends can
   // dedup without re-creating the function on every successful append. Written
@@ -105,60 +122,134 @@ export function DiscoverCollections() {
     visibleIdsRef.current = visibleIds;
   }, [visibleIds]);
 
-  // Cancellation token for the in-flight initial fetch. When the effect
-  // re-fires (StrictMode double-invoke, or genuine viewer switch), the old
-  // fetch's closure sees `cancelled.current === true` and skips its state
-  // writes — only the latest run wins. This is the React-recommended
-  // pattern for fetch-in-effect (see https://react.dev/reference/react/useEffect
-  // "Fetching data with Effects").
-  const inFlightInitialRef = useRef<{ cancelled: boolean } | null>(null);
+  // One rule orders every load: the newest reset wins. A reset (initial load,
+  // viewer switch, unfollow reload) bumps the generation, and so does unmount;
+  // Show More runs within the current one. After every await a load checks
+  // that its generation is still current and otherwise drops its result, so
+  // no two loads can interleave their writes to the list, cursor or phase.
+  const generationRef = useRef(0);
+  // A failed unfollow reload is owed: the next Show More click retries it
+  // instead of appending past the collection it should have returned.
+  const reloadOwedRef = useRef(false);
 
   /**
-   * One user-initiated action (initial mount or Show More click): pull one
-   * post-filter slice from the stream layer and append it.
+   * Reset: re-pull the stream from offset 0 through the stream layer, whose
+   * fetch-time filter reads the current bookmarks.
    *
-   * Optionally takes a `token` that the caller can flip to `cancelled` to
-   * make the run a no-op on its state writes (used by the initial-load
-   * effect to handle StrictMode double-invoke and real viewer-switch
-   * re-fires).
+   * - `keepGrid: false` (mount, viewer switch): clear the grid and load the
+   *   first page behind skeletons.
+   * - `keepGrid: true` (unfollow reload): pull every page loaded so far (up to
+   *   the current raw skip offset) and swap the result in without clearing the
+   *   grid. It supersedes an in-flight Show More, whose page is dropped; the
+   *   next click resumes from the reloaded offset.
    */
-  const runUserAction = async ({ isInitial, token }: { isInitial: boolean; token?: { cancelled: boolean } }) => {
-    if (token?.cancelled) return;
-    if (isInitial) {
-      setLoading(true);
-    } else {
-      setLoadingMore(true);
+  const reset = async ({ keepGrid }: { keepGrid: boolean }) => {
+    generationRef.current += 1;
+    const generation = generationRef.current;
+    const isCurrent = () => generationRef.current === generation;
+    reloadOwedRef.current = false;
+    const loadedTail = keepGrid ? cursorRef.current.streamTail : 0;
+    if (!keepGrid) {
+      setVisibleIds([]);
+      cursorRef.current = EMPTY_CURSOR;
+      setReachedEnd(false);
     }
+    setPhase(keepGrid ? 'reload' : 'initial');
 
     try {
-      let cursor = cursorRef.current;
-      if (isInitial) {
-        // First mount: clear stale cache + sync any unread posts in case
-        // the engagement stream changed across sessions. Mirrors
-        // `useStreamPagination.fetchStreamSlice(isInitialLoad=true)`.
-        // Skip-paginated streams always start at offset 0.
-        await StreamPostsController.prepareStreamForInitialLoad({ streamId });
-        if (token?.cancelled) return;
-        cursor = EMPTY_CURSOR;
-      }
+      // Clear stale cache + sync any unread posts in case the engagement
+      // stream changed. Mirrors `useStreamPagination.fetchStreamSlice(isInitialLoad=true)`.
+      // Skip-paginated streams always start at offset 0.
+      await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+      let cursor = EMPTY_CURSOR;
+      let reachedStreamEnd = false;
+      const ids: string[] = [];
+      const seen = new Set<string>();
+      do {
+        if (!isCurrent()) return;
+        const result = await StreamPostsController.getOrFetchStreamSlice({
+          streamId,
+          lastPostId: cursor.lastPostId,
+          streamTail: cursor.streamTail,
+          limit: COLLECTIONS_SECTION_PAGE_SIZE,
+        });
+        for (const id of result.nextPageIds) {
+          if (!seen.has(id)) {
+            seen.add(id);
+            ids.push(id);
+          }
+        }
+        const nextTail = result.nextCursor ?? cursor.streamTail;
+        const advanced = nextTail > cursor.streamTail;
+        // Anchor is inert for this skip stream's offset pagination, but resolves the
+        // same way as every other feed so the semantics stay uniform.
+        cursor = { lastPostId: resolveResumeAnchor(result) ?? cursor.lastPostId, streamTail: nextTail };
+        reachedStreamEnd = result.reachedEnd === true;
+        if (!advanced) break;
+      } while (!reachedStreamEnd && cursor.streamTail < loadedTail);
+      if (!isCurrent()) return;
 
+      cursorRef.current = cursor;
+      setReachedEnd(reachedStreamEnd);
+      setVisibleIds(ids);
+    } catch (error) {
+      if (!isCurrent()) return;
+      if (keepGrid) {
+        // Keep the grid (the failed request's `Err.*` factory already logged
+        // it) and owe the reload, so the collection does not stay missing.
+        // Show More must be offered even at the stream end: its click runs the
+        // owed reload.
+        reloadOwedRef.current = true;
+        setReachedEnd(false);
+        return;
+      }
+      Logger.error('[DiscoverCollections] Failed to fetch slice', { error });
+      // Mirror `MyCollections`' `useStreamPagination({ onError })` toast so the
+      // three Collections sections fail consistently from the user's POV.
+      toast({
+        variant: 'error',
+        description: 'Failed to load collections. Please try again.',
+      });
+      // Give up on this load so the spinner clears.
+      setReachedEnd(true);
+    } finally {
+      if (isCurrent()) {
+        setPhase('idle');
+      }
+    }
+  };
+
+  /**
+   * Show More: pull the next post-filter slice from the raw skip offset and
+   * append it. Runs within the current generation, so a reset started
+   * meanwhile drops its result.
+   */
+  const showMore = async () => {
+    if (reloadOwedRef.current) {
+      void reset({ keepGrid: true });
+      return;
+    }
+    const generation = generationRef.current;
+    const isCurrent = () => generationRef.current === generation;
+    setPhase('more');
+
+    try {
+      const cursor = cursorRef.current;
       const result = await StreamPostsController.getOrFetchStreamSlice({
         streamId,
         lastPostId: cursor.lastPostId,
         streamTail: cursor.streamTail,
         limit: COLLECTIONS_SECTION_PAGE_SIZE,
       });
-      if (token?.cancelled) return;
+      if (!isCurrent()) return;
 
       // `nextPageIds` is already post-filter; `nextCursor` is the raw skip
       // offset the stream layer consumed to produce it. Dedup is defensive
       // only — the stream layer's cursor accounting should prevent overlap.
-      const base = isInitial ? [] : visibleIdsRef.current;
+      const base = visibleIdsRef.current;
       const seen = new Set(base);
       const fresh = result.nextPageIds.filter((id) => !seen.has(id));
 
-      // Anchor is inert for this skip stream's offset pagination, but resolves the
-      // same way as every other feed so the semantics stay uniform.
       cursorRef.current = {
         lastPostId: resolveResumeAnchor(result) ?? cursor.lastPostId,
         streamTail: result.nextCursor ?? cursor.streamTail,
@@ -169,17 +260,15 @@ export function DiscoverCollections() {
       // A Show More click that surfaces nothing new while the stream still
       // has posts means the stream layer's bounded scan was fully filtered
       // (cap hit). Give the click feedback instead of silently doing nothing.
-      if (!isInitial && fresh.length === 0 && result.reachedEnd !== true) {
+      if (fresh.length === 0 && result.reachedEnd !== true) {
         toast({
           variant: 'warning',
           description: 'No new collections found right now. Try again later.',
         });
       }
     } catch (error) {
+      if (!isCurrent()) return;
       Logger.error('[DiscoverCollections] Failed to fetch slice', { error });
-      if (token?.cancelled) return;
-      // Mirror `MyCollections`' `useStreamPagination({ onError })` toast so the
-      // three Collections sections fail consistently from the user's POV.
       toast({
         variant: 'error',
         description: 'Failed to load collections. Please try again.',
@@ -187,45 +276,27 @@ export function DiscoverCollections() {
       // Give up on this action so the spinner clears.
       setReachedEnd(true);
     } finally {
-      if (token?.cancelled) return;
-      if (isInitial) {
-        setLoading(false);
-      } else {
-        setLoadingMore(false);
+      if (isCurrent()) {
+        setPhase('idle');
       }
     }
   };
 
   // Initial load — wait until the auth store has rehydrated so the stream
   // layer filters against the *settled* viewer from the very first fetch.
-  //
-  // Uses the cancellation-token pattern: on effect cleanup (StrictMode
-  // re-run or real dep change) the previous run is flagged `cancelled` and
-  // skips all of its remaining `set*` calls and cursor commits. Only the
-  // latest run survives — no interleaved double-fetch corruption.
+  // Cleanup (StrictMode re-run, viewer switch, unmount) bumps the generation,
+  // so every load still in flight drops its result.
   useEffect(() => {
     if (!hasHydrated) return;
-
-    // Mark any previous in-flight run as cancelled.
-    if (inFlightInitialRef.current) {
-      inFlightInitialRef.current.cancelled = true;
-    }
-    const token = { cancelled: false };
-    inFlightInitialRef.current = token;
-
-    setVisibleIds([]);
-    cursorRef.current = EMPTY_CURSOR;
-    setReachedEnd(false);
-    void runUserAction({ isInitial: true, token });
+    void reset({ keepGrid: false });
 
     return () => {
-      token.cancelled = true;
+      generationRef.current += 1;
     };
-    // `runUserAction` is intentionally excluded: it closes over refs
-    // (`inFlightInitialRef`, `cursorRef`) and is recreated on every render, so
-    // including it would re-fire this initial-load effect on every state update
-    // and restart the fetch mid-stream. The auth/stream identity deps below are
-    // the only triggers we want.
+    // `reset` is intentionally excluded: it closes over refs and is recreated
+    // on every render, so including it would re-fire this initial-load effect
+    // on every state update and restart the fetch mid-stream. The auth/stream
+    // identity deps below are the only triggers we want.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated, currentUserPubky, streamId]);
 
@@ -239,6 +310,50 @@ export function DiscoverCollections() {
   // to remove on first paint.
   const bookmarkedLive = useLiveQuery(() => BookmarkController.getAll(), []);
   const bookmarkedSet = bookmarkedLive ? new Set(bookmarkedLive) : null;
+
+  // Unfollow reload: a collection that left the bookmark set but is not loaded
+  // was dropped by the fetch-time filter, so only a reload can return it
+  // (#2237). A loaded id reappears through the overlay above on its own.
+  const previousBookmarkedRef = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!bookmarkedLive) return;
+    const previous = previousBookmarkedRef.current;
+    const current = new Set(bookmarkedLive);
+    previousBookmarkedRef.current = current;
+    // Before the first load starts (auth still hydrating) there is nothing to
+    // reload: that load reads the current bookmarks itself.
+    if (!previous || generationRef.current === 0) return;
+
+    const isUnloadedUnfollow = (id: string) =>
+      !previousBookmarkedRef.current?.has(id) && !visibleIdsRef.current.includes(id);
+    const candidates = [...previous].filter((id) => !current.has(id) && isUnloadedUnfollow(id));
+    if (candidates.length === 0) return;
+
+    // Any reset that starts after this point re-reads the bookmarks, so it
+    // already covers these unfollows.
+    const generation = generationRef.current;
+    // Bookmarks also hold ordinary posts, which never appear in Discover. An
+    // id without local details (or a failed read) may still be a collection.
+    void PostController.getDetailsByIds({ compositeIds: candidates })
+      .then((details) =>
+        candidates.filter((_, index) => {
+          const kind = details[index]?.kind;
+          return kind === undefined || kind === 'collection';
+        }),
+      )
+      .catch(() => candidates)
+      .then((collectionIds) => {
+        // Skip when a newer reset (or unmount) superseded this check, or when
+        // every candidate was re-followed or loaded while it ran.
+        if (generationRef.current !== generation) return;
+        if (!collectionIds.some(isUnloadedUnfollow)) return;
+        void reset({ keepGrid: visibleIdsRef.current.length > 0 });
+      });
+    // `reset` is recreated on every render (it closes over refs); only a new
+    // bookmark snapshot should trigger this check.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookmarkedLive]);
+
   // Live overlay for deletions + empty collections: subscribes to `post_details`
   // (via `getDetailsByIds`) for the current visible set and returns the subset
   // whose content has flipped to '[DELETED]' OR whose item count has fallen to
@@ -311,12 +426,7 @@ export function DiscoverCollections() {
 
       {showShowMore && (
         <Container overrideDefaults className="flex w-full justify-center">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => void runUserAction({ isInitial: false })}
-            disabled={loadingMore}
-          >
+          <Button variant="default" size="sm" onClick={() => void showMore()} disabled={loadingMore}>
             {loadingMore && <Loader2 className="size-4 animate-spin" />}
             {'Show more'}
           </Button>
