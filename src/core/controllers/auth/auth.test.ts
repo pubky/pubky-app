@@ -1,4 +1,4 @@
-import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
+import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';

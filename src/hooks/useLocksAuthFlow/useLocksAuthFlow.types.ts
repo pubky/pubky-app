@@ -1,4 +1,4 @@
-import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
+import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import type { RefObject } from 'react';
 import type { AppError } from '@/libs/error/error';
 

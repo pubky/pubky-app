@@ -445,21 +445,11 @@ Unlocked page; a creator meets the extra step the next time they lock a post.
 
 ## Testing & local demo
 
-**The Lock SDK is not on npm yet** (as of 2026-08). `@pubky/locks-sdk` is deliberately
-missing from `package.json` — you build it from the `pubky/locks` repo and copy it into
-`node_modules` by hand:
-
-Build the SDK from `pubky/locks` master: the payment flow needs `Locks.hasPaykitDataWithOptions`
-(`pubky/locks#42`) and `lookupPaykitConnectionState` (`pubky/locks#54`).
-
-```bash
-cd <locks repo>/locks-sdk/bindings/js
-npm run build                       # wasm-pack build --target web → ./pkg
-cp pkg/* <pubky-app>/node_modules/@pubky/locks-sdk/
-```
-
-Anything that reinstalls `node_modules` (`npm install`, `npm ci`, lockfile changes) wipes
-the copy — if lock imports suddenly fail or behave stale, re-copy first.
+The Lock SDK is the `@synonymdev/locks-sdk` npm package (Rust compiled to WebAssembly, pinned
+to an exact version in `package.json`); `npm ci` installs it like any other dependency. To try an
+SDK change that is not published yet, build it from `pubky/locks` (`locks-sdk/bindings/js`,
+`npm run build`) and point `package.json` at that folder with a `file:` path, or `npm link` it.
+Never commit either.
 
 - Tests are co-located with each file. Shared sample data (a `LockFile` + an author pubky)
   lives in `src/test-utils/locks.ts` (`mockLockFile()`, `MOCK_LOCK_AUTHOR_PUBKY`).

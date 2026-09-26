@@ -1,4 +1,4 @@
-import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
+import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { LOCKS_AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 import { asOpaque } from '@/test-utils/type-assertions';
