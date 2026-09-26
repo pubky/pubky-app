@@ -58,6 +58,11 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
   };
 
   const handleLearn = () => {
+    if (isLandingPage) {
+      document.getElementById(LANDING_NEXT_SECTION_ID)?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
     router.push(`/#${LANDING_NEXT_SECTION_ID}`);
   };
 
