@@ -286,9 +286,9 @@ describe('PostPage (cover preload)', () => {
     const cdn = `https://nexus.staging.pubky.app/static/files/${AUTHOR}/0035R8SA18DE0`;
 
     // One URL per side of the breakpoint, both the variants the hero renders: `feed` is what a
-    // phone downloads, `main` what a wide screen keeps.
+    // phone downloads, `large` what a wide screen gets instead of the original upload.
     expect(byMedia.get(POST_COVER_MOBILE_MEDIA)).toHaveAttribute('href', `${cdn}/feed`);
-    expect(byMedia.get(POST_COVER_DESKTOP_MEDIA)).toHaveAttribute('href', `${cdn}/main`);
+    expect(byMedia.get(POST_COVER_DESKTOP_MEDIA)).toHaveAttribute('href', `${cdn}/large`);
 
     for (const preload of preloads) {
       expect(preload).toHaveAttribute('as', 'image');

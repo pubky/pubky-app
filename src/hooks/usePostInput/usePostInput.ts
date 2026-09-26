@@ -325,7 +325,7 @@ export function usePostInput({
                 ...existingAttachments.map((attachment) => ({
                   type: attachment.type,
                   name: attachment.name,
-                  urls: attachment.urls as { main: string; feed?: string },
+                  urls: attachment.urls as { main: string; feed?: string; large?: string },
                 })),
                 ...attachments.map(newFileToLocalAttachment),
               ]

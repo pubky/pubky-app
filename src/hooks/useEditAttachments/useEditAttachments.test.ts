@@ -65,7 +65,11 @@ const RESOLVED_1: ExistingAttachment = {
   uri: URI_1,
   type: 'image/png',
   name: 'photo.png',
-  urls: { main: 'https://cdn.example/author-pubky:FILE1/main', feed: 'https://cdn.example/author-pubky:FILE1/feed' },
+  urls: {
+    main: 'https://cdn.example/author-pubky:FILE1/main',
+    feed: 'https://cdn.example/author-pubky:FILE1/feed',
+    large: 'https://cdn.example/author-pubky:FILE1/large',
+  },
 };
 const RESOLVED_2: ExistingAttachment = {
   uri: URI_2,

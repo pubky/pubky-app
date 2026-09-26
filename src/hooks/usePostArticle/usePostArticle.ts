@@ -22,7 +22,7 @@ interface UsePostArticleParams {
   coverImageVariant: FileVariant;
   /**
    * Second, larger source for surfaces that render the cover at full width (the article hero).
-   * Left unset by feed-sized surfaces, which never want the original upload.
+   * Left unset by feed-sized surfaces, which never want the larger file.
    */
   coverImageDesktopVariant?: FileVariant;
 }

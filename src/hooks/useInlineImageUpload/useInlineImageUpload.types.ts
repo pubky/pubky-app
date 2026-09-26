@@ -21,7 +21,7 @@ export interface UseInlineImageUploadOptions {
 export interface InlineImageLocalEntry {
   type: string;
   name: string;
-  urls: { main: string; feed?: string };
+  urls: { main: string; feed?: string; large?: string };
 }
 
 export interface UseInlineImageUploadReturn {

@@ -21,6 +21,7 @@ vi.mock('@/services/nexus/file/file.types', () => ({
   FileVariant: {
     MAIN: 'main',
     FEED: 'feed',
+    LARGE: 'large',
     SMALL: 'small',
   },
 }));
@@ -204,6 +205,31 @@ describe('usePostArticle', () => {
       expect(mockGetFileUrl).toHaveBeenCalledWith({
         fileId: 'user123:file456',
         variant: FileVariant.MAIN,
+      });
+    });
+
+    it('resolves the desktop source from the desktop variant of the same file', async () => {
+      const content = JSON.stringify({ title: 'Test', body: 'Content' });
+      const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
+      mockGetMetadata.mockResolvedValue([createMockImageMetadata('user123:file456', 'hero.png')]);
+
+      const { result } = renderHook(() =>
+        usePostArticle({
+          content,
+          attachments,
+          coverImageVariant: FileVariant.FEED,
+          coverImageDesktopVariant: FileVariant.LARGE,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.coverImage).not.toBeNull();
+      });
+
+      expect(result.current.coverImage).toEqual({
+        src: 'https://cdn.example.com/user123:file456/feed',
+        desktopSrc: 'https://cdn.example.com/user123:file456/large',
+        alt: 'hero.png',
       });
     });
 
