@@ -744,8 +744,8 @@ body {
 
   .landing-swirl-background__graphic {
     --landing-swirl-size: min(100vw, 34rem);
-    --landing-swirl-offset-x: -50px;
-    --landing-swirl-offset-y: 250px;
+    --landing-swirl-offset-x: 0px;
+    --landing-swirl-offset-y: 50px;
     --landing-swirl-clip: circle(75% at 50% 50%);
     --landing-swirl-mask-hole: 0%;
     --landing-swirl-mask-ring-start: 0%;
