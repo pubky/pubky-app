@@ -11,9 +11,6 @@ import { AppDownload } from '@/molecules/AppDownload/AppDownload';
 import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { toast } from '@/molecules/Toaster/toast';
 
-// Same device split as the Lock Server shell one step earlier: a phone cannot scan its own screen.
-const TOUCH = '[@media(hover:none)and(pointer:coarse)]';
-
 /** The dialog copy that goes with the panel, shared by the creator setup and the reader notice. */
 export function SessionUpgradeDescription() {
   return (
@@ -56,7 +53,9 @@ export function SessionUpgradePanel() {
       <button
         type="button"
         data-testid="session-upgrade-qr"
-        className={`group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 ${TOUCH}:hidden`}
+        // Device split spelled out: Tailwind scans source text, so a class built from a template
+        // literal is never generated. A phone cannot scan its own screen, hence the QR/button swap.
+        className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 [@media(hover:none)and(pointer:coarse)]:hidden"
         onClick={isExpired ? fetchUrl : handleQrClick}
         disabled={isLoading || (!url && !isExpired)}
         aria-label={isExpired ? 'Reload authorization QR code' : 'Copy authorization link'}
@@ -72,7 +71,7 @@ export function SessionUpgradePanel() {
       </button>
       <Button
         size="lg"
-        className={`hidden w-full ${TOUCH}:flex`}
+        className="hidden w-full [@media(hover:none)and(pointer:coarse)]:flex"
         onClick={onAuthorizeClick}
         disabled={isLaunching || (!url && !isExpired)}
         aria-busy={isLaunching}
