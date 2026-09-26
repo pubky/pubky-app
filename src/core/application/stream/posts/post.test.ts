@@ -2428,7 +2428,7 @@ describe('PostStreamApplication', () => {
       expect(unreadStream).toBeNull();
     });
 
-    it('merges only the unread posts with cached details and keeps the rest unread (#2608)', async () => {
+    it('merges the unread row from its first hydrated id and keeps the pending head unread (#2608)', async () => {
       const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
@@ -2452,33 +2452,46 @@ describe('PostStreamApplication', () => {
       expect(unreadStream?.stream).toEqual([pendingPostId]);
     });
 
-    it('keeps a pending id below a hydrated unread head unread, and merges it once hydrated (#2608)', async () => {
+    it('merges a pending id below a hydrated one in polled order, so its edited late arrival cannot move the poll head (#2608)', async () => {
       const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
       vi.spyOn(Date, 'now').mockReturnValue(now);
 
       const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
       await createStreamWithPosts([mainPostId]);
-      await createPostDetailWithTimestamp(mainPostId, now - 3);
+      await createPostDetailWithTimestamp(mainPostId, now - 30);
 
-      // The unread head has details, so step 2 compares a real timestamp against the max age.
+      // A head poll listed `unread-ready` above `unread-pending`; Nexus has served only the former.
       const readyPostId = `${DEFAULT_AUTHOR}:unread-ready`;
       const pendingPostId = `${DEFAULT_AUTHOR}:unread-pending`;
       await UnreadPostStreamModel.create(streamId, [readyPostId, pendingPostId]);
-      await createPostDetailWithTimestamp(readyPostId, now - 1);
+      await createPostDetailWithTimestamp(readyPostId, now - 20);
 
       await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
 
-      expect((await PostStreamModel.findById(streamId))?.stream).toEqual([readyPostId, mainPostId]);
-      expect((await UnreadPostStreamModel.findById(streamId))?.stream).toEqual([pendingPostId]);
-
-      // Once Nexus serves the pending post, the next initial load merges it as the unread
-      // row holds it, above the ids merged earlier, and the poll head resolves again.
-      await createPostDetailWithTimestamp(pendingPostId, now - 2);
-      await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
-
-      expect((await PostStreamModel.findById(streamId))?.stream).toEqual([pendingPostId, readyPostId, mainPostId]);
+      // Both merge in polled order: the pending id sits below a resolvable head and keeps its
+      // position for when it is served.
+      expect((await PostStreamModel.findById(streamId))?.stream).toEqual([readyPostId, pendingPostId, mainPostId]);
       expect(await UnreadPostStreamModel.findById(streamId)).toBeNull();
-      expect(await PostStreamApplication.getStreamHead({ streamId })).toBe(now - 2);
+      expect(await PostStreamApplication.getStreamHead({ streamId })).toBe(now - 20);
+
+      // Nexus serves the pending post after an edit, so its indexed_at is now newer than the
+      // ready post's although its stream position has not moved, and the next poll lists a post
+      // created in between. The merge keeps the row in polled order instead of floating the
+      // edited post to the top, so the poll head is the newest polled post, never the edit time.
+      await createPostDetailWithTimestamp(pendingPostId, now - 1);
+      const newerPostId = `${DEFAULT_AUTHOR}:unread-newer`;
+      await UnreadPostStreamModel.create(streamId, [newerPostId]);
+      await createPostDetailWithTimestamp(newerPostId, now - 10);
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+
+      expect((await PostStreamModel.findById(streamId))?.stream).toEqual([
+        newerPostId,
+        readyPostId,
+        pendingPostId,
+        mainPostId,
+      ]);
+      expect(await UnreadPostStreamModel.findById(streamId)).toBeNull();
+      expect(await PostStreamApplication.getStreamHead({ streamId })).toBe(now - 10);
     });
 
     it('drops the unread ids without seeding a main row when the cache is empty', async () => {

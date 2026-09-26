@@ -235,28 +235,40 @@ export class LocalStreamPostsService {
   }
 
   /**
-   * Merge and acknowledge the unread ids whose details are cached, classifying them inside
-   * the transaction so an id hydrated meanwhile is merged rather than acknowledged unread.
-   * Ids still without details stay unread for the poll-time hydration to retry: merged to
-   * the main head they would resolve no timestamp and polling would stop (#2608). Without
-   * a main row nothing is merged and the unread row is dropped, so the first page comes
-   * from Nexus with a real cursor instead of a cursor-less row seeded from the unread ids.
+   * Merge and acknowledge the unread row from its first id whose details are cached and not a
+   * tombstone, downward in polled order, ids without details below it included: each of those
+   * is fetched by its card's local-first read when it renders, and a late-served one keeps its
+   * position whatever `indexed_at` its edit carries. The ids above that head are held back when
+   * they have no details, since as the main head one of them would resolve no timestamp and
+   * polling would stop (#2608); they stay unread for the poll-time hydration to retry. A
+   * tombstone among them is acknowledged, and one below the head is acknowledged and dropped
+   * from the merge by `mergeUnreadStreamWithPostStream`. The classification runs inside the
+   * transaction, so an id hydrated meanwhile is merged rather than left behind. Without a main
+   * row, or with an empty one, nothing is merged and the unread row is dropped, so the first
+   * page comes from Nexus with a real cursor instead of a cursor-less row seeded from unread
+   * ids. See docs/local-first.md, _Stream Pagination Cursors_.
    */
-  static async markHydratedUnreadPostsAsRead({ streamId }: TStreamIdParams): Promise<void> {
+  static async markUnreadPostsAsReadFromResolvableHead({ streamId }: TStreamIdParams): Promise<void> {
     await db.transaction(
       'rw',
       [PostStreamModel.table, UnreadPostStreamModel.table, PostDetailsModel.table],
       async () => {
         const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
         if (!unreadPostStream) return;
-        if (!(await PostStreamModel.findById(streamId))) {
+        const postStream = await PostStreamModel.findById(streamId);
+        if (!postStream || postStream.stream.length === 0) {
           await this.clearUnreadStream({ streamId });
           return;
         }
         const details = await PostDetailsModel.findByIdsPreserveOrder(unreadPostStream.stream);
+        const headIndex = details.findIndex(
+          (postDetails) => postDetails !== undefined && postDetails.content !== DELETED,
+        );
         await this.markUnreadPostsAsRead({
           streamId,
-          postIds: unreadPostStream.stream.filter((_postId, index) => details[index] !== undefined),
+          postIds: unreadPostStream.stream.filter(
+            (_postId, index) => details[index] !== undefined || (headIndex !== -1 && index > headIndex),
+          ),
         });
       },
     );
