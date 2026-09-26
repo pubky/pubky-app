@@ -12,6 +12,8 @@ import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
 
 /** Returns true if the error indicates the auth flow has expired (timeout or SESSION_EXPIRED). */
+const UPGRADE_FAILURE_MESSAGE = 'Authorization failed. Approve with the key you are signed in with.';
+
 const isAuthFlowExpiredError = (error: unknown): boolean => {
   if (!isAppError(error)) return false;
   if (isTimeoutError(error)) return true;
@@ -40,8 +42,15 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
 
     try {
       // Request auth URL from controller
-      const { authorizationUrl, awaitApproval } =
-        type === 'signup' ? await AuthController.getSignupAuthUrl(inviteCode) : await AuthController.getAuthUrl();
+      let result;
+      if (type === 'signup') {
+        result = await AuthController.getSignupAuthUrl(inviteCode);
+      } else if (type === 'upgrade') {
+        result = await AuthController.getUpgradeAuthUrl();
+      } else {
+        result = await AuthController.getAuthUrl();
+      }
+      const { authorizationUrl, awaitApproval } = result;
 
       awaitApproval
         .then(async (session: Session) => {
@@ -49,17 +58,31 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           // and must run even if the component unmounted (e.g., mobile deeplink handoff where
           // the browser may unmount/remount the page while Pubky Ring is open).
           try {
-            await AuthController.initializeAuthenticatedSession({ session });
+            if (type === 'upgrade') {
+              // A wrong-key approval is reported as `false`, not thrown: the user picked the wrong
+              // identity in Pubky Ring, which is a choice to correct, not a fault to report.
+              const swapped = await AuthController.upgradeSession({ session });
+              if (!swapped) {
+                toast({ variant: 'error', description: UPGRADE_FAILURE_MESSAGE });
+                if (isMountedRef.current) {
+                  setUrl('');
+                  setIsExpired(true);
+                }
+              }
+            } else {
+              await AuthController.initializeAuthenticatedSession({ session });
+            }
           } catch (error) {
             const isWrongEnvironment = isWrongEnvironmentHomeserverError(error);
             if (!isWrongEnvironment && !isAppError(error)) {
               Logger.error('Failed to persist session and check profile:', error);
             }
+            const failureMessage = type === 'upgrade' ? UPGRADE_FAILURE_MESSAGE : 'Sign in failed. Try again.';
             toast({
               variant: 'error',
               description: isWrongEnvironment
                 ? 'This key is linked to a different homeserver. Use a staging account on this site.'
-                : 'Sign in failed. Try again.',
+                : failureMessage,
             });
             if (isMountedRef.current) {
               setUrl('');

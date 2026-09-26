@@ -246,6 +246,51 @@ export class AuthController {
   }
 
   /**
+   * Swaps the stored session for one the user just approved with today's capability list (#2373).
+   * Not a sign-in: no profile check, bootstrap or sign-in progress, so the route guard sees no change
+   * and the user keeps their place. The old session is never signed out — the homeserver keys its
+   * cookie by pubky, so that would drop the new session as well. Guards that compare the session
+   * object (`captureViewerSession`, the TTL coordinator) see one change: reads in flight are dropped
+   * once and TTL restarts, both of which the next interaction recovers from.
+   *
+   * @returns false when the approval came from another key — a user picking the wrong identity in
+   * Pubky Ring, which the caller reports as a toast. Not an `Err.*`: it is an expected choice, and
+   * an AppError would file it in Sentry as a fault.
+   */
+  static async upgradeSession({ session }: THomeserverSessionResult): Promise<boolean> {
+    // No `cancelActiveAuthFlow` here: the flow that produced this approval already cancelled itself
+    // on settle, so the only flow left to cancel would be a newer one the user just started — whose
+    // QR would then stop polling and never register their next approval.
+    const authStore = useAuthStore.getState();
+    const pubky = Identity.z32FromSession({ session });
+
+    if (pubky !== authStore.currentUserPubky) {
+      // That session is real on its own homeserver, so end it instead of leaving it dangling.
+      // Best-effort, and silent: a failure here is already an `AppError` that logged itself.
+      await AuthApplication.logout({ session }).catch(() => undefined);
+      Logger.warn('Session upgrade approved with a different key');
+      return false;
+    }
+
+    // The same boundary sign-in and restore apply: the key may have republished to a homeserver this
+    // deployment refuses since the session was minted. Not signed out on failure — the cookie is
+    // keyed by pubky, so signing this one out would leave the user with none.
+    await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
+
+    // That check is a network round trip, so the account can change while it runs. Re-read the store
+    // instead of using the snapshot above: storing now would resurrect a session after a sign-out, or
+    // pair the new account with the previous one's session.
+    const current = useAuthStore.getState();
+    if (current.currentUserPubky !== pubky) {
+      Logger.warn('Discarded an upgraded session: the account changed while it was being checked');
+      return false;
+    }
+
+    current.setSession(session);
+    return true;
+  }
+
+  /**
    * Session initialization shared by all sign-in flows; assumes the environment
    * guard already passed for this session.
    */
@@ -326,8 +371,7 @@ export class AuthController {
   }
 
   /**
-   * Wraps auth URL generation with flow tracking so useAuthUrl can cancel on unmount
-   * and we detect stale requests (e.g. React StrictMode double-mount).
+   * Wraps sign-in URL generation: clears the previous account's local state, then tracks the flow.
    * @param generateFn - Async function that returns the auth URL result
    * @returns Promise resolving to the generated authentication URL with wrapped approval
    */
@@ -340,6 +384,17 @@ export class AuthController {
     useMigrationStore.getState().reset();
     // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
     useSettingsStore.getState().reset();
+    return this.trackAuthFlow(generateFn);
+  }
+
+  /**
+   * Flow tracking only, so useAuthUrl can cancel on unmount and stale requests are detected
+   * (e.g. React StrictMode double-mount). No local state is touched: the session upgrade runs this
+   * for a user who stays signed in.
+   */
+  private static async trackAuthFlow(
+    generateFn: () => Promise<TGenerateAuthUrlResult>,
+  ): Promise<TGenerateAuthUrlResult> {
     const token = Symbol('auth-flow');
     this.cancelActiveAuthFlow();
     this.activeAuthFlow = { token, cancel: null };
@@ -427,6 +482,14 @@ export class AuthController {
    */
   static async getSignupAuthUrl(inviteCode: string): Promise<TGenerateAuthUrlResult> {
     return this.wrapAuthFlow(() => AuthApplication.generateSignupAuthUrl(inviteCode));
+  }
+
+  /**
+   * Same Ring flow as sign-in (the requested list is already the current one), but for a signed-in
+   * user (#2373): the local database and settings stay as they are. Approval goes to `upgradeSession`.
+   */
+  static async getUpgradeAuthUrl(): Promise<TGenerateAuthUrlResult> {
+    return this.trackAuthFlow(() => AuthApplication.generateAuthUrl());
   }
 
   /**

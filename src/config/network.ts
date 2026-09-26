@@ -41,3 +41,11 @@ export {
 export function isStagingHomeserverDeploy(): boolean {
   return getDeployEnv() === 'staging';
 }
+
+// Requested from Pubky Ring at sign-in and fixed for the life of that session; keypair sign-in mints a
+// root (`/:rw`) session instead. A session from before an entry was added lacks it until the user
+// approves a new one (`docs/locks.md`, _Sessions from before locks_).
+// - /pub/pubky.app/:rw   — the app's public data
+// - /priv/social/:rw     — where unlocked lock content is copied (reader replication)
+// - /priv/locks.app/:r   — read-only: a creator reads their OWN guarded original here (Ring sessions)
+export const HOMESERVER_CAPABILITIES = '/pub/pubky.app/:rw,/priv/social/:rw,/priv/locks.app/:r';

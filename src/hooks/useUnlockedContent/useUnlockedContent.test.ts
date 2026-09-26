@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import type { LockFile, TUnlockedContent } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -18,6 +18,13 @@ const authState = vi.hoisted(() => ({ currentUserPubky: 'me' as string | null, s
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
 }));
+const sessionNeedsUpgrade = vi.hoisted(() => ({ value: false }));
+vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
+  useSessionNeedsUpgrade: () => sessionNeedsUpgrade.value,
+}));
+afterEach(() => {
+  sessionNeedsUpgrade.value = false;
+});
 
 const LOCK_URL = 'pubky://hs/pub/locks.app/lock1.json';
 const content: TUnlockedContent = { post: { content: 'x', kind: 'short', attachments: null }, attachments: [] };
@@ -54,6 +61,18 @@ describe('useUnlockedContent (replica resolution)', () => {
     await waitFor(() => expect(result.current.isResolvingReplica).toBe(false));
   });
 
+  // The read is skipped for a session that cannot make it, so "resolving" has to end — a purchase
+  // resume waits on this flag.
+  it('stops resolving when the session cannot read /priv', async () => {
+    sessionNeedsUpgrade.value = true;
+
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'other:POST1' }));
+
+    await waitFor(() => expect(result.current.isResolvingReplica).toBe(false));
+    expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
+    sessionNeedsUpgrade.value = false;
+  });
+
   // An own post has no replica to wait for, so nothing should be gated on one.
   it('is not resolving for the reader own post', async () => {
     const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, postId: 'me:POST1' }));
@@ -87,6 +106,33 @@ describe('useUnlockedContent', () => {
     rerender();
 
     await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalledTimes(1));
+  });
+
+  // A session from before `/priv` was requested is refused with a 403, which the Err factory would
+  // report to Sentry once per locked post on screen.
+  it('skips the replica read while the session needs the upgrade, and reads once it is replaced', async () => {
+    sessionNeedsUpgrade.value = true;
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
+
+    const { rerender } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'author:POST1' }));
+
+    await Promise.resolve();
+    expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
+
+    sessionNeedsUpgrade.value = false;
+    rerender();
+
+    await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalledTimes(1));
+  });
+
+  it('skips the own-content read while the session needs the upgrade', async () => {
+    sessionNeedsUpgrade.value = true;
+    const lockFile = asOpaque<LockFile>({ creator: 'me' });
+
+    renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, postId: 'me:POST1' }));
+
+    await Promise.resolve();
+    expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
   });
 
   it('reads nothing without a lock url', async () => {

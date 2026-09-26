@@ -4,8 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL, BITKIT_WEBSITE_URL } from '@/config/externalLinks';
 import { LocksAuthFlowStatus } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow.types';
 import { PaykitSetupFlowStatus } from '@/hooks/usePaykitSetupFlow/usePaykitSetupFlow.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
+import { mockRingSession, mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { DialogLocksAuth } from './DialogLocksAuth';
 
@@ -41,6 +44,19 @@ vi.mock('@/hooks/useLocksAuthFlow/useLocksAuthFlow', () => ({
   }),
 }));
 
+// The session step starts a Ring flow on mount; keep it out of the network.
+vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
+  useMobileAuth: () => ({
+    url: 'pubkyring://authorize?token=upgrade',
+    isLoading: false,
+    isExpired: false,
+    fetchUrl: vi.fn(),
+    copyAuthUrl: vi.fn(),
+    isOpeningRing: false,
+    onAuthorizeClick: vi.fn(),
+  }),
+}));
+
 vi.mock('@/hooks/usePaykitSetupFlow/usePaykitSetupFlow', () => ({
   usePaykitSetupFlow: () => ({
     ...mocks.paykitFlow,
@@ -51,6 +67,13 @@ vi.mock('@/hooks/usePaykitSetupFlow/usePaykitSetupFlow', () => ({
 }));
 
 const fakeSession = asOpaque<LocksSdkSession>({ id: 'locks-session' });
+
+/** A homeserver session minted before the app requested `/priv` (#2373). */
+const signInWithNarrowSession = () =>
+  useAuthStore.setState({
+    currentUserPubky: 'creator-pubky',
+    session: mockRingSession(['/pub/pubky.app/:rw'], 'creator-pubky'),
+  });
 
 /** The store state the modal derives its step from. */
 const signIn = ({ paykitConnected = false } = {}) =>
@@ -71,6 +94,7 @@ describe('DialogLocksAuth', () => {
     mocks.flow = { status: LocksAuthFlowStatus.IDLE, connectUrl: null, session: null, error: null };
     mocks.paykitFlow = { status: PaykitSetupFlowStatus.IDLE, setupUrl: null, error: null };
     useLocksAuthStore.setState(locksAuthInitialState);
+    useAuthStore.setState(authInitialState);
   });
 
   it('probes the server readiness when the modal opens', () => {
@@ -139,6 +163,60 @@ describe('DialogLocksAuth', () => {
       expect(screen.getByRole('dialog').querySelector('svg.animate-spin')).toBeInTheDocument();
     },
   );
+
+  it('numbers the Enable Locks steps when the session also needs upgrading', () => {
+    signInWithNarrowSession();
+    mocks.flow = { status: LocksAuthFlowStatus.CONNECTING, connectUrl: null, session: null, error: null };
+    renderDialog();
+
+    expect(screen.getByText('Enable Locks (1/2)')).toBeInTheDocument();
+  });
+
+  it('keeps a single Enable Locks step for a session that already has the capabilities', () => {
+    useAuthStore.setState({ currentUserPubky: 'creator-pubky', session: mockSession() });
+    mocks.flow = { status: LocksAuthFlowStatus.CONNECTING, connectUrl: null, session: null, error: null };
+    renderDialog();
+
+    expect(screen.getByText('Enable Locks')).toBeInTheDocument();
+  });
+
+  it('shows the session step (2/2) once the Lock Server is authorized', () => {
+    signInWithNarrowSession();
+    mocks.flow = { status: LocksAuthFlowStatus.CONNECTING, connectUrl: null, session: null, error: null };
+    const { rerender } = renderDialog();
+
+    signIn();
+    rerender(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
+
+    expect(screen.getByText('Enable Locks (2/2)')).toBeInTheDocument();
+    expect(screen.getByText(/authorize Pubky.app to access your private Locks data/)).toBeInTheDocument();
+    expect(screen.getByTestId('session-upgrade-qr')).toBeInTheDocument();
+    expect(screen.queryByTitle('Bitkit payout account setup')).not.toBeInTheDocument();
+    expect(mocks.startPaykit).not.toHaveBeenCalled();
+  });
+
+  it('opens at an unnumbered session step when only the session is pending', () => {
+    signInWithNarrowSession();
+    signIn();
+    renderDialog();
+
+    expect(screen.getByText('Enable Locks')).toBeInTheDocument();
+    expect(screen.getByTestId('session-upgrade-qr')).toBeInTheDocument();
+    expect(mocks.prepare).not.toHaveBeenCalled();
+    expect(mocks.startPaykit).not.toHaveBeenCalled();
+  });
+
+  it('moves on to the Bitkit step once the session is upgraded', () => {
+    signInWithNarrowSession();
+    signIn();
+    const { rerender } = renderDialog();
+
+    useAuthStore.setState({ session: mockSession() });
+    rerender(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
+
+    expect(screen.getByText('Enable Payments')).toBeInTheDocument();
+    expect(mocks.startPaykit).toHaveBeenCalledTimes(1);
+  });
 
   it('opens at the Bitkit step for a creator who is signed in but not connected', () => {
     signIn();

@@ -17,6 +17,7 @@ import {
   getHomeserverUrl,
   getPkarrRelays,
   getTestnet,
+  HOMESERVER_CAPABILITIES,
   isStagingHomeserverDeploy,
 } from '@/config/network';
 import { AppError } from '@/libs/error/error';
@@ -63,12 +64,6 @@ import {
   resolveOwnedSessionPath,
 } from './homeserver.utils';
 
-// Only the Pubky Ring auth flow is scoped by these — keypair signin mints a root-capability session.
-// - /pub/pubky.app/:rw   — the app's public data
-// - /priv/social/:rw     — where unlocked lock content is copied (reader replication)
-// - /priv/locks.app/:r   — read-only: a creator reads their OWN guarded original here (Ring sessions)
-// Changing this invalidates existing Ring sessions until they re-authenticate.
-const CAPABILITIES = '/pub/pubky.app/:rw,/priv/social/:rw,/priv/locks.app/:r';
 const STORAGE_PATH_PREFIXES = ['/pub/', '/priv/'] as const;
 const DELETE_IDEMPOTENT_MAX_ATTEMPTS = 3;
 const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
@@ -322,7 +317,7 @@ export class HomeserverService {
    * @returns The authentication URL and approval promise
    */
   static async generateAuthUrl(caps?: Capabilities): Promise<TGenerateAuthUrlResult> {
-    const capabilities: Capabilities = caps || CAPABILITIES;
+    const capabilities: Capabilities = caps || HOMESERVER_CAPABILITIES;
 
     try {
       const pubkySdk = this.getPubkySdk();

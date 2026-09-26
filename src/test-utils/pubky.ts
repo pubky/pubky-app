@@ -15,9 +15,15 @@ export const mockSession = (partial: Partial<Session> = {}): Session =>
       publicKey: {
         z32: () => 'mock-session-pubky',
       },
+      // Root, like a keypair sign-in: a test that wants a narrow Ring session overrides `info`.
+      capabilities: ['/:rw'],
     },
     ...partial,
   });
+
+/** A Pubky Ring session double granted exactly `capabilities` (a keypair session is root, see above). */
+export const mockRingSession = (capabilities: string[], pubky = 'mock-session-pubky'): Session =>
+  mockSession({ info: asOpaque({ publicKey: { z32: () => pubky }, capabilities }) });
 
 /**
  * Minimal `@synonymdev/pubky` `Keypair` double.

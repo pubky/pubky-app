@@ -274,9 +274,10 @@ describe('DialogEditPost', () => {
     );
   });
 
-  // Saving a lock post as plain text would store content the reader cannot parse, so every lock post
-  // opens in teaser mode, with the fields the reader would show.
-  it('opens unrelated JSON in teaser mode with empty fields', () => {
+  // A lock post always opens in teaser mode, with the fields the reader would show. When the body is
+  // not a teaser envelope it is kept as the teaser text instead of being dropped: saving re-wraps the
+  // editor's content into an envelope, so clearing the field here would delete the post's only text.
+  it('keeps unparsable content as the teaser text', () => {
     const lockUrl = 'pubky://author/pub/locks.app/LOCK1.json';
     const unrelatedContent = JSON.stringify({ title: 'Not a teaser', body: 'No envelope field' });
     vi.mocked(usePostDetails).mockReturnValue({
@@ -293,7 +294,7 @@ describe('DialogEditPost', () => {
     render(<DialogEditPost postId="test-lock-post-123" open onOpenChangeAction={vi.fn()} />);
 
     expect(PostInput).toHaveBeenCalledWith(
-      expect.objectContaining({ editContent: '', editLock: { lockUrl, title: '' } }),
+      expect.objectContaining({ editContent: unrelatedContent, editLock: { lockUrl, title: '' } }),
       undefined,
     );
   });
