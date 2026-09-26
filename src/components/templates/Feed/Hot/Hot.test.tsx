@@ -79,8 +79,8 @@ vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', () => {
 
 vi.mock('@/organisms/HotActiveUsers/HotActiveUsers', () => {
   return {
-    HotActiveUsers: ({ className }: { className?: string }) => (
-      <div data-testid="hot-active-users" className={className}>
+    HotActiveUsers: ({ className, hideHeadingOnMobile }: { className?: string; hideHeadingOnMobile?: boolean }) => (
+      <div data-testid="hot-active-users" className={className} data-hide-heading-on-mobile={hideHeadingOnMobile}>
         HotActiveUsers
       </div>
     ),
@@ -197,6 +197,11 @@ describe('Hot', () => {
   it('shows the Trending posts heading on desktop only', () => {
     render(<Hot />);
     expect(screen.getByText('Trending posts')).toHaveClass('hidden', 'lg:block');
+  });
+
+  it('hides the Active users heading on mobile because the tab menu names the section', () => {
+    render(<Hot />);
+    expect(screen.getByTestId('hot-active-users')).toHaveAttribute('data-hide-heading-on-mobile', 'true');
   });
 
   it('passes hasGradientBackground={false} to ContentLayout', () => {

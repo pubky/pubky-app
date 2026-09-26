@@ -50,8 +50,8 @@ export function Hot() {
       {/* Tags Overview - hidden via CSS when another tab is active on mobile */}
       <HotTagsOverview className={cn(hideTags && 'hidden')} />
 
-      {/* Active Users - hidden via CSS when another tab is active on mobile */}
-      <HotActiveUsers className={cn(hideUsers && 'hidden')} />
+      {/* Active Users - hidden via CSS when another tab is active on mobile; the tab menu names the section */}
+      <HotActiveUsers hideHeadingOnMobile className={cn(hideUsers && 'hidden')} />
 
       {/* Trending Posts - hidden via CSS when another tab is active on mobile */}
       <Container overrideDefaults className={cn('flex flex-col gap-2', hidePosts && 'hidden')}>

@@ -46,7 +46,11 @@ function useActiveUsersStreamId(): UserStreamId {
  * - FOLLOWING: Influencers among people the current user follows
  * - FRIENDS: Influencers among the current user's friends
  */
-export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotActiveUsersProps) {
+export function HotActiveUsers({
+  limit = DEFAULT_USERS_LIMIT,
+  className,
+  hideHeadingOnMobile = false,
+}: HotActiveUsersProps) {
   const router = useRouter();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const streamId = useActiveUsersStreamId();
@@ -70,7 +74,11 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
 
   return (
     <Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)} data-testid="hot-active-users">
-      <Heading level={5} size="lg" className="hidden font-light text-muted-foreground lg:block">
+      <Heading
+        level={5}
+        size="lg"
+        className={cn('font-light text-muted-foreground', hideHeadingOnMobile && 'hidden lg:block')}
+      >
         {'Active users'}
       </Heading>
       {error ? (
