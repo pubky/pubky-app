@@ -277,7 +277,16 @@ export class AuthController {
     // keyed by pubky, so signing this one out would leave the user with none.
     await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
 
-    authStore.setSession(session);
+    // That check is a network round trip, so the account can change while it runs. Re-read the store
+    // instead of using the snapshot above: storing now would resurrect a session after a sign-out, or
+    // pair the new account with the previous one's session.
+    const current = useAuthStore.getState();
+    if (current.currentUserPubky !== pubky) {
+      Logger.warn('Discarded an upgraded session: the account changed while it was being checked');
+      return false;
+    }
+
+    current.setSession(session);
     return true;
   }
 

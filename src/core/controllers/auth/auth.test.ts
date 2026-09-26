@@ -1686,6 +1686,22 @@ describe('AuthController', () => {
       expect(cancelAuthFlow).not.toHaveBeenCalled();
     });
 
+    // The homeserver check is a network round trip: a sign-out or account switch during it must not
+    // be overwritten by the approval that was in flight.
+    it('discards the session when the account changes while the check runs', async () => {
+      const authStore = mockSignedInStore();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(currentUserPubky);
+      vi.spyOn(AuthApplication, 'assertUserHomeserverAllowed').mockImplementation(async () => {
+        vi.spyOn(useAuthStore, 'getState').mockReturnValue(
+          mockAuthStore({ ...storeMocks.getAuthState(), currentUserPubky: null }),
+        );
+      });
+
+      await expect(AuthController.upgradeSession({ session: buildMockSession() })).resolves.toBe(false);
+
+      expect(authStore.setSession).not.toHaveBeenCalled();
+    });
+
     it('refuses a session whose key now resolves to another homeserver', async () => {
       const authStore = mockSignedInStore();
       vi.spyOn(Identity, 'z32FromSession').mockReturnValue(currentUserPubky);
