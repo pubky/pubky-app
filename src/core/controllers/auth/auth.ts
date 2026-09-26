@@ -249,8 +249,7 @@ export class AuthController {
    * Swaps the stored session for one the user just approved with today's capability list (#2373).
    * Not a sign-in: no profile check, bootstrap or sign-in progress, so the route guard sees no change
    * and the user keeps their place. The old session is never signed out — the homeserver keys its
-   * cookie by pubky, so that would drop the new session as well. Skips the environment guard: the
-   * pubky check below only accepts the key that already passed it. Guards that compare the session
+   * cookie by pubky, so that would drop the new session as well. Guards that compare the session
    * object (`captureViewerSession`, the TTL coordinator) see one change: reads in flight are dropped
    * once and TTL restarts, both of which the next interaction recovers from.
    *
@@ -259,7 +258,9 @@ export class AuthController {
    * an AppError would file it in Sentry as a fault.
    */
   static async upgradeSession({ session }: THomeserverSessionResult): Promise<boolean> {
-    this.cancelActiveAuthFlow();
+    // No `cancelActiveAuthFlow` here: the flow that produced this approval already cancelled itself
+    // on settle, so the only flow left to cancel would be a newer one the user just started — whose
+    // QR would then stop polling and never register their next approval.
     const authStore = useAuthStore.getState();
     const pubky = Identity.z32FromSession({ session });
 
@@ -270,6 +271,11 @@ export class AuthController {
       Logger.warn('Session upgrade approved with a different key');
       return false;
     }
+
+    // The same boundary sign-in and restore apply: the key may have republished to a homeserver this
+    // deployment refuses since the session was minted. Not signed out on failure — the cookie is
+    // keyed by pubky, so signing this one out would leave the user with none.
+    await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
 
     authStore.setSession(session);
     return true;

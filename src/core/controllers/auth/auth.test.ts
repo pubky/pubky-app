@@ -1668,7 +1668,9 @@ describe('AuthController', () => {
       expect(oldSession.signout).not.toHaveBeenCalled();
     });
 
-    it('stops the auth flow that produced the session', async () => {
+    // The producing flow cancels itself on settle, so anything still active belongs to a newer flow
+    // the user just started — cancelling it would leave their fresh QR polling for nothing.
+    it('leaves a newer auth flow running', async () => {
       const cancelAuthFlow = vi.fn();
       vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue({
         authorizationUrl: 'https://example.com/auth?token=abc123',
@@ -1681,7 +1683,24 @@ describe('AuthController', () => {
 
       await AuthController.upgradeSession({ session: buildMockSession() });
 
-      expect(cancelAuthFlow).toHaveBeenCalled();
+      expect(cancelAuthFlow).not.toHaveBeenCalled();
+    });
+
+    it('refuses a session whose key now resolves to another homeserver', async () => {
+      const authStore = mockSignedInStore();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(currentUserPubky);
+      vi.spyOn(AuthApplication, 'assertUserHomeserverAllowed').mockRejectedValue(
+        Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'wrong homeserver', {
+          service: ErrorService.Homeserver,
+          operation: 'assertUserHomeserverAllowed',
+        }),
+      );
+
+      await expect(AuthController.upgradeSession({ session: buildMockSession() })).rejects.toMatchObject({
+        code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+      });
+
+      expect(authStore.setSession).not.toHaveBeenCalled();
     });
 
     // Picking the wrong identity in Ring is a user choice, so it comes back as `false` instead of an

@@ -409,7 +409,9 @@ The app does not sign such a user out. Instead (#2373):
   `AuthController.upgradeSession` replaces the stored session and does nothing else. The sign-in
   routine would re-init the auth store with the profile unknown, which the route guard reads as
   "signed out" for a moment and redirects. A session approved with a different key is refused and
-  signed out on its own homeserver so it is not left dangling.
+  signed out on its own homeserver so it is not left dangling, and the same homeserver boundary as
+  sign-in is applied before the swap, in case the key republished to a homeserver this deployment
+  refuses.
   The URL comes from `getUpgradeAuthUrl`, which only tracks the flow: the sign-in URL path also
   clears the local database and resets the settings store for the previous account, which must
   not happen to a user who stays signed in. An approval from another key is reported back as a
