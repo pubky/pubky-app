@@ -11,7 +11,7 @@ import type { TFetchUserDetailsParams, TFetchUserParams, TPubkyListParams } from
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { hasHttpStatus, isAppError } from '@/libs/error/error.utils';
+import { hasHttpStatus, isAppError, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
@@ -291,20 +291,39 @@ export class UserApplication {
   }
 
   /**
+   * Follow syncs in flight, keyed by follower and followee. Overlapping commits for one pair
+   * (the same user on two surfaces, or the sign-in moderation follow next to a manual one) run
+   * in order, so an older failed sync compensates before a newer one writes and can never undo it.
+   */
+  private static readonly inFlightFollows = new Map<string, Promise<void>>();
+
+  /**
    * Handles following or unfollowing a user.
    * Writes the relationship locally first and syncs it to the homeserver; a failed sync runs the
    * inverse local write so the live queries behind the Follow button, counts and friendship state
    * revert instead of diverging from the homeserver (#2065).
    * @param params - Parameters containing event type, URLs, JSON data, and user IDs
    */
-  static async commitFollow({
+  static async commitFollow(params: TUserApplicationFollowParams): Promise<void> {
+    const key = `${params.follower}:${params.followee}`;
+    const previous = this.inFlightFollows.get(key) ?? Promise.resolve();
+    const run = previous.catch(() => undefined).then(() => this.syncFollow(params));
+    this.inFlightFollows.set(key, run);
+    try {
+      await run;
+    } finally {
+      if (this.inFlightFollows.get(key) === run) this.inFlightFollows.delete(key);
+    }
+  }
+
+  private static async syncFollow({
     eventType,
     followUrl,
     followJson,
     follower,
     followee,
     signal,
-  }: TUserApplicationFollowParams) {
+  }: TUserApplicationFollowParams): Promise<void> {
     if (signal?.aborted) return;
 
     if (eventType === HttpMethod.PUT) {
@@ -333,7 +352,7 @@ export class UserApplication {
             Logger.error('Failed to rollback local follow write', { eventType, follower, followee, rollbackError });
         }
       }
-      throw error;
+      throw toAppError(error, ErrorService.Homeserver, 'commitFollow');
     }
   }
 
