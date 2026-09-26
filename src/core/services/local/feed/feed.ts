@@ -2,6 +2,7 @@ import type { TFeedIdParam } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
 import { FeedModel } from '@/models/feed/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import type { TFeedRollbackParams } from './feed.types';
 
 const FEED_TABLES = [FeedModel.table];
 
@@ -37,6 +38,25 @@ export class LocalFeedService {
   static async delete({ feedId }: TFeedIdParam) {
     await db.transaction('rw', FEED_TABLES, async () => {
       await FeedModel.deleteById(feedId);
+    });
+  }
+
+  /**
+   * Undo a local write that failed to sync. Restores `priorFeed` (or deletes the row when the
+   * write created it) only while the row still carries the write's own `updated_at`: a newer
+   * write to the same id (another tab, a bootstrap fetch landing mid-sync) is left alone, so a
+   * successful edit is never reverted. Returns whether the row was changed.
+   */
+  static async rollback({ feedId, expectedUpdatedAt, priorFeed }: TFeedRollbackParams): Promise<boolean> {
+    return await db.transaction('rw', FEED_TABLES, async () => {
+      const current = await FeedModel.findById(feedId);
+      if (!current || current.updated_at !== expectedUpdatedAt) return false;
+      if (priorFeed) {
+        await FeedModel.upsert(priorFeed);
+      } else {
+        await FeedModel.deleteById(feedId);
+      }
+      return true;
     });
   }
 
