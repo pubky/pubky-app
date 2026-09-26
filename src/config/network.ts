@@ -6,6 +6,7 @@ import {
   getHomeserver,
   getHomeserverUrl,
   getLockServer,
+  getPassportUrl,
   getPaykitServerUrl,
   getPkarrRelays,
   getTestnet,
@@ -21,10 +22,22 @@ export {
   getHomeserver,
   getHomeserverUrl,
   getLockServer,
+  getPassportUrl,
   getPaykitServerUrl,
   getPkarrRelays,
   getTestnet,
 };
+
+/**
+ * True when a Pubky Passport origin is configured (`PUBKY_RUNTIME_PASSPORT_URL`).
+ *
+ * Pure and server-safe: this only says the deploy points at a Passport. Whether the current
+ * browser page can actually complete a Passport hand-off (HTTPS origin) is resolved after mount
+ * by `usePassportEligibility`, never here.
+ */
+export function isPassportConfigured(): boolean {
+  return Boolean(getPassportUrl());
+}
 
 /**
  * True when this deploy declares itself a staging-homeserver environment

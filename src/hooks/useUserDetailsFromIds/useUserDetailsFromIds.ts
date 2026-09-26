@@ -48,7 +48,7 @@ export function useUserDetailsFromIds({
       for (const userId of userIds) {
         const details = userDetailsMap.get(userId);
         if (details) {
-          const avatarUrl = details.image ? FileController.getAvatarUrl(details.id) : undefined;
+          const avatarUrl = details.image ? FileController.getAvatarUrl(details.id, details.indexed_at) : undefined;
           result.push({
             id: userId,
             name: details.name || FALLBACK_USER_NAME,

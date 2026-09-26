@@ -5,6 +5,8 @@ export const ROOT_ROUTES = '/';
 export enum ONBOARDING_ROUTES {
   BACKUP = '/onboarding/backup',
   INSTALL = '/onboarding/install',
+  /** Step 1 when Pubky Passport is available: "Manage your own keys" vs "Continue with Google". */
+  JOIN = '/onboarding/join',
   PROFILE = '/onboarding/profile',
   PUBKY = '/onboarding/pubky',
   SCAN = '/onboarding/scan',
@@ -130,6 +132,7 @@ export const UNAUTHENTICATED_ROUTES = {
     ONBOARDING_ROUTES.PUBKY,
     ONBOARDING_ROUTES.BACKUP,
     ONBOARDING_ROUTES.HUMAN,
+    ONBOARDING_ROUTES.JOIN,
     ...EXPLORE_ROUTES,
     AUTH_ROUTES.LOGOUT,
     COPYRIGHT_ROUTES.COPYRIGHT,

@@ -2,19 +2,22 @@
 
 import { useRef } from 'react';
 import { Container } from '@/atoms/Container/Container';
-import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import {
+  POST_COVER_DESKTOP_MEDIA,
+  POST_COVER_DESKTOP_VARIANT,
+  POST_COVER_MOBILE_VARIANT,
+} from '@/libs/post/postCoverVariant';
 import { cn } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostText } from '@/molecules/PostText/PostText';
-import { FileVariant } from '@/services/nexus/file/file.types';
+import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useHomeStore } from '@/stores/home/home.store';
-import { LAYOUT } from '@/stores/home/home.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { DialogCheckLink } from '../DialogCheckLink/DialogCheckLink';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
@@ -33,11 +36,13 @@ interface PostArticleDetailProps {
 
 /**
  * Displays an article post detail page.
- * Columns reuses the regular post inline tags/actions; other layouts use a side tags column.
+ * Columns reuses the regular post inline tags/actions; wide and list use a side tags column.
+ * Any other layout value (visual, or a future one) renders as columns, the same rule
+ * `getTagsLayoutForSurfaceLayout` applies to the rest of the single-post surface.
  */
 export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: PostArticleDetailProps) => {
   const layout = useHomeStore((state) => state.layout);
-  const isColumnsLayout = layout === LAYOUT.COLUMNS;
+  const isColumnsLayout = getTagsLayoutForSurfaceLayout(layout) === 'inline';
   const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
@@ -58,7 +63,10 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   const { title, body, coverImage, hasCover } = usePostArticle({
     content,
     attachments,
-    coverImageVariant: FileVariant.MAIN,
+    // Both variants come from the same constants the server-side preload reads, so the
+    // preloaded URL is the one this image asks for and the cover downloads once.
+    coverImageVariant: POST_COVER_MOBILE_VARIANT,
+    coverImageDesktopVariant: POST_COVER_DESKTOP_VARIANT,
   });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
@@ -69,7 +77,11 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   // only when the slot-0 rule says so (otherwise it's an inline image).
   const localCoverImage =
     hasCover && localAttachments?.[0]?.type.startsWith('image')
-      ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }
+      ? {
+          src: localAttachments[0].urls.feed ?? localAttachments[0].urls.main,
+          desktopSrc: localAttachments[0].urls.main,
+          alt: localAttachments[0].name,
+        }
       : null;
 
   const finalCoverImage = localCoverImage || coverImage;
@@ -114,11 +126,24 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   ) : (
     <>
       {finalCoverImage && (
-        <Image
-          src={finalCoverImage.src}
-          alt={finalCoverImage.alt}
-          className="mb-6 aspect-video w-full rounded-md object-cover object-center"
-        />
+        // A `<picture>` rather than the `Image` atom: next/image drops a custom `srcSet` when
+        // it is `unoptimized` (every external CDN URL is), and a breakpoint is the only way to
+        // keep a high-DPR phone off the original upload. See POST_COVER_MOBILE_VARIANT.
+        <picture>
+          <source media={POST_COVER_DESKTOP_MEDIA} srcSet={finalCoverImage.desktopSrc} />
+          <img
+            src={finalCoverImage.src}
+            alt={finalCoverImage.alt}
+            width={800}
+            height={600}
+            // The cover is this page's largest contentful paint: eager + high priority
+            // so it is not queued behind the images below the fold.
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            className="mb-6 aspect-video w-full rounded-md object-cover object-center"
+          />
+        </picture>
       )}
 
       <PostText

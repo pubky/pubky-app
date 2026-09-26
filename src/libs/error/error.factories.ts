@@ -1,3 +1,4 @@
+import { Pulse } from '@synonymdev/pubky-pulse-web';
 import { Logger } from '../logger/logger';
 import { captureAppError } from '../observability/sentry';
 import { AppError, type AppErrorParams, hasAppErrorInCauseChain } from './error';
@@ -76,6 +77,7 @@ function createAppError<C extends ErrorCategory>(
     Logger.warn('[Err.factory] captureAppError failed', sentryError);
   }
 
+  Pulse.captureException(error);
   return error;
 }
 

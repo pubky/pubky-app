@@ -16,11 +16,6 @@ import {
   HeaderTitle,
 } from './Header';
 
-const collectionsDiscoveryMock = vi.hoisted(() => ({
-  markCollectionsNavSeen: vi.fn(),
-  showCollectionsNew: false,
-}));
-
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
@@ -41,12 +36,6 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 vi.mock('@/stores/notification/notification.store', () => ({
   useNotificationStore: vi.fn(),
-}));
-vi.mock('@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery', () => ({
-  useCollectionsNavDiscovery: () => ({
-    showCollectionsNew: collectionsDiscoveryMock.showCollectionsNew,
-    markCollectionsNavSeen: collectionsDiscoveryMock.markCollectionsNavSeen,
-  }),
 }));
 vi.mock('@/stores/search/search.store', () => ({
   useSearchStore: vi.fn(() => ({
@@ -175,7 +164,6 @@ describe('Header Components', () => {
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
     vi.mocked(usePathname).mockReturnValue('/home');
-    collectionsDiscoveryMock.showCollectionsNew = false;
     vi.mocked(useAuthStore).mockImplementation((selector) => {
       const state = {
         currentUserPubky: 'test-pubky',
@@ -184,12 +172,14 @@ describe('Header Components', () => {
       return selector(state as never);
     });
     vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
-    vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
+    vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+      query: deps?.[0],
+      data: { name: 'Test User', image: 'test-image.jpg' },
+    }));
   });
 
   afterEach(() => {
     vi.clearAllMocks();
-    collectionsDiscoveryMock.showCollectionsNew = false;
   });
 
   describe('HeaderContainer', () => {
@@ -489,36 +479,15 @@ describe('Header Components', () => {
       expect(collectionsButton).not.toHaveClass('bg-white/5');
     });
 
-    it('shows the Collections NEW treatment before dismissal', () => {
-      collectionsDiscoveryMock.showCollectionsNew = true;
-
+    it('renders the Collections nav item without a NEW treatment', () => {
       render(<HeaderNavigationButtons avatarName="TU" />);
 
       const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
-      expect(collectionsButton).toHaveClass('border-brand', 'text-brand');
-      expect(screen.getByRole('button', { name: 'Collections, New' })).toBeInTheDocument();
-      expect(screen.getByText('New')).toBeInTheDocument();
-    });
-
-    it('marks Collections discovery seen when clicking the Collections nav link', () => {
-      collectionsDiscoveryMock.showCollectionsNew = true;
-      render(<HeaderNavigationButtons avatarName="TU" />);
-
-      const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
-      expect(collectionsLink).toBeTruthy();
-      fireEvent.click(collectionsLink!);
-
-      expect(collectionsDiscoveryMock.markCollectionsNavSeen).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not show the Collections NEW treatment after dismissal', () => {
-      collectionsDiscoveryMock.showCollectionsNew = false;
-
-      render(<HeaderNavigationButtons avatarName="TU" />);
-
-      expect(screen.queryByText('New')).not.toBeInTheDocument();
-      const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
+      expect(collectionsButton).toBeTruthy();
+      expect(collectionsButton).toHaveClass('bg-white/5');
       expect(collectionsButton).not.toHaveClass('border-brand');
+      expect(screen.getByRole('button', { name: 'Collections' })).toBeInTheDocument();
+      expect(screen.queryByText('New')).not.toBeInTheDocument();
     });
 
     it('applies correct button classes', () => {
@@ -578,7 +547,10 @@ describe('Header Components', () => {
     });
 
     it('passes name to AvatarWithFallback for valid name', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: 'Test User', image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -586,7 +558,10 @@ describe('Header Components', () => {
     });
 
     it('uses default fallback name when name is undefined', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: undefined, image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: undefined, image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -595,7 +570,10 @@ describe('Header Components', () => {
     });
 
     it('passes empty name to AvatarWithFallback for empty name', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: '', image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: '', image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -603,7 +581,10 @@ describe('Header Components', () => {
     });
 
     it('passes whitespace-only name to AvatarWithFallback', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: '   ', image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: '   ', image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -611,7 +592,10 @@ describe('Header Components', () => {
     });
 
     it('passes name with whitespace to AvatarWithFallback', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: '  Sarah Jones  ', image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: '  Sarah Jones  ', image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -619,7 +603,10 @@ describe('Header Components', () => {
     });
 
     it('renders AvatarWithFallback when no image provided', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: null });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: 'Test User', image: null },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -628,7 +615,10 @@ describe('Header Components', () => {
     });
 
     it('renders AvatarWithFallback with name when image is provided', () => {
-      vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'custom-avatar.jpg' });
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+        query: deps?.[0],
+        data: { name: 'Test User', image: 'custom-avatar.jpg' },
+      }));
       render(<HeaderSignIn />);
 
       const avatar = screen.getByTestId('avatar-with-fallback');
@@ -655,7 +645,10 @@ describe('Header Components - Snapshots', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
     vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
     vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
-    vi.mocked(useLiveQuery).mockReturnValue({ name: 'Test User', image: 'test-image.jpg' });
+    vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
+      query: deps?.[0],
+      data: { name: 'Test User', image: 'test-image.jpg' },
+    }));
   });
 
   it('matches snapshot for HeaderContainer', () => {

@@ -3,6 +3,7 @@ import { PubkyAppPostKind } from 'pubky-app-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isVideoUrl } from '@/libs/utils/videoUrl';
 
 type TInferPostKindParams = {
   content: string;
@@ -34,14 +35,14 @@ const stripMarkdownLinks = (content: string): string => {
   return content.replace(/\[([^\]]*)\]\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g, '<stripped-link>');
 };
 
-const hasSupportedUrl = (content: string): boolean => {
+const getSupportedUrl = (content: string): string | null => {
   const linkify = new LinkifyIt({ fuzzyLink: true });
   IGNORED_PROTOCOLS.forEach((protocol) => linkify.add(protocol, null));
 
   const strippedContent = stripMarkdownLinks(content);
   const match = linkify.match(strippedContent);
 
-  return Boolean(match?.[0]?.url);
+  return match?.[0]?.url ?? null;
 };
 
 const getAttachmentKind = (contentTypes: string[]): PubkyAppPostKind | null => {
@@ -63,11 +64,13 @@ const getAttachmentKind = (contentTypes: string[]): PubkyAppPostKind | null => {
 /**
  * Shared tail of kind inference, applied after the callers' own guards
  * (article on create, article/collection preservation on edit):
- * URL in content → Link, else attachment media kind, else Short.
+ * video URL in content → Video, other URL in content → Link, else attachment
+ * media kind, else Short.
  */
 const inferContentKind = (content: string, attachmentContentTypes: string[]): PubkyAppPostKind => {
-  if (hasSupportedUrl(content)) {
-    return PubkyAppPostKind.Link;
+  const url = getSupportedUrl(content);
+  if (url) {
+    return isVideoUrl(url) ? PubkyAppPostKind.Video : PubkyAppPostKind.Link;
   }
 
   return getAttachmentKind(attachmentContentTypes) ?? PubkyAppPostKind.Short;

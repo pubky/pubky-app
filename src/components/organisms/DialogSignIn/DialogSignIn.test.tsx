@@ -4,6 +4,12 @@ import { DialogSignIn } from './DialogSignIn';
 
 const mockShowSignInDialog = vi.hoisted(() => ({ value: false }));
 const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
+const mockJoinRoute = vi.hoisted(() => ({ value: '/onboarding/human' }));
+
+// Join entry: fair-access step unless Pubky Passport is enabled on this page.
+vi.mock('@/hooks/useJoinRoute/useJoinRoute', () => ({
+  useJoinRoute: () => mockJoinRoute.value,
+}));
 
 // Mock auth store
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -25,6 +31,7 @@ describe('DialogSignIn', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockShowSignInDialog.value = false;
+    mockJoinRoute.value = '/onboarding/human';
   });
 
   describe('rendering', () => {
@@ -60,6 +67,16 @@ describe('DialogSignIn', () => {
 
       const joinLink = screen.getByTestId('link--onboarding-human');
       expect(joinLink).toHaveAttribute('href', '/onboarding/human');
+      expect(joinLink).toHaveTextContent('Join Pubky');
+    });
+
+    it('renders Join Pubky link pointing to the Join step when Passport is enabled', () => {
+      mockShowSignInDialog.value = true;
+      mockJoinRoute.value = '/onboarding/join';
+      render(<DialogSignIn />);
+
+      const joinLink = screen.getByTestId('link--onboarding-join');
+      expect(joinLink).toHaveAttribute('href', '/onboarding/join');
       expect(joinLink).toHaveTextContent('Join Pubky');
     });
 

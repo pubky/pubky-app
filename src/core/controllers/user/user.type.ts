@@ -18,3 +18,9 @@ export type TFetchUserParams = {
   userId: Pubky;
   viewerId?: Pubky;
 };
+
+/** User details fetch; only a profile page opts into a fast not-found verdict. */
+export type TFetchUserDetailsParams = {
+  userId: Pubky;
+  profileLookup?: boolean;
+};

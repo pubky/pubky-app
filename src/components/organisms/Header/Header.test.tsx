@@ -15,7 +15,7 @@ vi.mock('next/navigation', () => ({
 let mockCurrentUserPubky: string | null = null;
 // Mock dexie-react-hooks
 vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: vi.fn(() => ({ name: 'Test User', image: 'test-image.jpg' })),
+  useLiveQuery: vi.fn((_queryFn, deps) => ({ query: deps[0], data: { name: 'Test User', image: 'test-image.jpg' } })),
 }));
 
 // Mock atoms, libs, config, and app
@@ -538,6 +538,15 @@ describe('Header', () => {
 
       expect(screen.getByTestId('header-title')).toBeInTheDocument();
       expect(screen.getByTestId('header-title')).toHaveTextContent('Signed out');
+    });
+
+    it('renders the "Sign in" HeaderTitle for unauthenticated users on the sign-in route', () => {
+      mockCurrentUserPubky = null;
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.SIGN_IN);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('header-title')).toHaveTextContent('Sign in');
     });
 
     it('renders HeaderTitle when on the profile step even if signed in', () => {

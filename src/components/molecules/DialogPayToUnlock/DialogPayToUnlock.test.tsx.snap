@@ -194,7 +194,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the blocked stage 
     data-slot="dialog-footer"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
       data-cy="pay-to-unlock-cancel"
       data-size="lg"
       data-slot="button"
@@ -437,7 +437,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the checking stage
     data-slot="dialog-footer"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
       data-cy="pay-to-unlock-cancel"
       data-size="lg"
       data-slot="button"
@@ -759,7 +759,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the install stage 
     data-slot="dialog-footer"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
       data-cy="pay-to-unlock-cancel"
       data-size="lg"
       data-slot="button"
@@ -1275,7 +1275,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the parked waiting
           Still waiting for the payment. Pay in Bitkit, then check again.
         </p>
         <button
-          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal"
+          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal"
           data-cy="pay-to-unlock-recheck"
           data-size="lg"
           data-slot="button"
@@ -1291,7 +1291,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the parked waiting
     data-slot="dialog-footer"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
       data-cy="pay-to-unlock-cancel"
       data-size="lg"
       data-slot="button"
@@ -1581,7 +1581,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the retry stage 1`
     data-slot="dialog-footer"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
       data-cy="pay-to-unlock-cancel"
       data-size="lg"
       data-slot="button"
@@ -1826,7 +1826,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the unopened stage
           Payment received. The content could not be opened — nothing is lost.
         </p>
         <button
-          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal"
+          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal"
           data-cy="pay-to-unlock-recheck"
           data-size="lg"
           data-slot="button"
@@ -1842,7 +1842,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the unopened stage
     data-slot="dialog-footer"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
       data-cy="pay-to-unlock-cancel"
       data-size="lg"
       data-slot="button"
@@ -2102,7 +2102,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
     data-slot="dialog-footer"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
       data-cy="pay-to-unlock-cancel"
       data-size="lg"
       data-slot="button"
@@ -2340,7 +2340,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
     data-slot="dialog-footer"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
       data-cy="pay-to-unlock-cancel"
       data-size="lg"
       data-slot="button"
@@ -2578,7 +2578,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
     data-slot="dialog-footer"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
       data-cy="pay-to-unlock-cancel"
       data-size="lg"
       data-slot="button"
@@ -2839,7 +2839,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
     data-slot="dialog-footer"
   >
     <button
-      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal flex-1"
       data-cy="pay-to-unlock-cancel"
       data-size="lg"
       data-slot="button"

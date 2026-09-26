@@ -43,6 +43,7 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { extractStatusCode, handleError } from './error.utils';
 import type {
   PubPath,
+  TGeneratePassportAuthUrlParams,
   TGenerateSignupAuthUrlParams,
   THomeserverBytesResult,
   THomeserverFetchParams,
@@ -332,6 +333,40 @@ export class HomeserverService {
       };
     } catch (error) {
       return handleError({ error, additionalContext: { capabilities, relay: getDefaultHttpRelay() } });
+    }
+  }
+
+  /**
+   * Generates the authentication URL handed to Pubky Passport.
+   *
+   * Same cookie sign-in flow as {@link generateAuthUrl}, plus x-callback-url metadata so Passport can
+   * label the request and navigate back to the app when the popup hand-off cannot complete. Kept
+   * separate so the Pubky Ring QR never carries the Passport callbacks.
+   * @param xCallback - Source label and same-origin HTTPS success/error/cancel destinations
+   * @param caps - The capabilities to use
+   * @returns The authentication URL and approval promise
+   */
+  static async generatePassportAuthUrl({
+    xCallback,
+    caps,
+  }: TGeneratePassportAuthUrlParams): Promise<TGenerateAuthUrlResult> {
+    const capabilities: Capabilities = caps || HOMESERVER_CAPABILITIES;
+
+    try {
+      const pubkySdk = this.getPubkySdk();
+      const flow = pubkySdk.startCookieAuthFlow(capabilities, AuthFlowKind.signin(), getDefaultHttpRelay(), xCallback);
+      const approval = createCancelableAuthApproval(flow);
+
+      return {
+        authorizationUrl: flow.authorizationUrl,
+        awaitApproval: approval.awaitApproval,
+        cancelAuthFlow: approval.cancel,
+      };
+    } catch (error) {
+      return handleError({
+        error,
+        additionalContext: { capabilities, relay: getDefaultHttpRelay(), xSource: xCallback.xSource },
+      });
     }
   }
 

@@ -8,7 +8,13 @@ import type {
 } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { userApi } from '@/services/nexus/user/user.api';
-import type { TUserPaginationParams, TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
+import {
+  PROFILE_LOOKUP_NOT_FOUND_RETRIES,
+  type TUserDetailsParams,
+  type TUserPaginationParams,
+  type TUserTaggersParams,
+  type TUserTagsParams,
+} from '@/services/nexus/user/user.types';
 
 /**
  * Nexus User Service
@@ -51,14 +57,20 @@ export class NexusUserService {
   }
 
   /**
-   * Retrieves user details from Nexus API
+   * Retrieves user details from Nexus API.
+   *
+   * Shared detail consumers retain the indexing retry window. Only a profile page
+   * opts into the shorter not-found budget via `profileLookup`.
    *
    * @param params - Parameters containing user ID
    * @returns User details including name, bio, status, image, and links
    */
-  static async details(params: TUserId): Promise<NexusUserDetails> {
+  static async details({ profileLookup, ...params }: TUserDetailsParams): Promise<NexusUserDetails> {
     const url = userApi.details(params);
-    return await queryNexus<NexusUserDetails>({ url });
+    return await queryNexus<NexusUserDetails>({
+      url,
+      ...(profileLookup ? { notFoundRetries: PROFILE_LOOKUP_NOT_FOUND_RETRIES } : {}),
+    });
   }
 
   /**
