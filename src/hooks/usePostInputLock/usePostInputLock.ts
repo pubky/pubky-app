@@ -5,6 +5,7 @@ import type { TLockConfig } from '@/application/locks/locks.types';
 import { getLockServer, getPaykitServerUrl } from '@/config/network';
 import { PostController } from '@/controllers/post/post';
 import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
+import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { Logger } from '@/libs/logger/logger';
 import { buildArticleContent } from '@/libs/post/articleContent';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
@@ -63,13 +64,15 @@ export function usePostInputLock({
   const lockServerPubky = getLockServer() ?? '';
   const paykitServerUrl = getPaykitServerUrl() ?? '';
 
+  const needsSessionUpgrade = useSessionNeedsUpgrade();
   /**
-   * Signed into the Lock Server AND holding a connected Bitkit payout account. The connection is
-   * per browser session, so this is false again after a reload.
+   * Signed into the Lock Server, holding a connected Bitkit payout account, and on a homeserver
+   * session that can reach `/priv` (#2373). The first two are per browser session, so this is false
+   * again after a reload.
    */
   const isLocksSetUp = () => {
     const store = useLocksAuthStore.getState();
-    return store.selectIsLocksAuthenticated() && store.selectIsPaykitConnected();
+    return store.selectIsLocksAuthenticated() && store.selectIsPaykitConnected() && !needsSessionUpgrade;
   };
 
   // Optimistic commit of the just-published announcement, like a normal post: local blobs (so the

@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
@@ -100,6 +100,17 @@ vi.mock('@/controllers/locks/locks', () => ({
   },
 }));
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => toastMock(...args) }));
+// Both read the real auth store; it is stubbed here with a bare session, so stand them in.
+vi.mock('@/organisms/LocksPermissionNotice/LocksPermissionNotice', () => ({
+  LocksPermissionNotice: () => <div data-testid="locks-permission-notice" />,
+}));
+const sessionNeedsUpgrade = vi.hoisted(() => ({ value: false }));
+vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
+  useSessionNeedsUpgrade: () => sessionNeedsUpgrade.value,
+}));
+afterEach(() => {
+  sessionNeedsUpgrade.value = false;
+});
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (s: { currentUserPubky: string | null; session: object | null }) => unknown) =>
     selector({ currentUserPubky: 'pubkyreader', session: {} }),
@@ -421,6 +432,16 @@ describe('LockedPostContent', () => {
 
     expect(await screen.findByText('not article json')).toBeInTheDocument();
     expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
+  });
+
+  it('asks for the missing permission and parks the lock card when the session predates /priv', async () => {
+    sessionNeedsUpgrade.value = true;
+    mockLockData({ priceSats: '1000' });
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+    expect(await screen.findByTestId('locks-permission-notice')).toBeInTheDocument();
+    // This session cannot read whether the reader already unlocked; a live Unlock could charge twice.
+    expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
   });
 
   it('shows already-unlocked content on mount without the lock card', async () => {

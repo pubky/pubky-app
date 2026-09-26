@@ -1,0 +1,23 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`LocksPermissionNotice - Snapshots > matches snapshot 1`] = `
+<div
+  class="flex flex-col items-start gap-3"
+  data-testid="locks-permission-notice"
+>
+  <p
+    class="text-base font-medium text-muted-foreground"
+    data-testid="typography"
+  >
+    Pubky.app needs your permission to read your Locks data on your homeserver.
+  </p>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal w-fit"
+    data-size="lg"
+    data-slot="button"
+    data-variant="outline"
+  >
+    Authorize with Pubky Ring
+  </button>
+</div>
+`;

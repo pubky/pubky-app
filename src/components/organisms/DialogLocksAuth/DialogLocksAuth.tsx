@@ -3,18 +3,21 @@
 /**
  * DialogLocksAuth
  *
- * Four-step modal that sets a creator up for Locks (Intro → Enable Locks → Enable Payments → Enabled):
+ * Modal that sets a creator up for Locks (Intro → Enable Locks → Enable Payments → Enabled):
  *  1. Intro          — explains Locks; "Continue" begins the flow.
  *  2. Enable Locks   — iframe loads the Lock Server `/connect` page. On approval it posts the code
  *                      to the parent and `useLocksAuthFlow` exchanges it.
+ *  2b. Enable Locks  — only for a session from before the app requested `/priv` (#2373): Pubky Ring
+ *                      approves a session with today's capability list and it replaces the stored one.
+ *                      Steps 2 and 2b are numbered (1/2) and (2/2) when both are pending at open.
  *  3. Enable Payments — iframe loads Paykit's `/setup` page, where the creator connects the account
  *                      that receives payments.
  *  4. Enabled        — success; "Continue" notifies the caller via `onSuccess` and closes.
  *
- * Which step shows is derived from the Locks store, so a creator who is already signed in but has
- * not connected Bitkit in this browser session opens straight at Enable Payments.
+ * Which step shows is derived from the stores, so a creator who is already signed in but has not
+ * connected Bitkit in this browser session opens straight at Enable Payments.
  */
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -41,21 +44,23 @@ import { useLocksAuthFlow } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow';
 import { LocksAuthFlowStatus } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow.types';
 import { usePaykitSetupFlow } from '@/hooks/usePaykitSetupFlow/usePaykitSetupFlow';
 import { PaykitSetupFlowStatus } from '@/hooks/usePaykitSetupFlow/usePaykitSetupFlow.types';
+import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { cn } from '@/libs/utils/utils';
 import { AppDownload } from '@/molecules/AppDownload/AppDownload';
+import { SessionUpgradeDescription, SessionUpgradePanel } from '@/organisms/SessionUpgradePanel/SessionUpgradePanel';
 import { isLocksAuthenticated as isLocksAuthenticatedState } from '@/stores/locksAuth/locksAuth.selectors';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
+import {
+  focusLocksDialogPanel,
+  LOCKS_DIALOG_CARD_CLASSNAME,
+  LOCKS_DIALOG_DESCRIPTION_TRACKING,
+} from './DialogLocksAuth.constants';
 
 type DialogLocksAuthProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 };
-
-// Card chrome: card bg, brand-green top+bottom borders, rounded-xl.
-// `overrideDefaults` drops the atom's default background/border so these win cleanly.
-const CARD_CLASSNAME =
-  'flex max-h-[calc(100dvh-2rem)] w-full max-w-[100vw] flex-col gap-6 overflow-y-auto rounded-xl border-y border-brand bg-card p-8 shadow-2xl outline-none sm:max-w-xl';
 
 // Frames the 192px step illustration.
 function StepImage({ src, alt }: { src: string; alt: string }) {
@@ -86,8 +91,22 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
   } = usePaykitSetupFlow();
   const isLocksAuthenticated = isLocksAuthenticatedState(useLocksAuthStore((state) => state.session));
   const isPaykitConnected = useLocksAuthStore((state) => state.paykitConnected);
+  const needsSessionUpgrade = useSessionNeedsUpgrade();
 
-  const step = !isLocksAuthenticated ? 'locks' : !isPaykitConnected ? 'bitkit' : 'done';
+  let step: 'locks' | 'session' | 'bitkit' | 'done' = 'done';
+  if (!isLocksAuthenticated) step = 'locks';
+  else if (needsSessionUpgrade) step = 'session';
+  else if (!isPaykitConnected) step = 'bitkit';
+
+  // Fixed when the dialog opens (adjusted during render, so the first frame already carries it):
+  // once the Lock Server step completes only the session step is left, and a count taken then
+  // would never show "(2/2)".
+  const [isNumbered, setIsNumbered] = useState(() => open && !isLocksAuthenticated && needsSessionUpgrade);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setIsNumbered(!isLocksAuthenticated && needsSessionUpgrade);
+  }
 
   // Probe the Lock Server's readiness when the modal opens; reset when it closes. "Continue" only
   // starts the auth flow once the probe says the server is ready. Read the store here rather than
@@ -121,6 +140,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
     (locksStatus === LocksAuthFlowStatus.CONNECTING ||
       locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL ||
       locksStatus === LocksAuthFlowStatus.EXCHANGING);
+  const isSessionStep = step === 'session';
   const isBitkitStep = step === 'bitkit' && !isPaykitError;
 
   let title = 'Lock Content';
@@ -129,7 +149,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
     title = 'Locks Enabled';
     description = 'You authorized the Locks server to manage your Locks data.';
   } else if (isEnableStep) {
-    title = 'Enable Locks';
+    title = isNumbered ? 'Enable Locks (1/2)' : 'Enable Locks';
     description = (
       <>
         {'Use '}
@@ -139,6 +159,9 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
         {' to authorize Locks server to manage your Locks data.'}
       </>
     );
+  } else if (isSessionStep) {
+    title = isNumbered ? 'Enable Locks (2/2)' : 'Enable Locks';
+    description = <SessionUpgradeDescription />;
   } else if (isBitkitStep) {
     title = 'Enable Payments';
     description = (
@@ -160,21 +183,15 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        overrideDefaults
-        className={CARD_CLASSNAME}
-        // Focus the panel itself on open, not the first button. Radix otherwise auto-focuses
-        // Cancel, whose programmatic focus trips :focus-visible → a 3px ring that reads as a thick
-        // border. Focusing the panel keeps focus trapped (a11y) with no ring; Tab still rings
-        // buttons normally for keyboard users.
-        onOpenAutoFocus={(event) => {
-          event.preventDefault();
-          (event.currentTarget as HTMLElement | null)?.focus();
-        }}
-      >
+      <DialogContent overrideDefaults className={LOCKS_DIALOG_CARD_CLASSNAME} onOpenAutoFocus={focusLocksDialogPanel}>
         <DialogHeader className="gap-6">
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className={cn('text-base text-secondary-foreground', isEnableStep && 'tracking-[-0.5px]')}>
+          <DialogDescription
+            className={cn(
+              'text-base text-secondary-foreground',
+              (isEnableStep || isSessionStep) && LOCKS_DIALOG_DESCRIPTION_TRACKING,
+            )}
+          >
             {description}
           </DialogDescription>
         </DialogHeader>
@@ -219,6 +236,8 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
             />
           </Container>
         )}
+
+        {isSessionStep && <SessionUpgradePanel />}
 
         {isBitkitStep && (
           <Container className="flex flex-col items-center justify-center gap-6 py-3">

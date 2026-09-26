@@ -1,0 +1,262 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SessionUpgradePanel - Snapshots > matches snapshot while generating 1`] = `
+<div
+  class="mx-auto w-full flex flex-col items-center justify-center gap-6 py-3"
+  data-testid="container"
+>
+  <button
+    aria-label="Copy authorization link"
+    class="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 [@media(hover:none)and(pointer:coarse)]:hidden"
+    data-testid="session-upgrade-qr"
+    disabled=""
+    type="button"
+  >
+    <div
+      class="mx-auto w-full flex-col flex items-center gap-2"
+      data-testid="container"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-loader-circle size-8 animate-spin text-background"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M21 12a9 9 0 1 1-6.219-8.56"
+        />
+      </svg>
+      <small
+        class="text-sm font-medium text-background"
+        data-testid="typography"
+      >
+        Generating QR Code...
+      </small>
+    </div>
+  </button>
+  <button
+    aria-busy="true"
+    class="items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal hidden w-full [@media(hover:none)and(pointer:coarse)]:flex"
+    data-size="lg"
+    data-slot="button"
+    disabled=""
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-loader-circle mr-2 size-4 animate-spin"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M21 12a9 9 0 1 1-6.219-8.56"
+      />
+    </svg>
+    Generating...
+  </button>
+  <div
+    class="mx-auto w-full flex flex-col items-center gap-4"
+    data-testid="container"
+  >
+    <img
+      alt="Pubky Ring"
+      class="h-auto max-w-full"
+      data-nimg="1"
+      decoding="async"
+      height="32"
+      loading="lazy"
+      src="/images/logo-pubky-ring.svg"
+      style="color: transparent;"
+      width="147"
+    />
+    <div
+      class="mx-auto w-full flex flex-row items-center justify-center gap-3.5"
+      data-testid="container"
+    >
+      <a
+        class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+        href="https://apps.apple.com/app/pubky-ring/id6739356756"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <img
+          alt="App Store"
+          class="h-auto max-w-full"
+          data-nimg="1"
+          decoding="async"
+          height="24"
+          loading="lazy"
+          src="/images/badge-apple.webp"
+          style="color: transparent;"
+          width="72"
+        />
+      </a>
+      <a
+        class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+        href="https://play.google.com/store/apps/details?id=to.pubky.ring&pcampaignid=web_share"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <img
+          alt="Google Play"
+          class="h-auto max-w-full"
+          data-nimg="1"
+          decoding="async"
+          height="24"
+          loading="lazy"
+          src="/images/badge-android.webp"
+          style="color: transparent;"
+          width="81"
+        />
+      </a>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`SessionUpgradePanel - Snapshots > matches snapshot with a ready URL 1`] = `
+<div
+  class="mx-auto w-full flex flex-col items-center justify-center gap-6 py-3"
+  data-testid="container"
+>
+  <button
+    aria-label="Copy authorization link"
+    class="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2 [@media(hover:none)and(pointer:coarse)]:hidden"
+    data-testid="session-upgrade-qr"
+    type="button"
+  >
+    <svg
+      class="transition-opacity group-hover:opacity-90 group-active:opacity-80"
+      height="176"
+      role="img"
+      viewBox="0 0 29 29"
+      width="176"
+    >
+      <path
+        d="M0,0 h29v29H0z"
+        fill="#FFFFFF"
+        shape-rendering="crispEdges"
+      />
+      <path
+        d="M0 0h7v1H0zM8 0h2v1H8zM12 0h4v1H12zM17 0h1v1H17zM22,0 h7v1H22zM0 1h1v1H0zM6 1h1v1H6zM8 1h1v1H8zM10 1h1v1H10zM12 1h4v1H12zM19 1h1v1H19zM22 1h1v1H22zM28,1 h1v1H28zM0 2h1v1H0zM2 2h3v1H2zM6 2h1v1H6zM8 2h1v1H8zM10 2h2v1H10zM13 2h2v1H13zM18 2h1v1H18zM20 2h1v1H20zM22 2h1v1H22zM24 2h3v1H24zM28,2 h1v1H28zM0 3h1v1H0zM2 3h3v1H2zM6 3h1v1H6zM9 3h1v1H9zM11 3h2v1H11zM14 3h4v1H14zM19 3h1v1H19zM22 3h1v1H22zM24 3h3v1H24zM28,3 h1v1H28zM0 4h1v1H0zM2 4h3v1H2zM6 4h1v1H6zM8 4h2v1H8zM13 4h1v1H13zM15 4h1v1H15zM18 4h3v1H18zM22 4h1v1H22zM24 4h3v1H24zM28,4 h1v1H28zM0 5h1v1H0zM6 5h1v1H6zM13 5h2v1H13zM20 5h1v1H20zM22 5h1v1H22zM28,5 h1v1H28zM0 6h7v1H0zM8 6h1v1H8zM10 6h1v1H10zM12 6h1v1H12zM14 6h1v1H14zM16 6h1v1H16zM18 6h1v1H18zM20 6h1v1H20zM22,6 h7v1H22zM10 7h2v1H10zM14 7h1v1H14zM16 7h1v1H16zM19 7h1v1H19zM0 8h1v1H0zM3 8h9v1H3zM13 8h5v1H13zM19 8h1v1H19zM21 8h1v1H21zM24 8h1v1H24zM26,8 h3v1H26zM2 9h1v1H2zM4 9h2v1H4zM7 9h1v1H7zM9 9h1v1H9zM11 9h2v1H11zM14 9h2v1H14zM17 9h3v1H17zM23 9h2v1H23zM0 10h1v1H0zM6 10h2v1H6zM10 10h2v1H10zM14 10h2v1H14zM18 10h1v1H18zM20 10h2v1H20zM25 10h1v1H25zM0 11h1v1H0zM2 11h1v1H2zM4 11h2v1H4zM11 11h2v1H11zM14 11h1v1H14zM17 11h1v1H17zM19 11h1v1H19zM21 11h2v1H21zM25 11h1v1H25zM0 12h2v1H0zM4 12h4v1H4zM9 12h1v1H9zM13 12h4v1H13zM22 12h2v1H22zM27,12 h2v1H27zM0 13h2v1H0zM3 13h1v1H3zM8 13h1v1H8zM10 13h1v1H10zM12 13h1v1H12zM15 13h2v1H15zM18 13h1v1H18zM21 13h2v1H21zM24 13h2v1H24zM28,13 h1v1H28zM1 14h1v1H1zM3 14h1v1H3zM6 14h1v1H6zM8 14h1v1H8zM12 14h1v1H12zM14 14h2v1H14zM19 14h2v1H19zM22 14h2v1H22zM28,14 h1v1H28zM1 15h5v1H1zM7 15h3v1H7zM11 15h1v1H11zM13 15h2v1H13zM16 15h1v1H16zM20 15h4v1H20zM25,15 h4v1H25zM0 16h2v1H0zM3 16h1v1H3zM5 16h2v1H5zM9 16h1v1H9zM12 16h1v1H12zM15 16h1v1H15zM19 16h2v1H19zM23 16h1v1H23zM25 16h1v1H25zM0 17h3v1H0zM4 17h2v1H4zM8 17h2v1H8zM11 17h1v1H11zM15 17h1v1H15zM18 17h4v1H18zM23 17h2v1H23zM27 17h1v1H27zM0 18h9v1H0zM10 18h1v1H10zM13 18h4v1H13zM19 18h2v1H19zM22 18h2v1H22zM25 18h1v1H25zM28,18 h1v1H28zM0 19h4v1H0zM8 19h1v1H8zM12 19h2v1H12zM15 19h1v1H15zM18 19h1v1H18zM20 19h1v1H20zM26 19h1v1H26zM0 20h2v1H0zM3 20h1v1H3zM6 20h1v1H6zM8 20h1v1H8zM10 20h4v1H10zM15 20h1v1H15zM17,20 h12v1H17zM8 21h1v1H8zM10 21h1v1H10zM13 21h1v1H13zM15 21h1v1H15zM17 21h1v1H17zM19 21h2v1H19zM24 21h1v1H24zM27 21h1v1H27zM0 22h7v1H0zM8 22h2v1H8zM11 22h1v1H11zM13 22h1v1H13zM15 22h3v1H15zM19 22h2v1H19zM22 22h1v1H22zM24 22h3v1H24zM0 23h1v1H0zM6 23h1v1H6zM8 23h1v1H8zM11 23h3v1H11zM15 23h1v1H15zM17 23h1v1H17zM19 23h2v1H19zM24 23h2v1H24zM27 23h1v1H27zM0 24h1v1H0zM2 24h3v1H2zM6 24h1v1H6zM8 24h1v1H8zM11 24h3v1H11zM15 24h2v1H15zM19 24h7v1H19zM27,24 h2v1H27zM0 25h1v1H0zM2 25h3v1H2zM6 25h1v1H6zM8 25h3v1H8zM14 25h3v1H14zM21 25h1v1H21zM23 25h1v1H23zM28,25 h1v1H28zM0 26h1v1H0zM2 26h3v1H2zM6 26h1v1H6zM10 26h1v1H10zM13 26h1v1H13zM15 26h2v1H15zM20 26h2v1H20zM24,26 h5v1H24zM0 27h1v1H0zM6 27h1v1H6zM10 27h1v1H10zM12 27h1v1H12zM16 27h1v1H16zM23 27h1v1H23zM25 27h2v1H25zM28,27 h1v1H28zM0 28h7v1H0zM8 28h1v1H8zM15 28h2v1H15zM19 28h3v1H19zM24 28h1v1H24z"
+        fill="#000000"
+        shape-rendering="crispEdges"
+      />
+    </svg>
+    <img
+      alt="Pubky Ring"
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity group-hover:opacity-90 group-active:opacity-80"
+      data-nimg="1"
+      decoding="async"
+      height="48"
+      loading="lazy"
+      src="/images/ring-logo.svg"
+      style="color: transparent;"
+      width="48"
+    />
+  </button>
+  <button
+    aria-busy="false"
+    class="items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal hidden w-full [@media(hover:none)and(pointer:coarse)]:flex"
+    data-size="lg"
+    data-slot="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-key mr-2 size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m2 21 9.6-9.6"
+      />
+      <path
+        d="m7.5 15.5 2.3 2.3a1 1 0 0 1 0 1.4l-2.1 2.1a1 1 0 0 1-1.4 0L4 19"
+      />
+      <circle
+        cx="15.5"
+        cy="7.5"
+        r="5.5"
+      />
+    </svg>
+    Continue with Pubky Ring
+  </button>
+  <div
+    class="mx-auto w-full flex flex-col items-center gap-4"
+    data-testid="container"
+  >
+    <img
+      alt="Pubky Ring"
+      class="h-auto max-w-full"
+      data-nimg="1"
+      decoding="async"
+      height="32"
+      loading="lazy"
+      src="/images/logo-pubky-ring.svg"
+      style="color: transparent;"
+      width="147"
+    />
+    <div
+      class="mx-auto w-full flex flex-row items-center justify-center gap-3.5"
+      data-testid="container"
+    >
+      <a
+        class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+        href="https://apps.apple.com/app/pubky-ring/id6739356756"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <img
+          alt="App Store"
+          class="h-auto max-w-full"
+          data-nimg="1"
+          decoding="async"
+          height="24"
+          loading="lazy"
+          src="/images/badge-apple.webp"
+          style="color: transparent;"
+          width="72"
+        />
+      </a>
+      <a
+        class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+        href="https://play.google.com/store/apps/details?id=to.pubky.ring&pcampaignid=web_share"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <img
+          alt="Google Play"
+          class="h-auto max-w-full"
+          data-nimg="1"
+          decoding="async"
+          height="24"
+          loading="lazy"
+          src="/images/badge-android.webp"
+          style="color: transparent;"
+          width="81"
+        />
+      </a>
+    </div>
+  </div>
+</div>
+`;

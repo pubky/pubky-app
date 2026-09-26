@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import type { TUnlockedListItem } from '@/services/locks/locks.types';
 import { useUnlockedList } from './useUnlockedList';
@@ -13,6 +13,13 @@ const authState = vi.hoisted(() => ({ currentUserPubky: 'me' as string | null, s
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
 }));
+const sessionNeedsUpgrade = vi.hoisted(() => ({ value: false }));
+vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
+  useSessionNeedsUpgrade: () => sessionNeedsUpgrade.value,
+}));
+afterEach(() => {
+  sessionNeedsUpgrade.value = false;
+});
 
 const item = (lockId: string, unlockedAt: number): TUnlockedListItem => ({
   lockId,
@@ -51,6 +58,50 @@ describe('useUnlockedList', () => {
     expect(result.current.isLoading).toBe(true);
 
     authState.session = {};
+    rerender();
+
+    await waitFor(() => expect(LocksController.fetchUnlockedList).toHaveBeenCalledTimes(1));
+  });
+
+  // The error the block reports must not survive the upgrade: the screen would show "couldn't load"
+  // while the first real read is still in flight.
+  it('goes to loading, not error, once the session is replaced', async () => {
+    sessionNeedsUpgrade.value = true;
+    let settle: (value: TUnlockedListItem[]) => void = () => undefined;
+    vi.mocked(LocksController.fetchUnlockedList).mockReturnValue(
+      new Promise((resolve) => {
+        settle = resolve;
+      }),
+    );
+
+    const { rerender, result } = renderHook(() => useUnlockedList());
+    expect(result.current.isError).toBe(true);
+
+    sessionNeedsUpgrade.value = false;
+    rerender();
+
+    await waitFor(() => expect(result.current.isLoading).toBe(true));
+    expect(result.current.isError).toBe(false);
+
+    settle([]);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.isError).toBe(false);
+  });
+
+  // A session from before `/priv` was requested is refused with a 403 the Err factory would report to Sentry.
+  it('skips the read while the session needs the upgrade, and reads once it is replaced', async () => {
+    sessionNeedsUpgrade.value = true;
+
+    const { rerender, result } = renderHook(() => useUnlockedList());
+
+    await Promise.resolve();
+    expect(LocksController.fetchUnlockedList).not.toHaveBeenCalled();
+    // Settled, or the sidebar spins on a count that cannot arrive — reported like a failed read, so
+    // it shows no number rather than a confident 0.
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isError).toBe(true);
+
+    sessionNeedsUpgrade.value = false;
     rerender();
 
     await waitFor(() => expect(LocksController.fetchUnlockedList).toHaveBeenCalledTimes(1));

@@ -43,7 +43,7 @@ import {
   type SettingsState,
 } from '@/stores/settings/settings.types';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
-import { mockSession as buildMockSession } from '@/test-utils/pubky';
+import { mockPubky as buildMockPubky, mockSession as buildMockSession } from '@/test-utils/pubky';
 import {
   mockAuthStore,
   mockHomeStore,
@@ -1613,6 +1613,96 @@ describe('AuthController', () => {
       });
 
       expect(logoutSpy).toHaveBeenCalledWith({ session: mockSession });
+    });
+  });
+
+  describe('getUpgradeAuthUrl', () => {
+    it("tracks the flow without wiping the signed-in user's local state", async () => {
+      const cancelAuthFlow = vi.fn();
+      const generateAuthUrlSpy = vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue({
+        authorizationUrl: 'https://example.com/auth?token=upgrade',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow,
+      });
+      const result = await AuthController.getUpgradeAuthUrl();
+
+      expect(result.authorizationUrl).toBe('https://example.com/auth?token=upgrade');
+      expect(generateAuthUrlSpy).toHaveBeenCalled();
+      expect(mockClearDatabase).not.toHaveBeenCalled();
+      expect(storeMocks.resetSettingsStore).not.toHaveBeenCalled();
+      expect(storeMocks.resetMigrationStore).not.toHaveBeenCalled();
+      // Still tracked: a later flow cancels this one.
+      await AuthController.getUpgradeAuthUrl();
+      expect(cancelAuthFlow).toHaveBeenCalled();
+    });
+  });
+
+  describe('upgradeSession', () => {
+    const currentUserPubky = buildMockPubky(TEST_PUBKY);
+
+    const mockSignedInStore = (overrides: Partial<AuthStore> = {}) => {
+      const authStore = { ...storeMocks.getAuthState(), currentUserPubky, hasProfile: true, ...overrides };
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
+      return authStore;
+    };
+
+    it('replaces the stored session and touches nothing else', async () => {
+      const oldSession = buildMockSession({ signout: vi.fn() });
+      const authStore = mockSignedInStore({ session: oldSession });
+      const signInStore = storeMocks.getSignInState();
+      vi.spyOn(useSignInStore, 'getState').mockReturnValue(mockSignInStore(signInStore));
+      const logoutSpy = vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+      const newSession = buildMockSession();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(currentUserPubky);
+
+      await AuthController.upgradeSession({ session: newSession });
+
+      expect(authStore.setSession).toHaveBeenCalledWith(newSession);
+      // Not a sign-in: no store re-init, no profile check, no sign-in progress, no redirect trigger.
+      expect(authStore.init).not.toHaveBeenCalled();
+      expect(authStore.setHasProfile).not.toHaveBeenCalled();
+      expect(authStore.reset).not.toHaveBeenCalled();
+      expect(signInStore.reset).not.toHaveBeenCalled();
+      // The old session stays signed in on the homeserver: its cookie is the new session's cookie.
+      expect(logoutSpy).not.toHaveBeenCalled();
+      expect(oldSession.signout).not.toHaveBeenCalled();
+    });
+
+    it('stops the auth flow that produced the session', async () => {
+      const cancelAuthFlow = vi.fn();
+      vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue({
+        authorizationUrl: 'https://example.com/auth?token=abc123',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow,
+      });
+      await AuthController.getAuthUrl();
+      mockSignedInStore();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(currentUserPubky);
+
+      await AuthController.upgradeSession({ session: buildMockSession() });
+
+      expect(cancelAuthFlow).toHaveBeenCalled();
+    });
+
+    // Picking the wrong identity in Ring is a user choice, so it comes back as `false` instead of an
+    // AppError — an AppError would file every mis-tap in Sentry as a fault.
+    it('reports a session approved with another key without throwing, and leaves the store untouched', async () => {
+      const authStore = mockSignedInStore();
+      const logoutSpy = vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+      const otherSession = buildMockSession();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(buildMockPubky('other-pubky'));
+
+      await expect(AuthController.upgradeSession({ session: otherSession })).resolves.toBe(false);
+
+      expect(authStore.setSession).not.toHaveBeenCalled();
+      expect(logoutSpy).toHaveBeenCalledWith({ session: otherSession });
+    });
+
+    it('reports a successful swap', async () => {
+      mockSignedInStore();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(currentUserPubky);
+
+      await expect(AuthController.upgradeSession({ session: buildMockSession() })).resolves.toBe(true);
     });
   });
 

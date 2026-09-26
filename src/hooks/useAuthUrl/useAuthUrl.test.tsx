@@ -13,7 +13,9 @@ const mockLoggerError = vi.fn();
 const mockCopyToClipboard = vi.fn().mockResolvedValue(undefined);
 const mockGetAuthUrl = vi.fn();
 const mockGetSignupAuthUrl = vi.fn();
+const mockGetUpgradeAuthUrl = vi.fn();
 const mockInitializeAuthenticatedSession = vi.fn();
+const mockUpgradeSession = vi.fn();
 const mockCancelActiveAuthFlow = vi.fn();
 vi.mock('@/molecules/Toaster/toast');
 
@@ -39,7 +41,9 @@ vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     getAuthUrl: (...args: unknown[]) => mockGetAuthUrl(...args),
     getSignupAuthUrl: (...args: unknown[]) => mockGetSignupAuthUrl(...args),
+    getUpgradeAuthUrl: (...args: unknown[]) => mockGetUpgradeAuthUrl(...args),
     initializeAuthenticatedSession: (...args: unknown[]) => mockInitializeAuthenticatedSession(...args),
+    upgradeSession: (...args: unknown[]) => mockUpgradeSession(...args),
     cancelActiveAuthFlow: (...args: unknown[]) => mockCancelActiveAuthFlow(...args),
   },
 }));
@@ -55,6 +59,7 @@ vi.mock('@/services/homeserver/error.utils', () => ({
 
 describe('useAuthUrl', () => {
   beforeEach(() => {
+    mockUpgradeSession.mockResolvedValue(true);
     vi.clearAllMocks();
   });
 
@@ -461,6 +466,71 @@ describe('useAuthUrl', () => {
 
     expect(mockGetSignupAuthUrl).toHaveBeenCalledWith('A9KM-7MJP-ERM9');
     expect(mockGetAuthUrl).not.toHaveBeenCalled();
+  });
+
+  it('swaps the session instead of signing in when type is upgrade', async () => {
+    const session = mockSession();
+
+    let resolveApproval: (session: Session) => void;
+    const mockAwaitApproval = new Promise<Session>((resolve) => {
+      resolveApproval = resolve;
+    });
+
+    mockGetUpgradeAuthUrl.mockResolvedValue({
+      authorizationUrl: 'pubkyring://authorize?token=upgrade',
+      awaitApproval: mockAwaitApproval,
+      cancelAuthFlow: createCancelAuthFlow(),
+    });
+
+    renderHook(() => useAuthUrl({ type: 'upgrade' }));
+
+    await waitFor(() => {
+      expect(mockGetUpgradeAuthUrl).toHaveBeenCalled();
+    });
+    // The sign-in URL path wipes local state for the previous account; an upgrade must not.
+    expect(mockGetAuthUrl).not.toHaveBeenCalled();
+
+    resolveApproval!(session);
+
+    await waitFor(() => {
+      expect(mockUpgradeSession).toHaveBeenCalledWith({ session });
+    });
+    expect(mockInitializeAuthenticatedSession).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+  });
+
+  it('shows the upgrade toast and expires the URL when the approval came from another key', async () => {
+    const session = mockSession();
+
+    let resolveApproval: (session: Session) => void;
+    const mockAwaitApproval = new Promise<Session>((resolve) => {
+      resolveApproval = resolve;
+    });
+
+    mockGetUpgradeAuthUrl.mockResolvedValue({
+      authorizationUrl: 'pubkyring://authorize?token=upgrade-rejected',
+      awaitApproval: mockAwaitApproval,
+      cancelAuthFlow: createCancelAuthFlow(),
+    });
+
+    mockUpgradeSession.mockResolvedValue(false); // wrong-key approval
+
+    const { result } = renderHook(() => useAuthUrl({ type: 'upgrade' }));
+
+    await waitFor(() => {
+      expect(result.current.url).toBe('pubkyring://authorize?token=upgrade-rejected');
+    });
+
+    resolveApproval!(session);
+
+    await waitFor(() => {
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Authorization failed. Approve with the key you are signed in with.',
+      });
+      expect(result.current.url).toBe('');
+      expect(result.current.isExpired).toBe(true);
+    });
   });
 
   it('copyAuthUrl copies url to clipboard', async () => {
