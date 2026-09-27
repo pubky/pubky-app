@@ -512,7 +512,7 @@ exports[`Carousel - Snapshots > matches snapshot with custom button variants 1`]
     </div>
   </div>
   <button
-    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 size-9 absolute h-8 w-10 rounded-full top-1/2 -left-16 -translate-y-1/2"
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 size-9 absolute h-8 w-10 rounded-full top-1/2 -left-16 -translate-y-1/2"
     data-size="icon"
     data-slot="carousel-previous"
     data-variant="outline"
@@ -544,7 +544,7 @@ exports[`Carousel - Snapshots > matches snapshot with custom button variants 1`]
     </span>
   </button>
   <button
-    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 size-9 absolute h-8 w-10 rounded-full top-1/2 -right-16 -translate-y-1/2"
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 size-9 absolute h-8 w-10 rounded-full top-1/2 -right-16 -translate-y-1/2"
     data-size="icon"
     data-slot="carousel-next"
     data-variant="outline"
