@@ -60,8 +60,7 @@ export function ActionButtons({
               id="learn-btn"
               data-cy="learn-btn"
               variant="outline"
-              className="flex-1 gap-2"
-              size="lg"
+              className="flex-1 gap-2 backdrop-blur-sm"
               onClick={onLearn}
             >
               <BookOpen className="h-4 w-4" />
@@ -73,8 +72,7 @@ export function ActionButtons({
               id="explore-btn"
               data-cy="explore-btn"
               variant="outline"
-              className="flex-1 gap-2"
-              size="lg"
+              className="flex-1 gap-2 backdrop-blur-sm"
               onClick={onExplore}
             >
               <Eye className="h-4 w-4" />

@@ -13,7 +13,8 @@ import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { type ReachFilterValue } from '@/stores/home/home.types';
-import { REACH, type ReachType } from '@/stores/home/home.types';
+import { type ContentType, REACH, type ReachType, type SortType } from '@/stores/home/home.types';
+import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
 import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
@@ -66,6 +67,30 @@ function HomeFeedFilters({
   const effectiveProfileTags = isAuthenticated ? profileTags : [];
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
 
+  const getSelectedStreamId = () => {
+    const state = useHomeStore.getState();
+    return getHomeStreamIdFromFilters({
+      sort: state.sort,
+      reach: state.reach,
+      content: resolveVisualFeedContent({ content: state.content, variant: feedVariant, isVisualActive }),
+      currentUserPubky,
+      profileTags: state.profileTags,
+      taggedAsActive: state.taggedAsActive,
+    });
+  };
+
+  // A filter change that selects a different stream starts that feed from the
+  // top. The feed layout never resets `window.scrollY` on a same-route filter
+  // change, so the new stream would otherwise inherit the previous offset.
+  // Layout changes keep the stream and are not routed through here.
+  const applyStreamFilter = (applyChange: () => void) => {
+    const previousStreamId = getSelectedStreamId();
+    applyChange();
+    if (getSelectedStreamId() !== previousStreamId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   // "All" reach is public; other reach options require an account, so prompt Join Pubky in Explore mode.
   const handleReachChange = (value: ReachFilterValue) => {
     if (value === REACH.ALL) {
@@ -73,20 +98,26 @@ function HomeFeedFilters({
       // an explicit choice so a visitor remains eligible for the post-signup
       // My-network default.
       if (isAuthenticated) {
-        setReach(value);
+        applyStreamFilter(() => setReach(value));
       }
       return;
     }
 
-    requireAuth(() => {
-      if (value === TAGGED_AS_FILTER_KEY) {
-        setTaggedAsActive(true);
-        return;
-      }
+    requireAuth(() =>
+      applyStreamFilter(() => {
+        if (value === TAGGED_AS_FILTER_KEY) {
+          setTaggedAsActive(true);
+          return;
+        }
 
-      setReach(value as ReachType);
-    });
+        setReach(value as ReachType);
+      }),
+    );
   };
+  const handleProfileTagAdd = (tag: string) => applyStreamFilter(() => addProfileTag(tag));
+  const handleProfileTagRemove = (tag: string) => applyStreamFilter(() => removeProfileTag(tag));
+  const handleSortChange = (value: SortType) => applyStreamFilter(() => setSort(value));
+  const handleContentChange = (value: ContentType) => applyStreamFilter(() => setContent(value));
   const resolvedContent = resolveVisualFeedContent({
     content,
     variant: feedVariant,
@@ -104,25 +135,33 @@ function HomeFeedFilters({
           onTabChange={handleReachChange}
           showTaggedAs
           profileTags={effectiveProfileTags}
-          onProfileTagAdd={addProfileTag}
-          onProfileTagRemove={removeProfileTag}
+          onProfileTagAdd={handleProfileTagAdd}
+          onProfileTagRemove={handleProfileTagRemove}
           profileTagsDisabled={!isAuthenticated || !taggedAsActive}
         />
       )}
-      {!hideSortFilter && <FilterSort selectedTab={sort} onTabChange={setSort} />}
+      {!hideSortFilter && <FilterSort selectedTab={sort} onTabChange={handleSortChange} />}
       {variant === 'sidebar' ? (
         <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
           {!hideLayoutFilter && (
             <FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
           )}
-          <FilterContent selectedTab={resolvedContent} onTabChange={setContent} disabledTabs={disabledContentTabs} />
+          <FilterContent
+            selectedTab={resolvedContent}
+            onTabChange={handleContentChange}
+            disabledTabs={disabledContentTabs}
+          />
         </Container>
       ) : (
         <>
           {!hideLayoutFilter && (
             <FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
           )}
-          <FilterContent selectedTab={resolvedContent} onTabChange={setContent} disabledTabs={disabledContentTabs} />
+          <FilterContent
+            selectedTab={resolvedContent}
+            onTabChange={handleContentChange}
+            disabledTabs={disabledContentTabs}
+          />
         </>
       )}
     </Container>
