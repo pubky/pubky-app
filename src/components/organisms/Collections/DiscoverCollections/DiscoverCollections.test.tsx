@@ -2,6 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
+import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
@@ -383,8 +384,8 @@ describe('DiscoverCollections', () => {
   });
 
   describe('unfollow reload', () => {
-    // The bookmarks overlay is the live query with `[]` deps; the deletions
-    // overlay (deps `[visibleIds]`) hides nothing in these scenarios.
+    // The followed-collections overlay is the live query with `[]` deps; the
+    // deletions overlay (deps `[visibleIds]`) hides nothing in these scenarios.
     let bookmarks: string[];
 
     const cardIds = () => screen.getAllByTestId('collection-card').map((card) => card.getAttribute('data-post-id'));
@@ -414,17 +415,11 @@ describe('DiscoverCollections', () => {
       return (slice: TReadPostStreamChunkResponse) => act(async () => resolve(slice));
     };
 
-    const mockGetDetailsByIds = vi.mocked(PostController.getDetailsByIds);
-    const detailsOfKind = (kind: string) => asOpaque<PostDetailsModelSchema>({ kind });
-
     beforeEach(() => {
       mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
       bookmarks = [];
       mockUseLiveQuery.mockImplementation((_fn: unknown, deps?: unknown[]) =>
         Array.isArray(deps) && deps.length === 0 ? bookmarks : new Set<string>(),
-      );
-      mockGetDetailsByIds.mockImplementation(async ({ compositeIds }) =>
-        compositeIds.map(() => detailsOfKind('collection')),
       );
     });
 
@@ -550,9 +545,7 @@ describe('DiscoverCollections', () => {
       const { rerender } = await act(async () => render(<DiscoverCollections />));
 
       await setBookmarks([], rerender);
-      await act(async () => {});
 
-      expect(mockGetDetailsByIds).not.toHaveBeenCalled();
       expect(mockGetOrFetchStreamSlice).not.toHaveBeenCalled();
     });
 
@@ -625,73 +618,37 @@ describe('DiscoverCollections', () => {
       await waitFor(() => expect(cardIds()).toEqual(['3', '4']));
       expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 5 });
     });
+  });
 
-    it('does not reload when the collection is re-followed before its kind is read', async () => {
-      bookmarks = ['x:followed'];
-      let resolveDetails: (details: (PostDetailsModelSchema | undefined)[]) => void = () => {};
-      mockGetDetailsByIds.mockImplementationOnce(
-        () =>
-          new Promise((res) => {
-            resolveDetails = res;
-          }),
-      );
-      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1'], reachedEnd: true }));
-      const { rerender } = await act(async () => render(<DiscoverCollections />));
-      await waitFor(() => expect(cardIds()).toEqual(['1']));
+  describe('followed collections query', () => {
+    const mockGetAll = vi.mocked(BookmarkController.getAll);
+    const mockGetDetailsByIds = vi.mocked(PostController.getDetailsByIds);
+    const detailsOfKind = (kind: string) => asOpaque<PostDetailsModelSchema>({ kind });
 
-      await setBookmarks([], rerender);
-      await setBookmarks(['x:followed'], rerender);
-      await act(async () => resolveDetails([detailsOfKind('collection')]));
+    /** Runs the live query the component registers for the followed collections. */
+    const runFollowedQuery = async () => {
+      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+      await act(async () => {
+        render(<DiscoverCollections />);
+      });
+      const call = mockUseLiveQuery.mock.calls.find(([, deps]) => Array.isArray(deps) && deps.length === 0);
+      const query = call?.[0] as () => Promise<string[]>;
+      return await query();
+    };
 
-      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+    it('keeps followed collections and leaves ordinary post bookmarks out', async () => {
+      mockGetAll.mockResolvedValue(['a:collection', 'b:post']);
+      mockGetDetailsByIds.mockResolvedValue([detailsOfKind('collection'), detailsOfKind('short')]);
+
+      expect(await runFollowedQuery()).toEqual(['a:collection']);
     });
 
-    it('does not reload after unmounting while the kind is read', async () => {
-      bookmarks = ['x:followed'];
-      let resolveDetails: (details: (PostDetailsModelSchema | undefined)[]) => void = () => {};
-      mockGetDetailsByIds.mockImplementationOnce(
-        () =>
-          new Promise((res) => {
-            resolveDetails = res;
-          }),
-      );
-      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1'], reachedEnd: true }));
-      const { rerender, unmount } = await act(async () => render(<DiscoverCollections />));
-      await waitFor(() => expect(cardIds()).toEqual(['1']));
-
-      await setBookmarks([], rerender);
-      unmount();
-      await act(async () => resolveDetails([detailsOfKind('collection')]));
-
-      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not reload when an ordinary post is unbookmarked', async () => {
-      bookmarks = ['p:post'];
-      mockGetDetailsByIds.mockResolvedValue([detailsOfKind('short')]);
-      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true }));
-      const { rerender } = await act(async () => render(<DiscoverCollections />));
-      await waitFor(() => expect(cardIds()).toEqual(['1', '2']));
-
-      await setBookmarks([], rerender);
-
-      await waitFor(() => expect(mockGetDetailsByIds).toHaveBeenCalledWith({ compositeIds: ['p:post'] }));
-      await act(async () => {});
-      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
-    });
-
-    it('reloads when the unbookmarked id has no local details, since it may be a collection', async () => {
-      bookmarks = ['x:unknown'];
+    it('leaves out a bookmark whose post details are not local', async () => {
+      // Its kind resolving later must not read as an unfollow and reload Discover.
+      mockGetAll.mockResolvedValue(['a:unknown']);
       mockGetDetailsByIds.mockResolvedValue([undefined]);
-      mockGetOrFetchStreamSlice
-        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1'], reachedEnd: true, nextCursor: 1 }))
-        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['x:unknown', 'a:1'], reachedEnd: true, nextCursor: 2 }));
-      const { rerender } = await act(async () => render(<DiscoverCollections />));
-      await waitFor(() => expect(cardIds()).toEqual(['1']));
 
-      await setBookmarks([], rerender);
-
-      await waitFor(() => expect(cardIds()).toEqual(['unknown', '1']));
+      expect(await runFollowedQuery()).toEqual([]);
     });
   });
 

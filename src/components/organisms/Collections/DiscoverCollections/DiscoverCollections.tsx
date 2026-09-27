@@ -41,6 +41,18 @@ const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
 type LoadPhase = 'idle' | 'initial' | 'more' | 'reload';
 
 /**
+ * The viewer's followed collections, read live: bookmarks whose local post is a
+ * collection, as in `FollowedCollections`. Ordinary post bookmarks never appear
+ * in Discover, so they can neither hide a card nor trigger a reload.
+ */
+async function getFollowedCollectionIds(): Promise<string[]> {
+  const ids = await BookmarkController.getAll();
+  if (ids.length === 0) return [];
+  const details = await PostController.getDetailsByIds({ compositeIds: ids });
+  return ids.filter((_, index) => details[index]?.kind === 'collection');
+}
+
+/**
  * DiscoverCollections
  *
  * "Discover Collections" section. Pulls the global engagement-sorted
@@ -63,7 +75,7 @@ type LoadPhase = 'idle' | 'initial' | 'more' | 'reload';
  *      same slice.
  *
  *   2. **Render-time subtractive overlay** — `useLiveQuery` subscribes
- *      to the local `bookmarks` table (and `post_details` for deletions /
+ *      to the viewer's followed collections (and `post_details` for deletions /
  *      emptied collections) and yields sets of ids to hide. `displayIds`
  *      is `visibleIds` minus those sets. The overlay is monotonically
  *      subtractive (it can only remove, never add unfiltered cards), so it
@@ -75,7 +87,7 @@ type LoadPhase = 'idle' | 'initial' | 'more' | 'reload';
  *   3. **Unfollow reload** — a collection that was already followed when
  *      its page loaded was dropped by the fetch-time filter, so it is not in
  *      `visibleIds` and the subtractive overlay cannot bring it back. When a
- *      bookmark disappears for a collection that is not loaded, the depth
+ *      collection that is not loaded leaves the followed set, the depth
  *      already loaded is re-pulled from offset 0 and swapped in without
  *      clearing the grid, returning the collection at its popularity
  *      position. Every load is ordered by one generation counter (the newest
@@ -300,18 +312,17 @@ export function DiscoverCollections() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated, currentUserPubky, streamId]);
 
-  // Live-reactive subtractive overlay: subscribe to the local bookmark id
-  // set so any Follow performed elsewhere in the app (e.g. from the Followed
-  // section's Unfollow CTA being toggled back on, or from a future surface)
-  // removes the corresponding card here without a reload. While the live
+  // Live-reactive subtractive overlay: subscribe to the followed collections
+  // so any Follow performed elsewhere in the app (e.g. from a collection page's
+  // hero) removes the corresponding card here without a reload. While the live
   // query is still resolving (`undefined`) we render `visibleIds` unfiltered
   // — safe because the stream-layer fetch filter has already excluded
   // everything bookmarked at fetch time, so there's nothing for the overlay
   // to remove on first paint.
-  const bookmarkedLive = useLiveQuery(() => BookmarkController.getAll(), []);
+  const bookmarkedLive = useLiveQuery(getFollowedCollectionIds, []);
   const bookmarkedSet = bookmarkedLive ? new Set(bookmarkedLive) : null;
 
-  // Unfollow reload: a collection that left the bookmark set but is not loaded
+  // Unfollow reload: a collection that left the followed set but is not loaded
   // was dropped by the fetch-time filter, so only a reload can return it
   // (#2237). A loaded id reappears through the overlay above on its own.
   const previousBookmarkedRef = useRef<Set<string> | null>(null);
@@ -324,33 +335,12 @@ export function DiscoverCollections() {
     // reload: that load reads the current bookmarks itself.
     if (!previous || generationRef.current === 0) return;
 
-    const isUnloadedUnfollow = (id: string) =>
-      !previousBookmarkedRef.current?.has(id) && !visibleIdsRef.current.includes(id);
-    const candidates = [...previous].filter((id) => !current.has(id) && isUnloadedUnfollow(id));
-    if (candidates.length === 0) return;
-
-    // Any reset that starts after this point re-reads the bookmarks, so it
-    // already covers these unfollows.
-    const generation = generationRef.current;
-    // Bookmarks also hold ordinary posts, which never appear in Discover. An
-    // id without local details (or a failed read) may still be a collection.
-    void PostController.getDetailsByIds({ compositeIds: candidates })
-      .then((details) =>
-        candidates.filter((_, index) => {
-          const kind = details[index]?.kind;
-          return kind === undefined || kind === 'collection';
-        }),
-      )
-      .catch(() => candidates)
-      .then((collectionIds) => {
-        // Skip when a newer reset (or unmount) superseded this check, or when
-        // every candidate was re-followed or loaded while it ran.
-        if (generationRef.current !== generation) return;
-        if (!collectionIds.some(isUnloadedUnfollow)) return;
-        void reset({ keepGrid: visibleIdsRef.current.length > 0 });
-      });
+    const unfollowedUnloaded = [...previous].some((id) => !current.has(id) && !visibleIdsRef.current.includes(id));
+    if (unfollowedUnloaded) {
+      void reset({ keepGrid: visibleIdsRef.current.length > 0 });
+    }
     // `reset` is recreated on every render (it closes over refs); only a new
-    // bookmark snapshot should trigger this check.
+    // followed snapshot should trigger this check.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookmarkedLive]);
 
