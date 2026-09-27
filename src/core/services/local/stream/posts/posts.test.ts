@@ -15,6 +15,7 @@ import { TagModel } from '@/models/shared/tag/tag';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type { NexusPost, NexusPostDetails, NexusTag } from '@/services/nexus/nexus.types';
 import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
@@ -504,6 +505,27 @@ describe('LocalStreamPostsService', () => {
         expect(ids).toEqual([buildCompositeId({ pubky: 'a1', id: 'p1' }), buildCompositeId({ pubky: 'a2', id: 'p2' })]);
         // All rows must have a numeric created_at — the bug guard.
         expect(all.every((row) => typeof row.created_at === 'number')).toBe(true);
+      });
+
+      it('does not restore a bookmark the viewer removed while Nexus was still indexing it', async () => {
+        // #2237: a post view fetched within Nexus's indexing lag still reports the
+        // removed bookmark; persisting it would bring the unfollowed collection back.
+        const removedId = buildCompositeId({ pubky: 'a1', id: 'p1' });
+        recentUnbookmarks.markRemoved(removedId);
+        const posts = [
+          createMockNexusPost('p1', 'a1', BASE_TIMESTAMP, { bookmark: { id: 'bm-1', indexed_at: 1_000 } }),
+          createMockNexusPost('p2', 'a2', BASE_TIMESTAMP, { bookmark: { id: 'bm-2', indexed_at: 2_000 } }),
+        ];
+
+        try {
+          await LocalStreamPostsService.persistPosts({ posts });
+        } finally {
+          recentUnbookmarks.reset();
+        }
+
+        const ids = (await BookmarkModel.table.toArray()).map((row) => row.id);
+        expect(ids).toEqual([buildCompositeId({ pubky: 'a2', id: 'p2' })]);
+        expect(await PostDetailsModel.table.get(removedId)).toBeTruthy();
       });
     });
   });
