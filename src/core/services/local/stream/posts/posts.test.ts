@@ -511,14 +511,14 @@ describe('LocalStreamPostsService', () => {
         // #2237: a post view fetched within Nexus's indexing lag still reports the
         // removed bookmark; persisting it would bring the unfollowed collection back.
         const removedId = buildCompositeId({ pubky: 'a1', id: 'p1' });
-        recentUnbookmarks.markRemoved(removedId);
+        recentUnbookmarks.markRemoved('viewer-a', removedId);
         const posts = [
           createMockNexusPost('p1', 'a1', BASE_TIMESTAMP, { bookmark: { id: 'bm-1', indexed_at: 1_000 } }),
           createMockNexusPost('p2', 'a2', BASE_TIMESTAMP, { bookmark: { id: 'bm-2', indexed_at: 2_000 } }),
         ];
 
         try {
-          await LocalStreamPostsService.persistPosts({ posts });
+          await LocalStreamPostsService.persistPosts({ posts, tagGuard: { viewerId: 'viewer-a' } });
         } finally {
           recentUnbookmarks.reset();
         }
@@ -526,6 +526,24 @@ describe('LocalStreamPostsService', () => {
         const ids = (await BookmarkModel.table.toArray()).map((row) => row.id);
         expect(ids).toEqual([buildCompositeId({ pubky: 'a2', id: 'p2' })]);
         expect(await PostDetailsModel.table.get(removedId)).toBeTruthy();
+      });
+
+      it("keeps another viewer's bookmark on a post the previous viewer unbookmarked", async () => {
+        // Viewer A unbookmarks, then viewer B signs in to the same tab: B's own
+        // bookmark from Nexus must still be persisted.
+        const postId = buildCompositeId({ pubky: 'a1', id: 'p1' });
+        recentUnbookmarks.markRemoved('viewer-a', postId);
+        const posts = [
+          createMockNexusPost('p1', 'a1', BASE_TIMESTAMP, { bookmark: { id: 'bm-1', indexed_at: 1_000 } }),
+        ];
+
+        try {
+          await LocalStreamPostsService.persistPosts({ posts, tagGuard: { viewerId: 'viewer-b' } });
+        } finally {
+          recentUnbookmarks.reset();
+        }
+
+        expect(await BookmarkModel.table.get(postId)).toBeTruthy();
       });
     });
   });

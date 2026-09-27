@@ -214,14 +214,14 @@ describe('LocalBookmarkService', () => {
     it('should keep a stale Nexus copy of the removed bookmark from restoring it', async () => {
       await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
 
-      expect(recentUnbookmarks.isProtected(testData.compositePostId)).toBe(true);
+      expect(recentUnbookmarks.isProtected(testData.userPubky, testData.compositePostId)).toBe(true);
     });
 
     it('should let a re-bookmark lift the protection of an earlier removal', async () => {
       await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
       await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
 
-      expect(recentUnbookmarks.isProtected(testData.compositePostId)).toBe(false);
+      expect(recentUnbookmarks.isProtected(testData.userPubky, testData.compositePostId)).toBe(false);
       expect(await getSavedBookmark()).toBeTruthy();
     });
 

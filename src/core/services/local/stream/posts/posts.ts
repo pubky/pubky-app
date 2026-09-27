@@ -418,7 +418,7 @@ export class LocalStreamPostsService {
         // A bookmark the viewer removed locally while Nexus was still indexing
         // the removal must not come back (see `recentUnbookmarks`).
         const liveBookmarks = postBookmarks.filter(
-          (b) => !tombstonedIds.has(b.id) && !recentUnbookmarks.isProtected(b.id),
+          (b) => !tombstonedIds.has(b.id) && !recentUnbookmarks.isProtected(tagGuard.viewerId, b.id),
         );
         const liveModerations = postModerations.filter((m) => !tombstonedIds.has(m.id));
 

@@ -34,16 +34,16 @@ export class LocalBookmarkService {
   /**
    * Persists a bookmark operation (create or delete).
    *
-   * A delete is recorded in `recentUnbookmarks` before the write, so a Nexus
-   * response that still reports the bookmark cannot restore it; a create
-   * clears that record.
+   * A delete is recorded in `recentUnbookmarks` for this viewer before the
+   * write, so a Nexus response that still reports the bookmark cannot restore
+   * it; a create clears that record.
    */
   static async persist(action: HttpMethod, { userId, postId }: TBookmarkEventParams) {
     const isCreate = action === HttpMethod.PUT;
     if (isCreate) {
-      recentUnbookmarks.clear(postId);
+      recentUnbookmarks.clear(userId, postId);
     } else {
-      recentUnbookmarks.markRemoved(postId);
+      recentUnbookmarks.markRemoved(userId, postId);
     }
 
     try {
