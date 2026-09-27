@@ -1,4 +1,4 @@
-import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
+import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { z } from 'zod';
 import { POST_KINDS } from '@/models/models.types';
 

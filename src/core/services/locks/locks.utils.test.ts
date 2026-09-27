@@ -31,7 +31,7 @@ vi.mock('@/config/network', () => ({
   getPaykitServerUrl: mocks.getPaykitServerUrl,
 }));
 
-vi.mock('@pubky/locks-sdk', () => {
+vi.mock('@synonymdev/locks-sdk', () => {
   class LocksOptions {
     addPkarrRelay = mocks.addPkarrRelay;
     setLocalTestnetHomeserver = mocks.setLocalTestnetHomeserver;
