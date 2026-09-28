@@ -2,7 +2,7 @@ import type { TFeedIdParam } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
 import { FeedModel } from '@/models/feed/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
-import type { TFeedRollbackParams } from './feed.types';
+import type { TFeedRollbackParams, TFeedWriteResult } from './feed.types';
 
 const FEED_TABLES = [FeedModel.table];
 
@@ -15,12 +15,18 @@ export class LocalFeedService {
 
   /**
    * Persist a feed to local storage.
-   * The ID is always a HashId-derived string provided upfront, so this is a plain upsert.
+   * The ID is always a HashId-derived string provided upfront, so this is a plain upsert. The row as
+   * it was before the write is read in the same transaction and returned alongside, so a caller that
+   * has to undo the write holds an exact snapshot.
    */
-  static async createOrUpdate(feed: FeedModelSchema): Promise<FeedModelSchema> {
+  static async createOrUpdate(feed: FeedModelSchema): Promise<TFeedWriteResult> {
     return await db.transaction('rw', FEED_TABLES, async () => {
+      const prior = await FeedModel.findById(feed.id);
       await FeedModel.upsert(feed);
-      return this.normalize(await FeedModel.findByIdOrThrow(feed.id));
+      return {
+        persisted: this.normalize(await FeedModel.findByIdOrThrow(feed.id)),
+        prior: prior ? this.normalize(prior) : null,
+      };
     });
   }
 

@@ -195,7 +195,7 @@ describe('FeedApplication', () => {
         created_at: Date.now(),
         updated_at: Date.now(),
       };
-      createOrUpdateSpy.mockResolvedValue(mockPersistedFeed);
+      createOrUpdateSpy.mockResolvedValue({ persisted: mockPersistedFeed, prior: null });
       requestSpy.mockResolvedValue(undefined);
 
       const result = await FeedApplication.persist({ userId: testUserId, params: mockParams });
@@ -222,7 +222,7 @@ describe('FeedApplication', () => {
         feed: createMockFeedResult({ tags: [], domainTags: ['bitcoiner', '🔥'], reach: PubkyAppFeedReach.Wot }),
       };
       const { createOrUpdateSpy, requestSpy } = setupMocks();
-      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve(feed));
+      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: null }));
       requestSpy.mockResolvedValue(undefined);
 
       const result = await FeedApplication.persist({ userId: testUserId, params: mockParams });
@@ -395,10 +395,9 @@ describe('FeedApplication', () => {
 
     it('should roll back the local create and rethrow when homeserver sync fails', async () => {
       const mockParams = createMockCreateParams();
-      const { readSpy, createOrUpdateSpy, rollbackSpy, requestSpy, loggerErrorSpy } = setupMocks();
+      const { createOrUpdateSpy, rollbackSpy, requestSpy, loggerErrorSpy } = setupMocks();
 
-      readSpy.mockResolvedValue(null);
-      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve(feed));
+      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: null }));
       rollbackSpy.mockResolvedValue(true);
       requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
 
@@ -406,7 +405,6 @@ describe('FeedApplication', () => {
         'Failed to PUT to homeserver: 500',
       );
 
-      expect(readSpy).toHaveBeenCalledWith({ feedId: 'feed123' });
       expect(createOrUpdateSpy).toHaveBeenCalledTimes(1);
       const written = createOrUpdateSpy.mock.calls[0][0];
       expect(rollbackSpy).toHaveBeenCalledWith({
@@ -426,7 +424,7 @@ describe('FeedApplication', () => {
 
       const priorFeed = createMockFeedSchema({ name: 'Original Name', icon: 'star', created_at: 1000000 });
       readSpy.mockResolvedValue(priorFeed);
-      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve(feed));
+      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: priorFeed }));
       rollbackSpy.mockResolvedValue(true);
       requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
 
@@ -448,11 +446,10 @@ describe('FeedApplication', () => {
     it('should restore the existing row when a create collides with a cached feed ID and sync fails', async () => {
       // No existingId: the dialog created a feed whose config hashes to an id already cached locally.
       const mockParams: TFeedPersistCreateParams = { feed: createMockFeedResult({ name: 'Duplicate Config' }) };
-      const { readSpy, createOrUpdateSpy, rollbackSpy, requestSpy } = setupMocks();
+      const { createOrUpdateSpy, rollbackSpy, requestSpy } = setupMocks();
 
       const priorFeed = createMockFeedSchema({ name: 'Original Name', created_at: 1000000 });
-      readSpy.mockResolvedValue(priorFeed);
-      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve(feed));
+      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: priorFeed }));
       rollbackSpy.mockResolvedValue(true);
       requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
 
@@ -465,10 +462,9 @@ describe('FeedApplication', () => {
 
     it('should log a failed rollback and still rethrow the homeserver error', async () => {
       const mockParams = createMockCreateParams();
-      const { readSpy, createOrUpdateSpy, rollbackSpy, requestSpy, loggerErrorSpy } = setupMocks();
+      const { createOrUpdateSpy, rollbackSpy, requestSpy, loggerErrorSpy } = setupMocks();
 
-      readSpy.mockResolvedValue(null);
-      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve(feed));
+      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: null }));
       const rollbackError = new Error('IndexedDB unavailable');
       rollbackSpy.mockRejectedValue(rollbackError);
       requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
@@ -486,10 +482,9 @@ describe('FeedApplication', () => {
 
     it('should not log a failed rollback again when it is already an AppError', async () => {
       const mockParams = createMockCreateParams();
-      const { readSpy, createOrUpdateSpy, rollbackSpy, requestSpy, loggerErrorSpy } = setupMocks();
+      const { createOrUpdateSpy, rollbackSpy, requestSpy, loggerErrorSpy } = setupMocks();
 
-      readSpy.mockResolvedValue(null);
-      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve(feed));
+      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: null }));
       rollbackSpy.mockRejectedValue(
         new AppError({
           category: ErrorCategory.Database,
