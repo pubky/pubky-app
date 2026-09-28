@@ -147,7 +147,11 @@ export class LocalStreamUsersService {
       // The badge tier lives on the Nexus user view, not on `details`; it rides on the
       // details row so profile reads stay a single lookup. An absent field (older Nexus)
       // is stored as `null` so readers treat it as "no ranking" rather than "never fetched".
-      userDetails.push({ ...user.details, social_graph_status: toSocialGraphStatus(user.social_graph_status) });
+      userDetails.push({
+        ...user.details,
+        nexusIndexedAt: user.details.indexed_at,
+        social_graph_status: toSocialGraphStatus(user.social_graph_status),
+      });
       userTtl.push([userId, { lastUpdatedAt: now }]);
 
       // Detect moderation from user tags

@@ -29,8 +29,13 @@ describe('LockContentParser', () => {
       expect(LockContentParser.parse('"hi"')).toBeNull();
     });
 
-    it('defaults missing fields to empty strings', () => {
-      expect(LockContentParser.parse(JSON.stringify({}))).toEqual({ lock_title: '', teaser_description: '' });
+    // Any JSON object would otherwise parse into a blank teaser, which reads as a lock elsewhere.
+    it('returns null for an object carrying neither envelope field', () => {
+      expect(LockContentParser.parse(JSON.stringify({}))).toBeNull();
+      expect(LockContentParser.parse(JSON.stringify({ title: 'My Article', body: 'Body' }))).toBeNull();
+    });
+
+    it('defaults the other field to an empty string once one is present', () => {
       expect(LockContentParser.parse(JSON.stringify({ lock_title: 'X' }))).toEqual({
         lock_title: 'X',
         teaser_description: '',
@@ -243,6 +248,7 @@ describe('GuardedContentParser', () => {
   });
 
   describe('buildUnlockedPost', () => {
+    const ANNOUNCEMENT_URI = 'pubky://author1/pub/pubky.app/posts/POST1';
     const post: GuardedPost = {
       content: 'secret',
       kind: 'image',
@@ -250,24 +256,75 @@ describe('GuardedContentParser', () => {
     };
 
     it('repoints attachments at the reader copy with inline content types', () => {
-      const json = GuardedContentParser.buildUnlockedPost(post, 'readerpubky', 'LOCK1', [
-        { id: 'img1', contentType: 'image/png' },
-      ]);
+      const json = GuardedContentParser.buildUnlockedPost(
+        post,
+        'readerpubky',
+        'LOCK1',
+        [{ id: 'img1', contentType: 'image/png', slot: 0 }],
+        ANNOUNCEMENT_URI,
+      );
       expect(JSON.parse(json)).toEqual({
         content: 'secret',
         kind: 'image',
-        attachments: [{ url: 'pubky://readerpubky/priv/social/unlocked/LOCK1/img1', content_type: 'image/png' }],
+        attachments: [
+          { url: 'pubky://readerpubky/priv/social/unlocked/LOCK1/img1', content_type: 'image/png', slot: 0 },
+        ],
+        announcement: ANNOUNCEMENT_URI,
       });
     });
 
+    it('records the slot of each attachment, so a dropped one leaves a gap an article body can see', () => {
+      const json = GuardedContentParser.buildUnlockedPost(
+        post,
+        'readerpubky',
+        'LOCK1',
+        [
+          { id: 'cover', contentType: 'image/png', slot: 0 },
+          { id: 'second-image', contentType: 'image/png', slot: 2 },
+        ],
+        ANNOUNCEMENT_URI,
+      );
+
+      expect(JSON.parse(json).attachments.map((attachment: { slot: number }) => attachment.slot)).toEqual([0, 2]);
+    });
+
     it('keeps attachments null when the post has none', () => {
-      const json = GuardedContentParser.buildUnlockedPost({ ...post, attachments: null }, 'readerpubky', 'LOCK1', []);
+      const json = GuardedContentParser.buildUnlockedPost(
+        { ...post, attachments: null },
+        'readerpubky',
+        'LOCK1',
+        [],
+        ANNOUNCEMENT_URI,
+      );
       expect(JSON.parse(json).attachments).toBeNull();
     });
   });
 
   describe('parseReplicatedPost', () => {
     const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+
+    it('reads the slot of each attachment', () => {
+      const bytes = encode({
+        content: 'body',
+        kind: 'long',
+        attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png', slot: 2 }],
+      });
+
+      expect(GuardedContentParser.parseReplicatedPost(bytes)?.attachments?.[0].slot).toBe(2);
+    });
+
+    it('keeps the post when a slot is unreadable: the attachment falls back to its position', () => {
+      const bytes = encode({
+        content: 'body',
+        kind: 'long',
+        attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png', slot: 'first' }],
+      });
+
+      const parsed = GuardedContentParser.parseReplicatedPost(bytes);
+
+      expect(parsed?.content).toBe('body');
+      expect(parsed?.attachments?.[0].slot).toBeUndefined();
+    });
 
     it('parses the reader post.json with inline attachment content types', () => {
       const bytes = encode({
@@ -280,6 +337,26 @@ describe('GuardedContentParser', () => {
         kind: 'image',
         attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png' }],
       });
+    });
+
+    it('parses a marker written before the announcement was recorded', () => {
+      const bytes = encode({ content: 'body', kind: 'short', attachments: null });
+
+      // Assert the parse succeeded too: a rejected marker would also read as an absent announcement.
+      expect(GuardedContentParser.parseReplicatedPost(bytes)).toEqual({
+        content: 'body',
+        kind: 'short',
+        attachments: null,
+      });
+    });
+
+    it('drops a non-pubky announcement instead of rejecting the whole marker', () => {
+      const bytes = encode({ content: 'body', kind: 'short', attachments: null, announcement: 'https://evil/posts/x' });
+
+      const parsed = GuardedContentParser.parseReplicatedPost(bytes);
+
+      expect(parsed?.content).toBe('body');
+      expect(parsed?.announcement).toBeUndefined();
     });
 
     it('returns null for non-JSON bytes', () => {

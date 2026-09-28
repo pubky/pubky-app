@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Check, Lock } from 'lucide-react';
+import { matchPostRoute } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
@@ -9,13 +11,17 @@ import { usePayToUnlock } from '@/hooks/usePayToUnlock/usePayToUnlock';
 import { usePurchasedLocks } from '@/hooks/usePurchasedLocks/usePurchasedLocks';
 import { usePurchaseResume } from '@/hooks/usePurchaseResume/usePurchaseResume';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { useUnlockedContent } from '@/hooks/useUnlockedContent/useUnlockedContent';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { cn } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { DialogPayToUnlock } from '@/molecules/DialogPayToUnlock/DialogPayToUnlock';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
+import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { toast } from '@/molecules/Toaster/toast';
+import { LocksPermissionNotice } from '@/organisms/LocksPermissionNotice/LocksPermissionNotice';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { LockContentParser } from '@/pipes/locks/locks.parser';
 import type { TUnlockedContent } from '@/services/locks/locks.types';
@@ -25,8 +31,8 @@ import { PostBody } from '../PostBody/PostBody';
 interface LockedPostContentProps {
   content: string;
   lock: string | null | undefined;
-  /** Post author (pubky.app account). Matches the signed-in user for a creator's own lock post. */
-  authorId: string;
+  /** Composite id of this announcement post. Its author matches the signed-in user for an own lock. */
+  postId: string;
   attachments?: PostDetailsModel['attachments'];
   /** Creator's local (not-yet-remote) attachments, so their own just-published media shows. */
   localAttachments?: AttachmentConstructed[];
@@ -42,21 +48,34 @@ interface LockedPostContentProps {
 export function LockedPostContent({
   content,
   lock,
-  authorId,
+  postId,
   attachments,
   localAttachments,
   className,
   textClassName,
 }: LockedPostContentProps) {
   const [isPayOpen, setIsPayOpen] = useState(false);
+  const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
+  const isNestedPostPreview = useIsNestedPostPreview();
+  const routeParams = matchPostRoute(usePathname());
+  // Only the post the route names opens in full: the same page renders embeds and thread parents
+  // through this component, and the reply/repost dialogs preview the focused post itself — which
+  // matches the route ids, so the nesting flag is what keeps those compact.
+  const isFocusedPostPage =
+    routeParams?.userId === authorId && routeParams?.postId === rawPostId && !isNestedPostPreview;
   const lockContent = LocksController.getLockContent(content);
   const { lockFile, priceSats } = useLockFile(lock);
   const { unlockedPost, applyUnlockedContent, media, isOwnLock, isResolvingReplica } = useUnlockedContent({
     lock,
     lockFile,
-    authorId,
+    postId,
   });
   const { requireAuth, isAuthenticated } = useRequireAuth();
+  // A session from before the app asked for `/priv` cannot read whether this reader already
+  // unlocked, so ask for the permission first and keep the card inert: a second unlock would
+  // charge them twice. Gated on the session, not on a refused read, so the card does not flip from
+  // live to inert once that read fails.
+  const showPermissionNotice = useSessionNeedsUpgrade();
 
   /** Renders unlocked content, closes whichever dialog produced it, and reports dropped media. */
   const showUnlockedContent = (unlocked: TUnlockedContent) => {
@@ -98,7 +117,7 @@ export function LockedPostContent({
 
   // Paying needs the reader's pubky (it is the payment-request delivery address), so a signed-out
   // reader gets the sign-in dialog instead. Unsupported legacy locks have no unlock handler.
-  const handleUnlock = priceSats ? () => requireAuth(() => setIsPayOpen(true)) : undefined;
+  const handleUnlock = priceSats && !showPermissionNotice ? () => requireAuth(() => setIsPayOpen(true)) : undefined;
 
   return (
     <Container className={cn('min-w-0 gap-4', className)}>
@@ -126,7 +145,12 @@ export function LockedPostContent({
               </span>
             </div>
             {unlockedPost.kind === 'long' && isArticleContent(unlockedPost.content) ? (
-              <PostArticle content={unlockedPost.content} attachments={null} localAttachments={media} />
+              <PostArticle
+                content={unlockedPost.content}
+                attachments={null}
+                localAttachments={media}
+                variant={isFocusedPostPage ? 'full' : 'preview'}
+              />
             ) : (
               <PostBody
                 content={unlockedPost.content}
@@ -138,15 +162,18 @@ export function LockedPostContent({
           </div>
         </>
       ) : (
-        <LockedPostCard
-          title={lockContent.lock_title}
-          priceSats={priceSats}
-          unlockOpen={isPayOpen}
-          onUnlock={handleUnlock}
-          // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal
-          // closing snaps the button back.
-          slideOnUnlock={isAuthenticated}
-        />
+        <>
+          {showPermissionNotice && <LocksPermissionNotice />}
+          <LockedPostCard
+            title={lockContent.lock_title}
+            priceSats={priceSats}
+            unlockOpen={isPayOpen}
+            onUnlock={handleUnlock}
+            // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal
+            // closing snaps the button back.
+            slideOnUnlock={isAuthenticated}
+          />
+        </>
       )}
       {priceSats && (
         <DialogPayToUnlock

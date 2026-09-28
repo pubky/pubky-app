@@ -4,6 +4,8 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isNotFound, isValidationError, toAppError } from '@/libs/error/error.utils';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
+import { CompositeIdDomain } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocksService } from '@/services/locks/locks';
@@ -268,7 +270,7 @@ export class LocksApplication {
     readBytes: (path: string, uri: string) => Promise<Uint8Array>,
   ): Promise<TUnlockedAttachment[]> {
     const reads = await Promise.all(
-      uris.map(async (uri) => {
+      uris.map(async (uri, slot) => {
         try {
           const path = GuardedContentParser.attachmentUriToPath(uri);
           const contentType = lockFile.secondary_resources?.[path]?.content_type;
@@ -281,7 +283,7 @@ export class LocksApplication {
               context: { path },
             });
           }
-          return { id: path.slice(path.lastIndexOf('/') + 1), contentType, bytes: await readBytes(path, uri) };
+          return { id: path.slice(path.lastIndexOf('/') + 1), contentType, bytes: await readBytes(path, uri), slot };
         } catch (error) {
           // Validation = permanent data error (bad uri / no descriptor / outside namespace), already
           // reported — retrying can't fix it, so drop this attachment and let the rest render.
@@ -308,6 +310,7 @@ export class LocksApplication {
     lockUrl,
     readerPubky,
     content,
+    announcementUri,
   }: TReplicateUnlockedContentParams): Promise<void> {
     const lockId = this.requireLockId(lockUrl, 'replicateUnlockedContent');
 
@@ -321,7 +324,7 @@ export class LocksApplication {
     await HomeserverService.putBlob({
       url: GuardedContentParser.unlockedPostUrl(readerPubky, lockId),
       blob: new TextEncoder().encode(
-        GuardedContentParser.buildUnlockedPost(content.post, readerPubky, lockId, content.attachments),
+        GuardedContentParser.buildUnlockedPost(content.post, readerPubky, lockId, content.attachments, announcementUri),
       ),
     });
   }
@@ -344,7 +347,15 @@ export class LocksApplication {
       GuardedContentParser.completedLockIds(files).map(async (lockId) => {
         try {
           const replicatedPost = await this.readReplicatedMarker(readerPubky, lockId, 'fetchUnlockedList');
-          return replicatedPost ? { lockId, ...replicatedPost } : null;
+          if (!replicatedPost) return null;
+          // A marker from before the announcement was recorded, or an unparseable URI, still lists —
+          // it just renders without its announcement post.
+          // Spread rather than an `undefined` value: the key stays absent, which is what the optional
+          // field and the narrowing filter below both expect.
+          const announcementPostId = replicatedPost.post.announcement
+            ? buildCompositeIdFromPubkyUri({ uri: replicatedPost.post.announcement, domain: CompositeIdDomain.POSTS })
+            : null;
+          return { lockId, ...replicatedPost, ...(announcementPostId ? { announcementPostId } : {}) };
         } catch (error) {
           // Validation = corrupt marker, already reported — drop this item only.
           // So user will see validated locks but not invalid ones.
@@ -412,12 +423,13 @@ export class LocksApplication {
    */
   static async fetchReplicatedAttachments({ post }: TFetchReplicatedAttachmentsParams): Promise<TUnlockedAttachment[]> {
     const reads = await Promise.all(
-      (post.attachments ?? []).map(async ({ url, content_type }) => {
+      (post.attachments ?? []).map(async ({ url, content_type, slot }, index) => {
         try {
           return {
             id: url.slice(url.lastIndexOf('/') + 1),
             contentType: content_type,
             bytes: await HomeserverService.getBytes(url),
+            slot: slot ?? index,
           };
         } catch (error) {
           // 404 = the replica lost this file; `getBytes` already reported it.
@@ -490,10 +502,8 @@ export class LocksApplication {
    * TODO:[Locks] #2039 — a failure part-way leaves the already-uploaded resources orphaned on the
    * server. See the note on `LocksService.createContentLock` for the cleanup rules.
    *
-   * TODO:[Locks] #2039 — sizes are never checked before uploading. The Lock Server only enforces its
-   * limits at `createContentLock` (server config; defaults 10 MB/file, 10 files, 100 MB total), so an
-   * oversized file uploads fine and then fails the lock, leaving an orphan. A pre-check here is UX
-   * only — the server stays the authority.
+   * The composer checks the file count and size against the Lock Server defaults first
+   * (`LOCK_ATTACHMENT_*` in `@/config/posts`); the server stays the authority.
    */
   static async createLockContent({
     attachments = [],

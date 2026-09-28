@@ -15,17 +15,19 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, UserRoundPlus } from 'lucide-react';
-import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { AUTH_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export function DialogSignIn() {
   const showSignInDialog = useAuthStore((state) => state.showSignInDialog);
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
+  const joinRoute = useJoinRoute();
   const handleClose = () => setShowSignInDialog(false);
   return (
     <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
@@ -56,7 +58,7 @@ export function DialogSignIn() {
 
             <Container className="px-6">
               <Button asChild className="w-full gap-2 font-bold">
-                <Link href={ONBOARDING_ROUTES.HUMAN} onClick={handleClose}>
+                <Link href={joinRoute} onClick={handleClose}>
                   <UserRoundPlus className="size-4" />
                   {'Join Pubky'}
                 </Link>

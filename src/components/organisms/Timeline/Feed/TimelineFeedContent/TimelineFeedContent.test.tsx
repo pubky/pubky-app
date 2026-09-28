@@ -7,6 +7,7 @@ import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFe
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import {
   buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
@@ -241,7 +242,32 @@ describe('TimelineFeedContent', () => {
     vi.clearAllMocks();
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
     mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
+    vi.mocked(useUnreadPosts).mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
     mockUsePullToRefresh.mockReturnValue({ state: 'idle' as const, pullDistance: 0 });
+  });
+
+  it('passes mute-list readiness to the new-posts section', () => {
+    vi.mocked(useUnreadPosts).mockReturnValue({ unreadPostIds: ['author:new-post'], unreadCount: 1 });
+    mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, isLoading: true });
+    const feed = (
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+        variant={TIMELINE_FEED_VARIANT.HOME}
+        tagsLayout="inline"
+      />
+    );
+    const { rerender } = render(feed);
+    expect(screen.queryByTestId('new-posts-button')).not.toBeInTheDocument();
+
+    mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
+    rerender(
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+        variant={TIMELINE_FEED_VARIANT.HOME}
+        tagsLayout="inline"
+      />,
+    );
+    expect(screen.getByTestId('new-posts-button')).toHaveTextContent('1 new posts');
   });
 
   describe('TimelineFeedWithStream guard', () => {
@@ -827,6 +853,25 @@ describe('TimelineFeedContent', () => {
       render(collectionFeed(['muted-user:post9', 'post1']));
 
       expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post1']);
+    });
+
+    it('waits for the mute list before reconciling missing collection members', () => {
+      const membershipPostIds = ['muted-user:post9', 'other-user:post1'];
+      mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, isLoading: true });
+      setLoadedIds([]);
+
+      const { rerender } = render(collectionFeed(membershipPostIds));
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
+
+      mockUseMutedUsers.mockReturnValue({
+        ...defaultMutedUsersResult,
+        mutedUserIds: ['muted-user'],
+        mutedUserIdSet: new Set(['muted-user']),
+      });
+      rerender(collectionFeed(membershipPostIds));
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledTimes(1);
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['other-user:post1']);
     });
 
     it('does not reconcile while more pages are still loading', () => {

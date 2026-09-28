@@ -40,15 +40,19 @@ vi.mock('@/app/routes', () => ({
   AUTH_ROUTES: {
     SIGN_IN: '/sign-in',
   },
-  ONBOARDING_ROUTES: {
-    HUMAN: '/onboarding/human',
-  },
+}));
+
+// Join entry: fair-access step unless Pubky Passport is enabled on this page.
+const mockJoinRoute = vi.hoisted(() => ({ value: '/onboarding/human' }));
+vi.mock('@/hooks/useJoinRoute/useJoinRoute', () => ({
+  useJoinRoute: () => mockJoinRoute.value,
 }));
 
 describe('HeaderButtonSignIn', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUsePathname.mockReturnValue('/');
+    mockJoinRoute.value = '/onboarding/human';
   });
 
   it('renders sign in button with icon and text', () => {
@@ -84,6 +88,16 @@ describe('HeaderButtonSignIn', () => {
     screen.getByRole('button', { name: /New here\?/i }).click();
 
     expect(mockPush).toHaveBeenCalledWith('/onboarding/human');
+  });
+
+  it('navigates to the Join step from the sign-in page when Passport is enabled', () => {
+    mockUsePathname.mockReturnValue('/sign-in');
+    mockJoinRoute.value = '/onboarding/join';
+    render(<HeaderButtonSignIn />);
+
+    screen.getByRole('button', { name: /New here\?/i }).click();
+
+    expect(mockPush).toHaveBeenCalledWith('/onboarding/join');
   });
 
   it('renders sign in button on the onboarding page', () => {

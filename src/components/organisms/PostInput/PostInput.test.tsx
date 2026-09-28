@@ -530,6 +530,8 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handlePaste: vi.fn(),
     inlineImages: { upload: vi.fn(), getPreviewUrl: vi.fn(() => null) },
     uploadingCount: 0,
+    serializeArticleForLock: vi.fn(() => null),
+    getLatestArticle: vi.fn(() => ({ title: '', body: '' })),
     mentionUsers: [],
     mentionIsOpen: false,
     mentionSelectedIndex: 0,

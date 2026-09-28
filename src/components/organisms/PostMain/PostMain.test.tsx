@@ -1155,6 +1155,9 @@ describe('PostMain', () => {
         collections: [{ id: 'me:collection', name: 'Saved posts', description: '', isSaved: true, isUpdating: false }],
         isCollectionsLoading: false,
         isCreatingCollection: false,
+        hasMoreCollections: false,
+        isCollectionsLoadingMore: false,
+        loadMoreCollections: vi.fn(),
         toggleBookmark,
         toggleCollection,
         createCollectionWithPost: vi.fn(),
@@ -1173,7 +1176,7 @@ describe('PostMain', () => {
         </TimelineFeedContext.Provider>,
       );
       expect(screen.queryByTestId('post-actions')).not.toBeInTheDocument();
-      expect(usePostSaveTargets).toHaveBeenCalledWith('me:share-1');
+      expect(usePostSaveTargets).toHaveBeenCalledWith('me:share-1', { isPickerOpen: false });
       fireEvent.click(screen.getByRole('button', { name: 'Save post' }));
       fireEvent.click(
         await screen.findByText(variant === TIMELINE_FEED_VARIANT.BOOKMARKS ? 'Bookmarks' : 'Saved posts'),

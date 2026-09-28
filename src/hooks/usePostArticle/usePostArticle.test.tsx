@@ -13,6 +13,7 @@ vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getMetadata: vi.fn(),
+    fetchFiles: vi.fn(),
     getFileUrl: vi.fn(),
   },
 }));
@@ -529,6 +530,33 @@ describe('slot-0 cover rule (inline images)', () => {
         content: articleContent('Plain body'),
         attachments: null,
         coverImageVariant: FileVariant.MAIN,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(false);
+  });
+
+  it('reports a cover from local attachments alone, as unlocked content has no Nexus ones', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('Plain body'),
+        attachments: null,
+        coverImageVariant: FileVariant.MAIN,
+        localAttachmentCount: 1,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(true);
+    expect(result.current.coverImage).toBeNull(); // the URL is the caller's local blob, not a Nexus file
+  });
+
+  it('keeps the slot-0 rule for local attachments', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('![inline slot zero](attachment:0)'),
+        attachments: null,
+        coverImageVariant: FileVariant.MAIN,
+        localAttachmentCount: 1,
       }),
     );
 

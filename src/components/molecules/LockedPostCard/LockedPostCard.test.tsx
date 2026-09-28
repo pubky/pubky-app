@@ -1,8 +1,27 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { LockedPostCard, SLIDE_MS } from './LockedPostCard';
 
 describe('LockedPostCard', () => {
+  it('steps down a shade inside a post preview, where the surround is already bg-muted', () => {
+    render(
+      <PostPreviewNestingProvider>
+        <LockedPostCard title="Secret" priceSats="1234" />
+      </PostPreviewNestingProvider>,
+    );
+
+    const card = screen.getByTestId('locked-post-card');
+    expect(card).toHaveClass('bg-card');
+    expect(card).not.toHaveClass('bg-muted');
+  });
+
+  it('keeps bg-muted outside a post preview', () => {
+    render(<LockedPostCard title="Secret" priceSats="1234" />);
+
+    expect(screen.getByTestId('locked-post-card')).toHaveClass('bg-muted');
+  });
+
   it('falls back to the default title while the creator has not typed one', () => {
     render(<LockedPostCard title="" />);
     expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Locked content');

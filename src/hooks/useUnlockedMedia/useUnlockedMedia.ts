@@ -17,6 +17,7 @@ export function useUnlockedMedia(post: ReplicatedPost): AttachmentConstructed[] 
     if (!post.attachments?.length) return;
 
     let cancelled = false;
+    // TODO:[Locks] #2686 — loads every attachment, but the card shows only an article's cover.
     LocksController.fetchReplicatedAttachments({ post })
       .then((attachments) => {
         if (!cancelled) setMedia(toUnlockedMedia(attachments));

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
+import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import type { TUnlockedListItem } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseUnlockedListParams, UseUnlockedListResult } from './useUnlockedList.types';
@@ -21,6 +22,8 @@ export function useUnlockedList({ enabled = true }: UseUnlockedListParams = {}):
   // Reading my own `/priv` needs the restored session; `currentUserPubky` is persisted and
   // rehydrates first, which would fire this before the session exists.
   const session = useAuthStore((state) => state.session);
+  // A pre-`/priv` session gets a 403 (an `Err.auth` sent to Sentry) instead of a listing (#2373).
+  const needsUpgrade = useSessionNeedsUpgrade();
 
   useEffect(() => {
     if (!enabled || !currentUserPubky || !session) {
@@ -28,6 +31,15 @@ export function useUnlockedList({ enabled = true }: UseUnlockedListParams = {}):
       setItems([]);
       setHasResolved(false);
       setIsError(false);
+      return;
+    }
+
+    // This session cannot read `/priv` at all, so skip the doomed request. The state of the read
+    // itself is left alone and the block is reported through the returned values below: once the
+    // session is replaced this effect runs again and the screen goes straight to loading, instead of
+    // showing the error copy left behind by the block.
+    if (needsUpgrade) {
+      setItems([]);
       return;
     }
 
@@ -53,7 +65,15 @@ export function useUnlockedList({ enabled = true }: UseUnlockedListParams = {}):
     return () => {
       cancelled = true;
     };
-  }, [enabled, currentUserPubky, session]);
+  }, [enabled, currentUserPubky, session, needsUpgrade]);
 
-  return { items, count: items.length, isLoading: enabled && !hasResolved, isError };
+  return {
+    items,
+    count: items.length,
+    // A blocked session is settled, not loading — otherwise the sidebar spins on a count that cannot
+    // arrive — and it is reported like a failed read, so the sidebar shows no number rather than a
+    // confident 0. The Unlocked screen shows the permission notice instead of the error copy.
+    isLoading: enabled && !needsUpgrade && !hasResolved,
+    isError: needsUpgrade || isError,
+  };
 }

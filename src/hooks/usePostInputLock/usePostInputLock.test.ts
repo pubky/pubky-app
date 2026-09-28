@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostInputLock } from './usePostInputLock';
 import type { TLockDraft } from './usePostInputLock.types';
 
@@ -14,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   setPostAttachments: vi.fn(),
   // Last options handed to useCreateLockContent — the locked post the hook would publish.
   lockContentOptions: null as {
-    lockedPost: { content: string; kind: unknown };
+    lockedPost: { content: string; kind: unknown; attachments: File[] };
     lockConfig: unknown;
   } | null,
 }));
@@ -23,6 +24,13 @@ vi.mock('@/config/network', () => ({
   getLockServer: () => mocks.lockServer,
   getPaykitServerUrl: () => mocks.paykitServerUrl,
 }));
+const sessionNeedsUpgrade = vi.hoisted(() => ({ value: false }));
+vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
+  useSessionNeedsUpgrade: () => sessionNeedsUpgrade.value,
+}));
+afterEach(() => {
+  sessionNeedsUpgrade.value = false;
+});
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
   useLocksAuthStore: {
     getState: () => ({
@@ -32,7 +40,10 @@ vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
   },
 }));
 vi.mock('@/hooks/useCreateLockContent/useCreateLockContent', () => ({
-  useCreateLockContent: (options: { lockedPost: { content: string; kind: unknown }; lockConfig: unknown }) => {
+  useCreateLockContent: (options: {
+    lockedPost: { content: string; kind: unknown; attachments: File[] };
+    lockConfig: unknown;
+  }) => {
     mocks.lockContentOptions = options;
     return { publish: mocks.publish, isPublishing: false };
   },
@@ -49,19 +60,29 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
 vi.mock('@/controllers/post/post', () => ({ PostController: { getDetails: vi.fn() } }));
 
 const file = new File(['x'], 'secret.png', { type: 'image/png' });
-const draft: TLockDraft = { content: 'my secret', attachments: [file], isArticle: true, articleTitle: 'Essay' };
+const draft: TLockDraft = {
+  content: 'my secret',
+  attachments: [file],
+  isArticle: true,
+  articleTitle: 'Essay',
+  serializedArticle: { body: 'my secret', inlineFiles: [] },
+};
 
-const setup = (isEnabled = true, canEnable = true, draftOverride: TLockDraft = draft) => {
+const setup = (isEnabled = true, canEnable = true, draftOverride: TLockDraft | null = draft) => {
   const captureComposer = vi.fn(() => draftOverride);
   const restoreComposer = vi.fn();
   const clearComposer = vi.fn();
   const clearTags = vi.fn();
   const onPublished = vi.fn();
   const onNormalSubmit = vi.fn();
-  const view = renderHook(() =>
-    usePostInputLock({
+  const view = renderHook(() => {
+    // The composer owns the draft; the hook only reads and sets it.
+    const [lockDraft, setLockDraft] = useState<TLockDraft | null>(null);
+    return usePostInputLock({
       isEnabled,
       canEnable,
+      lockDraft,
+      setLockDraft,
       captureComposer,
       restoreComposer,
       clearComposer,
@@ -71,8 +92,8 @@ const setup = (isEnabled = true, canEnable = true, draftOverride: TLockDraft = d
       clearTags,
       onPublished,
       onNormalSubmit,
-    }),
-  );
+    });
+  });
   return { ...view, captureComposer, restoreComposer, clearComposer, clearTags, onPublished, onNormalSubmit };
 };
 
@@ -118,6 +139,23 @@ describe('usePostInputLock', () => {
       configureLock(result);
 
       expect(mocks.lockContentOptions?.lockedPost.content).toBe('my secret');
+    });
+
+    it('locks the serialized article body, with its images after the cover', () => {
+      mocks.isAuthed = true;
+      const inline = new File(['y'], 'shot.jpg', { type: 'image/jpeg' });
+      const { result } = setup(true, true, {
+        ...draft,
+        content: 'intro ![shot](pubky://author/pub/pubky.app/files/FILE1)',
+        serializedArticle: { body: 'intro ![shot](attachment:1)', inlineFiles: [inline] },
+      });
+
+      configureLock(result);
+
+      expect(mocks.lockContentOptions?.lockedPost.content).toBe(
+        JSON.stringify({ title: 'Essay', body: 'intro ![shot](attachment:1)' }),
+      );
+      expect(mocks.lockContentOptions?.lockedPost.attachments).toEqual([file, inline]);
     });
   });
 
@@ -178,6 +216,17 @@ describe('usePostInputLock', () => {
       expect(clearComposer).toHaveBeenCalledTimes(1);
     });
 
+    it('stays off when the composer refuses the capture', () => {
+      setUpLocks();
+      const { result } = setup(true, true, null);
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      expect(result.current.isLockEnabled).toBe(false);
+      expect(result.current.isLockDialogOpen).toBe(false);
+      expect(result.current.isAuthDialogOpen).toBe(false);
+    });
+
     it('opens the sign-in modal first when there is no Locks session', () => {
       const { result } = setup();
 
@@ -209,6 +258,18 @@ describe('usePostInputLock', () => {
       expect(result.current.isAuthDialogOpen).toBe(false);
     });
 
+    it('opens the auth modal for the session step when the homeserver session predates /priv', () => {
+      mocks.isAuthed = true;
+      mocks.isPaykitConnected = true;
+      sessionNeedsUpgrade.value = true;
+      const { result } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      expect(result.current.isAuthDialogOpen).toBe(true);
+      expect(result.current.isLockDialogOpen).toBe(false);
+    });
+
     it('advances from sign-in to the lock dialog, keeping the switch on', () => {
       const { result, restoreComposer } = setup();
 
@@ -235,6 +296,23 @@ describe('usePostInputLock', () => {
 
       expect(restoreComposer).toHaveBeenCalledWith(draft);
       expect(result.current.lockSwitch?.checked).toBe(false);
+    });
+
+    it('with the body as the editor holds it, not the serialized one', () => {
+      setUpLocks();
+      const articleDraft: TLockDraft = {
+        ...draft,
+        content: 'intro ![shot](pubky://author/pub/pubky.app/files/FILE1)',
+        serializedArticle: { body: 'intro ![shot](attachment:1)', inlineFiles: [file] },
+      };
+      const { result, restoreComposer } = setup(true, true, articleDraft);
+
+      configureLock(result);
+      act(() => result.current.lockSwitch?.onCheckedChange(false));
+
+      expect(restoreComposer).toHaveBeenCalledWith(
+        expect.objectContaining({ content: 'intro ![shot](pubky://author/pub/pubky.app/files/FILE1)' }),
+      );
     });
 
     it('when the sign-in modal is cancelled', () => {

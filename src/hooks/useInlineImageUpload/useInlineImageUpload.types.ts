@@ -12,6 +12,8 @@ export const INLINE_IMAGE_UPLOAD_REJECTION_NAME = 'InlineImageUploadRejection';
 export interface UseInlineImageUploadOptions {
   /** Only articles upload inline images; when false, uploads are rejected and the session is discarded */
   enabled: boolean;
+  /** A captured lock draft outlives article mode: while true, a false `enabled` discards nothing. */
+  keepSession?: boolean;
   authorPubky: Pubky | null;
   /** Remaining inline-image slots at insert time (serialize-time cap is the authority) */
   getInlineBudget: () => number;
@@ -34,6 +36,8 @@ export interface UseInlineImageUploadReturn {
   uploadInlineImage: (file: File) => Promise<string>;
   /** Object URL for a session-uploaded file URI, for in-editor preview */
   getPreviewUrl: (src: string) => string | null;
+  /** The file as picked, before upload sanitization; null for a URI not uploaded this session */
+  getSessionFile: (uri: string) => File | null;
   /** Adds an externally uploaded file (e.g. a replacement cover) to the session for cleanup tracking */
   registerSessionUpload: (uri: string, file: File) => void;
   /** Number of uploads currently in flight; publish must be blocked while > 0 */

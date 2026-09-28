@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
@@ -10,6 +10,8 @@ import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import {
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
+  LOCK_ATTACHMENT_MAX_FILES,
+  LOCK_ATTACHMENT_MAX_SIZE,
   LOCK_TEASER_MAX_CHARACTER_LENGTH,
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
@@ -23,9 +25,11 @@ import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
+import type { TLockDraft } from '@/hooks/usePostInputLock/usePostInputLock.types';
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { deserializeArticleBody } from '@/libs/post/articleInlineImages';
+import { areLockAttachmentsWithinLimit, hasSvgAttachment } from '@/libs/post/lockAttachments';
 import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
@@ -50,6 +54,10 @@ import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import type { PostInputProps } from './PostInput.types';
+
+// In MiB like the app's other size labels, rounded down so a file under the label is never refused.
+const LOCK_ATTACHMENT_MAX_SIZE_LABEL = `${Math.floor((LOCK_ATTACHMENT_MAX_SIZE / (1024 * 1024)) * 10) / 10}MB`;
+const LOCK_LIMITS_MESSAGE = `Locked content supports up to ${LOCK_ATTACHMENT_MAX_FILES} files of ${LOCK_ATTACHMENT_MAX_SIZE_LABEL} each.`;
 
 export function PostInput({
   dataCy,
@@ -78,6 +86,8 @@ export function PostInput({
   initialAttachments,
   layoutOverride,
 }: PostInputProps) {
+  const [lockDraft, setLockDraft] = useState<TLockDraft | null>(null);
+
   const {
     textareaRef,
     markdownEditorRef,
@@ -121,6 +131,8 @@ export function PostInput({
     handlePaste,
     inlineImages,
     uploadingCount,
+    serializeArticleForLock,
+    getLatestArticle,
     // Mention autocomplete
     mentionUsers,
     mentionIsOpen,
@@ -146,6 +158,9 @@ export function PostInput({
     onContentChange,
     onArticleModeChange,
     hasExternalContent: () => isLockEnabled,
+    // TODO:[Locks] #2684 — once this goes false the public copies are deleted best-effort; a failed
+    // deletion leaves paid images public and nobody is told.
+    keepInlineImages: lockDraft?.isArticle === true,
   });
 
   const {
@@ -193,6 +208,20 @@ export function PostInput({
     setArticleTitle('');
   };
 
+  const refuseFilesForLock = (files: File[]) => {
+    // TODO:[Locks] #2683 — temporary, until a locked SVG renders after an unlock.
+    if (hasSvgAttachment(files)) {
+      toast({ variant: 'error', description: 'Locked content cannot include SVG images yet.' });
+      return true;
+    }
+    // The Lock Server refuses an oversized lock only after its files were uploaded, which orphans them.
+    if (!areLockAttachmentsWithinLimit(files)) {
+      toast({ variant: 'error', description: LOCK_LIMITS_MESSAGE });
+      return true;
+    }
+    return false;
+  };
+
   const {
     lockSwitch,
     isLockEnabled,
@@ -211,9 +240,33 @@ export function PostInput({
     isPublishing: isPublishingLock,
   } = usePostInputLock({
     isEnabled: isPostVariant,
-    // Something to lock: any body text or at least one attachment.
-    canEnable: content.trim().length > 0 || attachments.length > 0,
-    captureComposer: () => ({ content, attachments, isArticle, articleTitle }),
+    // Something to lock: any body text or at least one attachment. An article needs a title and a
+    // body, as it does to be published.
+    canEnable:
+      (isArticle
+        ? articleTitle.trim().length > 0 && content.trim().length > 0
+        : content.trim().length > 0 || attachments.length > 0) && uploadingCount === 0,
+    lockDraft,
+    setLockDraft,
+    captureComposer: () => {
+      if (!isArticle) {
+        if (refuseFilesForLock(attachments)) return null;
+        return { content, attachments, isArticle: false, articleTitle };
+      }
+
+      // `articleTitle` and `content` trail the inputs by the debounce: a capture from them would
+      // leave out an image inserted since, and its upload is deleted after publishing.
+      const { title, body } = getLatestArticle();
+      if (!title.trim() || !body.trim()) {
+        toast({ variant: 'error', description: 'Add a title and a body to lock this article.' });
+        return null;
+      }
+      const serializedArticle = serializeArticleForLock(body);
+      if (!serializedArticle) return null;
+      if (refuseFilesForLock([...attachments, ...serializedArticle.inlineFiles])) return null;
+
+      return { content: body, attachments, isArticle: true, articleTitle: title, serializedArticle };
+    },
     restoreComposer: (draft) => {
       setContent(draft.content);
       setAttachments(draft.attachments);

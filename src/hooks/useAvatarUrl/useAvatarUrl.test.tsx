@@ -7,7 +7,7 @@ import { useAvatarUrl } from './useAvatarUrl';
 const mockGetAvatarUrl = vi.fn();
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
-    getAvatarUrl: (pubky: string) => mockGetAvatarUrl(pubky),
+    getAvatarUrl: (pubky: string, version?: string | number) => mockGetAvatarUrl(pubky, version),
   },
 }));
 
@@ -27,7 +27,7 @@ describe('useAvatarUrl', () => {
     const { result } = renderHook(() => useAvatarUrl(userDetails));
 
     expect(result.current).toBe('https://example.com/avatar/test-user.png');
-    expect(mockGetAvatarUrl).toHaveBeenCalledWith('test-user');
+    expect(mockGetAvatarUrl).toHaveBeenCalledWith('test-user', undefined);
   });
 
   it('returns undefined when user has no image', () => {
@@ -115,8 +115,8 @@ describe('useAvatarUrl', () => {
 
     expect(result.current).toBe('https://example.com/avatar/user-2.png');
     expect(mockGetAvatarUrl).toHaveBeenCalledTimes(2);
-    expect(mockGetAvatarUrl).toHaveBeenCalledWith('user-1');
-    expect(mockGetAvatarUrl).toHaveBeenCalledWith('user-2');
+    expect(mockGetAvatarUrl).toHaveBeenCalledWith('user-1', undefined);
+    expect(mockGetAvatarUrl).toHaveBeenCalledWith('user-2', undefined);
   });
 
   it('recomputes avatar URL when image changes from empty to present', () => {
@@ -142,6 +142,42 @@ describe('useAvatarUrl', () => {
 
     expect(result.current).toBe('https://example.com/avatar/test-user.png');
     expect(mockGetAvatarUrl).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useAvatarUrl - avatar versioning', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('versions the avatar URL with the details indexed_at', () => {
+    const userDetails = {
+      id: 'test-user',
+      name: 'Test User',
+      image: 'avatar.jpg',
+      indexed_at: 1704067200000,
+    } as NexusUserDetails;
+
+    renderHook(() => useAvatarUrl(userDetails));
+
+    expect(mockGetAvatarUrl).toHaveBeenCalledWith('test-user', 1704067200000);
+  });
+
+  it('recomputes the avatar URL when the same user is re-indexed after a profile edit', () => {
+    mockGetAvatarUrl.mockImplementation((pubky: string, version?: string | number) => `avatar:${pubky}:${version}`);
+
+    const before = { id: 'test-user', name: 'Old name', image: 'old.jpg', indexed_at: 1 } as NexusUserDetails;
+    const { result, rerender } = renderHook(({ userDetails }) => useAvatarUrl(userDetails), {
+      initialProps: { userDetails: before },
+    });
+
+    expect(result.current).toBe('avatar:test-user:1');
+
+    // The other user edits their avatar; the TTL refresh writes a new indexed_at.
+    const after = { id: 'test-user', name: 'Old name', image: 'new.jpg', indexed_at: 2 } as NexusUserDetails;
+    rerender({ userDetails: after });
+
+    expect(result.current).toBe('avatar:test-user:2');
   });
 });
 

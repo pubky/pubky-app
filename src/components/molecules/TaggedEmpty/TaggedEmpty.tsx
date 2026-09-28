@@ -12,9 +12,18 @@ export function TaggedEmpty({ onTagAdd }: TaggedEmptyProps) {
       imageAlt={'Tagged - Empty state'}
       icon={Tag}
       title={'Discover who tagged you'}
-      subtitle={'No one has tagged you yet.\nTip: You can add tags to your own profile too.'}
+      // The Tip hint starts on its own line in the design; a plain string newline
+      // would be collapsed by HTML whitespace, so the break is explicit.
+      subtitle={
+        <>
+          No one has tagged you yet.
+          <br />
+          Tip: You can add tags to your own profile too.
+        </>
+      }
     >
-      {onTagAdd && <TagInput onTagAdd={onTagAdd} enableApiSuggestions addOnSuggestionClick />}
+      {/* The input is a compact field in the design, not the full column width. */}
+      {onTagAdd && <TagInput onTagAdd={onTagAdd} enableApiSuggestions addOnSuggestionClick className="w-48" />}
     </IllustratedEmptyState>
   );
 }

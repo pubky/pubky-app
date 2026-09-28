@@ -162,6 +162,8 @@ export function usePostDetails(compositeId: string | null | undefined, options?:
 - `fetchFn` is a `fetch*` controller call that fetches from Nexus and persists to Dexie; the live query then re-renders on its own.
 - `fetchFn` runs **only when local data is `null`**. A cache hit is never refreshed by this hook (TTL does that).
 - Never call a network client, TanStack Query or retry logic inside `useLiveQuery`: it breaks Dexie's PSD.
+- A change to `deps` or `enabled` starts a new query lifetime. While its first local read is pending, `data` is `undefined` and `isLoading` is true; the previous lifetime's hit or miss is hidden. Switching away and back does not reuse the earlier snapshot.
+- When disabled, neither `queryFn` nor `fetchFn` runs. After that lifetime settles, `data` is `null` and `isLoading` is false. Cleanup prevents an earlier fetch from changing the current loading state, but does not abort its network request or persistence; controllers and services must still guard stale-session writes.
 
 `rg -l useLocalFirstQuery src/hooks --glob '!*.test.*'` lists the consumers. Some older hooks still hand-roll the `useEffect` + `useLiveQuery` pair; that is debt to migrate when touched, not a pattern to copy.
 
@@ -180,6 +182,7 @@ Two bug classes account for most regressions on read paths. Check them before to
 TTL refresh races are the second class (TTL rules: `docs/data-patterns.md`, _TTL Management_):
 
 - A background refresh that lands after a local write reverts the user's action (#1781) or flickers the tag UI (#1452, #1276). A local write must mark every affected row fresh (`*_ttl.lastUpdatedAt`) so the coordinator skips it; a stale Nexus response must never overwrite a fresher local write. `persistUsers` skips the relationship row for any user whose `user_ttl.lastUpdatedAt >= fetchStartedAt`, and `LocalFollowService.create`/`delete` stamp the followee TTL so a follow that lands mid-request wins (#1803).
+- Profile details keep `nexusIndexedAt` separately from `indexed_at`, which local edits also use to refresh avatar URLs. Compare only known Nexus revisions; legacy rows have no trustworthy server revision until hydrated. Profile creation and edits through `LocalProfileService` persist `localUpdatedAt` and user TTL together. A details response must come from an HTTP attempt started after that local write and advance the known server revision before replacing it; a retry can supply that newer attempt. Accepted Nexus details/full-user hydration clear the local-write marker. These are optional row fields, with no database version or index change.
 - TTL refresh also applies to public content for signed-out visitors (#2486). "Logged out" does not mean "no background refresh".
 - Do not force freshness by clearing stream caches: invalidate the affected scope through the dirty registry (see _Deferred Stream Invalidation_ below) and let the TTL/viewport policy refetch (ADR-0003, ADR-0005).
 

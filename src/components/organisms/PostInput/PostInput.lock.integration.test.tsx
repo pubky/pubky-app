@@ -50,6 +50,8 @@ vi.mock('@/controllers/post/post', () => ({
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) => selector({ currentUserPubky: 'alice' }),
 }));
+// The auth store stub above carries no session; the lock switch gates on this hook (#2373).
+vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({ useSessionNeedsUpgrade: () => false }));
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
   useLocksAuthStore: {
     getState: () => ({
@@ -110,6 +112,8 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         existingAttachments: [],
         removeExistingAttachment: vi.fn(),
         uploadingCount: 0,
+        serializeArticleForLock: vi.fn(),
+        getLatestArticle: () => ({ title: articleTitle, body: content }),
         isArticle,
         setIsArticle,
         handleArticleClick: vi.fn(),

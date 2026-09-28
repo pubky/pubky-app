@@ -11,6 +11,29 @@ import { isHttpProtocol, normalizeImageUrl } from '../nextjs.utils';
 const MEDIA_TYPES = ['image', 'video', 'audio'] as const;
 
 /**
+ * Tag values some sites serve when they answer with a client-rendered shell instead of the real
+ * page. YouTube Music returns the literal string "undefined" in every og tag it emits for such a
+ * response (og:title, og:url, og:site_name, og:type), which used to become the card title.
+ */
+const PLACEHOLDER_VALUES = new Set(['undefined', 'null']);
+
+/**
+ * Normalizes a raw tag capture into a usable metadata value, or null when it carries no metadata:
+ * missing, blank after entity decoding and trimming, or one of the placeholder literals.
+ *
+ * The placeholder match is exact: only JavaScript stringification of `undefined` / `null` produces
+ * these literals, so a real title such as "Null" or "Undefined" is kept.
+ */
+function pickMetadataValue(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = decodeHtmlEntities(value).trim();
+  return normalized && !PLACEHOLDER_VALUES.has(normalized) ? normalized : null;
+}
+
+/**
  * Detects media content types (image/video/audio) and returns early.
  * Returns null if content is not a media type.
  */
@@ -27,24 +50,36 @@ export function detectMediaType(url: string, response: Response): TOgMetadataRes
 }
 
 /**
+ * Whether the HTML carries an Open Graph tag the preview card can use (`og:title` or `og:image`).
+ *
+ * Bot-walled hosts answer a browser identity with a client-rendered shell: a 200 whose head has no
+ * Open Graph tags at all, sometimes with only a generic `<title>`. The service uses this to decide
+ * whether a 200 is worth one retry with a crawler identity.
+ */
+export function hasOgMetadata(html: string): boolean {
+  return (
+    pickMetadataValue(extractFromHtml(html, OG_PATTERNS.TITLE)) !== null ||
+    pickMetadataValue(extractFromHtml(html, OG_PATTERNS.IMAGE)) !== null
+  );
+}
+
+/**
  * Extracts OG metadata from HTML, normalizes image URLs, and applies truncation.
  */
 export async function extractMetadata(url: string, html: string): Promise<TOgMetadataResult> {
-  // Extract title (og:title → <title> fallback)
-  const ogTitle = extractFromHtml(html, OG_PATTERNS.TITLE);
-  const titleTag = html.match(OG_PATTERNS.TITLE_TAG)?.[1] || null;
-  const rawTitle = ogTitle || titleTag;
-  const title = rawTitle ? decodeHtmlEntities(rawTitle) : null;
+  // Extract title (og:title → <title> fallback), skipping placeholder values so a shell page
+  // cannot become a card title and the fallback tag still gets its chance.
+  const titleCandidates = [extractFromHtml(html, OG_PATTERNS.TITLE), html.match(OG_PATTERNS.TITLE_TAG)?.[1] ?? null];
+  const title = titleCandidates.map(pickMetadataValue).find((candidate) => candidate !== null) ?? null;
 
-  // Extract og:image
-  const image = extractFromHtml(html, OG_PATTERNS.IMAGE);
-
-  // Normalize and validate image URL
+  // Extract og:image. A placeholder is not a path: resolving it against the page URL would turn
+  // "undefined" into https://<host>/undefined.
+  const image = pickMetadataValue(extractFromHtml(html, OG_PATTERNS.IMAGE));
   const normalizedImage = image ? await normalizeImageUrl(image, url) : null;
 
   return {
     url: truncateMiddle(url, URL_TRUNCATE_LENGTH),
-    title: title ? truncateString(title.trim(), TITLE_TRUNCATE_LENGTH) : null,
+    title: title ? truncateString(title, TITLE_TRUNCATE_LENGTH) : null,
     image: normalizedImage,
     type: 'website',
   };

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
+import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UsePurchasedLocksParams, UsePurchasedLocksResult } from './usePurchasedLocks.types';
 
@@ -36,10 +37,12 @@ export function usePurchasedLocks({ enabled }: UsePurchasedLocksParams): UsePurc
   // one reads `/priv` unauthenticated, and its 404 would cache "nothing purchased" for the whole
   // page load — silently disabling the paid-but-never-received recovery.
   const session = useAuthStore((state) => state.session);
+  // A pre-`/priv` session gets a 403 (an `Err.auth` sent to Sentry) instead of a listing (#2373).
+  const needsUpgrade = useSessionNeedsUpgrade();
   const [ids, setIds] = useState<Set<string> | null>(null);
 
   useEffect(() => {
-    if (!enabled || !readerPubky || !session) {
+    if (!enabled || !readerPubky || !session || needsUpgrade) {
       setIds(null);
       return;
     }
@@ -50,7 +53,7 @@ export function usePurchasedLocks({ enabled }: UsePurchasedLocksParams): UsePurc
     return () => {
       cancelled = true;
     };
-  }, [enabled, readerPubky, session]);
+  }, [enabled, readerPubky, session, needsUpgrade]);
 
   const hasPurchase = (lockId: string | null) => Boolean(lockId && ids?.has(lockId));
 

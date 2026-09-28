@@ -48,6 +48,11 @@ export type TReplicateUnlockedContentParams = {
   lockUrl: string;
   readerPubky: string;
   content: TUnlockedContent;
+  /**
+   * `pubky://…/posts/<id>` of the announcement. Written into the reader's own replica marker, never
+   * into `lock.json` — the Lock Server contract is untouched by this.
+   */
+  announcementUri: string;
 };
 
 export type TFetchReplicatedContentParams = {

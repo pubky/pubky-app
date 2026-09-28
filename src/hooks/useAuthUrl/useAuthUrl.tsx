@@ -3,15 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@synonymdev/pubky';
 import { AuthController } from '@/controllers/auth/auth';
+import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { isAppError, isAuthError, isTimeoutError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
-import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils';
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
 
 /** Returns true if the error indicates the auth flow has expired (timeout or SESSION_EXPIRED). */
+const UPGRADE_FAILURE_MESSAGE = 'Authorization failed. Approve with the key you are signed in with.';
+
 const isAuthFlowExpiredError = (error: unknown): boolean => {
   if (!isAppError(error)) return false;
   if (isTimeoutError(error)) return true;
@@ -32,16 +34,30 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   const [isLoading, setIsLoading] = useState(autoFetch);
   const [isExpired, setIsExpired] = useState(false);
   const isMountedRef = useRef(true);
+  // Every fetchUrl() call is one request; only the latest request may touch UI state. An older
+  // request's late completion or cancellation (StrictMode, refresh, a Passport start superseding
+  // this Ring flow) must never overwrite or wipe the URL of a newer one.
+  const latestRequestIdRef = useRef(0);
 
   const fetchUrl = useCallback(async (): Promise<void> => {
+    const requestId = ++latestRequestIdRef.current;
+    const isCurrentRequest = () => isMountedRef.current && latestRequestIdRef.current === requestId;
+
     setIsLoading(true);
     setIsExpired(false);
     setUrl('');
 
     try {
       // Request auth URL from controller
-      const { authorizationUrl, awaitApproval } =
-        type === 'signup' ? await AuthController.getSignupAuthUrl(inviteCode) : await AuthController.getAuthUrl();
+      let result;
+      if (type === 'signup') {
+        result = await AuthController.getSignupAuthUrl(inviteCode);
+      } else if (type === 'upgrade') {
+        result = await AuthController.getUpgradeAuthUrl();
+      } else {
+        result = await AuthController.getAuthUrl();
+      }
+      const { authorizationUrl, awaitApproval } = result;
 
       awaitApproval
         .then(async (session: Session) => {
@@ -49,36 +65,52 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           // and must run even if the component unmounted (e.g., mobile deeplink handoff where
           // the browser may unmount/remount the page while Pubky Ring is open).
           try {
-            await AuthController.initializeAuthenticatedSession({ session });
+            if (type === 'upgrade') {
+              // A wrong-key approval is reported as `false`, not thrown: the user picked the wrong
+              // identity in Pubky Ring, which is a choice to correct, not a fault to report.
+              const swapped = await AuthController.upgradeSession({ session });
+              if (!swapped) {
+                toast({ variant: 'error', description: UPGRADE_FAILURE_MESSAGE });
+                if (isMountedRef.current) {
+                  setUrl('');
+                  setIsExpired(true);
+                }
+              }
+            } else {
+              await AuthController.initializeAuthenticatedSession({ session });
+            }
           } catch (error) {
             const isWrongEnvironment = isWrongEnvironmentHomeserverError(error);
             if (!isWrongEnvironment && !isAppError(error)) {
               Logger.error('Failed to persist session and check profile:', error);
             }
+            const failureMessage = type === 'upgrade' ? UPGRADE_FAILURE_MESSAGE : 'Sign in failed. Try again.';
             toast({
               variant: 'error',
               description: isWrongEnvironment
                 ? 'This key is linked to a different homeserver. Use a staging account on this site.'
-                : 'Sign in failed. Try again.',
+                : failureMessage,
             });
-            if (isMountedRef.current) {
+            if (isCurrentRequest()) {
               setUrl('');
               setIsExpired(true);
             }
           }
         })
         .catch((error: unknown) => {
-          if (
-            typeof error === 'object' &&
-            error !== null &&
-            'name' in error &&
-            (error as { name?: unknown }).name === AUTH_FLOW_CANCELED_ERROR_NAME
-          ) {
+          if (isAuthFlowCanceledError(error)) {
+            // Cancelled by a newer flow (e.g. the user switched to "Continue with Google"): the QR
+            // on screen can no longer complete a sign-in, so show the reload state. An older
+            // request's cancellation says nothing about the current QR and is ignored.
+            if (isCurrentRequest()) {
+              setUrl('');
+              setIsExpired(true);
+            }
             return;
           }
 
           Logger.error('Authorization promise rejected:', error);
-          if (!isMountedRef.current) return;
+          if (!isCurrentRequest()) return;
 
           if (isAuthFlowExpiredError(error)) {
             setUrl('');
@@ -92,17 +124,21 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           });
         });
 
-      if (!isMountedRef.current) return;
+      if (!isCurrentRequest()) return;
       setUrl(authorizationUrl ?? '');
     } catch (error) {
+      // A start superseded before it produced a URL (StrictMode double-mount, method switch) is
+      // not a failure of the current request; the newer request owns the UI.
+      if (isAuthFlowCanceledError(error)) return;
+
       Logger.error('Failed to generate auth URL:', error);
-      if (!isMountedRef.current) return;
+      if (!isCurrentRequest()) return;
       toast({
         variant: 'error',
         description: 'Could not generate QR. Refresh and try again.',
       });
     } finally {
-      if (isMountedRef.current) {
+      if (isCurrentRequest()) {
         setIsLoading(false);
       }
     }

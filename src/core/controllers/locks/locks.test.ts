@@ -4,6 +4,7 @@ import { LocksApplication } from '@/application/locks/locks';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import type { TUnlockedContent } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
 import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
@@ -315,6 +316,29 @@ describe('LocksController.fetchReplicatedContent', () => {
 
     await expect(LocksController.fetchReplicatedContent(params)).resolves.toEqual(content);
     expect(mocks.fetchReplicatedContent).toHaveBeenCalledWith(params);
+  });
+});
+
+describe('LocksController.replicateUnlockedContent', () => {
+  it('records the announcement post as a pubky URI, which the composite id alone is not', async () => {
+    const content: TUnlockedContent = {
+      post: { content: 'secret', kind: 'short', attachments: null },
+      attachments: [],
+    };
+
+    await LocksController.replicateUnlockedContent({
+      lockUrl: VALID_LOCK_URL,
+      readerPubky: 'pubkyreader',
+      content,
+      postId: 'pubkyauthor:POST1',
+    });
+
+    expect(mocks.replicateUnlockedContent).toHaveBeenCalledWith({
+      lockUrl: VALID_LOCK_URL,
+      readerPubky: 'pubkyreader',
+      content,
+      announcementUri: 'pubky://pubkyauthor/pub/pubky.app/posts/POST1',
+    });
   });
 });
 

@@ -89,6 +89,15 @@ export const ARTICLE_ATTACHMENT_MAX_FILES = validationLimits.postAttachmentsMaxC
 /** Maximum number of cover images per article (the cover picker's cap) */
 export const ARTICLE_COVER_MAX_FILES = 1;
 
+/**
+ * Lock Server default, mirrored because the server offers no way to read it: a lock holds 10
+ * resources, and the locked post is one of them.
+ */
+export const LOCK_ATTACHMENT_MAX_FILES = 9;
+
+/** Decimal, as the server counts it: a file of 10 MiB is already over. */
+export const LOCK_ATTACHMENT_MAX_SIZE = 10_000_000;
+
 /** Human-readable list of supported file types for error messages (derived from MIME types) */
 export const POST_SUPPORTED_FILE_TYPES = POST_SUPPORTED_ATTACHMENT_MIME_TYPES.map((mime) => mime.split('/')[1]).join(
   ', ',

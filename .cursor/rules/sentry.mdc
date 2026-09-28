@@ -1,9 +1,9 @@
 ---
-description: Sentry observability conventions — capture funnel and direct-call rule
+description: Observability conventions (Sentry + Pulse) — capture funnel, direct-call rule and the Pulse consent gate
 globs: src/**/*
 alwaysApply: false
 ---
 
-# Sentry Rules
+# Observability Rules (Sentry + Pulse)
 
 @docs/sentry.md

@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   commitUpdateCollectionItem: vi.fn(),
   commitCreateCollection: vi.fn(),
   toggleBookmark: vi.fn(),
+  loadMoreCollections: vi.fn(),
+  paginationEnabled: null as boolean | null,
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
@@ -29,6 +31,15 @@ vi.mock('@/hooks/useBookmark/useBookmark', () => ({
 }));
 
 vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
+  useAuthoredCollectionsPagination: ({ enabled }: { enabled?: boolean }) => {
+    mocks.paginationEnabled = enabled ?? null;
+    return {
+      hasMore: true,
+      isLoading: false,
+      isLoadingMore: false,
+      loadMore: mocks.loadMoreCollections,
+    };
+  },
   useAuthoredCollections: () => ({
     collections: [
       {
@@ -61,6 +72,23 @@ vi.mock('@/stores/auth/auth.store', () => ({
 describe('usePostSaveTargets', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.paginationEnabled = null;
+  });
+
+  it('paginates authored collections only while the picker is open', async () => {
+    const open = renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: true }));
+
+    expect(mocks.paginationEnabled).toBe(true);
+    expect(open.result.current.hasMoreCollections).toBe(true);
+    expect(open.result.current.isCollectionsLoadingMore).toBe(false);
+
+    await act(async () => {
+      await open.result.current.loadMoreCollections();
+    });
+    expect(mocks.loadMoreCollections).toHaveBeenCalledTimes(1);
+
+    renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: false }));
+    expect(mocks.paginationEnabled).toBe(false);
   });
 
   it('combines bookmark state and collection membership', () => {

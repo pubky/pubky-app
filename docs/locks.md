@@ -22,6 +22,7 @@ reader pays it from Bitkit.
   - [Reading a lock post](#reading-a-lock-post)
   - [The Unlocked screen](#the-unlocked-screen)
   - [Marker tracking](#marker-tracking)
+  - [Sessions from before locks](#sessions-from-before-locks)
   - [Testing & local demo](#testing--local-demo)
   - [References](#references)
 
@@ -69,6 +70,29 @@ article button while the lock switch is on (`PostInputExpandableSection`), and
 `PostController.create` routes any post carrying a `lock` through `inferAnnouncementKind`
 (`core/pipes/post/post.kind.ts`), which throws on those two kinds. The guard is the
 backstop for the UI rule, so a UI change can't loosen it silently.
+
+_Article body images._ An article uploads each body image to the creator's public storage the
+moment it is inserted, before anyone knows whether the article will be locked, and the editor
+references the image by its public URI. When the switch goes on, the composer captures the body in
+its published form instead (`serializeArticleForLock` in `usePost`), from the latest title and body
+the inputs reported rather than from the debounced composer state: every image becomes an
+`attachment:{n}` slot, the scheme a normal article already uses, and the files behind the slots join
+the lock's attachments after the cover. The bytes come from the composer's upload session, which
+still holds each file as the author picked it, so nothing is read back from public storage. The
+public copies are deleted once the lock is published or the composer closes (best-effort, #2684). They stay until then,
+so that abandoning the lock puts a working article back into the editor. A locked article's images
+are therefore public between the insert and the publish; that window is accepted (#2655).
+
+_SVG files._ A locked SVG is stored without its image type, so it does not render after an unlock.
+Until that is fixed the switch refuses a draft that holds one, with a toast (`TODO:[Locks] #2683`).
+
+_Lock limits._ The Lock Server takes 10 resources per lock, the locked post being one of them, and
+10,000,000 bytes per file. It refuses a lock only after its files were uploaded, which leaves them
+orphaned, so the composer mirrors both limits (`LOCK_ATTACHMENT_MAX_FILES` and
+`LOCK_ATTACHMENT_MAX_SIZE` in `@/config/posts`) and checks them when the switch goes on: a draft
+over them gets a toast and the switch stays off. The check waits for the switch so that a creator
+who is not locking anything never hears about lock limits. The values are the server's defaults: it
+offers no way to read them.
 
 **2. Unlock (reader).** The lock card opens Pay to Unlock. The FE submits a **proof** to the
 Lock Server, waits until the reader has paid in Bitkit, gets a short-lived credential,
@@ -146,6 +170,17 @@ The `lock` URL survives either way — `toEdit` reads it from the stored row, no
   fields degrade to empty strings so the teaser still renders. The edit composer reads it with
   the same parse, so what the creator edits is what the reader sees (see
   [Editing an announcement](#editing-an-announcement)).
+- The reader's replica marker (`/priv/social/unlocked/<lockId>/post.json`, `replicatedPostSchema`) is
+  not a `PubkyAppPost`: each attachment carries its `content_type` inline so the copy renders without
+  the creator's lock file, and `announcement` holds the `pubky://…/posts/<id>` URI of the post the
+  content was unlocked from. Nexus cannot look a post up by its lock URL, so without that URI the
+  Unlocked screen has no way back to the announcement. The field is optional, and a value that is not
+  a `pubky://` URI is dropped rather than rejected — failing the schema would lose the reader's
+  unlocked content over a bad link. Either way the row renders as a bare replica card.
+  Each attachment also records its `slot`, its position in the locked post's `attachments`. A file
+  that could not be copied leaves a gap there, and an article body addresses its images by that
+  position, so the position in the marker's own list cannot stand in for it. A marker written before
+  the field existed has none, and its attachments are read in list order.
 - `LockFile` mirrors the Lock server's public `lock.json` (`version`, `creator`,
   `primary_resource`, `secondary_resources`, `criteria`, `lock_logic`, `access_policy`,
   `lock_server`). It is the **Lock server's contract**, not FE-owned — it should come from
@@ -155,7 +190,7 @@ The `lock` URL survives either way — `toEdit` reads it from the stored row, no
 ## Render flow (shared by feed and detail)
 
 Both the feed and the post-detail page render post content through the **same
-`PostContentBase`**, so lock support reaches both with **no detail-specific code**:
+`PostContentBase`**, so lock support reaches both from one place:
 
 ```
 feed card   ─┐
@@ -166,6 +201,18 @@ detail page ─┴─→ PostContentBase ──(isLock)──→ LockedPostConte
 
 `LockedPostContent` renders the teaser body (via the shared `PostBody`) + a lock card,
 and swaps in the guarded post once it becomes readable.
+
+The one route-dependent bit lives there too: an unlocked **article** is a three-line preview
+everywhere except the post page of that same post, where it renders in full (`PostArticle full`).
+A lock post's own content is the lock envelope, not article JSON, so `SinglePostContent` never
+routes it to the article page — the route is the only thing that says the reader opened this post
+to read it. The match is on the route's own ids, because that page also renders embeds and thread
+parents through this component and those stay previews (#2401, absorbed into #2432).
+
+In full, the body images render from the reader's local copies: `PostArticle` hands its
+`localAttachments` to `PostText`, and `ArticleInlineImage` resolves `attachment:{n}` to the object
+URL of slot `n`. A slot whose file is missing shows the placeholder. The preview shows no body
+image, like any article card.
 
 | File                                                           | Role                                                                                |
 | -------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
@@ -190,7 +237,7 @@ LockedPostContent
   ├─ useLockFile(lock)                       → lock.json (LockFile | null)
   │    └─ LocksController.fetchLockFile      → LocksApplication → LocksService.readContentLock
   │
-  ├─ useUnlockedContent(lock, lockFile, authorId)
+  ├─ useUnlockedContent(lock, lockFile, postId)
   │    ├─ 1) already unlocked as a reader → fetchReplicatedContent  (my HS /priv copy)
   │    ├─ 2) my own post (a == b)         → fetchOwnContent         (my HS /priv original)
   │    ├─ 3) valid payment price → lock card → DialogPayToUnlock (sign-in required first)
@@ -325,7 +372,9 @@ profile/(own)/layout.tsx → ProfilePageContainer
   │         └─ listAll(/priv/social/unlocked/) → completedLockIds → read each post.json
   ├─ unlockedCount → ProfilePageFilterBar (sidebar badge)
   └─ UnlockedListProvider → ProfileUnlocked (the page)
-       └─ ProfileUnlockedCard → fetchReplicatedAttachments → PostArticle | PostBody
+       └─ ProfileUnlockedItem
+            ├─ PostMain (announcement post, when its id resolves)
+            └─ ProfileUnlockedCard → fetchReplicatedAttachments → PostArticle | PostBody
 ```
 
 - **One read, two consumers.** The layout survives profile tab navigation, so the hook lives
@@ -337,8 +386,18 @@ profile/(own)/layout.tsx → ProfilePageContainer
   so the ordering key is server-authoritative rather than a number the client puts in the body.
   It costs no extra request — the header rides along with the marker read. (Path order is no help:
   `list` sorts by path and a lock id is a hash.)
-- **Media loads per card, not per list.** The list holds only markers; pulling every
-  attachment up front would download the reader's whole unlocked library at once.
+- **The announcement post is the preferred row.** It carries the author, the timestamp and the
+  teaser, and swaps its own lock card for this reader's replica, so rendering it gives the whole row.
+  Its id comes from the marker's `announcement` URI (see [Data shape](#data-shape)); a marker without one, a
+  post that 404s, and a deleted post all fall back to the bare replica card. A temporary load failure
+  is deliberately not told apart from a deletion (#2432).
+- **Media loads per row, not per list.** The list holds only markers; pulling every attachment up
+  front would download the reader's whole unlocked library at once. The announcement branch costs
+  more than the fallback card: `LockedPostContent` re-reads the marker and fetches the lock file for
+  each row. #2296 turns the marker read local.
+- **An unlocked article's cover comes from the reader's own copy.** It has no Nexus attachments at
+  all, so `usePostArticle` counts the caller's local attachments when deciding whether slot 0 is a
+  cover; the slot-0 rule (a body that references `attachment:0` has no cover) still applies.
 - **Not cached.** Re-entering the profile re-lists the root and re-reads each marker; #2296
   moves this to IndexedDB.
 
@@ -353,15 +412,71 @@ Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.
 Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
 
+## Sessions from before locks
+
+A Pubky Ring session carries exactly the capability list approved at sign-in, for its whole life,
+and the app rebuilds the same session on every page load from `localStorage`. Locks added two
+entries to that list (`HOMESERVER_CAPABILITIES` in `@/config/network`: `/priv/social/:rw` for the
+reader's replicas and purchases, `/priv/locks.app/:r` for a creator's own originals). A user who
+signed in through Ring before those entries shipped keeps a session without them: `/pub` keeps
+working, so the feed, posting and profiles are unaffected, but the homeserver answers every read
+or write under `/priv` with **403** (a session that lacks the capability; 401 is only "no session").
+Keypair sign-in is unaffected: the SDK mints it with the root capability, `/:rw` — confirmed against
+the local stack, and root covers every required entry with no special case.
+
+The app does not sign such a user out. Instead (#2373):
+
+- **Detection is derived, not stored.** `sessionNeedsUpgrade` (`@/libs/capabilities/capabilities`)
+  compares `session.info.capabilities` against the required list by coverage, with the homeserver's
+  own rule: a scope covers a path when it is equal, or when it ends in `/` and is a prefix. `/:rw`
+  therefore covers everything with no special case, and `/pub/app` covers only that one path.
+  `useSessionNeedsUpgrade` reads it off the auth store, so it updates the moment the session changes.
+- **The upgrade is a swap, not a sign-in.** `useAuthUrl({ type: 'upgrade' })` starts the same Ring
+  flow as sign-in (the requested list is already the current one); on approval
+  `AuthController.upgradeSession` replaces the stored session and does nothing else. The sign-in
+  routine would re-init the auth store with the profile unknown, which the route guard reads as
+  "signed out" for a moment and redirects. A session approved with a different key is refused and
+  signed out on its own homeserver so it is not left dangling, and the same homeserver boundary as
+  sign-in is applied before the swap, in case the key republished to a homeserver this deployment
+  refuses.
+  The URL comes from `getUpgradeAuthUrl`, which only tracks the flow: the sign-in URL path also
+  clears the local database and resets the settings store for the previous account, which must
+  not happen to a user who stays signed in. An approval from another key is reported back as a
+  plain `false` and surfaced as a toast, not an `Err.*`: picking the wrong identity in Ring is a
+  choice to correct, and an AppError would file every mis-tap in Sentry. Guards that compare the
+  session object
+  (`captureViewerSession`, the TTL coordinator) see the swap as one change: reads in flight are
+  dropped once and TTL restarts, and the next interaction recovers both.
+- **The old session is never signed out.** The homeserver keys its cookie by pubky, so the new
+  sign-in already overwrote it; a sign-out request would answer with a removal cookie under that
+  same name and drop the new session too. The stale server-side row expires on its own.
+- **Where it is asked for.** The creator setup dialog inserts the step between the Lock Server
+  authorization and Bitkit, numbered `(1/2)` / `(2/2)` only when both were pending when the dialog
+  opened. On the reader side, a locked post (`LockedPostContent`) and the Unlocked screen
+  (`ProfileUnlocked`) render `LocksPermissionNotice` while `useSessionNeedsUpgrade()` is true,
+  instead of a dead-end message or a lock card that pretends nothing was unlocked; its button opens
+  the same Ring approval (`SessionUpgradePanel`), and the card's Unlock is parked meanwhile since a
+  second unlock could charge twice. The `/priv` reads behind those surfaces (`useUnlockedContent`,
+  `usePurchasedLocks`, `useUnlockedList`) skip the request while the session needs the upgrade:
+  the homeserver would only answer 403, and each refusal is an `Err.auth` that reaches Sentry.
+  Once the session is replaced, those hooks re-run on their own because the session is one of
+  their effect inputs. **A new `/priv` read belongs in that list**: gate it on
+  `useSessionNeedsUpgrade()` and settle whatever "loading" state it owns, or a pre-upgrade user pays
+  for it with a 403 per render. A creator whose Lock Server and Bitkit are already connected in this tab
+  still meets the step: `usePostInputLock` gates the lock dialog on the session as well.
+
+Release note: after the deploy, users already signed in through Ring are not logged out, and
+nothing under `/pub` changes behaviour. Every locked post they scroll past shows the notice with
+its Unlock parked (the app cannot tell which locks they unlocked before), and so does their
+Unlocked page; a creator meets the extra step the next time they lock a post.
+
 ## Testing & local demo
 
-The Lock SDK is an ordinary dependency: `@synonymdev/locks-sdk`, pinned exactly in
-`package.json` and installed by `npm ci` like anything else. Note the scope — the package is
-published under `@synonymdev`, while the crate it is built from is `locks-sdk-wasm`.
-
-Upgrading it is `npm i --save-exact @synonymdev/locks-sdk@<version>`. The published version
-is what `locks-sdk/bindings/js/package.json` declares in `pubky/locks`; releases are tagged
-there (`v0.1.0-rc4`, …), and a version can be ahead of the newest tag.
+The Lock SDK is the `@synonymdev/locks-sdk` npm package (Rust compiled to WebAssembly, pinned
+to an exact version in `package.json`); `npm ci` installs it like any other dependency. To try an
+SDK change that is not published yet, build it from `pubky/locks` (`locks-sdk/bindings/js`,
+`npm run build`) and point `package.json` at that folder with a `file:` path, or `npm link` it.
+Never commit either.
 
 - Tests are co-located with each file. Shared sample data (a `LockFile` + an author pubky)
   lives in `src/test-utils/locks.ts` (`mockLockFile()`, `MOCK_LOCK_AUTHOR_PUBKY`).

@@ -224,9 +224,25 @@ export const replicatedPostSchema = z.object({
   content: z.string().catch(''),
   kind: postKindSchema,
   attachments: z
-    .array(z.object({ url: z.string(), content_type: z.string() }))
+    .array(
+      z.object({
+        url: z.string(),
+        content_type: z.string(),
+        /**
+         * Position in the locked post's `attachments`, which an article body addresses its images
+         * by. Absent on markers written before it was recorded.
+         */
+        slot: z.number().int().nonnegative().optional().catch(undefined),
+      }),
+    )
     .nullable()
     .default(null),
+  /**
+   * Announcement post this was unlocked from. Absent on markers written before it was recorded. A
+   * non-pubky value is dropped rather than rejected: it would otherwise parse into a plausible-looking
+   * composite id, and failing the whole schema would lose the reader's unlocked content instead.
+   */
+  announcement: z.string().startsWith('pubky://').optional().catch(undefined),
 });
 
 export type ReplicatedPost = z.infer<typeof replicatedPostSchema>;
@@ -239,6 +255,8 @@ export interface TUnlockedListItem {
   post: ReplicatedPost;
   /** Homeserver write time of the marker — the unlock time, and the list's sort key. */
   unlockedAt: number;
+  /** From the marker's `announcement` URI. Absent when it has none, or the URI is unparseable. */
+  announcementPostId?: string;
 }
 
 /** One guarded attachment read back after unlock — raw bytes + its content type (for a Blob). */
@@ -247,6 +265,8 @@ export interface TUnlockedAttachment {
   id: string;
   contentType: string;
   bytes: Uint8Array;
+  /** Position in the locked post's `attachments`; a dropped attachment leaves a gap. */
+  slot: number;
 }
 
 /** The full unlocked content: the parsed post plus its proxy-read attachments (in `attachments` order). */

@@ -175,7 +175,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
       const relationship = userRelationshipsMap.get(id);
       const userTags = userTagsMap.get(id);
       // Only compute CDN avatar URL if user has an image set
-      const avatarUrl = details?.image ? FileController.getAvatarUrl(id) : null;
+      const avatarUrl = details?.image ? FileController.getAvatarUrl(id, details.indexed_at) : null;
       // Extract tag labels from NexusTag objects
       const tags = userTags?.map((tag) => tag.label) ?? [];
 

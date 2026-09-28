@@ -5,6 +5,7 @@ import type { TLockConfig } from '@/application/locks/locks.types';
 import { getLockServer, getPaykitServerUrl } from '@/config/network';
 import { PostController } from '@/controllers/post/post';
 import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
+import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { Logger } from '@/libs/logger/logger';
 import { buildArticleContent } from '@/libs/post/articleContent';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
@@ -14,7 +15,7 @@ import { inferPostKindForCreate } from '@/pipes/post/post.kind';
 import { postKindBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
-import type { TLockDraft, UsePostInputLockOptions, UsePostInputLockReturn } from './usePostInputLock.types';
+import type { UsePostInputLockOptions, UsePostInputLockReturn } from './usePostInputLock.types';
 
 /** Turns raw files into the local-blob attachment shape shown before the remote copies are ready. */
 const filesToLocalAttachments = (files: File[]) =>
@@ -38,6 +39,8 @@ const filesToLocalAttachments = (files: File[]) =>
 export function usePostInputLock({
   isEnabled,
   canEnable,
+  lockDraft,
+  setLockDraft,
   captureComposer,
   restoreComposer,
   clearComposer,
@@ -53,7 +56,6 @@ export function usePostInputLock({
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [lockConfig, setLockConfig] = useState<TLockConfig | null>(null);
   const isLockConfigured = lockConfig !== null;
-  const [lockDraft, setLockDraft] = useState<TLockDraft | null>(null);
   const [lockTitle, setLockTitle] = useState('');
   // The auth modal fires `onOpenChange(false)` on both cancel and the success "Continue"; this flag
   // lets the close handler tell them apart so success advances instead of reverting the switch.
@@ -63,13 +65,15 @@ export function usePostInputLock({
   const lockServerPubky = getLockServer() ?? '';
   const paykitServerUrl = getPaykitServerUrl() ?? '';
 
+  const needsSessionUpgrade = useSessionNeedsUpgrade();
   /**
-   * Signed into the Lock Server AND holding a connected Bitkit payout account. The connection is
-   * per browser session, so this is false again after a reload.
+   * Signed into the Lock Server, holding a connected Bitkit payout account, and on a homeserver
+   * session that can reach `/priv` (#2373). The first two are per browser session, so this is false
+   * again after a reload.
    */
   const isLocksSetUp = () => {
     const store = useLocksAuthStore.getState();
-    return store.selectIsLocksAuthenticated() && store.selectIsPaykitConnected();
+    return store.selectIsLocksAuthenticated() && store.selectIsPaykitConnected() && !needsSessionUpgrade;
   };
 
   // Optimistic commit of the just-published announcement, like a normal post: local blobs (so the
@@ -101,17 +105,21 @@ export function usePostInputLock({
   // whose kind is inferred exactly as a normal post would be (link / image / video / …).
   // An article draft is serialized the same way a normal publish would (`usePost`): title + body as
   // one JSON content — `PostArticle` can only render the unlocked copy back from that shape.
+  // Its body images follow the cover, in the order their `attachment:{n}` slots count them.
   const { publish, isPublishing } = useCreateLockContent({
     lockedPost: {
       content: lockDraft?.isArticle
-        ? buildArticleContent(lockDraft.articleTitle, lockDraft.content)
+        ? buildArticleContent(lockDraft.articleTitle, lockDraft.serializedArticle.body)
         : (lockDraft?.content ?? ''),
       kind: inferPostKindForCreate({
         content: lockDraft?.content ?? '',
         attachments: lockDraft?.attachments,
         isArticle: lockDraft?.isArticle,
       }),
-      attachments: lockDraft?.attachments ?? [],
+      attachments: [
+        ...(lockDraft?.attachments ?? []),
+        ...(lockDraft?.isArticle ? lockDraft.serializedArticle.inlineFiles : []),
+      ],
     },
     announcement: {
       teaser: { lock_title: lockTitle, teaser_description: announcementContent },
@@ -148,7 +156,9 @@ export function usePostInputLock({
     // The composer currently holds the content to be locked. Snapshot it, but leave it on screen so the
     // creator still sees their draft behind the auth/lock dialogs — it is only swapped for the
     // empty announcement composer once the lock is applied (see `handleLockApplied`).
-    setLockDraft(captureComposer());
+    const draft = captureComposer();
+    if (!draft) return;
+    setLockDraft(draft);
     setLockEnabled(true);
     // Seed the card's title with the default so it reads as real, editable text (not a placeholder).
     setLockTitle(DEFAULT_LOCK_TITLE);

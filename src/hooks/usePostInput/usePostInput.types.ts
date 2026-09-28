@@ -1,6 +1,6 @@
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import type { RefObject } from 'react';
-import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
+import type { ExistingAttachment, UsePostReturn } from '@/hooks/usePost/usePost.types';
 import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
 import type { EditLock, PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
@@ -50,6 +50,7 @@ export interface UsePostInputOptions {
   onArticleModeChange?: (isArticle: boolean) => void;
   /** Optional external work-in-progress check, added to the tracked fields before collapsing */
   hasExternalContent?: () => boolean;
+  keepInlineImages?: boolean;
 }
 
 export interface UsePostInputReturn {
@@ -83,6 +84,9 @@ export interface UsePostInputReturn {
   inlineImages: { upload: (file: File) => Promise<string>; getPreviewUrl: (src: string) => string | null };
   /** Inline image uploads in flight; submit stays disabled while > 0 */
   uploadingCount: number;
+  serializeArticleForLock: UsePostReturn['serializeArticleForLock'];
+  /** The article as the inputs hold it now. `articleTitle` and `content` trail them by the debounce. */
+  getLatestArticle: () => { title: string; body: string };
 
   // Mention autocomplete state
   mentionUsers: AutocompleteUserData[];
