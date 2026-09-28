@@ -77,7 +77,7 @@ export function HotActiveUsers({
       <Heading
         level={5}
         size="lg"
-        className={cn('font-light text-muted-foreground', hideHeadingOnMobile && 'hidden lg:block')}
+        className={cn('font-light text-muted-foreground', hideHeadingOnMobile && 'sr-only lg:not-sr-only')}
       >
         {'Active users'}
       </Heading>

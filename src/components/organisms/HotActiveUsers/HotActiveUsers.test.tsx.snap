@@ -27,13 +27,13 @@ exports[`HotActiveUsers - Snapshots > matches snapshot with active users 1`] = `
 </div>
 `;
 
-exports[`HotActiveUsers - Snapshots > matches snapshot with the heading hidden on mobile 1`] = `
+exports[`HotActiveUsers - Snapshots > matches snapshot with the heading visually hidden on mobile 1`] = `
 <div
   class="flex w-full flex-col gap-2"
   data-testid="hot-active-users"
 >
   <h5
-    class="font-light text-muted-foreground hidden lg:block"
+    class="font-light text-muted-foreground sr-only lg:not-sr-only"
   >
     Active users
   </h5>

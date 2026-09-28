@@ -159,11 +159,11 @@ describe('HotActiveUsers', () => {
 
     render(<HotActiveUsers />);
 
-    expect(screen.getByText('Active users')).not.toHaveClass('hidden');
-    expect(screen.getByText('Active users')).not.toHaveClass('lg:block');
+    expect(screen.getByText('Active users')).not.toHaveClass('sr-only');
+    expect(screen.getByText('Active users')).not.toHaveClass('lg:not-sr-only');
   });
 
-  it('shows the heading on desktop only when hideHeadingOnMobile is set', () => {
+  it('visually hides the heading below the lg breakpoint when hideHeadingOnMobile is set', () => {
     hooksMocks.useUserStream.mockReturnValue({
       ...baseStreamResult,
       users: [{ id: 'visible-user', name: 'Visible Person', image: null, avatarUrl: null, isFollowing: false }],
@@ -173,7 +173,7 @@ describe('HotActiveUsers', () => {
 
     render(<HotActiveUsers hideHeadingOnMobile />);
 
-    expect(screen.getByText('Active users')).toHaveClass('hidden', 'lg:block');
+    expect(screen.getByText('Active users')).toHaveClass('sr-only', 'lg:not-sr-only');
   });
 });
 
@@ -204,7 +204,7 @@ describe('HotActiveUsers - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with the heading hidden on mobile', () => {
+  it('matches snapshot with the heading visually hidden on mobile', () => {
     hooksMocks.useUserStream.mockReturnValue({
       ...baseStreamResult,
       users: [{ id: 'user-1', name: 'Alice', image: null, avatarUrl: null, isFollowing: false }],

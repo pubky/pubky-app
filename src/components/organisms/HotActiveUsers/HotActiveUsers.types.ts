@@ -4,9 +4,9 @@ export interface HotActiveUsersProps {
   /** Additional class name */
   className?: string;
   /**
-   * Hide the "Active users" heading below the `lg` breakpoint.
+   * Visually hide the "Active users" heading below the `lg` breakpoint (it stays in the accessibility tree).
    * Only for callers whose mobile chrome already names the section (the Hot page tab menu);
-   * standalone callers such as the profile-not-found view keep the heading on every viewport.
+   * standalone callers such as the profile-not-found view keep the heading visible on every viewport.
    */
   hideHeadingOnMobile?: boolean;
 }

@@ -52,7 +52,7 @@ exports[`Hot - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
       data-testid="container"
     >
       <div
-        class="hidden font-light text-muted-foreground lg:block"
+        class="sr-only font-light text-muted-foreground lg:not-sr-only"
         data-testid="heading-5"
       >
         Trending posts
@@ -119,7 +119,7 @@ exports[`Hot - Snapshots > matches snapshot 1`] = `
       data-testid="container"
     >
       <div
-        class="hidden font-light text-muted-foreground lg:block"
+        class="sr-only font-light text-muted-foreground lg:not-sr-only"
         data-testid="heading-5"
       >
         Trending posts

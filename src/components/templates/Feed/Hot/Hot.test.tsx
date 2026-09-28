@@ -194,9 +194,9 @@ describe('Hot', () => {
     expect(screen.getByText('Trending posts')).toBeInTheDocument();
   });
 
-  it('shows the Trending posts heading on desktop only', () => {
+  it('visually hides the Trending posts heading below the lg breakpoint', () => {
     render(<Hot />);
-    expect(screen.getByText('Trending posts')).toHaveClass('hidden', 'lg:block');
+    expect(screen.getByText('Trending posts')).toHaveClass('sr-only', 'lg:not-sr-only');
   });
 
   it('hides the Active users heading on mobile because the tab menu names the section', () => {
