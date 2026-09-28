@@ -1,5 +1,19 @@
 import type { Dispatch, SetStateAction } from 'react';
 
+export interface UsePostOptions {
+  /** A captured lock draft needs the article's uploaded images after the composer was emptied. */
+  keepInlineImages?: boolean;
+}
+
+/**
+ * An article body in published form: `body` references its images by `attachment:{n}` slot and
+ * `inlineFiles` holds them in slot order, after the cover.
+ */
+export type SerializedArticle = {
+  body: string;
+  inlineFiles: File[];
+};
+
 export interface UsePostReplyOptions {
   postId: string;
   onSuccess?: (createdPostId: string) => void;
@@ -92,4 +106,6 @@ export interface UsePostReturn {
   };
   /** Inline image uploads currently in flight; publishing is blocked while > 0. */
   uploadingCount: number;
+  /** Null, after a toast, when a normal publish would refuse the body too. */
+  serializeArticleForLock: (body: string) => SerializedArticle | null;
 }

@@ -270,7 +270,7 @@ export class LocksApplication {
     readBytes: (path: string, uri: string) => Promise<Uint8Array>,
   ): Promise<TUnlockedAttachment[]> {
     const reads = await Promise.all(
-      uris.map(async (uri) => {
+      uris.map(async (uri, slot) => {
         try {
           const path = GuardedContentParser.attachmentUriToPath(uri);
           const contentType = lockFile.secondary_resources?.[path]?.content_type;
@@ -283,7 +283,7 @@ export class LocksApplication {
               context: { path },
             });
           }
-          return { id: path.slice(path.lastIndexOf('/') + 1), contentType, bytes: await readBytes(path, uri) };
+          return { id: path.slice(path.lastIndexOf('/') + 1), contentType, bytes: await readBytes(path, uri), slot };
         } catch (error) {
           // Validation = permanent data error (bad uri / no descriptor / outside namespace), already
           // reported — retrying can't fix it, so drop this attachment and let the rest render.
@@ -423,12 +423,13 @@ export class LocksApplication {
    */
   static async fetchReplicatedAttachments({ post }: TFetchReplicatedAttachmentsParams): Promise<TUnlockedAttachment[]> {
     const reads = await Promise.all(
-      (post.attachments ?? []).map(async ({ url, content_type }) => {
+      (post.attachments ?? []).map(async ({ url, content_type, slot }, index) => {
         try {
           return {
             id: url.slice(url.lastIndexOf('/') + 1),
             contentType: content_type,
             bytes: await HomeserverService.getBytes(url),
+            slot: slot ?? index,
           };
         } catch (error) {
           // 404 = the replica lost this file; `getBytes` already reported it.
@@ -501,10 +502,8 @@ export class LocksApplication {
    * TODO:[Locks] #2039 — a failure part-way leaves the already-uploaded resources orphaned on the
    * server. See the note on `LocksService.createContentLock` for the cleanup rules.
    *
-   * TODO:[Locks] #2039 — sizes are never checked before uploading. The Lock Server only enforces its
-   * limits at `createContentLock` (server config; defaults 10 MB/file, 10 files, 100 MB total), so an
-   * oversized file uploads fine and then fails the lock, leaving an orphan. A pre-check here is UX
-   * only — the server stays the authority.
+   * The composer checks the file count and size against the Lock Server defaults first
+   * (`LOCK_ATTACHMENT_*` in `@/config/posts`); the server stays the authority.
    */
   static async createLockContent({
     attachments = [],

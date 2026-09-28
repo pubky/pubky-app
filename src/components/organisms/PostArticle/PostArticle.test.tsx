@@ -69,12 +69,14 @@ vi.mock('@/molecules/PostText/PostText', () => {
       content,
       isArticle,
       fullArticle,
+      articleImages,
       onLinkClick,
       className,
     }: {
       content: string;
       isArticle?: boolean;
       fullArticle?: boolean;
+      articleImages?: unknown;
       onLinkClick?: (url: string, e: React.MouseEvent) => void;
       className?: string;
     }) => (
@@ -82,6 +84,7 @@ vi.mock('@/molecules/PostText/PostText', () => {
         data-testid="post-text"
         data-is-article={isArticle}
         data-full-article={String(Boolean(fullArticle))}
+        data-article-images={articleImages ? JSON.stringify(articleImages) : undefined}
         data-has-link-click={!!onLinkClick}
         className={className}
       >
@@ -370,6 +373,31 @@ describe('PostArticle', () => {
       const text = screen.getByTestId('post-text');
       expect(text).toHaveAttribute('data-full-article', 'false');
       expect(text).toHaveClass('line-clamp-3');
+    });
+
+    it('renders the body images of unlocked content from its local attachments', () => {
+      render(<PostArticle {...defaultProps} variant="full" localAttachments={[mockLocalImageAttachment]} />);
+
+      expect(screen.getByTestId('post-text')).toHaveAttribute(
+        'data-article-images',
+        JSON.stringify({ localAttachments: [mockLocalImageAttachment] }),
+      );
+    });
+
+    it('keeps body images out of the preview card, like any article card', () => {
+      render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
+
+      expect(screen.getByTestId('post-text')).not.toHaveAttribute('data-article-images');
+    });
+
+    it('takes the cover from slot 0, not from whatever comes first in the list', () => {
+      // The cover was lost while copying: the first attachment left is a body image.
+      const bodyImage: AttachmentConstructed = { ...mockLocalImageAttachment, name: 'Body image', slot: 1 };
+      mockUsePostArticle.mockReturnValue(mockHookReturnWithoutImage);
+
+      render(<PostArticle {...defaultProps} variant="full" localAttachments={[bodyImage]} />);
+
+      expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
     });
 
     it('counts local attachments so a cover with no Nexus copy still shows', () => {

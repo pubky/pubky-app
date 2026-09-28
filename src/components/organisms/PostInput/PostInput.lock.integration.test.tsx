@@ -112,6 +112,8 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         existingAttachments: [],
         removeExistingAttachment: vi.fn(),
         uploadingCount: 0,
+        serializeArticleForLock: vi.fn(),
+        getLatestArticle: () => ({ title: articleTitle, body: content }),
         isArticle,
         setIsArticle,
         handleArticleClick: vi.fn(),
