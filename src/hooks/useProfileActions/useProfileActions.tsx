@@ -6,6 +6,8 @@ import { AUTH_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { ProfileController } from '@/controllers/profile/profile';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { withPubkyPrefix } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
@@ -79,7 +81,14 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
         await ProfileController.commitUpdateStatus({ pubky: currentUserPubky, status });
       } catch (error) {
         Logger.error('Failed to update status:', error);
-        toast({ variant: 'error', description: 'Could not update status. Try again.' });
+        // A tombstoned row is refused before the PUT (`commitUpdateStatus`), and retrying cannot
+        // help, so surface why instead of inviting another attempt. Any other failure keeps the
+        // generic retry message.
+        const isDeletedProfile = isAppError(error) && error.code === ClientErrorCode.GONE;
+        toast({
+          variant: 'error',
+          description: isDeletedProfile ? error.message : 'Could not update status. Try again.',
+        });
       }
     },
     [authStore],
