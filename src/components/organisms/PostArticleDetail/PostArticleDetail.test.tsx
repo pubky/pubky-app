@@ -556,6 +556,98 @@ describe('PostArticleDetail', () => {
     expect(getCoverImage()).toHaveAttribute('alt', 'local-priority.png');
   });
 
+  it('keeps the desktop slot on the preloaded variant for a kept CDN cover', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://cdn.example/cover-feed.webp',
+        desktopSrc: 'https://cdn.example/cover-large.webp',
+        desktopFallbackSrc: 'https://cdn.example/cover-main.png',
+        alt: 'Remote cover',
+      },
+      hasCover: true,
+    });
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(
+        createMockLocalFilesStore({
+          'user123:post456': [
+            {
+              type: 'image/png',
+              name: 'kept-cover.png',
+              urls: { main: 'https://cdn.example/cover-main.png', feed: 'https://cdn.example/cover-feed.webp' },
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    // A kept attachment resolves to the same file as the remote cover, so the local entry and the
+    // remote variant are interchangeable. The server preloaded `large`; rendering the local `main`
+    // here would pull the original upload the preload exists to replace.
+    expect(document.querySelector('picture source')).toHaveAttribute('srcset', 'https://cdn.example/cover-large.webp');
+    expect(getCoverImage()).toHaveAttribute('src', 'https://cdn.example/cover-feed.webp');
+  });
+
+  it('keeps a same-session blob cover in the desktop slot', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://cdn.example/old-feed.webp',
+        desktopSrc: 'https://cdn.example/old-large.webp',
+        desktopFallbackSrc: 'https://cdn.example/old-main.png',
+        alt: 'Remote cover',
+      },
+      hasCover: true,
+    });
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(
+        createMockLocalFilesStore({
+          'user123:post456': [
+            {
+              type: 'image/png',
+              name: 'new-cover.png',
+              urls: { main: 'blob:http://localhost/new-cover', feed: 'blob:http://localhost/new-cover' },
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    // A file uploaded this session is served from memory and Nexus has no variant for it, so it
+    // owns the desktop slot even though the remote cover resolved.
+    expect(document.querySelector('picture source')).toHaveAttribute('srcset', 'blob:http://localhost/new-cover');
+    expect(getCoverImage()).toHaveAttribute('src', 'blob:http://localhost/new-cover');
+  });
+
+  it('renders a kept CDN cover while the remote cover has not resolved', () => {
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(
+        createMockLocalFilesStore({
+          'user123:post456': [
+            {
+              type: 'image/png',
+              name: 'kept-cover.png',
+              urls: { main: 'https://cdn.example/cover-main.png', feed: 'https://cdn.example/cover-feed.webp' },
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    // No remote cover to prefer: the local entry is the only source, so it renders both slots.
+    expect(document.querySelector('picture source')).toHaveAttribute('srcset', 'https://cdn.example/cover-main.png');
+    expect(getCoverImage()).toHaveAttribute('src', 'https://cdn.example/cover-feed.webp');
+    expect(getCoverImage()).toHaveAttribute('alt', 'kept-cover.png');
+  });
+
   it('ignores local cover image when first attachment is not an image', () => {
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(

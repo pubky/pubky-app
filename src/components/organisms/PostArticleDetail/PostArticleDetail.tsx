@@ -75,16 +75,26 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
 
   // Local entries are index-aligned with attachments; slot 0 is the cover
   // only when the slot-0 rule says so (otherwise it's an inline image).
-  const localCoverImage =
-    hasCover && localAttachments?.[0]?.type.startsWith('image')
-      ? {
-          src: localAttachments[0].urls.feed ?? localAttachments[0].urls.main,
-          desktopSrc: localAttachments[0].urls.main,
-          // A local file is served from memory, not Nexus, so it has no derived-size fallback.
-          desktopFallbackSrc: undefined,
-          alt: localAttachments[0].name,
-        }
-      : null;
+  const localCover = hasCover && localAttachments?.[0]?.type.startsWith('image') ? localAttachments[0] : null;
+
+  // A `blob:` entry is a file this session uploaded: served from memory, with no variant Nexus
+  // derives from it, so it owns the desktop slot.
+  //
+  // A CDN entry is an attachment that was kept, so it resolves to the same file the remote cover
+  // does and the two URLs are interchangeable. The remote one wins there: it is the URL the
+  // server preloaded, and rendering the local `main` instead downloads a second copy of the cover
+  // (the original upload) on a document that already preloaded the desktop variant.
+  const localCoverOwnsDesktop = Boolean(localCover?.urls.main.startsWith('blob:'));
+
+  const localCoverImage = localCover
+    ? {
+        src: localCover.urls.feed ?? localCover.urls.main,
+        desktopSrc: localCoverOwnsDesktop || !coverImage?.desktopSrc ? localCover.urls.main : coverImage.desktopSrc,
+        // Only a memory-served file has no derived-size fallback to swap to.
+        desktopFallbackSrc: localCoverOwnsDesktop ? undefined : coverImage?.desktopFallbackSrc,
+        alt: localCover.name,
+      }
+    : null;
 
   const finalCoverImage = localCoverImage || coverImage;
 
