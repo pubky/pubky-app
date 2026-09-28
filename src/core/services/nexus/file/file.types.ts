@@ -7,8 +7,9 @@ export type TFileBody = {
 export enum FileVariant {
   SMALL = 'small',
   FEED = 'feed',
-  MAIN = 'main',
+  /** 1440 px WebP, never upscaled. Images only; videos have `main` alone. */
   LARGE = 'large',
+  MAIN = 'main',
 }
 
 export type TFileParams = {

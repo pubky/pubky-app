@@ -80,29 +80,28 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   const localCover = hasCover && localAttachments?.[0]?.type.startsWith('image') ? localAttachments[0] : null;
 
   // A `blob:` entry is a file this session uploaded: served from memory, with no variant Nexus
-  // derives from it, so it owns the desktop slot.
+  // derives from it, so it owns the desktop slot and has nothing to degrade to.
   //
-  // A CDN entry is an attachment that was kept, so it resolves to the same file the remote cover
-  // does and the two URLs are interchangeable. The remote one wins there: it is the URL the
-  // server preloaded, and rendering the local `main` instead downloads a second copy of the cover
-  // (the original upload) on a document that already preloaded the desktop variant.
+  // A CDN entry is an attachment that was kept. It is seeded with its derived `large` URL, the one
+  // the server preloaded, so the desktop slot renders that and a failed `large` degrades to the
+  // entry's own `main`. An entry seeded without `large` resolves to the same file the remote cover
+  // does, so it waits for that: holding the slot (no `srcset`, so a wide screen falls back to
+  // `feed`) keeps the original upload off the wire until the preloaded variant is known. A cover
+  // that never resolves still falls back to the local `main`, the only thing left to render.
   const localCoverOwnsDesktop = Boolean(localCover?.urls.main.startsWith('blob:'));
+  const localCoverDesktopSrc = (() => {
+    if (!localCover) return undefined;
+    if (localCoverOwnsDesktop) return localCover.urls.main;
+    if (localCover.urls.large) return localCover.urls.large;
+    if (isCoverLoading) return undefined;
+    return coverImage?.desktopSrc ?? localCover.urls.main;
+  })();
 
   const localCoverImage = localCover
     ? {
         src: localCover.urls.feed ?? localCover.urls.main,
-        // A kept CDN cover only knows the remote `large` URL once the cover resolves, so while it is
-        // still loading there is no desktop source to point at. Holding the slot (no `srcset`, so a
-        // wide screen falls back to `feed`) keeps the original upload off the wire; the desktop source
-        // appears, on the preloaded variant, as soon as the cover lands. A cover that never resolves
-        // still falls back to the local `main`, the only thing left to render.
-        desktopSrc: localCoverOwnsDesktop
-          ? localCover.urls.main
-          : isCoverLoading
-            ? undefined
-            : (coverImage?.desktopSrc ?? localCover.urls.main),
-        // Only a memory-served file has no derived-size fallback to swap to.
-        desktopFallbackSrc: localCoverOwnsDesktop ? undefined : coverImage?.desktopFallbackSrc,
+        desktopSrc: localCoverDesktopSrc,
+        desktopFallbackSrc: localCoverOwnsDesktop ? undefined : localCover.urls.main,
         alt: localCover.name,
       }
     : null;
