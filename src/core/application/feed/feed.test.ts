@@ -787,7 +787,7 @@ describe('FeedApplication', () => {
           layout: PubkyAppFeedLayout.Cards,
         },
       });
-      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve(feed));
+      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: null }));
       requestSpy.mockResolvedValue(undefined);
 
       const saved = await FeedApplication.persist({ userId: testUserId, params: { feed: normalized } });
