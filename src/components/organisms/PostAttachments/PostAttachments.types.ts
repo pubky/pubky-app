@@ -13,6 +13,8 @@ export type AttachmentConstructed = {
     main: string;
     feed?: string;
   };
+  /** Unlocked content only: position in the locked post's `attachments`. A lost file leaves a gap. */
+  slot?: number;
 };
 
 export type CategorizedAttachments = {

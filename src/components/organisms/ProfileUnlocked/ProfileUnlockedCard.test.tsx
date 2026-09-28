@@ -45,7 +45,7 @@ describe('ProfileUnlockedCard', () => {
   it('loads the bytes for a post that has attachments', async () => {
     const attachments = [{ url: 'pubky://me/priv/social/unlocked/LOCK1/img1', content_type: 'image/png' }];
     vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([
-      { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([1]) },
+      { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 },
     ]);
 
     render(<ProfileUnlockedCard post={post(attachments)} />);
@@ -58,7 +58,7 @@ describe('ProfileUnlockedCard', () => {
   describe('by post kind', () => {
     const withMedia = async (contentType: string) => {
       vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([
-        { id: 'file1', contentType, bytes: new Uint8Array([1]) },
+        { id: 'file1', contentType, bytes: new Uint8Array([1]), slot: 0 },
       ]);
       return [{ url: 'pubky://me/priv/social/unlocked/LOCK1/file1', content_type: contentType }];
     };
@@ -132,7 +132,12 @@ describe('ProfileUnlockedCard', () => {
       content_type: 'image/png',
     }));
     vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue(
-      [0, 2, 4].map((index) => ({ id: `img${index}`, contentType: 'image/png', bytes: new Uint8Array([index]) })),
+      [0, 2, 4].map((index) => ({
+        id: `img${index}`,
+        contentType: 'image/png',
+        bytes: new Uint8Array([index]),
+        slot: index,
+      })),
     );
 
     render(<ProfileUnlockedCard post={post(refs)} />);
@@ -143,7 +148,7 @@ describe('ProfileUnlockedCard', () => {
 
   it('releases the object URLs on unmount, so the blobs are not leaked', async () => {
     vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([
-      { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([1]) },
+      { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 },
     ]);
     const attachments = [{ url: 'pubky://me/priv/social/unlocked/LOCK1/img1', content_type: 'image/png' }];
 

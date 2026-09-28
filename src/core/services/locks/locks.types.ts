@@ -224,7 +224,17 @@ export const replicatedPostSchema = z.object({
   content: z.string().catch(''),
   kind: postKindSchema,
   attachments: z
-    .array(z.object({ url: z.string(), content_type: z.string() }))
+    .array(
+      z.object({
+        url: z.string(),
+        content_type: z.string(),
+        /**
+         * Position in the locked post's `attachments`, which an article body addresses its images
+         * by. Absent on markers written before it was recorded.
+         */
+        slot: z.number().int().nonnegative().optional().catch(undefined),
+      }),
+    )
     .nullable()
     .default(null),
   /**
@@ -255,6 +265,8 @@ export interface TUnlockedAttachment {
   id: string;
   contentType: string;
   bytes: Uint8Array;
+  /** Position in the locked post's `attachments`; a dropped attachment leaves a gap. */
+  slot: number;
 }
 
 /** The full unlocked content: the parsed post plus its proxy-read attachments (in `attachments` order). */

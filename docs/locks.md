@@ -71,6 +71,29 @@ article button while the lock switch is on (`PostInputExpandableSection`), and
 (`core/pipes/post/post.kind.ts`), which throws on those two kinds. The guard is the
 backstop for the UI rule, so a UI change can't loosen it silently.
 
+_Article body images._ An article uploads each body image to the creator's public storage the
+moment it is inserted, before anyone knows whether the article will be locked, and the editor
+references the image by its public URI. When the switch goes on, the composer captures the body in
+its published form instead (`serializeArticleForLock` in `usePost`), from the latest title and body
+the inputs reported rather than from the debounced composer state: every image becomes an
+`attachment:{n}` slot, the scheme a normal article already uses, and the files behind the slots join
+the lock's attachments after the cover. The bytes come from the composer's upload session, which
+still holds each file as the author picked it, so nothing is read back from public storage. The
+public copies are deleted once the lock is published or the composer closes (best-effort, #2684). They stay until then,
+so that abandoning the lock puts a working article back into the editor. A locked article's images
+are therefore public between the insert and the publish; that window is accepted (#2655).
+
+_SVG files._ A locked SVG is stored without its image type, so it does not render after an unlock.
+Until that is fixed the switch refuses a draft that holds one, with a toast (`TODO:[Locks] #2683`).
+
+_Lock limits._ The Lock Server takes 10 resources per lock, the locked post being one of them, and
+10,000,000 bytes per file. It refuses a lock only after its files were uploaded, which leaves them
+orphaned, so the composer mirrors both limits (`LOCK_ATTACHMENT_MAX_FILES` and
+`LOCK_ATTACHMENT_MAX_SIZE` in `@/config/posts`) and checks them when the switch goes on: a draft
+over them gets a toast and the switch stays off. The check waits for the switch so that a creator
+who is not locking anything never hears about lock limits. The values are the server's defaults: it
+offers no way to read them.
+
 **2. Unlock (reader).** The lock card opens Pay to Unlock. The FE submits a **proof** to the
 Lock Server, waits until the reader has paid in Bitkit, gets a short-lived credential,
 proxy-reads the guarded bytes with it — and then **replicates** them into the reader's own
@@ -154,6 +177,10 @@ The `lock` URL survives either way — `toEdit` reads it from the stored row, no
   Unlocked screen has no way back to the announcement. The field is optional, and a value that is not
   a `pubky://` URI is dropped rather than rejected — failing the schema would lose the reader's
   unlocked content over a bad link. Either way the row renders as a bare replica card.
+  Each attachment also records its `slot`, its position in the locked post's `attachments`. A file
+  that could not be copied leaves a gap there, and an article body addresses its images by that
+  position, so the position in the marker's own list cannot stand in for it. A marker written before
+  the field existed has none, and its attachments are read in list order.
 - `LockFile` mirrors the Lock server's public `lock.json` (`version`, `creator`,
   `primary_resource`, `secondary_resources`, `criteria`, `lock_logic`, `access_policy`,
   `lock_server`). It is the **Lock server's contract**, not FE-owned — it should come from
@@ -181,6 +208,11 @@ A lock post's own content is the lock envelope, not article JSON, so `SinglePost
 routes it to the article page — the route is the only thing that says the reader opened this post
 to read it. The match is on the route's own ids, because that page also renders embeds and thread
 parents through this component and those stay previews (#2401, absorbed into #2432).
+
+In full, the body images render from the reader's local copies: `PostArticle` hands its
+`localAttachments` to `PostText`, and `ArticleInlineImage` resolves `attachment:{n}` to the object
+URL of slot `n`. A slot whose file is missing shows the placeholder. The preview shows no body
+image, like any article card.
 
 | File                                                           | Role                                                                                |
 | -------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
@@ -375,11 +407,6 @@ Locks use one `paykit-payment` criterion holding the recipient (always the lock'
 the amount in sats as a string, and `BTC` as the asset. A reader unlocks it by paying from
 Bitkit (see [Reading a lock post](#reading-a-lock-post)). Creator-configurable credential
 TTLs and IndexedDB caching still come later.
-
-One temporary restriction is worth knowing before testing: an article whose body references an image
-the author uploaded cannot be locked, because those uploads land in public storage while the author
-types (`TODO:[Locks] #2655`). The lock switch stays off and the composer says why. A cover image is
-unaffected — it travels as a lock attachment.
 
 Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.

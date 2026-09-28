@@ -6,6 +6,7 @@ import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
+import { getAttachmentAtSlot } from '@/libs/utils/unlockedMedia';
 import { cn } from '@/libs/utils/utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostText } from '@/molecules/PostText/PostText';
@@ -43,10 +44,9 @@ export const PostArticle = ({
   // only when the slot-0 rule says so (otherwise it's an inline image).
   // TODO:[Locks] #2660 — the other half of the cover rule: the hook says a slot 0 exists, this says
   // whether it is an image, so a video in slot 0 reports a cover that never renders.
+  const localCover = getAttachmentAtSlot(localAttachments, 0);
   const localCoverImage =
-    hasCover && localAttachments?.[0]?.type.startsWith('image')
-      ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }
-      : null;
+    hasCover && localCover?.type.startsWith('image') ? { src: localCover.urls.main, alt: localCover.name } : null;
 
   const finalCoverImage = localCoverImage || coverImage;
 
@@ -74,6 +74,8 @@ export const PostArticle = ({
             content={body}
             isArticle
             fullArticle={isFull}
+            // Only unlocked content is read in full here.
+            articleImages={isFull && localAttachments ? { localAttachments } : undefined}
             onLinkClick={handleLinkClick}
             className={isFull ? undefined : 'line-clamp-3'}
           />

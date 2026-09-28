@@ -92,6 +92,8 @@ export function useCreateLockContent({
         return { contentType: POST_CONTENT_TYPE, bytes: new TextEncoder().encode(JSON.stringify(post.toJson())) };
       };
 
+      // TODO:[Locks] #2685 — the files go up as the author picked them. A normal upload first removes
+      // image metadata, which can hold the GPS position, and compresses the image.
       const files = await Promise.all(
         lockedPost.attachments.map(async (file) => ({
           contentType: file.type,

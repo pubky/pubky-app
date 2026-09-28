@@ -220,12 +220,13 @@ export class GuardedContentParser {
     post: GuardedPost,
     readerPubky: string,
     lockId: string,
-    attachments: Array<{ id: string; contentType: string }>,
+    attachments: Array<{ id: string; contentType: string; slot: number }>,
     announcementUri: string,
   ): string {
-    const rewritten = attachments.map(({ id, contentType }) => ({
+    const rewritten = attachments.map(({ id, contentType, slot }) => ({
       url: this.unlockedUrl(readerPubky, lockId, id),
       content_type: contentType,
+      slot,
     }));
     return JSON.stringify({
       content: post.content,

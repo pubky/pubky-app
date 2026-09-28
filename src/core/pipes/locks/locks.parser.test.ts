@@ -260,15 +260,32 @@ describe('GuardedContentParser', () => {
         post,
         'readerpubky',
         'LOCK1',
-        [{ id: 'img1', contentType: 'image/png' }],
+        [{ id: 'img1', contentType: 'image/png', slot: 0 }],
         ANNOUNCEMENT_URI,
       );
       expect(JSON.parse(json)).toEqual({
         content: 'secret',
         kind: 'image',
-        attachments: [{ url: 'pubky://readerpubky/priv/social/unlocked/LOCK1/img1', content_type: 'image/png' }],
+        attachments: [
+          { url: 'pubky://readerpubky/priv/social/unlocked/LOCK1/img1', content_type: 'image/png', slot: 0 },
+        ],
         announcement: ANNOUNCEMENT_URI,
       });
+    });
+
+    it('records the slot of each attachment, so a dropped one leaves a gap an article body can see', () => {
+      const json = GuardedContentParser.buildUnlockedPost(
+        post,
+        'readerpubky',
+        'LOCK1',
+        [
+          { id: 'cover', contentType: 'image/png', slot: 0 },
+          { id: 'second-image', contentType: 'image/png', slot: 2 },
+        ],
+        ANNOUNCEMENT_URI,
+      );
+
+      expect(JSON.parse(json).attachments.map((attachment: { slot: number }) => attachment.slot)).toEqual([0, 2]);
     });
 
     it('keeps attachments null when the post has none', () => {
@@ -285,6 +302,29 @@ describe('GuardedContentParser', () => {
 
   describe('parseReplicatedPost', () => {
     const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+
+    it('reads the slot of each attachment', () => {
+      const bytes = encode({
+        content: 'body',
+        kind: 'long',
+        attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png', slot: 2 }],
+      });
+
+      expect(GuardedContentParser.parseReplicatedPost(bytes)?.attachments?.[0].slot).toBe(2);
+    });
+
+    it('keeps the post when a slot is unreadable: the attachment falls back to its position', () => {
+      const bytes = encode({
+        content: 'body',
+        kind: 'long',
+        attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png', slot: 'first' }],
+      });
+
+      const parsed = GuardedContentParser.parseReplicatedPost(bytes);
+
+      expect(parsed?.content).toBe('body');
+      expect(parsed?.attachments?.[0].slot).toBeUndefined();
+    });
 
     it('parses the reader post.json with inline attachment content types', () => {
       const bytes = encode({

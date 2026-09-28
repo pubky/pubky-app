@@ -45,6 +45,8 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
   const isOwnLock = lockOwner !== null && lockOwner === currentUserPubky && authorId === currentUserPubky;
 
   // Bytes → object URLs here; only post + URLs go to state, so the raw bytes are GC'd once this returns.
+  // TODO:[Locks] #2686 — the replica read and the own-lock read below load every attachment, but an
+  // article preview only shows its cover.
   const applyContent = (content: TUnlockedContent) => {
     setMedia(toUnlockedMedia(content.attachments));
     setUnlockedPost(content.post);

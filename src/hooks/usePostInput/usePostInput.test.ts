@@ -12,6 +12,7 @@ import {
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
+import { usePost } from '@/hooks/usePost/usePost';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { Logger } from '@/libs/logger/logger';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
@@ -94,6 +95,7 @@ vi.mock('@/hooks/usePost/usePost', () => ({
     isSubmitting: mockIsSubmitting,
     inlineImages: { upload: mockInlineImageUpload, getPreviewUrl: vi.fn(() => null) },
     uploadingCount: 0,
+    serializeArticleForLock: vi.fn(() => null),
   })),
 }));
 
@@ -2221,6 +2223,110 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetContent).toHaveBeenCalledWith('# Heading\n\nSome content');
+    });
+  });
+
+  describe('getLatestArticle', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const titleEvent = (value: string) => ({ target: { value } }) as React.ChangeEvent<HTMLInputElement>;
+
+    it('returns the composer state while nothing is pending', () => {
+      mockArticleTitle = 'Stored title';
+      mockContent = 'Stored body';
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      expect(result.current.getLatestArticle()).toEqual({ title: 'Stored title', body: 'Stored body' });
+    });
+
+    it('returns what the inputs reported, before the debounce hands it to the state', () => {
+      mockArticleTitle = 'Stored title';
+      mockContent = 'Stored body';
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      act(() => {
+        result.current.handleArticleTitleChange(titleEvent('Typed title'));
+        // Markdown mode reports its textarea through the same handler as the rich text editor.
+        result.current.handleArticleBodyChange('Typed body', false);
+      });
+
+      expect(mockSetContent).not.toHaveBeenCalled();
+      expect(result.current.getLatestArticle()).toEqual({ title: 'Typed title', body: 'Typed body' });
+    });
+
+    it('returns the last of several changes inside one debounce window', () => {
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      act(() => {
+        result.current.handleArticleBodyChange('first', false);
+        result.current.handleArticleBodyChange('first, then more', false);
+      });
+
+      expect(result.current.getLatestArticle().body).toBe('first, then more');
+    });
+
+    it('keeps the latest value when a debounce from an earlier render fires first', () => {
+      const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+      act(() => {
+        result.current.handleArticleBodyChange('first', false);
+      });
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+
+      // A render in between hands out a new debounce; the first one's timer is still running.
+      rerender();
+      act(() => {
+        result.current.handleArticleBodyChange('first, then more', false);
+      });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+
+      expect(mockSetContent).toHaveBeenLastCalledWith('first');
+      expect(result.current.getLatestArticle().body).toBe('first, then more');
+    });
+
+    it('goes back to the composer state once the debounce has fired', () => {
+      mockContent = 'Stored body';
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+      act(() => {
+        result.current.handleArticleBodyChange('Typed body', false);
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      // The mocked state never changes, so a stale pending value would still read 'Typed body'.
+      expect(mockSetContent).toHaveBeenCalledWith('Typed body');
+      expect(result.current.getLatestArticle().body).toBe('Stored body');
+    });
+
+    it('ignores a title over the character limit, as the state does', () => {
+      mockArticleTitle = 'Stored title';
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      act(() => {
+        result.current.handleArticleTitleChange(titleEvent('x'.repeat(ARTICLE_TITLE_MAX_CHARACTER_LENGTH + 1)));
+      });
+
+      expect(result.current.getLatestArticle().title).toBe('Stored title');
+    });
+  });
+
+  describe('inline image session', () => {
+    it('tells usePost to keep the uploaded images while a lock draft holds them', () => {
+      renderHook(() => usePostInput({ variant: 'post', keepInlineImages: true }));
+
+      expect(usePost).toHaveBeenLastCalledWith({ keepInlineImages: true });
     });
   });
 

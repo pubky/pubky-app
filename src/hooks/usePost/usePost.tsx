@@ -23,7 +23,9 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type {
   ExistingAttachment,
+  SerializedArticle,
   UsePostEditOptions,
+  UsePostOptions,
   UsePostPostOptions,
   UsePostReplyOptions,
   UsePostRepostOptions,
@@ -89,7 +91,7 @@ const showSessionExpiredToast = () =>
     description: 'Session expired. Please sign in.',
   });
 
-export function usePost(): UsePostReturn {
+export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UsePostReturn {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -110,6 +112,7 @@ export function usePost(): UsePostReturn {
   // remains the authoritative cap enforcement.
   const inlineImageSession = useInlineImageUpload({
     enabled: isArticle,
+    keepSession: keepInlineImages,
     authorPubky: currentUserId,
     getInlineBudget: () =>
       ARTICLE_ATTACHMENT_MAX_FILES -
@@ -149,10 +152,13 @@ export function usePost(): UsePostReturn {
    * file URIs to `attachment:{n}` slots. Returns null (after toasting) when
    * the body contains destinations that block publishing.
    */
-  const serializeArticleForPublish = (coverPresent: boolean): { body: string; inlineUris: string[] } | null => {
+  const serializeArticleForPublish = (
+    coverPresent: boolean,
+    body = content.trim(),
+  ): { body: string; inlineUris: string[] } | null => {
     if (!currentUserId) return null;
     const serialized = serializeArticleBody({
-      body: content.trim(),
+      body,
       coverPresent,
       authorPubky: currentUserId,
       maxInlineImages: ARTICLE_ATTACHMENT_MAX_FILES - (coverPresent ? 1 : 0),
@@ -184,6 +190,16 @@ export function usePost(): UsePostReturn {
         'Some images reference files from outside this article. Remove them, or insert the images again so they upload fresh.',
     });
     return true;
+  };
+
+  const serializeArticleForLock = (body: string): SerializedArticle | null => {
+    const serialized = serializeArticleForPublish(attachments.length > 0, body.trim());
+    if (!serialized || rejectForeignInlineUris(serialized.inlineUris)) return null;
+
+    const inlineFiles = serialized.inlineUris.map((uri) => inlineImageSession.getSessionFile(uri));
+    // A skipped file would shift every slot after it onto the wrong image.
+    if (!inlineFiles.every((file) => file !== null)) return null;
+    return { body: serialized.body, inlineFiles };
   };
 
   /**
@@ -552,5 +568,6 @@ export function usePost(): UsePostReturn {
       getPreviewUrl: inlineImageSession.getPreviewUrl,
     },
     uploadingCount: inlineImageSession.uploadingCount,
+    serializeArticleForLock,
   };
 }

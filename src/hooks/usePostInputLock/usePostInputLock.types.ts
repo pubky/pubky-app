@@ -1,4 +1,6 @@
+import type { Dispatch, SetStateAction } from 'react';
 import type { TLockConfig } from '@/application/locks/locks.types';
+import type { SerializedArticle } from '@/hooks/usePost/usePost.types';
 
 /**
  * The composer state captured when the lock switch goes on: this is the content that gets locked.
@@ -9,17 +11,35 @@ import type { TLockConfig } from '@/application/locks/locks.types';
 export type TLockDraft = {
   content: string;
   attachments: File[];
-  isArticle: boolean;
   articleTitle: string;
-};
+} & (
+  | { isArticle: false }
+  | {
+      isArticle: true;
+      /**
+       * What the lock stores. `content` keeps the editor's form, because that is what goes back
+       * into the editor when the lock is abandoned.
+       */
+      serializedArticle: SerializedArticle;
+    }
+);
 
 export interface UsePostInputLockOptions {
   isEnabled: boolean;
   /** Whether the composer has something to lock. The switch is disabled while it is empty, so a lock
    * can never wrap an empty body. */
   canEnable: boolean;
-  /** Reads the composer as it stands, to be locked. Called when the switch goes on. */
-  captureComposer: () => TLockDraft;
+  /**
+   * Owned by the composer: its upload session needs to know during render whether a draft still
+   * holds its files, and this hook runs after it.
+   */
+  lockDraft: TLockDraft | null;
+  setLockDraft: Dispatch<SetStateAction<TLockDraft | null>>;
+  /**
+   * Reads the composer as it stands, to be locked. Called when the switch goes on. Null when the
+   * content cannot be locked: the switch stays off.
+   */
+  captureComposer: () => TLockDraft | null;
   /**
    * Puts the captured draft back into the composer. Called whenever the lock is abandoned — switch
    * off, sign-in cancelled, lock configuration cancelled — because the content becomes a normal post again.

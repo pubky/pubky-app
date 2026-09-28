@@ -596,7 +596,40 @@ describe('LocksApplication.fetchUnlockedContent', () => {
 
     expect(mocks.proxyReadGuardedResource).toHaveBeenNthCalledWith(1, 'cred', 'p.json');
     expect(mocks.proxyReadGuardedResource).toHaveBeenNthCalledWith(2, 'cred', 'img1');
-    expect(result?.attachments).toEqual([{ id: 'img1', contentType: 'image/png', bytes: new Uint8Array([9, 9]) }]);
+    expect(result?.attachments).toEqual([
+      { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([9, 9]), slot: 0 },
+    ]);
+  });
+
+  it('keeps the slot of the attachments that survive a dropped one', async () => {
+    const errorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+    const post = {
+      content: 'body',
+      kind: 'long',
+      attachments: [
+        'pubky://ownerb/priv/locks.app/content/cover',
+        'pubky://ownerb/priv/locks.app/content/missing',
+        'pubky://ownerb/priv/locks.app/content/inline',
+      ],
+    };
+    mocks.proxyReadGuardedResource
+      .mockResolvedValueOnce(new TextEncoder().encode(JSON.stringify(post)))
+      .mockResolvedValue(new Uint8Array([1]));
+    const lockFile = asOpaque<LockFile>({
+      primary_resource: { path: '/priv/locks.app/content/p.json' },
+      secondary_resources: {
+        '/priv/locks.app/content/cover': { content_type: 'image/png', hash: 'h', size: 1 },
+        '/priv/locks.app/content/inline': { content_type: 'image/png', hash: 'h', size: 1 },
+      },
+    });
+
+    const result = await LocksApplication.fetchUnlockedContent({ lockFile, credential: 'cred' });
+
+    expect(result.attachments.map(({ id, slot }) => ({ id, slot }))).toEqual([
+      { id: 'cover', slot: 0 },
+      { id: 'inline', slot: 2 },
+    ]);
+    errorSpy.mockRestore();
   });
 
   it('reports and drops an attachment (no read) when the lock file has no descriptor for it', async () => {
@@ -663,8 +696,8 @@ describe('LocksApplication.replicateUnlockedContent', () => {
   const content: TUnlockedContent = {
     post: { content: 'secret body', kind: 'image', attachments: ['pubky://b/priv/locks.app/content/img1'] },
     attachments: [
-      { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([1]) },
-      { id: 'img2', contentType: 'image/png', bytes: new Uint8Array([2]) },
+      { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 },
+      { id: 'img2', contentType: 'image/png', bytes: new Uint8Array([2]), slot: 1 },
     ],
   };
 
@@ -702,8 +735,8 @@ describe('LocksApplication.replicateUnlockedContent', () => {
       content: 'secret body',
       kind: 'image',
       attachments: [
-        { url: `pubky://${READER}/priv/social/unlocked/LOCK1/img1`, content_type: 'image/png' },
-        { url: `pubky://${READER}/priv/social/unlocked/LOCK1/img2`, content_type: 'image/png' },
+        { url: `pubky://${READER}/priv/social/unlocked/LOCK1/img1`, content_type: 'image/png', slot: 0 },
+        { url: `pubky://${READER}/priv/social/unlocked/LOCK1/img2`, content_type: 'image/png', slot: 1 },
       ],
       announcement: ANNOUNCEMENT_URI,
     });
@@ -791,8 +824,33 @@ describe('LocksApplication.fetchReplicatedContent', () => {
     const result = await LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER });
 
     expect(result?.post).toEqual({ content: 'secret', kind: 'image', attachments: [attachmentUrl] });
-    expect(result?.attachments).toEqual([{ id: 'img1', contentType: 'image/png', bytes: new Uint8Array([7, 7]) }]);
+    // A marker from before slots were recorded: the position in the list is the slot.
+    expect(result?.attachments).toEqual([
+      { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([7, 7]), slot: 0 },
+    ]);
     expect(mocks.getBytes).toHaveBeenCalledWith(attachmentUrl);
+  });
+
+  it('reads each attachment back at the slot the marker recorded for it', async () => {
+    const url = (id: string) => `pubky://${READER}/priv/social/unlocked/LOCK1/${id}`;
+    mocks.getBytesIfExists.mockResolvedValueOnce(
+      marker({
+        content: 'secret',
+        kind: 'long',
+        attachments: [
+          { url: url('cover'), content_type: 'image/png', slot: 0 },
+          { url: url('inline'), content_type: 'image/png', slot: 2 },
+        ],
+      }),
+    );
+    mocks.getBytes.mockResolvedValue(new Uint8Array([7]));
+
+    const result = await LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER });
+
+    expect(result?.attachments.map(({ id, slot }) => ({ id, slot }))).toEqual([
+      { id: 'cover', slot: 0 },
+      { id: 'inline', slot: 2 },
+    ]);
   });
 
   it('throws when the marker exists but is not a parseable post (data corruption, not "not unlocked")', async () => {
@@ -891,7 +949,9 @@ describe('LocksApplication.fetchOwnContent', () => {
     expect(mocks.getBytes).toHaveBeenNthCalledWith(1, 'pubky://owner/priv/locks.app/content/post');
     expect(mocks.getBytes).toHaveBeenNthCalledWith(2, attachmentUri);
     expect(result?.post).toEqual({ content: 'my secret', kind: 'image', attachments: [attachmentUri] });
-    expect(result?.attachments).toEqual([{ id: 'img1', contentType: 'image/png', bytes: new Uint8Array([5, 5]) }]);
+    expect(result?.attachments).toEqual([
+      { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([5, 5]), slot: 0 },
+    ]);
     expect(mocks.proxyReadGuardedResource).not.toHaveBeenCalled();
   });
 
