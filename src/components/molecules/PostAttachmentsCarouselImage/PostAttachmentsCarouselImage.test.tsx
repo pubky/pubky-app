@@ -325,3 +325,16 @@ describe('PostAttachmentsCarouselImage - Snapshots', () => {
     expect(container).toMatchSnapshot();
   });
 });
+
+describe('local attachment fallback', () => {
+  it('opens a local attachment that has no separate feed thumbnail', () => {
+    render(
+      <PostAttachmentsCarouselImage
+        id="local"
+        image={{ type: 'image/png', name: 'Local image', urls: { main: '/local.png' } }}
+      />,
+    );
+    const images = screen.getAllByAltText('Local image');
+    expect(images.every((image) => image.getAttribute('src') === '/local.png')).toBe(true);
+  });
+});

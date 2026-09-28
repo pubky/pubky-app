@@ -33,6 +33,7 @@ export function layoutToString(layout: PubkyAppFeedLayout): string {
     [PubkyAppFeedLayout.Wide]: 'wide',
     [PubkyAppFeedLayout.Visual]: 'visual',
     [PubkyAppFeedLayout.List]: 'list',
+    [PubkyAppFeedLayout.Cards]: 'cards',
   };
   return map[layout];
 }
