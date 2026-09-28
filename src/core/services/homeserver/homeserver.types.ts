@@ -1,4 +1,4 @@
-import type { Capabilities, PublicKey, Session } from '@synonymdev/pubky';
+import type { Capabilities, PublicKey, Session, XCallbackParams } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { HttpMethod } from '@/libs/http/http.types';
 
@@ -57,6 +57,17 @@ export type StoragePath<T extends string = string> = PubPath<T> | PrivPath<T>;
 
 export type TGenerateSignupAuthUrlParams = {
   inviteCode: string;
+  caps?: Capabilities;
+};
+
+/**
+ * Pubky Passport auth request: a plain sign-in cookie flow decorated with x-callback-url metadata
+ * (`xSource` label plus same-origin HTTPS success/error/cancel destinations) that Passport shows
+ * and navigates to. Passport creates the identity itself when the Google account has none, so
+ * sign-up and sign-in share this single request kind.
+ */
+export type TGeneratePassportAuthUrlParams = {
+  xCallback: XCallbackParams;
   caps?: Capabilities;
 };
 

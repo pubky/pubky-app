@@ -75,8 +75,8 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   CI workflows change only in a CI task.
 - Env: only `src/libs/env/env.ts` and `src/libs/runtime-config/**` read `process.env.NEXT_PUBLIC_*` / `PUBKY_RUNTIME_*`
   (ESLint-enforced); deploy-time values are `PUBKY_RUNTIME_*` getters, never secrets. `docs/environment.md`
-- Sentry: throw via `Err.*`; `Sentry.captureException` is called only in `app/error.tsx` and `app/global-error.tsx`, for
-  non-`AppError` values; no raw user data in error context. `docs/sentry.md`
+- Observability: throw via `Err.*`; they capture to Sentry and, in a consenting browser, Pulse. No other direct
+  `captureException` except `app/error.tsx` / `app/global-error.tsx`, for non-`AppError` values; no raw user data. `docs/sentry.md`
 - Tests: colocated `*.test.tsx`, one snapshot per test, mobile snapshot blocks for viewport-aware organisms; no `as any` or
   `as unknown as T` (use the `src/test-utils` helpers). `docs/component-testing.md`
 
@@ -141,8 +141,9 @@ are owned by QA: flag an invalidated spec, do not edit or run e2e yourself. `doc
 
 ## Tooling map
 
-- `CLAUDE.md` imports this file for Claude Code; Codex and Cursor read it directly. Keep it within 150 lines; details go
-  in `docs/`.
+- `CLAUDE.md` imports this file for Claude Code; Codex and Cursor read it directly. Keep it short; details go in `docs/`.
+- `next dev` would append its own agent-rules block here; `agentRules` is off in `next.config.ts` so it never does. The
+  installed Next.js version's docs are in `node_modules/next/dist/docs/`; read the relevant page before using a Next API.
 - `.cursor/rules/*.mdc` and `.claude/rules/*.md` attach the matching doc when a file under their glob is edited; their
   bodies only point at `docs/`.
 - Skills live in `.agents/skills/<name>/` (read natively by Codex and Cursor, symlinked from `.claude/skills/` for Claude

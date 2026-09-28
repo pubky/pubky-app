@@ -218,13 +218,6 @@ vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', () => {
   return { useSearchAutocomplete: () => result };
 });
 
-vi.mock('@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery', () => ({
-  useCollectionsNavDiscovery: () => ({
-    showCollectionsNew: false,
-    markCollectionsNavSeen: () => {},
-  }),
-}));
-
 vi.mock('@/hooks/useSignOut/useSignOut', () => ({
   useSignOut: () => ({ handleSignOut: async () => {}, isLoading: false }),
 }));

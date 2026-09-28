@@ -785,6 +785,82 @@ describe('HomeserverService', () => {
         });
       });
     });
+
+    describe('generatePassportAuthUrl', () => {
+      const xCallback = {
+        xSource: 'Pubky',
+        xSuccess: 'https://app.example.com/passport/return?attempt=a&outcome=success',
+        xError: 'https://app.example.com/passport/return?attempt=a&outcome=error',
+        xCancel: 'https://app.example.com/passport/return?attempt=a&outcome=cancel',
+      };
+
+      it('starts a sign-in cookie flow with the x-callback metadata and default capabilities', async () => {
+        const result = await HomeserverService.generatePassportAuthUrl({ xCallback });
+
+        expect(mockState.startCookieAuthFlow).toHaveBeenCalledWith(
+          '/pub/pubky.app/:rw,/priv/social/:rw,/priv/locks.app/:r',
+          'signin-kind',
+          expect.stringContaining('/inbox'),
+          xCallback,
+        );
+        expect(typeof result.authorizationUrl).toBe('string');
+        expect(result.awaitApproval).toBeInstanceOf(Promise);
+        expect(typeof result.cancelAuthFlow).toBe('function');
+      });
+
+      it('honors custom capabilities', async () => {
+        await HomeserverService.generatePassportAuthUrl({ xCallback, caps: '/custom/path/:r' });
+
+        expect(mockState.startCookieAuthFlow).toHaveBeenCalledWith(
+          '/custom/path/:r',
+          'signin-kind',
+          expect.stringContaining('/inbox'),
+          xCallback,
+        );
+      });
+
+      it('leaves the Pubky Ring flow free of callbacks', async () => {
+        await HomeserverService.generateAuthUrl();
+
+        expect(mockState.startCookieAuthFlow).toHaveBeenCalledTimes(1);
+        expect(mockState.startCookieAuthFlow.mock.calls[0]).toHaveLength(3);
+      });
+
+      it('cancels polling when cancelAuthFlow is called', async () => {
+        vi.useFakeTimers();
+        try {
+          const tryPollOnce = vi.fn().mockResolvedValue(undefined);
+          const free = vi.fn();
+          mockState.startCookieAuthFlow.mockReturnValue({
+            authorizationUrl: 'pubkyauth:///?caps=x',
+            tryPollOnce,
+            free,
+          });
+
+          const result = await HomeserverService.generatePassportAuthUrl({ xCallback });
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
+
+          result.cancelAuthFlow();
+          await vi.runAllTimersAsync();
+
+          await rejection;
+          expect(free).toHaveBeenCalledTimes(1);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('throws an app error when the flow fails to start', async () => {
+        mockState.startCookieAuthFlow.mockImplementation(() => {
+          throw new Error('Flow initialization failed');
+        });
+
+        await expect(HomeserverService.generatePassportAuthUrl({ xCallback })).rejects.toMatchObject({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.INTERNAL_ERROR,
+        });
+      });
+    });
   });
 
   // ===========================================================================

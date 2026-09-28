@@ -29,8 +29,13 @@ describe('LockContentParser', () => {
       expect(LockContentParser.parse('"hi"')).toBeNull();
     });
 
-    it('defaults missing fields to empty strings', () => {
-      expect(LockContentParser.parse(JSON.stringify({}))).toEqual({ lock_title: '', teaser_description: '' });
+    // Any JSON object would otherwise parse into a blank teaser, which reads as a lock elsewhere.
+    it('returns null for an object carrying neither envelope field', () => {
+      expect(LockContentParser.parse(JSON.stringify({}))).toBeNull();
+      expect(LockContentParser.parse(JSON.stringify({ title: 'My Article', body: 'Body' }))).toBeNull();
+    });
+
+    it('defaults the other field to an empty string once one is present', () => {
       expect(LockContentParser.parse(JSON.stringify({ lock_title: 'X' }))).toEqual({
         lock_title: 'X',
         teaser_description: '',

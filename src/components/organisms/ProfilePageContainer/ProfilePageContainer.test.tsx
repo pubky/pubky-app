@@ -25,7 +25,12 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 // vi.hoisted beats the vi.mock hoist, so the factory and the tests can share one literal.
-const UNLOCKED_LIST_SETTLED = vi.hoisted(() => ({ items: [], count: 0, isLoading: false, isError: false }));
+const UNLOCKED_LIST_SETTLED = vi.hoisted(() => ({
+  items: [],
+  count: 0,
+  isLoading: false,
+  isError: false,
+}));
 vi.mock('@/hooks/useUnlockedList/useUnlockedList', () => ({
   useUnlockedList: vi.fn(() => UNLOCKED_LIST_SETTLED),
 }));

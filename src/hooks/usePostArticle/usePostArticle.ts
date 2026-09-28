@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { FileController } from '@/controllers/file/file';
+import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
@@ -10,6 +11,8 @@ import type { FileVariant } from '@/services/nexus/file/file.types';
 
 interface CoverImage {
   src: string;
+  /** Set when a desktop variant was requested: the same file at its larger size. */
+  desktopSrc?: string;
   alt: string;
 }
 
@@ -25,6 +28,11 @@ interface UsePostArticleParams {
    * decided again in `PostArticle`, so the two can disagree. Take the attachments here instead.
    */
   localAttachmentCount?: number;
+  /**
+   * Second, larger source for surfaces that render the cover at full width (the article hero).
+   * Left unset by feed-sized surfaces, which never want the original upload.
+   */
+  coverImageDesktopVariant?: FileVariant;
 }
 
 interface UsePostArticleResult {
@@ -41,6 +49,10 @@ interface UsePostArticleResult {
 
 /**
  * Custom hook to extract article data from post content and attachments
+ *
+ * The cover is resolved through `useAttachmentsMetadata`, so it appears as soon
+ * as the file row lands — a cover whose metadata was persisted after the post
+ * row no longer stays missing until the article remounts.
  *
  * @param params.content - The JSON stringified article content containing title and body
  * @param params.attachments - The file attachment URIs for the post
@@ -61,10 +73,10 @@ export function usePostArticle({
   attachments,
   coverImageVariant,
   localAttachmentCount,
+  coverImageDesktopVariant,
 }: UsePostArticleParams): UsePostArticleResult {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [coverImage, setCoverImage] = useState<CoverImage | null>(null);
 
   useEffect(() => {
     const parsed = parseArticleContent(content);
@@ -87,49 +99,26 @@ export function usePostArticle({
   const hasInlineSlotZero = articleHasInlineSlotZero(parseArticleContent(content)?.body ?? '');
   const hasCover = Boolean(attachments?.length || localAttachmentCount) && !hasInlineSlotZero;
 
-  useEffect(() => {
-    let cancelled = false;
+  // Only the cover slot is relevant; inline attachments render inside the
+  // article body and are never resolved here. An edit that replaces or removes
+  // the cover derives a new result, so no stale cover can linger.
+  const coverFileUri = hasCover ? attachments?.[0] : undefined;
+  const { files } = useAttachmentsMetadata({
+    fileUris: coverFileUri ? [coverFileUri] : [],
+    onError: () => toast({ variant: 'error', description: 'Could not load cover image' }),
+  });
+  const coverFile = files[0];
 
-    const extractCoverImage = async () => {
-      // An edit can remove the cover — clear previously extracted state.
-      // Slot 0 referenced by the body means it is an inline image, not a cover.
-      if (!attachments?.length || hasInlineSlotZero) {
-        setCoverImage(null);
-        return;
-      }
-
-      try {
-        // Only the cover slot is relevant; never resolve inline attachments here
-        const attachment = (await FileController.getMetadata({ fileAttachments: [attachments[0]] }))[0];
-
-        if (cancelled) return;
-
-        if (attachment && attachment.content_type.startsWith('image')) {
-          const src = FileController.getFileUrl({ fileId: attachment.id, variant: coverImageVariant });
-          const coverImage = { src, alt: attachment.name };
-          setCoverImage(coverImage);
-        } else {
-          setCoverImage(null);
+  const coverImage: CoverImage | null =
+    coverFile && coverFile.content_type.startsWith('image')
+      ? {
+          src: FileController.getFileUrl({ fileId: coverFile.id, variant: coverImageVariant }),
+          desktopSrc: coverImageDesktopVariant
+            ? FileController.getFileUrl({ fileId: coverFile.id, variant: coverImageDesktopVariant })
+            : undefined,
+          alt: coverFile.name,
         }
-      } catch {
-        if (cancelled) return;
-
-        // Clear on failure too — an edit can have replaced or removed the
-        // cover, and keeping the previously extracted one would render stale
-        setCoverImage(null);
-        toast({
-          variant: 'error',
-          description: 'Could not load cover image',
-        });
-      }
-    };
-
-    extractCoverImage();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [attachments, coverImageVariant, hasInlineSlotZero]);
+      : null;
 
   return {
     title,

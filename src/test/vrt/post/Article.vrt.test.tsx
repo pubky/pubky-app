@@ -500,15 +500,6 @@ function EditArticleWithChrome({ postId }: { postId: string }) {
   );
 }
 
-async function waitForVisibleCollectionsNew() {
-  await vi.waitFor(() => {
-    const collectionsNew = [...document.querySelectorAll('[aria-label="Collections, New"]')].find(
-      (el) => el instanceof HTMLElement && el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }),
-    );
-    expect(collectionsNew).toBeTruthy();
-  });
-}
-
 async function renderPublishedArticle(layout: 'columns' | 'wide', viewport: { width: number; height: number }) {
   const f = await fixtures;
   uiState.layout = layout;
@@ -540,7 +531,6 @@ async function renderPublishedArticle(layout: 'columns' | 'wide', viewport: { wi
     expect(visiblePanel?.textContent).toContain('hierarchy');
   }
 
-  await waitForVisibleCollectionsNew();
   return screen;
 }
 
@@ -557,7 +547,6 @@ async function renderEditArticle(viewport: { width: number; height: number }) {
   await expect.element(page.getByAltText('Image preview')).toBeVisible();
   const dialog = document.querySelector('[data-testid="dialog-content"]') ?? document;
   await waitForMarkdownEditorReady(dialog);
-  await waitForVisibleCollectionsNew();
 }
 
 describe('Article — editing — visual regression', () => {

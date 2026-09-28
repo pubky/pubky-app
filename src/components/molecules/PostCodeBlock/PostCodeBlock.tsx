@@ -1,14 +1,39 @@
 'use client';
 
-import { ClassAttributes, HTMLAttributes, useEffect, useState } from 'react';
+import { ClassAttributes, HTMLAttributes, Suspense, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Check, Clipboard } from 'lucide-react';
+import { ErrorBoundary } from 'react-error-boundary';
 import type { ExtraProps } from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { cn, copyToClipboard } from '@/libs/utils/utils';
+
+/**
+ * The highlighter (prism plus the oneDark theme) is the largest dependency a post body can
+ * pull in and only fenced blocks need it, so it loads on demand: an inline `code` span, or a
+ * post with no code at all, never fetches the chunk.
+ *
+ * `ssr` is left on: `ssr: false` makes next/dynamic wrap the module in its own Suspense with a
+ * null fallback, which hides the code while the chunk loads. Rendering the plain code instead
+ * (below) keeps the text readable and the box at its final height until the chunk lands.
+ */
+const PostCodeBlockHighlighter = dynamic(() =>
+  import('./PostCodeBlockHighlighter').then((module) => module.PostCodeBlockHighlighter),
+);
+
+/**
+ * Unhighlighted code. Shown while the highlighter chunk loads, and kept if it never loads: a
+ * code block must not blank out the text, and a failed chunk must not reach the page's error
+ * boundary.
+ */
+const PostCodeBlockPlain = ({ code }: { code: string }) => (
+  // Same padding, font size and line height as the highlighted block (oneDark pads 1em, the
+  // post body is text-base at line-height 1.5), so the box does not change height when the
+  // chunk lands.
+  <pre className="overflow-x-auto rounded-b-md bg-neutral-800 p-4 font-mono text-base leading-normal">{code}</pre>
+);
 
 type PostCodeBlockProps = ClassAttributes<HTMLElement> & HTMLAttributes<HTMLElement> & ExtraProps;
 export const PostCodeBlock = (props: PostCodeBlockProps) => {
@@ -54,18 +79,11 @@ export const PostCodeBlock = (props: PostCodeBlockProps) => {
         </Button>
       </Container>
 
-      <SyntaxHighlighter
-        {...rest}
-        PreTag="div"
-        language={lang}
-        style={oneDark}
-        customStyle={{
-          margin: 0,
-          borderRadius: 0,
-        }}
-      >
-        {codeSyntaxHighlight}
-      </SyntaxHighlighter>
+      <ErrorBoundary fallback={<PostCodeBlockPlain code={codeSyntaxHighlight} />}>
+        <Suspense fallback={<PostCodeBlockPlain code={codeSyntaxHighlight} />}>
+          <PostCodeBlockHighlighter {...rest} language={lang} code={codeSyntaxHighlight} />
+        </Suspense>
+      </ErrorBoundary>
     </Container>
   ) : (
     // Inline code block (ex. ``)

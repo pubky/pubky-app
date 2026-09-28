@@ -8,9 +8,7 @@ import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisibl
 import { MobileFooter } from './MobileFooter';
 
 const collectionsDiscoveryMock = vi.hoisted(() => ({
-  markCollectionsNavSeen: vi.fn(),
   setShowSignInDialog: vi.fn(),
-  showCollectionsNew: false,
 }));
 
 let mockCurrentUserPubky: string | null = 'pk:test-user-pubky';
@@ -110,12 +108,6 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
   useKeyboardVisible: vi.fn(() => false),
 }));
-vi.mock('@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery', () => ({
-  useCollectionsNavDiscovery: () => ({
-    showCollectionsNew: Boolean(mockCurrentUserPubky) && collectionsDiscoveryMock.showCollectionsNew,
-    markCollectionsNavSeen: collectionsDiscoveryMock.markCollectionsNavSeen,
-  }),
-}));
 
 // Track notification store mock for per-test overrides
 const mockSelectUnread = vi.fn(() => 0);
@@ -150,7 +142,6 @@ describe('MobileFooter', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
     mockCurrentUserPubky = 'pk:test-user-pubky';
-    collectionsDiscoveryMock.showCollectionsNew = false;
     mockIsPublicRoute = false;
     mockIsCoreExploreRoute = false;
     Object.defineProperty(window, 'sessionStorage', {
@@ -308,52 +299,26 @@ describe('MobileFooter', () => {
     expect(collectionsLink).not.toHaveClass('border');
   });
 
-  it('shows the Collections NEW treatment before dismissal', () => {
-    collectionsDiscoveryMock.showCollectionsNew = true;
-
-    render(<MobileFooter />);
-
-    const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
-    expect(collectionsLink).toHaveClass('border-brand', 'text-brand');
-    expect(screen.getByRole('link', { name: 'Collections, New' })).toBeInTheDocument();
-    expect(screen.getByText('New')).toBeInTheDocument();
-  });
-
-  it('uses the discovery treatment instead of active background when Collections is active and new', () => {
-    vi.mocked(usePathname).mockReturnValue('/collections');
-    collectionsDiscoveryMock.showCollectionsNew = true;
-
-    render(<MobileFooter />);
-
-    const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
-    expect(collectionsLink).toHaveClass('border-brand', 'bg-white/5', 'text-brand');
-    expect(collectionsLink).not.toHaveClass('bg-secondary');
-  });
-
-  it('marks Collections discovery seen when clicking the authenticated Collections nav link', () => {
-    collectionsDiscoveryMock.showCollectionsNew = true;
+  it('renders the Collections nav item without a NEW treatment', () => {
     render(<MobileFooter />);
 
     const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
     expect(collectionsLink).toBeTruthy();
-    fireEvent.click(collectionsLink!);
-
-    expect(collectionsDiscoveryMock.markCollectionsNavSeen).toHaveBeenCalledTimes(1);
+    expect(collectionsLink).not.toHaveClass('border-brand');
+    expect(screen.getByRole('link', { name: 'Collections' })).toBeInTheDocument();
+    expect(screen.queryByText('New')).not.toBeInTheDocument();
   });
 
-  it('does not show or dismiss Collections discovery for guests', () => {
+  it('keeps Collections reachable for guests on public explore routes', () => {
     mockCurrentUserPubky = null;
     mockIsCoreExploreRoute = true;
-    collectionsDiscoveryMock.showCollectionsNew = true;
 
     render(<MobileFooter />);
 
-    expect(screen.queryByText('New')).not.toBeInTheDocument();
     const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
     expect(collectionsLink).toBeTruthy();
     expect(collectionsLink).toHaveAttribute('href', '/collections');
     fireEvent.click(collectionsLink!);
-    expect(collectionsDiscoveryMock.markCollectionsNavSeen).not.toHaveBeenCalled();
     expect(collectionsDiscoveryMock.setShowSignInDialog).not.toHaveBeenCalled();
   });
 
@@ -507,7 +472,6 @@ describe('MobileFooter - Snapshots', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
     mockCurrentUserPubky = 'pk:test-user-pubky';
-    collectionsDiscoveryMock.showCollectionsNew = false;
     mockIsPublicRoute = false;
     mockIsCoreExploreRoute = false;
     vi.mocked(useKeyboardVisible).mockReturnValue(false);

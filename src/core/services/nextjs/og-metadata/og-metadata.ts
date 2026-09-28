@@ -9,7 +9,13 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { checkDnsSafety, readResponseBody } from '../nextjs.utils';
-import { buildFallbackMetadata, detectMediaType, extractMetadata, validateRedirectUrl } from './og-metadata.utils';
+import {
+  buildFallbackMetadata,
+  detectMediaType,
+  extractMetadata,
+  hasOgMetadata,
+  validateRedirectUrl,
+} from './og-metadata.utils';
 
 const MAX_REDIRECTS = 5;
 const FETCH_TIMEOUT_MS = 10_000;
@@ -24,7 +30,32 @@ const FETCH_HEADERS = {
   'Upgrade-Insecure-Requests': '1',
 };
 
+/**
+ * Crawler identity used for the single retry.
+ *
+ * Hosts that classify a datacenter browser identity as a bot (Reddit and other bot-walled hosts)
+ * answer it with 403/429, or with a 200 client-rendered shell whose head carries no Open Graph
+ * tags, while serving the same URL to known link-preview crawlers. Preview generation is what those
+ * identities exist for, so the retry reuses the whole SSRF-guarded fetch path with only the
+ * User-Agent changed.
+ */
+const CRAWLER_FETCH_HEADERS = {
+  'User-Agent': 'facebookexternalhit/1.1',
+  Accept: 'text/html, image/*, video/*, audio/*',
+  'Accept-Language': 'en-US,en;q=0.9',
+};
+
 type FetchInitWithDispatcher = RequestInit & { dispatcher: Dispatcher };
+
+type TOgMetadataRetryTrigger = 'bot_wall' | 'empty_metadata';
+
+type TOgMetadataRetry = { trigger: TOgMetadataRetryTrigger; statusCode?: number };
+
+/**
+ * One fetch attempt: its metadata, whether it produced a usable preview, and whether a crawler
+ * identity is worth trying. A terminal fallback is not a successful recovery.
+ */
+type TOgMetadataAttempt = { result: TOgMetadataResult; usable: boolean; retry?: TOgMetadataRetry };
 
 /**
  * Internal transport signal for an expected connection-time DNS miss.
@@ -75,44 +106,27 @@ export class NextJsOgMetadataService {
     const url = validatedUrl.toString();
 
     try {
-      // 1. Fetch with redirect following and two DNS checks on every hop:
-      // a preflight check for IP literals/all answers, then a connection-time check that pins the socket to vetted answers.
-      const fetchResult = await fetchWithRedirectsForOgMetadata(url);
-      if (!fetchResult.ok) {
-        return fallback(fetchResult.url, fetchResult.reason, fetchResult.context);
-      }
-      const { response } = fetchResult;
-
-      // 2. Handle non-OK responses
-      if (!response.ok) {
-        return handleErrorResponse(response, url);
+      // 1. Fetch as a browser first. Bot-walled hosts answer that identity with 403/429, or with a
+      // 200 shell that carries no usable metadata, while the same URL served to a crawler carries
+      // the real tags, so an unusable first pass earns exactly one retry with a crawler identity.
+      const attempt = await fetchOgMetadataWithHeaders(url, FETCH_HEADERS);
+      if (!attempt.retry) {
+        return attempt.result;
       }
 
-      // 3. Check for media content types (image/video/audio)
-      const mediaResult = detectMediaType(url, response);
-      if (mediaResult) {
-        // If it's valid media content type, return result and stop fetch process
-        response.body?.cancel().catch(() => {});
-        return mediaResult;
+      try {
+        const retried = await fetchOgMetadataWithHeaders(url, CRAWLER_FETCH_HEADERS);
+        // Keep the first pass's metadata, including a plain title, unless the crawler produces a
+        // usable preview. A terminal failure is no improvement over another bot wall or shell.
+        const result = retried.usable ? retried.result : attempt.result;
+        logCrawlerRetry(url, attempt.retry, retried.usable);
+        return result;
+      } catch {
+        // Enrichment is optional: rejected redirects or a failed retry must not discard the
+        // first result. The retry still goes through every DNS, protocol and redirect guard.
+        logCrawlerRetry(url, attempt.retry, false);
+        return attempt.result;
       }
-
-      // 4. Validate HTML content type
-      const contentTypeOutcome = resolveHtmlContentType(response, url);
-      if (contentTypeOutcome) {
-        return contentTypeOutcome;
-      }
-
-      // 5. Read response body under the size cap and read deadline
-      const bodyResult = await readResponseBody(response);
-      if (!bodyResult.ok) {
-        // The page exists but its body is unusable for enrichment: release the connection and
-        // degrade to the fallback card instead of reporting an expected remote outcome.
-        response.body?.cancel().catch(() => {});
-        return fallback(url, bodyResult.reason);
-      }
-
-      // 6. Extract and normalize metadata
-      return await extractMetadata(url, bodyResult.body);
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -129,6 +143,87 @@ export class NextJsOgMetadataService {
 }
 
 // --- Module-private helpers (not exported; used only by NextJsOgMetadataService.fetch) ---
+
+/**
+ * Runs one fetch attempt with a given identity: redirect chain, content-type gates, body read and
+ * extraction. The retry decision is returned as data so the caller owns the single retry.
+ */
+async function fetchOgMetadataWithHeaders(url: string, headers: Record<string, string>): Promise<TOgMetadataAttempt> {
+  // 1. Fetch with redirect following and two DNS checks on every hop:
+  // a preflight check for IP literals/all answers, then a connection-time check that pins the socket to vetted answers.
+  const fetchResult = await fetchWithRedirectsForOgMetadata(url, headers);
+  if (!fetchResult.ok) {
+    return { result: fallback(fetchResult.url, fetchResult.reason, fetchResult.context), usable: false };
+  }
+  const { response } = fetchResult;
+
+  // 2. Handle non-OK responses. 403/429 is the classic bot wall, so it earns one crawler retry.
+  if (!response.ok) {
+    const result = handleErrorResponse(response, url);
+    if (response.status === HttpStatusCode.FORBIDDEN || response.status === HttpStatusCode.TOO_MANY_REQUESTS) {
+      return { result, usable: false, retry: { trigger: 'bot_wall', statusCode: response.status } };
+    }
+
+    return { result, usable: false };
+  }
+
+  // 3. Check for media content types (image/video/audio)
+  const mediaResult = detectMediaType(url, response);
+  if (mediaResult) {
+    // If it's valid media content type, return result and stop fetch process
+    response.body?.cancel().catch(() => {});
+    return { result: mediaResult, usable: true };
+  }
+
+  // 4. Validate HTML content type
+  const contentTypeOutcome = resolveHtmlContentType(response, url);
+  if (contentTypeOutcome) {
+    return { result: contentTypeOutcome, usable: false };
+  }
+
+  // 5. Read response body under the size cap and read deadline
+  const bodyResult = await readResponseBody(response);
+  if (!bodyResult.ok) {
+    // The page exists but its body is unusable for enrichment: release the connection and
+    // degrade to the fallback card instead of reporting an expected remote outcome.
+    response.body?.cancel().catch(() => {});
+    return { result: fallback(url, bodyResult.reason), usable: false };
+  }
+
+  // 6. Extract and normalize metadata. A 200 whose head has no Open Graph tags (a client-rendered
+  // shell, or a bot wall served with 200) is worth one crawler retry too.
+  const result = await extractMetadata(url, bodyResult.body);
+  if (!isPreviewUsable(result, bodyResult.body)) {
+    logFallback(url, 'empty_metadata', { statusCode: response.status });
+    return { result, usable: false, retry: { trigger: 'empty_metadata', statusCode: response.status } };
+  }
+
+  return { result, usable: true };
+}
+
+/**
+ * Whether the extracted metadata gives the preview card something to show.
+ *
+ * A page whose head has no Open Graph tags at all is not a preview even when it carries a plain
+ * `<title>`: that is the shape a client-rendered shell takes when the browser identity is
+ * bot-walled, while the crawler identity serves the real tags.
+ */
+function isPreviewUsable(result: TOgMetadataResult, html: string): boolean {
+  if (result.image) return true;
+  if (!result.title) return false;
+
+  return hasOgMetadata(html);
+}
+
+function logCrawlerRetry(url: string, retry: TOgMetadataRetry, recovered: boolean): void {
+  Logger.warn('[og-metadata:fetch]', {
+    outcome: 'crawler_retry',
+    trigger: retry.trigger,
+    recovered,
+    hostname: getHostname(url),
+    ...(retry.statusCode ? { statusCode: retry.statusCode } : {}),
+  });
+}
 
 /**
  * Handles non-OK responses. Remote HTTP failures are expected enrichment outcomes,
@@ -166,18 +261,24 @@ function resolveHtmlContentType(response: Response, url: string): TOgMetadataRes
 /**
  * Follows redirects manually, validating DNS on each hop to prevent SSRF via open redirects.
  */
-async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgFetchResult> {
+async function fetchWithRedirectsForOgMetadata(url: string, headers: Record<string, string>): Promise<OgFetchResult> {
   let currentUrl = url;
 
   for (let i = 0; i < MAX_REDIRECTS; i++) {
     const fetchResult = await fetchForOgMetadata(currentUrl, {
-      headers: FETCH_HEADERS,
+      headers,
       redirect: 'manual', // Disable automatic redirects so we can validate each hop (DNS + protocol) ourselves
     });
     if (!fetchResult.ok) return fetchResult;
 
     const { response } = fetchResult;
-    const redirectUrl = validateRedirectUrl(response, currentUrl);
+    let redirectUrl: URL | null;
+    try {
+      redirectUrl = validateRedirectUrl(response, currentUrl);
+    } catch (error) {
+      response.body?.cancel().catch(() => {});
+      throw error;
+    }
     if (!redirectUrl) {
       return { ok: true, response };
     }

@@ -323,12 +323,13 @@ describe('FeedbackCard', () => {
         id: mockPubky,
         name: 'Miguel',
         image: 'avatar.jpg',
+        indexed_at: 1704067200000,
       } as never);
 
       render(<FeedbackCard />);
 
       await waitFor(() => {
-        expect(mockGetAvatarUrl).toHaveBeenCalledWith(mockPubky);
+        expect(mockGetAvatarUrl).toHaveBeenCalledWith(mockPubky, 1704067200000);
       });
     });
 

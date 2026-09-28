@@ -12,11 +12,16 @@ const mockState = vi.hoisted(() => ({
   isBookmarkLoading: false,
   isBookmarkToggling: false,
   isCollectionsLoading: false,
+  hasMoreCollections: false,
+  isCollectionsLoadingMore: false,
+  isStalled: false,
   collection1Saved: true,
   collection1Updating: false,
   toggleBookmark: vi.fn(),
   toggleCollection: vi.fn(),
   createCollectionWithPost: vi.fn(),
+  loadMoreCollections: vi.fn(),
+  resumeAutoLoad: vi.fn(),
   setShowSignInDialog: vi.fn(),
 }));
 vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => ({
@@ -42,9 +47,22 @@ vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => ({
     ],
     isCollectionsLoading: mockState.isCollectionsLoading,
     isCreatingCollection: false,
+    hasMoreCollections: mockState.hasMoreCollections,
+    isCollectionsLoadingMore: mockState.isCollectionsLoadingMore,
+    loadMoreCollections: mockState.loadMoreCollections,
     toggleBookmark: mockState.toggleBookmark,
     toggleCollection: mockState.toggleCollection,
     createCollectionWithPost: mockState.createCollectionWithPost,
+  }),
+}));
+
+// The stalled state is the real hook's own budget outcome (see its test file); here it is
+// forced so the fallback control the picker renders for it can be exercised directly.
+vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
+  useInfiniteScroll: () => ({
+    sentinelRef: { current: null },
+    isStalled: mockState.isStalled,
+    resumeAutoLoad: mockState.resumeAutoLoad,
   }),
 }));
 
@@ -79,6 +97,9 @@ describe('PostSavePicker', () => {
     mockState.isCollectionsLoading = false;
     mockState.collection1Saved = true;
     mockState.collection1Updating = false;
+    mockState.hasMoreCollections = false;
+    mockState.isCollectionsLoadingMore = false;
+    mockState.isStalled = false;
   });
 
   const renderPicker = (feedContext?: TimelineFeedContextValue) => {
@@ -390,6 +411,37 @@ describe('PostSavePicker', () => {
     closePicker();
 
     expect(removePosts).not.toHaveBeenCalled();
+  });
+
+  it('reaches the stalled Load more control from the keyboard and keeps the menu open', async () => {
+    mockState.hasMoreCollections = true;
+    mockState.isStalled = true;
+
+    renderPicker();
+    openPicker();
+
+    // Arrow/Home/End navigation inside a Radix menu only visits registered menu items.
+    const loadMore = await screen.findByRole('menuitem', { name: 'Load more' });
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'End', code: 'End' });
+    expect(loadMore).toHaveFocus();
+
+    fireEvent.click(loadMore);
+
+    expect(mockState.resumeAutoLoad).toHaveBeenCalledTimes(1);
+    // The picker stays open so the revealed collections can be picked.
+    expect(screen.getByText('Bookmarks')).toBeInTheDocument();
+  });
+
+  it('renders the stalled Load more control as a plain button in the mobile sheet', async () => {
+    mockState.isMobile = true;
+    mockState.hasMoreCollections = true;
+    mockState.isStalled = true;
+
+    renderPicker();
+    fireEvent.click(screen.getByRole('button', { name: 'Save post' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Load more' }));
+
+    expect(mockState.resumeAutoLoad).toHaveBeenCalledTimes(1);
   });
 
   it('matches desktop picker snapshot when open', async () => {

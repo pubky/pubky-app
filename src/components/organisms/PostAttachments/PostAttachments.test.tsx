@@ -61,6 +61,7 @@ vi.mock('@/atoms/Container/Container', () => {
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getMetadata: vi.fn(),
+    fetchFiles: vi.fn(),
     getFileUrl: vi.fn(),
   },
 }));
@@ -439,17 +440,18 @@ describe('PostAttachments', () => {
     it('does not toast or clear when the failing fetch was already cancelled', async () => {
       const attachments = ['pubky://user1/pub/pubky.app/files/image1'];
       let rejectMetadata: (error: Error) => void = () => undefined;
-      mockGetMetadata.mockReturnValue(
-        new Promise<NexusFileDetails[]>((_, reject) => {
-          rejectMetadata = reject;
-        }),
-      );
+      const pendingMetadata = new Promise<NexusFileDetails[]>((_, reject) => {
+        rejectMetadata = reject;
+      });
+      mockGetMetadata.mockReturnValue(pendingMetadata);
 
       const { container, rerender } = render(
         <PostAttachments attachments={attachments} localAttachments={undefined} />,
       );
 
-      // Removing the attachments cancels the in-flight fetch
+      await waitFor(() => expect(mockGetMetadata).toHaveBeenCalled());
+
+      // Removing the attachments retires the in-flight read
       rerender(<PostAttachments attachments={null} localAttachments={undefined} />);
 
       await act(async () => {
@@ -554,13 +556,17 @@ describe('PostAttachments', () => {
         <PostAttachments attachments={attachments} localAttachments={undefined} />,
       );
 
-      rerender(<PostAttachments attachments={null} localAttachments={undefined} />);
-
-      resolveMetadata([createMockImageMetadata('user1:image1')]);
-
       await waitFor(() => {
         expect(mockGetMetadata).toHaveBeenCalled();
       });
+
+      rerender(<PostAttachments attachments={null} localAttachments={undefined} />);
+
+      await act(async () => {
+        resolveMetadata([createMockImageMetadata('user1:image1')]);
+        await Promise.resolve();
+      });
+
       expect(container.firstChild).toBeNull();
     });
   });

@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import { usePurchasedLocks } from './usePurchasedLocks';
 
@@ -14,6 +14,13 @@ const authState = vi.hoisted(() => ({
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
 }));
+const sessionNeedsUpgrade = vi.hoisted(() => ({ value: false }));
+vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
+  useSessionNeedsUpgrade: () => sessionNeedsUpgrade.value,
+}));
+afterEach(() => {
+  sessionNeedsUpgrade.value = false;
+});
 
 describe('usePurchasedLocks', () => {
   beforeEach(() => {
@@ -108,6 +115,19 @@ describe('usePurchasedLocks', () => {
     expect(LocksController.fetchPurchasedLockIds).not.toHaveBeenCalled();
 
     authState.session = { pubky: authState.currentUserPubky as string };
+    rerender();
+
+    await waitFor(() => expect(result.current.hasPurchase('lock1')).toBe(true));
+    expect(LocksController.fetchPurchasedLockIds).toHaveBeenCalledTimes(1);
+  });
+
+  // A session from before `/priv` was requested is refused with a 403 the Err factory would report to Sentry.
+  it('skips the listing while the session needs the upgrade, and lists once it is replaced', async () => {
+    sessionNeedsUpgrade.value = true;
+    const { rerender, result } = renderHook(() => usePurchasedLocks({ enabled: true }));
+    expect(LocksController.fetchPurchasedLockIds).not.toHaveBeenCalled();
+
+    sessionNeedsUpgrade.value = false;
     rerender();
 
     await waitFor(() => expect(result.current.hasPurchase('lock1')).toBe(true));

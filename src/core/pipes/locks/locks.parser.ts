@@ -2,13 +2,13 @@ import type { ZodType } from 'zod';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { parseLockTeaserContent } from '@/libs/post/lockTeaser';
 import { isPositiveIntegerString, isPubkyIdentifier, withPubkyPrefix } from '@/libs/utils/utils';
 import {
   type GuardedPost,
   guardedPostSchema,
   type LockFile,
   type LockPostContent,
-  lockPostContentSchema,
   purchaseFileSchema,
   type ReplicatedPost,
   replicatedPostSchema,
@@ -31,23 +31,9 @@ const UNLOCKED_POST_FILE = 'post.json';
 export class LockContentParser {
   private constructor() {}
 
-  /**
-   * Parse + validate a lock post's `content` (FE-owned schema, via Zod). Returns
-   * `null` only when the content is empty or not a JSON object; missing/invalid
-   * fields fall back to empty strings so the teaser still renders.
-   */
+  /** Null when the content is empty, not a JSON object, or has neither envelope field. */
   static parse(content: string): LockPostContent | null {
-    if (!content) return null;
-
-    let raw: unknown;
-    try {
-      raw = JSON.parse(content);
-    } catch {
-      return null;
-    }
-
-    const result = lockPostContentSchema.safeParse(raw);
-    return result.success ? result.data : null;
+    return parseLockTeaserContent(content);
   }
 
   /**

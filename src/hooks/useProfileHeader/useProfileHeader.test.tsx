@@ -101,6 +101,7 @@ describe('useProfileHeader', () => {
       expect(result.current.profile).toEqual(mockProfile);
       expect(result.current.stats).toEqual(mockStats);
       expect(result.current.actions).toEqual(mockActions);
+      expect(useUserProfile).toHaveBeenCalledWith('test-user-id', { profileLookup: true });
     });
 
     it('returns default profile when useUserProfile returns null', () => {
@@ -387,7 +388,7 @@ describe('useProfileHeader', () => {
     it('forwards enabled: false to useUserProfile and useProfileStats', () => {
       renderHook(() => useProfileHeader('bad-id', { enabled: false }));
 
-      expect(useUserProfile).toHaveBeenCalledWith('bad-id', { enabled: false });
+      expect(useUserProfile).toHaveBeenCalledWith('bad-id', { enabled: false, profileLookup: true });
       expect(useProfileStats).toHaveBeenCalledWith('bad-id', { enabled: false });
     });
   });

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from '@/molecules/Toaster/toast';
 import { useNotificationPostContent } from './useNotificationPostContent';
 
-type PostDetails = { kind: string; content: string } | null | undefined;
+type PostDetails = { kind: string; content: string; lock?: string | null } | null | undefined;
 
 const mockUsePostDetails = vi.hoisted(() =>
   vi.fn<(compositeId: string | null) => { postDetails: PostDetails; isLoading: boolean }>(() => ({
@@ -35,6 +35,7 @@ vi.mock('@/organisms/NotificationItem/NotificationItem.helpers', () => ({
 }));
 
 const COMPOSITE_ID = 'author:post123';
+const LOCK_URL = 'pubky://hs/pub/locks.app/lock1.json';
 
 /** The post the mocked live query currently reports; undefined models "still loading". */
 const setPost = (postDetails: PostDetails, isLoading = postDetails === undefined) =>
@@ -92,6 +93,40 @@ describe('useNotificationPostContent', () => {
 
     expect(result.current.content).toBe('Based Bitcoin');
     expect(vi.mocked(toast)).not.toHaveBeenCalled();
+  });
+
+  it("uses the lock title for a lock announcement whose kind is the teaser's own", async () => {
+    setPost({
+      kind: 'short',
+      content: JSON.stringify({ lock_title: 'BBC', teaser_description: 'A peek' }),
+      lock: LOCK_URL,
+    });
+
+    const { result } = renderHook(() => useNotificationPostContent({ compositeId: COMPOSITE_ID }));
+
+    await waitFor(() => expect(result.current.content).toBe('BBC'));
+    // The title is composer text, so it goes through mention resolution like a plain post would.
+    expect(mockResolvePubkyToNames).toHaveBeenCalledWith('BBC');
+  });
+
+  it('resolves mentions inside a lock title', async () => {
+    setPost({
+      kind: 'short',
+      content: JSON.stringify({ lock_title: 'ask pk:abc', teaser_description: 'A peek' }),
+      lock: LOCK_URL,
+    });
+
+    const { result } = renderHook(() => useNotificationPostContent({ compositeId: COMPOSITE_ID }));
+
+    await waitFor(() => expect(result.current.content).toBe('ask @Alice'));
+  });
+
+  it('resolves mentions in the raw content when a lock announcement will not parse', async () => {
+    setPost({ kind: 'short', content: 'hey pk:abc', lock: LOCK_URL });
+
+    const { result } = renderHook(() => useNotificationPostContent({ compositeId: COMPOSITE_ID }));
+
+    await waitFor(() => expect(result.current.content).toBe('hey @Alice'));
   });
 
   it('falls back to raw content and warns the user when collection content will not parse', () => {

@@ -1,3 +1,4 @@
+import { AUTH_FLOW_CANCELED_ERROR_NAME, createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, NetworkErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -13,7 +14,9 @@ import type {
   TThrowSessionExpiredErrorParams,
 } from './homeserver.types';
 
-export const AUTH_FLOW_CANCELED_ERROR_NAME = 'AuthFlowCanceled';
+// The cancellation sentinel is layer-neutral (`@/libs/error/auth-flow-canceled`); re-exported here
+// so the service keeps its existing surface.
+export { AUTH_FLOW_CANCELED_ERROR_NAME, createCanceledError };
 
 /** Pubky SDK error names for type-safe error handling */
 const PUBKY_ERROR_NAMES = {
@@ -41,20 +44,6 @@ export const extractStatusCode = (error: unknown): number | undefined => {
   if (!('statusCode' in data)) return undefined;
   const statusCode = (data as { statusCode?: unknown }).statusCode;
   return typeof statusCode === 'number' ? statusCode : undefined;
-};
-
-/**
- * Creates a canceled error for auth flows.
- *
- * Uses plain Error (not AppError) intentionally — cancellation is a control flow
- * signal, not an actual error. It's caught by name and handled as a normal exit path.
- *
- * @returns An Error with the canceled error name
- */
-export const createCanceledError = (): Error => {
-  const error = new Error('Auth flow canceled');
-  error.name = AUTH_FLOW_CANCELED_ERROR_NAME;
-  return error;
 };
 
 /**

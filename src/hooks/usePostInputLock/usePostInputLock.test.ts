@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostInputLock } from './usePostInputLock';
 import type { TLockDraft } from './usePostInputLock.types';
 
@@ -23,6 +23,13 @@ vi.mock('@/config/network', () => ({
   getLockServer: () => mocks.lockServer,
   getPaykitServerUrl: () => mocks.paykitServerUrl,
 }));
+const sessionNeedsUpgrade = vi.hoisted(() => ({ value: false }));
+vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
+  useSessionNeedsUpgrade: () => sessionNeedsUpgrade.value,
+}));
+afterEach(() => {
+  sessionNeedsUpgrade.value = false;
+});
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
   useLocksAuthStore: {
     getState: () => ({
@@ -207,6 +214,18 @@ describe('usePostInputLock', () => {
 
       expect(result.current.isLockDialogOpen).toBe(true);
       expect(result.current.isAuthDialogOpen).toBe(false);
+    });
+
+    it('opens the auth modal for the session step when the homeserver session predates /priv', () => {
+      mocks.isAuthed = true;
+      mocks.isPaykitConnected = true;
+      sessionNeedsUpgrade.value = true;
+      const { result } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      expect(result.current.isAuthDialogOpen).toBe(true);
+      expect(result.current.isLockDialogOpen).toBe(false);
     });
 
     it('advances from sign-in to the lock dialog, keeping the switch on', () => {

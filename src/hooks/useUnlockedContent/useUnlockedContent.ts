@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
+import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { Logger } from '@/libs/logger/logger';
 import { toUnlockedMedia } from '@/libs/utils/unlockedMedia';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
@@ -33,6 +34,9 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
   // Effects 1) and 2) below both read my own `/priv`, so they need the restored session.
   // `currentUserPubky` alone is persisted and rehydrates first, which would run them too early.
   const session = useAuthStore((state) => state.session);
+  // A session from before the app requested `/priv` gets a 403 on both reads, and each refusal is an
+  // `Err.auth` sent to Sentry; skip them until the user approves the upgrade (#2373).
+  const needsUpgrade = useSessionNeedsUpgrade();
 
   // Own lock when I posted it (author) AND I own the guarded storage (lock file creator == me, a == b).
   // `authorId === currentUserPubky` is required: lock.json is public, so anyone can point their own
@@ -51,6 +55,12 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
   // re-run the effect (= duplicate request) once lock.json loads.
   useEffect(() => {
     if (!lock || !currentUserPubky || !session) return;
+    // This session cannot read `/priv`, so the answer is known: there is nothing to wait for.
+    // Leaving the flag set would tell callers (a purchase resume, say) a read is still in flight.
+    if (needsUpgrade) {
+      setIsResolvingReplica(false);
+      return;
+    }
     // My own post can't have a replicated copy (unlocking only happens on other people's posts).
     // Leans on the a == b policy: post author == lock creator. TODO:[Locks] #2283 — a != b breaks
     // that inference; decide by lock ownership (e.g. a local unlock index), not authorship.
@@ -73,12 +83,12 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
       cancelled = true;
     };
     // applyContent omitted: it only touches stable setters, so it's not a real dependency.
-  }, [lock, currentUserPubky, session, authorId]);
+  }, [lock, currentUserPubky, session, needsUpgrade, authorId]);
 
   // 2) Is this my own content (a == b)? → read the original from my own HS /priv.
   // Needs lock.json to prove the guarded storage is mine.
   useEffect(() => {
-    if (!lock || !currentUserPubky || !session || !lockFile) return;
+    if (!lock || !currentUserPubky || !session || needsUpgrade || !lockFile) return;
 
     if (!isOwnLock) {
       // a != b: I posted this but locked it with a different account, so the guarded original lives on
@@ -102,7 +112,7 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
     return () => {
       cancelled = true;
     };
-  }, [lock, currentUserPubky, session, lockFile, authorId, isOwnLock]);
+  }, [lock, currentUserPubky, session, needsUpgrade, lockFile, authorId, isOwnLock]);
 
   // Revoke a media set's object URLs when it's replaced or on unmount — after commit, so the DOM has
   // already swapped to the new URLs (revoking before commit could break an in-flight image load).

@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm';
 import { POST_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { remarkDisallowMarkdownLinks, remarkPlaintextTables } from '@/libs/post/markdown';
 import { cn } from '@/libs/utils/utils';
 import { ArticleInlineImage } from '@/molecules/ArticleInlineImage/ArticleInlineImage';
 import { PostMentions } from '@/organisms/PostMentions/PostMentions';
@@ -15,13 +16,11 @@ import { PostHashtags } from '../PostHashtags/PostHashtags';
 import { INLINE_LINK_CLASSNAME } from './PostText.constants';
 import { PostTextProps, RemarkAnchorProps, RemarkButtonProps } from './PostText.types';
 import {
-  remarkDisallowMarkdownLinks,
   remarkExtractFirstParagraph,
   remarkHashtags,
   remarkInlineShowMore,
   remarkMentions,
   remarkPlaintextCodeblock,
-  remarkPlaintextTables,
   remarkSoftBreaks,
   remarkStripImages,
   truncatePostPreviewText,

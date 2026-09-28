@@ -235,6 +235,7 @@ describe('useSearchPeople', () => {
         isFollowing: true,
       },
     ]);
+    expect(mockGetAvatarUrl).toHaveBeenCalledWith(USER_A, 1);
   });
 
   it('does not compute an avatar url for users without an image', async () => {

@@ -506,14 +506,6 @@ vi.mock('@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary', a
   };
 });
 
-// Keep Collections nav chrome stable (no pulsing NEW treatment).
-vi.mock('@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery', () => ({
-  useCollectionsNavDiscovery: () => ({
-    showCollectionsNew: false,
-    markCollectionsNavSeen: () => {},
-  }),
-}));
-
 vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   useDeletePost: () => ({ deletePost: async () => {}, isDeleting: false }),
 }));

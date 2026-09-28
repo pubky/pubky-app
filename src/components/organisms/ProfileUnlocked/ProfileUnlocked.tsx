@@ -3,6 +3,8 @@
 import { Check } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
+import { LocksPermissionNotice } from '@/organisms/LocksPermissionNotice/LocksPermissionNotice';
 import { useUnlockedListContext } from '@/providers/UnlockedListProvider/UnlockedListProvider';
 import { ProfileUnlockedSkeleton } from './ProfileUnlocked.skeleton';
 import { ProfileUnlockedItem } from './ProfileUnlockedItem';
@@ -13,6 +15,11 @@ import { ProfileUnlockedItem } from './ProfileUnlockedItem';
  */
 export function ProfileUnlocked() {
   const { items, isLoading, isError } = useUnlockedListContext();
+  const needsUpgrade = useSessionNeedsUpgrade();
+
+  // Before the skeleton: this session cannot read `/priv` at all, so waiting on that read would only
+  // show a spinner on its way to the same notice.
+  if (needsUpgrade) return <LocksPermissionNotice className="w-full items-center text-center" />;
 
   if (isLoading) return <ProfileUnlockedSkeleton />;
 

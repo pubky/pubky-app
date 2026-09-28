@@ -11,6 +11,7 @@ import { usePayToUnlock } from '@/hooks/usePayToUnlock/usePayToUnlock';
 import { usePurchasedLocks } from '@/hooks/usePurchasedLocks/usePurchasedLocks';
 import { usePurchaseResume } from '@/hooks/usePurchaseResume/usePurchaseResume';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { useUnlockedContent } from '@/hooks/useUnlockedContent/useUnlockedContent';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { cn } from '@/libs/utils/utils';
@@ -20,6 +21,7 @@ import { DialogPayToUnlock } from '@/molecules/DialogPayToUnlock/DialogPayToUnlo
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { toast } from '@/molecules/Toaster/toast';
+import { LocksPermissionNotice } from '@/organisms/LocksPermissionNotice/LocksPermissionNotice';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { LockContentParser } from '@/pipes/locks/locks.parser';
 import type { TUnlockedContent } from '@/services/locks/locks.types';
@@ -69,6 +71,11 @@ export function LockedPostContent({
     postId,
   });
   const { requireAuth, isAuthenticated } = useRequireAuth();
+  // A session from before the app asked for `/priv` cannot read whether this reader already
+  // unlocked, so ask for the permission first and keep the card inert: a second unlock would
+  // charge them twice. Gated on the session, not on a refused read, so the card does not flip from
+  // live to inert once that read fails.
+  const showPermissionNotice = useSessionNeedsUpgrade();
 
   /** Renders unlocked content, closes whichever dialog produced it, and reports dropped media. */
   const showUnlockedContent = (unlocked: TUnlockedContent) => {
@@ -110,7 +117,7 @@ export function LockedPostContent({
 
   // Paying needs the reader's pubky (it is the payment-request delivery address), so a signed-out
   // reader gets the sign-in dialog instead. Unsupported legacy locks have no unlock handler.
-  const handleUnlock = priceSats ? () => requireAuth(() => setIsPayOpen(true)) : undefined;
+  const handleUnlock = priceSats && !showPermissionNotice ? () => requireAuth(() => setIsPayOpen(true)) : undefined;
 
   return (
     <Container className={cn('min-w-0 gap-4', className)}>
@@ -155,15 +162,18 @@ export function LockedPostContent({
           </div>
         </>
       ) : (
-        <LockedPostCard
-          title={lockContent.lock_title}
-          priceSats={priceSats}
-          unlockOpen={isPayOpen}
-          onUnlock={handleUnlock}
-          // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal
-          // closing snaps the button back.
-          slideOnUnlock={isAuthenticated}
-        />
+        <>
+          {showPermissionNotice && <LocksPermissionNotice />}
+          <LockedPostCard
+            title={lockContent.lock_title}
+            priceSats={priceSats}
+            unlockOpen={isPayOpen}
+            onUnlock={handleUnlock}
+            // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal
+            // closing snaps the button back.
+            slideOnUnlock={isAuthenticated}
+          />
+        </>
       )}
       {priceSats && (
         <DialogPayToUnlock
