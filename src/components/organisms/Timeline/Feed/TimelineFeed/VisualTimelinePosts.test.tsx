@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import type { VisualPlaceholderKind, VisualRow, VisualTile } from './TimelineFeedVisual.types';
@@ -14,8 +14,18 @@ const {
   mockUseIsTouchDevice,
   mockUseRemoveDeletedPost,
   mockClickableTagsList,
+  mockUserDetailsRef,
 } = vi.hoisted(() => ({
   mockNavigateToPost: vi.fn(),
+  mockUserDetailsRef: {
+    current: { id: 'author', name: 'Author', image: null, status: 'vacationing' } as {
+      id: string;
+      name: string;
+      image: string | null;
+      status: string | null;
+      deleted?: boolean;
+    },
+  },
   mockPostHeaderUserInfo: vi.fn(({ timeAgo }: { timeAgo?: string }) => (
     <div data-testid="visual-overlay-header">{timeAgo ? `Header:${timeAgo}` : 'Header'}</div>
   )),
@@ -55,8 +65,12 @@ vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
 }));
 
 vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
-  useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null, status: 'vacationing' } }),
+  useUserDetails: () => ({ userDetails: mockUserDetailsRef.current }),
 }));
+
+afterEach(() => {
+  mockUserDetailsRef.current = { id: 'author', name: 'Author', image: null, status: 'vacationing' };
+});
 
 vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
   useAvatarUrl: () => null,
@@ -870,6 +884,26 @@ describe('VisualTimelinePosts', () => {
     expect(mockPostHeaderUserInfo.mock.calls[0][0]).not.toHaveProperty('showPopover', false);
   });
 
+  it('labels a tombstoned author as [DELETED] in the overlay header', () => {
+    mockUserDetailsRef.current = { id: 'author', name: '', image: null, status: null, deleted: true };
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(mockPostHeaderUserInfo).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'author', userName: '[DELETED]' }),
+      undefined,
+    );
+  });
+
   it('renders the header and text inside a vertical stack with spacing', () => {
     render(
       <VisualTimelinePosts
@@ -1292,7 +1326,7 @@ describe('VisualTimelinePosts', () => {
 
     it('renders the provided empty state without a trailing slot (visitor view, Grid/List parity)', () => {
       // Regression: emptyState must reach TimelineStateWrapper's emptyComponent
-      // like Posts/GridPosts do — a visitor whose visual collection feed
+      // like Posts/CardsPosts do — a visitor whose visual collection feed
       // resolves to zero posts sees CollectionItemsEmpty, not generic copy.
       mockUseVisualFeedTiles.mockReturnValue({
         rows: [],

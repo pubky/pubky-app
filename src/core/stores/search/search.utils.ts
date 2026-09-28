@@ -1,4 +1,4 @@
-import { MAX_ACTIVE_SEARCH_TAGS } from './search.constants';
+import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 
 /**
  * Shared utility for adding a tag to an array with business logic:
@@ -10,14 +10,10 @@ import { MAX_ACTIVE_SEARCH_TAGS } from './search.constants';
  *
  * @param currentTags - Current array of tags
  * @param newTag - Tag to add (should be normalized)
- * @param maxTags - Maximum number of tags allowed (default: MAX_ACTIVE_SEARCH_TAGS)
+ * @param maxTags - Maximum number of tags allowed (default: getMaxStreamTags())
  * @returns New array with tag added
  */
-export function addTagToArray(
-  currentTags: string[],
-  newTag: string,
-  maxTags: number = MAX_ACTIVE_SEARCH_TAGS,
-): string[] {
+export function addTagToArray(currentTags: string[], newTag: string, maxTags: number = getMaxStreamTags()): string[] {
   if (newTag.length === 0) return currentTags;
 
   // Check if tag already exists

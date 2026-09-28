@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PostAttachments } from '@/organisms/PostAttachments/PostAttachments';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { PostAttachmentsImagesAndVideos } from './PostAttachmentsImagesAndVideos';
 
@@ -28,6 +29,10 @@ vi.mock('embla-carousel-react', () => ({
 }));
 
 vi.mock('@/molecules/Toaster/toast');
+vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', () => ({
+  useAttachmentsMetadata: () => ({ files: [] }),
+}));
+afterEach(() => vi.restoreAllMocks());
 
 const createMockImage = (overrides: Partial<AttachmentConstructed> = {}): AttachmentConstructed => ({
   type: 'image/jpeg',
@@ -73,5 +78,49 @@ describe('PostAttachmentsImagesAndVideos - focus (real Dialog)', () => {
     await waitFor(() => {
       expect(carouselRegion).toHaveFocus();
     });
+  });
+  it('pauses inline Cards video while the lightbox is open and restores its trigger focus', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(false);
+    const { container } = render(
+      <PostAttachments
+        attachments={null}
+        mediaVariant="cards"
+        localAttachments={[createMockImage({ type: 'video/mp4' })]}
+      />,
+    );
+    const inlineVideo = container.querySelector('video')!;
+    const pause = vi.spyOn(inlineVideo, 'pause').mockImplementation(() => {});
+    const trigger = screen.getByRole('button', { name: 'Open video 1 of 1' });
+    await user.click(trigger);
+    await screen.findByRole('dialog');
+    await waitFor(() => expect(pause).toHaveBeenCalled());
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it('renders Cards media before its caption and audio/files after it', async () => {
+    const { container } = render(
+      <PostAttachments
+        attachments={null}
+        mediaVariant="cards"
+        localAttachments={[
+          createMockImage(),
+          createMockImage({ type: 'audio/mpeg', name: 'audio.mp3' }),
+          createMockImage({ type: 'application/pdf', name: 'document.pdf' }),
+        ]}
+      >
+        <p>Caption between attachments</p>
+      </PostAttachments>,
+    );
+    const image = screen.getByRole('button', { name: /Open image 1/ });
+    const caption = screen.getByText('Caption between attachments');
+    const audio = container.querySelector('audio')!;
+    expect(image.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(caption.compareDocumentPosition(audio) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      audio.compareDocumentPosition(screen.getByText('document.pdf')) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

@@ -47,13 +47,13 @@ type BookmarksTimelineFeedProps = TimelineFeedPropsBase & {
   /** Add Content CTA rendered after bookmarked posts. */
   trailingSlot?: ReactNode;
   pullToRefreshContainerRef?: never;
-  requestedLayout?: never;
+  requestedLayout?: LayoutType;
   visualHiddenItemsNotice?: never;
 };
 
 type CollectionTimelineFeedProps = TimelineFeedPropsBase & {
   variant: typeof TIMELINE_FEED_VARIANT.COLLECTION;
-  /** Collection-scoped Grid/List/Visual choice; never sourced from the persisted home store. */
+  /** Collection-scoped Cards/List/Visual choice; never sourced from the persisted home store. */
   requestedLayout?: LayoutType;
   /**
    * Empty state for finite collection-like feeds.

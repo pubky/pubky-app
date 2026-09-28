@@ -113,6 +113,16 @@ describe('useUserDetailsFromIds', () => {
       expect(result.current.users[2].id).toBe('user2');
     });
 
+    it('labels a tombstoned user as [DELETED] instead of the fallback name', () => {
+      setMockUserDetailsMap(
+        new Map([['user1', { id: 'user1', name: '', image: null, deleted: true } as NexusUserDetails]]),
+      );
+
+      const { result } = renderHook(() => useUserDetailsFromIds({ userIds: ['user1'] as Pubky[] }));
+
+      expect(result.current.users[0].name).toBe('[DELETED]');
+    });
+
     it('uses fallback name when user name is not available', () => {
       setMockUserDetailsMap(
         new Map([

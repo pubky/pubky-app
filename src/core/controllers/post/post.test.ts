@@ -1326,7 +1326,7 @@ describe('PostController', () => {
             name: 'Saved posts',
             description: '',
             items: [targetPostUri],
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -1365,7 +1365,7 @@ describe('PostController', () => {
             name: 'Saved posts',
             description: '',
             items: [targetPostUri, existingItemUri],
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -1397,7 +1397,7 @@ describe('PostController', () => {
             name: 'Saved posts',
             description: '',
             items: [],
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -1555,7 +1555,7 @@ describe('PostController', () => {
             name: 'Saved posts',
             description: '',
             items: [uriC, uriA, uriB],
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -1595,7 +1595,7 @@ describe('PostController', () => {
               name: 'Saved posts',
               description: '',
               items: [uriC, uriB, uriA],
-              layout: COLLECTION_LAYOUT.GRID,
+              layout: COLLECTION_LAYOUT.CARDS,
             }),
           }),
         );
@@ -1766,7 +1766,7 @@ describe('PostController', () => {
             description: 'Updated description',
             items: [existingItemUri],
             cover_image: 'pubky://author/pub/pubky.app/files/oldcover',
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -1814,7 +1814,7 @@ describe('PostController', () => {
             description: 'Updated description',
             items: [existingItemUri],
             cover_image: 'pubky://author/pub/pubky.app/files/newcover',
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });
