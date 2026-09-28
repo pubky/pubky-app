@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { type SyntheticEvent, useRef, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
@@ -113,8 +113,16 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   // `feed` and is left alone: one failed request, and no multi-megabyte upload pulled onto a
   // phone. The failed URL (not a bare boolean) is remembered, so a later cover on the same mount
   // starts on `large` again, and re-firing `error` for a URL already recorded is a no-op: no loop.
+  // Only a failure of the desktop candidate counts: a phone whose `feed` fails never requested
+  // `large`, so widening past the breakpoint later must still try it. An empty `currentSrc` gives
+  // no way to tell which candidate failed, so it is treated as the desktop one.
   const [failedDesktopSrc, setFailedDesktopSrc] = useState<string | null>(null);
-  const handleCoverError = () => setFailedDesktopSrc(finalCoverImage?.desktopSrc ?? null);
+  const handleCoverError = (event: SyntheticEvent<HTMLImageElement>) => {
+    const desktopSrc = finalCoverImage?.desktopSrc;
+    const failedSrc = event.currentTarget.currentSrc;
+    if (!desktopSrc || (failedSrc && failedSrc !== desktopSrc)) return;
+    setFailedDesktopSrc(desktopSrc);
+  };
   const desktopCoverFailed = Boolean(finalCoverImage?.desktopSrc) && failedDesktopSrc === finalCoverImage?.desktopSrc;
   const desktopCoverSrc = desktopCoverFailed
     ? (finalCoverImage?.desktopFallbackSrc ?? finalCoverImage?.desktopSrc)

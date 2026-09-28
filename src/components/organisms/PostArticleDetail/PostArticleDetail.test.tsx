@@ -21,6 +21,13 @@ import { PostArticleDetail } from './PostArticleDetail';
  */
 const getCoverImage = () => document.querySelector<HTMLImageElement>('picture img');
 
+/** jsdom never selects a candidate, so the failing one is set the way a browser reports it. */
+const failCoverLoad = (failedSrc: string) => {
+  const img = getCoverImage()!;
+  Object.defineProperty(img, 'currentSrc', { configurable: true, value: failedSrc });
+  fireEvent.error(img);
+};
+
 vi.mock('@/hooks/usePostArticle/usePostArticle', () => ({
   usePostArticle: vi.fn(),
 }));
@@ -429,10 +436,33 @@ describe('PostArticleDetail', () => {
     // source. The desktop candidate must then drop to `main` (the pre-#2666 behaviour) instead of
     // showing a broken image, while the phone candidate stays `feed` so a phone never downloads
     // the multi-megabyte upload.
-    fireEvent.error(getCoverImage()!);
+    failCoverLoad('https://example.com/cover-large.webp');
 
     expect(source()).toHaveAttribute('srcset', 'https://example.com/cover-main.png');
     expect(getCoverImage()).toHaveAttribute('src', 'https://example.com/cover-feed.webp');
+  });
+
+  it('keeps the large desktop source when the phone feed candidate is the one that fails', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://example.com/cover-feed.webp',
+        desktopSrc: 'https://example.com/cover-large.webp',
+        desktopFallbackSrc: 'https://example.com/cover-main.png',
+        alt: 'Cover image',
+      },
+      hasCover: true,
+      isCoverLoading: false,
+    });
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    // A phone never requested `large`, so a failed `feed` must not send a later wide viewport to
+    // the original upload.
+    failCoverLoad('https://example.com/cover-feed.webp');
+
+    expect(document.querySelector('picture source')).toHaveAttribute('srcset', 'https://example.com/cover-large.webp');
   });
 
   it('starts a later cover on the large source again after an earlier one fell back', () => {
