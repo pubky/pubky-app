@@ -156,6 +156,7 @@ describe('usePostArticle', () => {
       const content = JSON.stringify({ title: 'Test', body: 'Content' });
       const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
       const mockMetadata = createMockImageMetadata('user123:file456', 'beautiful-cover.jpg');
+      mockMetadata.metadata = { width: '800', height: '1200' };
 
       mockGetMetadata.mockResolvedValue([mockMetadata]);
 
@@ -179,6 +180,8 @@ describe('usePostArticle', () => {
       expect(result.current.coverImage).toEqual({
         src: 'https://cdn.example.com/user123:file456/feed',
         alt: 'beautiful-cover.jpg',
+        width: 800,
+        height: 1200,
       });
     });
 

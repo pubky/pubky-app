@@ -4,6 +4,7 @@ import { Newspaper } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
+import { POST_CONTENT_PENDING_PROPS } from '@/hooks/useCardsLayout/useCardsLayout.utils';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { getAttachmentAtSlot } from '@/libs/utils/unlockedMedia';
@@ -21,6 +22,7 @@ interface PostArticleProps {
   className?: string;
   /** 'full' reads the whole article, as the post page does; 'preview' clamps it to a card. */
   variant?: 'preview' | 'full';
+  presentation?: 'default' | 'cards';
 }
 
 export const PostArticle = ({
@@ -29,9 +31,10 @@ export const PostArticle = ({
   localAttachments,
   className,
   variant = 'preview',
+  presentation = 'default',
 }: PostArticleProps) => {
   const isFull = variant === 'full';
-  const { title, body, coverImage, hasCover } = usePostArticle({
+  const { title, body, coverImage, hasCover, isCoverLoading } = usePostArticle({
     content,
     attachments,
     coverImageVariant: FileVariant.FEED,
@@ -46,13 +49,24 @@ export const PostArticle = ({
   // whether it is an image, so a video in slot 0 reports a cover that never renders.
   const localCover = getAttachmentAtSlot(localAttachments, 0);
   const localCoverImage =
-    hasCover && localCover?.type.startsWith('image') ? { src: localCover.urls.main, alt: localCover.name } : null;
+    hasCover && localCover?.type.startsWith('image')
+      ? { src: localCover.urls.main, alt: localCover.name, width: localCover.width, height: localCover.height }
+      : null;
 
   const finalCoverImage = localCoverImage || coverImage;
 
   return (
     <>
-      <Container className={cn('justify-between gap-6', !isFull && 'lg:flex-row @max-xl/grid:flex-col!', className)}>
+      <Container
+        className={cn(
+          presentation === 'cards' ? 'gap-3' : 'justify-between gap-6',
+          presentation !== 'cards' && !isFull && 'lg:flex-row @max-xl/grid:flex-col!',
+          className,
+        )}
+      >
+        {presentation === 'cards' && isCoverLoading && !localCoverImage && (
+          <span hidden {...POST_CONTENT_PENDING_PROPS} />
+        )}
         {/* A full read puts the cover above the title, the way the article page does; the preview
             card keeps it beside the text. */}
         {isFull && finalCoverImage && (
@@ -85,9 +99,13 @@ export const PostArticle = ({
           <Image
             src={finalCoverImage.src}
             alt={finalCoverImage.alt}
-            className="aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!"
-            width={180}
-            height={100}
+            className={
+              presentation === 'cards'
+                ? 'order-first -mx-6 h-auto max-h-160 w-auto max-w-none object-contain'
+                : 'aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!'
+            }
+            width={presentation === 'cards' ? finalCoverImage.width : 180}
+            height={presentation === 'cards' ? finalCoverImage.height : 100}
           />
         )}
       </Container>

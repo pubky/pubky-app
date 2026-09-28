@@ -46,7 +46,7 @@ describe('parseCollectionContent', () => {
         description: undefined,
         items: undefined,
         cover_image: undefined,
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
@@ -58,7 +58,7 @@ describe('parseCollectionContent', () => {
         description: undefined,
         items: [],
         cover_image: undefined,
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
@@ -68,7 +68,7 @@ describe('parseCollectionContent', () => {
         description: 'A bit of Bitcoin purity amidst all of the madness.',
         items: ['pubky://author/pub/pubky.app/posts/abc', 'pubky://author/pub/pubky.app/posts/def'],
         cover_image: 'https://example.com/cover.png',
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
 
       expect(parseCollectionContent(raw)).toEqual({
@@ -76,7 +76,7 @@ describe('parseCollectionContent', () => {
         description: 'A bit of Bitcoin purity amidst all of the madness.',
         items: ['pubky://author/pub/pubky.app/posts/abc', 'pubky://author/pub/pubky.app/posts/def'],
         cover_image: 'https://example.com/cover.png',
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
@@ -111,7 +111,7 @@ describe('parseCollectionContent', () => {
         description: undefined,
         items: [],
         cover_image: undefined,
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
@@ -120,7 +120,7 @@ describe('parseCollectionContent', () => {
         COLLECTION_LAYOUT.LIST,
       );
       expect(parseCollectionContent(JSON.stringify({ name: 'Future', layout: 'spiral' }))?.layout).toBe(
-        COLLECTION_LAYOUT.GRID,
+        COLLECTION_LAYOUT.CARDS,
       );
     });
 
@@ -129,7 +129,7 @@ describe('parseCollectionContent', () => {
         COLLECTION_LAYOUT.VISUAL,
       );
       expect(parseCollectionContent(JSON.stringify({ name: 'Future', layout: 'mosaic' }))?.layout).toBe(
-        COLLECTION_LAYOUT.GRID,
+        COLLECTION_LAYOUT.CARDS,
       );
     });
   });

@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TAGGED_AS_FILTER_KEY, TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { CONTENT, homeInitialState, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from './HomeFeedSidebar';
 
 const {
@@ -10,6 +11,8 @@ const {
   mockUseHomeStore,
   mockFilterContent,
   mockFilterReach,
+  mockFilterSort,
+  mockFilterLayout,
   mockUseFeedLayoutResolution,
   mockCurrentUserPubky,
 } = vi.hoisted(() => ({
@@ -17,15 +20,24 @@ const {
   mockSetReach: vi.fn(),
   mockSetTaggedAsActive: vi.fn(),
   mockUseHomeStore: vi.fn(),
-  mockFilterContent: vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
-    <div
-      data-testid="filter-content"
-      data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
-      data-selected-tab={selectedTab}
-    >
-      FilterContent
-    </div>
-  )),
+  mockFilterContent: vi.fn(
+    ({
+      disabledTabs,
+      selectedTab,
+    }: {
+      disabledTabs?: string[];
+      selectedTab?: string;
+      onTabChange?: (value: string) => void;
+    }) => (
+      <div
+        data-testid="filter-content"
+        data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
+        data-selected-tab={selectedTab}
+      >
+        FilterContent
+      </div>
+    ),
+  ),
   mockFilterReach: vi.fn(
     ({
       selectedTab,
@@ -38,6 +50,8 @@ const {
       profileTags?: string[];
       profileTagsDisabled?: boolean;
       onTabChange?: (value: string) => void;
+      onProfileTagAdd?: (tag: string) => void;
+      onProfileTagRemove?: (tag: string) => void;
     }) => (
       <div
         data-testid="filter-reach"
@@ -50,6 +64,14 @@ const {
       </div>
     ),
   ),
+  mockFilterSort: vi.fn((_props: { onTabChange?: (value: string) => void }) => (
+    <div data-testid="filter-sort">FilterSort</div>
+  )),
+  mockFilterLayout: vi.fn(({ showVisual }: { showVisual?: boolean; onTabChange?: (value: string) => void }) => (
+    <div data-testid="filter-layout" data-show-visual={showVisual ? 'true' : undefined}>
+      FilterLayout
+    </div>
+  )),
   mockUseFeedLayoutResolution: vi.fn(() => ({
     requestedLayout: 'columns',
     effectiveLayout: 'columns',
@@ -60,28 +82,12 @@ const {
   mockCurrentUserPubky: { value: 'viewer-pubky' as string | null },
 }));
 
-// Mock useHomeStore
-vi.mock('@/stores/home/home.types', () => ({
-  REACH: {
-    ALL: 'all',
-    NETWORK: 'network',
-    FOLLOWING: 'following',
-    FRIENDS: 'friends',
-    ME: 'me',
-  },
-  CONTENT: {
-    ALL: 'all',
-    SHORT: 'short',
-    LONG: 'long',
-    IMAGES: 'images',
-    VIDEOS: 'videos',
-    LINKS: 'links',
-    FILES: 'files',
-  },
-}));
+// Mock useHomeStore; getState() reads the same state so handlers see it too
 vi.mock('@/stores/home/home.store', () => ({
-  useHomeStore: (selector?: (state: unknown) => unknown) =>
-    selector ? selector(mockUseHomeStore()) : mockUseHomeStore(),
+  useHomeStore: Object.assign(
+    (selector?: (state: unknown) => unknown) => (selector ? selector(mockUseHomeStore()) : mockUseHomeStore()),
+    { getState: () => mockUseHomeStore() },
+  ),
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -97,7 +103,7 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   // Mirror the real hook: authentication is derived from the auth store, so
   // signed-out tests (mockCurrentUserPubky.value = null) flow through here.
   useRequireAuth: () => ({
-    requireAuth: (action: () => unknown) => action(),
+    requireAuth: (action: () => unknown) => (mockCurrentUserPubky.value ? action() : undefined),
     isAuthenticated: Boolean(mockCurrentUserPubky.value),
   }),
 }));
@@ -116,17 +122,14 @@ vi.mock('@/atoms/Container/Container', () => {
 // Mock Molecules
 vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
   return {
-    FilterContent: (props: { disabledTabs?: string[]; selectedTab?: string }) => mockFilterContent(props),
+    FilterContent: (props: { disabledTabs?: string[]; selectedTab?: string; onTabChange?: (value: string) => void }) =>
+      mockFilterContent(props),
   };
 });
 
 vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
   return {
-    FilterLayout: ({ showVisual }: { showVisual?: boolean }) => (
-      <div data-testid="filter-layout" data-show-visual={showVisual ? 'true' : undefined}>
-        FilterLayout
-      </div>
-    ),
+    FilterLayout: (props: { showVisual?: boolean; onTabChange?: (value: string) => void }) => mockFilterLayout(props),
   };
 });
 
@@ -139,13 +142,15 @@ vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
       profileTags?: string[];
       profileTagsDisabled?: boolean;
       onTabChange?: (value: string) => void;
+      onProfileTagAdd?: (tag: string) => void;
+      onProfileTagRemove?: (tag: string) => void;
     }) => mockFilterReach(props),
   };
 });
 
 vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
   return {
-    FilterSort: () => <div data-testid="filter-sort">FilterSort</div>,
+    FilterSort: (props: { onTabChange?: (value: string) => void }) => mockFilterSort(props),
   };
 });
 
@@ -171,6 +176,8 @@ beforeEach(() => {
   });
   mockFilterContent.mockClear();
   mockFilterReach.mockClear();
+  mockFilterSort.mockClear();
+  mockFilterLayout.mockClear();
   mockUseFeedLayoutResolution.mockReturnValue({
     requestedLayout: 'columns',
     effectiveLayout: 'columns',
@@ -370,6 +377,136 @@ describe('HomeFeedSidebar', () => {
 
     expect(mockSetTaggedAsActive).toHaveBeenCalledWith(true);
     expect(mockSetReach).not.toHaveBeenCalled();
+  });
+});
+
+describe('HomeFeedSidebar - scroll to top on stream change', () => {
+  // The real store, so every filter action applies its actual semantics
+  // (Reach clears Tagged as, a duplicate profile tag is a no-op, ...).
+  let realHomeStore: typeof import('@/stores/home/home.store').useHomeStore;
+  let scrollTo: ReturnType<typeof vi.spyOn>;
+
+  const lastProps = <T,>(mock: { mock: { calls: T[][] } }) => mock.mock.calls.at(-1)?.[0];
+
+  beforeEach(async () => {
+    ({ useHomeStore: realHomeStore } =
+      await vi.importActual<typeof import('@/stores/home/home.store')>('@/stores/home/home.store'));
+    realHomeStore.setState({ ...homeInitialState, reach: REACH.FOLLOWING });
+    mockUseHomeStore.mockImplementation(() => realHomeStore.getState());
+    scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    scrollTo.mockRestore();
+  });
+
+  it('smoothly scrolls to the top when Sort selects a different stream', () => {
+    render(<HomeFeedSidebar />);
+
+    act(() => lastProps(mockFilterSort)?.onTabChange?.(SORT.ENGAGEMENT));
+
+    expect(realHomeStore.getState().sort).toBe(SORT.ENGAGEMENT);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+  });
+
+  it('scrolls to the top when Content selects a different stream', () => {
+    render(<HomeFeedSidebar />);
+
+    act(() => lastProps(mockFilterContent)?.onTabChange?.(CONTENT.IMAGES));
+
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+  });
+
+  it('scrolls to the top when Reach selects a different stream', () => {
+    render(<HomeFeedSidebar />);
+
+    act(() => lastProps(mockFilterReach)?.onTabChange?.(REACH.FRIENDS));
+
+    expect(realHomeStore.getState().reach).toBe(REACH.FRIENDS);
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not scroll when the selected filter already matches the stream', () => {
+    render(<HomeFeedSidebar />);
+
+    act(() => lastProps(mockFilterSort)?.onTabChange?.(SORT.TIMELINE));
+    act(() => lastProps(mockFilterReach)?.onTabChange?.(REACH.FOLLOWING));
+
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('does not scroll when a signed-out Reach click only opens the sign-in prompt', () => {
+    mockCurrentUserPubky.value = null;
+    realHomeStore.setState({ reach: REACH.ALL });
+    render(<HomeFeedSidebar />);
+
+    act(() => lastProps(mockFilterReach)?.onTabChange?.(REACH.FOLLOWING));
+
+    expect(realHomeStore.getState().reach).toBe(REACH.ALL);
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('scrolls to the top when Tagged as switches to its profile-tag stream', () => {
+    realHomeStore.setState({ profileTags: ['bitcoin'] });
+    render(<HomeFeedSidebar />);
+
+    act(() => lastProps(mockFilterReach)?.onTabChange?.(TAGGED_AS_FILTER_KEY));
+
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not scroll when Tagged as opens an empty editor that keeps the stream', () => {
+    render(<HomeFeedSidebar />);
+
+    act(() => lastProps(mockFilterReach)?.onTabChange?.(TAGGED_AS_FILTER_KEY));
+
+    expect(realHomeStore.getState().taggedAsActive).toBe(true);
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('scrolls to the top when adding or removing a Tagged-as profile tag changes the stream', () => {
+    realHomeStore.setState({ taggedAsActive: true, profileTags: ['bitcoin'] });
+    render(<HomeFeedSidebar />);
+
+    act(() => lastProps(mockFilterReach)?.onProfileTagAdd?.('dev'));
+    act(() => lastProps(mockFilterReach)?.onProfileTagRemove?.('bitcoin'));
+
+    expect(realHomeStore.getState().profileTags).toEqual(['dev']);
+    expect(scrollTo).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not scroll when a duplicate profile tag leaves the stream unchanged', () => {
+    realHomeStore.setState({ taggedAsActive: true, profileTags: ['bitcoin'] });
+    render(<HomeFeedSidebar />);
+
+    act(() => lastProps(mockFilterReach)?.onProfileTagAdd?.('bitcoin'));
+
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('does not scroll when the layout changes', () => {
+    render(<HomeFeedSidebar />);
+
+    act(() => lastProps(mockFilterLayout)?.onTabChange?.(LAYOUT.LIST));
+
+    expect(realHomeStore.getState().layout).toBe(LAYOUT.LIST);
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('scrolls to the top from the tablet drawer', () => {
+    render(<HomeFeedDrawer />);
+
+    act(() => lastProps(mockFilterSort)?.onTabChange?.(SORT.ENGAGEMENT));
+
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+  });
+
+  it('scrolls to the top from the mobile drawer on Search', () => {
+    render(<HomeFeedDrawerMobile hideReachFilter feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />);
+
+    act(() => lastProps(mockFilterContent)?.onTabChange?.(CONTENT.VIDEOS));
+
+    expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 });
 

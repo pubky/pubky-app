@@ -74,7 +74,7 @@ function VisualTileVideo({ tile }: VisualTileVideoProps) {
     });
   }, [isVisible]);
 
-  const handleTimeUpdate = React.useCallback(() => {
+  const handleTimeUpdate = () => {
     const videoElement = videoRef.current;
     if (!videoElement) return;
 
@@ -84,7 +84,7 @@ function VisualTileVideo({ tile }: VisualTileVideoProps) {
         // Ignore autoplay restarts that are blocked by the browser.
       });
     }
-  }, []);
+  };
 
   return (
     <Container ref={ref} overrideDefaults className="absolute inset-0">
@@ -113,36 +113,29 @@ function VisualTileImage({ tile }: VisualTileImageProps) {
     hasFallenBackToMainRef.current = tile.previewSrc === tile.mainSrc;
   }, [tile.mainSrc, tile.previewSrc]);
 
-  const handleError = React.useCallback(() => {
+  const handleError = () => {
     if (hasFallenBackToMainRef.current || tile.previewSrc === tile.mainSrc) {
       return;
     }
 
     hasFallenBackToMainRef.current = true;
     setCurrentSrc(tile.mainSrc);
-  }, [tile.mainSrc, tile.previewSrc]);
+  };
 
   return <Image src={currentSrc} alt={tile.attachmentName} fill className="object-cover" onError={handleError} />;
 }
 
 function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: VisualTimelineTileOverlayProps) {
-  const userId = React.useMemo(() => parseCompositeId(tile.postId).pubky, [tile.postId]);
+  const userId = parseCompositeId(tile.postId).pubky;
   const { userDetails } = useUserDetails(userId);
   const avatarUrl = useAvatarUrl(userDetails);
   const { formatRelativeTime } = useRelativeTime();
   const indexedAt = new Date(tile.indexedAt);
   const [tagsExpanded, setTagsExpanded] = React.useState(false);
   const isCompact = size === 'square';
-  const truncatedContent = React.useMemo(() => {
-    const trimmedContent = tile.content.trim();
-
-    if (!trimmedContent) {
-      return trimmedContent;
-    }
-
-    const limit = isCompact ? 120 : size === 'wide' ? 260 : 180;
-    return truncateAtWordBoundary(trimmedContent, limit);
-  }, [isCompact, size, tile.content]);
+  const trimmedContent = tile.content.trim();
+  const limit = isCompact ? 120 : size === 'wide' ? 260 : 180;
+  const truncatedContent = trimmedContent ? truncateAtWordBoundary(trimmedContent, limit) : trimmedContent;
 
   return (
     <Container
@@ -235,21 +228,17 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
   const isTouchDevice = useIsTouchDevice();
   const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(tile.postId);
 
-  const handleNavigate = React.useCallback(() => {
+  const handleNavigate = () => {
     onNavigate(tile.postId);
-  }, [onNavigate, tile.postId]);
+  };
 
-  const handleKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (event.target !== event.currentTarget) return;
-
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        handleNavigate();
-      }
-    },
-    [handleNavigate],
-  );
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleNavigate();
+    }
+  };
 
   return (
     <>
@@ -494,7 +483,7 @@ export function VisualTimelinePosts({
 
             {/* Infinite-scroll sentinel — only mounted (and given height) while there are
                 more posts to observe for and auto-loading is not stalled, mirroring
-                TimelineGridPosts. Once the feed is fully loaded the observer detaches, so
+                TimelineCardsPosts. Once the feed is fully loaded the observer detaches, so
                 rendering it would just leave dead space below the mosaic. */}
             {hasMore && !isStalled && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
           </Container>

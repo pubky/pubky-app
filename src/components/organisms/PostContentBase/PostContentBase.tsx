@@ -4,11 +4,14 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
+import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
+import { PostText } from '@/molecules/PostText/PostText';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { LockedPostContent } from '../LockedPostContent/LockedPostContent';
 import { PostArticle } from '../PostArticle/PostArticle';
+import { PostAttachments } from '../PostAttachments/PostAttachments';
 import { PostBody } from '../PostBody/PostBody';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
 import { PostContentBaseSkeleton } from './PostContentBase.skeleton';
@@ -66,6 +69,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
         content={postDetails.content}
         attachments={postDetails.attachments}
         localAttachments={localAttachments}
+        {...(mediaVariant === 'cards' ? { presentation: 'cards' as const } : {})}
         className={className}
       />
     );
@@ -78,6 +82,20 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
   }
 
   if (!hasContent && !hasAttachments) return null;
+
+  if (mediaVariant === 'cards') {
+    return (
+      <PostAttachments
+        attachments={postDetails.attachments}
+        localAttachments={localAttachments}
+        mediaVariant="cards"
+        className={cn('min-w-0', className)}
+      >
+        {hasContent && <PostText content={postDetails.content} className={textClassName} />}
+        {hasContent && <PostLinkEmbeds content={postDetails.content} />}
+      </PostAttachments>
+    );
+  }
 
   return (
     <Container className={cn('min-w-0 gap-3', className)}>

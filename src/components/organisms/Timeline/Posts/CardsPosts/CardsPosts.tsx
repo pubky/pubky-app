@@ -3,22 +3,26 @@
 import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS, TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
+import { useCardsLayout } from '@/hooks/useCardsLayout/useCardsLayout';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
 import type { UsePostListKeyboardResult } from '@/hooks/usePostListKeyboard/usePostListKeyboard.types';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
-import { cn } from '@/libs/utils/utils';
+import { cn, isPostDeleted } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
-import { PostMain } from '../../../PostMain/PostMain';
-import { GridPostsSkeleton } from './GridPosts.skeleton';
+import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
+import { PostMain } from '@/organisms/PostMain/PostMain';
+import { CardsPostSkeleton, CardsPostsSkeleton } from './CardsPosts.skeleton';
 
-interface TimelineGridPostsProps {
+interface TimelineCardsPostsProps {
   postIds: string[];
   loading: boolean;
   loadingMore: boolean;
@@ -26,46 +30,20 @@ interface TimelineGridPostsProps {
   hasMore: boolean;
   loadMore: () => Promise<void>;
   /**
-   * Whether to render the "You've reached the end" message once the grid is fully
-   * loaded. Defaults to `true`. Collection and bookmarks grids set this to
+   * Whether to render the "You've reached the end" message once the Cards feed is fully
+   * loaded. Defaults to `true`. Collection and bookmarks Cards feeds set this to
    * `false` because the end-of-feed celebration reads as out of place in these
    * finite, library-style surfaces.
    */
   showEndMessage?: boolean;
   emptyState?: ReactNode;
   /**
-   * Optional last grid cell (e.g. Add Content CTA on bookmarks/collection feeds).
-   * Rendered after post cards inside the same grid. The cell uses `h-full` so the
-   * tile stretches to a taller sibling in the row without imposing min-height.
+   * Optional Add Post tile placed after the posts in the shortest column.
    */
   trailingSlot?: ReactNode;
 }
 
-/**
- * TimelineGridPosts
- *
- * Presentational renderer that lays the timeline's post cards out in a fixed,
- * responsive card grid with infinite scroll. Sibling to `TimelinePosts` (vertical
- * list) and `VisualTimelinePosts` (media tiles); shares the same data contract.
- *
- * Variant-agnostic — it carries no collection-specific logic. `TimelineFeedContent`
- * selects it whenever `layoutResolution.isGridActive` (driven by `GRID_LAYOUT_VARIANTS`),
- * and wraps it in `PostMainLayoutProvider` so each `PostMain` inherits the `inline`
- * tags layout (the only sensible layout in a narrow cell, decision D2).
- *
- * Each cell is a named container (`@container/grid`, `container-type: inline-size`)
- * so the Phase C grid-scoped container-query overrides can adapt the card to the
- * narrow cell width. Because a container query with no ancestor container resolves
- * to `false`, those overrides are inert on every non-grid surface (decision D4).
- *
- * When `trailingSlot` is set, it becomes the last grid cell after all posts.
- * When there are no posts but a trailing slot is present, `emptyState` is still
- * rendered above the grid so the user sees both the empty copy and the CTA tile.
- */
-const GRID_TRAILING_CELL_CLASS =
-  '@container/grid block h-full w-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1';
-
-function GridPost({
+function CardsPost({
   postId,
   index,
   totalCount,
@@ -76,7 +54,11 @@ function GridPost({
   totalCount: number;
   setCardRef: UsePostListKeyboardResult['setCardRef'];
 }) {
-  const visibility = usePostHeaderVisibility(postId);
+  const { postDetails, isLoading } = usePostDetails(postId);
+  const identity = parseCompositeId(postId);
+  // Resolve the envelope before mounting other local-first readers of this post.
+  // Passing an empty id keeps the visibility hook's details/relationship queries disabled.
+  const visibility = usePostHeaderVisibility(postDetails ? postId : '');
   const displayedPostId = getDisplayedPostId(postId, visibility);
   const { handlePostKeyDown } = usePostNavigation();
   return (
@@ -88,14 +70,20 @@ function GridPost({
       aria-setsize={totalCount}
       tabIndex={0}
       onKeyDown={(e) => handlePostKeyDown(displayedPostId, e)}
-      className="@container/grid rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1"
+      className="@container/grid min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <PostMain postId={postId} isReply={false} />
+      {postDetails === undefined || isLoading ? (
+        <CardsPostSkeleton index={index} />
+      ) : postDetails?.kind === 'collection' && !isPostDeleted(postDetails.content) ? (
+        <CollectionCard authorPubky={identity.pubky} postId={identity.id} />
+      ) : (
+        <PostMain postId={postId} postDetails={postDetails} isReply={false} presentation="cards" />
+      )}
     </Container>
   );
 }
 
-export function TimelineGridPosts({
+export function TimelineCardsPosts({
   postIds,
   loading,
   loadingMore,
@@ -105,7 +93,7 @@ export function TimelineGridPosts({
   showEndMessage = true,
   emptyState,
   trailingSlot,
-}: TimelineGridPostsProps) {
+}: TimelineCardsPostsProps) {
   // Rounds that surface nothing new (a long client-side-filtered region) are budgeted;
   // past the budget the sentinel stops and the manual Load more below takes over (#2523).
   const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
@@ -118,6 +106,7 @@ export function TimelineGridPosts({
     maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
   });
 
+  const cardsRef = useCardsLayout(postIds, trailingSlot != null);
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
   const hasGridContent = postIds.length > 0 || trailingSlot != null;
   const showEmptyMessageWithTrailingSlot = postIds.length === 0 && trailingSlot != null && emptyState != null;
@@ -129,7 +118,7 @@ export function TimelineGridPosts({
       hasItems={hasGridContent}
       hasMore={hasMore}
       stalled={isStalled}
-      loadingComponent={<GridPostsSkeleton />}
+      loadingComponent={<CardsPostsSkeleton />}
       emptyComponent={emptyState}
     >
       <Container
@@ -139,23 +128,18 @@ export function TimelineGridPosts({
       >
         {showEmptyMessageWithTrailingSlot ? emptyState : null}
         <Container
-          data-cy="timeline-posts-grid"
+          data-cy="timeline-posts-cards"
+          ref={cardsRef}
           overrideDefaults
           role="feed"
-          className={cn('grid', GRID_FEED_GAP_CLASS, GRID_FEED_COLUMNS_CLASS)}
+          className={cn('relative grid items-start', GRID_FEED_GAP_CLASS, GRID_FEED_COLUMNS_CLASS)}
           onKeyDown={onListKeyDown}
         >
           {postIds.map((postId, index) => (
-            <GridPost
-              key={`grid_${postId}`}
-              postId={postId}
-              index={index}
-              totalCount={postIds.length}
-              setCardRef={setCardRef}
-            />
+            <CardsPost key={postId} postId={postId} index={index} totalCount={postIds.length} setCardRef={setCardRef} />
           ))}
           {trailingSlot != null ? (
-            <Container overrideDefaults className={GRID_TRAILING_CELL_CLASS}>
+            <Container overrideDefaults className="@container/grid min-h-48 [&>*:first-child]:min-h-48">
               {trailingSlot}
             </Container>
           ) : null}

@@ -25,7 +25,7 @@ exports[`CollectionItems - Snapshots > matches the owner Visual layout snapshot 
       <button
         type="button"
       >
-        Switch to Grid
+        Switch to Cards
       </button>
     </div>
   </div>
@@ -80,7 +80,7 @@ exports[`CollectionItems - Snapshots > matches the owner non-empty snapshot 1`] 
   data-has-empty-state="true"
   data-has-trailing-slot="true"
   data-has-visual-hidden-items-notice="true"
-  data-requested-layout="columns"
+  data-requested-layout="cards"
   data-testid="timeline-feed"
   data-variant="collection"
 >
@@ -100,7 +100,7 @@ exports[`CollectionItems - Snapshots > matches the owner non-empty snapshot 1`] 
       <button
         type="button"
       >
-        Switch to Grid
+        Switch to Cards
       </button>
     </div>
   </div>
@@ -167,7 +167,7 @@ exports[`CollectionItems - Snapshots > matches the owner reorder-mode snapshot 1
     <button
       type="button"
     >
-      Switch to Grid
+      Switch to Cards
     </button>
   </div>
   <div
