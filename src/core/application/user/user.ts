@@ -293,7 +293,8 @@ export class UserApplication {
   /**
    * Follow syncs in flight, keyed by follower and followee. Overlapping commits for one pair
    * (the same user on two surfaces, or the sign-in moderation follow next to a manual one) run
-   * in order, so an older failed sync compensates before a newer one writes and can never undo it.
+   * in order, so an older failed sync compensates before a newer one writes; the `changed` gate
+   * in {@link syncFollow} then keeps a queued no-op from undoing the commit that came before it.
    */
   private static readonly inFlightFollows = new Map<string, Promise<void>>();
 
@@ -326,10 +327,13 @@ export class UserApplication {
   }: TUserApplicationFollowParams): Promise<void> {
     if (signal?.aborted) return;
 
+    // A write that found the relationship already in its target state has nothing to compensate:
+    // rolling it back would undo a follow the homeserver already holds.
+    let changed = false;
     if (eventType === HttpMethod.PUT) {
-      await LocalFollowService.create({ follower, followee });
+      changed = await LocalFollowService.create({ follower, followee });
     } else if (eventType === HttpMethod.DELETE) {
-      await LocalFollowService.delete({ follower, followee });
+      changed = await LocalFollowService.delete({ follower, followee });
     }
 
     if (signal?.aborted) return;
@@ -340,7 +344,7 @@ export class UserApplication {
       // An already absent homeserver record agrees with the optimistic unfollow.
       if (eventType === HttpMethod.DELETE && hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return;
       // A torn-down session skips the compensation: its local rows no longer belong to this flow.
-      if (!signal?.aborted) {
+      if (changed && !signal?.aborted) {
         try {
           if (eventType === HttpMethod.PUT) {
             await LocalFollowService.delete({ follower, followee });
