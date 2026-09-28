@@ -60,6 +60,10 @@ spec:
               value: "https://nexus.staging.pubky.app/static"
             - name: PUBKY_RUNTIME_HOMEGATE_URL
               value: "https://homegate.staging.pubky.app"
+            - name: PUBKY_RUNTIME_LOCK_SERVER
+              value: "pubkysefcamkcucuoenhz33jixp6s6kxt8hpas7mm9m7a4cihhuwr6byo"
+            - name: PUBKY_RUNTIME_PAYKIT_SERVER_URL
+              value: "https://paykit.staging.pubky.app"
             - name: PUBKY_RUNTIME_PKARR_RELAYS
               value: '["https://pkarr.pubky.app","https://pkarr.pubky.org"]'
             - name: PUBKY_RUNTIME_DEFAULT_HTTP_RELAY

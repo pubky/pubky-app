@@ -673,7 +673,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the install stage 
           <span
             class="font-bold"
           >
-            1) 
+            1)
           </span>
           Install Bitkit
         </p>
@@ -684,7 +684,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the install stage 
           <span
             class="font-bold"
           >
-            2) 
+            2)
           </span>
           Set up profile
         </p>
@@ -695,7 +695,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the install stage 
           <span
             class="font-bold"
           >
-            3) 
+            3)
           </span>
           Fund wallet
         </p>
@@ -1000,7 +1000,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the paid stage 1`]
         <span
           class="hidden lg:inline"
         >
-          Unlocked. 
+          Unlocked.
         </span>
         Thank you for supporting creators!
       </p>
@@ -2074,7 +2074,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
         <span
           class="hidden lg:inline"
         >
-          Awaiting payment. 
+          Awaiting payment.
         </span>
         Please confirm in Bitkit.
       </p>
