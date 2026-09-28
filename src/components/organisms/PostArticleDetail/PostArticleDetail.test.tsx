@@ -416,6 +416,7 @@ describe('PostArticleDetail', () => {
         alt: 'Cover image',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -445,6 +446,7 @@ describe('PostArticleDetail', () => {
         alt: 'A',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
 
     const { rerender } = render(<PostArticleDetail {...defaultProps} />);
@@ -463,6 +465,7 @@ describe('PostArticleDetail', () => {
         alt: 'B',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
 
     rerender(<PostArticleDetail {...defaultProps} />);
@@ -600,6 +603,7 @@ describe('PostArticleDetail', () => {
         alt: 'Remote cover',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
@@ -624,6 +628,54 @@ describe('PostArticleDetail', () => {
     expect(getCoverImage()).toHaveAttribute('src', 'https://cdn.example/cover-feed.webp');
   });
 
+  it('holds the desktop slot while a kept CDN cover resolves, then takes the preloaded variant', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: null,
+      hasCover: true,
+      isCoverLoading: true,
+    });
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(
+        createMockLocalFilesStore({
+          'user123:post456': [
+            {
+              type: 'image/png',
+              name: 'kept-cover.png',
+              urls: { main: 'https://cdn.example/cover-main.png', feed: 'https://cdn.example/cover-feed.webp' },
+            },
+          ],
+        }),
+      ),
+    );
+
+    const { rerender } = render(<PostArticleDetail {...defaultProps} />);
+
+    // The remote `large` URL is not known until the cover resolves, and the local `main` is the
+    // original upload. With no desktop `srcset` a wide screen takes the local `feed` instead, so
+    // the original never starts downloading on the author's own session.
+    expect(document.querySelector('picture source')).not.toHaveAttribute('srcset');
+    expect(getCoverImage()).toHaveAttribute('src', 'https://cdn.example/cover-feed.webp');
+
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://cdn.example/cover-feed.webp',
+        desktopSrc: 'https://cdn.example/cover-large.webp',
+        desktopFallbackSrc: 'https://cdn.example/cover-main.png',
+        alt: 'Remote cover',
+      },
+      hasCover: true,
+      isCoverLoading: false,
+    });
+
+    rerender(<PostArticleDetail {...defaultProps} />);
+
+    expect(document.querySelector('picture source')).toHaveAttribute('srcset', 'https://cdn.example/cover-large.webp');
+  });
+
   it('keeps a same-session blob cover in the desktop slot', () => {
     mockUsePostArticle.mockReturnValue({
       title: 'Test Title',
@@ -635,6 +687,7 @@ describe('PostArticleDetail', () => {
         alt: 'Remote cover',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(

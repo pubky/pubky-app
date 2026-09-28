@@ -61,7 +61,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     desktopTagsPanelRef.current?.focus();
   };
 
-  const { title, body, coverImage, hasCover } = usePostArticle({
+  const { title, body, coverImage, hasCover, isCoverLoading } = usePostArticle({
     content,
     attachments,
     // Both variants come from the same constants the server-side preload reads, so the
@@ -91,7 +91,16 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   const localCoverImage = localCover
     ? {
         src: localCover.urls.feed ?? localCover.urls.main,
-        desktopSrc: localCoverOwnsDesktop || !coverImage?.desktopSrc ? localCover.urls.main : coverImage.desktopSrc,
+        // A kept CDN cover only knows the remote `large` URL once the cover resolves, so while it is
+        // still loading there is no desktop source to point at. Holding the slot (no `srcset`, so a
+        // wide screen falls back to `feed`) keeps the original upload off the wire; the desktop source
+        // appears, on the preloaded variant, as soon as the cover lands. A cover that never resolves
+        // still falls back to the local `main`, the only thing left to render.
+        desktopSrc: localCoverOwnsDesktop
+          ? localCover.urls.main
+          : isCoverLoading
+            ? undefined
+            : (coverImage?.desktopSrc ?? localCover.urls.main),
         // Only a memory-served file has no derived-size fallback to swap to.
         desktopFallbackSrc: localCoverOwnsDesktop ? undefined : coverImage?.desktopFallbackSrc,
         alt: localCover.name,
