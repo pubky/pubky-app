@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
 import { POST_COVER_DESKTOP_VARIANT, POST_COVER_MOBILE_VARIANT } from '@/libs/post/postCoverVariant';
 import { toast } from '@/molecules/Toaster/toast';
-import { filesApi } from '@/services/nexus/file/file.api';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { usePostArticle } from './usePostArticle';
@@ -27,19 +26,8 @@ vi.mock('@/services/nexus/file/file.types', () => ({
   },
 }));
 
-// The cover URL is built by `resolvePostAttachmentUrl`, the same resolver the server preload uses,
-// so it is `filesApi.getFileUrl` that is called, not the Dexie-backed controller.
-vi.mock('@/services/nexus/file/file.api', () => ({
-  filesApi: {
-    getFileUrl: vi.fn(
-      ({ pubky, file_id, variant }: { pubky: string; file_id: string; variant: string }) =>
-        `https://cdn.example.com/${pubky}:${file_id}/${variant}`,
-    ),
-  },
-}));
-
 const mockGetMetadata = vi.mocked(FileController.getMetadata);
-const mockGetFileUrl = vi.mocked(filesApi.getFileUrl);
+const mockGetFileUrl = vi.mocked(FileController.getFileUrl);
 
 // Helper to create mock file metadata
 const createMockImageMetadata = (id: string, name = 'cover.jpg'): NexusFileDetails => ({
@@ -81,9 +69,7 @@ const createMockPdfMetadata = (id: string, name = 'document.pdf'): NexusFileDeta
 describe('usePostArticle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetFileUrl.mockImplementation(
-      ({ pubky, file_id, variant }) => `https://cdn.example.com/${pubky}:${file_id}/${variant}`,
-    );
+    mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
   });
 
   describe('Content Parsing', () => {
@@ -189,8 +175,7 @@ describe('usePostArticle', () => {
 
       expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: attachments });
       expect(mockGetFileUrl).toHaveBeenCalledWith({
-        pubky: 'user123',
-        file_id: 'file456',
+        fileId: 'user123:file456',
         variant: FileVariant.FEED,
       });
       expect(result.current.coverImage).toEqual({
@@ -221,8 +206,7 @@ describe('usePostArticle', () => {
       });
 
       expect(mockGetFileUrl).toHaveBeenCalledWith({
-        pubky: 'user123',
-        file_id: 'file456',
+        fileId: 'user123:file456',
         variant: FileVariant.MAIN,
       });
     });
@@ -303,7 +287,7 @@ describe('usePostArticle', () => {
       });
     });
 
-    it('handles empty metadata response', async () => {
+    it('drops the provisional cover once the lookup settles with no file row', async () => {
       const content = JSON.stringify({ title: 'Test', body: 'Content' });
       const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
 
@@ -317,15 +301,15 @@ describe('usePostArticle', () => {
         }),
       );
 
-      await waitFor(() => {
-        expect(mockGetMetadata).toHaveBeenCalled();
-      });
+      // The uri names a cover, so it paints before the lookup answers.
+      expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
 
-      // No file row is not a reason to withhold a cover the attachment uri already names.
-      expect(result.current.coverImage).toEqual({
-        src: 'https://cdn.example.com/user123:file456/feed',
-        alt: '',
+      // Nexus omits a file it no longer serves: a settled lookup with no row is authoritative, so
+      // the hero does not stay a broken image.
+      await waitFor(() => {
+        expect(result.current.coverImage).toBeNull();
       });
+      expect(result.current.isCoverLoading).toBe(false);
     });
 
     it('uses first attachment when multiple attachments provided', async () => {
@@ -369,7 +353,7 @@ describe('usePostArticle', () => {
       expect(result.current.body).toBe('');
     });
 
-    it('keeps the cover from the attachment uri when the metadata lookup fails', async () => {
+    it('drops the cover and reports it when the metadata lookup fails', async () => {
       const content = JSON.stringify({ title: 'Test', body: 'Content' });
       const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
 
@@ -384,22 +368,19 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(mockGetMetadata).toHaveBeenCalled();
+        expect(vi.mocked(toast)).toHaveBeenCalled();
       });
 
-      // The lookup only supplies the alt text: losing it is not a cover failure, so the cover is
-      // kept and no "could not load cover image" toast is raised.
-      expect(result.current.coverImage).toEqual({
-        src: 'https://cdn.example.com/user123:file456/feed',
-        alt: '',
-      });
-      expect(vi.mocked(toast)).not.toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not load cover image',
       });
+      await waitFor(() => {
+        expect(result.current.coverImage).toBeNull();
+      });
     });
 
-    it('follows the new attachment uri when a re-fetch fails', async () => {
+    it('never shows the previous cover for a replaced attachment whose lookup fails', async () => {
       const content = JSON.stringify({ title: 'Test', body: 'Content' });
       mockGetMetadata.mockResolvedValueOnce([createMockImageMetadata('user123:file456', 'old-cover.jpg')]);
 
@@ -417,15 +398,20 @@ describe('usePostArticle', () => {
         expect(result.current.coverImage?.alt).toBe('old-cover.jpg');
       });
 
-      // An edit replaced the attachments; the new uri names the cover even though the metadata
-      // fetch fails, so the stale cover must not linger and the new one must not be withheld.
+      // An edit replaced the attachments. The new uri paints provisionally, without the old row's
+      // alt text, and the failed lookup then drops it: the stale cover never lingers.
       mockGetMetadata.mockRejectedValueOnce(new Error('Network error'));
       rerender({ attachments: ['pubky://user123/pub/pubky.app/files/file789'] });
 
+      expect(result.current.coverImage?.src).not.toBe('https://cdn.example.com/user123:file456/feed');
+      expect(result.current.coverImage?.alt).not.toBe('old-cover.jpg');
       await waitFor(() => {
-        expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file789/feed');
+        expect(result.current.coverImage).toBeNull();
       });
-      expect(result.current.coverImage?.alt).toBe('');
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not load cover image',
+      });
     });
   });
 
@@ -485,8 +471,7 @@ describe('usePostArticle', () => {
       });
 
       expect(mockGetFileUrl).toHaveBeenLastCalledWith({
-        pubky: 'user123',
-        file_id: 'file1',
+        fileId: 'user123:file1',
         variant: FileVariant.FEED,
       });
 
@@ -494,8 +479,7 @@ describe('usePostArticle', () => {
 
       await waitFor(() => {
         expect(mockGetFileUrl).toHaveBeenLastCalledWith({
-          pubky: 'user123',
-          file_id: 'file1',
+          fileId: 'user123:file1',
           variant: FileVariant.MAIN,
         });
       });
@@ -509,9 +493,7 @@ describe('cover first paint', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetFileUrl.mockImplementation(
-      ({ pubky, file_id, variant }) => `https://cdn.example.com/${pubky}:${file_id}/${variant}`,
-    );
+    mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
   });
 
   it('renders the cover from the attachment uri before any file metadata resolves', () => {

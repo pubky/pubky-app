@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
+import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
-import { resolvePostAttachmentUrl } from '@/libs/post/postAttachmentUrl';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { toast } from '@/molecules/Toaster/toast';
 import type { FileVariant } from '@/services/nexus/file/file.types';
@@ -45,14 +45,13 @@ interface UsePostArticleResult {
 /**
  * Custom hook to extract article data from post content and attachments
  *
- * The cover URL is a pure function of the attachment URI and the variant
- * (`resolvePostAttachmentUrl`, the same resolver the server-side preload uses),
- * so it exists on the first render that has post details — no file-metadata
- * round trip stands in front of the hero. The metadata lookup only refines the
- * result: it supplies the alt text and the intrinsic size, and it can still veto
- * a slot 0 whose row turns out not to be an image. A cover whose metadata was
- * persisted after the post row therefore no longer stays missing until the
- * article remounts.
+ * The cover URL is a pure function of the attachment URI and the variant, so it
+ * exists on the first render that has post details: no file-metadata round trip
+ * stands in front of the hero. The metadata row is a progressive refinement (alt
+ * text, intrinsic size) and stays authoritative once the lookup settles: a row
+ * that is not an image, or a lookup that settles with no row, drops the cover,
+ * as it did when the cover waited for the row. A row persisted after the post
+ * row still renders, because the lookup is live.
  *
  * @param params.content - The JSON stringified article content containing title and body
  * @param params.attachments - The file attachment URIs for the post
@@ -102,43 +101,35 @@ export function usePostArticle({
   // article body and are never resolved here. An edit that replaces or removes
   // the cover derives a new result, so no stale cover can linger.
   const coverFileUri = hasCover ? attachments?.[0] : undefined;
-  // No `onError` here on purpose: the cover no longer depends on this lookup, so a failure only
-  // costs the alt text. Reporting "could not load cover image" while the derived cover renders
-  // would be a false alarm.
   const { files, isLoading: isCoverLoading } = useAttachmentsMetadata({
     fileUris: coverFileUri ? [coverFileUri] : [],
+    onError: () => toast({ variant: 'error', description: 'Could not load cover image' }),
   });
   // The row for *this* uri, not merely the first of a retained previous snapshot: when the
   // attachment is replaced, the old row must not carry its alt text onto the new cover.
   const coverFile = files.find((file) => file.uri === coverFileUri);
 
-  // The cover's CDN URL is a pure function of the attachment URI and the variant, so it is known
-  // the moment the post details are — the file-metadata lookup never gates first paint. This is
-  // the same URL the server preload (`resolvePostCoverPreloadUrls`) and the `<picture>` in
-  // PostArticleDetail build from the shared variants, so a viewport still downloads the cover
-  // once. `resolvePostAttachmentUrl` returns `null` for anything that is not a homeserver file
-  // URI, so a slot 0 the CDN cannot serve renders no cover.
-  const coverSrc = coverFileUri ? resolvePostAttachmentUrl(coverFileUri, coverImageVariant) : null;
-  const coverDesktopSrc =
-    coverFileUri && coverImageDesktopVariant ? resolvePostAttachmentUrl(coverFileUri, coverImageDesktopVariant) : null;
+  // `pubkyUriToCdnUrl` ends in the same `filesApi.getFileUrl` the server preload
+  // (`resolvePostCoverPreloadUrls`) resolves through, and both read the shared cover variants, so
+  // the URL rendered here is the one the document already preloaded. It returns `null` for
+  // anything that is not a homeserver file URI, which the CDN cannot serve.
+  const coverSrc = pubkyUriToCdnUrl(coverFileUri, coverImageVariant);
+  const coverDesktopSrc = coverImageDesktopVariant ? pubkyUriToCdnUrl(coverFileUri, coverImageDesktopVariant) : null;
+  // Only the row can say slot 0 is not an image, or that Nexus no longer serves it (the lookup
+  // settles with no row). Until it lands the cover is provisional.
+  const isCoverUnavailable = coverFile ? !coverFile.content_type.startsWith('image') : !isCoverLoading;
 
-  let coverImage: CoverImage | null = null;
-  if (coverSrc) {
-    if (coverFile && !coverFile.content_type.startsWith('image')) {
-      // Slot 0 resolved to a file that is not an image: only the metadata row can say that, so
-      // the provisional cover is dropped once the row lands.
-      coverImage = null;
-    } else {
-      const width = Number(coverFile?.metadata?.width);
-      const height = Number(coverFile?.metadata?.height);
-      coverImage = {
-        src: coverSrc,
-        desktopSrc: coverDesktopSrc ?? undefined,
-        alt: coverFile?.name ?? '',
-        ...(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0 ? { width, height } : {}),
-      };
-    }
-  }
+  const width = Number(coverFile?.metadata?.width);
+  const height = Number(coverFile?.metadata?.height);
+  const coverImage: CoverImage | null =
+    coverSrc && !isCoverUnavailable
+      ? {
+          src: coverSrc,
+          desktopSrc: coverDesktopSrc ?? undefined,
+          alt: coverFile?.name ?? '',
+          ...(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0 ? { width, height } : {}),
+        }
+      : null;
 
   return {
     title,

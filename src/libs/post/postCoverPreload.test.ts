@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { resolvePostCoverPreloadUrls } from './postCoverPreload';
 import { POST_COVER_DESKTOP_VARIANT, POST_COVER_MOBILE_VARIANT } from './postCoverVariant';
 
@@ -79,5 +80,20 @@ describe('resolvePostCoverPreloadUrls', () => {
     });
 
     expect(urls).toEqual(cover);
+  });
+
+  it('matches the URLs the client hero derives, so the preloaded file is the one rendered', () => {
+    const urls = resolvePostCoverPreloadUrls({
+      kind: 'long',
+      content: article('Body'),
+      attachments: [ATTACHMENT],
+    });
+
+    // The hero paints from `pubkyUriToCdnUrl` (the UI-layer resolver, through FileController)
+    // before its metadata lands. Any drift between the two would download the cover twice.
+    expect(urls).toEqual({
+      mobile: pubkyUriToCdnUrl(ATTACHMENT, POST_COVER_MOBILE_VARIANT),
+      desktop: pubkyUriToCdnUrl(ATTACHMENT, POST_COVER_DESKTOP_VARIANT),
+    });
   });
 });
