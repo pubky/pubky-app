@@ -29,6 +29,10 @@ updates:
           - vitest
           - "@vitest/*"
           - vitest-browser-react
+      pubky-sdk:
+        patterns:
+          - "@synonymdev/*"
+          - pubky-app-specs
       production-minor-patch:
         dependency-type: production
         update-types:
