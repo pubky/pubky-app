@@ -23,6 +23,7 @@ import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { FeedNormalizer } from '@/pipes/feed/feed.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFeedService } from '@/services/local/feed/feed';
@@ -679,6 +680,43 @@ describe('FeedApplication', () => {
   });
 
   describe('fetchFeeds', () => {
+    it('round-trips a Cards feed through the published SDK, homeserver JSON and local data', async () => {
+      const { createOrUpdateSpy, requestSpy, listSpy, createOrUpdateManySpy } = setupMocks();
+      vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(new PubkySpecsBuilder(testUserId));
+      const normalized = FeedNormalizer.to({
+        userId: testUserId,
+        params: {
+          name: 'Cards feed',
+          icon: 'layout-dashboard',
+          tags: ['bitcoin'],
+          domain_tags: [],
+          reach: PubkyAppFeedReach.All,
+          sort: PubkyAppFeedSort.Recent,
+          content: null,
+          layout: PubkyAppFeedLayout.Cards,
+        },
+      });
+      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve(feed));
+      requestSpy.mockResolvedValue(undefined);
+
+      const saved = await FeedApplication.persist({ userId: testUserId, params: { feed: normalized } });
+      const json = normalized.feed.toJson();
+
+      expect(saved.layout).toBe(PubkyAppFeedLayout.Cards);
+      expect(json.feed.layout).toBe('cards');
+      expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: normalized.meta.url, bodyJson: json });
+
+      listSpy.mockResolvedValue([normalized.meta.url]);
+      requestSpy.mockResolvedValue(json);
+      createOrUpdateManySpy.mockImplementation((feeds) => Promise.resolve(feeds));
+
+      const restored = await FeedApplication.fetchFeeds(testUserId);
+
+      expect(restored).toHaveLength(1);
+      expect(restored[0]).toMatchObject({ id: saved.id, layout: PubkyAppFeedLayout.Cards, tags: ['bitcoin'] });
+      expect(buildFeedStreamId(restored[0], testUserId)).toBe(buildFeedStreamId(saved, testUserId));
+    });
+
     const feedUri1 = `pubky://${testUserId}/pub/pubky.app/feeds/feed-abc`;
     const feedUri2 = `pubky://${testUserId}/pub/pubky.app/feeds/feed-def`;
 

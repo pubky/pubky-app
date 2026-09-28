@@ -154,6 +154,21 @@ describe('PostArticle', () => {
     mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
   });
 
+  it('keeps Cards pending while the cover metadata resolves and releases missing covers', () => {
+    mockUsePostArticle.mockReturnValue({ ...mockHookReturnWithoutImage, isCoverLoading: true });
+    const props = {
+      content: 'article',
+      attachments: ['cover'],
+      localAttachments: undefined,
+      presentation: 'cards' as const,
+    };
+    const { container, rerender } = render(<PostArticle {...props} />);
+    expect(container.querySelector('[data-post-content-pending]')).not.toBeNull();
+    mockUsePostArticle.mockReturnValue({ ...mockHookReturnWithoutImage, isCoverLoading: false });
+    rerender(<PostArticle {...props} />);
+    expect(container.querySelector('[data-post-content-pending]')).toBeNull();
+  });
+
   describe('Rendering', () => {
     it('renders article with title and body', () => {
       render(<PostArticle {...defaultProps} />);
@@ -230,6 +245,18 @@ describe('PostArticle', () => {
   });
 
   describe('Hook Integration', () => {
+    it('keeps the Cards cover above the excerpt with its supplied dimensions and contain sizing', () => {
+      mockUsePostArticle.mockReturnValue({
+        ...mockHookReturnWithImage,
+        coverImage: { ...mockHookReturnWithImage.coverImage, width: 600, height: 900 },
+      });
+      render(<PostArticle {...defaultProps} presentation="cards" />);
+      const image = screen.getByTestId('cover-image');
+      expect(image).toHaveClass('order-first', 'object-contain', 'max-h-160');
+      expect(image).toHaveAttribute('width', '600');
+      expect(image).toHaveAttribute('height', '900');
+    });
+
     it('calls usePostArticle with correct parameters', () => {
       render(<PostArticle {...defaultProps} />);
 
