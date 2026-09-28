@@ -22,6 +22,7 @@ vi.mock('@/services/nexus/file/file.types', () => ({
   FileVariant: {
     MAIN: 'main',
     FEED: 'feed',
+    LARGE: 'large',
     SMALL: 'small',
   },
 }));
@@ -208,6 +209,66 @@ describe('usePostArticle', () => {
       expect(mockGetFileUrl).toHaveBeenCalledWith({
         fileId: 'user123:file456',
         variant: FileVariant.MAIN,
+      });
+    });
+
+    it('resolves the desktop source from the desktop variant of the same file', async () => {
+      const content = JSON.stringify({ title: 'Test', body: 'Content' });
+      const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
+      mockGetMetadata.mockResolvedValue([createMockImageMetadata('user123:file456', 'hero.png')]);
+
+      const { result } = renderHook(() =>
+        usePostArticle({
+          content,
+          attachments,
+          coverImageVariant: FileVariant.FEED,
+          coverImageDesktopVariant: FileVariant.LARGE,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.coverImage?.alt).toBe('hero.png');
+      });
+
+      expect(result.current.coverImage).toEqual({
+        src: 'https://cdn.example.com/user123:file456/feed',
+        desktopSrc: 'https://cdn.example.com/user123:file456/large',
+        alt: 'hero.png',
+      });
+    });
+
+    it('resolves the desktop fallback source next to the desktop variant', async () => {
+      const content = JSON.stringify({ title: 'Test', body: 'Content' });
+      const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
+      const mockMetadata = createMockImageMetadata('user123:file456', 'beautiful-cover.jpg');
+
+      mockGetMetadata.mockResolvedValue([mockMetadata]);
+
+      const { result } = renderHook(() =>
+        usePostArticle({
+          content,
+          attachments,
+          coverImageVariant: FileVariant.FEED,
+          coverImageDesktopVariant: FileVariant.LARGE,
+          coverImageDesktopFallbackVariant: FileVariant.MAIN,
+        }),
+      );
+
+      // Provisional (no row yet): no fallback, so a slot 0 that is not an image cannot pull its
+      // original upload through the `<img>`.
+      expect(result.current.coverImage?.desktopFallbackSrc).toBeUndefined();
+
+      await waitFor(() => {
+        expect(result.current.coverImage?.alt).toBe('beautiful-cover.jpg');
+      });
+
+      // The hero needs a desktop size it can degrade to when `large` is not served yet.
+      expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user123:file456', variant: FileVariant.MAIN });
+      expect(result.current.coverImage).toEqual({
+        src: 'https://cdn.example.com/user123:file456/feed',
+        desktopSrc: 'https://cdn.example.com/user123:file456/large',
+        desktopFallbackSrc: 'https://cdn.example.com/user123:file456/main',
+        alt: 'beautiful-cover.jpg',
       });
     });
 
@@ -551,9 +612,9 @@ describe('cover first paint', () => {
     // Pinned literals: `resolvePostCoverPreloadUrls` resolves slot 0 with these same constants, so
     // the preloaded resource is the one the hero asks for and a viewport downloads it once.
     expect(POST_COVER_MOBILE_VARIANT).toBe('feed');
-    expect(POST_COVER_DESKTOP_VARIANT).toBe('main');
+    expect(POST_COVER_DESKTOP_VARIANT).toBe('large');
     expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
-    expect(result.current.coverImage?.desktopSrc).toBe('https://cdn.example.com/user123:file456/main');
+    expect(result.current.coverImage?.desktopSrc).toBe('https://cdn.example.com/user123:file456/large');
   });
 
   it('keeps no cover when the attachment is not a homeserver file uri', () => {

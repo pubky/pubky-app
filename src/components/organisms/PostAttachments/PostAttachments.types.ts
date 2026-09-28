@@ -18,6 +18,8 @@ export type AttachmentConstructed = {
   urls: {
     main: string;
     feed?: string;
+    /** CDN-backed images only: a session object URL has no derived variants. */
+    large?: string;
   };
 };
 

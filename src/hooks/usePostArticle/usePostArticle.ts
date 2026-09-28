@@ -13,6 +13,12 @@ interface CoverImage {
   src: string;
   /** Set when a desktop variant was requested: the same file at its larger size. */
   desktopSrc?: string;
+  /**
+   * Set alongside `desktopSrc`: the size to use when `desktopSrc` fails to load. The article
+   * hero swaps the desktop `<source>` to it on the cover's `error` event, so a desktop variant
+   * Nexus cannot serve yet (`large` before its deploy) degrades to a usable image.
+   */
+  desktopFallbackSrc?: string;
   alt: string;
   width?: number;
   height?: number;
@@ -24,9 +30,14 @@ interface UsePostArticleParams {
   coverImageVariant: FileVariant;
   /**
    * Second, larger source for surfaces that render the cover at full width (the article hero).
-   * Left unset by feed-sized surfaces, which never want the original upload.
+   * Left unset by feed-sized surfaces, which never want the larger file.
    */
   coverImageDesktopVariant?: FileVariant;
+  /**
+   * Size to swap to when {@link coverImageDesktopVariant} fails to load. Left unset by surfaces
+   * that render a variant they know Nexus serves.
+   */
+  coverImageDesktopFallbackVariant?: FileVariant;
 }
 
 interface UsePostArticleResult {
@@ -72,6 +83,7 @@ export function usePostArticle({
   attachments,
   coverImageVariant,
   coverImageDesktopVariant,
+  coverImageDesktopFallbackVariant,
 }: UsePostArticleParams): UsePostArticleResult {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -115,6 +127,14 @@ export function usePostArticle({
   // anything that is not a homeserver file URI, which the CDN cannot serve.
   const coverSrc = pubkyUriToCdnUrl(coverFileUri, coverImageVariant);
   const coverDesktopSrc = coverImageDesktopVariant ? pubkyUriToCdnUrl(coverFileUri, coverImageDesktopVariant) : null;
+  // The desktop fallback (`main`, the untouched upload) waits for the row to confirm an image: a
+  // provisional slot 0 that turns out to be a video would otherwise pull its multi-megabyte original
+  // through the `<img>` when `large` fails. A failure recorded before the row lands still swaps as
+  // soon as it does.
+  const coverDesktopFallbackSrc =
+    coverFile && coverImageDesktopFallbackVariant
+      ? pubkyUriToCdnUrl(coverFileUri, coverImageDesktopFallbackVariant)
+      : null;
   // Only the row can say slot 0 is not an image, or that Nexus no longer serves it (the lookup
   // settles with no row). Until it lands the cover is provisional.
   const isCoverUnavailable = coverFile ? !coverFile.content_type.startsWith('image') : !isCoverLoading;
@@ -126,6 +146,7 @@ export function usePostArticle({
       ? {
           src: coverSrc,
           desktopSrc: coverDesktopSrc ?? undefined,
+          desktopFallbackSrc: coverDesktopFallbackSrc ?? undefined,
           alt: coverFile?.name ?? '',
           ...(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0 ? { width, height } : {}),
         }
