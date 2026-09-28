@@ -225,6 +225,7 @@ describe('PostArticleDetail', () => {
       body: 'Test article body content',
       coverImage: null,
       hasCover: true,
+      isCoverLoading: false,
     });
     mockUseLocalFilesStore.mockImplementation((selector) => selector(createMockLocalFilesStore()));
   });
@@ -260,6 +261,30 @@ describe('PostArticleDetail', () => {
     expect(screen.getAllByTestId('post-tags-panel')).toHaveLength(2);
     expect(screen.getByTestId('post-actions-bar')).toBeInTheDocument();
     expect(screen.queryByTestId('post-inline-tags-actions')).not.toBeInTheDocument();
+  });
+
+  it('keeps the side tags grid layout in list mode', () => {
+    useHomeStore.getState().setLayout(LAYOUT.LIST);
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    const containers = screen.getAllByTestId('container');
+    expect(containers.some((el) => el.className.includes('lg:grid-cols-3'))).toBe(true);
+    expect(screen.getAllByTestId('post-tags-panel')).toHaveLength(2);
+    expect(screen.getByTestId('post-actions-bar')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-inline-tags-actions')).not.toBeInTheDocument();
+  });
+
+  it('renders the columns layout in visual mode, matching the single-post sidebar and tags rule', () => {
+    useHomeStore.getState().setLayout(LAYOUT.VISUAL);
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    const containers = screen.getAllByTestId('container');
+    expect(containers.some((el) => el.className.includes('lg:grid-cols-3'))).toBe(false);
+    expect(screen.getByTestId('post-inline-tags-actions')).toHaveAttribute('data-post-id', 'user123:post456');
+    expect(screen.queryByTestId('post-tags-panel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-actions-bar')).not.toBeInTheDocument();
   });
 
   it('scrolls the mobile tags panel into view without focusing its input on mobile (issue #1650)', () => {
@@ -329,6 +354,7 @@ describe('PostArticleDetail', () => {
         alt: 'Cover image',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -346,6 +372,7 @@ describe('PostArticleDetail', () => {
         alt: 'Cover image',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -365,6 +392,7 @@ describe('PostArticleDetail', () => {
         alt: 'Cover image',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -451,6 +479,7 @@ describe('PostArticleDetail', () => {
         alt: 'Cover image',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -469,6 +498,7 @@ describe('PostArticleDetail', () => {
         alt: 'Cover image',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -482,6 +512,7 @@ describe('PostArticleDetail', () => {
       body: 'Test body',
       coverImage: null,
       hasCover: true,
+      isCoverLoading: false,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -498,6 +529,7 @@ describe('PostArticleDetail', () => {
         alt: 'Cover image',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
 
     render(<PostArticleDetail {...defaultProps} isBlurred />);
@@ -535,6 +567,7 @@ describe('PostArticleDetail', () => {
         alt: 'Remote cover',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
@@ -677,6 +710,7 @@ describe('PostArticleDetail', () => {
         alt: 'Remote fallback',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
@@ -787,6 +821,7 @@ describe('PostArticleDetail', () => {
         alt: 'Article cover',
       },
       hasCover: true,
+      isCoverLoading: false,
     });
 
     const { container } = render(

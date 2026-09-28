@@ -10,35 +10,6 @@ vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
   useCustomFeed: () => mockUseCustomFeed(),
 }));
 
-// Mock store constants
-vi.mock('@/stores/home/home.types', () => ({
-  REACH: {
-    ALL: 'all',
-    NETWORK: 'network',
-    FOLLOWING: 'following',
-    FRIENDS: 'friends',
-    ME: 'me',
-  },
-  SORT: {
-    TIMELINE: 'timeline',
-    ENGAGEMENT: 'total_engagement',
-  },
-  LAYOUT: {
-    COLUMNS: 'columns',
-    WIDE: 'wide',
-    VISUAL: 'visual',
-  },
-  CONTENT: {
-    ALL: 'all',
-    SHORT: 'short',
-    LONG: 'long',
-    IMAGES: 'images',
-    VIDEOS: 'videos',
-    LINKS: 'links',
-    FILES: 'files',
-  },
-}));
-
 // Mock atoms
 vi.mock('@/atoms/Container/Container', () => {
   return {
@@ -99,16 +70,19 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
       selectedTab,
       defaultSelectedTab,
       disabled,
+      showCards,
     }: {
       selectedTab?: string;
       defaultSelectedTab?: string;
       disabled?: boolean;
+      showCards?: boolean;
     }) => (
       <div
         data-testid="filter-layout"
         data-selected-tab={selectedTab ?? ''}
         data-default-selected-tab={defaultSelectedTab ?? ''}
         data-disabled={disabled}
+        data-show-cards={showCards}
       >
         FilterLayout
       </div>
@@ -297,6 +271,13 @@ describe('CustomFeedFilters', () => {
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'wide');
+  });
+
+  it.each(['sidebar', 'drawer'] as const)('shows the saved Cards selection in the %s', (variant) => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ layout: PubkyAppFeedLayout.Cards }));
+    render(<CustomFeedFilters variant={variant} />);
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'cards');
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-show-cards', 'true');
   });
 
   it('maps customFeed content to filter selectedTab', () => {

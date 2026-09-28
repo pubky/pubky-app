@@ -164,9 +164,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   </button>
                 </TooltipTrigger>
                 <TooltipPortal>
-                  <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
-                    {parsedStatus.text}
-                  </TooltipContent>
+                  <TooltipContent variant="accent">{parsedStatus.text}</TooltipContent>
                 </TooltipPortal>
               </Tooltip>
             )}

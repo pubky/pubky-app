@@ -20,6 +20,8 @@ interface CoverImage {
    */
   desktopFallbackSrc?: string;
   alt: string;
+  width?: number;
+  height?: number;
 }
 
 interface UsePostArticleParams {
@@ -48,6 +50,7 @@ interface UsePostArticleResult {
    * cover). Callers must gate any locally sourced cover on this too.
    */
   hasCover: boolean;
+  isCoverLoading: boolean;
 }
 
 /**
@@ -106,12 +109,14 @@ export function usePostArticle({
   // article body and are never resolved here. An edit that replaces or removes
   // the cover derives a new result, so no stale cover can linger.
   const coverFileUri = hasCover ? attachments?.[0] : undefined;
-  const { files } = useAttachmentsMetadata({
+  const { files, isLoading: isCoverLoading } = useAttachmentsMetadata({
     fileUris: coverFileUri ? [coverFileUri] : [],
     onError: () => toast({ variant: 'error', description: 'Could not load cover image' }),
   });
   const coverFile = files[0];
 
+  const width = Number(coverFile?.metadata?.width);
+  const height = Number(coverFile?.metadata?.height);
   const coverImage: CoverImage | null =
     coverFile && coverFile.content_type.startsWith('image')
       ? {
@@ -123,6 +128,7 @@ export function usePostArticle({
             ? FileController.getFileUrl({ fileId: coverFile.id, variant: coverImageDesktopFallbackVariant })
             : undefined,
           alt: coverFile.name,
+          ...(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0 ? { width, height } : {}),
         }
       : null;
 
@@ -131,5 +137,6 @@ export function usePostArticle({
     body,
     coverImage,
     hasCover,
+    isCoverLoading,
   };
 }
