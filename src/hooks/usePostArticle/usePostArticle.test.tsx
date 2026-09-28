@@ -1,7 +1,9 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
+import { POST_COVER_DESKTOP_VARIANT, POST_COVER_MOBILE_VARIANT } from '@/libs/post/postCoverVariant';
 import { toast } from '@/molecules/Toaster/toast';
+import { filesApi } from '@/services/nexus/file/file.api';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { usePostArticle } from './usePostArticle';
@@ -25,8 +27,19 @@ vi.mock('@/services/nexus/file/file.types', () => ({
   },
 }));
 
+// The cover URL is built by `resolvePostAttachmentUrl`, the same resolver the server preload uses,
+// so it is `filesApi.getFileUrl` that is called, not the Dexie-backed controller.
+vi.mock('@/services/nexus/file/file.api', () => ({
+  filesApi: {
+    getFileUrl: vi.fn(
+      ({ pubky, file_id, variant }: { pubky: string; file_id: string; variant: string }) =>
+        `https://cdn.example.com/${pubky}:${file_id}/${variant}`,
+    ),
+  },
+}));
+
 const mockGetMetadata = vi.mocked(FileController.getMetadata);
-const mockGetFileUrl = vi.mocked(FileController.getFileUrl);
+const mockGetFileUrl = vi.mocked(filesApi.getFileUrl);
 
 // Helper to create mock file metadata
 const createMockImageMetadata = (id: string, name = 'cover.jpg'): NexusFileDetails => ({
@@ -68,7 +81,9 @@ const createMockPdfMetadata = (id: string, name = 'document.pdf'): NexusFileDeta
 describe('usePostArticle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
+    mockGetFileUrl.mockImplementation(
+      ({ pubky, file_id, variant }) => `https://cdn.example.com/${pubky}:${file_id}/${variant}`,
+    );
   });
 
   describe('Content Parsing', () => {
@@ -169,12 +184,13 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(result.current.coverImage).not.toBeNull();
+        expect(result.current.coverImage?.alt).toBe('beautiful-cover.jpg');
       });
 
       expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: attachments });
       expect(mockGetFileUrl).toHaveBeenCalledWith({
-        fileId: 'user123:file456',
+        pubky: 'user123',
+        file_id: 'file456',
         variant: FileVariant.FEED,
       });
       expect(result.current.coverImage).toEqual({
@@ -205,7 +221,8 @@ describe('usePostArticle', () => {
       });
 
       expect(mockGetFileUrl).toHaveBeenCalledWith({
-        fileId: 'user123:file456',
+        pubky: 'user123',
+        file_id: 'file456',
         variant: FileVariant.MAIN,
       });
     });
@@ -277,13 +294,13 @@ describe('usePostArticle', () => {
         }),
       );
 
-      // Wait for effect to complete
-      await waitFor(() => {
-        expect(mockGetMetadata).toHaveBeenCalled();
-      });
+      // The attachment uri names a cover, so it paints before the row lands; the row is the only
+      // thing that can say slot 0 is not an image, and the provisional cover drops once it does.
+      expect(result.current.coverImage).not.toBeNull();
 
-      expect(result.current.coverImage).toBeNull();
-      expect(mockGetFileUrl).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(result.current.coverImage).toBeNull();
+      });
     });
 
     it('handles empty metadata response', async () => {
@@ -304,7 +321,11 @@ describe('usePostArticle', () => {
         expect(mockGetMetadata).toHaveBeenCalled();
       });
 
-      expect(result.current.coverImage).toBeNull();
+      // No file row is not a reason to withhold a cover the attachment uri already names.
+      expect(result.current.coverImage).toEqual({
+        src: 'https://cdn.example.com/user123:file456/feed',
+        alt: '',
+      });
     });
 
     it('uses first attachment when multiple attachments provided', async () => {
@@ -323,10 +344,8 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(result.current.coverImage).not.toBeNull();
+        expect(result.current.coverImage?.alt).toBe('first-image.jpg');
       });
-
-      expect(result.current.coverImage?.alt).toBe('first-image.jpg');
     });
   });
 
@@ -350,7 +369,7 @@ describe('usePostArticle', () => {
       expect(result.current.body).toBe('');
     });
 
-    it('shows toast on metadata fetch error', async () => {
+    it('keeps the cover from the attachment uri when the metadata lookup fails', async () => {
       const content = JSON.stringify({ title: 'Test', body: 'Content' });
       const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
 
@@ -365,17 +384,22 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(vi.mocked(toast)).toHaveBeenCalled();
+        expect(mockGetMetadata).toHaveBeenCalled();
       });
 
-      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      // The lookup only supplies the alt text: losing it is not a cover failure, so the cover is
+      // kept and no "could not load cover image" toast is raised.
+      expect(result.current.coverImage).toEqual({
+        src: 'https://cdn.example.com/user123:file456/feed',
+        alt: '',
+      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not load cover image',
       });
-      expect(result.current.coverImage).toBeNull();
     });
 
-    it('clears a previously loaded cover image when a re-fetch fails', async () => {
+    it('follows the new attachment uri when a re-fetch fails', async () => {
       const content = JSON.stringify({ title: 'Test', body: 'Content' });
       mockGetMetadata.mockResolvedValueOnce([createMockImageMetadata('user123:file456', 'old-cover.jpg')]);
 
@@ -393,18 +417,15 @@ describe('usePostArticle', () => {
         expect(result.current.coverImage?.alt).toBe('old-cover.jpg');
       });
 
-      // An edit replaced the attachments, but the metadata fetch fails —
-      // the stale cover must not linger
+      // An edit replaced the attachments; the new uri names the cover even though the metadata
+      // fetch fails, so the stale cover must not linger and the new one must not be withheld.
       mockGetMetadata.mockRejectedValueOnce(new Error('Network error'));
       rerender({ attachments: ['pubky://user123/pub/pubky.app/files/file789'] });
 
       await waitFor(() => {
-        expect(result.current.coverImage).toBeNull();
+        expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file789/feed');
       });
-      expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        variant: 'error',
-        description: 'Could not load cover image',
-      });
+      expect(result.current.coverImage?.alt).toBe('');
     });
   });
 
@@ -464,7 +485,8 @@ describe('usePostArticle', () => {
       });
 
       expect(mockGetFileUrl).toHaveBeenLastCalledWith({
-        fileId: 'user123:file1',
+        pubky: 'user123',
+        file_id: 'file1',
         variant: FileVariant.FEED,
       });
 
@@ -472,11 +494,98 @@ describe('usePostArticle', () => {
 
       await waitFor(() => {
         expect(mockGetFileUrl).toHaveBeenLastCalledWith({
-          fileId: 'user123:file1',
+          pubky: 'user123',
+          file_id: 'file1',
           variant: FileVariant.MAIN,
         });
       });
     });
+  });
+});
+
+describe('cover first paint', () => {
+  const content = JSON.stringify({ title: 'Test', body: 'Content' });
+  const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetFileUrl.mockImplementation(
+      ({ pubky, file_id, variant }) => `https://cdn.example.com/${pubky}:${file_id}/${variant}`,
+    );
+  });
+
+  it('renders the cover from the attachment uri before any file metadata resolves', () => {
+    mockGetMetadata.mockResolvedValue([]);
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        coverImageVariant: FileVariant.FEED,
+        coverImageDesktopVariant: FileVariant.MAIN,
+      }),
+    );
+
+    // No metadata has resolved yet; the cover exists all the same, and its desktop source is the
+    // same pair of variants the server preload resolves.
+    expect(result.current.coverImage).toEqual({
+      src: 'https://cdn.example.com/user123:file456/feed',
+      desktopSrc: 'https://cdn.example.com/user123:file456/main',
+      alt: '',
+    });
+  });
+
+  it('fills the alt text from the file row once it lands, keeping the URL', async () => {
+    mockGetMetadata.mockResolvedValue([createMockImageMetadata('user123:file456', 'beautiful-cover.jpg')]);
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        coverImageVariant: FileVariant.FEED,
+      }),
+    );
+
+    expect(result.current.coverImage?.alt).toBe('');
+
+    await waitFor(() => {
+      expect(result.current.coverImage?.alt).toBe('beautiful-cover.jpg');
+    });
+    expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
+  });
+
+  it('builds the cover from the same variants the server preload uses', () => {
+    mockGetMetadata.mockResolvedValue([]);
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        coverImageVariant: POST_COVER_MOBILE_VARIANT,
+        coverImageDesktopVariant: POST_COVER_DESKTOP_VARIANT,
+      }),
+    );
+
+    // Pinned literals: `resolvePostCoverPreloadUrls` resolves slot 0 with these same constants, so
+    // the preloaded resource is the one the hero asks for and a viewport downloads it once.
+    expect(POST_COVER_MOBILE_VARIANT).toBe('feed');
+    expect(POST_COVER_DESKTOP_VARIANT).toBe('main');
+    expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
+    expect(result.current.coverImage?.desktopSrc).toBe('https://cdn.example.com/user123:file456/main');
+  });
+
+  it('keeps no cover when the attachment is not a homeserver file uri', () => {
+    mockGetMetadata.mockResolvedValue([]);
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments: ['https://cdn.example.com/not-a-pubky-uri.jpg'],
+        coverImageVariant: FileVariant.FEED,
+      }),
+    );
+
+    expect(result.current.coverImage).toBeNull();
   });
 });
 

@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FileController } from '@/controllers/file/file';
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
+import { resolvePostAttachmentUrl } from '@/libs/post/postAttachmentUrl';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { toast } from '@/molecules/Toaster/toast';
 import type { FileVariant } from '@/services/nexus/file/file.types';
@@ -45,9 +45,14 @@ interface UsePostArticleResult {
 /**
  * Custom hook to extract article data from post content and attachments
  *
- * The cover is resolved through `useAttachmentsMetadata`, so it appears as soon
- * as the file row lands — a cover whose metadata was persisted after the post
- * row no longer stays missing until the article remounts.
+ * The cover URL is a pure function of the attachment URI and the variant
+ * (`resolvePostAttachmentUrl`, the same resolver the server-side preload uses),
+ * so it exists on the first render that has post details — no file-metadata
+ * round trip stands in front of the hero. The metadata lookup only refines the
+ * result: it supplies the alt text and the intrinsic size, and it can still veto
+ * a slot 0 whose row turns out not to be an image. A cover whose metadata was
+ * persisted after the post row therefore no longer stays missing until the
+ * article remounts.
  *
  * @param params.content - The JSON stringified article content containing title and body
  * @param params.attachments - The file attachment URIs for the post
@@ -97,25 +102,43 @@ export function usePostArticle({
   // article body and are never resolved here. An edit that replaces or removes
   // the cover derives a new result, so no stale cover can linger.
   const coverFileUri = hasCover ? attachments?.[0] : undefined;
+  // No `onError` here on purpose: the cover no longer depends on this lookup, so a failure only
+  // costs the alt text. Reporting "could not load cover image" while the derived cover renders
+  // would be a false alarm.
   const { files, isLoading: isCoverLoading } = useAttachmentsMetadata({
     fileUris: coverFileUri ? [coverFileUri] : [],
-    onError: () => toast({ variant: 'error', description: 'Could not load cover image' }),
   });
-  const coverFile = files[0];
+  // The row for *this* uri, not merely the first of a retained previous snapshot: when the
+  // attachment is replaced, the old row must not carry its alt text onto the new cover.
+  const coverFile = files.find((file) => file.uri === coverFileUri);
 
-  const width = Number(coverFile?.metadata?.width);
-  const height = Number(coverFile?.metadata?.height);
-  const coverImage: CoverImage | null =
-    coverFile && coverFile.content_type.startsWith('image')
-      ? {
-          src: FileController.getFileUrl({ fileId: coverFile.id, variant: coverImageVariant }),
-          desktopSrc: coverImageDesktopVariant
-            ? FileController.getFileUrl({ fileId: coverFile.id, variant: coverImageDesktopVariant })
-            : undefined,
-          alt: coverFile.name,
-          ...(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0 ? { width, height } : {}),
-        }
-      : null;
+  // The cover's CDN URL is a pure function of the attachment URI and the variant, so it is known
+  // the moment the post details are — the file-metadata lookup never gates first paint. This is
+  // the same URL the server preload (`resolvePostCoverPreloadUrls`) and the `<picture>` in
+  // PostArticleDetail build from the shared variants, so a viewport still downloads the cover
+  // once. `resolvePostAttachmentUrl` returns `null` for anything that is not a homeserver file
+  // URI, so a slot 0 the CDN cannot serve renders no cover.
+  const coverSrc = coverFileUri ? resolvePostAttachmentUrl(coverFileUri, coverImageVariant) : null;
+  const coverDesktopSrc =
+    coverFileUri && coverImageDesktopVariant ? resolvePostAttachmentUrl(coverFileUri, coverImageDesktopVariant) : null;
+
+  let coverImage: CoverImage | null = null;
+  if (coverSrc) {
+    if (coverFile && !coverFile.content_type.startsWith('image')) {
+      // Slot 0 resolved to a file that is not an image: only the metadata row can say that, so
+      // the provisional cover is dropped once the row lands.
+      coverImage = null;
+    } else {
+      const width = Number(coverFile?.metadata?.width);
+      const height = Number(coverFile?.metadata?.height);
+      coverImage = {
+        src: coverSrc,
+        desktopSrc: coverDesktopSrc ?? undefined,
+        alt: coverFile?.name ?? '',
+        ...(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0 ? { width, height } : {}),
+      };
+    }
+  }
 
   return {
     title,
