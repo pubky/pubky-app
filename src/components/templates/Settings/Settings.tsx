@@ -41,6 +41,7 @@ export function Settings({ children }: SettingsProps) {
         leftDrawerContent={<SettingsMenu />}
         rightDrawerContent={<SettingsInfo hideFAQ={isOnHelpPage} />}
         className="pt-(--settings-mobile-chrome-height) lg:pt-0"
+        classNameWrapperContent="pt-6 lg:pt-0"
         disableWideShellLayout
       >
         {children}

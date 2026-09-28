@@ -17,7 +17,7 @@ describe('CollectionPostContent', () => {
         description: 'Best stuff',
         items: [],
         cover_image: undefined,
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
@@ -98,7 +98,7 @@ describe('CollectionPostContent', () => {
         description: '',
         items: [VALID_ITEM_URI, 'https://example.com/post'],
         cover_image: undefined,
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
@@ -140,7 +140,7 @@ describe('CollectionPostContent', () => {
         description: 'Bitcoin writing',
         items: [VALID_ITEM_URI],
         cover_image: undefined,
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
@@ -160,7 +160,7 @@ describe('CollectionPostContent', () => {
         description: '',
         items: [],
         cover_image: 'https://cdn.example.com/cover.png',
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
@@ -172,7 +172,7 @@ describe('CollectionPostContent', () => {
         description: '',
         items: [],
         cover_image: undefined,
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
@@ -191,7 +191,7 @@ describe('CollectionPostContent', () => {
         description: '',
         items: [VALID_ITEM_URI],
         cover_image: undefined,
-        layout: COLLECTION_LAYOUT.GRID,
+        layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
@@ -202,9 +202,9 @@ describe('CollectionPostContent', () => {
       });
 
       expect(CollectionPostContent.parse(listJson)?.layout).toBe(COLLECTION_LAYOUT.LIST);
-      expect(CollectionPostContent.parse(JSON.stringify({ name: 'Legacy' }))?.layout).toBe(COLLECTION_LAYOUT.GRID);
+      expect(CollectionPostContent.parse(JSON.stringify({ name: 'Legacy' }))?.layout).toBe(COLLECTION_LAYOUT.CARDS);
       expect(CollectionPostContent.parse(JSON.stringify({ name: 'Future', layout: 'spiral' }))?.layout).toBe(
-        COLLECTION_LAYOUT.GRID,
+        COLLECTION_LAYOUT.CARDS,
       );
     });
 
