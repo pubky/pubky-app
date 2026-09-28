@@ -299,7 +299,13 @@ Build forms with `react-hook-form` + `zod` (via `@hookform/resolvers/zod`). Cano
 
 // No arbitrary sizes
 <Avatar className="h-[37px] w-[37px]" />
+
+// Allowed: the scale has no viewport-relative or calc() equivalent
+<div className="max-h-[75dvh]" />
+<div className="max-h-[calc(100dvh-2rem)]" />
 ```
+
+An arbitrary value is fine only when the scale cannot express it: a viewport-relative size (`max-h-[75dvh]`), a `calc()` over the viewport or a CSS variable (`max-h-[calc(100dvh-2rem)]`, the `Dialog` atom's own sizing), or a CSS variable set by a library (`translate-x-[var(--radix-toast-swipe-move-x)]`). Fixed lengths and colours always come from the scale and the tokens.
 
 ### Spacing
 
