@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover
 import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
 
-export const PASSPORT_README_URL = 'https://github.com/pubky/pubky-passport/blob/main/README.md';
+const PASSPORT_README_URL = 'https://github.com/pubky/pubky-passport/blob/main/README.md';
 
 const POINTS = [
   {
