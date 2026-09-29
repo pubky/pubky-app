@@ -109,8 +109,8 @@ replica also survives the creator revoking the lock. Details:
 
 | Where                                              | What                                                                    | Who can read it                                              |
 | -------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------ |
-| creator's HS `/priv/locks.app/content/`            | the locked post + attachments (originals)                               | the creator; readers only via Lock Server proxy + credential |
-| creator's HS `/pub/locks.app/<lockId>.json`        | the public lock contract (`LockFile`)                                   | anyone                                                       |
+| creator's HS `/priv/app.locks/content/`            | the locked post + attachments (originals)                               | the creator; readers only via Lock Server proxy + credential |
+| creator's HS `/pub/app.locks/<lockId>.json`        | the public lock contract (`LockFile`)                                   | anyone                                                       |
 | reader's HS `/priv/social/unlocked/<lockId>/`      | the reader's replica, written on unlock                                 | that reader only                                             |
 | reader's HS `/priv/social/purchases/<lockId>.json` | the purchase's bundle id, written BEFORE the proof is submitted (#2297) | that reader only                                             |
 
@@ -324,7 +324,7 @@ bytes come from:
 | ------------------------ | ---------------------------------------------------------- | ------------------------ |
 | `fetchUnlockedContent`   | creator's guarded storage, via the Lock Server proxy       | access credential        |
 | `fetchReplicatedContent` | the reader's own copy at `/priv/social/unlocked/<lockId>/` | pubky.app session        |
-| `fetchOwnContent`        | the creator's own `/priv/locks.app/content/`               | pubky.app session (a==b) |
+| `fetchOwnContent`        | the creator's own `/priv/app.locks/content/`               | pubky.app session (a==b) |
 
 Only the first one costs an unlock. `fetchReplicatedAttachments` loads the media for a
 replica whose marker the caller already has — the unlocked list uses it so listing the
@@ -417,7 +417,7 @@ Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
 A Pubky Ring session carries exactly the capability list approved at sign-in, for its whole life,
 and the app rebuilds the same session on every page load from `localStorage`. Locks added two
 entries to that list (`HOMESERVER_CAPABILITIES` in `@/config/network`: `/priv/social/:rw` for the
-reader's replicas and purchases, `/priv/locks.app/:r` for a creator's own originals). A user who
+reader's replicas and purchases, `/priv/app.locks/content/:r` for a creator's own originals). A user who
 signed in through Ring before those entries shipped keeps a session without them: `/pub` keeps
 working, so the feed, posting and profiles are unaffected, but the homeserver answers every read
 or write under `/priv` with **403** (a session that lacks the capability; 401 is only "no session").

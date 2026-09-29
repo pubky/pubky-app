@@ -66,7 +66,7 @@ describe('LocksApplication (content)', () => {
     }));
     mocks.createContentLock.mockResolvedValue({
       lock_id: 'LOCK1',
-      content_lock_path: '/pub/locks.app/LOCK1.json',
+      content_lock_path: '/pub/app.locks/LOCK1.json',
       creator: 'pubkybob',
     });
   });
@@ -97,7 +97,7 @@ describe('LocksApplication (content)', () => {
         secondaryResources: [descriptor('id-1'), descriptor('id-2')],
       }),
     );
-    expect(result).toEqual({ lock_id: 'LOCK1', content_lock_path: '/pub/locks.app/LOCK1.json', creator: 'pubkybob' });
+    expect(result).toEqual({ lock_id: 'LOCK1', content_lock_path: '/pub/app.locks/LOCK1.json', creator: 'pubkybob' });
   });
 
   it('gives identical files distinct paths, so neither overwrites the other', async () => {
@@ -154,12 +154,12 @@ describe('LocksApplication (content)', () => {
     expect(mocks.createContentLock).not.toHaveBeenCalled();
   });
 });
-const VALID_LOCK_URL = 'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo/pub/locks.app/lock1.json';
+const VALID_LOCK_URL = 'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo/pub/app.locks/lock1.json';
 
 const lockFile: LockFile = {
   version: 1,
   creator: 'pubkybob',
-  primary_resource: { path: '/priv/locks.app/content/x', hash: 'h', content_type: 'application/octet-stream', size: 1 },
+  primary_resource: { path: '/priv/app.locks/content/x', hash: 'h', content_type: 'application/octet-stream', size: 1 },
   secondary_resources: {},
   criteria: [{ criterion_id: 'c1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
   lock_logic: { type: 'all', criteria: ['c1'] },
@@ -190,7 +190,7 @@ describe('LocksApplication (payment unlock)', () => {
     creator: 'pubkybob',
     criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
   });
-  const lockUrl = 'pubky://pubkybob/pub/locks.app/LOCK1.json';
+  const lockUrl = 'pubky://pubkybob/pub/app.locks/LOCK1.json';
   const purchaseUrl = 'pubky://reader1/priv/social/purchases/LOCK1.json';
   const purchaseBytes = (raw: string) => ({ bytes: new TextEncoder().encode(raw), contentType: 'application/json' });
   const withPrimary = () =>
@@ -198,7 +198,7 @@ describe('LocksApplication (payment unlock)', () => {
       creator: 'pubkybob',
       secondary_resources: {},
       primary_resource: {
-        path: '/priv/locks.app/content/a.json',
+        path: '/priv/app.locks/content/a.json',
         hash: 'h',
         content_type: 'application/json',
         size: 1,
@@ -256,7 +256,7 @@ describe('LocksApplication (payment unlock)', () => {
       expect(mocks.submitProof).toHaveBeenCalledWith({
         version: 1,
         bundle_id: 'fresh-1',
-        pubky_lock_resource: 'pubkybob/pub/locks.app/LOCK1.json',
+        pubky_lock_resource: 'pubkybob/pub/app.locks/LOCK1.json',
         reader_public_key: 'pubkyreader1',
         proofs: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', payload: {} }],
       });
@@ -417,7 +417,7 @@ describe('LocksApplication (payment unlock)', () => {
       ],
       ['startPayment', (lockUrl: string) => LocksApplication.startPayment({ ...params, lockUrl })],
     ])('%s rejects a lock URL without a lock id before touching the homeserver', async (_name, call) => {
-      await expect(call('pubky://pubkybob/pub/locks.app/')).rejects.toMatchObject({
+      await expect(call('pubky://pubkybob/pub/app.locks/')).rejects.toMatchObject({
         code: ValidationErrorCode.INVALID_INPUT,
       });
       expect(mocks.getBytesIfExists).not.toHaveBeenCalled();
@@ -574,7 +574,7 @@ describe('LocksApplication.fetchUnlockedContent', () => {
   it('reads the primary resource with the derived path and parses the post (no attachments)', async () => {
     const post = { content: 'secret body', kind: 'short', attachments: null };
     mocks.proxyReadGuardedResource.mockResolvedValue(new TextEncoder().encode(JSON.stringify(post)));
-    const lockFile = asOpaque<LockFile>({ primary_resource: { path: '/priv/locks.app/content/a.json' } });
+    const lockFile = asOpaque<LockFile>({ primary_resource: { path: '/priv/app.locks/content/a.json' } });
 
     const result = await LocksApplication.fetchUnlockedContent({ lockFile, credential: 'cred-abc' });
 
@@ -583,13 +583,13 @@ describe('LocksApplication.fetchUnlockedContent', () => {
   });
 
   it('proxy-reads each attachment with its content type from the lock file', async () => {
-    const post = { content: 'body', kind: 'image', attachments: ['pubky://ownerb/priv/locks.app/content/img1'] };
+    const post = { content: 'body', kind: 'image', attachments: ['pubky://ownerb/priv/app.locks/content/img1'] };
     mocks.proxyReadGuardedResource
       .mockResolvedValueOnce(new TextEncoder().encode(JSON.stringify(post))) // primary
       .mockResolvedValueOnce(new Uint8Array([9, 9])); // attachment
     const lockFile = asOpaque<LockFile>({
-      primary_resource: { path: '/priv/locks.app/content/p.json' },
-      secondary_resources: { '/priv/locks.app/content/img1': { content_type: 'image/png', hash: 'h', size: 2 } },
+      primary_resource: { path: '/priv/app.locks/content/p.json' },
+      secondary_resources: { '/priv/app.locks/content/img1': { content_type: 'image/png', hash: 'h', size: 2 } },
     });
 
     const result = await LocksApplication.fetchUnlockedContent({ lockFile, credential: 'cred' });
@@ -607,19 +607,19 @@ describe('LocksApplication.fetchUnlockedContent', () => {
       content: 'body',
       kind: 'long',
       attachments: [
-        'pubky://ownerb/priv/locks.app/content/cover',
-        'pubky://ownerb/priv/locks.app/content/missing',
-        'pubky://ownerb/priv/locks.app/content/inline',
+        'pubky://ownerb/priv/app.locks/content/cover',
+        'pubky://ownerb/priv/app.locks/content/missing',
+        'pubky://ownerb/priv/app.locks/content/inline',
       ],
     };
     mocks.proxyReadGuardedResource
       .mockResolvedValueOnce(new TextEncoder().encode(JSON.stringify(post)))
       .mockResolvedValue(new Uint8Array([1]));
     const lockFile = asOpaque<LockFile>({
-      primary_resource: { path: '/priv/locks.app/content/p.json' },
+      primary_resource: { path: '/priv/app.locks/content/p.json' },
       secondary_resources: {
-        '/priv/locks.app/content/cover': { content_type: 'image/png', hash: 'h', size: 1 },
-        '/priv/locks.app/content/inline': { content_type: 'image/png', hash: 'h', size: 1 },
+        '/priv/app.locks/content/cover': { content_type: 'image/png', hash: 'h', size: 1 },
+        '/priv/app.locks/content/inline': { content_type: 'image/png', hash: 'h', size: 1 },
       },
     });
 
@@ -634,10 +634,10 @@ describe('LocksApplication.fetchUnlockedContent', () => {
 
   it('reports and drops an attachment (no read) when the lock file has no descriptor for it', async () => {
     const errorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
-    const post = { content: 'body', kind: 'image', attachments: ['pubky://ownerb/priv/locks.app/content/missing'] };
+    const post = { content: 'body', kind: 'image', attachments: ['pubky://ownerb/priv/app.locks/content/missing'] };
     mocks.proxyReadGuardedResource.mockResolvedValueOnce(new TextEncoder().encode(JSON.stringify(post)));
     const lockFile = asOpaque<LockFile>({
-      primary_resource: { path: '/priv/locks.app/content/p.json' },
+      primary_resource: { path: '/priv/app.locks/content/p.json' },
       secondary_resources: {},
     });
 
@@ -651,7 +651,7 @@ describe('LocksApplication.fetchUnlockedContent', () => {
 
   it('rejects the whole fetch when an attachment proxy-read fails', async () => {
     const errorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
-    const post = { content: 'body', kind: 'image', attachments: ['pubky://ownerb/priv/locks.app/content/img1'] };
+    const post = { content: 'body', kind: 'image', attachments: ['pubky://ownerb/priv/app.locks/content/img1'] };
     mocks.proxyReadGuardedResource
       .mockResolvedValueOnce(new TextEncoder().encode(JSON.stringify(post))) // primary
       .mockRejectedValueOnce(
@@ -661,8 +661,8 @@ describe('LocksApplication.fetchUnlockedContent', () => {
         }),
       );
     const lockFile = asOpaque<LockFile>({
-      primary_resource: { path: '/priv/locks.app/content/p.json' },
-      secondary_resources: { '/priv/locks.app/content/img1': { content_type: 'image/png', hash: 'h', size: 2 } },
+      primary_resource: { path: '/priv/app.locks/content/p.json' },
+      secondary_resources: { '/priv/app.locks/content/img1': { content_type: 'image/png', hash: 'h', size: 2 } },
     });
 
     // A partial resolve would get replicated and marked complete (`post.json`), freezing the missing
@@ -682,7 +682,7 @@ describe('LocksApplication.fetchUnlockedContent', () => {
 
   it('throws when the unlocked primary resource is not a parseable post', async () => {
     mocks.proxyReadGuardedResource.mockResolvedValue(new TextEncoder().encode('not a post'));
-    const lockFile = asOpaque<LockFile>({ primary_resource: { path: '/priv/locks.app/content/a.json' } });
+    const lockFile = asOpaque<LockFile>({ primary_resource: { path: '/priv/app.locks/content/a.json' } });
 
     // A silent null here would be indistinguishable from "no content" at the caller; must surface.
     await expect(LocksApplication.fetchUnlockedContent({ lockFile, credential: 'cred' })).rejects.toThrow();
@@ -691,10 +691,10 @@ describe('LocksApplication.fetchUnlockedContent', () => {
 
 describe('LocksApplication.replicateUnlockedContent', () => {
   const READER = 'pubkyreader123';
-  const LOCK_URL = 'pubky://pubkycreator123/pub/locks.app/LOCK1.json';
+  const LOCK_URL = 'pubky://pubkycreator123/pub/app.locks/LOCK1.json';
   const ANNOUNCEMENT_URI = 'pubky://pubkycreator123/pub/pubky.app/posts/POST1';
   const content: TUnlockedContent = {
-    post: { content: 'secret body', kind: 'image', attachments: ['pubky://b/priv/locks.app/content/img1'] },
+    post: { content: 'secret body', kind: 'image', attachments: ['pubky://b/priv/app.locks/content/img1'] },
     attachments: [
       { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 },
       { id: 'img2', contentType: 'image/png', bytes: new Uint8Array([2]), slot: 1 },
@@ -745,7 +745,7 @@ describe('LocksApplication.replicateUnlockedContent', () => {
   it('throws without uploading when the lock URL carries no lock id', async () => {
     await expect(
       LocksApplication.replicateUnlockedContent({
-        lockUrl: 'pubky://creator/pub/locks.app/',
+        lockUrl: 'pubky://creator/pub/app.locks/',
         readerPubky: READER,
         content,
         announcementUri: ANNOUNCEMENT_URI,
@@ -797,7 +797,7 @@ describe('LocksApplication.fetchReplicatedAttachments', () => {
 
 describe('LocksApplication.fetchReplicatedContent', () => {
   const READER = 'pubkyreader123';
-  const LOCK_URL = 'pubky://pubkycreator123/pub/locks.app/LOCK1.json';
+  const LOCK_URL = 'pubky://pubkycreator123/pub/app.locks/LOCK1.json';
   const marker = (value: unknown, modifiedAt = 1) => ({
     bytes: new TextEncoder().encode(JSON.stringify(value)),
     modifiedAt,
@@ -927,26 +927,26 @@ describe('LocksApplication.fetchOwnContent', () => {
   const ownLockFile = asOpaque<LockFile>({
     creator: 'pubkyowner', // stripPubkyPrefix → 'owner' is the read host (see the test below)
     primary_resource: {
-      path: '/priv/locks.app/content/post',
+      path: '/priv/app.locks/content/post',
       hash: 'h',
       content_type: 'application/octet-stream',
       size: 1,
     },
-    secondary_resources: { '/priv/locks.app/content/img1': { content_type: 'image/png', hash: 'h', size: 2 } },
+    secondary_resources: { '/priv/app.locks/content/img1': { content_type: 'image/png', hash: 'h', size: 2 } },
   });
 
   beforeEach(() => vi.clearAllMocks());
 
   it('reads the guarded original directly from the owner homeserver (no credential/proxy)', async () => {
     // `stripPubkyPrefix('pubkyowner')` → 'owner', the host for the primary read.
-    const attachmentUri = 'pubky://owner/priv/locks.app/content/img1';
+    const attachmentUri = 'pubky://owner/priv/app.locks/content/img1';
     mocks.getBytes
       .mockResolvedValueOnce(encode({ content: 'my secret', kind: 'image', attachments: [attachmentUri] }))
       .mockResolvedValueOnce(new Uint8Array([5, 5]));
 
     const result = await LocksApplication.fetchOwnContent({ lockFile: ownLockFile });
 
-    expect(mocks.getBytes).toHaveBeenNthCalledWith(1, 'pubky://owner/priv/locks.app/content/post');
+    expect(mocks.getBytes).toHaveBeenNthCalledWith(1, 'pubky://owner/priv/app.locks/content/post');
     expect(mocks.getBytes).toHaveBeenNthCalledWith(2, attachmentUri);
     expect(result?.post).toEqual({ content: 'my secret', kind: 'image', attachments: [attachmentUri] });
     expect(result?.attachments).toEqual([
@@ -971,7 +971,7 @@ describe('LocksApplication.fetchOwnContent', () => {
   });
 
   it('rejects the whole fetch when an attachment direct read fails', async () => {
-    const attachmentUri = 'pubky://owner/priv/locks.app/content/img1';
+    const attachmentUri = 'pubky://owner/priv/app.locks/content/img1';
     mocks.getBytes
       .mockResolvedValueOnce(encode({ content: 'my secret', kind: 'image', attachments: [attachmentUri] }))
       .mockRejectedValueOnce(new Error('network down'));

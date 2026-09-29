@@ -66,7 +66,7 @@ describe('useCreateLockContent', () => {
     vi.clearAllMocks();
     mocks.createLockContent.mockResolvedValue({
       lock_id: 'LOCK1',
-      content_lock_path: '/pub/locks.app/LOCK1.json',
+      content_lock_path: '/pub/app.locks/LOCK1.json',
       creator: 'pubkybob',
     });
     mocks.commitCreate.mockResolvedValue('POST1');
@@ -89,12 +89,12 @@ describe('useCreateLockContent', () => {
 
     const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
     // The controller passes the guarded-bytes owner (`bob`), so the URIs point at that account — not alice.
-    const postFile = buildPost([descriptor('/priv/locks.app/content/id-1')], 'pubkybob');
+    const postFile = buildPost([descriptor('/priv/app.locks/content/id-1')], 'pubkybob');
 
     expect(postFile.contentType).toBe('application/octet-stream');
     expect(decode(postFile.bytes)).toEqual({
       content: 'locked body',
-      attachments: ['pubky://bob/priv/locks.app/content/id-1'],
+      attachments: ['pubky://bob/priv/app.locks/content/id-1'],
     });
   });
 
@@ -112,7 +112,7 @@ describe('useCreateLockContent', () => {
     await act(() => result.current.publish());
 
     const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    expect(() => buildPost([descriptor('/priv/locks.app/content/id-1')])).toThrow();
+    expect(() => buildPost([descriptor('/priv/app.locks/content/id-1')])).toThrow();
   });
 
   // The announcement is posted by the pubky.app account (`alice`), but the lock URL points at the
@@ -128,7 +128,7 @@ describe('useCreateLockContent', () => {
       content: JSON.stringify(teaser),
       attachments: [cover],
       tags: ['bitcoin'],
-      lock: 'pubky://bob/pub/locks.app/LOCK1.json',
+      lock: 'pubky://bob/pub/app.locks/LOCK1.json',
     });
     expect(postId).toEqual({ status: 'published', postId: 'POST1' });
   });
@@ -138,7 +138,7 @@ describe('useCreateLockContent', () => {
     const order: string[] = [];
     mocks.createLockContent.mockImplementation(async () => {
       order.push('lock');
-      return { lock_id: 'LOCK1', content_lock_path: '/pub/locks.app/LOCK1.json', creator: 'pubkybob' };
+      return { lock_id: 'LOCK1', content_lock_path: '/pub/app.locks/LOCK1.json', creator: 'pubkybob' };
     });
     mocks.commitCreate.mockImplementation(async () => {
       order.push('announcement');

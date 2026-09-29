@@ -263,7 +263,7 @@ const renderEditLock = () =>
       editContent="Public teaser"
       editIsArticle={false}
       editAttachments={[]}
-      editLock={{ lockUrl: 'pubky://alice/pub/locks.app/LOCK1.json', title: 'Private note' }}
+      editLock={{ lockUrl: 'pubky://alice/pub/app.locks/LOCK1.json', title: 'Private note' }}
       expanded
     />,
   );
@@ -286,7 +286,7 @@ describe('PostInput lock wiring', () => {
     mocks.serializeArticleForLock.mockReset();
     mocks.createLockContent.mockResolvedValue({
       lock_id: 'L1',
-      content_lock_path: '/pub/locks.app/L1.json',
+      content_lock_path: '/pub/app.locks/L1.json',
       creator: 'pubkybob',
     });
     mocks.commitCreate.mockResolvedValue('alice:POST1');
@@ -635,7 +635,7 @@ describe('PostInput lock wiring', () => {
         editContent="Public teaser"
         editIsArticle={false}
         editAttachments={[]}
-        editLock={{ lockUrl: 'pubky://alice/pub/locks.app/LOCK1.json', title: 'Remote title' }}
+        editLock={{ lockUrl: 'pubky://alice/pub/app.locks/LOCK1.json', title: 'Remote title' }}
         expanded
       />,
     );
@@ -664,7 +664,7 @@ describe('PostInput lock wiring', () => {
           editContent={content}
           editIsArticle={false}
           editAttachments={[]}
-          editLock={{ lockUrl: 'pubky://alice/pub/locks.app/LOCK1.json', title }}
+          editLock={{ lockUrl: 'pubky://alice/pub/app.locks/LOCK1.json', title }}
           expanded
         />,
       );
@@ -738,7 +738,7 @@ describe('PostInput lock wiring', () => {
       expect.objectContaining({
         authorId: 'alice',
         content: JSON.stringify({ lock_title: 'My title', teaser_description: 'my teaser' }),
-        lock: 'pubky://bob/pub/locks.app/L1.json',
+        lock: 'pubky://bob/pub/app.locks/L1.json',
       }),
     );
     expect(mocks.handleSubmit).not.toHaveBeenCalled(); // never the normal path

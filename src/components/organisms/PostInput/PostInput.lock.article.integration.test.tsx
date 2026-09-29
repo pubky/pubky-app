@@ -227,7 +227,7 @@ const lockedPost = () => {
     buildPost: (resources: TGuardedResource[], owner?: string) => unknown;
   };
   buildPost(
-    attachments.map((_, index) => descriptor(`/priv/locks.app/content/file${index}`)),
+    attachments.map((_, index) => descriptor(`/priv/app.locks/content/file${index}`)),
     'pubkyowner',
   );
   const [content, , , , uris] = mocks.post.mock.calls.at(-1) as [string, number, null, null, string[] | null];
@@ -245,7 +245,7 @@ describe('PostInput - locking an article with body images (integration)', () => 
     mocks.commitCreatePost.mockResolvedValue(`${AUTHOR}:POST1`);
     mocks.createLockContent.mockResolvedValue({
       lock_id: 'L1',
-      content_lock_path: '/pub/locks.app/L1.json',
+      content_lock_path: '/pub/app.locks/L1.json',
       creator: 'pubkyowner',
     });
   });
@@ -267,7 +267,7 @@ describe('PostInput - locking an article with body images (integration)', () => 
     expect(attachments).toHaveLength(1);
     expect(new TextDecoder().decode(attachments[0].bytes)).toBe('image bytes');
     expect(body).toBe('Intro\n\n![shot](attachment:0)\n\nOutro');
-    expect(uris).toEqual(['pubky://owner/priv/locks.app/content/file0']);
+    expect(uris).toEqual(['pubky://owner/priv/app.locks/content/file0']);
     await waitFor(() => expect(mocks.commitDeleteFile).toHaveBeenCalledWith({ fileUris: [IMAGE_URI] }));
   });
 
@@ -284,7 +284,7 @@ describe('PostInput - locking an article with body images (integration)', () => 
       'image bytes',
     ]);
     expect(body).toBe('Intro\n\n![shot](attachment:1)\n\nOutro');
-    expect(uris).toEqual(['pubky://owner/priv/locks.app/content/file0', 'pubky://owner/priv/locks.app/content/file1']);
+    expect(uris).toEqual(['pubky://owner/priv/app.locks/content/file0', 'pubky://owner/priv/app.locks/content/file1']);
   });
 
   it('publishes the article normally, image included, after the lock is abandoned', async () => {

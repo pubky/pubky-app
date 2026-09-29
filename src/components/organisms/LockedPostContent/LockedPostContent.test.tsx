@@ -145,7 +145,7 @@ const mockLockData = ({
   vi.mocked(useLockFile).mockReturnValue({ lockFile, priceSats, hasError });
 };
 
-const LOCK_URL = 'pubky://hs/pub/locks.app/lock1.json';
+const LOCK_URL = 'pubky://hs/pub/app.locks/lock1.json';
 
 /** jsdom reports every offset as 0, which would make the slide-over a no-op no test could see. */
 const useSlideGeometry = () => {

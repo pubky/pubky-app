@@ -251,7 +251,7 @@ describe('DialogEditPost', () => {
   });
 
   it('passes parsed teaser content and lock metadata for a lock announcement', () => {
-    const lockUrl = 'pubky://author/pub/locks.app/LOCK1.json';
+    const lockUrl = 'pubky://author/pub/app.locks/LOCK1.json';
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-lock-post-123',
@@ -278,7 +278,7 @@ describe('DialogEditPost', () => {
   // not a teaser envelope it is kept as the teaser text instead of being dropped: saving re-wraps the
   // editor's content into an envelope, so clearing the field here would delete the post's only text.
   it('keeps unparsable content as the teaser text', () => {
-    const lockUrl = 'pubky://author/pub/locks.app/LOCK1.json';
+    const lockUrl = 'pubky://author/pub/app.locks/LOCK1.json';
     const unrelatedContent = JSON.stringify({ title: 'Not a teaser', body: 'No envelope field' });
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
@@ -300,7 +300,7 @@ describe('DialogEditPost', () => {
   });
 
   it('seeds the teaser with the raw content when the announcement is not JSON', () => {
-    const lockUrl = 'pubky://author/pub/locks.app/LOCK1.json';
+    const lockUrl = 'pubky://author/pub/app.locks/LOCK1.json';
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-lock-post-123',
@@ -324,7 +324,7 @@ describe('DialogEditPost', () => {
   });
 
   it('keeps an explicitly empty title when the envelope is complete', () => {
-    const lockUrl = 'pubky://author/pub/locks.app/LOCK1.json';
+    const lockUrl = 'pubky://author/pub/app.locks/LOCK1.json';
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-lock-post-123',
@@ -345,7 +345,7 @@ describe('DialogEditPost', () => {
   });
 
   it('opens a partial envelope in teaser mode, filling the missing field', () => {
-    const lockUrl = 'pubky://author/pub/locks.app/LOCK1.json';
+    const lockUrl = 'pubky://author/pub/app.locks/LOCK1.json';
     const partialContent = '{"lock_title":"Private note"}';
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {

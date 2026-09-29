@@ -50,7 +50,7 @@ export type TLocksSessionResult = {
 
 /**
  * A guarded-resource descriptor. `path` is the FULL homeserver path
- * (`/priv/locks.app/content/<tail>`) and `hash` is the server-computed BLAKE3 (Crockford base32).
+ * (`/priv/app.locks/content/<tail>`) and `hash` is the server-computed BLAKE3 (Crockford base32).
  * Returned by `registerGuardedResource` and fed back verbatim into a content lock's resources.
  */
 export type TGuardedResource = {
@@ -81,7 +81,7 @@ type TAccessPolicy = {
 /** Params to upload one guarded resource (raw bytes). */
 export type TRegisterGuardedResourceParams = {
   /**
-   * The path TAIL only (the caller mints it); the server prepends `/priv/locks.app/content/`.
+   * The path TAIL only (the caller mints it); the server prepends `/priv/app.locks/content/`.
    * Passing a full path double-prefixes.
    */
   path: string;
@@ -109,7 +109,7 @@ export type TCreateContentLockParams = {
 
 /**
  * `createContentLock` response (only the fields the FE consumes; the server also echoes the full
- * `content_lock` document). `content_lock_path` is the homeserver path (`/pub/locks.app/<lock_id>.json`)
+ * `content_lock` document). `content_lock_path` is the homeserver path (`/pub/app.locks/<lock_id>.json`)
  * and `creator` owns it — the pubky that authenticated to the Lock Server. This can differ from the
  * pubky.app account, so the announcement's `lock` URL must be built from `creator`, not the app user.
  */
@@ -170,7 +170,7 @@ interface LockServer {
 
 /**
  * Mirror of the Lock server's public content-lock contract (`lock.json`), published
- * by the creator at `/pub/locks.app/<lock_id>.json` and read directly by the reader.
+ * by the creator at `/pub/app.locks/<lock_id>.json` and read directly by the reader.
  * The Lock server is a standalone service (not pubky.app-specific), so this type
  * belongs to the Lock SDK — hand-mirrored here until that ships a typed reader API.
  * Payment support is read from each criterion's `verifier_type`.
@@ -261,7 +261,7 @@ export interface TUnlockedListItem {
 
 /** One guarded attachment read back after unlock — raw bytes + its content type (for a Blob). */
 export interface TUnlockedAttachment {
-  /** Guarded path tail (`/priv/locks.app/content/<uuid>` → `<uuid>`); reused as the filename when replicated. */
+  /** Guarded path tail (`/priv/app.locks/content/<uuid>` → `<uuid>`); reused as the filename when replicated. */
   id: string;
   contentType: string;
   bytes: Uint8Array;
@@ -297,7 +297,7 @@ interface TProof {
 export interface TSubmittedProofBundle {
   version: number;
   bundle_id: string;
-  /** Public lock file as `<creator>/pub/locks.app/<lock_id>.json` — no `pubky://` scheme. */
+  /** Public lock file as `<creator>/pub/app.locks/<lock_id>.json` — no `pubky://` scheme. */
   pubky_lock_resource: string;
   /** Payment bundles only (`pubky` prefix included): where Paykit delivers the payment request. */
   reader_public_key?: string;

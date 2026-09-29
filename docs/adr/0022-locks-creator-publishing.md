@@ -15,7 +15,7 @@ publishing #2002).
 
 Constraints that shaped the frontend design:
 
-- **Guarded bytes live in homeserver private storage** (`/priv/locks.app/content/…`), written and
+- **Guarded bytes live in homeserver private storage** (`/priv/app.locks/content/…`), written and
   read only through the Lock Server. Nexus never indexes them; nothing private may leak into public
   posts, feeds, or the local database.
 - **Locks is not pubky.app-specific.** The Lock Server stores no preview/marketing metadata and the
@@ -38,8 +38,8 @@ frontend must handle both cases.
 | Object              | Where                                                              | Owner                                                  | Visibility                                          |
 | ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------------------- |
 | **Announcement**    | `/pub/pubky.app/posts/<id>` (normal `PubkyAppPost`)                | pubky.app account (**A**)                              | Public, indexed by Nexus                            |
-| **Lock file**       | `/pub/locks.app/<lock_id>.json`                                    | Lock-Server-authenticated account (**B**, may equal A) | Public (criteria, resource hashes — nothing secret) |
-| **Guarded content** | `/priv/locks.app/content/<uuid>`, written/read via the Lock Server | **B**                                                  | Locked (HTTP 401 without unlock)                    |
+| **Lock file**       | `/pub/app.locks/<lock_id>.json`                                    | Lock-Server-authenticated account (**B**, may equal A) | Public (criteria, resource hashes — nothing secret) |
+| **Guarded content** | `/priv/app.locks/content/<uuid>`, written/read via the Lock Server | **B**                                                  | Locked (HTTP 401 without unlock)                    |
 
 - The announcement's `lock` field (pubky-app-specs ≥ 0.6.0, flat `pubky://` URL) points at the
   public lock file. `lock` — not `kind` — is what marks a post as locked.

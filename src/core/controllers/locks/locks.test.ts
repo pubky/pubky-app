@@ -257,7 +257,7 @@ describe('LocksController (content)', () => {
   });
 
   it('createLockContent delegates to the application workflow', async () => {
-    const lock = { lock_id: 'LOCK1', content_lock_path: '/pub/locks.app/LOCK1.json', creator: 'pubkybob' };
+    const lock = { lock_id: 'LOCK1', content_lock_path: '/pub/app.locks/LOCK1.json', creator: 'pubkybob' };
     mocks.createLockContent.mockResolvedValue(lock);
     const params = {
       attachments: [],
