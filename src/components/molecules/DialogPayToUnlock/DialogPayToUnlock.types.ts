@@ -21,6 +21,8 @@ export interface DialogPayToUnlockProps {
   isSubmitting: boolean;
   /** Install screen: re-checks the wallet, then submits. Retry screen: submits again (a fresh id after a failed/expired payment). */
   onRetry: () => void;
+  /** Retry screen: moves to the install screen, whose steps the reader can work through before retrying. */
+  onSetupWallet: () => void;
   /** Restarts a parked wait. */
   onRecheck: () => void;
   /** Reveals the downloaded content from the paid confirmation screen. */

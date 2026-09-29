@@ -351,6 +351,13 @@ export function usePayToUnlock({
 
   const retry = () => void attemptPayment(generation.current, stage === 'install');
 
+  /**
+   * A failed submission answers the same way whether the reader's wallet cannot pay or Paykit is down,
+   * so the retry screen offers the setup steps rather than only replaying the same submission. This
+   * submits nothing: the install screen's own button re-checks the wallet before it does.
+   */
+  const setupWallet = () => setStage('install');
+
   const recheck = () => {
     const bundleId = waitingBundleId.current;
     if (!bundleId) return;
@@ -379,5 +386,5 @@ export function usePayToUnlock({
   // Neither state is something the reader can act on from here, so they are surfaced as notices.
   const connectionIssue =
     connectionState === 'recovery_required' || connectionState === 'blocked' ? connectionState : null;
-  return { stage, isStalled, handshakePubky, connectionIssue, isSubmitting, retry, recheck, viewContent };
+  return { stage, isStalled, handshakePubky, connectionIssue, isSubmitting, retry, setupWallet, recheck, viewContent };
 }

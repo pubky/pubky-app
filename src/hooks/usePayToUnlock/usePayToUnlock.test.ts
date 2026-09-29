@@ -302,6 +302,19 @@ describe('usePayToUnlock (retry)', () => {
     expect(LocksController.startPayment).toHaveBeenLastCalledWith(expect.objectContaining({ rejectBundleId: null }));
   });
 
+  // The 502 that started this covers both "this wallet cannot pay" and "Paykit is down", so Try again
+  // alone can replay the same failure forever: the retry screen needs the way back to the setup steps.
+  it('leaves the retry screen for install when the reader asks to set up the wallet', async () => {
+    vi.mocked(LocksController.startPayment).mockRejectedValue(new Error('HTTP 502'));
+
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('retry'));
+
+    act(() => result.current.setupWallet());
+    expect(result.current.stage).toBe('install');
+    expect(LocksController.startPayment).toHaveBeenCalledTimes(1);
+  });
+
   describe('install screen', () => {
     const openOnInstall = async () => {
       vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValueOnce(false);

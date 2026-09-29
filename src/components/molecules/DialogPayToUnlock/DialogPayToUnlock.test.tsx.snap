@@ -1516,12 +1516,26 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the retry stage 1`
           ₿ 1,000
         </p>
       </div>
-      <p
-        class="font-medium text-base text-secondary-foreground"
-        data-testid="typography"
+      <div
+        class="flex flex-col items-start gap-3"
+        data-testid="container"
       >
-        The payment could not continue. Try again when Bitkit is ready.
-      </p>
+        <p
+          class="font-medium text-base text-secondary-foreground"
+          data-testid="typography"
+        >
+          The payment could not continue. Check that Bitkit is set up to pay from this account, or try again.
+        </p>
+        <button
+          class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal"
+          data-cy="pay-to-unlock-setup-wallet"
+          data-size="lg"
+          data-slot="button"
+          data-variant="outline"
+        >
+          Set up Bitkit
+        </button>
+      </div>
       <div
         class="flex flex-wrap items-center gap-3.5"
         data-testid="container"
