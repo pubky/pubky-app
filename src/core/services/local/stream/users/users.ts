@@ -1,4 +1,5 @@
 import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
+import { getProfileLocalEditTtlMs } from '@/config/user';
 import { db } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
@@ -9,6 +10,7 @@ import { UserStreamModel } from '@/models/stream/user/userStream';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
+import { canReplaceUserDetails } from '@/models/user/details/userDetails.utils';
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import type { TUserStreamUpsertParams } from '@/services/local/stream/users/users.types';
@@ -118,6 +120,7 @@ export class LocalStreamUsersService {
    * When the batch was fetched without a `viewerId`, Nexus returns a viewer-agnostic
    * relationship, so the row is skipped instead of caching "unknown" as "not following".
    * A missing row reads as a cache miss and triggers a viewer-aware fetch (#1803).
+   * Details follow the same freshness rule as `LocalProfileService.upsertDetails`.
    *
    * @param users - Array of users from Nexus API
    * @param tagGuard - Tag-cache guard; `viewerId` is required to persist relationship rows.
@@ -168,9 +171,8 @@ export class LocalStreamUsersService {
 
     // Bulk save to normalized tables
     await Promise.all([
-      UserDetailsModel.bulkSave(userDetails),
+      this.persistDetailsRelationshipsAndTtl(userIds, userDetails, userRelationships, userTtl, tagGuard),
       LocalTagCacheService.savePreviews('user', userTags, tagGuard, userCounts),
-      this.persistRelationshipsAndTtl(userIds, userRelationships, userTtl, tagGuard),
       // Persist moderation records for flagged profiles
       userModerations.length > 0 ? ModerationModel.bulkSave(userModerations) : Promise.resolve(),
     ]);
@@ -179,38 +181,59 @@ export class LocalStreamUsersService {
   }
 
   /**
-   * Guest / viewer-less Nexus payloads skip the relationship row (#1803).
-   * When `fetchStartedAt` is set, a user TTL written at or after that stamp
-   * means a local follow landed during the request — keep that row.
+   * Writes details, relationships and TTL in one transaction, reading before writing.
+   *
+   * A details row `canReplaceUserDetails` rejects (an older revision, or a pending local
+   * edit the payload doesn't include) is kept, and its TTL isn't advanced. Guest /
+   * viewer-less payloads skip the relationship row (#1803). When `fetchStartedAt` is set, a
+   * user TTL written at or after that stamp means a local follow landed during the request —
+   * keep that row.
    */
-  private static async persistRelationshipsAndTtl(
+  private static async persistDetailsRelationshipsAndTtl(
     userIds: Pubky[],
+    userDetails: UserDetailsModelSchema[],
     userRelationships: NexusModelTuple<NexusUserRelationship>[],
     userTtl: NexusModelTuple<{ lastUpdatedAt: number }>[],
     tagGuard: PersistUsersGuard,
   ): Promise<void> {
-    if (!tagGuard.viewerId) {
-      await UserTtlModel.bulkSave(userTtl);
-      return;
-    }
+    await db.transaction('rw', [UserDetailsModel.table, UserRelationshipsModel.table, UserTtlModel.table], async () => {
+      const fetchStartedAt = tagGuard.viewerId ? tagGuard.fetchStartedAt : undefined;
+      const [existingDetails, existingTtl] = await Promise.all([
+        UserDetailsModel.findByIdsPreserveOrder(userIds),
+        fetchStartedAt !== undefined ? UserTtlModel.findByIds(userIds) : Promise.resolve([]),
+      ]);
 
-    await db.transaction('rw', [UserRelationshipsModel.table, UserTtlModel.table], async () => {
-      let toSave = userRelationships;
-      const fetchStartedAt = tagGuard.fetchStartedAt;
+      const now = Date.now();
+      const pendingEditMs = getProfileLocalEditTtlMs();
+      const keptIds = new Set<Pubky>();
+      const detailsToSave = userDetails.filter((details, index) => {
+        const replace = canReplaceUserDetails({
+          existing: existingDetails[index],
+          incoming: details,
+          responseStartedAt: tagGuard.validatedAt,
+          now,
+          pendingEditMs,
+        });
+        if (!replace) keptIds.add(details.id);
+        return replace;
+      });
+
+      let relationshipsToSave = tagGuard.viewerId ? userRelationships : [];
       if (fetchStartedAt !== undefined) {
-        const existingTtl = await UserTtlModel.findByIds(userIds);
         const skipIds = new Set(existingTtl.filter((row) => row.lastUpdatedAt >= fetchStartedAt).map((row) => row.id));
         if (skipIds.size > 0) {
           Logger.debug('LocalStreamUsersService: Skipped relationship rows written since the fetch started', {
             ids: Array.from(skipIds).slice(0, 5),
             count: skipIds.size,
           });
-          toSave = userRelationships.filter(([id]) => !skipIds.has(id));
+          relationshipsToSave = relationshipsToSave.filter(([id]) => !skipIds.has(id));
         }
       }
+
       await Promise.all([
-        toSave.length > 0 ? UserRelationshipsModel.bulkSave(toSave) : Promise.resolve(),
-        UserTtlModel.bulkSave(userTtl),
+        detailsToSave.length > 0 ? UserDetailsModel.bulkSave(detailsToSave) : Promise.resolve(),
+        relationshipsToSave.length > 0 ? UserRelationshipsModel.bulkSave(relationshipsToSave) : Promise.resolve(),
+        UserTtlModel.bulkSave(userTtl.filter(([id]) => !keptIds.has(id))),
       ]);
     });
   }

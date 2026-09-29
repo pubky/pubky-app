@@ -442,6 +442,65 @@ describe('LocalStreamUsersService', () => {
       });
     });
 
+    describe('profile freshness', () => {
+      const userId = 'user-edited' as Pubky;
+      const otherId = 'user-other' as Pubky;
+      const editedAt = Date.now();
+      const withDetails = (id: Pubky, details: Partial<NexusUser['details']>): NexusUser => {
+        const user = createMockNexusUser(id);
+        return { ...user, details: { ...user.details, ...details } };
+      };
+
+      beforeEach(async () => {
+        // The user just published a new name on top of revision 1
+        await UserDetailsModel.upsert({
+          ...createMockNexusUser(userId).details,
+          name: 'Local edit',
+          indexed_at: editedAt,
+          nexusIndexedAt: 1,
+          localUpdatedAt: editedAt,
+        });
+        await UserTtlModel.upsert({ id: userId, lastUpdatedAt: editedAt });
+      });
+
+      it('keeps a pending local edit and its TTL, while saving the rest of the batch', async () => {
+        await LocalStreamUsersService.persistUsers(
+          [withDetails(userId, { name: 'Other change', indexed_at: 2 }), createMockNexusUser(otherId)],
+          { viewerId: VIEWER_ID, validatedAt: editedAt + 1 },
+        );
+
+        expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Local edit', localUpdatedAt: editedAt });
+        expect(await UserTtlModel.findById(userId)).toMatchObject({ lastUpdatedAt: editedAt });
+        expect(await UserCountsModel.findById(userId)).toBeTruthy();
+        expect(await UserRelationshipsModel.findById(userId)).toBeTruthy();
+        await verifyUserPersisted(otherId, `User ${otherId}`);
+      });
+
+      it('accepts a newer revision that includes the pending edit and clears the marker', async () => {
+        await LocalStreamUsersService.persistUsers([withDetails(userId, { name: 'Local edit', indexed_at: 2 })], {
+          viewerId: VIEWER_ID,
+          validatedAt: editedAt + 1,
+        });
+
+        const details = await UserDetailsModel.findById(userId);
+        expect(details).toMatchObject({ name: 'Local edit', nexusIndexedAt: 2 });
+        expect(details!.localUpdatedAt).toBeUndefined();
+      });
+
+      it('never replaces a newer revision with an older one', async () => {
+        await UserDetailsModel.upsert({
+          ...createMockNexusUser(userId).details,
+          name: 'Revision 5',
+          nexusIndexedAt: 5,
+        });
+
+        await LocalStreamUsersService.persistUsers([withDetails(userId, { name: 'Revision 3', indexed_at: 3 })]);
+
+        expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Revision 5', nexusIndexedAt: 5 });
+        expect(await UserTtlModel.findById(userId)).toMatchObject({ lastUpdatedAt: editedAt });
+      });
+    });
+
     it('should persist user details correctly', async () => {
       const userId = 'user-1' as Pubky;
       const mockUser = createMockNexusUser(userId, {

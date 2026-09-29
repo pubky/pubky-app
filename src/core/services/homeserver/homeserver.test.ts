@@ -1361,6 +1361,35 @@ describe('HomeserverService', () => {
       });
     });
 
+    describe('getFreshJson', () => {
+      const testUrl = 'pubky://user/pub/pubky.app/profile.json';
+
+      it('reads past the browser HTTP cache and returns the parsed body', async () => {
+        mockState.clientFetch.mockResolvedValue(
+          new Response(JSON.stringify({ name: 'Alice' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+
+        await expect(HomeserverService.getFreshJson(testUrl)).resolves.toEqual({ name: 'Alice' });
+
+        expect(mockState.clientFetch).toHaveBeenCalledWith(
+          'https://user/pub/pubky.app/profile.json',
+          expect.objectContaining({ method: HttpMethod.GET, cache: 'no-store' }),
+        );
+        expect(mockState.publicStorageGet).not.toHaveBeenCalled();
+      });
+
+      it('throws an AppError carrying the HTTP status when the resource is missing', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response('', { status: 404 }));
+
+        await expect(HomeserverService.getFreshJson(testUrl)).rejects.toMatchObject({
+          context: expect.objectContaining({ statusCode: 404 }),
+        });
+      });
+    });
+
     describe('exists', () => {
       const testUrl = 'pubky://user/pub/resource.json';
 

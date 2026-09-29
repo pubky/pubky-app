@@ -422,6 +422,7 @@ export class HomeserverService {
       const response = await httpBridge.fetch(resolvedUrl, {
         method: options?.method,
         body: options?.body as BodyInit | undefined,
+        cache: options?.cache,
         credentials: 'include',
       });
 
@@ -656,6 +657,19 @@ export class HomeserverService {
     } catch (error) {
       return handleError({ error, additionalContext: { url, method: HttpMethod.GET } });
     }
+  }
+
+  /**
+   * Reads a JSON resource past the browser HTTP cache. The homeserver sends `Last-Modified`
+   * without `max-age`, so a plain GET can be answered from a heuristically fresh cached copy.
+   * Throws on a non-OK response; resolves `undefined` for an empty or invalid body.
+   *
+   * @param url - Pubky URL to read.
+   */
+  static async getFreshJson<T>(url: string): Promise<T | undefined> {
+    const response = await this.fetch({ url, options: { method: HttpMethod.GET, cache: 'no-store' } });
+    await assertOk({ response, url, operation: 'getFreshJson' });
+    return await parseResponseOrUndefined<T>({ response, operation: 'getFreshJson', url });
   }
 
   /**

@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES, PROFILE_ROUTES } from '@/app/routes';
+import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
 import { toast } from '@/molecules/Toaster/toast';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
@@ -227,5 +228,99 @@ describe('useProfileForm post-save navigation', () => {
 
     expect(ProfileController.commitUpdate).toHaveBeenCalled();
     expect(routerPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS);
+  });
+});
+
+describe('useProfileForm edit sends only the fields the user changed', () => {
+  // The cached profile may be stale, so nothing is taken from it unless the user edits it.
+  const userDetails: NexusUserDetails = {
+    id: pubky,
+    name: 'Valid User',
+    bio: 'Cached bio',
+    links: [{ title: 'WEBSITE', url: 'https://example.com/' }],
+    status: 'working',
+    image: 'pubky://test-pubky/pub/pubky.app/files/OLD',
+    indexed_at: 1,
+  };
+
+  const renderEditForm = async () => {
+    const hook = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails }));
+    await waitFor(() => expect(hook.result.current.state.isLoading).toBe(false));
+    return hook.result;
+  };
+
+  const submit = async (result: Awaited<ReturnType<typeof renderEditForm>>) => {
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('sends no image when the avatar is untouched', async () => {
+    const result = await renderEditForm();
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: {} });
+  });
+
+  it('sends only the edited bio', async () => {
+    const result = await renderEditForm();
+    act(() => {
+      result.current.handlers.setBio('New bio');
+    });
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: { bio: 'New bio' } });
+  });
+
+  it('ignores a whitespace-only name edit', async () => {
+    const result = await renderEditForm();
+    act(() => {
+      result.current.handlers.setName('Valid User  ');
+    });
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: {} });
+  });
+
+  it('sends image: null when the avatar is removed', async () => {
+    const result = await renderEditForm();
+    act(() => {
+      result.current.handlers.handleDeleteAvatar();
+    });
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: { image: null } });
+  });
+
+  it('sends the uploaded avatar when a new one is chosen', async () => {
+    const uploaded = 'pubky://test-pubky/pub/pubky.app/files/NEW';
+    vi.mocked(FileController.commitCreate).mockResolvedValue(uploaded);
+    const result = await renderEditForm();
+    act(() => {
+      result.current.handlers.handleCropComplete(new File(['a'], 'avatar.jpg', { type: 'image/jpeg' }), 'blob:preview');
+    });
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: { image: uploaded } });
+  });
+
+  it('sends an empty link list when every link is removed', async () => {
+    const result = await renderEditForm();
+    act(() => {
+      result.current.handlers.handleDeleteLink(0);
+    });
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: { links: [] } });
   });
 });

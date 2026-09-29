@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { baseUriBuilder } from 'pubky-app-specs';
+import { baseUriBuilder, userUriBuilder } from 'pubky-app-specs';
 import type {
   TApplicationCommitUpdateDetailsParams,
   TCreateProfileInput,
@@ -13,13 +13,11 @@ import { hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
-import { DELETED_USER_NAME } from '@/libs/utils/utils.constants';
 import type { Pubky } from '@/models/models.types';
-import { UserDetailsModel } from '@/models/user/details/userDetails';
+import type { ProfileChanges } from '@/pipes/pipes.types';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalProfileService } from '@/services/local/profile/profile';
-import { LocalUserService } from '@/services/local/user/user';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
@@ -28,6 +26,8 @@ const DELETE_FILE_RETRY_DELAY_MS = 500;
 
 export class ProfileApplication {
   private constructor() {} // Prevent instantiation
+
+  private static pendingWrites = new Map<Pubky, Promise<void>>();
 
   /**
    * Commits the set details operation to the homeserver and local database.
@@ -65,89 +65,91 @@ export class ProfileApplication {
   }
 
   /**
-   * Updates full user profile in both homeserver and local database.
-   * Follows local-first pattern: updates homeserver first, then local DB.
+   * Publishes the fields the user edited in the profile form.
    *
-   * @param params - Parameters containing user's public key and profile data
+   * @param params - The user's public key and the changed fields
    */
-  static async commitUpdate({ pubky, name, bio, image, links }: TApplicationCommitUpdateDetailsParams) {
-    const userDetails = await LocalUserService.readDetails({ userId: pubky });
-    if (!userDetails) {
-      throw Err.client(ClientErrorCode.NOT_FOUND, 'User profile not found', {
-        service: ErrorService.Local,
-        operation: 'commitUpdate',
-        context: { pubky },
-      });
-    }
-
-    // Build complete user object with updated fields
-    const { user, meta } = UserNormalizer.to(
-      {
-        name,
-        bio: bio ?? '',
-        image,
-        links,
-        status: userDetails.status ?? '',
-      },
+  static async commitUpdate({ pubky, changes }: TApplicationCommitUpdateDetailsParams) {
+    await this.commitChanges({
       pubky,
-    );
-
-    // Update homeserver with complete profile
-    await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: user.toJson() });
-    // Update local database after successful homeserver sync
-    await LocalProfileService.updateDetails(user, pubky);
+      changes,
+      operation: 'commitUpdate',
+      deletedMessage: 'Cannot update a deleted profile',
+    });
   }
 
   /**
-   * Updates user status in both homeserver and local database.
+   * Publishes a new status, leaving every other profile field as published.
    */
   static async commitUpdateStatus({ pubky, status }: { pubky: Pubky; status: string }) {
-    // Get current user details from local DB
-    const currentUser = await UserDetailsModel.findById(pubky);
-    if (!currentUser) {
-      throw Err.client(ClientErrorCode.NOT_FOUND, 'User profile not found', {
-        service: ErrorService.Local,
-        operation: 'commitUpdateStatus',
-        context: { pubky },
-      });
-    }
-
-    // The PUT below republishes the whole cached profile, so a tombstoned row would send its
-    // cleared name (`''`, or the legacy `[DELETED]` sentinel) as the user's name and recreate
-    // the profile Nexus has already removed. Nothing here can recover a real name, so refuse.
-    // A row that still carries a name stays writable: the flag alone is stale, and the upsert
-    // below clears it.
-    const cachedName = currentUser.name?.trim() ?? '';
-    if (cachedName === '' || cachedName === DELETED_USER_NAME) {
-      throw Err.client(ClientErrorCode.GONE, 'Cannot update the status of a deleted profile', {
-        service: ErrorService.Local,
-        operation: 'commitUpdateStatus',
-        context: { pubky },
-      });
-    }
-
-    // Build complete user object with updated status
-    // According to spec, we must send the full profile, not just the status field
-    const { user, meta } = UserNormalizer.to(
-      {
-        name: currentUser.name,
-        bio: currentUser.bio,
-        image: currentUser.image,
-        links: (currentUser.links ?? []).map((link) => ({ title: link.title, url: link.url })),
-        status: status || '',
-      },
+    await this.commitChanges({
       pubky,
-    );
-
-    // Update homeserver with complete profile
-    await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: user.toJson() });
-
-    // Update local database after successful homeserver sync
-    await UserDetailsModel.upsert({
-      ...currentUser,
-      status: status || null,
-      deleted: false,
+      changes: { status },
+      operation: 'commitUpdateStatus',
+      deletedMessage: 'Cannot update the status of a deleted profile',
     });
+  }
+
+  /**
+   * Applies `changes` onto the profile currently on the homeserver, PUTs it, then stores
+   * exactly what was published locally. The PUT replaces the whole `profile.json`, so every
+   * field the user didn't change comes from a fresh homeserver read, never from the local
+   * cache, which can be older than the last save. A failed read aborts before the PUT, and a
+   * missing profile (a deleted account) is refused so it isn't recreated. One user's writes
+   * run one at a time (see `enqueueWrite`).
+   */
+  private static async commitChanges({
+    pubky,
+    changes,
+    operation,
+    deletedMessage,
+  }: {
+    pubky: Pubky;
+    changes: ProfileChanges;
+    operation: string;
+    deletedMessage: string;
+  }) {
+    await this.enqueueWrite(pubky, async () => {
+      let publishedJson: unknown;
+      try {
+        publishedJson = await HomeserverService.getFreshJson(userUriBuilder(pubky));
+      } catch (error) {
+        if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
+          throw Err.client(ClientErrorCode.GONE, deletedMessage, {
+            service: ErrorService.Homeserver,
+            operation,
+            context: { pubky },
+            cause: error,
+          });
+        }
+        throw error;
+      }
+
+      const published = UserNormalizer.fromPublished(publishedJson);
+      const { user, meta } = UserNormalizer.to(UserNormalizer.merge(published, changes), pubky);
+      await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: user.toJson() });
+      await LocalProfileService.updateDetails(user, pubky);
+    });
+  }
+
+  /**
+   * Runs one user's profile writes one at a time. Each write reads the published profile before
+   * its PUT, so two overlapping writes would read the same copy and the PUT landing last would
+   * win, even when it was the earlier action.
+   */
+  private static async enqueueWrite(pubky: Pubky, write: () => Promise<void>): Promise<void> {
+    const previousWrite = this.pendingWrites.get(pubky) ?? Promise.resolve();
+    const pendingWrite = previousWrite.catch(() => {}).then(write);
+
+    this.pendingWrites.set(pubky, pendingWrite);
+
+    try {
+      await pendingWrite;
+    } finally {
+      if (this.pendingWrites.get(pubky) === pendingWrite) {
+        this.pendingWrites.delete(pubky);
+      }
+    }
   }
 
   /**

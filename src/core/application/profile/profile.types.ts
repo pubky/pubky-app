@@ -1,6 +1,6 @@
 import { BlobResult, FileResult, PubkyAppUser } from 'pubky-app-specs';
 import type { Pubky } from '@/models/models.types';
-import type { NexusUserLink } from '@/services/nexus/nexus.types';
+import type { ProfileChanges } from '@/pipes/pipes.types';
 
 export type TUploadAvatarInput = {
   blobResult: BlobResult;
@@ -25,8 +25,5 @@ export type TDownloadDataParams = {
 
 export type TApplicationCommitUpdateDetailsParams = {
   pubky: Pubky;
-  name: string;
-  bio: string | undefined;
-  image: string | null;
-  links: NexusUserLink[];
+  changes: ProfileChanges;
 };

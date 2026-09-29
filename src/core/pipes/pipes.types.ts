@@ -16,3 +16,12 @@ export type PostValidatorData = {
 };
 
 export type UserValidatorData = Omit<NexusUserDetails, 'id' | 'indexed_at'>;
+
+/** The fields `profile.json` publishes. */
+export type ProfileFields = Pick<UserValidatorData, 'name' | 'bio' | 'image' | 'links' | 'status'>;
+
+/**
+ * Edits to apply onto the published profile. An omitted field keeps its published value;
+ * `null`, `''` or `[]` clears it.
+ */
+export type ProfileChanges = Partial<ProfileFields>;
