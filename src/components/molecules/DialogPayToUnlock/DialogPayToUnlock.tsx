@@ -52,6 +52,7 @@ export function DialogPayToUnlock({
   connectionIssue,
   isSubmitting,
   onRetry,
+  onSetupWallet,
   onRecheck,
   onViewContent,
 }: DialogPayToUnlockProps) {
@@ -183,10 +184,25 @@ export function DialogPayToUnlock({
               </Container>
             )}
 
+            {/* The failure reads the same whether the reader's wallet cannot pay or Paykit is down, so
+              this screen also offers the setup steps rather than only replaying the submission. */}
             {stage === 'retry' && (
-              <Typography className="text-base text-secondary-foreground">
-                {'The payment could not continue. Try again when Bitkit is ready.'}
-              </Typography>
+              <Container overrideDefaults className="flex flex-col items-start gap-3">
+                <Typography className="text-base text-secondary-foreground">
+                  {
+                    'The payment could not continue. Check that Bitkit is set up to pay from this account, or try again.'
+                  }
+                </Typography>
+                <Button
+                  variant={ButtonVariant.OUTLINE}
+                  size="lg"
+                  onClick={onSetupWallet}
+                  disabled={isSubmitting}
+                  data-cy="pay-to-unlock-setup-wallet"
+                >
+                  {'Set up Bitkit'}
+                </Button>
+              </Container>
             )}
 
             {showPrimary && (

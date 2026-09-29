@@ -104,7 +104,7 @@ export function LockedPostContent({
     onResumed: showUnlockedContent,
   });
 
-  const { stage, isStalled, handshakePubky, connectionIssue, isSubmitting, retry, recheck, viewContent } =
+  const { stage, isStalled, handshakePubky, connectionIssue, isSubmitting, retry, setupWallet, recheck, viewContent } =
     usePayToUnlock({
       open: isPayOpen,
       lockUrl: lock ?? '',
@@ -188,6 +188,7 @@ export function LockedPostContent({
           connectionIssue={connectionIssue}
           isSubmitting={isSubmitting}
           onRetry={retry}
+          onSetupWallet={setupWallet}
           onRecheck={recheck}
           onViewContent={viewContent}
         />

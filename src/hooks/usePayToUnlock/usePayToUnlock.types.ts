@@ -34,6 +34,11 @@ export interface UsePayToUnlockResult {
   isSubmitting: boolean;
   /** Install screen: re-checks the wallet, then submits. Retry screen: submits again (a fresh id after a failed/expired payment). */
   retry: () => void;
+  /**
+   * Retry screen: the submission failure may be the reader's wallet, so this takes them to the setup
+   * steps instead of replaying it. Nothing is submitted here — the install screen re-checks first.
+   */
+  setupWallet: () => void;
   /** Resume a parked wait. The purchase was never abandoned, so this only restarts the polling. */
   recheck: () => void;
   /** Reveals content already downloaded for the paid confirmation screen. */
