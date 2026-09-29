@@ -890,6 +890,20 @@ describe('NextJsOgMetadataService', () => {
     );
   });
 
+  it('should not retry when a 200 shell emits a placeholder og:title before the real one', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    mockFetch.mockResolvedValue(createOkResponse('text/html'));
+    mockReadResponseBody.mockResolvedValueOnce(
+      '<!DOCTYPE html><html><head><meta property="og:title" content="undefined" /><meta property="og:image" content="undefined" /><meta property="og:title" content="Hydrated Title" /><meta property="og:image" content="https://share.redd.it/preview.png" /></head><body></body></html>',
+    );
+
+    const result = await NextJsOgMetadataService.fetch(new URL(BOT_WALL_URL));
+
+    expect(result).toMatchObject({ title: 'Hydrated Title', image: 'https://share.redd.it/preview.png' });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(loggerWarnSpy).not.toHaveBeenCalled();
+  });
+
   it('should retry once when a 200 page carries neither a title nor an image', async () => {
     const loggerWarnSpy = await spyOnLoggerWarn();
     mockFetch.mockResolvedValue(createOkResponse('text/html'));
