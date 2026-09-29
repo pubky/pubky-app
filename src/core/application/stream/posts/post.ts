@@ -135,7 +135,13 @@ export class PostStreamApplication {
     return await LocalStreamPostsService.getStreamHead(params);
   }
 
-  /** Retry unread details without delaying newer-key discovery when a cursor is already cached. */
+  /**
+   * Retry unread details without delaying newer-key discovery when a cursor is already cached.
+   * The poll starts from the first row entry that resolves a timestamp: the unread head, else the
+   * first main-row id with cached details. An id without details therefore never stalls the poll
+   * (#2608), whether it is still unread or sits at the main head because the post above it was
+   * removed.
+   */
   static async getOrFetchStreamHead({ streamId, viewerId, isCurrent }: TGetOrFetchStreamHeadParams): Promise<number> {
     const unreadStream = await this.getUnreadStream({ streamId });
     let hydration: Promise<boolean> | undefined;
@@ -150,7 +156,7 @@ export class PostStreamApplication {
       const streamHead = await this.getStreamHead({ streamId });
       // Nexus may omit a deleted or not-yet-indexed unread ID. Keep it pending
       // for hydration, but let newer keys arrive from the known main-stream cursor.
-      return streamHead === SKIP_FETCH_NEW_POSTS ? this.getMainStreamHeadTimestamp({ streamId }) : streamHead;
+      return streamHead === SKIP_FETCH_NEW_POSTS ? this.getResolvableMainStreamHeadTimestamp({ streamId }) : streamHead;
     };
     if (!isCurrent()) return SKIP_FETCH_NEW_POSTS;
     let streamHead = await readHead();
@@ -315,9 +321,15 @@ export class PostStreamApplication {
    *
    * This method should be called before fetching the initial stream slice to ensure
    * the stream state is consistent. It performs the following operations:
-   * 1. Clears stale cache if the stream head is older than configured max age
-   * 2. Merges any existing unread posts into the main stream
-   * 3. Clears the unread stream
+   * 1. Clears the cache if the main head is older than the configured max age, or has no
+   *    details: such a head can be neither aged nor polled from (#2608)
+   * 2. Merges the unread posts into the main stream in polled order, from the first one whose
+   *    details are cached and not a tombstone; the ids above it without details stay unread,
+   *    since as the main head one of them would resolve no timestamp
+   *    (`LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead`)
+   * 3. Clears the merged posts and the tombstoned unread ids from the unread stream; with no
+   *    cached main row, or an empty one, nothing is merged and the whole unread row is
+   *    dropped, so the first page comes from Nexus
    *
    * This prevents race conditions where the StreamCoordinator might fetch posts
    * that are already in the main stream (due to stale unread stream head).
@@ -346,9 +358,11 @@ export class PostStreamApplication {
 
     const now = Date.now();
 
-    // 1. Check if main stream cache is stale
+    // 1. Check if main stream cache is stale. A head without details resolves no timestamp,
+    // so the age check would keep the row forever while no poll can start from it (#2608):
+    // rebuild it from Nexus like a stale one.
     const mainStreamHead = await this.getMainStreamHeadTimestamp({ streamId });
-    if (this.isTimestampStale(mainStreamHead, now)) {
+    if (mainStreamHead === SKIP_FETCH_NEW_POSTS || this.isTimestampStale(mainStreamHead, now)) {
       // Main cache is stale - clear both main stream and unread stream (both are outdated)
       Logger.debug('[PostStreamApplication] Main stream cache is stale, clearing both streams', {
         streamId,
@@ -377,9 +391,10 @@ export class PostStreamApplication {
       return;
     }
 
-    // 3. Both streams are fresh - merge unread posts into main stream and clear unread
-    await LocalStreamPostsService.mergeUnreadStreamWithPostStream({ streamId });
-    await LocalStreamPostsService.clearUnreadStream({ streamId });
+    // 3. Both streams are fresh - merge and acknowledge the unread row from its first id that
+    // can be the main head; ids without details above it stay unread for the poll-time retry
+    // (#2608, see the service method).
+    await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
   }
 
   /**
@@ -414,6 +429,27 @@ export class PostStreamApplication {
     }
     const postDetails = await PostDetailsModel.findById(postCompositeId);
     return postDetails?.indexed_at ?? SKIP_FETCH_NEW_POSTS;
+  }
+
+  /**
+   * Poll-time fallback: the timestamp of the first main-row id that resolves one (bookmark time
+   * for bookmark streams). A main-row id without details, left at the head when the post above
+   * it was removed, then stalls nothing: the poll runs from the id below it and lists it again
+   * for the unread hydration to retry (#2608). `getMainStreamHeadTimestamp` stays literal so the
+   * initial load still rebuilds a row whose head has no details.
+   */
+  private static async getResolvableMainStreamHeadTimestamp({ streamId }: TStreamIdParams): Promise<number> {
+    const postStream = await PostStreamModel.findById(streamId);
+    if (!postStream || postStream.stream.length === 0) {
+      return FORCE_FETCH_NEW_POSTS;
+    }
+    for (const postCompositeId of postStream.stream) {
+      const timestamp = await this.getStreamCursorTimestamp(streamId, postCompositeId);
+      if (timestamp !== undefined) {
+        return timestamp;
+      }
+    }
+    return SKIP_FETCH_NEW_POSTS;
   }
 
   /**

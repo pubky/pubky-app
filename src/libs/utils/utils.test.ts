@@ -29,6 +29,7 @@ import {
   isPositiveIntegerString,
   isPostDeleted,
   isPubkyIdentifier,
+  isReservedUserName,
   isSameDomain,
   isStarterPackReservedTag,
   isUserDeleted,
@@ -38,6 +39,7 @@ import {
   radixIdSerializer,
   readFromClipboard,
   resolveDisplayName,
+  resolveUserDisplayName,
   sanitizeTagInput,
   shouldBypassLinkConfirmation,
   stripPubkyPrefix,
@@ -270,6 +272,26 @@ describe('Utils', () => {
       ['far past the safe-integer range', '99999999999999999999'],
     ])('rejects %s', (_label, value) => {
       expect(isPositiveIntegerString(value)).toBe(false);
+    });
+  });
+
+  describe('resolveUserDisplayName', () => {
+    it('returns the name when present', () => {
+      expect(resolveUserDisplayName({ name: 'Alice' })).toBe('Alice');
+    });
+
+    it('returns an empty string when a live user has no name, so the caller keeps its fallback', () => {
+      expect(resolveUserDisplayName({ name: '' })).toBe('');
+      expect(resolveUserDisplayName({ name: null })).toBe('');
+      expect(resolveUserDisplayName(undefined)).toBe('');
+    });
+
+    it('returns [DELETED] for a flagged tombstone, never the empty fallback', () => {
+      expect(resolveUserDisplayName({ name: '', deleted: true })).toBe('[DELETED]');
+    });
+
+    it('returns [DELETED] for the legacy sentinel name', () => {
+      expect(resolveUserDisplayName({ name: '[DELETED]' })).toBe('[DELETED]');
     });
   });
 
@@ -944,6 +966,19 @@ describe('Utils', () => {
     it('requires an exact sentinel match', () => {
       expect(isUserDeleted({ name: '[deleted]' })).toBe(false);
       expect(isUserDeleted({ name: 'Alice [DELETED]' })).toBe(false);
+    });
+  });
+
+  describe('isReservedUserName', () => {
+    it('reserves the tombstone label, with or without surrounding whitespace', () => {
+      expect(isReservedUserName('[DELETED]')).toBe(true);
+      expect(isReservedUserName('  [DELETED]  ')).toBe(true);
+    });
+
+    it('leaves a live name alone', () => {
+      expect(isReservedUserName('Alice')).toBe(false);
+      expect(isReservedUserName('[deleted]')).toBe(false);
+      expect(isReservedUserName('Alice [DELETED]')).toBe(false);
     });
   });
 

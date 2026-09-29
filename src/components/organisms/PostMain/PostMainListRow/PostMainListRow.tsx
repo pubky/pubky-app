@@ -15,8 +15,7 @@ import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { DEFAULT_LOCK_TITLE, parseLockTeaserContent } from '@/libs/post/lockTeaser';
-import { cn, formatPublicKey, isPostDeleted, isUserDeleted } from '@/libs/utils/utils';
-import { DELETED_USER_NAME } from '@/libs/utils/utils.constants';
+import { cn, formatPublicKey, isPostDeleted, resolveUserDisplayName } from '@/libs/utils/utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostListMediaThumbnail } from '@/molecules/PostListMediaThumbnail/PostListMediaThumbnail';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
@@ -147,7 +146,7 @@ export function PostMainListRow({
   const indexedAt = new Date(displayPostDetails.indexed_at);
   const timeAgo = formatRelativeTime(indexedAt);
   const formattedPublicKey = formatPublicKey({ key: displayUserId });
-  const authorName = isUserDeleted(userDetails) ? DELETED_USER_NAME : userDetails.name || '';
+  const authorName = resolveUserDisplayName(userDetails);
   const contentSnippet = getListPostSnippet(
     previewPostDetails.content,
     previewPostDetails.kind,
