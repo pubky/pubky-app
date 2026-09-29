@@ -2820,19 +2820,18 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
         Pay with Bitkit
       </a>
     </div>
-    <div
-      aria-label="Creator Pubky QR code"
-      class="hidden shrink-0 self-center rounded-md bg-foreground p-2 lg:block"
+    <button
+      aria-label="Copy creator pubky"
+      class="group hidden shrink-0 cursor-pointer self-center rounded-md bg-foreground p-2 lg:block"
       data-cy="pay-to-unlock-handshake-qr"
-      data-testid="container"
-      role="img"
+      type="button"
     >
       <div
         data-size="112"
         data-testid="qr-code"
         data-value="pubkylockcreator"
       />
-    </div>
+    </button>
   </div>
   <div
     class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"

@@ -1,8 +1,18 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TPayToUnlockStage } from '@/hooks/usePayToUnlock/usePayToUnlock.types';
 import { DialogPayToUnlock } from './DialogPayToUnlock';
 
+const mocks = vi.hoisted(() => ({
+  copyToClipboard: vi.fn(),
+  toast: vi.fn(),
+}));
+
+vi.mock('@/libs/utils/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/utils/utils')>();
+  return { ...actual, copyToClipboard: (args: { text: string }) => mocks.copyToClipboard(args) };
+});
+vi.mock('@/molecules/Toaster/toast', () => ({ toast: (args: unknown) => mocks.toast(args) }));
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: () => ({ profile: { name: 'John Carvalho', avatarUrl: undefined }, isLoading: false }),
 }));
@@ -50,6 +60,11 @@ const renderDialog = (stage: TPayToUnlockStage, overrides: DialogOverrides = {})
   render(dialogElement(stage, overrides), { wrapper: overrides.wrapper });
 
 describe('DialogPayToUnlock', () => {
+  // clearAllMocks keeps implementations, so a rejected copy would leak into later tests.
+  beforeEach(() => {
+    mocks.copyToClipboard.mockReset();
+  });
+
   it('applies wrapping and shrink constraints to the lock title', () => {
     renderDialog('retry');
 
@@ -86,7 +101,7 @@ describe('DialogPayToUnlock', () => {
     expect(screen.getByText(/Install Bitkit/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pay with Bitkit' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'I completed the steps' }));
@@ -100,7 +115,7 @@ describe('DialogPayToUnlock', () => {
     // Desktop leads with "Awaiting payment."; mobile moves that under the spinner.
     expect(screen.getByText('Awaiting payment.')).toBeInTheDocument();
     expect(screen.getByText('Please confirm in Bitkit.')).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Try again|I completed the steps/ })).not.toBeInTheDocument();
     // The footer button reads Close (the X in the corner is also named Close, hence the data-cy hook).
     expect(document.querySelector('[data-cy="pay-to-unlock-cancel"]')).toHaveTextContent('Close');
@@ -109,7 +124,7 @@ describe('DialogPayToUnlock', () => {
   it('waiting: shows the creator pubky QR while the hook hands one over', () => {
     const { rerender } = renderDialog('waiting', { handshakePubky: 'lockcreator' });
 
-    expect(screen.getByRole('img', { name: 'Creator Pubky QR code' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy creator pubky' })).toBeInTheDocument();
     expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
     expect(screen.getByText('Scan with Bitkit and pay to unlock.')).toBeInTheDocument();
     // The QR screen stays clean: setup belongs to the install screen.
@@ -120,7 +135,36 @@ describe('DialogPayToUnlock', () => {
     expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
 
     rerender(dialogElement('waiting'));
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
+  });
+
+  it('waiting: copies the QR value when the QR is clicked', async () => {
+    mocks.copyToClipboard.mockResolvedValue(undefined);
+    renderDialog('waiting', { handshakePubky: 'lockcreator' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy creator pubky' }));
+
+    await vi.waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith({
+        variant: 'info',
+        title: 'Pubky copied to clipboard',
+        dismissButton: true,
+      }),
+    );
+    expect(mocks.copyToClipboard).toHaveBeenCalledWith({ text: 'pubkylockcreator' });
+  });
+
+  // A rejected clipboard write must not be reported as copied.
+  it('waiting: reports a failed QR copy', async () => {
+    mocks.copyToClipboard.mockRejectedValue(new Error('denied'));
+    renderDialog('waiting', { handshakePubky: 'lockcreator' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy creator pubky' }));
+
+    await vi.waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not copy to clipboard' }),
+    );
+    expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'info' }));
   });
 
   // A phone cannot scan its own screen, so the link must hand Bitkit the value the QR carries.
@@ -145,7 +189,7 @@ describe('DialogPayToUnlock', () => {
     renderDialog('waiting', { connectionIssue });
 
     expect(screen.getByText(copy)).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
   });
 
   // Parked is not failed: a reader who never leaves the tab gets no visibility event, so the only
