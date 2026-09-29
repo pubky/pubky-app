@@ -443,7 +443,7 @@ export class LocksApplication {
 
   /**
    * Creator reads their OWN locked content straight from their homeserver
-   * (`/priv/locks.app/content/`) — no unlock, no credential, no replication.
+   * (`/priv/app.locks/content/`) — no unlock, no credential, no replication.
    * Only valid when the lock owner is the signed-in account (a == b); the caller
    * verifies that before calling.
    */

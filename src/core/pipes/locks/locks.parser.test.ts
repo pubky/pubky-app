@@ -62,14 +62,14 @@ describe('LockContentParser', () => {
 
   describe('lockIdFromUrl', () => {
     it('takes the lock id from the .json filename', () => {
-      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/LOCK1.json`)).toBe(
+      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/LOCK1.json`)).toBe(
         'LOCK1',
       );
     });
 
     it('returns null when there is no .json filename to read', () => {
-      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/`)).toBeNull();
-      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/.json`)).toBeNull();
+      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/`)).toBeNull();
+      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/.json`)).toBeNull();
     });
   });
 });
@@ -107,7 +107,7 @@ describe('LockFileParser', () => {
 });
 
 describe('LockProofBundler', () => {
-  const LOCK_URL = `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/lock1.json`;
+  const LOCK_URL = `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/lock1.json`;
 
   describe('buildPayment', () => {
     it('builds one empty-payload proof with the reader pubky at the top level', () => {
@@ -118,7 +118,7 @@ describe('LockProofBundler', () => {
       expect(LockProofBundler.buildPayment(paymentLock, LOCK_URL, 'bundle-1', 'reader123')).toEqual({
         version: 1,
         bundle_id: 'bundle-1',
-        pubky_lock_resource: `${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/lock1.json`,
+        pubky_lock_resource: `${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/lock1.json`,
         reader_public_key: 'pubkyreader123',
         proofs: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', payload: {} }],
       });
@@ -175,7 +175,7 @@ describe('GuardedContentParser', () => {
 
   describe('toReadPath', () => {
     it('strips the guarded content prefix to the relative read path', () => {
-      expect(GuardedContentParser.toReadPath('/priv/locks.app/content/nested/a.txt')).toBe('nested/a.txt');
+      expect(GuardedContentParser.toReadPath('/priv/app.locks/content/nested/a.txt')).toBe('nested/a.txt');
     });
 
     it('returns null for a path outside the guarded namespace', () => {
@@ -185,8 +185,8 @@ describe('GuardedContentParser', () => {
 
   describe('attachmentUriToPath', () => {
     it('strips the pubky scheme and host to the private path', () => {
-      expect(GuardedContentParser.attachmentUriToPath('pubky://ownerb/priv/locks.app/content/img1')).toBe(
-        '/priv/locks.app/content/img1',
+      expect(GuardedContentParser.attachmentUriToPath('pubky://ownerb/priv/app.locks/content/img1')).toBe(
+        '/priv/app.locks/content/img1',
       );
     });
   });
@@ -252,7 +252,7 @@ describe('GuardedContentParser', () => {
     const post: GuardedPost = {
       content: 'secret',
       kind: 'image',
-      attachments: ['pubky://b/priv/locks.app/content/img1'],
+      attachments: ['pubky://b/priv/app.locks/content/img1'],
     };
 
     it('repoints attachments at the reader copy with inline content types', () => {
@@ -371,12 +371,12 @@ describe('GuardedContentParser', () => {
       const bytes = encode({
         content: 'secret body',
         kind: 'short',
-        attachments: ['pubky://b/priv/locks.app/content/a'],
+        attachments: ['pubky://b/priv/app.locks/content/a'],
       });
       expect(GuardedContentParser.parsePost(bytes)).toEqual({
         content: 'secret body',
         kind: 'short',
-        attachments: ['pubky://b/priv/locks.app/content/a'],
+        attachments: ['pubky://b/priv/app.locks/content/a'],
       });
     });
 

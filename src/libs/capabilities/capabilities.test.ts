@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { mockRingSession } from '@/test-utils/pubky';
 import { hasRequiredCapabilities, sessionNeedsUpgrade } from './capabilities';
 
-const REQUIRED = '/pub/pubky.app/:rw,/priv/social/:rw,/priv/locks.app/:r';
+const REQUIRED = '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r';
 
 describe('hasRequiredCapabilities', () => {
   it('accepts the exact list the app requests', () => {
-    expect(hasRequiredCapabilities(['/pub/pubky.app/:rw', '/priv/social/:rw', '/priv/locks.app/:r'], REQUIRED)).toBe(
-      true,
-    );
+    expect(
+      hasRequiredCapabilities(['/pub/pubky.app/:rw', '/priv/social/:rw', '/priv/app.locks/content/:r'], REQUIRED),
+    ).toBe(true);
   });
 
   it('accepts the root capability without a special case', () => {
@@ -24,9 +24,9 @@ describe('hasRequiredCapabilities', () => {
   });
 
   it('rejects read-only where write is required', () => {
-    expect(hasRequiredCapabilities(['/pub/pubky.app/:rw', '/priv/social/:r', '/priv/locks.app/:r'], REQUIRED)).toBe(
-      false,
-    );
+    expect(
+      hasRequiredCapabilities(['/pub/pubky.app/:rw', '/priv/social/:r', '/priv/app.locks/content/:r'], REQUIRED),
+    ).toBe(false);
   });
 
   it('treats a scope without a trailing slash as one path, not a prefix', () => {
@@ -57,5 +57,11 @@ describe('sessionNeedsUpgrade', () => {
 
   it('is true for a Ring session minted with the pre-locks list', () => {
     expect(sessionNeedsUpgrade(mockRingSession(['/pub/pubky.app/:rw']))).toBe(true);
+  });
+
+  it('is true for a Ring session minted with the retired locks.app scope', () => {
+    expect(sessionNeedsUpgrade(mockRingSession(['/pub/pubky.app/:rw', '/priv/social/:rw', '/priv/locks.app/:r']))).toBe(
+      true,
+    );
   });
 });

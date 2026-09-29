@@ -244,7 +244,7 @@ describe('PostInput lock flow (integration)', () => {
     mocks.lockServer = 'lockpubky';
     mocks.createLockContent.mockResolvedValue({
       lock_id: 'L1',
-      content_lock_path: '/pub/locks.app/L1.json',
+      content_lock_path: '/pub/app.locks/L1.json',
       creator: 'pubkybob',
     });
     mocks.commitCreate.mockResolvedValue('alice:POST1');
@@ -281,20 +281,20 @@ describe('PostInput lock flow (integration)', () => {
       expect.objectContaining({
         authorId: 'alice',
         content: JSON.stringify({ lock_title: 'My title', teaser_description: 'come see this' }),
-        lock: 'pubky://bob/pub/locks.app/L1.json',
+        lock: 'pubky://bob/pub/app.locks/L1.json',
       }),
     );
 
     // The locked post carries the captured body and the kind a normal post would infer.
     const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    buildPost(files.length > 0 ? [descriptor('/priv/locks.app/content/id-1')] : [], 'pubkybob');
+    buildPost(files.length > 0 ? [descriptor('/priv/app.locks/content/id-1')] : [], 'pubkybob');
     const expectedKind = inferPostKindForCreate({ content: body, attachments: files, isArticle: false });
     expect(mocks.post).toHaveBeenLastCalledWith(
       body,
       expectedKind,
       null,
       null,
-      files.length > 0 ? ['pubky://bob/priv/locks.app/content/id-1'] : null,
+      files.length > 0 ? ['pubky://bob/priv/app.locks/content/id-1'] : null,
     );
 
     expect(mocks.handleSubmit).not.toHaveBeenCalled(); // never the normal path
@@ -376,7 +376,7 @@ describe('PostInput lock flow (integration)', () => {
 
     // The locked post itself is declared as an opaque blob and links all four files.
     const postFile = buildPost(
-      attachments.map((_: unknown, index: number) => descriptor(`/priv/locks.app/content/id-${index}`)),
+      attachments.map((_: unknown, index: number) => descriptor(`/priv/app.locks/content/id-${index}`)),
       'pubkybob',
     );
     expect(postFile.contentType).toBe('application/octet-stream');
@@ -399,13 +399,13 @@ describe('PostInput lock flow (integration)', () => {
     await waitFor(() => expect(mocks.createLockContent).toHaveBeenCalledTimes(1));
 
     const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    buildPost([descriptor('/priv/locks.app/content/id-1')], 'pubkybob');
+    buildPost([descriptor('/priv/app.locks/content/id-1')], 'pubkybob');
     const [, , , , uris] = mocks.post.mock.lastCall as [string, number, null, null, string[]];
-    expect(uris).toEqual(['pubky://bob/priv/locks.app/content/id-1']);
+    expect(uris).toEqual(['pubky://bob/priv/app.locks/content/id-1']);
     expect(JSON.stringify(uris)).not.toContain('alice');
 
     // No owner → refuse loudly instead of silently using the pubky.app account.
-    expect(() => buildPost([descriptor('/priv/locks.app/content/id-1')])).toThrow();
+    expect(() => buildPost([descriptor('/priv/app.locks/content/id-1')])).toThrow();
   });
 
   it('cannot publish while the Lock Server sign-in is still pending', () => {

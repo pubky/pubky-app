@@ -254,7 +254,7 @@ const session = asOpaque<LocksSdkSession>({
   lockServer: () => 'lockpubky',
 });
 
-const descriptor = { path: '/priv/locks.app/content/id-1', hash: 'H', content_type: 'image/png', size: 1 };
+const descriptor = { path: '/priv/app.locks/content/id-1', hash: 'H', content_type: 'image/png', size: 1 };
 
 const lockParams = {
   primaryResource: descriptor,
@@ -285,13 +285,13 @@ describe('LocksService (content)', () => {
   it('createContentLock returns the lock descriptor', async () => {
     mocks.createContentLock.mockResolvedValue({
       lock_id: 'LOCK1',
-      content_lock_path: '/pub/locks.app/LOCK1.json',
+      content_lock_path: '/pub/app.locks/LOCK1.json',
       content_lock: { creator: 'pubkybob' },
     });
 
     const result = await LocksService.createContentLock(lockParams);
 
-    expect(result).toEqual({ lock_id: 'LOCK1', content_lock_path: '/pub/locks.app/LOCK1.json', creator: 'pubkybob' });
+    expect(result).toEqual({ lock_id: 'LOCK1', content_lock_path: '/pub/app.locks/LOCK1.json', creator: 'pubkybob' });
   });
 
   it.each([
@@ -374,10 +374,10 @@ describe('LocksService (reader unlock)', () => {
   });
 
   it('readContentLock strips the pubky:// scheme and reads via the SDK', async () => {
-    const result = await LocksService.readContentLock('pubky://creatorb/pub/locks.app/lock1.json');
+    const result = await LocksService.readContentLock('pubky://creatorb/pub/app.locks/lock1.json');
 
     expect(mocks.readContentLockWithOptions).toHaveBeenCalledWith(
-      'creatorb/pub/locks.app/lock1.json',
+      'creatorb/pub/app.locks/lock1.json',
       expect.anything(),
     );
     expect(result).toEqual({ version: 1, creator: 'pubkybob' });
@@ -386,7 +386,7 @@ describe('LocksService (reader unlock)', () => {
   it('readContentLock wraps a wasm init failure as an AppError', async () => {
     mocks.ensureLocksSdkReady.mockRejectedValueOnce(new Error('wasm init failed'));
 
-    const error = await LocksService.readContentLock('pubky://creatorb/pub/locks.app/lock1.json').catch(
+    const error = await LocksService.readContentLock('pubky://creatorb/pub/app.locks/lock1.json').catch(
       (e: unknown) => e,
     );
     expect(isAppError(error)).toBe(true);

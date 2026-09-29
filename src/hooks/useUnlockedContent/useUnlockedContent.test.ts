@@ -26,7 +26,7 @@ afterEach(() => {
   sessionNeedsUpgrade.value = false;
 });
 
-const LOCK_URL = 'pubky://hs/pub/locks.app/lock1.json';
+const LOCK_URL = 'pubky://hs/pub/app.locks/lock1.json';
 const content: TUnlockedContent = { post: { content: 'x', kind: 'short', attachments: null }, attachments: [] };
 
 describe('useUnlockedContent (replica resolution)', () => {

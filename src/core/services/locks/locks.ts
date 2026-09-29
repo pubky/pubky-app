@@ -305,7 +305,7 @@ export class LocksService {
 
   /**
    * Registers the creator's default Lock Server (the runtime-configured one) by writing the
-   * lock-service pointer (`/pub/locks.app/config.json`). The Lock Server performs the homeserver
+   * lock-service pointer (`/pub/app.locks/config.json`). The Lock Server performs the homeserver
    * write; the SDK session carries the frontend-session bearer, so the FE attaches no
    * `Authorization` header by hand.
    */
@@ -320,7 +320,7 @@ export class LocksService {
   }
 
   /**
-   * Uploads one file's raw bytes under `/priv/locks.app/content/<path>` and returns its descriptor
+   * Uploads one file's raw bytes under `/priv/app.locks/content/<path>` and returns its descriptor
    * ({ path, hash, content_type, size }) plus the owner pubky — the Lock-Server-authenticated account
    * the bytes landed on, which the post needs to reference its attachments by the right host.
    * Re-uploading the same path silently overwrites — the caller mints a fresh path per file so
@@ -351,7 +351,7 @@ export class LocksService {
    * TODO:[Locks] #2039 — orphan cleanup. A failure here leaves the resources uploaded by the
    * preceding `registerGuardedResource` calls on the server, unreferenced.
    * Scenario: 3 of 4 files upload, then this rejects (size/count limit, hash mismatch, malformed
-   * body) and the 3 blobs linger under `/priv/locks.app/content/`. Harmless — each path is minted
+   * body) and the 3 blobs linger under `/priv/app.locks/content/`. Harmless — each path is minted
    * fresh, so no existing lock breaks — but it wastes the creator's private storage. Closing the tab
    * between the two calls has the same effect and no `catch` can cover it.
    * When #2039 lands: best-effort `deleteGuardedResource` per path on a deterministic 4xx or a user

@@ -31,7 +31,7 @@ const lockFile = asOpaque<LockFile>({
   creator: 'pubkybob',
   criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
 });
-const LOCK_URL = 'pubky://pubkybob/pub/locks.app/LOCK1.json';
+const LOCK_URL = 'pubky://pubkybob/pub/app.locks/LOCK1.json';
 
 const unlockedContent = asOpaque<TUnlockedContent>({
   post: { content: 'paid', kind: 'short', attachments: null },

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_LOCK_TITLE } from './lockTeaser';
 import { deriveTextPreview } from './postPreview';
 
-const LOCK_URL = 'pubky://hs/pub/locks.app/lock1.json';
+const LOCK_URL = 'pubky://hs/pub/app.locks/lock1.json';
 
 describe('deriveTextPreview', () => {
   it('returns the deleted notice for a deleted post regardless of kind', () => {

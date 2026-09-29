@@ -35,7 +35,7 @@ vi.mock('@/organisms/NotificationItem/NotificationItem.helpers', () => ({
 }));
 
 const COMPOSITE_ID = 'author:post123';
-const LOCK_URL = 'pubky://hs/pub/locks.app/lock1.json';
+const LOCK_URL = 'pubky://hs/pub/app.locks/lock1.json';
 
 /** The post the mocked live query currently reports; undefined models "still loading". */
 const setPost = (postDetails: PostDetails, isLoading = postDetails === undefined) =>

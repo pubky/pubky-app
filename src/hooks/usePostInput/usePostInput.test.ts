@@ -537,7 +537,7 @@ describe('usePostInput', () => {
 
     it('passes lock announcement metadata to the edit method', async () => {
       mockContent = 'Updated teaser';
-      const editLock = { lockUrl: 'pubky://author/pub/locks.app/LOCK1.json', title: 'Private note' };
+      const editLock = { lockUrl: 'pubky://author/pub/app.locks/LOCK1.json', title: 'Private note' };
 
       const { result } = renderHook(() =>
         usePostInput({

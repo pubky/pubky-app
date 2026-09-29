@@ -756,7 +756,7 @@ describe('HomeserverService', () => {
         await HomeserverService.generateAuthUrl();
 
         expect(mockState.startCookieAuthFlow).toHaveBeenCalledWith(
-          '/pub/pubky.app/:rw,/priv/social/:rw,/priv/locks.app/:r', // Default capabilities
+          '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r', // Default capabilities
           'signin-kind', // AuthFlowKind.signin()
           expect.stringContaining('/inbox'), // HTTP relay (Pubky 0.7+ inbox endpoint)
         );
@@ -798,7 +798,7 @@ describe('HomeserverService', () => {
         const result = await HomeserverService.generatePassportAuthUrl({ xCallback });
 
         expect(mockState.startCookieAuthFlow).toHaveBeenCalledWith(
-          '/pub/pubky.app/:rw,/priv/social/:rw,/priv/locks.app/:r',
+          '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r',
           'signin-kind',
           expect.stringContaining('/inbox'),
           xCallback,

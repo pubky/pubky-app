@@ -1,3 +1,4 @@
+import { LOCKS_GUARDED_CONTENT_PATH } from '@/config/locks';
 import {
   getDefaultHttpRelay,
   getDeployEnv,
@@ -58,7 +59,7 @@ export function isStagingHomeserverDeploy(): boolean {
 // Requested from Pubky Ring at sign-in and fixed for the life of that session; keypair sign-in mints a
 // root (`/:rw`) session instead. A session from before an entry was added lacks it until the user
 // approves a new one (`docs/locks.md`, _Sessions from before locks_).
-// - /pub/pubky.app/:rw   — the app's public data
-// - /priv/social/:rw     — where unlocked lock content is copied (reader replication)
-// - /priv/locks.app/:r   — read-only: a creator reads their OWN guarded original here (Ring sessions)
-export const HOMESERVER_CAPABILITIES = '/pub/pubky.app/:rw,/priv/social/:rw,/priv/locks.app/:r';
+// - /pub/pubky.app/:rw         — the app's public data
+// - /priv/social/:rw           — where unlocked lock content is copied (reader replication)
+// - /priv/app.locks/content/:r — read-only: a creator reads their OWN guarded original here (Ring sessions)
+export const HOMESERVER_CAPABILITIES = `/pub/pubky.app/:rw,/priv/social/:rw,${LOCKS_GUARDED_CONTENT_PATH}:r`;

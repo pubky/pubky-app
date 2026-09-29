@@ -406,7 +406,7 @@ describe('PostMainListRow', () => {
     mockPostDetails(
       JSON.stringify({ lock_title: 'BBC', teaser_description: 'A peek' }),
       'short',
-      'pubky://hs/pub/locks.app/lock1.json',
+      'pubky://hs/pub/app.locks/lock1.json',
     );
 
     render(

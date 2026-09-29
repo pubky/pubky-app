@@ -1,4 +1,5 @@
 import type { ZodType } from 'zod';
+import { LOCKS_GUARDED_CONTENT_PATH } from '@/config/locks';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -16,7 +17,6 @@ import {
   VerifierType,
 } from '@/services/locks/locks.types';
 
-const GUARDED_CONTENT_PREFIX = '/priv/locks.app/content/';
 /** Where a reader keeps its own copy of content it has unlocked. */
 const UNLOCKED_PREFIX = '/priv/social/unlocked/';
 /** Where a reader keeps each purchase's bundle id; without it the paid content cannot be fetched again. */
@@ -49,7 +49,7 @@ export class LockContentParser {
     return isPubkyIdentifier(host);
   }
 
-  /** `pubky://<creator>/pub/locks.app/<lock_id>.json` → `<lock_id>`. Null when there is no `.json` tail. */
+  /** `pubky://<creator>/pub/app.locks/<lock_id>.json` → `<lock_id>`. Null when there is no `.json` tail. */
   static lockIdFromUrl(lockUrl: string): string | null {
     const file = lockUrl.split('/').pop() ?? '';
     return file.endsWith('.json') ? file.slice(0, -'.json'.length) || null : null;
@@ -116,14 +116,16 @@ export class LockProofBundler {
 export class GuardedContentParser {
   private constructor() {}
 
-  /** `pubky://<owner>/priv/locks.app/content/img1` → `/priv/locks.app/content/img1`. */
+  /** `pubky://<owner>/priv/app.locks/content/img1` → `/priv/app.locks/content/img1`. */
   static attachmentUriToPath(uri: string): string {
     return uri.replace(/^pubky:\/\/[^/]+/, '');
   }
 
   /** Relative path for `proxyReadGuardedResource`, or null when outside the guarded namespace. */
   static toReadPath(resourcePath: string): string | null {
-    return resourcePath.startsWith(GUARDED_CONTENT_PREFIX) ? resourcePath.slice(GUARDED_CONTENT_PREFIX.length) : null;
+    return resourcePath.startsWith(LOCKS_GUARDED_CONTENT_PATH)
+      ? resourcePath.slice(LOCKS_GUARDED_CONTENT_PATH.length)
+      : null;
   }
 
   /** Reader's own copy of one unlocked file: `pubky://<reader>/priv/social/unlocked/<lockId>/<file>`. */
