@@ -23,6 +23,7 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 
 const DELETE_FILE_MAX_ATTEMPTS = 3;
 const DELETE_FILE_RETRY_DELAY_MS = 500;
+const PROFILE_LOCK_PREFIX = 'pubky-app:profile:';
 
 export class ProfileApplication {
   private constructor() {} // Prevent instantiation
@@ -95,8 +96,8 @@ export class ProfileApplication {
    * exactly what was published locally. The PUT replaces the whole `profile.json`, so every
    * field the user didn't change comes from a fresh homeserver read, never from the local
    * cache, which can be older than the last save. A failed read aborts before the PUT, and a
-   * missing profile (a deleted account) is refused so it isn't recreated. One user's writes
-   * run one at a time (see `enqueueWrite`).
+   * missing profile (a deleted account) is refused so it isn't recreated. The whole write
+   * holds the user's profile lock (see `withProfileLock`).
    */
   private static async commitChanges({
     pubky,
@@ -109,7 +110,7 @@ export class ProfileApplication {
     operation: string;
     deletedMessage: string;
   }) {
-    await this.enqueueWrite(pubky, async () => {
+    await this.withProfileLock(pubky, async () => {
       let publishedJson: unknown;
       try {
         publishedJson = await HomeserverService.getFreshJson(userUriBuilder(pubky));
@@ -133,20 +134,28 @@ export class ProfileApplication {
   }
 
   /**
-   * Runs one user's profile writes one at a time. Each write reads the published profile before
-   * its PUT, so two overlapping writes would read the same copy and the PUT landing last would
-   * win, even when it was the earlier action.
+   * Runs one user's profile writes and account deletion one at a time. Each write reads the
+   * published profile before its PUT, so an overlapping write would read the copy an earlier one
+   * is about to replace, and a write that read `profile.json` before a deletion could PUT it back
+   * after. Web Locks share the lock with every tab of the app, so a deletion also waits for a
+   * write already in flight in another tab. Without them (an insecure origin), a queue covers
+   * this tab only.
    */
-  private static async enqueueWrite(pubky: Pubky, write: () => Promise<void>): Promise<void> {
-    const previousWrite = this.pendingWrites.get(pubky) ?? Promise.resolve();
-    const pendingWrite = previousWrite.catch(() => {}).then(write);
+  private static async withProfileLock(pubky: Pubky, task: () => Promise<void>): Promise<void> {
+    if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+      await navigator.locks.request(`${PROFILE_LOCK_PREFIX}${pubky}`, task);
+      return;
+    }
 
-    this.pendingWrites.set(pubky, pendingWrite);
+    const previousTask = this.pendingWrites.get(pubky) ?? Promise.resolve();
+    const pendingTask = previousTask.catch(() => {}).then(task);
+
+    this.pendingWrites.set(pubky, pendingTask);
 
     try {
-      await pendingWrite;
+      await pendingTask;
     } finally {
-      if (this.pendingWrites.get(pubky) === pendingWrite) {
+      if (this.pendingWrites.get(pubky) === pendingTask) {
         this.pendingWrites.delete(pubky);
       }
     }
@@ -180,46 +189,50 @@ export class ProfileApplication {
   }
 
   /**
-   * Commits the delete profile operation to the homeserver and local database.
+   * Commits the delete profile operation to the homeserver and local database. Holds the
+   * user's profile lock throughout, so a profile write can't PUT `profile.json` back after it
+   * is deleted.
    * @param pubky - The public key of the user
    * @param setProgress - The function to set the progress
    */
   static async commitDelete({ pubky, setProgress }: TDeleteAccountParams) {
-    // Clear local IndexedDB data first
-    await LocalProfileService.deleteAll();
+    await this.withProfileLock(pubky, async () => {
+      // Clear local IndexedDB data first
+      await LocalProfileService.deleteAll();
 
-    const baseDirectory = baseUriBuilder(pubky);
-    // Enumerate the full directory before deleting (single list calls are page-limited),
-    // so nothing is missed and progress reporting stays accurate.
-    const dataList = await HomeserverService.listAll({ baseDirectory });
+      const baseDirectory = baseUriBuilder(pubky);
+      // Enumerate the full directory before deleting (single list calls are page-limited),
+      // so nothing is missed and progress reporting stays accurate.
+      const dataList = await HomeserverService.listAll({ baseDirectory });
 
-    // Separate profile.json and other files
-    const profileUrl = `${baseDirectory}profile.json`;
-    const filesToDelete = dataList.filter((file) => file !== profileUrl);
+      // Separate profile.json and other files
+      const profileUrl = `${baseDirectory}profile.json`;
+      const filesToDelete = dataList.filter((file) => file !== profileUrl);
 
-    // Sort remaining files alphanumerically and reverse
-    filesToDelete.sort().reverse();
+      // Sort remaining files alphanumerically and reverse
+      filesToDelete.sort().reverse();
 
-    // Total files including profile.json for progress calculation
-    const totalFiles = filesToDelete.length + 1;
+      // Total files including profile.json for progress calculation
+      const totalFiles = filesToDelete.length + 1;
 
-    // Delete each file (excluding profile.json) and update progress
-    for (let index = 0; index < filesToDelete.length; index++) {
-      await this.deleteFile(filesToDelete[index]);
+      // Delete each file (excluding profile.json) and update progress
+      for (let index = 0; index < filesToDelete.length; index++) {
+        await this.deleteFile(filesToDelete[index]);
 
-      if (!setProgress) {
-        continue;
+        if (!setProgress) {
+          continue;
+        }
+
+        setProgress(Math.round(((index + 1) / totalFiles) * 100));
       }
 
-      setProgress(Math.round(((index + 1) / totalFiles) * 100));
-    }
+      // Finally, delete profile.json and update progress to 100%
+      await this.deleteFile(profileUrl);
 
-    // Finally, delete profile.json and update progress to 100%
-    await this.deleteFile(profileUrl);
-
-    if (setProgress) {
-      setProgress(100);
-    }
+      if (setProgress) {
+        setProgress(100);
+      }
+    });
   }
 
   /**

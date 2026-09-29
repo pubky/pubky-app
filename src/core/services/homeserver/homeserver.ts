@@ -24,7 +24,7 @@ import { AuthErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/erro
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { hasHttpStatus } from '@/libs/error/error.utils';
+import { hasHttpStatus, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
@@ -662,14 +662,19 @@ export class HomeserverService {
   /**
    * Reads a JSON resource past the browser HTTP cache. The homeserver sends `Last-Modified`
    * without `max-age`, so a plain GET can be answered from a heuristically fresh cached copy.
-   * Throws on a non-OK response; resolves `undefined` for an empty or invalid body.
+   * Throws an `AppError` on a non-OK response or a failed read (a body that breaks off
+   * mid-read included); resolves `undefined` for an empty or invalid body.
    *
    * @param url - Pubky URL to read.
    */
   static async getFreshJson<T>(url: string): Promise<T | undefined> {
-    const response = await this.fetch({ url, options: { method: HttpMethod.GET, cache: 'no-store' } });
-    await assertOk({ response, url, operation: 'getFreshJson' });
-    return await parseResponseOrUndefined<T>({ response, operation: 'getFreshJson', url });
+    try {
+      const response = await this.fetch({ url, options: { method: HttpMethod.GET, cache: 'no-store' } });
+      await assertOk({ response, url, operation: 'getFreshJson' });
+      return await parseResponseOrUndefined<T>({ response, operation: 'getFreshJson', url });
+    } catch (error) {
+      throw toAppError(error, ErrorService.Homeserver, 'getFreshJson');
+    }
   }
 
   /**

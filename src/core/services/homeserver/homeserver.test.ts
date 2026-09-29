@@ -1388,6 +1388,24 @@ describe('HomeserverService', () => {
           context: expect.objectContaining({ statusCode: 404 }),
         });
       });
+
+      it('normalizes a body that breaks off mid-read into an AppError', async () => {
+        const readError = new TypeError('terminated');
+        const body = new ReadableStream({
+          start(controller) {
+            controller.error(readError);
+          },
+        });
+        mockState.clientFetch.mockResolvedValue(new Response(body, { status: 200 }));
+
+        await expect(HomeserverService.getFreshJson(testUrl)).rejects.toMatchObject({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.UNKNOWN_ERROR,
+          service: ErrorService.Homeserver,
+          operation: 'getFreshJson',
+          cause: readError,
+        });
+      });
     });
 
     describe('exists', () => {

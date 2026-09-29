@@ -35,6 +35,7 @@ vi.mock('pubky-app-specs', () => ({
       return json;
     },
   },
+  baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
   userUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/profile.json`,
   getValidMimeTypes: () => ['image/jpeg', 'image/png'],
 }));
@@ -45,6 +46,8 @@ vi.mock('@/services/homeserver/homeserver', () => ({
     putBlob: vi.fn(),
     request: vi.fn(),
     getFreshJson: vi.fn(),
+    listAll: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
@@ -348,6 +351,100 @@ describe('ProfileApplication', () => {
         ).rejects.toMatchObject({ code: ClientErrorCode.GONE, message: 'Cannot update a deleted profile' });
 
         expect(putCalls()).toHaveLength(0);
+      });
+    });
+
+    describe('with account deletion', () => {
+      const otherFile = `pubky://${testPubky}/pub/pubky.app/posts/0001`;
+      const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+      let profileExists: boolean;
+
+      beforeEach(async () => {
+        // A homeserver that serves profile.json until the deletion removes it; a PUT recreates it
+        const notFoundError = await notFound();
+        profileExists = true;
+        vi.mocked(HomeserverService.getFreshJson).mockImplementation(async () => {
+          if (!profileExists) throw notFoundError;
+          return published;
+        });
+        vi.mocked(HomeserverService.request).mockImplementation(async () => {
+          profileExists = true;
+        });
+        vi.mocked(HomeserverService.listAll).mockResolvedValue([otherFile, profileUrl]);
+        vi.mocked(HomeserverService.delete).mockImplementation(async (url) => {
+          if (url === profileUrl) profileExists = false;
+        });
+      });
+
+      it('refuses a write requested during the deletion instead of recreating profile.json', async () => {
+        let finishDeletingFile!: () => void;
+        vi.mocked(HomeserverService.delete).mockImplementationOnce(
+          () =>
+            new Promise<void>((resolve) => {
+              finishDeletingFile = resolve;
+            }),
+        );
+
+        const deletion = ProfileApplication.commitDelete({ pubky: testPubky });
+        await vi.waitFor(() => expect(HomeserverService.delete).toHaveBeenCalledWith(otherFile));
+        const write = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+        await settle();
+        // The write waits for the deletion instead of reading profile.json while it still exists
+        expect(HomeserverService.getFreshJson).not.toHaveBeenCalled();
+
+        finishDeletingFile();
+        await deletion;
+
+        await expect(write).rejects.toMatchObject({ code: ClientErrorCode.GONE });
+        expect(putCalls()).toHaveLength(0);
+        expect(profileExists).toBe(false);
+      });
+
+      it('waits for a write already in flight before deleting anything', async () => {
+        const { LocalProfileService } = await import('@/services/local/profile/profile');
+        const deleteAll = vi.spyOn(LocalProfileService, 'deleteAll');
+        let finishPut!: () => void;
+        vi.mocked(HomeserverService.request).mockImplementationOnce(
+          () =>
+            new Promise<undefined>((resolve) => {
+              finishPut = () => {
+                profileExists = true;
+                resolve(undefined);
+              };
+            }),
+        );
+
+        const write = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+        await vi.waitFor(() => expect(putCalls()).toHaveLength(1));
+        const deletion = ProfileApplication.commitDelete({ pubky: testPubky });
+        await settle();
+        // Deleting now would let the pending PUT recreate profile.json afterwards
+        expect(deleteAll).not.toHaveBeenCalled();
+        expect(HomeserverService.listAll).not.toHaveBeenCalled();
+
+        finishPut();
+        await Promise.all([write, deletion]);
+
+        expect(profileExists).toBe(false);
+        // The deletion also cleared the row the write stored
+        expect(await UserDetailsModel.findById(testPubky)).toBeNull();
+      });
+
+      it('takes the same Web Lock for profile writes and deletion', async () => {
+        const request = vi.fn((_name: string, task: () => Promise<void>) => task());
+        Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
+
+        try {
+          await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+          await ProfileApplication.commitDelete({ pubky: testPubky });
+        } finally {
+          Reflect.deleteProperty(navigator, 'locks');
+        }
+
+        expect(request.mock.calls.map(([name]) => name)).toEqual([
+          `pubky-app:profile:${testPubky}`,
+          `pubky-app:profile:${testPubky}`,
+        ]);
       });
     });
   });
