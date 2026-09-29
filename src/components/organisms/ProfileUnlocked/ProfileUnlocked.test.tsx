@@ -85,4 +85,11 @@ describe('ProfileUnlocked', () => {
     expect(screen.getByTestId('locks-permission-notice')).toBeInTheDocument();
     expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(0);
   });
+
+  it('keeps cached items visible when the homeserver list fetch fails', () => {
+    renderWith({ items: [item('LOCK1', 'cached secret')], count: 1, isError: true });
+
+    expect(screen.getByText('cached secret')).toBeInTheDocument();
+    expect(screen.queryByText("Couldn't load your unlocked content. Try again later.")).not.toBeInTheDocument();
+  });
 });

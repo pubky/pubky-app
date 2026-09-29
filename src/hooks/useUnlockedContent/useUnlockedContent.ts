@@ -8,9 +8,20 @@ import { toUnlockedMedia } from '@/libs/utils/unlockedMedia';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
-import type { GuardedPost, TUnlockedContent } from '@/services/locks/locks.types';
+import type { GuardedPost, ReplicatedPost, TUnlockedContent } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseUnlockedContentParams, UseUnlockedContentResult } from './useUnlockedContent.types';
+
+async function loadCachedContent(post: ReplicatedPost): Promise<TUnlockedContent> {
+  return {
+    post: {
+      content: post.content,
+      kind: post.kind,
+      attachments: null,
+    },
+    attachments: await LocksController.fetchReplicatedAttachments({ post }),
+  };
+}
 
 /**
  * Resolves the content a reader can see without re-unlocking, and derives whether the lock is the
@@ -73,7 +84,12 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
 
     let cancelled = false;
     setIsResolvingReplica(true);
-    LocksController.fetchReplicatedContent({ lockUrl: lock, readerPubky: currentUserPubky })
+    LocksController.getUnlockedPost({ lockUrl: lock })
+      .then((post) => (post ? loadCachedContent(post) : null))
+      .catch(() => null)
+      .then(
+        (local) => local ?? LocksController.fetchReplicatedContent({ lockUrl: lock, readerPubky: currentUserPubky }),
+      )
       .then((result) => {
         if (!cancelled && result) applyContent(result);
       })
@@ -106,7 +122,10 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
     }
 
     let cancelled = false;
-    LocksController.fetchOwnContent({ lockFile })
+    LocksController.getOwnPost({ lockUrl: lock })
+      .then((post) => (post ? loadCachedContent(post) : null))
+      .catch(() => null)
+      .then((local) => local ?? LocksController.fetchOwnContent({ lockUrl: lock, lockFile }))
       .then((result) => {
         if (!cancelled && result) applyContent(result);
       })
