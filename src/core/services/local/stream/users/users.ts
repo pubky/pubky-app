@@ -2,6 +2,7 @@ import { detectModerationFromTags } from '@/application/moderation/moderation.ut
 import { getProfileLocalEditTtlMs } from '@/config/user';
 import { db } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
+import { getTtlRetryDelayMs, getTtlUserMs } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
 import { ModerationModel } from '@/models/moderation/moderation';
 import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
@@ -184,10 +185,11 @@ export class LocalStreamUsersService {
    * Writes details, relationships and TTL in one transaction, reading before writing.
    *
    * A details row `canReplaceUserDetails` rejects (an older revision, or a pending local
-   * edit the payload doesn't include) is kept, and its TTL isn't advanced. Guest /
-   * viewer-less payloads skip the relationship row (#1803). When `fetchStartedAt` is set, a
-   * user TTL written at or after that stamp means a local follow landed during the request —
-   * keep that row.
+   * edit the payload doesn't include) is kept, and its TTL isn't renewed: an expired one
+   * waits the retry delay, as for users Nexus omits, instead of being refetched on every
+   * coordinator tick, and a fresher one stays. Guest / viewer-less payloads skip the
+   * relationship row (#1803). When `fetchStartedAt` is set, a user TTL written at or after
+   * that stamp means a local follow landed during the request — keep that row.
    */
   private static async persistDetailsRelationshipsAndTtl(
     userIds: Pubky[],
@@ -200,7 +202,7 @@ export class LocalStreamUsersService {
       const fetchStartedAt = tagGuard.viewerId ? tagGuard.fetchStartedAt : undefined;
       const [existingDetails, existingTtl] = await Promise.all([
         UserDetailsModel.findByIdsPreserveOrder(userIds),
-        fetchStartedAt !== undefined ? UserTtlModel.findByIds(userIds) : Promise.resolve([]),
+        UserTtlModel.findByIds(userIds),
       ]);
 
       const now = Date.now();
@@ -230,10 +232,17 @@ export class LocalStreamUsersService {
         }
       }
 
+      const retryAt = now - (getTtlUserMs() - getTtlRetryDelayMs());
+      const ttlById = new Map(existingTtl.map((row) => [row.id, row.lastUpdatedAt]));
+      const ttlToSave = userTtl.flatMap(([id, ttl]): NexusModelTuple<{ lastUpdatedAt: number }>[] => {
+        if (!keptIds.has(id)) return [[id, ttl]];
+        return (ttlById.get(id) ?? -Infinity) < retryAt ? [[id, { lastUpdatedAt: retryAt }]] : [];
+      });
+
       await Promise.all([
         detailsToSave.length > 0 ? UserDetailsModel.bulkSave(detailsToSave) : Promise.resolve(),
         relationshipsToSave.length > 0 ? UserRelationshipsModel.bulkSave(relationshipsToSave) : Promise.resolve(),
-        UserTtlModel.bulkSave(userTtl.filter(([id]) => !keptIds.has(id))),
+        UserTtlModel.bulkSave(ttlToSave),
       ]);
     });
   }

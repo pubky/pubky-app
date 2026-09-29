@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getModeratedTags } from '@/config/moderation';
+import { getTtlRetryDelayMs, getTtlUserMs } from '@/libs/runtime-config/runtime-config';
 import { APP_RUNTIME_DEFAULTS } from '@/libs/runtime-config/runtime-config.schema';
 import type { Pubky } from '@/models/models.types';
 import { ModerationModel } from '@/models/moderation/moderation';
@@ -12,6 +13,7 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { LocalUserService } from '@/services/local/user/user';
 import { NexusSocialGraphStatus, type NexusTag, type NexusUser } from '@/services/nexus/nexus.types';
 import { asInvalid } from '@/test-utils/type-assertions';
 
@@ -498,6 +500,37 @@ describe('LocalStreamUsersService', () => {
 
         expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Revision 5', nexusIndexedAt: 5 });
         expect(await UserTtlModel.findById(userId)).toMatchObject({ lastUpdatedAt: editedAt });
+      });
+
+      it('waits the retry delay after a rejected refresh instead of refetching on every tick', async () => {
+        const isStale = async () => {
+          const ttl = await UserTtlModel.findById(userId);
+          return !ttl || Date.now() - ttl.lastUpdatedAt > getTtlUserMs();
+        };
+        vi.useFakeTimers({ toFake: ['Date'], now: editedAt + 1_000 });
+
+        try {
+          // A late bootstrap that found the user not yet indexed shortens the edit's TTL
+          await LocalUserService.upsertTtlWithDelay(userId, getTtlRetryDelayMs());
+          vi.setSystemTime(Date.now() + getTtlRetryDelayMs() + 1);
+          expect(await isStale()).toBe(true);
+
+          // The refresh still returns the profile from before the edit, which is rejected
+          await LocalStreamUsersService.persistUsers(
+            [withDetails(userId, { name: 'Before the edit', indexed_at: 2 })],
+            {
+              viewerId: VIEWER_ID,
+              validatedAt: Date.now(),
+            },
+          );
+
+          expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Local edit' });
+          expect(await isStale()).toBe(false);
+          vi.setSystemTime(Date.now() + getTtlRetryDelayMs() + 1);
+          expect(await isStale()).toBe(true);
+        } finally {
+          vi.useRealTimers();
+        }
       });
     });
 
