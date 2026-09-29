@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
 import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL } from '@/config/externalLinks';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { generateBitkitContactDeeplink } from '@/libs/deeplink/deeplink';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
@@ -64,6 +65,14 @@ export function DialogPayToUnlock({
   // `unopened` reached this screen by a completed payment too, so it must not show a cost to pay.
   const isPaid = stage === 'paid' || stage === 'unopened';
   const [isConfirmingClose, setIsConfirmingClose] = useState(false);
+  const { copyToClipboard } = useCopyToClipboard();
+
+  // A wallet on another device cannot scan this screen, and a phone cannot scan its own, so the QR
+  // hands its value over on click the way the sign-in and session upgrade QRs already do.
+  const handleQrClick = () => {
+    if (!handshakePubky) return;
+    void copyToClipboard(withPubkyPrefix(handshakePubky));
+  };
 
   const handleOpenChange = (next: boolean) => {
     // Paid content is already in memory. Closing should reveal that copy instead of enabling the
@@ -224,15 +233,15 @@ export function DialogPayToUnlock({
           </Container>
 
           {showQr && handshakePubky && (
-            <Container
-              overrideDefaults
-              role="img"
-              aria-label="Creator Pubky QR code"
+            <button
+              type="button"
               data-cy="pay-to-unlock-handshake-qr"
-              className="hidden shrink-0 self-center rounded-md bg-foreground p-2 lg:block"
+              aria-label="Copy creator pubky"
+              onClick={handleQrClick}
+              className="hidden shrink-0 cursor-pointer self-center rounded-md bg-foreground p-2 transition-opacity hover:opacity-90 active:opacity-80 lg:block"
             >
               <QRCodeSVG value={withPubkyPrefix(handshakePubky)} size={112} />
-            </Container>
+            </button>
           )}
 
           {showSpinner && (
