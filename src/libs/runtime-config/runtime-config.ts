@@ -169,6 +169,8 @@ export const getTestnet = (): boolean => getRuntimeConfig().testnet;
 export const getDeployEnv = (): DeployEnv => getRuntimeConfig().deployEnv;
 
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
+export const getPulseClientKey = (): string | undefined => getRuntimeConfig().pulseClientKey;
+export const getPulseEndpoint = (): string | undefined => getRuntimeConfig().pulseEndpoint;
 export const getSentryDsn = (): string | undefined => getRuntimeConfig().sentryDsn;
 export const getSentryEnvironment = (): string | undefined => getRuntimeConfig().sentryEnvironment;
 export const getSentryTracesSampleRate = (): number => getRuntimeConfig().sentryTracesSampleRate;

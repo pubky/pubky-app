@@ -35,6 +35,15 @@ export class AuthApplication {
   private static readonly RESTORE_RETRY_DELAY_MS = 3000;
 
   /**
+   * Max attempts for the post-restore profile check (~6 s with a 3 s delay between each).
+   * Shorter than the session restore policy: the session is already valid here, this only
+   * decides whether the restored account still has a profile.
+   */
+  private static readonly PROFILE_CHECK_MAX_ATTEMPTS = 3;
+  /** Fixed delay between profile-check attempts */
+  private static readonly PROFILE_CHECK_RETRY_DELAY_MS = 3000;
+
+  /**
    * Restores a session from a persisted session export.
    * Prevents concurrent restoration attempts by managing a singleton promise.
    *
@@ -234,5 +243,36 @@ export class AuthApplication {
       if (isNotFound(appError)) return false;
       throw appError;
     }
+  }
+
+  /**
+   * Resolves whether a restored session's profile.json exists, retrying transient homeserver
+   * failures so a temporary outage is never mistaken for a missing profile (issue #2070).
+   *
+   * @param params - Parameters containing the user's public key
+   * @param params.pubky - The user's public key identifier
+   * @returns true when the profile exists, false when the homeserver confirmed it does not, and
+   * null when the state could not be determined after the retries
+   */
+  static async resolveUserIsSignedUp({ pubky }: { pubky: Pubky }): Promise<boolean | null> {
+    for (let attempt = 1; attempt <= this.PROFILE_CHECK_MAX_ATTEMPTS; attempt++) {
+      try {
+        return await this.userIsSignedUp({ pubky });
+      } catch (error) {
+        const appError = isAppError(error)
+          ? error
+          : toAppError(error, ErrorService.Homeserver, 'resolveUserIsSignedUp');
+        const canRetry = isRetryable(appError) && attempt < this.PROFILE_CHECK_MAX_ATTEMPTS;
+        if (!canRetry) {
+          return null;
+        }
+        Logger.warn(
+          `Profile check attempt ${attempt}/${this.PROFILE_CHECK_MAX_ATTEMPTS} failed with a transient error, retrying in ${this.PROFILE_CHECK_RETRY_DELAY_MS}ms`,
+          { error: appError },
+        );
+        await sleep(this.PROFILE_CHECK_RETRY_DELAY_MS);
+      }
+    }
+    return null;
   }
 }

@@ -1,11 +1,12 @@
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
+import { resolvePostAttachmentUrl } from '@/libs/post/postAttachmentUrl';
 import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
 import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { OG_HEADER_HEIGHT, OgAvatar, OgFrame, OgHeader } from './OgComponents';
 import { OG_SIZE, OG_TOKENS, OG_TRUNCATE } from './ogConstants';
-import { buildAvatarUrl, fetchImageAsDataUri, resolvePostAttachmentUrl } from './ogData';
+import { buildAvatarUrl, fetchImageAsDataUri } from './ogData';
 import { LibraryIcon, StickyNoteIcon } from './OgIcons';
 import { ogImageResponse } from './ogImageResponse';
 import { prepareOgText } from './ogText';

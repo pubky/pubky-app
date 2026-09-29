@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { USER_BIO_MAX_LENGTH, USER_NAME_MAX_LENGTH, USER_NAME_MIN_LENGTH } from '@/config/user';
 import { safeExternalUrlSchema } from '@/libs/utils/safeExternalUrl';
+import { isReservedUserName } from '@/libs/utils/utils';
 
 export class UserValidator {
   static check(name: string, bio: string, links: { label: string; url: string }[], avatarFile: File | null) {
@@ -45,7 +46,8 @@ export const UiUserSchema = z.object({
     .string()
     .trim()
     .min(USER_NAME_MIN_LENGTH, `Name must be at least ${USER_NAME_MIN_LENGTH} characters`)
-    .max(USER_NAME_MAX_LENGTH, `Name must be no more than ${USER_NAME_MAX_LENGTH} characters`),
+    .max(USER_NAME_MAX_LENGTH, `Name must be no more than ${USER_NAME_MAX_LENGTH} characters`)
+    .refine((value) => !isReservedUserName(value), { message: 'This name is reserved' }),
   bio: z
     .string()
     .trim()

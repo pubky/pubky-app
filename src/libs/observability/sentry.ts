@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
-import { INLINE_IMAGE_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineImageUpload/useInlineImageUpload.types';
 import { Env } from '@/libs/env/env';
 import { AppError } from '@/libs/error/error';
+import { OBSERVABILITY_IGNORE_ERRORS } from '@/libs/observability/sentry.constants';
 import {
   sanitizeForSentry,
   scrubSensitiveData,
@@ -99,33 +99,8 @@ export function getSentryInitBase(): Sentry.NodeOptions & Sentry.BrowserOptions 
     debug: false,
     sendDefaultPii: false,
     tracesSampleRate: getSentryTracesSampleRate(),
-    ignoreErrors: [
-      'ResizeObserver loop limit exceeded',
-      'ResizeObserver loop completed with undelivered notifications',
-      'Failed to fetch',
-      /Loading chunk \d+ failed/,
-      'AbortError',
-      'Non-Error promise rejection captured',
-      // Expected article inline-image upload rejections: surfaced to the user
-      // via toast at the source, but MDXEditor's internal batch handling
-      // rethrows them into a promise nobody owns, so Sentry's globalHandlers
-      // would report them as unhandled. Genuine upload failures are already
-      // captured with full context through the Err.* factory pipeline.
-      INLINE_IMAGE_UPLOAD_REJECTION_NAME,
-      // Native webview bridges (pubky-ring iOS/Android hosts) inject scripts that
-      // talk to `window.webkit.messageHandlers` / the Android JavascriptInterface.
-      // When the host tears the bridge down mid-navigation those injected scripts
-      // throw from frames outside our bundle (PUBKY-APP-B6/B7/CJ). Nothing in the
-      // app references the bridge (see rg for `messageHandlers`), so there is no
-      // call site to guard — the patterns are specific to the host's messages.
-      /window\.webkit\.messageHandlers/,
-      /Java object is gone/,
-      /Java exception was raised during method invocation/,
-      // MetaMask (and similar wallets) inject `inpage.js` into every page; it
-      // rejects with "Failed to connect to MetaMask" when the extension is
-      // disabled mid-session (PUBKY-APP-8G). Not our code.
-      /Failed to connect to MetaMask/,
-    ],
+    // Spread, not passed through: the SDK option is a mutable array, and neither sink may mutate the shared list.
+    ignoreErrors: [...OBSERVABILITY_IGNORE_ERRORS],
     beforeSend: filterAndScrubErrorEvent,
     beforeSendTransaction: scrubTransactionEvent,
     beforeSendSpan: scrubSpanJson,

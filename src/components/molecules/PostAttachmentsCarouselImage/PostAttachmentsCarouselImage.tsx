@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Image } from '@/atoms/Image/Image';
+import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 
 type PostAttachmentsCarouselImageProps = {
@@ -16,7 +17,7 @@ export const PostAttachmentsCarouselImage = ({ image, id }: PostAttachmentsCarou
       {/* Feed image shown as placeholder while main loads */}
       {!isMainLoaded && (
         <Image
-          src={image.urls.feed as string}
+          src={getAttachmentPreviewUrl(image)}
           alt={image.name}
           className="max-h-[75dvh] w-full rounded-md object-contain"
         />

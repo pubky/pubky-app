@@ -28,14 +28,17 @@ import {
   hoursAgo,
   isPostDeleted,
   isPubkyIdentifier,
+  isReservedUserName,
   isSameDomain,
   isStarterPackReservedTag,
+  isUserDeleted,
   isValidPostCompositeId,
   isValidTagLabel,
   minutesAgo,
   radixIdSerializer,
   readFromClipboard,
   resolveDisplayName,
+  resolveUserDisplayName,
   sanitizeTagInput,
   shouldBypassLinkConfirmation,
   stripPubkyPrefix,
@@ -241,6 +244,30 @@ describe('Utils', () => {
       expect(result).toBe(formatPublicKey({ key: PUBKY }));
       expect(result).toContain('...');
       expect(result).not.toBe(PUBKY);
+    });
+
+    it('returns [DELETED] instead of the public key fallback for a deleted user', () => {
+      expect(resolveDisplayName({ name: '', id: PUBKY, deleted: true })).toBe('[DELETED]');
+    });
+  });
+
+  describe('resolveUserDisplayName', () => {
+    it('returns the name when present', () => {
+      expect(resolveUserDisplayName({ name: 'Alice' })).toBe('Alice');
+    });
+
+    it('returns an empty string when a live user has no name, so the caller keeps its fallback', () => {
+      expect(resolveUserDisplayName({ name: '' })).toBe('');
+      expect(resolveUserDisplayName({ name: null })).toBe('');
+      expect(resolveUserDisplayName(undefined)).toBe('');
+    });
+
+    it('returns [DELETED] for a flagged tombstone, never the empty fallback', () => {
+      expect(resolveUserDisplayName({ name: '', deleted: true })).toBe('[DELETED]');
+    });
+
+    it('returns [DELETED] for the legacy sentinel name', () => {
+      expect(resolveUserDisplayName({ name: '[DELETED]' })).toBe('[DELETED]');
     });
   });
 
@@ -886,6 +913,48 @@ describe('Utils', () => {
     it('should return false for content containing "[DELETED]"', () => {
       expect(isPostDeleted('This post is [DELETED]')).toBe(false);
       expect(isPostDeleted('[DELETED] post')).toBe(false);
+    });
+  });
+
+  describe('isUserDeleted', () => {
+    it('returns true when Nexus flags the user as deleted', () => {
+      expect(isUserDeleted({ name: '', deleted: true })).toBe(true);
+    });
+
+    it('returns true for the legacy [DELETED] name sentinel without the flag', () => {
+      expect(isUserDeleted({ name: '[DELETED]' })).toBe(true);
+    });
+
+    it('returns false for a live user', () => {
+      expect(isUserDeleted({ name: 'Alice' })).toBe(false);
+      expect(isUserDeleted({ name: 'Alice', deleted: false })).toBe(false);
+    });
+
+    it('returns false for an empty name without the flag', () => {
+      expect(isUserDeleted({ name: '' })).toBe(false);
+    });
+
+    it('returns false for missing details', () => {
+      expect(isUserDeleted(null)).toBe(false);
+      expect(isUserDeleted(undefined)).toBe(false);
+    });
+
+    it('requires an exact sentinel match', () => {
+      expect(isUserDeleted({ name: '[deleted]' })).toBe(false);
+      expect(isUserDeleted({ name: 'Alice [DELETED]' })).toBe(false);
+    });
+  });
+
+  describe('isReservedUserName', () => {
+    it('reserves the tombstone label, with or without surrounding whitespace', () => {
+      expect(isReservedUserName('[DELETED]')).toBe(true);
+      expect(isReservedUserName('  [DELETED]  ')).toBe(true);
+    });
+
+    it('leaves a live name alone', () => {
+      expect(isReservedUserName('Alice')).toBe(false);
+      expect(isReservedUserName('[deleted]')).toBe(false);
+      expect(isReservedUserName('Alice [DELETED]')).toBe(false);
     });
   });
 

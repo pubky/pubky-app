@@ -28,4 +28,5 @@ export type TOgMetadataFallbackReason =
   | 'blocked_ip'
   | 'body_too_large'
   | 'body_timeout'
-  | 'body_unreadable';
+  | 'body_unreadable'
+  | 'empty_metadata';

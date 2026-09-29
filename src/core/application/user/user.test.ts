@@ -990,7 +990,11 @@ describe('UserApplication.fetch', () => {
     const result = await UserApplication.fetch({ userId, viewerId: undefined });
 
     expect(fetchByIdsSpy.mock.calls[0][0].viewer_id).toBeUndefined();
-    expect(result).toEqual({ ...mockUserDetails, social_graph_status: null });
+    expect(result).toEqual({
+      ...mockUserDetails,
+      nexusIndexedAt: mockUserDetails.indexed_at,
+      social_graph_status: null,
+    });
     // Missing row → later signed-in reads are a cache miss and trigger a viewer-aware fetch
     expect(await LocalUserService.readRelationships({ userId })).toBeNull();
   });

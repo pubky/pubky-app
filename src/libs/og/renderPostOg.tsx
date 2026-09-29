@@ -1,13 +1,14 @@
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { markdownToText } from '@/libs/post/markdownToText';
+import { resolvePostAttachmentUrl } from '@/libs/post/postAttachmentUrl';
 import { fetchUserAndPostForMetadata, resolveMentionSegmentsForMetadata } from '@/libs/post/postMetadata';
 import { deriveTextPreview, isMentionResolvablePreview } from '@/libs/post/postPreview';
 import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { OgFrame, OgHeader, OgText } from './OgComponents';
 import { OG_TOKENS, OG_TRUNCATE } from './ogConstants';
-import { buildAvatarUrl, fetchImageAsDataUri, resolvePostAttachmentUrl } from './ogData';
+import { buildAvatarUrl, fetchImageAsDataUri } from './ogData';
 import { NewspaperIcon } from './OgIcons';
 import { ogImageResponse } from './ogImageResponse';
 import { prepareOgText, prepareOgTextSegments } from './ogText';

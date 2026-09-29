@@ -169,11 +169,12 @@ body {
 
   /**
    * Mobile tab bar height (icon row)
-   * - Matches MobileTabBar tab cell + button + icon stack
+   * - Matches MobileTabBar tab cell + button + icon stack (48px) plus the
+   *   1px tab cell bottom border, so content offset by it starts below the border
    * - Applied: Settings content top padding below header + tab bar
    * - Responsive: Mobile only (hidden on desktop via lg:hidden)
    */
-  --mobile-tab-bar-height: 48px;
+  --mobile-tab-bar-height: 49px;
 
   /**
    * Settings mobile chrome height (header + tab bar)
@@ -743,8 +744,8 @@ body {
 
   .landing-swirl-background__graphic {
     --landing-swirl-size: min(100vw, 34rem);
-    --landing-swirl-offset-x: -50px;
-    --landing-swirl-offset-y: 250px;
+    --landing-swirl-offset-x: 0px;
+    --landing-swirl-offset-y: 50px;
     --landing-swirl-clip: circle(75% at 50% 50%);
     --landing-swirl-mask-hole: 0%;
     --landing-swirl-mask-ring-start: 0%;

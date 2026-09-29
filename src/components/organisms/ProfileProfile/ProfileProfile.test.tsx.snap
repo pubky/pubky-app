@@ -12,6 +12,11 @@ exports[`ProfileProfile > matches snapshot 1`] = `
       <div>
         Satoshi Nakamoto
       </div>
+      <button
+        data-testid="avatar-button"
+      >
+        Avatar
+      </button>
       <div>
         Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.
       </div>

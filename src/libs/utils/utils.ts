@@ -4,7 +4,7 @@ import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/post
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import { getSafeExternalUrl } from './safeExternalUrl';
-import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
+import { DELETED_USER_NAME, RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 import type {
   CopyToClipboardProps,
   ExtractInitialsProps,
@@ -52,10 +52,24 @@ export function formatPublicKey({
 /**
  * Resolves a user's display name, falling back to a shortened public key when
  * the profile has no `name` set. Mirrors the app's UI convention
- * (`user.name || formatPublicKey(...)`, e.g. in `UserListItem`).
+ * (`user.name || formatPublicKey(...)`, e.g. in `UserListItem`). Deleted users
+ * resolve to `[DELETED]` rather than the fallback.
  */
-export function resolveDisplayName(user: { name: string; id: string }): string {
-  return user.name || formatPublicKey({ key: user.id });
+export function resolveDisplayName(user: { name: string; id: string; deleted?: boolean }): string {
+  return resolveUserDisplayName(user) || formatPublicKey({ key: user.id });
+}
+
+/**
+ * Display label for a user: `[DELETED]` for a tombstone, the user's own name otherwise, and
+ * an empty string when a live user has none. Empty lets the caller keep its own fallback
+ * (public key, "Unknown User", …) while a deleted user never degrades into one. Surfaces
+ * that key on the label (`AvatarWithFallback` picks its glyph from it) must pass the resolved
+ * value, not a raw row name: a new-shape tombstone's row has `name: ''`, which renders a seed
+ * letter instead of the glyph.
+ */
+export function resolveUserDisplayName(user: { name?: string | null; deleted?: boolean } | null | undefined): string {
+  if (isUserDeleted(user)) return DELETED_USER_NAME;
+  return user?.name ?? '';
 }
 
 /**
@@ -444,6 +458,21 @@ export const convertHmsToSeconds = (
 };
 
 export const isPostDeleted = (content: string | undefined) => content === '[DELETED]';
+
+/**
+ * Whether a user is a Nexus tombstone. Current Nexus sets `deleted: true` and empties the name;
+ * rows cached from older builds still carry the legacy `[DELETED]` name instead.
+ */
+export const isUserDeleted = (user: { name?: string | null; deleted?: boolean } | null | undefined) =>
+  user?.deleted === true || user?.name === DELETED_USER_NAME;
+
+/**
+ * Whether a profile name is reserved for the tombstone label. `[DELETED]` is what the app shows for
+ * a deleted user, so a live profile must not be able to take it: it would render as deleted and
+ * `commitUpdateStatus` refuses the status updates of a row carrying it. Reserved at input by
+ * `UserValidator` and the profile form, both of which gate the name on this.
+ */
+export const isReservedUserName = (name: string) => name.trim() === DELETED_USER_NAME;
 
 /**
  * Get tags that fit within the character budget.
