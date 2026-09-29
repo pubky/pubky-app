@@ -126,6 +126,7 @@ function HomeFeedFilters({
 
   const disabledContentTabs = isVisualActive ? VISUAL_DISABLED_CONTENT : [];
   const showVisualLayout = allowVisualLayout && !isPhoneViewport;
+  const showCardsLayout = feedVariant === TIMELINE_FEED_VARIANT.HOME || feedVariant === TIMELINE_FEED_VARIANT.SEARCH;
 
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
@@ -144,7 +145,12 @@ function HomeFeedFilters({
       {variant === 'sidebar' ? (
         <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
           {!hideLayoutFilter && (
-            <FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
+            <FilterLayout
+              selectedTab={layout}
+              onTabChange={setLayout}
+              showVisual={showVisualLayout}
+              showCards={showCardsLayout}
+            />
           )}
           <FilterContent
             selectedTab={resolvedContent}
@@ -155,7 +161,12 @@ function HomeFeedFilters({
       ) : (
         <>
           {!hideLayoutFilter && (
-            <FilterLayout selectedTab={layout} onTabChange={setLayout} showVisual={showVisualLayout} />
+            <FilterLayout
+              selectedTab={layout}
+              onTabChange={setLayout}
+              showVisual={showVisualLayout}
+              showCards={showCardsLayout}
+            />
           )}
           <FilterContent
             selectedTab={resolvedContent}
