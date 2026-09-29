@@ -229,7 +229,8 @@ export function DialogPayToUnlock({
 
           {showQr && handshakeValue && (
             // Same affordance as the session-upgrade QR: a wallet on a device without a camera needs the value itself.
-            <button
+            <Button
+              overrideDefaults
               type="button"
               onClick={() => copyToClipboard(handshakeValue)}
               aria-label="Copy creator pubky"
@@ -237,7 +238,7 @@ export function DialogPayToUnlock({
               className="group hidden shrink-0 cursor-pointer self-center rounded-md bg-foreground p-2 lg:block"
             >
               <QRCodeSVG value={handshakeValue} size={112} className={QR_HOVER_OPACITY} />
-            </button>
+            </Button>
           )}
 
           {showSpinner && (

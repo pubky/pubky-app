@@ -2824,6 +2824,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
       aria-label="Copy creator pubky"
       class="group hidden shrink-0 cursor-pointer self-center rounded-md bg-foreground p-2 lg:block"
       data-cy="pay-to-unlock-handshake-qr"
+      data-slot="button"
       type="button"
     >
       <div
