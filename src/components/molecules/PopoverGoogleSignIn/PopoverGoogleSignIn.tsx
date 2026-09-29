@@ -52,7 +52,7 @@ export function PopoverGoogleSignIn({ className }: { className?: string }) {
           <CircleHelp className="size-4" data-testid="circle-help-icon" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[327px] p-6">
+      <PopoverContent className="w-80 p-6">
         <Container className="gap-4">
           <Heading level={4} size="sm" className="text-popover-foreground">
             {'Continue with Google, powered by Pubky Passport.'}
