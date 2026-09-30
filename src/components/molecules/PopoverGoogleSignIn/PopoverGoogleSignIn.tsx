@@ -57,16 +57,14 @@ export function PopoverGoogleSignIn({ className }: { className?: string }) {
           <Heading level={4} size="sm" className="text-popover-foreground">
             {'Continue with Google, powered by Pubky Passport.'}
           </Heading>
-          <ul className="list-inside list-disc text-sm font-medium text-muted-foreground">
-            {POINTS.map((point) => (
-              <li key={point.term}>
-                <Typography as="strong" size="sm" className="font-semibold text-secondary-foreground">
-                  {point.term}
-                </Typography>
-                {` ${point.text}`}
-              </li>
-            ))}
-          </ul>
+          {POINTS.map((point) => (
+            <Typography key={point.term} size="sm" className="text-muted-foreground">
+              <Typography as="strong" size="sm" className="font-semibold text-secondary-foreground">
+                {point.term}
+              </Typography>
+              {` ${point.text}`}
+            </Typography>
+          ))}
           <Link href={PASSPORT_README_URL} className="font-semibold">
             {'Learn more'}
           </Link>
