@@ -358,11 +358,19 @@ describe('PostInputExpandableSection', () => {
     expect(actionBar).toHaveAttribute('data-post-button-label', 'Share');
   });
 
-  it('labels the submit button "Publish" when editing an article', () => {
+  it('labels the submit button "Publish Article" when editing an article', () => {
     render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.EDIT} isArticle={true} />);
 
     const actionBar = screen.getByTestId('post-input-action-bar');
-    expect(actionBar).toHaveAttribute('data-post-button-label', 'Publish');
+    expect(actionBar).toHaveAttribute('data-post-button-label', 'Publish Article');
+  });
+
+  it('passes the newspaper icon as the default submit icon for an article', () => {
+    render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.POST} isArticle={true} />);
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    // POST has no default icon, so a truthy icon here proves the article default applied.
+    expect(actionBar).toHaveAttribute('data-has-post-button-icon', 'true');
   });
 
   it('keeps the submit button label "Edit" when editing a non-article post', () => {

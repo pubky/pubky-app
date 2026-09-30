@@ -158,10 +158,10 @@ exports[`PostInputExpandableSection - Snapshots > matches snapshot when isArticl
     data-testid="post-input-tags"
   />
   <div
-    data-has-post-button-icon="false"
+    data-has-post-button-icon="true"
     data-hide-article-button="true"
     data-is-article="true"
-    data-post-button-label="Publish"
+    data-post-button-label="Publish Article"
     data-post-disabled="false"
     data-submitting="false"
     data-testid="post-input-action-bar"
