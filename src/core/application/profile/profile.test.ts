@@ -446,6 +446,37 @@ describe('ProfileApplication', () => {
           `pubky-app:profile:${testPubky}`,
         ]);
       });
+
+      it('passes a write error through the Web Lock unchanged', async () => {
+        const request = vi.fn((_name: string, task: () => Promise<void>) => task());
+        Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
+        profileExists = false;
+
+        try {
+          await expect(
+            ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' }),
+          ).rejects.toMatchObject({ code: ClientErrorCode.GONE });
+        } finally {
+          Reflect.deleteProperty(navigator, 'locks');
+        }
+      });
+
+      it('turns a Web Lock request that fails on its own into an AppError', async () => {
+        const lockError = new DOMException('The document is not fully active.', 'InvalidStateError');
+        const request = vi.fn(() => Promise.reject(lockError));
+        Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
+
+        try {
+          await expect(
+            ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' }),
+          ).rejects.toMatchObject({ service: ErrorService.Local, operation: 'withProfileLock', cause: lockError });
+        } finally {
+          Reflect.deleteProperty(navigator, 'locks');
+        }
+
+        expect(HomeserverService.getFreshJson).not.toHaveBeenCalled();
+        expect(putCalls()).toHaveLength(0);
+      });
     });
   });
 });

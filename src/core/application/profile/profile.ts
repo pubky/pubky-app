@@ -9,7 +9,7 @@ import type {
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { hasHttpStatus } from '@/libs/error/error.utils';
+import { hasHttpStatus, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
@@ -143,7 +143,12 @@ export class ProfileApplication {
    */
   private static async withProfileLock(pubky: Pubky, task: () => Promise<void>): Promise<void> {
     if (typeof navigator !== 'undefined' && 'locks' in navigator) {
-      await navigator.locks.request(`${PROFILE_LOCK_PREFIX}${pubky}`, task);
+      try {
+        await navigator.locks.request(`${PROFILE_LOCK_PREFIX}${pubky}`, task);
+      } catch (error) {
+        // `request` itself can reject with a DOMException that no Err factory has reported.
+        throw toAppError(error, ErrorService.Local, 'withProfileLock');
+      }
       return;
     }
 
