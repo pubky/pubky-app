@@ -133,7 +133,10 @@ describe('StreamPostsController', () => {
     });
 
     describe('author-scoped content search (profile "Filter posts")', () => {
-      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', 'user-1' as Pubky);
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', {
+        type: 'author',
+        author: 'user-1' as Pubky,
+      });
 
       it('rejects when hydration fails, instead of strict-dropping into a false "no results"', async () => {
         // Cold cache: every result is a miss. If by_ids fails, no relationships rows

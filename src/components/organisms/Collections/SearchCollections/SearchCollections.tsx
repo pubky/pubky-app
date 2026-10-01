@@ -13,6 +13,7 @@ import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { CONTENT } from '@/stores/home/home.types';
 
 /**
@@ -25,13 +26,13 @@ import { CONTENT } from '@/stores/home/home.types';
  */
 export function SearchCollections() {
   const streamId = useSearchStreamId(CONTENT.COLLECTIONS);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   if (!streamId) {
     return null;
   }
 
-  // Remount on any tag/sort change so the expansion state resets with the query.
-  return <SearchCollectionsStream key={streamId} streamId={streamId} />;
+  return <SearchCollectionsStream key={`${currentUserPubky ?? 'public'}:${streamId}`} streamId={streamId} />;
 }
 
 /**

@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchApplication } from '@/application/search/search';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { SearchController } from './search';
 
 describe('SearchController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ currentUserPubky: 'viewer' });
   });
 
   describe('fetchUsersById', () => {
@@ -90,6 +92,24 @@ describe('SearchController', () => {
     });
   });
   describe('fetchUsersByTags', () => {
+    it.each(['following', 'friends', 'wot'] as const)(
+      'uses the current viewer for %s People results',
+      async (reach) => {
+        const fetch = vi.spyOn(SearchApplication, 'fetchUsersByTags').mockResolvedValue([]);
+        await SearchController.fetchUsersByTags({ tags: 'bitcoin,pubky', skip: 20, limit: 20, reach });
+        expect(fetch).toHaveBeenCalledWith({ tags: 'bitcoin,pubky', skip: 20, limit: 20, reach, user_id: 'viewer' });
+      },
+    );
+
+    it('rejects scoped People search without an account', async () => {
+      useAuthStore.setState({ currentUserPubky: null });
+      const fetch = vi.spyOn(SearchApplication, 'fetchUsersByTags');
+      await expect(SearchController.fetchUsersByTags({ tags: 'pubky', reach: 'wot' })).rejects.toMatchObject({
+        code: 'UNAUTHORIZED',
+      });
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
     it('should call SearchApplication.fetchUsersByTags with correct params', async () => {
       const params = { tags: 'synonym,rust', skip: 0, limit: 20 };
       const mockResults = [

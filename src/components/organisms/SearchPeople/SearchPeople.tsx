@@ -9,8 +9,10 @@ import { SEARCH_PEOPLE_PREVIEW_COUNT } from '@/config/search';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchPeople } from '@/hooks/useSearchPeople/useSearchPeople';
+import { useSearchReach } from '@/hooks/useSearchReach/useSearchReach';
 import { toast } from '@/molecules/Toaster/toast';
 import { UserListItem } from '@/organisms/UserListItem/UserListItem';
+import type { NexusSearchReach } from '@/services/nexus/search/search.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { SearchPersonCardSkeleton } from './SearchPeople.skeleton';
 
@@ -25,6 +27,7 @@ import { SearchPersonCardSkeleton } from './SearchPeople.skeleton';
  */
 export function SearchPeople() {
   const criteria = useSearchCriteria();
+  const { nexusReach, currentUserPubky } = useSearchReach();
 
   if (criteria.mode !== 'tags') {
     return null;
@@ -32,17 +35,19 @@ export function SearchPeople() {
 
   const tags = criteria.tags;
 
-  // Remount on any tag change so the expansion state resets with the query.
-  return <SearchPeopleContent key={tags.join(',')} tags={tags} />;
+  return (
+    <SearchPeopleContent key={JSON.stringify([tags, nexusReach, currentUserPubky])} tags={tags} reach={nexusReach} />
+  );
 }
 
 /** Inner data-driven body — only mounted with a non-empty tag list. */
-function SearchPeopleContent({ tags }: { tags: string[] }) {
+function SearchPeopleContent({ tags, reach }: { tags: string[]; reach?: NexusSearchReach }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { toggleFollow, isUserLoading } = useFollowUser();
 
   const { users, loading, loadingMore, hasMore, loadMore } = useSearchPeople(tags, {
+    reach,
     onError: () => {
       toast({
         variant: 'error',

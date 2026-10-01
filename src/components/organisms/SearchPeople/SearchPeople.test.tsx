@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SEARCH_PEOPLE_PREVIEW_COUNT } from '@/config/search';
 import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
@@ -6,6 +6,8 @@ import { useSearchPeople } from '@/hooks/useSearchPeople/useSearchPeople';
 import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
 import type { UserListItemData } from '@/organisms/UserListItem/UserListItem.types';
+import { REACH } from '@/stores/home/home.types';
+import { useSearchStore } from '@/stores/search/search.store';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { SearchPeople } from './SearchPeople';
 
@@ -95,6 +97,7 @@ function setup({ people = {} }: { people?: Partial<typeof defaultPeople> } = {})
 }
 
 beforeEach(() => {
+  useSearchStore.getState().reset();
   vi.clearAllMocks();
   setup();
 });
@@ -104,6 +107,15 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('SearchPeople', () => {
+  it('collapses the preview and passes the new scope when reach changes', () => {
+    setup({ people: { users: buildUsers(6) } });
+    render(<SearchPeople />);
+    fireEvent.click(screen.getByRole('button', { name: 'See all' }));
+    expect(screen.queryByRole('button', { name: 'See all' })).not.toBeInTheDocument();
+    act(() => useSearchStore.getState().setReach(REACH.NETWORK));
+    expect(screen.getByRole('button', { name: 'See all' })).toBeInTheDocument();
+    expect(mockUseSearchPeople).toHaveBeenLastCalledWith(['synonym'], expect.objectContaining({ reach: 'wot' }));
+  });
   it('renders nothing without a tag search', () => {
     mockUseSearchCriteria.mockReturnValue({ mode: 'none' });
 

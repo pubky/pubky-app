@@ -1,7 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, SORT } from '@/stores/home/home.types';
+import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
+import { useSearchStore } from '@/stores/search/search.store';
 import { useSearchStreamId } from './useSearchStreamId';
 
 // Mock next/navigation
@@ -18,12 +20,34 @@ describe('useSearchStreamId', () => {
     // Reset mocks and store to default state before each test
     mockGet.mockReset();
     mockQueryParam.value = null;
+    useSearchStore.getState().reset();
+    useAuthStore.setState({ currentUserPubky: 'viewer' });
     act(() => {
       useHomeStore.setState({
         sort: SORT.TIMELINE,
         content: CONTENT.ALL,
       });
     });
+  });
+
+  it.each([
+    [REACH.ALL, 'all'],
+    [REACH.NETWORK, 'wot'],
+    [REACH.FOLLOWING, 'following'],
+    [REACH.FRIENDS, 'friends'],
+  ] as const)('applies %s to tag posts, collections and full-text independently of Home', (reach, source) => {
+    mockGet.mockReturnValue('bitcoin,pubky');
+    useSearchStore.getState().setReach(reach);
+    useHomeStore.setState({ reach: REACH.ME, taggedAsActive: true, profileTags: ['unrelated'] });
+    const posts = renderHook(() => useSearchStreamId());
+    const collections = renderHook(() => useSearchStreamId(CONTENT.COLLECTIONS));
+    expect(posts.result.current).toBe(`timeline:${source}:all:bitcoin,pubky`);
+    expect(collections.result.current).toBe(`timeline:${source}:collection:bitcoin,pubky`);
+    mockQueryParam.value = 'bitcoin wallets';
+    posts.rerender();
+    expect(posts.result.current).toBe(
+      `content_search:q~bitcoin%20wallets:all${reach === REACH.ALL ? '' : `:reach:${source}`}`,
+    );
   });
 
   describe('when no tags in URL', () => {
