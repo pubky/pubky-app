@@ -205,6 +205,7 @@ const customCases = [
   { name: 'pubky', color: '#C8FF00' },
   { name: 'blocktank', color: '#FFAE00' },
   { name: 'tether', color: '#26A17B' },
+  { name: 'ai', color: '#00C8FF' },
 ];
 
 /**

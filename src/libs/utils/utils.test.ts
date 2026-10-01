@@ -597,8 +597,13 @@ describe('Utils', () => {
       expect(color1).toBe(color2);
     });
 
+    it.each(['ai', 'AI', 'Ai'])('uses the fixed cyan background for %s', (tag) => {
+      expect(generateRandomColor(tag)).toBe('#00C8FF');
+      expect(hexToRgba(generateRandomColor(tag), 0.3)).toBe('rgba(0, 200, 255, 0.3)');
+    });
+
     it('remaps deep blue and blue-violet to distinct cyan and teal colors', () => {
-      expect(generateRandomColor('ai')).toBe('#00FFe1');
+      expect(generateRandomColor('topic-101')).toBe('#00FFc0');
       expect(generateRandomColor('lol')).toBe('#00c8FF');
     });
 
