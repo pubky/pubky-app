@@ -54,6 +54,9 @@ describe('ContinueWithPassport', () => {
     expect(screen.getByText('Recovery:')).toBeInTheDocument();
     expect(screen.getByText('Split security:')).toBeInTheDocument();
 
+    // The points read as separate paragraphs, never as a bulleted list.
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+
     const learnMore = screen.getByRole('link', { name: 'Learn more' });
     expect(learnMore).toHaveAttribute('href', PASSPORT_README_URL);
     expect(learnMore).toHaveAttribute('target', '_blank');

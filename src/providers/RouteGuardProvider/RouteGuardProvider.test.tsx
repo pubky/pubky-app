@@ -362,6 +362,32 @@ describe('RouteGuardProvider — migration resync', () => {
     expect(screen.getByText('Redirecting...')).toBeInTheDocument();
   });
 
+  // #2373: the upgrade swaps the stored session in place while the user stays signed in. The guard
+  // must not read that as an auth change and move them off the page they were on.
+  it('keeps the user in place when the session object is replaced', () => {
+    mocks.status = 'AUTHENTICATED';
+    mocks.isLoading = false;
+    mocks.currentUserPubky = 'test-pubky-z32';
+    mocks.pathname = '/feed';
+
+    const { rerender } = render(
+      <RouteGuardProvider>
+        <div>Page Content</div>
+      </RouteGuardProvider>,
+    );
+
+    mocks.session = { swapped: true };
+    rerender(
+      <RouteGuardProvider>
+        <div>Page Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(screen.getByText('Page Content')).toBeInTheDocument();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+    expect(mocks.restorePersistedSession).not.toHaveBeenCalled();
+  });
+
   it('allows unauthenticated users to render core explore routes after auth loading resolves', () => {
     mocks.status = 'UNAUTHENTICATED';
     mocks.isLoading = false;

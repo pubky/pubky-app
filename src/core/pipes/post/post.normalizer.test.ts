@@ -167,7 +167,23 @@ describe('PostNormalizer', () => {
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
           expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null);
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null, null);
+        });
+
+        // `lock` is only ever set on the public announcement of a lock post.
+        it('should forward a lock URL when present', async () => {
+          const post = { ...createBasicPost(), lock: 'pubky://alice/pub/app.locks/LOCK1.json' };
+
+          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
+
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(
+            post.content,
+            post.kind,
+            null,
+            null,
+            null,
+            'pubky://alice/pub/app.locks/LOCK1.json',
+          );
         });
       });
 
@@ -179,7 +195,7 @@ describe('PostNormalizer', () => {
           const post = createBasicPost({ kind });
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(expect.any(String), kind, null, null, null);
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(expect.any(String), kind, null, null, null, null);
         });
       });
 
@@ -190,14 +206,14 @@ describe('PostNormalizer', () => {
 
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, parentUri, null, null);
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, parentUri, null, null, null);
         });
 
         it('should pass null when parentUri not provided', async () => {
           const post = createBasicPost();
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null);
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null, null);
         });
       });
 
@@ -218,6 +234,7 @@ describe('PostNormalizer', () => {
             null,
             expect.any(PubkyAppPostEmbed),
             null,
+            null,
           );
         });
 
@@ -227,7 +244,7 @@ describe('PostNormalizer', () => {
           const post = createBasicPost({ embed: embedUri });
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null);
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null, null);
         });
 
         it('should pass null embed when embedded post not found', async () => {
@@ -237,7 +254,7 @@ describe('PostNormalizer', () => {
           const post = createBasicPost({ embed: embedUri });
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null);
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null, null);
         });
       });
 
@@ -248,17 +265,21 @@ describe('PostNormalizer', () => {
 
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, [
-            buildPubkyUri(TEST_PUBKY.USER_1, 'files/file1'),
-            buildPubkyUri(TEST_PUBKY.USER_1, 'files/file2'),
-          ]);
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(
+            post.content,
+            post.kind,
+            null,
+            null,
+            [buildPubkyUri(TEST_PUBKY.USER_1, 'files/file1'), buildPubkyUri(TEST_PUBKY.USER_1, 'files/file2')],
+            null,
+          );
         });
 
         it('should pass null when no attachments', async () => {
           const post = createBasicPost();
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null);
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null, null);
         });
 
         it('should append pre-uploaded attachment URIs after uploaded file URLs', async () => {
@@ -270,10 +291,14 @@ describe('PostNormalizer', () => {
 
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, [
-            buildPubkyUri(TEST_PUBKY.USER_1, 'files/cover'),
-            ...inlineUris,
-          ]);
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(
+            post.content,
+            post.kind,
+            null,
+            null,
+            [buildPubkyUri(TEST_PUBKY.USER_1, 'files/cover'), ...inlineUris],
+            null,
+          );
         });
 
         it('should pass attachment URIs alone when there are no uploaded files', async () => {
@@ -282,7 +307,7 @@ describe('PostNormalizer', () => {
 
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
-          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, inlineUris);
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, inlineUris, null);
         });
       });
 
@@ -309,6 +334,7 @@ describe('PostNormalizer', () => {
             parentUri,
             expect.any(PubkyAppPostEmbed),
             [buildPubkyUri(TEST_PUBKY.USER_1, 'files/file1')],
+            null,
           );
         });
       });
@@ -847,6 +873,58 @@ describe('PostNormalizer', () => {
         expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/posts\/.+/);
         expect(result.meta.id).toBe(TEST_POST_IDS.POST_1);
         expect(result.post.toJson().content).toBe(newContent);
+      });
+
+      it('preserves the stored lock when editing announcement content', async () => {
+        const lockUrl = `pubky://${TEST_PUBKY.USER_1}/pub/app.locks/LOCK1.json`;
+        const postDetails = createMockPostDetails(compositePostId);
+        postDetails.lock = lockUrl;
+        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(postDetails);
+        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
+
+        const result = await PostNormalizer.toEdit({
+          compositePostId,
+          content: 'Updated announcement',
+          currentUserPubky: TEST_PUBKY.USER_1,
+        });
+
+        expect(result.post.toJson()).toEqual(
+          expect.objectContaining({ content: 'Updated announcement', lock: lockUrl }),
+        );
+      });
+
+      it('preserves the stored lock when attachments and kind change', async () => {
+        const lockUrl = `pubky://${TEST_PUBKY.USER_1}/pub/app.locks/LOCK1.json`;
+        const nextAttachments = [buildPubkyUri(TEST_PUBKY.USER_1, 'files/NEXT1')];
+        const postDetails = createMockPostDetails(compositePostId);
+        postDetails.lock = lockUrl;
+        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(postDetails);
+        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
+
+        const result = await PostNormalizer.toEdit({
+          compositePostId,
+          content: 'Updated announcement',
+          currentUserPubky: TEST_PUBKY.USER_1,
+          attachments: nextAttachments,
+          kind: PubkyAppPostKind.Image,
+        });
+
+        expect(result.post.toJson()).toEqual(
+          expect.objectContaining({ lock: lockUrl, attachments: nextAttachments, kind: 'image' }),
+        );
+      });
+
+      it('does not add a lock field to a normal post edit', async () => {
+        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(compositePostId));
+        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
+
+        const result = await PostNormalizer.toEdit({
+          compositePostId,
+          content: 'Updated post content',
+          currentUserPubky: TEST_PUBKY.USER_1,
+        });
+
+        expect('lock' in result.post.toJson()).toBe(false);
       });
 
       it('should reject empty content', async () => {

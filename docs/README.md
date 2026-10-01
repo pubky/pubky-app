@@ -13,6 +13,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `src/libs/env/`, `src/libs/runtime-config/`                                                                                           | `environment.md`                                                                  |
 | Observability (Sentry, Pulse)                                                                                                         | `sentry.md`                                                                       |
 | PWA: `src/sw.ts`, `public/manifest.json`, `src/libs/pwa/`, `src/hooks/use{ServiceWorkerUpdate,NetworkStatus,AppBadge,InstallPrompt}*` | `pwa.md`                                                                          |
+| Lock posts                                                                                                                            | `locks.md`                                                                        |
 | Writing tests                                                                                                                         | `component-testing.md`, `visual-regression-testing.md`                            |
 | Making commits, branches, PRs                                                                                                         | `commit-message.md`                                                               |
 | Cutting a release                                                                                                                     | `release.md`                                                                      |
@@ -39,6 +40,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `commit-message.md`            | Conventional commit format, branch naming, pull request conventions                                                |
 | `release.md`                   | Cutting a production release from `dev` onto `master`                                                              |
 | `hotfix.md`                    | Cutting a production patch without taking `dev` HEAD (see `release.md` for shared steps)                           |
+| `locks.md`                     | Frontend reader for lock posts — payment-gated content (creator side: ADR 0022)                                    |
 | `adr-guidelines.md`            | When and how to write ADRs                                                                                         |
 
 ### Migrations

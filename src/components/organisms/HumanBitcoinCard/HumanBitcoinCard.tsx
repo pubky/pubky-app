@@ -13,7 +13,7 @@ import { HumanBitcoinCardSkeleton, PriceSkeleton } from './HumanBitcoinCard.skel
 import type { HumanBitcoinCardProps } from './HumanBitcoinCard.types';
 
 export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
-  const satUsdRate = useBtcRate()?.satUsd;
+  const satUsdRate = useBtcRate().rate?.satUsd;
   const lnInfo = useLnVerificationInfo();
 
   // Waiting for availability check

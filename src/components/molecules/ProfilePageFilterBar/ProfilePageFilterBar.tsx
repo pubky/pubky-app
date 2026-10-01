@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Bell, HeartHandshake, Library, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
+import { Bell, HeartHandshake, Library, LockOpen, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
 import { type FilterBarPageType, PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import { Container } from '@/atoms/Container/Container';
 import { FilterItem, FilterItemIcon, FilterItemLabel } from '@/atoms/Filter/Filter';
@@ -23,7 +23,7 @@ export interface ProfilePageFilterBarItem {
   label: string;
   count: number | undefined;
   pageType: FilterBarPageType;
-  /** When false, the tab renders without a count badge (set for tabs that have no stat). */
+  /** When false, the tab renders without a count badge: no stat to show, or the read for it failed. */
   showCount?: boolean;
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
@@ -31,6 +31,11 @@ export interface ProfilePageFilterBarItem {
 export interface ProfilePageFilterBarProps {
   items?: ProfilePageFilterBarItem[];
   stats?: ProfileStats;
+  /**
+   * Unlocked-content count; separate from `stats` because Nexus cannot index the reader's `/priv`.
+   * `undefined` while the read is in flight (spinner), `null` when it failed (label only).
+   */
+  unlockedCount?: number | null;
   activePage: FilterBarPageType;
   onPageChangeAction: (page: FilterBarPageType) => void;
   /** Whether this is the logged-in user's own profile */
@@ -107,29 +112,54 @@ const FILTER_ITEMS_CONFIG: Array<{
     pageType: PROFILE_PAGE_TYPES.COLLECTIONS,
     statKey: 'collections',
   },
+  {
+    icon: LockOpen,
+    id: 'unlocked',
+    label: 'Unlocked',
+    pageType: PROFILE_PAGE_TYPES.UNLOCKED,
+    // No statKey: the count comes from `unlockedCount`, not Nexus stats.
+    ownProfileOnly: true,
+  },
 ];
-export const getDefaultItems = (stats?: ProfileStats, isOwnProfile: boolean = true): ProfilePageFilterBarItem[] => {
+export interface GetDefaultItemsParams {
+  stats?: ProfileStats;
+  isOwnProfile?: boolean;
+  /** Count for the Unlocked tab: `undefined` while the read is in flight (spinner), `null` when it failed (label only). */
+  unlockedCount?: number | null;
+}
+
+export const getDefaultItems = ({
+  stats,
+  isOwnProfile = true,
+  unlockedCount,
+}: GetDefaultItemsParams = {}): ProfilePageFilterBarItem[] => {
   return FILTER_ITEMS_CONFIG.filter((config) => {
     // Filter out own-profile-only items when viewing another user's profile
     if (config.ownProfileOnly && !isOwnProfile) {
       return false;
     }
     return true;
-  }).map((config) => ({
-    icon: config.icon,
-    id: config.id,
-    label: config.label,
-    pageType: config.pageType,
-    showCount: config.statKey !== undefined,
-    // If stats not provided, count is undefined (loading state)
-    // If stats provided, use the value or fallback to 0
-    count: config.statKey ? (stats ? (stats[config.statKey] ?? 0) : undefined) : undefined,
-    ownProfileOnly: config.ownProfileOnly,
-  }));
+  }).map((config) => {
+    // Unlocked has no statKey — its count is passed in, since Nexus can't index the reader's /priv.
+    const isUnlocked = config.pageType === PROFILE_PAGE_TYPES.UNLOCKED;
+    // Undefined count = still loading, which renders a spinner instead of a number.
+    const statCount = config.statKey && stats ? (stats[config.statKey] ?? 0) : undefined;
+
+    return {
+      icon: config.icon,
+      id: config.id,
+      label: config.label,
+      pageType: config.pageType,
+      showCount: isUnlocked ? unlockedCount !== null : config.statKey !== undefined,
+      count: isUnlocked ? (unlockedCount ?? undefined) : statCount,
+      ownProfileOnly: config.ownProfileOnly,
+    };
+  });
 };
 export function ProfilePageFilterBar({
   items,
   stats,
+  unlockedCount,
   activePage,
   onPageChangeAction,
   isOwnProfile = true,
@@ -147,8 +177,8 @@ export function ProfilePageFilterBar({
         return true;
       });
     }
-    return getDefaultItems(stats, isOwnProfile);
-  }, [items, stats, isOwnProfile]);
+    return getDefaultItems({ stats, isOwnProfile, unlockedCount });
+  }, [items, stats, isOwnProfile, unlockedCount]);
 
   // Only apply sticky when content fits in viewport
   const { ref, shouldBeSticky } = useStickyWhenFits({

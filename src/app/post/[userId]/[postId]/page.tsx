@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     }
 
     const username = resolveDisplayName(user);
-    const preview = deriveTextPreview({ content: post.content, kind: post.kind });
+    const preview = deriveTextPreview({ content: post.content, kind: post.kind, lock: post.lock ?? null });
     // Raw `pk:` / `pubky` mentions become display names, as the app renders them
     // (`PostMentions`), so a shared link never captions the post with a
     // 52-character key. Article titles stay verbatim, as in the app.

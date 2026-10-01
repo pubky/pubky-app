@@ -88,6 +88,7 @@ export function usePostInput({
   postId,
   originalPostId,
   editPostId,
+  editLock,
   editAttachmentUris,
   editContent,
   editIsArticle,
@@ -98,7 +99,11 @@ export function usePostInput({
   expanded = false,
   onContentChange,
   onArticleModeChange,
+  hasExternalContent,
+  keepInlineImages,
 }: UsePostInputOptions): UsePostInputReturn {
+  const isLockAnnouncement = editLock != null;
+
   // State
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isExpanded, setIsExpanded] = useState(expanded);
@@ -130,6 +135,8 @@ export function usePostInput({
     setIsArticle,
     articleTitle,
     setArticleTitle,
+    lockTitle,
+    setLockTitle,
     reply,
     post,
     repost,
@@ -137,7 +144,8 @@ export function usePostInput({
     isSubmitting,
     inlineImages,
     uploadingCount,
-  } = usePost();
+    serializeArticleForLock,
+  } = usePost({ keepInlineImages });
   const timelineFeed = useTimelineFeedContext();
   const { undoRepost } = useUndoRepost(isCollectionShare);
 
@@ -249,8 +257,19 @@ export function usePostInput({
       const dialogContent = document.querySelector('[data-slot="dialog-content"]');
       if (dialogContent?.contains(target)) return;
 
-      // Collapse only if there's no content
-      if (!content.trim() && tags.length === 0 && attachments.length === 0 && !articleTitle.trim()) {
+      // The lock-title input renders just above the composer container but belongs to it: focusing it
+      // must not collapse the composer. `closest` on the target (not a document query) so multiple
+      // mounted composers cannot shadow each other.
+      if (target instanceof Element && target.closest('[data-lock-title-input]')) return;
+
+      // An empty composer is not always idle — the lock flow holds the draft outside it.
+      const isInProgress =
+        Boolean(content.trim()) ||
+        tags.length > 0 ||
+        attachments.length > 0 ||
+        Boolean(articleTitle.trim()) ||
+        Boolean(hasExternalContent?.());
+      if (!isInProgress) {
         setIsExpanded(false);
         setIsArticle(false);
       }
@@ -260,7 +279,7 @@ export function usePostInput({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [expanded, content, tags, attachments, setIsArticle, articleTitle]);
+  }, [expanded, content, tags, attachments, setIsArticle, articleTitle, hasExternalContent]);
 
   // Handle expand on interaction
   const handleExpand = useCallback(() => {
@@ -410,6 +429,7 @@ export function usePostInput({
       case POST_INPUT_VARIANT.EDIT:
         await edit({
           editPostId: editPostId!,
+          isLockAnnouncement: isLockAnnouncement || undefined,
           originalAttachmentUris: seededAttachmentUris,
           preservedAttachmentUris: editPreservedUris,
           onSuccess: handleSuccess,
@@ -435,6 +455,7 @@ export function usePostInput({
     repost,
     edit,
     editPostId,
+    isLockAnnouncement,
     seededAttachmentUris,
     editPreservedUris,
     isSubmitting,
@@ -468,19 +489,42 @@ export function usePostInput({
     [setContent],
   );
 
-  // Handle article title change with validation
-  const handleArticleTitleChange = useDebounceCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value.length <= ARTICLE_TITLE_MAX_CHARACTER_LENGTH) {
-      setArticleTitle(value);
-    }
+  // The title and body inputs run ahead of `articleTitle` and `content` by the debounce. Null once
+  // the state has caught up.
+  const pendingArticleTitleRef = useRef<string | null>(null);
+  const pendingArticleBodyRef = useRef<string | null>(null);
+
+  // Each render makes a new debounce and the old one's timer still fires, so a commit can carry an
+  // older value than the input holds: only a commit of the latest value clears it.
+  const commitArticleTitle = useDebounceCallback((value: string) => {
+    if (pendingArticleTitleRef.current === value) pendingArticleTitleRef.current = null;
+    setArticleTitle(value);
   }, 500);
 
-  // Handle article body change - length validation is handled via MDXEditor's maxLength plugin
-  const handleArticleBodyChange = useDebounceCallback<NonNullable<MDXEditorProps['onChange']>>(
-    (markdown) => setContent(markdown),
-    500,
-  );
+  // Handle article title change with validation
+  const handleArticleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value.length > ARTICLE_TITLE_MAX_CHARACTER_LENGTH) return;
+    pendingArticleTitleRef.current = value;
+    commitArticleTitle(value);
+  };
+
+  const commitArticleBody = useDebounceCallback((markdown: string) => {
+    if (pendingArticleBodyRef.current === markdown) pendingArticleBodyRef.current = null;
+    setContent(markdown);
+  }, 500);
+
+  // Handle article body change - length validation is handled via MDXEditor's maxLength plugin.
+  // Rich text and markdown mode both report here; the rich text editor knows nothing of markdown mode.
+  const handleArticleBodyChange: NonNullable<MDXEditorProps['onChange']> = (markdown) => {
+    pendingArticleBodyRef.current = markdown;
+    commitArticleBody(markdown);
+  };
+
+  const getLatestArticle = () => ({
+    title: pendingArticleTitleRef.current ?? articleTitle,
+    body: pendingArticleBodyRef.current ?? content,
+  });
 
   // Emoji insert handler
   const handleEmojiSelect = useEmojiInsert({
@@ -726,6 +770,8 @@ export function usePostInput({
     setIsArticle,
     articleTitle,
     setArticleTitle,
+    lockTitle,
+    setLockTitle,
     isDragging,
     isExpanded,
     isSubmitting,
@@ -733,6 +779,8 @@ export function usePostInput({
     setShowEmojiPicker,
     inlineImages,
     uploadingCount,
+    serializeArticleForLock,
+    getLatestArticle,
 
     // Mention autocomplete state
     mentionUsers,

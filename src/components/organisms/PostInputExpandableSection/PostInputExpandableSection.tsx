@@ -1,6 +1,6 @@
 'use client';
 
-import { Edit, MessageCircle, Repeat } from 'lucide-react';
+import { Edit, MessageCircle, Newspaper, Repeat } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { EmojiPickerDialog } from '@/molecules/EmojiPickerDialog/EmojiPickerDialog';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
@@ -34,11 +34,15 @@ export function PostInputExpandableSection({
   onEmojiSelect,
   onImageClick,
   onArticleClick,
+  lockSwitch,
+  lockCard,
 }: PostInputExpandableSectionProps) {
   const hasContent = content.trim().length > 0;
   const isUiDisabled = isSubmitting || isDisabled;
   // Use provided isPostDisabled or default to requiring content
   const isPostDisabled = isPostDisabledProp ?? (!hasContent || isUiDisabled);
+  // Articles always submit with the newspaper icon, in create and in edit.
+  const defaultSubmitIcon = isArticle ? Newspaper : IconsButton[submitMode];
   const postButtonLabel = submitLabel ?? getButtonLabel(submitMode, isArticle);
   const postButtonAriaLabel = postButtonLabel;
   const isEdit = submitMode === POST_INPUT_VARIANT.EDIT;
@@ -47,6 +51,9 @@ export function PostInputExpandableSection({
     <>
       <Container className="gap-4">
         {hasContent && !isArticle && <PostLinkEmbeds content={content} />}
+
+        {/* Stands in for the content the lock switch stashed away. */}
+        {lockCard}
 
         <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
 
@@ -59,9 +66,10 @@ export function PostInputExpandableSection({
           isSubmitting={isSubmitting}
           postButtonLabel={postButtonLabel}
           postButtonAriaLabel={postButtonAriaLabel}
-          hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle}
+          hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle || !!lockCard}
           isArticle={isArticle}
-          postButtonIcon={submitIcon ?? IconsButton[submitMode]}
+          postButtonIcon={submitIcon ?? defaultSubmitIcon}
+          lockSwitch={lockSwitch}
         />
       </Container>
 
