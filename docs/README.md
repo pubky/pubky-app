@@ -61,13 +61,15 @@ The repo is set up so that Claude Code, Codex and Cursor all read the same instr
 | -------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Entry point          | `../AGENTS.md` (Codex and Cursor read it natively; `../CLAUDE.md` imports it) | Commands, hard rules, doc index, verification, definition of done                                       |
 | Conventions          | this folder                                                                   | Canonical long-form rules                                                                               |
-| Path-scoped adapters | `../.cursor/rules/*.mdc`, `../.claude/rules/*.md`                             | Attach the matching doc when a file under the glob is edited; body is a pointer only                    |
+| Path-scoped adapters | `../.cursor/rules/*.mdc`, `../.claude/rules/*.md`                             | Load when a file under the glob is read or edited; body only points at the matching doc                 |
 | Skills               | `../.agents/skills/<name>/` (symlinked from `../.claude/skills/`)             | On-demand procedures: `pubky-code-review`, `pubky-staging-invite`, `sentry-nextjs-sdk`                  |
 | PR review            | `../.greptile/config.json`, `../.greptile/files.json`                         | Greptile rules and the docs it reads per path (it does not read `AGENTS.md` or the adapters on its own) |
 | Permissions          | `../.claude/settings.json`                                                    | Claude Code permission allowlist for the verification commands                                          |
 | Dev server           | `../.claude/launch.json`                                                      | Claude Code launch config: `npm run dev` on port 3000, `autoPort` picks a free port on conflict         |
 
 The Cursor commit rule (`../.cursor/rules/commit-message.mdc`) is agent-requested rather than path-scoped and intentionally has no Claude twin: Claude Code has no agent-requested rule type, and `../AGENTS.md` already points commits, branches and PRs at `commit-message.md`.
+
+Claude rules name their doc in plain text and never `@`-import it. Claude Code expands an import in a rule file when the session starts, whatever the rule's `paths:`, so importing would load every adapter's doc (about 170 KB) into every session. With a plain-text pointer, the rule appears when a matching file is read and the agent reads the doc then. Cursor rules keep their `@docs/…` reference.
 
 When a convention changes: update the doc here (plus an ADR when the rule is architectural), then `AGENTS.md` if the one-line summary changed, then `.greptile/config.json` if Greptile should enforce it. The adapters only point at docs, so they rarely need a change beyond a new glob.
 
