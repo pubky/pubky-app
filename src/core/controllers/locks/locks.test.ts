@@ -95,7 +95,7 @@ describe('LocksController (auth)', () => {
   it('completeAuthFromCallback exchanges the code and persists the session to the store', async () => {
     const result = await LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
 
-    expect(result.session).toBe(fakeSession);
+    expect(result?.session).toBe(fakeSession);
     expect(mocks.exchangeSessionCode).toHaveBeenCalledWith({ code: 'CODE', state: 'STATE' });
     const store = useLocksAuthStore.getState();
     expect(store.selectIsLocksAuthenticated()).toBe(true);
@@ -123,7 +123,7 @@ describe('LocksController (auth)', () => {
     const pending = LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
     await LocksController.logout();
     exchange.resolve({ session: fakeSession, secret: 'secret-abc' });
-    await pending;
+    await expect(pending).resolves.toBeNull();
 
     const store = useLocksAuthStore.getState();
     expect(store.selectLocksSession()).toBeNull();
@@ -140,7 +140,7 @@ describe('LocksController (auth)', () => {
     const pendingEarlier = LocksController.completeAuthFromCallback({ code: 'CODE-1', state: 'STATE-1' });
     const pendingLater = LocksController.completeAuthFromCallback({ code: 'CODE-2', state: 'STATE-2' });
     earlier.resolve({ session: fakeSession, secret: 'secret-1' });
-    await pendingEarlier;
+    await expect(pendingEarlier).resolves.toBeNull();
     later.resolve({ session: laterSession, secret: 'secret-2' });
     await pendingLater;
 
@@ -155,7 +155,7 @@ describe('LocksController (auth)', () => {
     const result = await LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
     await Promise.resolve();
 
-    expect(result.session).toBe(fakeSession);
+    expect(result?.session).toBe(fakeSession);
     expect(mocks.setLockServiceConfig).toHaveBeenCalledTimes(1);
     expect(useLocksAuthStore.getState().selectIsLocksAuthenticated()).toBe(true);
   });
@@ -197,6 +197,25 @@ describe('LocksController (auth)', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    it('does not keep a sign-in that started while the Lock Server signout was pending', async () => {
+      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+      const signout = Promise.withResolvers<void>();
+      mocks.signout.mockReturnValue(signout.promise);
+      const exchange = Promise.withResolvers<{ session: LocksSdkSession; secret: string }>();
+      mocks.exchangeSessionCode.mockReturnValue(exchange.promise);
+
+      const pendingLogout = LocksController.logout();
+      const pendingSignIn = LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
+      signout.resolve();
+      await pendingLogout;
+      exchange.resolve({ session: fakeSession, secret: 'secret-new' });
+      await pendingSignIn;
+
+      const store = useLocksAuthStore.getState();
+      expect(store.selectLocksSession()).toBeNull();
+      expect(store.selectLocksSessionSecret()).toBeNull();
     });
 
     it('clears the persisted secret without a network call when no live session exists', async () => {

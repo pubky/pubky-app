@@ -86,15 +86,15 @@ export class LocksController {
 
   /**
    * Completes auth from a validated callback: exchanges the one-time code for a session and
-   * persists it (bearer secret) to the store.
+   * persists it (bearer secret) to the store. Null when a logout or a later sign-in discarded it.
    */
-  static async completeAuthFromCallback(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {
+  static async completeAuthFromCallback(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult | null> {
     // Claimed before the exchange: a logout or a later sign-in, possibly with another Pubky Ring
     // identity (ADR-0022), must win even when this exchange finishes last.
     this.sessionGeneration++;
     const isCurrent = this.captureSession();
     const result = await LocksApplication.exchangeSessionCode(params);
-    if (!isCurrent()) return result;
+    if (!isCurrent()) return null;
     useLocksAuthStore.getState().init({ session: result.session, secret: result.secret });
     // Register the creator's default Lock Server pointer in the background on every auth, mirroring
     // the homeserver's post-auth write. Fire-and-forget: a failure (already reported to Sentry by the
@@ -121,7 +121,8 @@ export class LocksController {
         // Already reported to Sentry by the service Err factory; swallow so local teardown runs.
       }
     }
-    store.reset();
+    // Bumps again: a sign-in that started during the signout wait must not outlive the logout.
+    this.clearSession();
   }
 
   /**
