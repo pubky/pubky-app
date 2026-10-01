@@ -245,10 +245,10 @@ export function useStreamPagination({
         if (anchor !== undefined) setLastPostId(anchor);
         setHasMore(!reachedEnd);
       } catch (err) {
-        Logger.error('Failed to fetch stream slice:', err);
         // A stale failure belongs to a discarded request: surfacing it (error banner,
         // hasMore=false, onError) would poison the fresh stream's state.
         if (isStale()) return;
+        if (!isAppError(err)) Logger.error('Failed to fetch stream slice:', err);
         const errorMessage = isAppError(err) ? err.message : 'An unknown error occurred.';
         setError(errorMessage);
         setHasMore(false);
@@ -504,7 +504,11 @@ export function useStreamPagination({
       clearState();
     }
     fetchStreamSlice(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // A keyed feed replacement must also discard the old hook's pending work.
+    return () => {
+      fetchGenerationRef.current += 1;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pagination state changes must not restart the initial load
   }, [streamId]);
 
   // Inert result: an undefined `streamId` means the consumer is not paginating
