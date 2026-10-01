@@ -14,7 +14,7 @@ exports[`Search - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
     </div>
   </div>
   <div
-    class="flex w-full flex-col gap-4"
+    class="flex w-full flex-col gap-8"
     data-testid="container"
   >
     <div
@@ -95,7 +95,7 @@ exports[`Search - Snapshots > matches snapshot with full-text results 1`] = `
     </div>
   </div>
   <div
-    class="flex w-full flex-col gap-4"
+    class="flex w-full flex-col gap-8"
     data-testid="container"
   >
     <div
@@ -104,14 +104,25 @@ exports[`Search - Snapshots > matches snapshot with full-text results 1`] = `
       SearchContentTags
     </div>
     <div
-      data-cy="post-search-results"
+      class="flex w-full flex-col gap-4"
       data-testid="container"
     >
-      <div
-        data-testid="timeline-feed"
-        data-variant="search"
+      <h2
+        class="text-2xl font-light text-muted-foreground"
+        data-testid="heading-2"
       >
-        TimelineFeed
+        Posts
+      </h2>
+      <div
+        data-cy="post-search-results"
+        data-testid="container"
+      >
+        <div
+          data-testid="timeline-feed"
+          data-variant="search"
+        >
+          TimelineFeed
+        </div>
       </div>
     </div>
   </div>
@@ -153,7 +164,7 @@ exports[`Search - Snapshots > matches snapshot with tags present 1`] = `
     </div>
   </div>
   <div
-    class="flex w-full flex-col gap-4"
+    class="flex w-full flex-col gap-8"
     data-testid="container"
   >
     <div

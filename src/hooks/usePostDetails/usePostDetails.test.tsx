@@ -19,7 +19,7 @@ vi.mock('dexie-react-hooks', () => ({
     queryFn();
     // Return the mock value based on what mockReadPostDetails returns
     const result = mockReadPostDetails.mock.results[mockReadPostDetails.mock.results.length - 1];
-    return result?.value ?? defaultValue;
+    return result?.value == null ? defaultValue : { query: _deps[0], data: result.value };
   },
 }));
 

@@ -32,7 +32,7 @@
     },
     {
       "path": "docs/sentry.md",
-      "description": "What Sentry captures, the capture rule, drop rules, privacy scrubbing, source maps",
+      "description": "What Sentry and Pulse capture, the capture rule, drop rules, the Pulse consent gate, privacy scrubbing, source maps",
       "scope": [
         "src/libs/observability/**",
         "src/libs/error/**",

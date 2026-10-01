@@ -7,11 +7,12 @@ import type {
 } from '@/application/user/user.types';
 import { USER_TAGS_PER_PAGE } from '@/config/tags';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
-import type { TFetchUserParams, TPubkyListParams } from '@/controllers/user/user.type';
+import type { TFetchUserDetailsParams, TFetchUserParams, TPubkyListParams } from '@/controllers/user/user.type';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { HttpMethod } from '@/libs/http/http.types';
+import { hasHttpStatus, isAppError, toAppError } from '@/libs/error/error.utils';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
@@ -89,8 +90,12 @@ export class UserApplication {
    * @param params - Parameters containing user ID
    * @returns Promise resolving to user details or null if not found
    */
-  static async fetchDetails({ userId, isCurrent }: TReadProfileParams & { isCurrent?: () => boolean }) {
-    const nexusUserDetails = await NexusUserService.details({ user_id: userId });
+  static async fetchDetails({
+    userId,
+    isCurrent,
+    ...options
+  }: TFetchUserDetailsParams & { isCurrent?: () => boolean }) {
+    const nexusUserDetails = await NexusUserService.details({ user_id: userId, ...options });
     if (isCurrent && !isCurrent()) return null;
     await LocalProfileService.upsertDetails(nexusUserDetails);
     return await LocalUserService.readDetails({ userId });
@@ -286,29 +291,73 @@ export class UserApplication {
   }
 
   /**
+   * Follow syncs in flight, keyed by follower and followee. Overlapping commits for one pair
+   * (the same user on two surfaces, or the sign-in moderation follow next to a manual one) run
+   * in order, so an older failed sync compensates before a newer one writes; the `changed` gate
+   * in {@link syncFollow} then keeps a queued no-op from undoing the commit that came before it.
+   */
+  private static readonly inFlightFollows = new Map<string, Promise<void>>();
+
+  /**
    * Handles following or unfollowing a user.
-   * Performs local database operations and syncs with the homeserver.
+   * Writes the relationship locally first and syncs it to the homeserver; a failed sync runs the
+   * inverse local write so the live queries behind the Follow button, counts and friendship state
+   * revert instead of diverging from the homeserver (#2065).
    * @param params - Parameters containing event type, URLs, JSON data, and user IDs
    */
-  static async commitFollow({
+  static async commitFollow(params: TUserApplicationFollowParams): Promise<void> {
+    const key = `${params.follower}:${params.followee}`;
+    const previous = this.inFlightFollows.get(key) ?? Promise.resolve();
+    const run = previous.catch(() => undefined).then(() => this.syncFollow(params));
+    this.inFlightFollows.set(key, run);
+    try {
+      await run;
+    } finally {
+      if (this.inFlightFollows.get(key) === run) this.inFlightFollows.delete(key);
+    }
+  }
+
+  private static async syncFollow({
     eventType,
     followUrl,
     followJson,
     follower,
     followee,
     signal,
-  }: TUserApplicationFollowParams) {
+  }: TUserApplicationFollowParams): Promise<void> {
     if (signal?.aborted) return;
 
+    // A write that found the relationship already in its target state has nothing to compensate:
+    // rolling it back would undo a follow the homeserver already holds.
+    let changed = false;
     if (eventType === HttpMethod.PUT) {
-      await LocalFollowService.create({ follower, followee });
+      changed = await LocalFollowService.create({ follower, followee });
     } else if (eventType === HttpMethod.DELETE) {
-      await LocalFollowService.delete({ follower, followee });
+      changed = await LocalFollowService.delete({ follower, followee });
     }
 
     if (signal?.aborted) return;
 
-    await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
+    try {
+      await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
+    } catch (error) {
+      // An already absent homeserver record agrees with the optimistic unfollow.
+      if (eventType === HttpMethod.DELETE && hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return;
+      // A torn-down session skips the compensation: its local rows no longer belong to this flow.
+      if (changed && !signal?.aborted) {
+        try {
+          if (eventType === HttpMethod.PUT) {
+            await LocalFollowService.delete({ follower, followee });
+          } else if (eventType === HttpMethod.DELETE) {
+            await LocalFollowService.create({ follower, followee });
+          }
+        } catch (rollbackError) {
+          if (!isAppError(rollbackError))
+            Logger.error('Failed to rollback local follow write', { eventType, follower, followee, rollbackError });
+        }
+      }
+      throw toAppError(error, ErrorService.Homeserver, 'commitFollow');
+    }
   }
 
   /**

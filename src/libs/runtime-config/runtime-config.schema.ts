@@ -233,6 +233,9 @@ export type NetworkRuntimeConfig = z.infer<typeof networkConfigValueSchema>;
  * Validates `window.__PUBKY_CONFIG__`.
  */
 export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
+  /** Optional browser telemetry. Only a client key is needed; endpoint overrides the SDK default. */
+  pulseClientKey: z.string().startsWith('pulse_client_').optional(),
+  pulseEndpoint: urlValue.optional(),
   /** Sentry DSN shared by browser/server/edge. Absent/empty disables Sentry entirely. */
   sentryDsn: urlValue.optional(),
   /** Environment tag attached to every Sentry event. Absent falls back to NODE_ENV (see sentry.ts). */
@@ -282,6 +285,10 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   email: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.email),
   appStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.appStoreUrl),
   playStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.playStoreUrl),
+  /** Lock Server pubky the composer's lock flow signs into. Absent = Locks disabled. */
+  lockServer: nonEmptyStringValue.optional(),
+  /** Paykit Server address, where a creator connects the account that receives payments. Absent = Locks disabled. */
+  paykitServerUrl: urlValue.optional(),
 });
 
 const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
@@ -309,6 +316,10 @@ export const runtimeEnvInputSchema = z
     pkarrRelays: pkarrRelaysFromString,
     testnet: testnetFromString,
     deployEnv: deployEnvValue,
+    lockServer: optionalTrimmedString,
+    paykitServerUrl: optionalUrlFromString,
+    pulseClientKey: optionalTrimmedString,
+    pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -388,6 +399,10 @@ export const runtimeEnvInputSchemaWithDefaults = z
     pkarrRelays: z.string().default(JSON.stringify(NETWORK_RUNTIME_DEFAULTS.pkarrRelays)).pipe(pkarrRelaysFromString),
     testnet: z.string().default(String(NETWORK_RUNTIME_DEFAULTS.testnet)).pipe(testnetFromString),
     deployEnv: deployEnvValue.default(NETWORK_RUNTIME_DEFAULTS.deployEnv),
+    lockServer: optionalTrimmedString,
+    paykitServerUrl: optionalUrlFromString,
+    pulseClientKey: optionalTrimmedString,
+    pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -464,6 +479,10 @@ const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
 
 export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ...NETWORK_RUNTIME_ENV_NAMES,
+  lockServer: 'PUBKY_RUNTIME_LOCK_SERVER',
+  paykitServerUrl: 'PUBKY_RUNTIME_PAYKIT_SERVER_URL',
+  pulseClientKey: 'PUBKY_RUNTIME_PULSE_CLIENT_KEY',
+  pulseEndpoint: 'PUBKY_RUNTIME_PULSE_ENDPOINT',
   sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',
   sentryEnvironment: 'PUBKY_RUNTIME_SENTRY_ENVIRONMENT',
   sentryTracesSampleRate: 'PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE',

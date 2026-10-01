@@ -4,6 +4,7 @@ import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { asOpaque } from '@/test-utils/type-assertions';
 
@@ -106,7 +107,10 @@ describe('ProfileApplication', () => {
         image: profileJson.image,
         links: profileJson.links,
         status: null,
+        localUpdatedAt: expect.any(Number),
       });
+      expect(localProfile?.nexusIndexedAt).toBeUndefined();
+      expect(await UserTtlModel.findById(pubky)).toMatchObject({ lastUpdatedAt: localProfile?.localUpdatedAt });
     });
 
     it('does not persist the local profile when the homeserver write fails', async () => {
@@ -219,6 +223,74 @@ describe('ProfileApplication', () => {
 
       const updatedUser = await UserDetailsModel.findById(testPubky);
       expect(updatedUser!.status).toBeNull();
+    });
+
+    it('clears a cached tombstone after the status is written', async () => {
+      await UserDetailsModel.create({
+        id: testPubky,
+        name: 'Test User',
+        bio: '',
+        image: null,
+        status: null,
+        links: null,
+        indexed_at: Date.now(),
+        deleted: true,
+      });
+
+      const mockUserResult = {
+        user: { toJson: vi.fn(() => ({ name: 'Test User', bio: '', image: '', links: [], status: 'back' })) },
+        meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
+      };
+      vi.spyOn(UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
+      vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+
+      await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+
+      const updatedUser = await UserDetailsModel.findById(testPubky);
+      expect(updatedUser!.status).toBe('back');
+      expect(updatedUser!.deleted).toBe(false);
+    });
+
+    it('refuses to republish a tombstoned row, so the cleared name never reaches the homeserver', async () => {
+      await UserDetailsModel.create({
+        id: testPubky,
+        name: '',
+        bio: '',
+        image: null,
+        status: null,
+        links: null,
+        indexed_at: Date.now(),
+        deleted: true,
+      });
+      const normalizerSpy = vi.spyOn(UserNormalizer, 'to');
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+
+      await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toThrow(
+        'Cannot update the status of a deleted profile',
+      );
+
+      expect(normalizerSpy).not.toHaveBeenCalled();
+      expect(requestSpy).not.toHaveBeenCalled();
+      const unchanged = await UserDetailsModel.findById(testPubky);
+      expect(unchanged!.status).toBeNull();
+    });
+
+    it('refuses when the cached row still carries the legacy [DELETED] name', async () => {
+      await UserDetailsModel.create({
+        id: testPubky,
+        name: '[DELETED]',
+        bio: '',
+        image: null,
+        status: null,
+        links: null,
+        indexed_at: Date.now(),
+      });
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+
+      await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toThrow(
+        'Cannot update the status of a deleted profile',
+      );
+      expect(requestSpy).not.toHaveBeenCalled();
     });
 
     it('throws error when user not found', async () => {

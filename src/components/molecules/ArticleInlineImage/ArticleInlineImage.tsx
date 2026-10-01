@@ -5,7 +5,7 @@ import { ImageOff } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { ArticleInlineImageProps } from './ArticleInlineImage.types';
-import { resolveArticleImageSrc } from './ArticleInlineImage.utils';
+import { resolveArticleImageSrc, resolveUnlockedArticleImageSrc } from './ArticleInlineImage.utils';
 
 /**
  * Renders one inline image inside an article body.
@@ -19,19 +19,23 @@ import { resolveArticleImageSrc } from './ArticleInlineImage.utils';
  * Rendered inside markdown paragraphs, so both the image and the placeholder
  * are phrasing-safe (`img` / `span`) — no block elements.
  */
-export const ArticleInlineImage = ({ src, alt, attachments, authorId, postId }: ArticleInlineImageProps) => {
+export const ArticleInlineImage = ({ src, alt, ...source }: ArticleInlineImageProps) => {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const localAttachments = useLocalFilesStore((state) => state.posts[postId]);
+  const localAttachments = useLocalFilesStore((state) => ('postId' in source ? state.posts[source.postId] : undefined));
 
-  const resolved = resolveArticleImageSrc({ src, attachments, authorId });
+  const resolved =
+    'localAttachments' in source
+      ? resolveUnlockedArticleImageSrc({ src, localAttachments: source.localAttachments })
+      : resolveArticleImageSrc({ src, attachments: source.attachments, authorId: source.authorId });
 
   // Local entries are index-aligned with attachments; the store only holds
   // image object URLs for posts created/edited this session. The length guard
   // mirrors useEditAttachments: right after an edit the store already has the
   // NEW order while this render still shows the stale body — indexing across
   // that mismatch would serve the wrong image.
-  const alignedLocalAttachments = localAttachments?.length === attachments.length ? localAttachments : undefined;
+  const alignedLocalAttachments =
+    'attachments' in source && localAttachments?.length === source.attachments.length ? localAttachments : undefined;
   const localUrl =
     resolved.kind === 'attachment' && alignedLocalAttachments?.[resolved.index]?.type.startsWith('image')
       ? alignedLocalAttachments[resolved.index].urls.main

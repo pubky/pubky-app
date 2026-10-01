@@ -4,7 +4,7 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
-import type { Pubky } from '@/models/models.types';
+import type { PostKind, Pubky } from '@/models/models.types';
 import {
   buildSortedAuthorStreamId,
   buildWotDomainStreamId,
@@ -33,6 +33,7 @@ export function layoutToString(layout: PubkyAppFeedLayout): string {
     [PubkyAppFeedLayout.Wide]: 'wide',
     [PubkyAppFeedLayout.Visual]: 'visual',
     [PubkyAppFeedLayout.List]: 'list',
+    [PubkyAppFeedLayout.Cards]: 'cards',
   };
   return map[layout];
 }
@@ -45,8 +46,8 @@ export function sortToString(sort: PubkyAppFeedSort): string {
   return map[sort];
 }
 
-export function postKindToString(kind: PubkyAppPostKind): string {
-  const map: Record<PubkyAppPostKind, string> = {
+export function postKindToString(kind: PubkyAppPostKind): PostKind {
+  const map: Record<PubkyAppPostKind, PostKind> = {
     [PubkyAppPostKind.Short]: 'short',
     [PubkyAppPostKind.Long]: 'long',
     [PubkyAppPostKind.Image]: 'image',

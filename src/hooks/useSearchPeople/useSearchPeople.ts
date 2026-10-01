@@ -9,6 +9,7 @@ import { StreamUserController } from '@/controllers/stream/users/users';
 import { UserController } from '@/controllers/user/user';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { Logger } from '@/libs/logger/logger';
+import { resolveUserDisplayName } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import type { UserListItemData } from '@/organisms/UserListItem/UserListItem.types';
@@ -231,8 +232,8 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
       const relationship = userRelationshipsMap.get(id);
       return {
         id,
-        name: details.name,
-        avatarUrl: details.image ? FileController.getAvatarUrl(id) : null,
+        name: resolveUserDisplayName(details),
+        avatarUrl: details.image ? FileController.getAvatarUrl(id, details.indexed_at) : null,
         stats: {
           tags: counts?.tagged ?? 0,
           posts: counts?.posts ?? 0,

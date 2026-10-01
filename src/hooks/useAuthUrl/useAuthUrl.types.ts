@@ -13,6 +13,15 @@ export type UseAuthUrlOptions =
       type: 'signup';
       /** The invite code for signup. Required when type is 'signup'. */
       inviteCode: string;
+    }
+  | {
+      /** Whether to automatically fetch the auth URL on mount. @default true */
+      autoFetch?: boolean;
+      /**
+       * Same URL as `signin`, but approval swaps the stored session for the new one instead of
+       * running the sign-in routine (#2373).
+       */
+      type: 'upgrade';
     };
 
 export interface UseAuthUrlReturn {

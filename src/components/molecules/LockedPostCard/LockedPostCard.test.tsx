@@ -1,0 +1,154 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import { LockedPostCard, SLIDE_MS } from './LockedPostCard';
+
+describe('LockedPostCard', () => {
+  it('steps down a shade inside a post preview, where the surround is already bg-muted', () => {
+    render(
+      <PostPreviewNestingProvider>
+        <LockedPostCard title="Secret" priceSats="1234" />
+      </PostPreviewNestingProvider>,
+    );
+
+    const card = screen.getByTestId('locked-post-card');
+    expect(card).toHaveClass('bg-card');
+    expect(card).not.toHaveClass('bg-muted');
+  });
+
+  it('keeps bg-muted outside a post preview', () => {
+    render(<LockedPostCard title="Secret" priceSats="1234" />);
+
+    expect(screen.getByTestId('locked-post-card')).toHaveClass('bg-muted');
+  });
+
+  it('falls back to the default title while the creator has not typed one', () => {
+    render(<LockedPostCard title="" />);
+    expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Locked content');
+  });
+
+  it('falls back to the default title for a whitespace-only title', () => {
+    render(<LockedPostCard title="   " />);
+    expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Locked content');
+  });
+
+  it('shows the creator-typed title', () => {
+    render(<LockedPostCard title="My most famous quote" />);
+    expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('My most famous quote');
+  });
+
+  it('shows the grouped price beside Unlock', () => {
+    render(<LockedPostCard title="" priceSats="1000" />);
+    expect(screen.getByText('₿1,000')).toBeInTheDocument();
+    expect(screen.queryByText('••••••')).not.toBeInTheDocument();
+  });
+
+  // The reader's lock file arrives after the first paint, and can fail to arrive at all. The mask
+  // fills the slot until then so the pill is never half-empty.
+  it('falls back to the mask while the price is unknown', () => {
+    render(<LockedPostCard title="" />);
+    expect(screen.getByText('••••••')).toBeInTheDocument();
+  });
+
+  // Composer preview: no `onUnlock`, so the lock (which does not exist until Post) cannot be opened.
+  it('renders the Unlock control as inert without an onUnlock handler', () => {
+    render(<LockedPostCard title="" />);
+    const button = screen.getByRole('button', { name: 'Unlock' });
+
+    expect(button).toBeDisabled();
+    expect(button).toHaveClass('disabled:opacity-100');
+    expect(button.parentElement).toHaveClass('cursor-not-allowed', 'opacity-50');
+  });
+
+  // Reader: an `onUnlock` handler enables the control; it runs after the slide-over transition.
+  it('enables Unlock and calls onUnlock once the slide completes', () => {
+    vi.useFakeTimers();
+    try {
+      const onUnlock = vi.fn();
+      render(<LockedPostCard title="" onUnlock={onUnlock} />);
+
+      const button = screen.getByRole('button', { name: 'Unlock' });
+      expect(button).toBeEnabled();
+
+      fireEvent.click(button);
+      // Deferred until the button finishes sliding over the mask.
+      expect(onUnlock).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not fire onUnlock after the card unmounts mid-slide', () => {
+    vi.useFakeTimers();
+    try {
+      const onUnlock = vi.fn();
+      const { unmount } = render(<LockedPostCard title="" onUnlock={onUnlock} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+      unmount();
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ignores a second click while the slide is pending (no double unlock)', () => {
+    vi.useFakeTimers();
+    try {
+      const onUnlock = vi.fn();
+      render(<LockedPostCard title="" onUnlock={onUnlock} />);
+      const button = screen.getByRole('button', { name: 'Unlock' });
+      fireEvent.click(button);
+      fireEvent.click(button);
+      vi.advanceTimersByTime(SLIDE_MS);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('honours an explicit disabled even with a handler', () => {
+    const onUnlock = vi.fn();
+    render(<LockedPostCard title="" onUnlock={onUnlock} disabled />);
+    expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+  });
+
+  it('renders an editable title input bound to editableTitle in composer mode', () => {
+    const onChange = vi.fn();
+    render(<LockedPostCard title="" editableTitle={{ value: 'My quote', onChange }} />);
+
+    const input = screen.getByRole('textbox', { name: 'Lock title' });
+    expect(input).toHaveValue('My quote');
+    fireEvent.change(input, { target: { value: 'Updated' } });
+    expect(onChange).toHaveBeenCalledWith('Updated');
+  });
+
+  it('swaps the icon (StickyNote → Check) while the title is being edited', () => {
+    render(<LockedPostCard title="" editableTitle={{ value: '', onChange: vi.fn() }} />);
+    const input = screen.getByRole('textbox', { name: 'Lock title' });
+
+    expect(document.querySelector('.lucide-sticky-note')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-check')).not.toBeInTheDocument();
+
+    fireEvent.focus(input);
+    expect(document.querySelector('.lucide-check')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-sticky-note')).not.toBeInTheDocument();
+
+    fireEvent.blur(input);
+    expect(document.querySelector('.lucide-check')).not.toBeInTheDocument();
+  });
+
+  it('shows a static, non-editable title in reader mode', () => {
+    render(<LockedPostCard title="Secret" />);
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Secret');
+  });
+
+  it('applies two-line clamping and anywhere wrapping to a reader title', () => {
+    render(<LockedPostCard title="A long lock title" />);
+    expect(screen.getByRole('heading', { level: 4 })).toHaveClass('line-clamp-2', 'wrap-anywhere');
+  });
+});
