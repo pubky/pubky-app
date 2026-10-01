@@ -32,6 +32,16 @@ export type TGetPaykitSetupUrlParams = {
   state: string;
 };
 
+/**
+ * Whether the creator's Paykit payout account is set up, as the Lock Server reports it. `unavailable`
+ * means Paykit could not answer, which says nothing about the setup.
+ */
+const paykitSetupStatusSchema = z.enum(['ready', 'setup_required', 'unavailable']);
+export type TPaykitSetupStatus = z.infer<typeof paykitSetupStatusSchema>;
+
+/** Setup-status response (`session.creator.paykitSetupStatus()`, typed `any` by the SDK). */
+export const paykitSetupStatusResponseSchema = z.object({ status: paykitSetupStatusSchema });
+
 /** Params to exchange a one-time callback code for a Locks session. */
 export type TExchangeSessionCodeParams = {
   code: string;

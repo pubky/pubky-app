@@ -20,6 +20,7 @@ import type {
   TGuardedResource,
   TLocksSessionResult,
   TPaykitConnectionState,
+  TPaykitSetupStatus,
   TRegisterGuardedResourceResult,
   TUnlockedAttachment,
   TUnlockedContent,
@@ -65,6 +66,11 @@ export class LocksApplication {
 
   static generatePaykitSetupUrl(params: TGeneratePaykitSetupUrlParams): string {
     return LocksService.generatePaykitSetupUrl(params);
+  }
+
+  /** Whether the Paykit payout account of the current Locks session's creator is set up. */
+  static fetchPaykitSetupStatus(): Promise<TPaykitSetupStatus> {
+    return LocksService.lookupPaykitSetupStatus();
   }
 
   /** Whether the Lock Server at `origin` is ready to serve — gates the auth flow before the iframe. */
