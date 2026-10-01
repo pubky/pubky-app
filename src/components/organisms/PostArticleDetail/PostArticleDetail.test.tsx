@@ -69,12 +69,28 @@ vi.mock('@/atoms/Typography/Typography', () => ({
   ),
 }));
 
+// Recorded rather than rendered, so the snapshots do not carry it.
+const postTextProps = vi.hoisted(() => ({ articleImages: undefined as unknown }));
+
 vi.mock('@/molecules/PostText/PostText', () => ({
-  PostText: ({ content, isArticle, fullArticle }: { content: string; isArticle?: boolean; fullArticle?: boolean }) => (
-    <div data-testid="post-text" data-is-article={isArticle} data-full-article={fullArticle}>
-      {content}
-    </div>
-  ),
+  PostText: ({
+    content,
+    isArticle,
+    fullArticle,
+    articleImages,
+  }: {
+    content: string;
+    isArticle?: boolean;
+    fullArticle?: boolean;
+    articleImages?: unknown;
+  }) => {
+    postTextProps.articleImages = articleImages;
+    return (
+      <div data-testid="post-text" data-is-article={isArticle} data-full-article={fullArticle}>
+        {content}
+      </div>
+    );
+  },
 }));
 
 vi.mock('../DialogCheckLink/DialogCheckLink', () => ({
@@ -342,6 +358,12 @@ describe('PostArticleDetail', () => {
     expect(screen.getByTestId('post-text')).toHaveTextContent('Test article body content');
     expect(screen.getByTestId('post-text')).toHaveAttribute('data-is-article', 'true');
     expect(screen.getByTestId('post-text')).toHaveAttribute('data-full-article', 'true');
+  });
+
+  it("resolves body images through the post's own attachments and their owner", () => {
+    render(<PostArticleDetail {...defaultProps} />);
+
+    expect(postTextProps.articleImages).toEqual({ attachments: [], authorId: 'user123', postId: 'user123:post456' });
   });
 
   it('renders dialogs in closed state initially', () => {

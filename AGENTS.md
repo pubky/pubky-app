@@ -32,6 +32,8 @@ Hard constraints (review-enforced, not compiler-enforced; `docs/architecture.md`
 - Controllers NEVER call Services directly and never do IO; they go through Application.
 - Coordinators NEVER call Application; they go through Controllers.
 - Application NEVER accesses Stores and never calls Controllers; only Controllers manage stores.
+- Services NEVER access Stores, except session reads in `HomeserverService` / `LocksService` via `getState()`
+  (ADR-0004); reads only, never writes.
 - Pipes are pure: NO IO, NO side effects. Services never call up. Models touch Dexie only.
 - Cross-Application calls (ADR-0009): only PostApplication, NotificationApplication, BootstrapApplication, MigrationApplication,
   HotApplication, PostStreamApplication and TtlApplication may call other Applications; acyclic; depth 1, with one depth-2

@@ -155,9 +155,7 @@ export const PostText = memo(function PostText({
                     <ArticleInlineImage
                       src={typeof props.src === 'string' ? props.src : undefined}
                       alt={props.alt}
-                      attachments={articleImages.attachments}
-                      authorId={articleImages.authorId}
-                      postId={articleImages.postId}
+                      {...articleImages}
                     />
                   );
                 },

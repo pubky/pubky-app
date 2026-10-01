@@ -126,7 +126,14 @@ export class PostNormalizer {
       ];
       const attachments = attachmentList.length > 0 ? attachmentList : null;
 
-      return builder.createPost(post.content, post.kind, post.parentUri ?? null, embedObject, attachments);
+      return builder.createPost(
+        post.content,
+        post.kind,
+        post.parentUri ?? null,
+        embedObject,
+        attachments,
+        post.lock ?? null,
+      );
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -197,12 +204,16 @@ export class PostNormalizer {
     const nextAttachments =
       attachments === undefined ? postDetails.attachments : attachments && attachments.length > 0 ? attachments : null;
 
-    const originalPost = new PubkyAppPost(
+    // Everything but the content is carried over from this pre-edit post, so `lock` has to be on it —
+    // and `new_with_lock` is the only constructor that accepts one. Omit it and editing an
+    // announcement republishes it with no link to the paid content, unrecoverably.
+    const originalPost = PubkyAppPost.new_with_lock(
       postDetails.content,
       kind ?? this.mapKindToEnum(postDetails.kind),
       postRelationships?.replied ?? null,
       embedObject ?? null,
       nextAttachments,
+      postDetails.lock ?? null,
     );
 
     const result = builder.editPost(originalPost, postId, content);
