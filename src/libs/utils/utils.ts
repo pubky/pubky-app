@@ -245,7 +245,14 @@ export function generateRandomColor(str: string): string {
   ];
 
   // Select pattern based on the hash
-  const pattern = patterns[positiveHash % patterns.length];
+  const patternIndex = positiveHash % patterns.length;
+  // The blue-heavy patterns span 220–260° when their variable channel is <= 85.
+  // Remap only that range to teal/cyan (165–195°), keeping the hash's variation.
+  if ((patternIndex === 3 || patternIndex === 4) && randomByte <= 85) {
+    const cyanHex = (255 - Math.round(randomByte * 0.75)).toString(16).padStart(2, '0');
+    return patternIndex === 3 ? `#00${cyanHex}FF` : `#00FF${cyanHex}`;
+  }
+  const pattern = patterns[patternIndex];
 
   return `#${pattern}`;
 }
