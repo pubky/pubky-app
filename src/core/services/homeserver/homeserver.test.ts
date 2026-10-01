@@ -825,6 +825,108 @@ describe('HomeserverService', () => {
         });
       });
     });
+
+    describe('Passport grant flow', () => {
+      const xCallback = {
+        xSource: 'Pubky',
+        xSuccess: 'https://app.example.com/passport/return?attempt=a&outcome=success',
+        xError: 'https://app.example.com/passport/return?attempt=a&outcome=error',
+        xCancel: 'https://app.example.com/passport/return?attempt=a&outcome=cancel',
+      };
+
+      it('starts a sign-in grant flow with the x-callback metadata and default capabilities', async () => {
+        const result = await HomeserverService.startGrantFlow({
+          purpose: 'signin',
+          capabilities: '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r',
+          generation: '',
+          xCallback,
+        });
+
+        expect(mockState.startGrantAuthFlow).toHaveBeenCalledWith(
+          '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r',
+          'signin-kind',
+          expect.objectContaining({ relay: expect.stringContaining('/inbox'), xCallback }),
+        );
+        expect(typeof result.authorizationUrl).toBe('string');
+        expect(result.awaitApproval).toBeInstanceOf(Promise);
+        expect(typeof result.cancelAuthFlow).toBe('function');
+      });
+
+      it('honors custom capabilities', async () => {
+        await HomeserverService.startGrantFlow({
+          purpose: 'signin',
+          capabilities: '/custom/path/:r',
+          generation: '',
+          xCallback,
+        });
+
+        expect(mockState.startGrantAuthFlow).toHaveBeenCalledWith(
+          '/custom/path/:r',
+          'signin-kind',
+          expect.objectContaining({ relay: expect.stringContaining('/inbox'), xCallback }),
+        );
+      });
+
+      it('leaves the Pubky Ring flow free of callbacks', async () => {
+        await HomeserverService.startGrantFlow({
+          purpose: 'signin',
+          capabilities: '/pub/pubky.app/:rw',
+          generation: '',
+        });
+
+        expect(mockState.startGrantAuthFlow).toHaveBeenCalledTimes(1);
+        expect(mockState.startGrantAuthFlow.mock.calls[0]?.[2].xCallback).toBeUndefined();
+      });
+
+      it('cancels polling when cancelAuthFlow is called', async () => {
+        vi.useFakeTimers();
+        try {
+          const tryPollOnce = vi.fn().mockResolvedValue(undefined);
+          const free = vi.fn();
+          mockState.startGrantAuthFlow.mockReturnValue({
+            authorizationUrl: 'pubkyauth://signin_grant?caps=x',
+            saveDelegated: () => 'saved-delegated',
+            saveLocal: () => 'saved-local',
+            tryPollOnce,
+            free,
+          });
+
+          const result = await HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r',
+            generation: '',
+            xCallback,
+          });
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
+
+          result.cancelAuthFlow();
+          await vi.runAllTimersAsync();
+
+          await rejection;
+          expect(free).toHaveBeenCalledTimes(1);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('throws an app error when the flow fails to start', async () => {
+        mockState.startGrantAuthFlow.mockImplementation(() => {
+          throw new Error('Flow initialization failed');
+        });
+
+        await expect(
+          HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r',
+            generation: '',
+            xCallback,
+          }),
+        ).rejects.toMatchObject({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.INTERNAL_ERROR,
+        });
+      });
+    });
   });
 
   // ===========================================================================
@@ -1457,6 +1559,88 @@ describe('HomeserverService', () => {
         mockState.publicStorageGet.mockRejectedValue(networkError);
 
         await expect(HomeserverService.get(testUrl)).rejects.toMatchObject({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.INTERNAL_ERROR,
+        });
+      });
+    });
+
+    describe('getBytesIfExists', () => {
+      const OWNED_URL = 'pubky://user/pub/marker.json';
+
+      beforeEach(() => {
+        mockState.currentSession = createMockSession();
+      });
+
+      it('reports the server write time, so callers can order by it', async () => {
+        mockState.sessionStorageGet.mockResolvedValue(
+          new Response('bytes', { status: 200, headers: { 'last-modified': 'Wed, 05 Aug 2026 10:00:00 GMT' } }),
+        );
+
+        const result = await HomeserverService.getBytesIfExists(OWNED_URL);
+
+        expect(result?.modifiedAt).toBe(Date.UTC(2026, 7, 5, 10, 0, 0));
+      });
+
+      it.each([
+        ['no last-modified header', {}],
+        ['an unparseable last-modified header', { 'last-modified': 'not a date' }],
+      ])('still returns the bytes with a null time given %s', async (_label, headers) => {
+        mockState.sessionStorageGet.mockResolvedValue(new Response('bytes', { status: 200, headers }));
+
+        const result = await HomeserverService.getBytesIfExists(OWNED_URL);
+
+        expect(result?.modifiedAt).toBeNull();
+        expect(new TextDecoder().decode(result?.bytes)).toBe('bytes');
+      });
+
+      it('should return the bytes of an owned resource', async () => {
+        mockState.sessionStorageGet.mockResolvedValue(new Response('hello', { status: 200 }));
+
+        const result = await HomeserverService.getBytesIfExists(OWNED_URL);
+
+        expect(mockState.sessionStorageGet).toHaveBeenCalledWith('/pub/marker.json');
+        expect(new TextDecoder().decode(result?.bytes)).toBe('hello');
+      });
+
+      it('should reject missing authentication without treating it as a missing file', async () => {
+        mockState.currentSession = null;
+
+        await expect(HomeserverService.getBytesIfExists(OWNED_URL)).rejects.toMatchObject({
+          code: AuthErrorCode.UNAUTHORIZED,
+        });
+        expect(mockState.sessionStorageGet).not.toHaveBeenCalled();
+      });
+
+      it('should return null when the resource is absent (404 response)', async () => {
+        mockState.sessionStorageGet.mockResolvedValue(new Response('not found', { status: 404 }));
+
+        await expect(HomeserverService.getBytesIfExists(OWNED_URL)).resolves.toBeNull();
+      });
+
+      // `storage.get` resolves for any status, so a non-404 failure must not be read as "absent" —
+      // the resource may exist and the caller would record a false absence.
+      it.each([
+        // 401 must classify as SESSION_EXPIRED like every other read (`assertOk`), not UNAUTHORIZED.
+        [401, ErrorCategory.Auth, AuthErrorCode.SESSION_EXPIRED],
+        [403, ErrorCategory.Auth, AuthErrorCode.FORBIDDEN],
+        [500, ErrorCategory.Server, ServerErrorCode.INTERNAL_ERROR],
+      ])('should reject on a %i response instead of reporting absence', async (status, category, code) => {
+        mockState.sessionStorageGet.mockResolvedValue(new Response('nope', { status }));
+
+        await expect(HomeserverService.getBytesIfExists(OWNED_URL)).rejects.toMatchObject({ category, code });
+      });
+
+      it('should return null when the SDK rejects with a 404', async () => {
+        mockState.sessionStorageGet.mockRejectedValue(Object.assign(new Error('Not found'), { statusCode: 404 }));
+
+        await expect(HomeserverService.getBytesIfExists(OWNED_URL)).resolves.toBeNull();
+      });
+
+      it('should reject when the SDK rejects for any other reason', async () => {
+        mockState.sessionStorageGet.mockRejectedValue(new Error('Network request failed'));
+
+        await expect(HomeserverService.getBytesIfExists(OWNED_URL)).rejects.toMatchObject({
           category: ErrorCategory.Server,
           code: ServerErrorCode.INTERNAL_ERROR,
         });

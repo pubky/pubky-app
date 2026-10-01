@@ -1,8 +1,15 @@
-import { AuthFlowKind, type Capabilities, type GrantAuthFlow, type Pubky, PublicKey } from '@synonymdev/pubky';
+import {
+  AuthFlowKind,
+  type Capabilities,
+  type GrantAuthFlow,
+  type Pubky,
+  PublicKey,
+  type XCallbackParams,
+} from '@synonymdev/pubky';
 import { z } from 'zod';
 import { getAuthClientId } from '@/config/auth';
 import { getDefaultHttpRelay, getDeployEnv, getHomeserver, getTestnet } from '@/config/network';
-import { createCanceledError } from '@/libs/auth/cancellation';
+import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import type { TGenerateAuthUrlResult } from './homeserver.types';
 import { createCancelableAuthApproval } from './homeserver.utils';
 
@@ -24,6 +31,7 @@ export interface GrantFlowRequest {
   expectedPubky?: string;
   inviteCode?: string;
   fresh?: boolean;
+  xCallback?: XCallbackParams;
 }
 
 export class GrantFlowService {
@@ -49,6 +57,7 @@ export class GrantFlowService {
     ).join('');
     const context = JSON.stringify({
       purpose: request.purpose,
+      xCallback: request.xCallback,
       capabilities: request.capabilities,
       expectedPubky: request.expectedPubky,
       generation: request.generation,
@@ -85,6 +94,7 @@ export class GrantFlowService {
       flow = await sdk.startGrantAuthFlow(request.capabilities, kind, {
         clientId: getAuthClientId(),
         relay: getDefaultHttpRelay(),
+        xCallback: request.xCallback,
       });
       if (version !== this.version) {
         flow.free();

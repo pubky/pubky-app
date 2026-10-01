@@ -295,6 +295,7 @@ describe('useProfileConnections', () => {
       expect(connection1?.name).toBe('John Doe');
       expect(connection1?.bio).toBe('Test bio');
       expect(connection1?.avatarUrl).toBe('https://cdn.example.com/avatar/user-1.png');
+      expect(mockMocks.mockGetAvatarUrl).toHaveBeenCalledWith('user-1', 1704067200000);
       expect(connection1?.stats?.tags).toBe(4);
       expect(connection1?.stats?.posts).toBe(5);
       expect(connection1?.isFollowing).toBe(false);

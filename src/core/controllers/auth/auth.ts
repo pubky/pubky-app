@@ -9,19 +9,20 @@ import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-q
 import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, LOCKS_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
-import { getDeployEnv, getHomeserver } from '@/config/network';
+import { getDeployEnv, getHomeserver, HOMESERVER_CAPABILITIES } from '@/config/network';
 import type {
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
   TSignUpParams,
 } from '@/controllers/auth/auth.types';
+import { LocksController } from '@/controllers/locks/locks';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { clearDatabase } from '@/database/franky/franky.helpers';
-import { createCanceledError } from '@/libs/auth/cancellation';
 import { hasCapabilities } from '@/libs/auth/capabilities';
 import type { PersistedAuth } from '@/libs/auth/session.types';
+import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -36,7 +37,11 @@ import { NotificationNormalizer } from '@/pipes/notification/notification.normal
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import type { GrantFlowRequest } from '@/services/homeserver/grant-flow';
-import type { TGenerateAuthUrlResult, THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
+import type {
+  TGenerateAuthUrlResult,
+  TGeneratePassportAuthUrlParams,
+  THomeserverSessionResult,
+} from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { useHotStore } from '@/stores/hot/hot.store';
@@ -83,6 +88,9 @@ export class AuthController {
     result: Promise<TGenerateAuthUrlResult>;
     cancel: (() => void) | null;
   } | null = null;
+  // Passport stops popup timers after approval, before it asks us to persist/bootstrap the session.
+  // Keep the original flow ownership until that second step so a stale popup cannot adopt a session.
+  private static pendingSessionAdoptions = new WeakMap<Session, () => Promise<void>>();
   private static epoch = 0;
   private static restorePromise: Promise<boolean> | null = null;
   private static signupPromise: Promise<void> | null = null;
@@ -235,7 +243,7 @@ export class AuthController {
         await this.retrySessionRetirement();
         if (!isCurrent()) return false;
         if (useAuthStore.getState().hasProfile === null || useAuthStore.getState().needsAccountSync)
-          await this.bounded(this.finishProfileBootstrap(result.session, generation), 'restoreProfile');
+          await this.bounded(this.finishProfileBootstrap(result.session, generation, true), 'restoreProfile');
         if (isCurrent()) useAuthStore.getState().setRestoreStatus('ready');
         return isCurrent();
       } catch (error) {
@@ -476,7 +484,7 @@ export class AuthController {
     }
     // Once the reference is durable, this tab must adopt it even if UI cancellation arrives late.
     previous.init({ ...record, session });
-    useAuthStore.getState().setRestoreStatus('restoring');
+    if (!preserveContext) useAuthStore.getState().setRestoreStatus('restoring');
     try {
       if (!sameAccount) {
         this.cancelModerationFollow();
@@ -497,12 +505,20 @@ export class AuthController {
     }
   }
 
-  private static async finishProfileBootstrap(session: Session, generation: string): Promise<void> {
+  private static async finishProfileBootstrap(session: Session, generation: string, restoring = false): Promise<void> {
     const signInStore = useSignInStore.getState();
     signInStore.reset();
     signInStore.setAuthUrlResolved(true);
     const pubky = Identity.z32FromSession({ session });
-    const isSignedUp = await AuthApplication.userIsSignedUp({ pubky });
+    const isSignedUp = restoring
+      ? await AuthApplication.resolveUserIsSignedUp({ pubky })
+      : await AuthApplication.userIsSignedUp({ pubky });
+    if (isSignedUp === null) {
+      throw Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Could not determine the account profile. Try again.', {
+        service: ErrorService.Homeserver,
+        operation: 'restoreProfile',
+      });
+    }
     if (!this.isCurrentGeneration(generation)) throw createCanceledError();
     signInStore.setProfileChecked(true);
     if (isSignedUp) await this.hydrateMeImAlive({ pubky });
@@ -621,7 +637,7 @@ export class AuthController {
    * @param request - The bound authorization purpose, identity and scopes
    * @returns Promise resolving to the generated authentication URL with wrapped approval
    */
-  private static async wrapAuthFlow(request: GrantFlowRequest): Promise<TGenerateAuthUrlResult> {
+  private static async wrapAuthFlow(request: GrantFlowRequest, deferAdoption = false): Promise<TGenerateAuthUrlResult> {
     const key = JSON.stringify({ ...request, fresh: false });
     if (!request.fresh && this.activeAuthFlow?.key === key) return this.activeAuthFlow.result;
     // Preserve the pending serialization when resuming after page reload.
@@ -639,21 +655,26 @@ export class AuthController {
       const awaitApproval = flow.awaitApproval
         .then(async (session) => {
           if (epoch !== this.epoch) throw createCanceledError();
-          await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
-          if (epoch !== this.epoch) throw createCanceledError();
-          try {
-            await this.completeAuthenticatedSession(
-              { session },
-              {
-                epoch,
-                expectedPubky: request.expectedPubky,
-                required: request.capabilities.split(','),
-                preserveContext: request.purpose === 'upgrade',
-              },
-            );
-          } finally {
-            if (useAuthStore.getState().session === session) flow.completeAuthFlow?.();
-          }
+          const adopt = async () => {
+            if (epoch !== this.epoch) throw createCanceledError();
+            await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
+            if (epoch !== this.epoch) throw createCanceledError();
+            try {
+              await this.completeAuthenticatedSession(
+                { session },
+                {
+                  epoch,
+                  expectedPubky: request.expectedPubky,
+                  required: request.capabilities.split(','),
+                  preserveContext: request.purpose === 'upgrade',
+                },
+              );
+            } finally {
+              if (useAuthStore.getState().session === session) flow.completeAuthFlow?.();
+            }
+          };
+          if (deferAdoption) this.pendingSessionAdoptions.set(session, adopt);
+          else await adopt();
           return session;
         })
         .finally(() => {
@@ -714,6 +735,10 @@ export class AuthController {
     useNotificationStore.getState().reset();
     useSettingsStore.getState().reset();
 
+    // Unified logout: tear down the Locks session (Lock Server signout + local store) alongside the
+    // homeserver session, so the user can never stay logged into Locks after leaving pubky.app.
+    await LocksController.logout();
+
     // Clear cookies (also drops any stale `locale` cookie from the removed language selection)
     clearCookies();
 
@@ -730,7 +755,7 @@ export class AuthController {
     const state = useAuthStore.getState();
     return this.wrapAuthFlow({
       purpose: 'signin',
-      capabilities: APP_CAPABILITIES,
+      capabilities: HOMESERVER_CAPABILITIES,
       generation: state.generation,
       fresh,
       expectedPubky: state.restoreStatus === 'reauth-required' ? (state.currentUserPubky ?? undefined) : undefined,
@@ -740,7 +765,7 @@ export class AuthController {
   static async getSignupAuthUrl(inviteCode: string, fresh = false): Promise<TGenerateAuthUrlResult> {
     return this.wrapAuthFlow({
       purpose: 'signup',
-      capabilities: APP_CAPABILITIES,
+      capabilities: HOMESERVER_CAPABILITIES,
       generation: useAuthStore.getState().generation,
       inviteCode,
       fresh,
@@ -750,6 +775,7 @@ export class AuthController {
   /** Feature UI displays the returned QR/deeplink and awaits approval before resuming its action. */
   static async requestCapabilities(
     required: readonly string[] = LOCKS_CAPABILITIES,
+    fresh = false,
   ): Promise<TGenerateAuthUrlResult | null> {
     await this.retrySessionRetirement();
     const state = useAuthStore.getState();
@@ -765,9 +791,45 @@ export class AuthController {
     return this.wrapAuthFlow({
       purpose: 'upgrade',
       capabilities,
+      fresh,
       generation: state.generation,
       expectedPubky: state.currentUserPubky,
     });
+  }
+
+  /**
+   * Generates the sign-in authentication URL handed to Pubky Passport ("Continue with Google").
+   * Shares the single-active-flow tracking with the Pubky Ring flows, so starting Passport cancels
+   * a pending Ring request and vice versa.
+   * @param params - x-callback-url metadata (source label and same-origin callbacks)
+   * @returns Promise resolving to the generated authentication URL with wrapped approval
+   */
+  static async getPassportAuthUrl(params: TGeneratePassportAuthUrlParams): Promise<TGenerateAuthUrlResult> {
+    const state = useAuthStore.getState();
+    return this.wrapAuthFlow(
+      {
+        purpose: 'signin',
+        capabilities: params.caps || HOMESERVER_CAPABILITIES,
+        generation: state.generation,
+        xCallback: params.xCallback,
+        fresh: true,
+        expectedPubky: state.restoreStatus === 'reauth-required' ? (state.currentUserPubky ?? undefined) : undefined,
+      },
+      true,
+    );
+  }
+
+  /** Completes the specific Passport approval after its hook has stopped the popup timers. */
+  static async initializeAuthenticatedSession({ session }: THomeserverSessionResult): Promise<void> {
+    const adopt = this.pendingSessionAdoptions.get(session);
+    this.pendingSessionAdoptions.delete(session);
+    if (!adopt) throw createCanceledError();
+    await adopt();
+  }
+
+  /** Uses the grant upgrade while keeping the merged Locks UI's entry point. */
+  static async getUpgradeAuthUrl(fresh = false): Promise<TGenerateAuthUrlResult | null> {
+    return this.requestCapabilities(LOCKS_CAPABILITIES, fresh);
   }
 
   /**

@@ -168,7 +168,15 @@ export const getPkarrRelays = (): string[] => getRuntimeConfig().pkarrRelays;
 export const getTestnet = (): boolean => getRuntimeConfig().testnet;
 export const getDeployEnv = (): DeployEnv => getRuntimeConfig().deployEnv;
 
+// Optional Lock Server pubky the composer's lock flow signs into (undefined = Locks disabled).
+export const getLockServer = (): string | undefined => getRuntimeConfig().lockServer;
+
+// Optional Paykit Server address for the creator's payout setup (undefined = Locks disabled).
+export const getPaykitServerUrl = (): string | undefined => getRuntimeConfig().paykitServerUrl;
+
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
+export const getPulseClientKey = (): string | undefined => getRuntimeConfig().pulseClientKey;
+export const getPulseEndpoint = (): string | undefined => getRuntimeConfig().pulseEndpoint;
 export const getSentryDsn = (): string | undefined => getRuntimeConfig().sentryDsn;
 export const getSentryEnvironment = (): string | undefined => getRuntimeConfig().sentryEnvironment;
 export const getSentryTracesSampleRate = (): number => getRuntimeConfig().sentryTracesSampleRate;
@@ -196,6 +204,8 @@ export const getPreludeSdkKey = (): string | undefined => getRuntimeConfig().pre
 export const getPreludeSdkTimeoutMs = (): number => getRuntimeConfig().preludeSdkTimeoutMs;
 export const getPlausibleDomain = (): string | undefined => getRuntimeConfig().plausibleDomain;
 export const getPlausibleScriptUrl = (): string | undefined => getRuntimeConfig().plausibleScriptUrl;
+/** Pubky Passport signer origin; `undefined` disables every "Continue with Google" entry point. */
+export const getPassportUrl = (): string | undefined => getRuntimeConfig().passportUrl;
 export const getPreviewImage = (): string => getRuntimeConfig().previewImage;
 export const getSiteName = (): string => getRuntimeConfig().siteName;
 export const getLocale = (): string => getRuntimeConfig().locale;

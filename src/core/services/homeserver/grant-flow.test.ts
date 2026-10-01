@@ -64,10 +64,24 @@ describe('pending Ring grant flow', () => {
     { expectedPubky: 'another-account' },
     { purpose: 'signup' as const, inviteCode: 'invite' },
     { fresh: true },
+    { xCallback: { xSource: 'Pubky', xSuccess: 'https://app.example/passport/return?attempt=2' } },
   ])('discards a pending flow when its context changes: %j', async (change) => {
     const sdk = makeSdk();
     await GrantFlowService.start(sdk, request);
     await GrantFlowService.start(sdk, { ...request, ...change });
+    expect(sdk.startGrantAuthFlow).toHaveBeenCalledTimes(2);
+    expect(sdk.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+  });
+  it('passes Passport callbacks to the SDK and binds resume to the popup attempt', async () => {
+    const sdk = makeSdk();
+    const xCallback = { xSource: 'Pubky', xSuccess: 'https://app.example/passport/return?attempt=1' };
+    await GrantFlowService.start(sdk, { ...request, xCallback });
+    expect(sdk.startGrantAuthFlow).toHaveBeenCalledWith(
+      request.capabilities,
+      expect.anything(),
+      expect.objectContaining({ xCallback }),
+    );
+    await GrantFlowService.start(sdk, request);
     expect(sdk.startGrantAuthFlow).toHaveBeenCalledTimes(2);
     expect(sdk.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
   });

@@ -2,6 +2,8 @@ import { PostStreamApplication } from '@/application/stream/posts/post';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type {
+  TClearUnreadStreamParams,
+  TMarkUnreadPostsAsReadParams,
   TReadPostStreamChunkParams,
   TReadPostStreamChunkResponse,
   TStreamIdParams,
@@ -164,6 +166,15 @@ export class StreamPostsController {
     return await PostStreamApplication.getStreamHead(params);
   }
 
+  /** Resolve the poll cursor, retrying unread details left missing by an earlier poll. */
+  static async getOrFetchStreamHead(params: TStreamIdParams): Promise<number> {
+    return PostStreamApplication.getOrFetchStreamHead({
+      ...params,
+      viewerId: useAuthStore.getState().currentUserPubky,
+      isCurrent: captureViewerSession(),
+    });
+  }
+
   /**
    * Get local stream data from cache
    * @param streamId - The ID of the stream
@@ -190,12 +201,17 @@ export class StreamPostsController {
     return await PostStreamApplication.mergeUnreadStreamWithPostStream(params);
   }
 
+  /** Merge and acknowledge exactly the posts the reader chose to open. */
+  static async markUnreadPostsAsRead(params: TMarkUnreadPostsAsReadParams): Promise<void> {
+    await PostStreamApplication.markUnreadPostsAsRead(params);
+  }
+
   /**
-   * Clear the unread stream and return the post IDs that were in it
+   * Clear the selected unread IDs, or the entire stream when no IDs are supplied.
    * @param params - The stream ID to clear the unread stream for
-   * @returns Array of post IDs that were in the unread stream
+   * @returns Array of unread IDs that were cleared
    */
-  static async clearUnreadStream(params: TStreamIdParams): Promise<string[]> {
+  static async clearUnreadStream(params: TClearUnreadStreamParams): Promise<string[]> {
     return await PostStreamApplication.clearUnreadStream(params);
   }
 
@@ -204,9 +220,15 @@ export class StreamPostsController {
    *
    * This method should be called before fetching the initial stream slice to ensure
    * the stream state is consistent. It performs the following operations:
-   * 1. Clears stale cache if the stream head is older than configured max age
-   * 2. Merges any existing unread posts into the main stream
-   * 3. Clears the unread stream
+   * 1. Clears the cache if the main head is older than the configured max age, or has no
+   *    details: such a head can be neither aged nor polled from (#2608)
+   * 2. Merges the unread posts into the main stream in polled order, from the first one whose
+   *    details are cached and not a tombstone; the ids above it without details stay unread,
+   *    since as the main head one of them would resolve no timestamp
+   *    (`LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead`)
+   * 3. Clears the merged posts and the tombstoned unread ids from the unread stream; with no
+   *    cached main row, or an empty one, nothing is merged and the whole unread row is
+   *    dropped, so the first page comes from Nexus
    *
    * This prevents race conditions where the StreamCoordinator might fetch posts
    * that are already in the main stream (due to stale unread stream head).

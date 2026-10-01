@@ -1,4 +1,4 @@
-import type { PublicKey, Session } from '@synonymdev/pubky';
+import type { Capabilities, PublicKey, Session, XCallbackParams } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { HttpMethod } from '@/libs/http/http.types';
 
@@ -56,6 +56,17 @@ type PrivPath<T extends string = string> = `/priv/${T}`;
 
 /** The only roots the homeserver accepts writes under — mirrors its `STORAGE_ROOTS`. */
 export type StoragePath<T extends string = string> = PubPath<T> | PrivPath<T>;
+
+/**
+ * Pubky Passport auth request: a sign-in grant flow decorated with x-callback-url metadata
+ * (`xSource` label plus same-origin HTTPS success/error/cancel destinations) that Passport shows
+ * and navigates to. Passport creates the identity itself when the Google account has none, so
+ * sign-up and sign-in share this single request kind.
+ */
+export type TGeneratePassportAuthUrlParams = {
+  xCallback: XCallbackParams;
+  caps?: Capabilities;
+};
 
 export type THomeserverFetchParams = {
   url: string;

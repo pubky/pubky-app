@@ -1,6 +1,6 @@
-import { createCanceledError } from '@/libs/auth/cancellation';
 import { createAuthStorage, readAuthStorage } from '@/libs/auth/persistence';
 import { type PersistedAuth, persistedAuthSchema } from '@/libs/auth/session.types';
+import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';

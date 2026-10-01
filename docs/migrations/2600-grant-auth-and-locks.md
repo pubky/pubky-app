@@ -2,15 +2,16 @@
 
 ## Behavior
 
-Valid existing cookie sessions continue to restore. New Ring, encrypted-file, recovery-phrase and browser-signup
+Valid existing cookie sessions continue to restore. New Ring, Passport, encrypted-file, recovery-phrase and browser-signup
 sessions use SDK grants. There is no new-cookie login fallback and no bulk logout or database-version change.
 Nexus reads and the existing public mute SSE subscription retain their current behavior.
 
-Normal Ring authorization requests `/pub/pubky.app/:rw`. A recovered root-key login obtains a root grant.
+Normal Ring and Passport authorization requests `/pub/pubky.app/:rw`, `/priv/social/:rw` and
+`/priv/app.locks/content/:r`, matching `HOMESERVER_CAPABILITIES` from the merged Locks feature. A recovered root-key login obtains a root grant.
 Existing root cookie sessions already cover the Locks paths. Decide access from the live capabilities, not
 from the session kind, age, device, or login method.
 
-## Locks branch contract
+## Locks integration contract
 
 Use the shared controller through the feature's hook:
 
@@ -25,7 +26,7 @@ if (authorization) {
 ```
 
 The default `LOCKS_CAPABILITIES` are `/priv/social/:rw` (reader copies and purchase records) and
-`/priv/locks.app/:r` (creator originals). The replacement includes ordinary app permissions and current
+`/priv/app.locks/content/:r` (creator originals). The replacement includes ordinary app permissions and current
 permissions, checks the same account/environment/client identity, and preserves the profile, route and cache.
 Approval resolves only after durable adoption and retirement of the previous credential. Cancel/wrong account/
 insufficient scope/save failure before adoption preserves the old session. After adoption, an uncertain retirement
@@ -34,8 +35,29 @@ keeps the new grant and a retryable retirement record; it never restores the old
 `HomeserverService` routes owned `/pub/` and `/priv/` paths through `session.storage`. Full Pubky URLs must identify
 the current account. `getBytesIfExists(url)` returns `{ bytes, modifiedAt }` or `null` for HTTP 404 only; permission,
 authentication and network failures must remain visible to Locks. `modifiedAt` is milliseconds since epoch, or null.
-Keep Lock Server/Ring approval independent. Add the Locks SDK, payments, feature UI and its logout hook on the
-feature branch after syncing these shared changes from dev. Lock SDK/server versions still need confirmation.
+Lock Server approval remains independent. The Locks UI uses `useAuthUrl({ type: 'upgrade' })` and
+`getUpgradeAuthUrl()` to reach the shared grant upgrade. A successful same-account upgrade keeps the
+route and composer mounted; unified logout also revokes the separate Lock Server session.
+The merged branch pins `@synonymdev/locks-sdk` to `0.1.0-rc6`; deployed server compatibility still needs verification.
+
+## Merge with dev (2026-10-01)
+
+Locks #2689 and Passport #2587 are included. Their auth integration now uses the existing grant lifecycle:
+
+- The creator scope follows `LOCKS_GUARDED_CONTENT_PATH`, not the retired `/priv/locks.app/` path.
+- New Ring signin/signup and Passport requests include the current Locks capabilities; existing cookie sessions still restore.
+- Passport passes SDK `xCallback` metadata and binds any pending serialization to that popup's callbacks.
+  The relay approval and durable session adoption remain separate so popup-close/timeout cannot interrupt profile bootstrap.
+  A later auth request invalidates adoption by an older Passport popup.
+- Restored profiles retain #2070's transient retries and stale-account guards. Exhaustion offers session recovery while retaining credentials.
+- Owned storage reads reject missing authentication; only a confirmed 404 is a missing resource.
+- Grant auth is ADR 0023; Locks keeps its existing ADR 0022.
+
+Passport source verification: `pubky/pubky-passport` main at `fb10f45dc3301f59e67dcd67a096048a6ed93f14`
+accepts `signin_grant` with `cid`/`cpk`, and approves through `signer.approveAuthRequest`.
+This verifies the source contract, not which revision is deployed. A real staging Google signup/signin
+with the intended Passport, HS and SDK builds remains a release check. This merge does not update the Pubky SDK
+or close the migration's earlier review findings and upstream release checks.
 
 ## Persistence and recovery
 

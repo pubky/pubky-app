@@ -36,13 +36,23 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => {
   return {
     ContentLayout: ({
       children,
+      className,
+      classNameWrapperContent,
       disableWideShellLayout,
     }: {
       children: React.ReactNode;
+      className?: string;
+      classNameWrapperContent?: string;
       disableWideShellLayout?: boolean;
     }) => (
-      <div data-testid="content-layout" data-disable-wide-shell-layout={String(disableWideShellLayout)}>
-        {children}
+      <div
+        data-testid="content-layout"
+        data-disable-wide-shell-layout={String(disableWideShellLayout)}
+        className={className}
+      >
+        <div data-testid="content-layout-content" className={classNameWrapperContent}>
+          {children}
+        </div>
       </div>
     ),
   };
@@ -94,6 +104,17 @@ describe('Settings', () => {
 
     expect(screen.getByTestId('content-layout')).toHaveAttribute('data-disable-wide-shell-layout', 'true');
   });
+
+  it('offsets content below the fixed mobile chrome and keeps a gap under the tab bar on mobile only', () => {
+    render(
+      <Settings>
+        <div>Test content</div>
+      </Settings>,
+    );
+
+    expect(screen.getByTestId('content-layout')).toHaveClass('pt-(--settings-mobile-chrome-height)', 'lg:pt-0');
+    expect(screen.getByTestId('content-layout-content')).toHaveClass('pt-6', 'lg:pt-0');
+  });
 });
 
 describe('Settings - Snapshots', () => {
@@ -103,6 +124,6 @@ describe('Settings - Snapshots', () => {
         <div>Test content</div>
       </Settings>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 });

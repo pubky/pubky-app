@@ -2,9 +2,11 @@ import type { Keypair, Session } from '@synonymdev/pubky';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
+import { LocksApplication } from '@/application/locks/locks';
 import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, getAuthClientId, LOCKS_CAPABILITIES } from '@/config/auth';
+import { HOMESERVER_CAPABILITIES } from '@/config/network';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import type { SessionReference } from '@/libs/auth/session.types';
 import { AuthErrorCode, ClientErrorCode, NetworkErrorCode } from '@/libs/error/error.codes';
@@ -13,6 +15,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { Identity } from '@/libs/identity/identity';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
+import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { AUTH_PERSIST_KEY, ONBOARDING_PERSIST_KEY, SETTINGS_PERSIST_KEY } from '@/stores/persistedKeys';
 import { useSettingsStore } from '@/stores/settings/settings.store';
@@ -42,7 +45,7 @@ const grantReference = (grantId = 'grant'): SessionReference => ({
   grantExpiresAt: Date.now() / 1000 + 60_000,
   tokenExpiresAt: Date.now() / 1000 + 3600,
 });
-const grantSession = (capabilities: string[] = [APP_CAPABILITIES], pubky = PUBKY): Session =>
+const grantSession = (capabilities: string[] = [APP_CAPABILITIES, ...LOCKS_CAPABILITIES], pubky = PUBKY): Session =>
   asOpaque({
     info: { publicKey: { z32: () => pubky }, capabilities },
     grant: { sessionInfo: vi.fn().mockResolvedValue({ ...grantReference(), publicKey: { z32: () => pubky } }) },
@@ -233,12 +236,106 @@ describe('gradual grant migration', () => {
     expect(await restore).toBe(false);
     expect(useAuthStore.getState().sessionReference).toBeNull();
   });
-  it('requests only app public permissions for ordinary Ring sign-in', async () => {
+  it('requests the merged app and Locks permissions for ordinary Ring sign-in', async () => {
     startFlow();
     await AuthController.getAuthUrl();
     expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(
-      expect.objectContaining({ purpose: 'signin', capabilities: APP_CAPABILITIES }),
+      expect.objectContaining({ purpose: 'signin', capabilities: HOMESERVER_CAPABILITIES }),
     );
+  });
+  it('requests the current Locks scopes during Ring signup too', async () => {
+    startFlow();
+    await AuthController.getSignupAuthUrl('invite');
+    expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        purpose: 'signup',
+        capabilities: HOMESERVER_CAPABILITIES,
+        inviteCode: 'invite',
+      }),
+    );
+  });
+  it('keeps the Locks screen mounted while replacing and retiring a narrow cookie', async () => {
+    const flow = startFlow();
+    const retirement = deferred<void>();
+    vi.mocked(AuthApplication.logout).mockReturnValue(retirement.promise);
+    const states: string[] = [];
+    const unsubscribe = useAuthStore.subscribe((state) => states.push(state.restoreStatus));
+    try {
+      const result = await AuthController.getUpgradeAuthUrl(true);
+      const next = grantSession();
+      flow.approval.resolve(next);
+      await vi.waitFor(() => expect(AuthApplication.logout).toHaveBeenCalled());
+      expect(useAuthStore.getState().session).toBe(next);
+      expect(states).not.toContain('restoring');
+      retirement.resolve();
+      await result!.awaitApproval;
+      expect(clearDatabase).not.toHaveBeenCalled();
+      expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
+      expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          purpose: 'upgrade',
+          fresh: true,
+          expectedPubky: PUBKY,
+          capabilities: HOMESERVER_CAPABILITIES,
+        }),
+      );
+    } finally {
+      retirement.resolve();
+      unsubscribe();
+    }
+  });
+  it('revokes the separate Lock Server session during app logout', async () => {
+    useLocksAuthStore.getState().init({ session: asOpaque({}), secret: 'lock-secret' });
+    const signout = vi.spyOn(LocksApplication, 'signout').mockResolvedValue(undefined);
+    await AuthController.logout();
+    expect(signout).toHaveBeenCalledOnce();
+    expect(useLocksAuthStore.getState().selectLocksSession()).toBeNull();
+    expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+  });
+  it('starts Passport with grants and callbacks, adopting only after popup approval', async () => {
+    const flow = startFlow();
+    const callbacks = { xSource: 'Pubky', xSuccess: 'https://app.example/passport/return?attempt=1' };
+    const result = await AuthController.getPassportAuthUrl({ xCallback: callbacks });
+    expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        purpose: 'signin',
+        capabilities: HOMESERVER_CAPABILITIES,
+        xCallback: callbacks,
+        fresh: true,
+      }),
+    );
+    const session = grantSession();
+    flow.approval.resolve(session);
+    await expect(result.awaitApproval).resolves.toBe(session);
+    expect(AuthApplication.saveSession).not.toHaveBeenCalled();
+    await AuthController.initializeAuthenticatedSession({ session });
+    expect(useAuthStore.getState().session).toBe(session);
+    expect(useAuthStore.getState().sessionReference?.kind).toBe('grant');
+    expect(flow.complete).toHaveBeenCalledOnce();
+    await expect(AuthController.initializeAuthenticatedSession({ session })).rejects.toMatchObject({
+      name: 'AuthFlowCanceled',
+    });
+  });
+  it('does not adopt an approved Passport session superseded by a newer Ring request', async () => {
+    const flow = startFlow();
+    const result = await AuthController.getPassportAuthUrl({ xCallback: { xSource: 'Pubky' } });
+    const session = grantSession();
+    flow.approval.resolve(session);
+    await result.awaitApproval;
+    startFlow();
+    await AuthController.getAuthUrl();
+    await expect(AuthController.initializeAuthenticatedSession({ session })).rejects.toMatchObject({
+      name: 'AuthFlowCanceled',
+    });
+    expect(AuthApplication.saveSession).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().session).toBe(cookie);
+  });
+  it('cancels an active Ring request before starting Passport', async () => {
+    const ring = startFlow();
+    await AuthController.getAuthUrl();
+    startFlow();
+    await AuthController.getPassportAuthUrl({ xCallback: { xSource: 'Pubky' } });
+    expect(ring.cancel).toHaveBeenCalledOnce();
   });
   it('shares one active approval when Strict Mode requests the same flow twice', async () => {
     const flow = startFlow();
@@ -285,7 +382,7 @@ describe('gradual grant migration', () => {
   it('rejects insufficient approved scopes', async () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();
-    flow.approval.resolve(grantSession());
+    flow.approval.resolve(grantSession([APP_CAPABILITIES]));
     await expect(result!.awaitApproval).rejects.toMatchObject({ code: AuthErrorCode.FORBIDDEN });
     expect(useAuthStore.getState().session).toBe(cookie);
   });
@@ -422,9 +519,10 @@ describe('gradual grant migration', () => {
       status: 'restored',
       session: grantSession([APP_CAPABILITIES], OTHER_PUBKY),
     });
-    vi.mocked(AuthApplication.userIsSignedUp).mockRejectedValueOnce(offline()).mockResolvedValue(true);
+    vi.spyOn(AuthApplication, 'resolveUserIsSignedUp').mockResolvedValueOnce(null);
     await AuthController.syncSessionFromStorage();
     expect(useAuthStore.getState()).toMatchObject({ needsAccountSync: true, restoreStatus: 'temporary-error' });
+    vi.mocked(AuthApplication.userIsSignedUp).mockResolvedValue(true);
     await AuthController.restorePersistedSession();
     expect(SettingsApplication.initializeSettings).toHaveBeenCalledWith(
       OTHER_PUBKY,

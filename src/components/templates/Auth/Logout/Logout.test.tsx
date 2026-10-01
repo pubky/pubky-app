@@ -1,13 +1,14 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SessionReference } from '@/libs/auth/session.types';
 import { Logout } from './Logout';
 
 const mocks = vi.hoisted(() => {
   const authState = {
     hasHydrated: true,
     session: {} as object | null,
-    sessionReference: null as string | null,
+    sessionReference: null as SessionReference | null,
     isLoggingOut: false,
     setIsLoggingOut: vi.fn((value: boolean) => {
       authState.isLoggingOut = value;
@@ -77,13 +78,15 @@ vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
       continueText,
       onHandleBackButton,
       onHandleContinueButton,
+      className,
     }: {
       backText: string;
       continueText: string;
       onHandleBackButton: () => void;
       onHandleContinueButton: () => void;
+      className?: string;
     }) => (
-      <div data-testid="buttons-navigation">
+      <div data-testid="buttons-navigation" data-class={className}>
         <button onClick={onHandleBackButton}>{backText}</button>
         <button onClick={onHandleContinueButton}>{continueText}</button>
       </div>
@@ -100,7 +103,11 @@ vi.mock('@/molecules/Content/Content', () => {
 vi.mock('@/molecules/Logout/Logout', () => {
   return {
     LogoutContent: () => <div data-testid="logout-content">Logout content</div>,
-    LogoutNavigation: () => <div data-testid="logout-navigation">Logout navigation</div>,
+    LogoutNavigation: ({ className }: { className?: string }) => (
+      <div data-testid="logout-navigation" data-class={className}>
+        Logout navigation
+      </div>
+    ),
   };
 });
 
@@ -183,7 +190,7 @@ describe('Logout', () => {
   it('does not show the success state before a persisted-session logout finishes', async () => {
     let resolveLogout: (() => void) | undefined;
     mocks.authState.session = null;
-    mocks.authState.sessionReference = 'session-export';
+    mocks.authState.sessionReference = { kind: 'cookie', sessionExport: 'session-export' };
     mocks.mockLogout.mockImplementation(
       () =>
         new Promise<void>((resolve) => {
@@ -264,5 +271,26 @@ describe('Logout', () => {
     fireEvent.click(screen.getByText('Homepage'));
 
     expect(mocks.mockPush).toHaveBeenCalledWith('/');
+  });
+
+  it('drops the doubled mobile bottom inset on the signed-out navigation', () => {
+    mocks.authState.session = null;
+    mocks.authState.sessionReference = null;
+
+    render(<Logout />);
+
+    expect(screen.getByTestId('logout-navigation')).toHaveAttribute('data-class', 'pb-0 lg:pb-6');
+  });
+
+  it('drops the doubled mobile bottom inset on the error-state navigation', async () => {
+    mocks.mockLogout.mockRejectedValue(new Error('clear failed'));
+
+    render(<Logout />);
+
+    await waitFor(() => {
+      expect(screen.getByText("We couldn't sign you out yet")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('buttons-navigation')).toHaveAttribute('data-class', 'pb-0 lg:pb-6');
   });
 });

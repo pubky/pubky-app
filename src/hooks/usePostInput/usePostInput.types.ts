@@ -1,8 +1,8 @@
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import type { RefObject } from 'react';
-import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
+import type { ExistingAttachment, UsePostReturn } from '@/hooks/usePost/usePost.types';
 import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
-import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
+import type { EditLock, PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 
 export interface UsePostInputOptions {
@@ -14,6 +14,8 @@ export interface UsePostInputOptions {
   originalPostId?: string;
   /** Optional edit post ID (required if variant is 'edit') */
   editPostId?: string;
+  /** Existing lock announcement metadata (edit variant only). */
+  editLock?: EditLock;
   /** The post's current attachment URIs (edit variant only) */
   editAttachmentUris?: string[];
   /** The post's current content (edit variant only) — used to derive the article cover slot */
@@ -46,6 +48,9 @@ export interface UsePostInputOptions {
   ) => void;
   /** Callback when article mode changes */
   onArticleModeChange?: (isArticle: boolean) => void;
+  /** Optional external work-in-progress check, added to the tracked fields before collapsing */
+  hasExternalContent?: () => boolean;
+  keepInlineImages?: boolean;
 }
 
 export interface UsePostInputReturn {
@@ -68,6 +73,8 @@ export interface UsePostInputReturn {
   setIsArticle: React.Dispatch<React.SetStateAction<boolean>>;
   articleTitle: string;
   setArticleTitle: React.Dispatch<React.SetStateAction<string>>;
+  lockTitle: string;
+  setLockTitle: React.Dispatch<React.SetStateAction<string>>;
   isDragging: boolean;
   isExpanded: boolean;
   isSubmitting: boolean;
@@ -77,6 +84,9 @@ export interface UsePostInputReturn {
   inlineImages: { upload: (file: File) => Promise<string>; getPreviewUrl: (src: string) => string | null };
   /** Inline image uploads in flight; submit stays disabled while > 0 */
   uploadingCount: number;
+  serializeArticleForLock: UsePostReturn['serializeArticleForLock'];
+  /** The article as the inputs hold it now. `articleTitle` and `content` trail them by the debounce. */
+  getLatestArticle: () => { title: string; body: string };
 
   // Mention autocomplete state
   mentionUsers: AutocompleteUserData[];

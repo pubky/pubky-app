@@ -85,7 +85,8 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - `exchangerate/` — Exchange rate service
 - `nextjs/` — Server-only work (OG-metadata scraping for link previews, Next.js route-handler helpers)
 - **NEVER** call application or controllers
-- **NEVER** access stores
+- **NEVER** access stores — one exception (ADR 0004): session-owning services read their session
+  store via `getState()` (`homeserver` → `useAuthStore`, `locks` → `useLocksAuthStore`); reads only, never writes
 
 ### Pipes (`src/core/pipes/`)
 
@@ -331,6 +332,8 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0019 | Dexie schema changes recreate the local database                          |
 | 0020 | Local-first tag cache and viewport lifetimes                              |
 | 0021 | Service worker scope and update policy                                    |
+| 0022 | Locks creator publishing                                                  |
+| 0023 | Gradual grant authentication                                              |
 
 ## Quick Checklist
 

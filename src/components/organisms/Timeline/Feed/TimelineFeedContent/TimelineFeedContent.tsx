@@ -12,13 +12,14 @@ import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFe
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { cn } from '@/libs/utils/utils';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { PullToRefreshIndicator } from '@/molecules/PullToRefreshIndicator/PullToRefreshIndicator';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
-import { TimelineGridPosts } from '../../Posts/GridPosts/GridPosts';
+import { TimelineCardsPosts } from '../../Posts/CardsPosts/CardsPosts';
 import { TimelinePosts } from '../../Posts/Posts';
 import { NewPostsSection } from '../NewPostsSection/NewPostsSection';
 import type {
@@ -171,7 +172,7 @@ function TimelineFeedContent({
   const previousMutedUserIdSetRef = useRef<Set<string> | null>(null);
 
   const isVisualActive = layoutResolution?.isVisualActive ?? false;
-  const isGridActive = layoutResolution?.isGridActive ?? false;
+  const isCardsActive = layoutResolution?.isCardsActive ?? false;
   const isCollectionFeed = variant === TIMELINE_FEED_VARIANT.COLLECTION;
   const {
     postIds: rawPostIds,
@@ -236,7 +237,7 @@ function TimelineFeedContent({
   // does); additions are reconciled once the stream has settled: any member
   // the stream never delivered is prepended once — except muted authors, whom
   // the stream filters on purpose. Both are idempotent.
-  const { mutedUserIdSet } = useMutedUsers();
+  const { mutedUserIdSet, isLoading: mutedUsersLoading } = useMutedUsers();
   const seenMembershipRef = useRef<Set<string>>(new Set());
   const everLoadedRef = useRef<Set<string>>(new Set());
   const prependedRef = useRef<Set<string>>(new Set());
@@ -260,9 +261,9 @@ function TimelineFeedContent({
       removePostsOptimistically(removed).commit();
     }
 
-    // Reconcile additions only against a settled stream: while pages are
-    // still arriving the missing ids are most likely on the next page.
-    if (!streamSettled) return;
+    // Wait for the stream and mute list: missing ids may be on the next page
+    // or intentionally excluded because their author is muted.
+    if (!streamSettled || mutedUsersLoading) return;
     const missing = [...current].filter(
       (id) => !everLoaded.has(id) && !prepended.has(id) && !MuteFilter.isPostMuted(id, mutedUserIdSet),
     );
@@ -270,7 +271,15 @@ function TimelineFeedContent({
       missing.forEach((id) => prepended.add(id));
       prependOptimisticPosts(missing);
     }
-  }, [membershipPostIds, rawPostIds, streamSettled, mutedUserIdSet, prependOptimisticPosts, removePostsOptimistically]);
+  }, [
+    membershipPostIds,
+    rawPostIds,
+    streamSettled,
+    mutedUserIdSet,
+    mutedUsersLoading,
+    prependOptimisticPosts,
+    removePostsOptimistically,
+  ]);
 
   // Drain optimistic posts the global FAB enqueued for this feed. The FAB lives
   // outside this feed's React tree, so it cannot call `prependOptimisticPosts`
@@ -342,12 +351,15 @@ function TimelineFeedContent({
   // `children` is the composer/filter region on interactive feeds (hidden by the
   // immersive Visual mosaic on Home/Search/Custom) but the collection hero on
   // COLLECTION, which must stay visible in every layout.
-  const shouldRenderChildren = !isVisualActive || isGridActive || variant === TIMELINE_FEED_VARIANT.COLLECTION;
+  const shouldRenderChildren = !isVisualActive || variant === TIMELINE_FEED_VARIANT.COLLECTION;
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
       <PostMainLayoutProvider tagsLayout={tagsLayout}>
-        <Container ref={containerRef} className={CONTENT_AREA_STACK_CLASS}>
+        <Container
+          ref={containerRef}
+          className={cn(CONTENT_AREA_STACK_CLASS, variant === TIMELINE_FEED_VARIANT.COLLECTION && 'gap-6')}
+        >
           {enablePullToRefresh && <PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
           {shouldRenderChildren ? children : null}
           {persistentHeader}
@@ -356,11 +368,12 @@ function TimelineFeedContent({
             variant={variant}
             postIds={postIds}
             mutedUserIdSet={mutedUserIdSet}
+            mutedUsersLoading={mutedUsersLoading}
             loading={loading}
             prependPosts={prependPosts}
           />
-          {isGridActive ? (
-            <TimelineGridPosts
+          {isCardsActive ? (
+            <TimelineCardsPosts
               postIds={postIds}
               loading={loading}
               loadingMore={loadingMore}

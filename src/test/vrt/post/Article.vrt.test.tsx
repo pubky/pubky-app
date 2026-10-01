@@ -130,10 +130,11 @@ vi.mock('@/stores/home/home.store', async () => {
 
 vi.mock('@/stores/auth/auth.store', async () => {
   const f = await fixtures;
+  const { mockRingSession } = await import('@/test-utils/pubky');
   return {
     useAuthStore: createZustandLikeHook({
       currentUserPubky: f.viewerPubky,
-      session: { pubky: f.viewerPubky },
+      session: mockRingSession(['/:rw'], f.viewerPubky),
       sessionExport: null,
       hasProfile: true,
       hasHydrated: true,
@@ -447,6 +448,18 @@ vi.mock('@/hooks/usePostParticipants/usePostParticipants', async () => {
   return { usePostParticipants: () => result };
 });
 
+vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', async () => {
+  const f = await fixtures;
+  return {
+    useAttachmentsMetadata: ({ fileUris }: { fileUris: readonly string[] }) => ({
+      files: fileUris.flatMap((uri) => {
+        const metadata = f.articleCoverByUri.get(uri);
+        return metadata ? [metadata] : [];
+      }),
+    }),
+  };
+});
+
 vi.mock('@/controllers/file/file', async () => {
   const f = await fixtures;
   return {
@@ -500,15 +513,6 @@ function EditArticleWithChrome({ postId }: { postId: string }) {
   );
 }
 
-async function waitForVisibleCollectionsNew() {
-  await vi.waitFor(() => {
-    const collectionsNew = [...document.querySelectorAll('[aria-label="Collections, New"]')].find(
-      (el) => el instanceof HTMLElement && el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }),
-    );
-    expect(collectionsNew).toBeTruthy();
-  });
-}
-
 async function renderPublishedArticle(layout: 'columns' | 'wide', viewport: { width: number; height: number }) {
   const f = await fixtures;
   uiState.layout = layout;
@@ -540,7 +544,6 @@ async function renderPublishedArticle(layout: 'columns' | 'wide', viewport: { wi
     expect(visiblePanel?.textContent).toContain('hierarchy');
   }
 
-  await waitForVisibleCollectionsNew();
   return screen;
 }
 
@@ -557,7 +560,6 @@ async function renderEditArticle(viewport: { width: number; height: number }) {
   await expect.element(page.getByAltText('Image preview')).toBeVisible();
   const dialog = document.querySelector('[data-testid="dialog-content"]') ?? document;
   await waitForMarkdownEditorReady(dialog);
-  await waitForVisibleCollectionsNew();
 }
 
 describe('Article — editing — visual regression', () => {

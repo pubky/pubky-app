@@ -57,6 +57,11 @@ const PROFILE_ROUTES_CONFIG: Record<
     route: PROFILE_ROUTES.COLLECTIONS,
     subPath: '/collections',
   },
+  [PROFILE_PAGE_TYPES.UNLOCKED]: {
+    route: PROFILE_ROUTES.UNLOCKED,
+    subPath: '/unlocked',
+    ownProfileOnly: true, // The content lives in the reader's own /priv
+  },
   [PROFILE_PAGE_TYPES.PROFILE]: {
     route: PROFILE_ROUTES.PROFILE_PAGE,
     subPath: '/profile',

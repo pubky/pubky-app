@@ -124,6 +124,11 @@ export type NexusUserDetails = {
   status: string | null;
   image: string | null;
   indexed_at: Timestamp;
+  /**
+   * `true` when the user is a tombstone (profile cleared, `name` empty). Absent on Nexus builds
+   * that predate the flag, which marked tombstones with the `[DELETED]` name instead.
+   */
+  deleted?: boolean;
 };
 
 /** Aggregate counts for a user's activity and social connections */
@@ -230,6 +235,8 @@ export type NexusPostDetails = {
   kind: string;
   uri: string;
   attachments: string[] | null;
+  /** URL of the post's public `lock.json`. Present = lock teaser; the sole lock-detection signal. */
+  lock?: string | null;
 };
 
 /** Aggregate counts for post engagement */

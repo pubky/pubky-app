@@ -21,7 +21,7 @@ exports[`DialogCropImage > matches snapshot with image loaded 1`] = `
       <p
         data-testid="dialog-description"
       >
-        Adjust the selection to create the perfect square avatar.
+        Adjust the selection to create the perfect circular avatar.
       </p>
     </div>
     <div

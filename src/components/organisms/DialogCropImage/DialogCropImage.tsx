@@ -85,7 +85,7 @@ export function DialogCropImage({ open, imageSrc, fileName, fileType, onClose, o
       >
         <DialogHeader className="gap-1">
           <DialogTitle className="text-2xl sm:text-xl">Cropped Image</DialogTitle>
-          <DialogDescription>Adjust the selection to create the perfect square avatar.</DialogDescription>
+          <DialogDescription>Adjust the selection to create the perfect circular avatar.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
@@ -96,6 +96,7 @@ export function DialogCropImage({ open, imageSrc, fileName, fileType, onClose, o
                 crop={crop}
                 zoom={zoom}
                 aspect={1}
+                cropShape="round"
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={handleCropComplete}

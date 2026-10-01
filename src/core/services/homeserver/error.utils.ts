@@ -1,4 +1,4 @@
-import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/libs/auth/cancellation';
+import { AUTH_FLOW_CANCELED_ERROR_NAME, createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, NetworkErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -13,6 +13,10 @@ import type {
   TThrowPkarrLookupErrorParams,
   TThrowSessionExpiredErrorParams,
 } from './homeserver.types';
+
+// The cancellation sentinel is layer-neutral (`@/libs/error/auth-flow-canceled`); re-exported here
+// so the service keeps its existing surface.
+export { AUTH_FLOW_CANCELED_ERROR_NAME, createCanceledError };
 
 /** Pubky SDK error names for type-safe error handling */
 const PUBKY_ERROR_NAMES = {

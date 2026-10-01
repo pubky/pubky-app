@@ -2,6 +2,8 @@ import { Inter_Tight } from 'next/font/google';
 import Script from 'next/script';
 import { Container } from '@/atoms/Container/Container';
 import {
+  getCdnUrl,
+  getNexusUrl,
   getPlausibleDomain,
   getPlausibleScriptUrl,
   serializeRuntimeConfig,
@@ -20,6 +22,13 @@ interface RootContainerProps {
 export function RootContainer({ children }: RootContainerProps) {
   const plausibleDomain = getPlausibleDomain();
   const plausibleScriptUrl = getPlausibleScriptUrl();
+  // Images and data both come from Nexus, and the first image of a cold visit is a
+  // multi-megabyte file: warm DNS + TLS for it while the document is still parsing.
+  // Two hints, because a CORS request (the Nexus API) cannot reuse a non-credentialed
+  // preconnected socket. The origins are equal on production; keeping both hints means
+  // the config can split them (staging CDN vs API host) without losing either.
+  const cdnOrigin = new URL(getCdnUrl()).origin;
+  const nexusOrigin = new URL(getNexusUrl()).origin;
 
   return (
     <Container as="html" lang="en-US" dir="ltr">
@@ -35,6 +44,13 @@ export function RootContainer({ children }: RootContainerProps) {
           NOTE: if a Content-Security-Policy is added later, this inline script needs a nonce.
         */}
         <script id="pubky-runtime-config" dangerouslySetInnerHTML={{ __html: serializeRuntimeConfig() }} />
+        {/*
+          React hoists both hints into <head> (they are host-hoistable `link` elements), so
+          their position here is for readability: the runtime-config script above stays the
+          first element in <body>, as its own comment requires.
+        */}
+        <link rel="preconnect" href={cdnOrigin} />
+        <link rel="preconnect" href={nexusOrigin} crossOrigin="anonymous" />
         {plausibleDomain && plausibleScriptUrl && (
           <Script
             data-domain={plausibleDomain}

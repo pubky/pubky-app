@@ -10,7 +10,9 @@ import { toast } from '@/molecules/Toaster/toast';
 import type { TGenerateAuthUrlResult } from '@/services/homeserver/homeserver.types';
 import { useAuthUrl } from './useAuthUrl';
 
-vi.mock('@/controllers/auth/auth', () => ({ AuthController: { getAuthUrl: vi.fn(), getSignupAuthUrl: vi.fn() } }));
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: { getAuthUrl: vi.fn(), getSignupAuthUrl: vi.fn(), getUpgradeAuthUrl: vi.fn() },
+}));
 vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/libs/utils/utils', async (original) => ({
   ...(await original<typeof import('@/libs/utils/utils')>()),
@@ -48,6 +50,21 @@ describe('useAuthUrl', () => {
     vi.mocked(AuthController.getSignupAuthUrl).mockResolvedValue(flow().value);
     renderHook(() => useAuthUrl({ type: 'signup', inviteCode: 'invite' }));
     await waitFor(() => expect(AuthController.getSignupAuthUrl).toHaveBeenCalledWith('invite', false));
+  });
+  it('uses the grant upgrade entry point for the Locks approval screen', async () => {
+    vi.mocked(AuthController.getUpgradeAuthUrl).mockResolvedValue(flow().value);
+    const { result } = renderHook(() => useAuthUrl({ type: 'upgrade' }));
+    await waitFor(() => expect(result.current.url).toBe('pubkyauth://grant'));
+    expect(AuthController.getUpgradeAuthUrl).toHaveBeenLastCalledWith(false);
+    await act(() => result.current.fetchUrl());
+    expect(AuthController.getUpgradeAuthUrl).toHaveBeenLastCalledWith(true);
+    expect(AuthController.getAuthUrl).not.toHaveBeenCalled();
+  });
+  it('finishes loading if another tab already supplied the required permissions', async () => {
+    vi.mocked(AuthController.getUpgradeAuthUrl).mockResolvedValue(null);
+    const { result } = renderHook(() => useAuthUrl({ type: 'upgrade' }));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(toast).not.toHaveBeenCalled();
   });
   it('keeps controller approval alive while the mobile UI is unmounted', async () => {
     const pending = flow();

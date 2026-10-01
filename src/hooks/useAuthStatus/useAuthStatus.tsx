@@ -6,7 +6,12 @@ export function useAuthStatus(): AuthStatusResult {
   const onboarding = useOnboardingStore();
   const auth = useAuthStore();
   const pending = auth.sessionReference !== null && auth.session === null && auth.restoreStatus === 'idle';
-  const isLoading = !onboarding.hasHydrated || !auth.hasHydrated || auth.isRestoringSession || pending;
+  const isLoading =
+    !onboarding.hasHydrated ||
+    !auth.hasHydrated ||
+    auth.isRestoringSession ||
+    pending ||
+    (auth.session !== null && auth.hasProfile === null && auth.isResolvingProfile);
   const hasKeypair = auth.session !== null;
   const hasProfile = auth.hasProfile;
   const status =

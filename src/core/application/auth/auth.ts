@@ -10,11 +10,14 @@ import {
   isAppError,
   isAuthError,
   isNotFound,
+  isRetryable,
   isValidationError,
   isWrongEnvironmentHomeserverError,
   toAppError,
 } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
+import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { GrantFlowRequest } from '@/services/homeserver/grant-flow';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -27,6 +30,9 @@ import { LocalAuthService } from '@/services/local/auth/auth';
 
 export class AuthApplication {
   private constructor() {} // Prevent instantiation
+
+  private static readonly PROFILE_CHECK_MAX_ATTEMPTS = 3;
+  private static readonly PROFILE_CHECK_RETRY_DELAY_MS = 3000;
 
   /** A failed exchange is not proof that a saved grant should be deleted. */
   static async restorePersistedSession({ reference, expectedPubky }: TRestoreSessionParams): TRestoreSessionResult {
@@ -167,5 +173,36 @@ export class AuthApplication {
       if (isNotFound(appError)) return false;
       throw appError;
     }
+  }
+
+  /**
+   * Resolves whether a restored session's profile.json exists, retrying transient homeserver
+   * failures so a temporary outage is never mistaken for a missing profile (issue #2070).
+   *
+   * @param params - Parameters containing the user's public key
+   * @param params.pubky - The user's public key identifier
+   * @returns true when the profile exists, false when the homeserver confirmed it does not, and
+   * null when the state could not be determined after the retries
+   */
+  static async resolveUserIsSignedUp({ pubky }: { pubky: Pubky }): Promise<boolean | null> {
+    for (let attempt = 1; attempt <= this.PROFILE_CHECK_MAX_ATTEMPTS; attempt++) {
+      try {
+        return await this.userIsSignedUp({ pubky });
+      } catch (error) {
+        const appError = isAppError(error)
+          ? error
+          : toAppError(error, ErrorService.Homeserver, 'resolveUserIsSignedUp');
+        const canRetry = isRetryable(appError) && attempt < this.PROFILE_CHECK_MAX_ATTEMPTS;
+        if (!canRetry) {
+          return null;
+        }
+        Logger.warn(
+          `Profile check attempt ${attempt}/${this.PROFILE_CHECK_MAX_ATTEMPTS} failed with a transient error, retrying in ${this.PROFILE_CHECK_RETRY_DELAY_MS}ms`,
+          { error: appError },
+        );
+        await sleep(this.PROFILE_CHECK_RETRY_DELAY_MS);
+      }
+    }
+    return null;
   }
 }

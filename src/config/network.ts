@@ -1,3 +1,4 @@
+import { LOCKS_GUARDED_CONTENT_PATH } from '@/config/locks';
 import {
   getDefaultHttpRelay,
   getDeployEnv,
@@ -5,6 +6,9 @@ import {
   getHomegateUrl,
   getHomeserver,
   getHomeserverUrl,
+  getLockServer,
+  getPassportUrl,
+  getPaykitServerUrl,
   getPkarrRelays,
   getTestnet,
 } from '@/libs/runtime-config/runtime-config';
@@ -18,9 +22,23 @@ export {
   getHomegateUrl,
   getHomeserver,
   getHomeserverUrl,
+  getLockServer,
+  getPassportUrl,
+  getPaykitServerUrl,
   getPkarrRelays,
   getTestnet,
 };
+
+/**
+ * True when a Pubky Passport origin is configured (`PUBKY_RUNTIME_PASSPORT_URL`).
+ *
+ * Pure and server-safe: this only says the deploy points at a Passport. Whether the current
+ * browser page can actually complete a Passport hand-off (HTTPS origin) is resolved after mount
+ * by `usePassportEligibility`, never here.
+ */
+export function isPassportConfigured(): boolean {
+  return Boolean(getPassportUrl());
+}
 
 /**
  * True when this deploy declares itself a staging-homeserver environment
@@ -37,3 +55,11 @@ export {
 export function isStagingHomeserverDeploy(): boolean {
   return getDeployEnv() === 'staging';
 }
+
+// Requested from Pubky Ring at sign-in and fixed for the life of that session; keypair sign-in mints a
+// root (`/:rw`) session instead. A session from before an entry was added lacks it until the user
+// approves a new one (`docs/locks.md`, _Sessions from before locks_).
+// - /pub/pubky.app/:rw         — the app's public data
+// - /priv/social/:rw           — where unlocked lock content is copied (reader replication)
+// - /priv/app.locks/content/:r — read-only: a creator reads their OWN guarded original here (Ring sessions)
+export const HOMESERVER_CAPABILITIES = `/pub/pubky.app/:rw,/priv/social/:rw,${LOCKS_GUARDED_CONTENT_PATH}:r`;

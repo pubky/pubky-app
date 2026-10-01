@@ -36,11 +36,15 @@ exports[`TaggedEmpty - Snapshots > matches snapshot 1`] = `
   <h3>
     Discover who tagged you
   </h3>
-  <div>
+  <div
+    data-testid="empty-subtitle"
+  >
     No one has tagged you yet.
-Tip: You can add tags to your own profile too.
+    <br />
+    Tip: You can add tags to your own profile too.
   </div>
   <div
+    class="w-48"
     data-testid="tag-input"
   >
     TagInput

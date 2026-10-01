@@ -2,9 +2,13 @@ import type { PostStreamId } from '@/models/stream/post/postStream.types';
 
 export interface UseStreamPaginationOptions {
   /**
-   * Stream ID to fetch posts from
+   * Stream ID to fetch posts from. `undefined` makes the hook inert: it never
+   * loads, reports an empty settled result (`hasMore: false`, `loading: false`)
+   * and no-ops its actions. Lets a consumer that is only sometimes mounted for
+   * real (e.g. a picker that paginates while open) keep the hook call
+   * unconditional without paginating the stream while it is closed.
    */
-  streamId: PostStreamId;
+  streamId: PostStreamId | undefined;
   /**
    * Optional limit for posts per page (defaults to NEXUS_POSTS_PER_PAGE)
    */
@@ -13,6 +17,21 @@ export interface UseStreamPaginationOptions {
    * Whether to reset state when streamId changes
    */
   resetOnStreamChange?: boolean;
+  /**
+   * Keep the cached stream row on the initial load instead of letting
+   * `prepareStreamForInitialLoad` drop it as expired.
+   *
+   * A feed's own first load may reset an expired cache: that surface renders from the
+   * pagination result, so the refetched page replaces what was dropped. A consumer that
+   * paginates a stream *another* surface owns and renders from a local-first read of the
+   * shared row must not: the reset deletes the row before the replacement page arrives,
+   * so an unavailable Nexus turns cached rows into an empty surface. With this flag the
+   * initial load is additive — it resumes from the cached tail and only writes pages on
+   * top of the rows already there.
+   *
+   * Defaults to false.
+   */
+  preserveCachedStream?: boolean;
   /**
    * Optional callback invoked when a stream slice fetch fails. Fires after
    * the internal `error` state is set but before the `loading` / `loadingMore`

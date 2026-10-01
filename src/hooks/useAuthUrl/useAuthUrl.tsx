@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { AuthController } from '@/controllers/auth/auth';
-import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/libs/auth/cancellation';
+import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/libs/error/auth-flow-canceled';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
@@ -28,7 +28,10 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
       const flow =
         type === 'signup'
           ? await AuthController.getSignupAuthUrl(inviteCode, fresh)
-          : await AuthController.getAuthUrl(fresh);
+          : type === 'upgrade'
+            ? await AuthController.getUpgradeAuthUrl(fresh)
+            : await AuthController.getAuthUrl(fresh);
+      if (!flow) return;
       void flow.awaitApproval.catch((error: unknown) => {
         if (!current()) return;
         setUrl('');
@@ -38,7 +41,9 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           variant: 'error',
           description: isWrongEnvironmentHomeserverError(error)
             ? 'This key is linked to a different homeserver. Use a staging account on this site.'
-            : 'Authorization failed. Try again.',
+            : type === 'upgrade'
+              ? 'Authorization failed. Approve with the key you are signed in with.'
+              : 'Authorization failed. Try again.',
         });
       });
       if (current()) setUrl(flow.authorizationUrl);

@@ -1,5 +1,5 @@
 import { type AuthFlow } from '@synonymdev/pubky';
-import { createCanceledError } from '@/libs/auth/cancellation';
+import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
