@@ -302,11 +302,11 @@ describe('DiscoverCollections', () => {
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
     mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true }));
     // Two `useLiveQuery` calls run inside the component: the bookmarks overlay
-    // (deps: `[]`) and the deletions overlay (deps: `[visibleIds]`). Branch on
+    // (deps: `[currentUserPubky]`) and the deletions overlay (deps: `[visibleIds]`). Branch on
     // deps so only the bookmarks overlay sees 'a:1' and the deletions overlay
     // gets an empty `Set` (no live-deleted ids in this scenario).
     mockUseLiveQuery.mockImplementation((_fn: unknown, deps?: unknown[]) =>
-      Array.isArray(deps) && deps.length === 0 ? ['a:1'] : new Set<string>(),
+      !Array.isArray(deps?.[0]) ? { viewerId: mockAuthState.currentUserPubky, ids: ['a:1'] } : new Set<string>(),
     );
 
     await act(async () => {
@@ -327,10 +327,10 @@ describe('DiscoverCollections', () => {
     // the visible window, and `displayIds` must exclude them.
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
     mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:1', 'b:2'], reachedEnd: true }));
-    // Two live queries — bookmarks (deps: []) returns []; deletions (deps:
+    // Two live queries — bookmarks (deps: [currentUserPubky]) returns an empty snapshot; deletions (deps:
     // [visibleIds]) returns the deleted-id Set.
     mockUseLiveQuery.mockImplementation((_fn: unknown, deps?: unknown[]) =>
-      Array.isArray(deps) && deps.length === 0 ? [] : new Set<string>(['a:1']),
+      !Array.isArray(deps?.[0]) ? { viewerId: mockAuthState.currentUserPubky, ids: [] } : new Set<string>(['a:1']),
     );
 
     await act(async () => {
@@ -384,7 +384,7 @@ describe('DiscoverCollections', () => {
   });
 
   describe('unfollow reload', () => {
-    // The followed-collections overlay is the live query with `[]` deps; the
+    // The followed-collections overlay is keyed by viewer; the
     // deletions overlay (deps `[visibleIds]`) hides nothing in these scenarios.
     let bookmarks: string[];
 
@@ -419,7 +419,7 @@ describe('DiscoverCollections', () => {
       mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
       bookmarks = [];
       mockUseLiveQuery.mockImplementation((_fn: unknown, deps?: unknown[]) =>
-        Array.isArray(deps) && deps.length === 0 ? bookmarks : new Set<string>(),
+        !Array.isArray(deps?.[0]) ? { viewerId: mockAuthState.currentUserPubky, ids: bookmarks } : new Set<string>(),
       );
     });
 
@@ -593,6 +593,69 @@ describe('DiscoverCollections', () => {
       expect(cardIds()).toEqual(['1', 'followed', '2']);
     });
 
+    it.each([false, true])(
+      'does not treat logout as unfollows (intermediate old snapshot: %s)',
+      async (emitOldSnapshot) => {
+        let snapshot: { viewerId: string | null; ids: string[] } = { viewerId: 'me', ids: ['x:followed'] };
+        mockUseLiveQuery.mockImplementation((_fn: unknown, deps?: unknown[]) =>
+          !Array.isArray(deps?.[0]) ? snapshot : new Set<string>(),
+        );
+        mockGetOrFetchStreamSlice
+          .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1'], reachedEnd: true }))
+          .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1', 'x:followed'], reachedEnd: true }));
+        const { rerender } = await act(async () => render(<DiscoverCollections />));
+
+        mockAuthState = { hasHydrated: true, currentUserPubky: null };
+        await act(async () => rerender(<DiscoverCollections />));
+        // The live query can retain the old viewer's result until its replacement
+        // settles. It must neither hide the guest's cards nor seed an unfollow.
+        expect(cardIds()).toEqual(['1', 'followed']);
+
+        if (emitOldSnapshot) {
+          snapshot = { viewerId: 'me', ids: ['x:followed'] };
+          await act(async () => rerender(<DiscoverCollections />));
+        }
+        snapshot = { viewerId: null, ids: [] };
+        await act(async () => rerender(<DiscoverCollections />));
+
+        expect(mockPrepareStreamForInitialLoad).toHaveBeenCalledTimes(2);
+        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+        expect(cardIds()).toEqual(['1', 'followed']);
+      },
+    );
+
+    it('compares unfollows only within the current viewer, ignoring late previous-viewer snapshots', async () => {
+      let snapshot = { viewerId: 'me', ids: ['x:followed'] };
+      mockUseLiveQuery.mockImplementation((_fn: unknown, deps?: unknown[]) =>
+        !Array.isArray(deps?.[0]) ? snapshot : new Set<string>(),
+      );
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1'], reachedEnd: true }))
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1', 'x:followed'], reachedEnd: true }))
+        .mockResolvedValueOnce(makeSlice({ nextPageIds: ['a:1', 'x:followed', 'y:followed'], reachedEnd: true }));
+      const { rerender } = await act(async () => render(<DiscoverCollections />));
+
+      mockAuthState = { hasHydrated: true, currentUserPubky: 'someone-else' };
+      await act(async () => rerender(<DiscoverCollections />));
+      expect(cardIds()).toEqual(['1', 'followed']);
+
+      snapshot = { viewerId: 'someone-else', ids: ['y:followed'] };
+      await act(async () => rerender(<DiscoverCollections />));
+      // A late result must not replace the new viewer's baseline.
+      snapshot = { viewerId: 'me', ids: [] };
+      await act(async () => rerender(<DiscoverCollections />));
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+
+      snapshot = { viewerId: 'someone-else', ids: [] };
+      await act(async () => rerender(<DiscoverCollections />));
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(3);
+      expect(screen.getAllByTestId('collection-card').map((card) => card.getAttribute('data-author-pubky'))).toEqual([
+        'a',
+        'x',
+        'y',
+      ]);
+    });
+
     it('drops an in-flight Show More when the viewer switches, and keeps loading normally afterwards', async () => {
       mockGetOrFetchStreamSlice.mockResolvedValueOnce(
         makeSlice({ nextPageIds: ['a:1'], reachedEnd: false, nextCursor: 20 }),
@@ -626,13 +689,13 @@ describe('DiscoverCollections', () => {
     const detailsOfKind = (kind: string) => asOpaque<PostDetailsModelSchema>({ kind });
 
     /** Runs the live query the component registers for the followed collections. */
-    const runFollowedQuery = async () => {
-      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    const runFollowedQuery = async (viewerId: string | null = 'me') => {
+      mockAuthState = { hasHydrated: true, currentUserPubky: viewerId };
       await act(async () => {
         render(<DiscoverCollections />);
       });
-      const call = mockUseLiveQuery.mock.calls.find(([, deps]) => Array.isArray(deps) && deps.length === 0);
-      const query = call?.[0] as () => Promise<string[]>;
+      const call = mockUseLiveQuery.mock.calls.find(([, deps]) => deps?.[0] === viewerId);
+      const query = call?.[0] as () => Promise<{ viewerId: string | null; ids: string[] }>;
       return await query();
     };
 
@@ -640,7 +703,7 @@ describe('DiscoverCollections', () => {
       mockGetAll.mockResolvedValue(['a:collection', 'b:post']);
       mockGetDetailsByIds.mockResolvedValue([detailsOfKind('collection'), detailsOfKind('short')]);
 
-      expect(await runFollowedQuery()).toEqual(['a:collection']);
+      expect(await runFollowedQuery()).toEqual({ viewerId: 'me', ids: ['a:collection'] });
     });
 
     it('leaves out a bookmark whose post details are not local', async () => {
@@ -648,7 +711,15 @@ describe('DiscoverCollections', () => {
       mockGetAll.mockResolvedValue(['a:unknown']);
       mockGetDetailsByIds.mockResolvedValue([undefined]);
 
-      expect(await runFollowedQuery()).toEqual([]);
+      expect(await runFollowedQuery()).toEqual({ viewerId: 'me', ids: [] });
+    });
+
+    it('does not read the previous account bookmarks while signed out', async () => {
+      mockGetAll.mockResolvedValue(['a:collection']);
+
+      expect(await runFollowedQuery(null)).toEqual({ viewerId: null, ids: [] });
+      expect(mockGetAll).not.toHaveBeenCalled();
+      expect(mockGetDetailsByIds).not.toHaveBeenCalled();
     });
   });
 

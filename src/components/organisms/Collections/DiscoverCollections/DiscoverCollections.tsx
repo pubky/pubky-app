@@ -35,6 +35,11 @@ interface DiscoverCursor {
   streamTail: number;
 }
 
+interface FollowedCollectionsSnapshot {
+  viewerId: string | null;
+  ids: string[];
+}
+
 const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
 
 /** `initial`: first page behind skeletons; `more` / `reload`: Show More disabled. */
@@ -143,6 +148,7 @@ export function DiscoverCollections() {
   // A failed unfollow reload is owed: the next Show More click retries it
   // instead of appending past the collection it should have returned.
   const reloadOwedRef = useRef(false);
+  const previousBookmarkedRef = useRef<FollowedCollectionsSnapshot | null>(null);
 
   /**
    * Reset: re-pull the stream from offset 0 through the stream layer, whose
@@ -304,6 +310,7 @@ export function DiscoverCollections() {
 
     return () => {
       generationRef.current += 1;
+      previousBookmarkedRef.current = null;
     };
     // `reset` is intentionally excluded: it closes over refs and is recreated
     // on every render, so including it would re-fire this initial-load effect
@@ -319,30 +326,42 @@ export function DiscoverCollections() {
   // — safe because the stream-layer fetch filter has already excluded
   // everything bookmarked at fetch time, so there's nothing for the overlay
   // to remove on first paint.
-  const bookmarkedLive = useLiveQuery(getFollowedCollectionIds, []);
-  const bookmarkedSet = bookmarkedLive ? new Set(bookmarkedLive) : null;
+  // Tag the snapshot with its viewer: useLiveQuery can retain the previous
+  // result while the new query settles. Guests must not read the old account's
+  // bookmarks while logout is still clearing IndexedDB.
+  const bookmarkedLive = useLiveQuery(
+    async (): Promise<FollowedCollectionsSnapshot> => ({
+      viewerId: currentUserPubky,
+      ids: currentUserPubky ? await getFollowedCollectionIds() : [],
+    }),
+    [currentUserPubky],
+  );
+  const bookmarkedSet = bookmarkedLive?.viewerId === currentUserPubky ? new Set(bookmarkedLive.ids) : null;
 
   // Unfollow reload: a collection that left the followed set but is not loaded
   // was dropped by the fetch-time filter, so only a reload can return it
   // (#2237). A loaded id reappears through the overlay above on its own.
-  const previousBookmarkedRef = useRef<Set<string> | null>(null);
   useEffect(() => {
-    if (!bookmarkedLive) return;
+    if (!currentUserPubky) {
+      previousBookmarkedRef.current = null;
+      return;
+    }
+    if (!bookmarkedLive || bookmarkedLive.viewerId !== currentUserPubky) return;
     const previous = previousBookmarkedRef.current;
-    const current = new Set(bookmarkedLive);
-    previousBookmarkedRef.current = current;
+    const current = new Set(bookmarkedLive.ids);
+    previousBookmarkedRef.current = bookmarkedLive;
     // Before the first load starts (auth still hydrating) there is nothing to
     // reload: that load reads the current bookmarks itself.
-    if (!previous || generationRef.current === 0) return;
+    if (!previous || previous.viewerId !== currentUserPubky || generationRef.current === 0) return;
 
-    const unfollowedUnloaded = [...previous].some((id) => !current.has(id) && !visibleIdsRef.current.includes(id));
+    const unfollowedUnloaded = previous.ids.some((id) => !current.has(id) && !visibleIdsRef.current.includes(id));
     if (unfollowedUnloaded) {
       void reset({ keepGrid: visibleIdsRef.current.length > 0 });
     }
-    // `reset` is recreated on every render (it closes over refs); only a new
-    // followed snapshot should trigger this check.
+    // `reset` is recreated on every render (it closes over refs); only viewer
+    // changes and followed snapshots should trigger this check.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookmarkedLive]);
+  }, [bookmarkedLive, currentUserPubky]);
 
   // Live overlay for deletions + empty collections: subscribes to `post_details`
   // (via `getDetailsByIds`) for the current visible set and returns the subset

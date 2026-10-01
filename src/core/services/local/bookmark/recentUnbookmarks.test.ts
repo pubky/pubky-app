@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BOOKMARK_REMOVAL_PROTECTION_MS, RecentUnbookmarks } from './recentUnbookmarks';
+import { BOOKMARK_REMOVAL_PROTECTION_MS } from '@/config/bookmarks';
+import { RecentUnbookmarks } from './recentUnbookmarks';
 
 const viewer = 'viewer-a';
 const postId = 'author:post';

@@ -1,9 +1,4 @@
-/**
- * How long a local unbookmark wins over the `bookmark` Nexus keeps reporting
- * until it indexes the removal. Same window as local tag writes
- * (`TAG_MUTATION_TTL_MS`); the measured indexing lag is about two seconds.
- */
-export const BOOKMARK_REMOVAL_PROTECTION_MS = 300_000;
+import { BOOKMARK_REMOVAL_PROTECTION_MS } from '@/config/bookmarks';
 
 /**
  * In-memory record of the bookmarks each viewer removed locally, kept for
