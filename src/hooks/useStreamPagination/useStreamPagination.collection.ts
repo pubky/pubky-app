@@ -210,7 +210,9 @@ export function useCollectionStreamMembership(
           ]),
           explicitAdds: new Set([...current.explicitAdds].filter((id) => !removed.includes(id))),
         }));
-        raw.removePosts(removed);
+        // Confirmed removals share the consumed-row accounting with transactional
+        // removals, including commits during a page fetch and local-only inserts.
+        raw.removePostsOptimistically(removed).commit();
       },
       removePostsOptimistically: (ids: string | string[]) => {
         const { state: snapshot, pagination: raw, orderedIds: candidates } = latest.current;

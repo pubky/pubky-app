@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { postUriBuilder } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { PostController } from '@/controllers/post/post';
@@ -202,6 +203,79 @@ describe('useStreamPagination collection membership', () => {
     );
     expect(result.current.postIds).toEqual([indexed]);
   });
+
+  it.each([false, true])(
+    'accounts for confirmed removals exactly once (next page already pending: %s)',
+    async (pagePending) => {
+      const indexedIds: string[] = [];
+      for (let i = 0; i < 5; i++) indexedIds.push(await createPost());
+      const localOnly = await createPost();
+      const explicitlyAdded = await createPost();
+      const members = [...indexedIds, localOnly];
+      const collectionId = await PostController.commitCreateCollection({
+        authorId: AUTHOR,
+        name: 'Paginated collection',
+        items: members.map((postId) => {
+          const { pubky, id } = parseCompositeId(postId);
+          return postUriBuilder(pubky, id);
+        }),
+      });
+      let indexed = [...indexedIds];
+      vi.mocked(NexusPostStreamService.fetch).mockImplementation(async ({ params }) => {
+        const skip = Number(params.skip ?? 0);
+        return { post_keys: indexed.slice(skip, skip + Number(params.limit)), last_post_score: null };
+      });
+      const streamId = buildCollectionItemsStreamId(AUTHOR, parseCompositeId(collectionId).id);
+      const { result, rerender } = renderHook(
+        ({ members }) =>
+          useStreamPagination({ streamId, limit: 2, collectionMembership: { postIds: members, viewerId: AUTHOR } }),
+        { initialProps: { members } },
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.postIds).toEqual(members));
+      await act(async () => result.current.prependPosts(explicitlyAdded));
+
+      const pending = Promise.withResolvers<Awaited<ReturnType<typeof NexusPostStreamService.fetch>>>();
+      let loadingPage: Promise<void> | undefined;
+      if (pagePending) {
+        vi.mocked(NexusPostStreamService.fetch).mockReturnValueOnce(pending.promise);
+        act(() => {
+          loadingPage = result.current.loadMore();
+        });
+        await waitFor(() => expect(NexusPostStreamService.fetch).toHaveBeenCalledTimes(2));
+      }
+      await act(async () => {
+        await PostController.commitUpdateCollectionItem({ collectionId, postId: indexedIds[0], shouldAdd: false });
+        await PostController.commitUpdateCollectionItem({ collectionId, postId: localOnly, shouldAdd: false });
+      });
+      indexed = indexedIds.slice(1);
+      rerender({ members: indexed });
+      act(() => {
+        // The picker closes after persistence. Only the consumed Nexus row
+        // contributes to the offset, even if this callback repeats.
+        result.current.removePosts([indexedIds[0], localOnly, explicitlyAdded, indexedIds[0]]);
+        result.current.removePosts(indexedIds[0]);
+      });
+      if (pagePending) {
+        await act(async () => {
+          // This response started against the old index, before the deletion.
+          pending.resolve({ post_keys: indexedIds.slice(2, 4), last_post_score: null });
+          await loadingPage;
+        });
+      }
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(NexusPostStreamService.fetch).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          params: expect.objectContaining({ skip: pagePending ? 3 : 1, limit: 2 }),
+        }),
+      );
+      const lastPage = await vi.mocked(NexusPostStreamService.fetch).mock.results.at(-1)!.value;
+      expect(lastPage.post_keys).toEqual(pagePending ? indexedIds.slice(4) : indexedIds.slice(2, 4));
+      expect(result.current.postIds).toEqual(indexed);
+    },
+  );
 
   it('deduplicates and orders members while excluding removed ids returned by a stale Nexus page', async () => {
     const id = await createPost();

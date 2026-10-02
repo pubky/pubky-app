@@ -5,6 +5,7 @@ import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-q
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { PostController } from '@/controllers/post/post';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import * as pullToRefresh from '@/hooks/usePullToRefresh/usePullToRefresh';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -115,6 +116,37 @@ describe('collection feed with local membership', () => {
     expect(screen.getByTestId('item-count')).toHaveTextContent('1');
     await waitFor(() => expect(NexusPostStreamService.fetch).toHaveBeenCalled());
     expect(screen.queryByText('No saved posts')).not.toBeInTheDocument();
+  });
+
+  it('preserves the same card and open picker while refresh awaits a replacement page', async () => {
+    const originalHook = pullToRefresh.usePullToRefresh;
+    let refresh = async () => {};
+    // Observe the callback while keeping the real pull-to-refresh hook mounted.
+    vi.spyOn(pullToRefresh, 'usePullToRefresh').mockImplementation(function useObservedPullToRefresh(options) {
+      refresh = options.onRefresh;
+      return originalHook(options);
+    });
+    const { collectionId, postId } = await seed();
+    vi.mocked(NexusPostStreamService.fetch).mockResolvedValueOnce({ post_keys: [postId], last_post_score: null });
+    showFeed(collectionId);
+    await openPicker();
+    const originalCard = screen.getByTestId(postId);
+    const before = vi.mocked(NexusPostStreamService.fetch).mock.calls.length;
+    const replacement = Promise.withResolvers<Awaited<ReturnType<typeof NexusPostStreamService.fetch>>>();
+    vi.mocked(NexusPostStreamService.fetch).mockReturnValueOnce(replacement.promise);
+    let refreshing: Promise<void> | undefined;
+    act(() => {
+      refreshing = refresh();
+    });
+    await waitFor(() => expect(NexusPostStreamService.fetch).toHaveBeenCalledTimes(before + 1));
+    expect(screen.getByTestId(postId)).toBe(originalCard);
+    expect(screen.getByText('Reading list')).toBeVisible();
+    await act(async () => {
+      replacement.resolve({ post_keys: [], last_post_score: null });
+      await refreshing;
+    });
+    expect(screen.getByTestId(postId)).toBe(originalCard);
+    expect(screen.getByText('Reading list')).toBeVisible();
   });
 
   it.each(['desktop', 'mobile'])(
