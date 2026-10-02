@@ -37,6 +37,7 @@ import {
   isContentSearchStream,
   isDeletedRetainingStream,
   isDiscoverCollectionsStream,
+  isPostCollectionsStream,
   isSkipPaginatedStream,
   parseContentSearchStreamId,
   type PostStreamId,
@@ -1011,6 +1012,11 @@ export class PostStreamApplication {
     // Profile search inherits the Posts tab contract: collections have their own tab.
     if (isAuthorScopedContentSearchStream(streamId)) {
       return true;
+    }
+
+    // Every post in a post-collections stream is a collection; its third segment is a post id, not a kind.
+    if (isPostCollectionsStream(streamId)) {
+      return false;
     }
 
     // Content search is the one family where `kind=all` means "including

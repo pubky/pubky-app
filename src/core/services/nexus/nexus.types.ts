@@ -243,6 +243,11 @@ export type NexusPostCounts = {
   unique_tags: number;
   replies: number;
   reposts: number;
+  /**
+   * Collections that curate this post (pubky-nexus#1067). Optional because rows
+   * persisted before the field existed carry no value; read it as `?? 0`.
+   */
+  collections?: number;
 };
 
 /** Post relationship data (replies, reposts, mentions) */

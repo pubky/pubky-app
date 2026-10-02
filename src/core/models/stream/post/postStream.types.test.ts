@@ -7,6 +7,7 @@ import {
   buildContentSearchStreamId,
   buildDiscoverCollectionsStreamId,
   buildFollowedCollectionsStreamId,
+  buildPostCollectionsStreamId,
   buildPostReplyStreamId,
   buildSortedAuthorStreamId,
   buildWotDomainStreamId,
@@ -18,6 +19,7 @@ import {
   isCollectionItemsStream,
   isContentSearchStream,
   isDeletedRetainingStream,
+  isPostCollectionsStream,
   isSkipPaginatedStream,
   isViewerExcludedWotStream,
   isWotDomainStream,
@@ -252,6 +254,27 @@ describe('post-stream id builders', () => {
       });
     });
   });
+
+  describe('buildPostCollectionsStreamId (collections containing a post)', () => {
+    it('produces post_collections:<authorPubky>:<postId>', () => {
+      expect(buildPostCollectionsStreamId(TEST_PUBKY, TEST_POST_ID)).toBe(
+        `${StreamSource.POST_COLLECTIONS}:${TEST_PUBKY}:${TEST_POST_ID}`,
+      );
+    });
+
+    it('round-trips through breakDownStreamId as named fields', () => {
+      const streamId = buildPostCollectionsStreamId(TEST_PUBKY, TEST_POST_ID);
+      expect(breakDownStreamId(streamId)).toEqual({
+        sorting: TEST_PUBKY,
+        invokeEndpoint: StreamSource.POST_COLLECTIONS,
+        kind: TEST_POST_ID,
+      });
+    });
+
+    it('encodes no kind: the third segment is the anchored post id', () => {
+      expect(getPostStreamKind(buildPostCollectionsStreamId(TEST_PUBKY, TEST_POST_ID))).toBeUndefined();
+    });
+  });
 });
 
 describe('isSkipPaginatedStream', () => {
@@ -270,6 +293,10 @@ describe('isSkipPaginatedStream', () => {
     expect(isSkipPaginatedStream(buildCollectionItemsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(true);
   });
 
+  it('returns true for post-collections streams (graph-served, skip/limit paginated)', () => {
+    expect(isSkipPaginatedStream(buildPostCollectionsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(true);
+  });
+
   it('returns false for timeline / author / bookmarks streams (timestamp-paginated)', () => {
     expect(isSkipPaginatedStream('timeline:all:all')).toBe(false);
     expect(isSkipPaginatedStream('timeline:bookmarks:collection')).toBe(false);
@@ -283,6 +310,17 @@ describe('isCollectionItemsStream', () => {
     expect(isCollectionItemsStream(buildCollectionItemsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(true);
     expect(isCollectionItemsStream(buildAuthorCollectionsStreamId(TEST_PUBKY))).toBe(false);
     expect(isCollectionItemsStream('timeline:bookmarks:collection')).toBe(false);
+    // `post_collections:` must not read as the `collection:` prefix.
+    expect(isCollectionItemsStream(buildPostCollectionsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(false);
+  });
+});
+
+describe('isPostCollectionsStream', () => {
+  it('returns true only for collections-containing-a-post streams', () => {
+    expect(isPostCollectionsStream(buildPostCollectionsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(true);
+    expect(isPostCollectionsStream(buildCollectionItemsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(false);
+    expect(isPostCollectionsStream(buildAuthorCollectionsStreamId(TEST_PUBKY))).toBe(false);
+    expect(isPostCollectionsStream('timeline:all:collection')).toBe(false);
   });
 });
 

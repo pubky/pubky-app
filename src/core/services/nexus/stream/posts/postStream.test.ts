@@ -11,6 +11,7 @@ import {
   type TStreamAuthorParams,
   type TStreamAuthorRepliesParams,
   type TStreamCollectionParams,
+  type TStreamPostCollectionsParams,
   type TStreamPostRepliesParams,
   type TStreamPostsByIdsParams,
   type TStreamQueryParams,
@@ -61,6 +62,8 @@ function callStreamEndpoint(
       return postStreamApi.author_replies(params as TStreamAuthorRepliesParams);
     case 'collection':
       return postStreamApi.collection(params as TStreamCollectionParams);
+    case 'post_collections':
+      return postStreamApi.post_collections(params as TStreamPostCollectionsParams);
     case 'postsByIds':
       return postStreamApi.postsByIds(params as TStreamPostsByIdsParams);
     default:
@@ -911,6 +914,40 @@ describe('createPostStreamParams', () => {
       expect(result.extraParams.author_id).toBe('pubky');
       expect(result.extraParams.post_id).toBe('post123');
     });
+
+    it('builds params for post_collections:<pubky>:<postId> (collections containing a post)', () => {
+      const result = createPostStreamParams({
+        streamId: 'post_collections:pubky:post123' as PostStreamId,
+        streamHead: 0,
+        streamTail: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.invokeEndpoint).toBe(StreamSource.POST_COLLECTIONS);
+      // Nexus rejects `kind` for this source, and the 3rd segment is the anchored post id anyway.
+      expect(result.params.kind).toBeUndefined();
+      expect(result.params.viewer_id).toBe(mockViewerId);
+      expect(result.extraParams.author_id).toBe('pubky');
+      expect(result.extraParams.post_id).toBe('post123');
+      // Skip-paginated: the offset is the number of collections already loaded.
+      expect(result.params.skip).toBe(0);
+      expect(result.params.start).toBeUndefined();
+    });
+
+    it('pages post_collections streams by skip offset', () => {
+      const result = createPostStreamParams({
+        streamId: 'post_collections:pubky:post123' as PostStreamId,
+        streamHead: 0,
+        streamTail: 20,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.params.skip).toBe(20);
+      expect(result.params.start).toBeUndefined();
+      expect(result.params.end).toBeUndefined();
+    });
   });
 });
 
@@ -1118,6 +1155,16 @@ describe('breakDownStreamId', () => {
       });
     });
 
+    it('should parse post_collections:<pubky>:<postId> (collections containing a post, source-first composite)', () => {
+      const result = breakDownStreamId('post_collections:pubky:post123' as PostStreamId);
+      expect(result).toEqual({
+        sorting: 'pubky',
+        invokeEndpoint: StreamSource.POST_COLLECTIONS,
+        kind: 'post123',
+        tags: undefined,
+      });
+    });
+
     it('should parse collection:<pubky>:<postId> with tags', () => {
       const result = breakDownStreamId('collection:pubky:post123:tag1,tag2' as PostStreamId);
       expect(result).toEqual({
@@ -1274,6 +1321,19 @@ describe('NexusPostStreamService', () => {
           'source=collection',
           'author_id=author-pubky-id',
           'post_id=post-pubky-id',
+          `viewer_id=${mockViewerId}`,
+        ],
+      },
+      {
+        name: 'POST_COLLECTIONS',
+        invokeEndpoint: StreamSource.POST_COLLECTIONS,
+        params: { limit: 20, skip: 20, viewer_id: mockViewerId },
+        extraParams: { author_id: mockAuthorId, post_id: mockPostId },
+        expectedInUrl: [
+          'source=post_collections',
+          'author_id=author-pubky-id',
+          'post_id=post-pubky-id',
+          'skip=20',
           `viewer_id=${mockViewerId}`,
         ],
       },

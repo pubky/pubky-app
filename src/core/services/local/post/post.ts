@@ -6,6 +6,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { getTtlPostMs } from '@/libs/runtime-config/runtime-config';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
@@ -189,11 +190,22 @@ export class LocalPostService {
         changes.kind = kind;
       }
 
-      await db.transaction('rw', [PostDetailsModel.table, PostTtlModel.table], async () => {
+      await db.transaction('rw', [PostDetailsModel.table, PostCountsModel.table, PostTtlModel.table], async () => {
+        // Read before the write: the curated-item diff below needs the pre-edit envelope.
+        const existing = await PostDetailsModel.findById(compositePostId);
         await PostDetailsModel.update(compositePostId, changes);
         // Touch TTL so the coordinator considers the edited post fresh and
         // doesn't overwrite the local edit with stale (pre-edit) Nexus data
         await PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() });
+
+        // A collection edit (item added/removed, or a kind flip in either direction)
+        // moves the curated posts' `collections` count, like Nexus's COLLECTED edges.
+        await Promise.all(
+          this.updateCuratedPostCounts(
+            this.curatedItemIds(existing?.kind, existing?.content),
+            this.curatedItemIds(kind ?? existing?.kind, content),
+          ),
+        );
       });
       Logger.debug('Post edited successfully', { compositePostId });
     } catch (error) {
@@ -295,6 +307,7 @@ export class LocalPostService {
         unique_tags: 0,
         replies: 0,
         reposts: 0,
+        collections: 0,
       };
 
       await db.transaction(
@@ -350,6 +363,9 @@ export class LocalPostService {
               ops.push(PostTtlModel.upsert({ id: repostedPostId, lastUpdatedAt: Date.now() }));
             }
           }
+
+          // A new collection curates its items from the start: bump their `collections` count.
+          ops.push(...this.updateCuratedPostCounts(new Set(), this.curatedItemIds(normalizedKind, content)));
 
           // Touch TTL for the new post
           ops.push(PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }));
@@ -420,7 +436,22 @@ export class LocalPostService {
     const postCounts = await PostCountsModel.findById(compositePostId);
     // If counts exist and post is linked → soft delete (mark as DELETED, keep records)
     if (postCounts && this.isPostLinked(postCounts)) {
-      await PostDetailsModel.update(compositePostId, { content: DELETED });
+      try {
+        await db.transaction('rw', [PostDetailsModel.table, PostCountsModel.table, PostTtlModel.table], async () => {
+          await PostDetailsModel.update(compositePostId, { content: DELETED });
+          // A tombstoned collection curates nothing any more (Nexus drops its COLLECTED edges too).
+          await Promise.all(
+            this.updateCuratedPostCounts(this.curatedItemIds(existing?.kind, existing?.content), new Set()),
+          );
+        });
+      } catch (error) {
+        throw Err.database(DatabaseErrorCode.DELETE_FAILED, 'Failed to delete post', {
+          service: ErrorService.Local,
+          operation: 'delete',
+          context: { compositePostId },
+          cause: error,
+        });
+      }
       return true;
     }
 
@@ -494,6 +525,9 @@ export class LocalPostService {
               ops.push(PostTtlModel.upsert({ id: repostedPostId, lastUpdatedAt: Date.now() }));
             }
           }
+
+          // A deleted collection curates nothing any more: its items lose one `collections` count.
+          ops.push(...this.updateCuratedPostCounts(this.curatedItemIds(kind, postDetails?.content), new Set()));
 
           // Update author's user counts in a single operation. Mirror the create
           // path: a collection-kind post decrements both `posts` and `collections`.
@@ -587,6 +621,43 @@ export class LocalPostService {
 
   private static isPostLinked(postCounts: PostCountsModelSchema): boolean {
     return postCounts.replies > 0 || postCounts.reposts > 0 || postCounts.tags > 0;
+  }
+
+  /**
+   * Composite ids of the posts a collection envelope curates; empty for any other kind and for
+   * envelopes that do not parse (a tombstone, malformed content). Diffing on ids rather than
+   * raw URIs keeps two spellings of one post from counting twice, and drops non-post URIs the
+   * way Nexus does (it only links items that are posts).
+   */
+  private static curatedItemIds(kind: string | undefined, content: string | null | undefined): Set<string> {
+    if (kind !== 'collection') return new Set();
+    const itemIds = (parseCollectionContent(content)?.items ?? [])
+      .map((uri) => buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.POSTS }))
+      .filter((itemId): itemId is string => itemId !== null);
+    return new Set(itemIds);
+  }
+
+  /**
+   * Local counterpart of Nexus's COLLECTED edges (pubky-nexus#1067): every post the collection
+   * gained gets `collections + 1`, every post it dropped `collections - 1`, and each touched
+   * post's TTL is stamped so the coordinator does not overwrite the local change with a count
+   * Nexus has not re-indexed yet (the reply/repost count pattern above). Returns the pending
+   * writes for the caller's transaction.
+   */
+  private static updateCuratedPostCounts(previousItemIds: Set<string>, nextItemIds: Set<string>): Promise<unknown>[] {
+    const ops: Promise<unknown>[] = [];
+    const bump = (postCompositeId: string, collections: number) => {
+      ops.push(PostCountsModel.updateCounts({ postCompositeId, countChanges: { collections } }));
+      ops.push(PostTtlModel.upsert({ id: postCompositeId, lastUpdatedAt: Date.now() }));
+    };
+
+    for (const itemId of nextItemIds) {
+      if (!previousItemIds.has(itemId)) bump(itemId, 1);
+    }
+    for (const itemId of previousItemIds) {
+      if (!nextItemIds.has(itemId)) bump(itemId, -1);
+    }
+    return ops;
   }
 
   /**

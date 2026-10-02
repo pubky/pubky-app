@@ -13,6 +13,7 @@ export class PostCountsModel extends TupleModelBase<string, PostCountsModelSchem
   unique_tags: number;
   replies: number;
   reposts: number;
+  collections: number;
 
   constructor(postCounts: PostCountsModelSchema) {
     super(postCounts);
@@ -20,6 +21,8 @@ export class PostCountsModel extends TupleModelBase<string, PostCountsModelSchem
     this.unique_tags = postCounts.unique_tags;
     this.replies = postCounts.replies;
     this.reposts = postCounts.reposts;
+    // Rows persisted before the field existed carry no value.
+    this.collections = postCounts.collections ?? 0;
   }
 
   // Adapter function to convert NexusPostCounts to PostCountsModelSchema
@@ -44,6 +47,9 @@ export class PostCountsModel extends TupleModelBase<string, PostCountsModelSchem
     }
     if (countChanges.unique_tags !== undefined) {
       updates.unique_tags = Math.max(0, postCounts.unique_tags + countChanges.unique_tags);
+    }
+    if (countChanges.collections !== undefined) {
+      updates.collections = Math.max(0, postCounts.collections + countChanges.collections);
     }
 
     if (Object.keys(updates).length > 0) {
