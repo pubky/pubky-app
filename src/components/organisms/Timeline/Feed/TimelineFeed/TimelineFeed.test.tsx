@@ -824,6 +824,7 @@ describe('TimelineFeed', () => {
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
         streamId: buildCollectionItemsStreamId(collectionAuthor, collectionPost),
         limit: NEXUS_STREAM_MAX_LIMIT,
+        collectionMembership: { postIds: undefined, viewerId: null },
       });
       expect(mockUsePostDetails).toHaveBeenCalledWith(`${collectionAuthor}:${collectionPost}`);
     });
@@ -839,19 +840,22 @@ describe('TimelineFeed', () => {
         isLoading: false,
       });
 
-    it('renders signed-in viewers the envelope items in envelope order, hiding ids the envelope lacks', () => {
+    it('passes a signed-in viewer’s membership to pagination and renders its projected items', () => {
       orderedEnvelope();
       mockUseStreamPagination.mockReturnValue({
         ...defaultPaginationResult,
-        postIds: ['author_b:post_b', 'author_a:post_a', 'stranger:post_x'],
+        postIds: ['author_b:post_b', 'author_a:post_a'],
       });
       useAuthStore.getState().init({ session: mockSession(), currentUserPubky: 'viewer' as Pubky, hasProfile: true });
 
       try {
         render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
 
-        // A stream id the envelope lacks is either stale or not yet reflected in
-        // the envelope; hiding it keeps the grid in step with the count badge.
+        expect(mockUseStreamPagination).toHaveBeenCalledWith(
+          expect.objectContaining({
+            collectionMembership: { postIds: ['author_a:post_a', 'author_b:post_b'], viewerId: 'viewer' },
+          }),
+        );
         expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
           'data-post-ids',
           'author_a:post_a,author_b:post_b',
@@ -865,16 +869,20 @@ describe('TimelineFeed', () => {
       orderedEnvelope();
       mockUseStreamPagination.mockReturnValue({
         ...defaultPaginationResult,
-        postIds: ['author_b:post_b', 'author_a:post_a', 'stranger:post_x'],
+        postIds: ['author_b:post_b', 'author_a:post_a'],
       });
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
 
-      // The guest's count badge follows the refreshed envelope, so the grid must too.
+      expect(mockUseStreamPagination).toHaveBeenCalledWith(
+        expect.objectContaining({
+          collectionMembership: { postIds: ['author_a:post_a', 'author_b:post_b'], viewerId: null },
+        }),
+      );
       expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'author_a:post_a,author_b:post_b');
     });
 
-    it('keeps ids outside the envelope for the owner, appended after the envelope order', () => {
+    it('preserves explicitly retained ids returned by pagination for the owner', () => {
       orderedEnvelope();
       mockUseStreamPagination.mockReturnValue({
         ...defaultPaginationResult,
@@ -892,6 +900,23 @@ describe('TimelineFeed', () => {
       } finally {
         useAuthStore.getState().reset();
       }
+    });
+
+    it('distinguishes a pending cache miss from a settled missing envelope', () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: true });
+      const { rerender } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
+      expect(mockUseStreamPagination).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          collectionMembership: { postIds: undefined, viewerId: null },
+        }),
+      );
+      mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+      rerender(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
+      expect(mockUseStreamPagination).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          collectionMembership: { postIds: [], viewerId: null },
+        }),
+      );
     });
 
     it('leaves the stream order untouched while the envelope has not resolved', () => {

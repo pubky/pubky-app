@@ -286,7 +286,7 @@ describe('TimelineFeedContent', () => {
         />,
       );
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
-      expect(screen.queryByTestId('timeline-loading')).not.toBeInTheDocument();
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
     });
 
     it('renders children above post list', () => {
@@ -357,6 +357,7 @@ describe('TimelineFeedContent', () => {
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
         streamId: COLLECTION_STREAM_ID,
         limit: NEXUS_STREAM_MAX_LIMIT,
+        collectionMembership: { postIds: undefined, viewerId: null },
       });
     });
 
@@ -424,20 +425,32 @@ describe('TimelineFeedContent', () => {
           variant={TIMELINE_FEED_VARIANT.COLLECTION}
           tagsLayout="inline"
           collectionId="author-pubky:collection-post"
+          membershipPostIds={['uncached:post']}
         />
       );
-      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true });
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds: [], hasMore: true });
       const { rerender } = render(renderFeed());
 
       for (let round = 0; round < 6; round++) {
-        mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true, loadingMore: true });
+        mockUseStreamPagination.mockReturnValue({
+          ...defaultPaginationResult,
+          postIds: [],
+          hasMore: true,
+          loadingMore: true,
+        });
         rerender(renderFeed());
-        mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true, loadingMore: false });
+        mockUseStreamPagination.mockReturnValue({
+          ...defaultPaginationResult,
+          postIds: [],
+          hasMore: true,
+          loadingMore: false,
+        });
         rerender(renderFeed());
       }
 
       // ceil(COLLECTION_ITEMS_MAX_COUNT / NEXUS_STREAM_MAX_LIMIT) + 1 = 3.
       expect(mockLoadMore).toHaveBeenCalledTimes(3);
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
     });
 
     it('resets the eager-load budget when the stream restarts from an initial load', () => {
@@ -692,7 +705,7 @@ describe('TimelineFeedContent', () => {
     });
   });
 
-  describe('Collection membership sync', () => {
+  describe('Collection membership display', () => {
     const collectionFeed = (membershipPostIds: string[] | undefined) => (
       <TimelineFeedWithStream
         streamId={COLLECTION_STREAM_ID}
@@ -701,195 +714,55 @@ describe('TimelineFeedContent', () => {
         membershipPostIds={membershipPostIds}
       />
     );
-    // The mocked hook is static, so tests simulate what the real hook does after
-    // an apply (the id leaves / enters `postIds`) by updating the mock.
-    const setLoadedIds = (postIds: string[], overrides: Partial<typeof defaultPaginationResult> = {}) =>
-      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds, hasMore: false, ...overrides });
 
-    beforeEach(() => {
-      // Loaded feed: post1, post2, post3; no more pages so the eager-load effect stays quiet.
-      setLoadedIds(['post1', 'post2', 'post3']);
-    });
-
-    it('treats the first envelope as the baseline and applies nothing', () => {
+    it('passes the complete local membership to pagination without issuing feed mutations', () => {
       const { rerender } = render(collectionFeed(undefined));
-      rerender(collectionFeed(['post1', 'post2', 'post3']));
-
+      rerender(collectionFeed(['post3', 'post1']));
+      expect(mockUseStreamPagination).toHaveBeenLastCalledWith({
+        streamId: COLLECTION_STREAM_ID,
+        limit: NEXUS_STREAM_MAX_LIMIT,
+        collectionMembership: { postIds: ['post3', 'post1'], viewerId: null },
+      });
       expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
       expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
-    });
-
-    it('prepends an added id the feed has not loaded, without refetching', () => {
-      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
-      rerender(collectionFeed(['post4', 'post1', 'post2', 'post3']));
-
-      expect(mockPrependOptimisticPosts).toHaveBeenCalledTimes(1);
-      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post4']);
       expect(mockRefresh).not.toHaveBeenCalled();
     });
 
-    it('commits a removal for a dropped id the feed still shows', () => {
-      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
-      rerender(collectionFeed(['post1', 'post3']));
-
-      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
-      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
-      expect(mockRemoveCommit).toHaveBeenCalledTimes(1);
-    });
-
-    it('applies additions and removals from one envelope change together', () => {
-      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
-      rerender(collectionFeed(['post4', 'post1', 'post3']));
-
-      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
-      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post4']);
-    });
-
-    it('skips an added id the feed already shows', () => {
-      const { rerender } = render(collectionFeed(['post1', 'post2']));
-      rerender(collectionFeed(['post3', 'post1', 'post2']));
-
-      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
-    });
-
-    it('defers a removal until the dropped id is loaded, then commits it once', () => {
-      // post2 is in the envelope but its page has not arrived yet.
-      setLoadedIds(['post1']);
-      const { rerender } = render(collectionFeed(['post1', 'post2']));
-      rerender(collectionFeed(['post1']));
-      expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
-
-      // The page lands and brings post2 (Nexus had not re-indexed the removal).
-      setLoadedIds(['post1', 'post2']);
-      rerender(collectionFeed(['post1']));
-      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
-      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
-      expect(mockRemoveCommit).toHaveBeenCalledTimes(1);
-
-      // The hook drops the id; the next run has nothing left to remove.
-      setLoadedIds(['post1']);
-      rerender(collectionFeed(['post1']));
-      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
-    });
-
-    it('removes a dropped id again when a refresh re-serves it', () => {
-      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
-      rerender(collectionFeed(['post1', 'post3']));
-      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
-
-      setLoadedIds(['post1', 'post3']);
-      rerender(collectionFeed(['post1', 'post3']));
-      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
-
-      // Pull-to-refresh hits a lagging Nexus stream that still lists post2.
-      setLoadedIds(['post1', 'post2', 'post3']);
-      rerender(collectionFeed(['post1', 'post3']));
-      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(2);
-      expect(mockRemovePostsOptimistically).toHaveBeenLastCalledWith(['post2']);
-    });
-
-    it('re-adds an id the envelope drops and later restores', () => {
-      const { rerender } = render(collectionFeed(['post1', 'post2']));
-      rerender(collectionFeed(['post1']));
-      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
-
-      setLoadedIds(['post1']);
-      rerender(collectionFeed(['post1', 'post2']));
-      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post2']);
-    });
-
-    it('hides a dropped id in the same render, before the removal is committed', () => {
-      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
-      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,post2,post3');
-
-      rerender(collectionFeed(['post1', 'post3']));
-
-      // The render already excludes post2 (no flash to the end of the grid)…
-      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,post3');
-      // …and the effect commits it out of the hook state.
-      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
-    });
-
-    it('renders only loaded ids the membership contains, so a stale envelope matches the badge', () => {
-      render(collectionFeed(['post1', 'post3']));
-
-      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,post3');
-      expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
-    });
-
-    it('does nothing on a reorder-only change', () => {
-      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
-      rerender(collectionFeed(['post3', 'post1', 'post2']));
-
-      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
-      expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
-    });
-
-    it('defers additions until the initial load has settled', () => {
-      setLoadedIds([], { loading: true });
-      const { rerender } = render(collectionFeed(['post1']));
-      rerender(collectionFeed(['post4', 'post1']));
-      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
-
-      // The stream lands without post4 (Nexus has not indexed it yet).
-      setLoadedIds(['post1']);
-      rerender(collectionFeed(['post4', 'post1']));
-      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post4']);
-    });
-
-    it('reconciles members the settled initial stream never delivered', () => {
-      // A viewer opens a collection right after the owner added its first post:
-      // the envelope says [post1], the lagging items stream returns nothing.
-      setLoadedIds([]);
-      render(collectionFeed(['post1']));
-
-      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post1']);
-    });
-
-    it('does not reconcile members whose author is muted (the stream filters them on purpose)', () => {
-      mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, mutedUserIdSet: new Set(['muted-user']) });
-      setLoadedIds([]);
-
-      render(collectionFeed(['muted-user:post9', 'post1']));
-
-      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post1']);
-    });
-
-    it('waits for the mute list before reconciling missing collection members', () => {
-      const membershipPostIds = ['muted-user:post9', 'other-user:post1'];
-      mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, isLoading: true });
-      setLoadedIds([]);
-
-      const { rerender } = render(collectionFeed(membershipPostIds));
-      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
-
-      mockUseMutedUsers.mockReturnValue({
-        ...defaultMutedUsersResult,
-        mutedUserIds: ['muted-user'],
-        mutedUserIdSet: new Set(['muted-user']),
+    it('renders the projected ids, including cards retained by an open picker', () => {
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['post3', 'retained', 'post1'],
       });
-      rerender(collectionFeed(membershipPostIds));
-
-      expect(mockPrependOptimisticPosts).toHaveBeenCalledTimes(1);
-      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['other-user:post1']);
+      render(collectionFeed(['post3', 'post1']));
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post3,retained,post1');
     });
 
-    it('does not reconcile while more pages are still loading', () => {
-      setLoadedIds(['post1'], { loadingMore: true, hasMore: true });
-      const { rerender } = render(collectionFeed(['post1', 'post2']));
-      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
-
-      setLoadedIds(['post1']);
-      rerender(collectionFeed(['post1', 'post2']));
-      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post2']);
+    it('waits for the local membership, then displays it even while Nexus is loading', () => {
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, loading: true });
+      const { rerender } = render(collectionFeed(undefined));
+      expect(screen.getByTestId('loading')).toHaveTextContent('true');
+      rerender(collectionFeed(['post1', 'post2', 'post3']));
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('post-count')).toHaveTextContent('3');
     });
 
-    it('applies each membership change once, not on every re-render', () => {
-      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
-      rerender(collectionFeed(['post4', 'post1', 'post2', 'post3']));
-      rerender(collectionFeed(['post4', 'post1', 'post2', 'post3']));
+    it('waits for the mute list and restores unmuted members without another stream fetch', () => {
+      const members = ['muted-user:post1', 'other-user:post2'];
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds: members });
+      mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, isLoading: true });
+      const { rerender } = render(collectionFeed(members));
+      expect(screen.getByTestId('loading')).toHaveTextContent('true');
+      expect(screen.getByTestId('post-count')).toHaveTextContent('0');
 
-      expect(mockPrependOptimisticPosts).toHaveBeenCalledTimes(1);
+      mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, mutedUserIdSet: new Set(['muted-user']) });
+      rerender(collectionFeed(members));
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'other-user:post2');
+
+      mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
+      rerender(collectionFeed(members));
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', members.join(','));
+      expect(mockRemovePosts).not.toHaveBeenCalled();
+      expect(mockRefresh).not.toHaveBeenCalled();
     });
   });
 
@@ -1300,7 +1173,7 @@ describe('Cards layout dispatch', () => {
     expect(screen.getByTestId('pull-to-refresh')).toBeInTheDocument();
   });
 
-  it('applies muting for the collection variant (not in the mute skip list, D7)', () => {
+  it('filters muted collection cards without dismissing their membership', () => {
     let mutedUserIds: string[] = [];
     mockUseStreamPagination.mockReturnValue({
       ...defaultPaginationResult,
@@ -1332,7 +1205,8 @@ describe('Cards layout dispatch', () => {
       />,
     );
 
-    expect(mockRemovePosts).toHaveBeenCalledWith(['muted-user:post-1']);
+    expect(screen.getByTestId('cards-post-count')).toHaveTextContent('1');
+    expect(mockRemovePosts).not.toHaveBeenCalled();
   });
 });
 

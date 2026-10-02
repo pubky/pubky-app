@@ -1,6 +1,15 @@
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 
+export interface CollectionStreamMembership {
+  /** Complete local membership in collection order; undefined while its read resolves. */
+  postIds: string[] | undefined;
+  /** Scopes transient picker/removal state to the current viewer. */
+  viewerId: string | null;
+}
+
 export interface UseStreamPaginationOptions {
+  /** Single-collection display membership. Never contributes to Nexus pagination offsets. */
+  collectionMembership?: CollectionStreamMembership;
   /**
    * Stream ID to fetch posts from. `undefined` makes the hook inert: it never
    * loads, reports an empty settled result (`hasMore: false`, `loading: false`)
@@ -53,6 +62,8 @@ export interface OptimisticPostRemoval {
 }
 
 export interface UseStreamPaginationResult {
+  /** Retain a collection card while its picker is open or its save is pending. Release on completion/unmount. */
+  retainPost?: (postId: string) => () => void;
   /**
    * Array of post IDs in the current stream
    */
