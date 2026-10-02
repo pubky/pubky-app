@@ -74,6 +74,15 @@ describe('post-stream id builders', () => {
       }
     });
 
+    it('maps differently-cased queries to one id so they share a stream cache', () => {
+      expect(buildContentSearchStreamId('Bitcoin Wallets')).toBe(buildContentSearchStreamId('bitcoin wallets'));
+      expect(buildContentSearchStreamId('BITCOIN', StreamKind.COLLECTION, TEST_PUBKY)).toBe(
+        buildContentSearchStreamId('bitcoin', StreamKind.COLLECTION, TEST_PUBKY),
+      );
+      expect(buildContentSearchStreamId('Bitcoin Wallets')).toBe('content_search:q~bitcoin%20wallets:all');
+      expect(parseContentSearchStreamId(buildContentSearchStreamId('Bitcoin Wallets'))?.query).toBe('bitcoin wallets');
+    });
+
     it('round-trips author-scoped ids (profile "Filter posts") preserving the q~ marker', () => {
       const streamId = buildContentSearchStreamId('bitcoin: wallets & privacy', StreamKind.COLLECTION, TEST_PUBKY);
 
