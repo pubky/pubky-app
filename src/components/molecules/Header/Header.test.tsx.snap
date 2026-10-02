@@ -62,12 +62,14 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderHome 1`] = `
     data-testid="header-social-links"
   >
     <a
+      aria-label="GitHub"
       class="cursor-pointer transition-colors text-muted-foreground hover:text-brand text-sm"
       href="https://github.com"
       rel="noopener noreferrer"
       target="_blank"
     >
       <svg
+        aria-hidden="true"
         class="h-6 w-6"
         fill="none"
         height="24"
@@ -85,12 +87,14 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderHome 1`] = `
       </svg>
     </a>
     <a
+      aria-label="X"
       class="cursor-pointer transition-colors text-muted-foreground hover:text-brand text-sm"
       href="https://twitter.com/getpubky"
       rel="noopener noreferrer"
       target="_blank"
     >
       <svg
+        aria-hidden="true"
         class="lucide-x-twitter h-6 w-6"
         fill="none"
         height="24"
@@ -121,12 +125,14 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderHome 1`] = `
       </svg>
     </a>
     <a
+      aria-label="Telegram"
       class="cursor-pointer transition-colors text-muted-foreground hover:text-brand text-sm"
       href="https://t.me/getpubky"
       rel="noopener noreferrer"
       target="_blank"
     >
       <svg
+        aria-hidden="true"
         class="lucide-telegram h-6 w-6"
         fill="none"
         height="24"
@@ -709,12 +715,14 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSocialLinks 
   data-testid="header-social-links"
 >
   <a
+    aria-label="GitHub"
     class="cursor-pointer transition-colors text-muted-foreground hover:text-brand text-sm"
     href="https://github.com"
     rel="noopener noreferrer"
     target="_blank"
   >
     <svg
+      aria-hidden="true"
       class="h-6 w-6"
       fill="none"
       height="24"
@@ -732,12 +740,14 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSocialLinks 
     </svg>
   </a>
   <a
+    aria-label="X"
     class="cursor-pointer transition-colors text-muted-foreground hover:text-brand text-sm"
     href="https://twitter.com/getpubky"
     rel="noopener noreferrer"
     target="_blank"
   >
     <svg
+      aria-hidden="true"
       class="lucide-x-twitter h-6 w-6"
       fill="none"
       height="24"
@@ -768,12 +778,14 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSocialLinks 
     </svg>
   </a>
   <a
+    aria-label="Telegram"
     class="cursor-pointer transition-colors text-muted-foreground hover:text-brand text-sm"
     href="https://t.me/getpubky"
     rel="noopener noreferrer"
     target="_blank"
   >
     <svg
+      aria-hidden="true"
       class="lucide-telegram h-6 w-6"
       fill="none"
       height="24"

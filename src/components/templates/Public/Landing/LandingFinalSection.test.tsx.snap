@@ -1,0 +1,182 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`LandingFinalSection - Snapshots > matches snapshot with default props 1`] = `
+<section
+  class="relative z-0 flex min-h-svh items-center py-10 sm:py-20 px-4 lg:px-6"
+  id="landing-final-section"
+>
+  <div
+    class="mx-auto w-full flex-col flex container max-w-(--container-max-width) items-center gap-8 text-center"
+    data-testid="container"
+  >
+    <h2
+      class="font-bold text-foreground max-w-[820px] text-5xl sm:text-7xl"
+      data-testid="heading-2"
+    >
+      Enter the 
+      <span
+        class="block"
+      >
+        <span
+          class="text-brand"
+        >
+          freedom web
+        </span>
+        .
+      </span>
+    </h2>
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand text-background border-brand hover:bg-brand/90 h-auto gap-2 py-5 text-sm font-bold leading-normal px-10"
+      data-size="lg"
+      data-slot="button"
+      data-variant="brand"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-user-round-plus mr-2 h-4 w-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M2 21a8 8 0 0 1 13.292-6"
+        />
+        <circle
+          cx="10"
+          cy="8"
+          r="5"
+        />
+        <path
+          d="M19 16v6"
+        />
+        <path
+          d="M22 19h-6"
+        />
+      </svg>
+      Join now
+    </button>
+    <img
+      alt="Pubky"
+      class="-mt-1"
+      data-nimg="1"
+      decoding="async"
+      height="50"
+      loading="lazy"
+      src="/pubky-logo.svg"
+      style="color: transparent; width: 151px; height: 50px;"
+      width="151"
+    />
+    <p
+      class="leading-light text-sm font-medium text-muted-foreground max-w-xl text-center"
+      data-testid="typography"
+    >
+      By creating a 
+      Pubky
+       account, you agree to the
+       
+      <span
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        class="text-sm cursor-pointer font-medium text-brand"
+        data-as-child="true"
+        data-slot="dialog-trigger"
+        data-state="closed"
+        data-testid="dialog-trigger"
+        role="button"
+        tabindex="0"
+        type="button"
+      >
+        Terms of Service
+      </span>
+      , 
+      <span
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        class="text-sm cursor-pointer font-medium text-brand"
+        data-as-child="true"
+        data-slot="dialog-trigger"
+        data-state="closed"
+        data-testid="dialog-trigger"
+        role="button"
+        tabindex="0"
+        type="button"
+      >
+        Privacy Policy
+      </span>
+      , and confirm you are
+       
+      <span
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        class="text-sm cursor-pointer font-medium text-brand"
+        data-as-child="true"
+        data-slot="dialog-trigger"
+        data-state="closed"
+        data-testid="dialog-trigger"
+        role="button"
+        tabindex="0"
+        type="button"
+      >
+        over 18 years old.
+      </span>
+       
+      Pubky is powered by 
+      <a
+        class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm underline"
+        href="https://pubky.org"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        Pubky Protocol
+      </a>
+       and was built by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.
+    </p>
+    <div
+      class="landing-brand-footer inline-flex min-w-max items-center gap-2 whitespace-nowrap transition-opacity duration-300 [&_*]:shrink-0"
+    >
+      <a
+        class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm inline-flex items-center"
+        href="https://synonym.to"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <img
+          alt="Synonym"
+          class="h-auto max-w-none"
+          data-nimg="1"
+          decoding="async"
+          height="24"
+          loading="lazy"
+          src="/images/synonym-grey-logo.svg"
+          style="color: transparent;"
+          width="95"
+        />
+      </a>
+      <a
+        class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm inline-flex items-center"
+        href="https://tether.io/"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <img
+          alt="a tether. company"
+          class="h-auto max-w-none translate-y-px"
+          data-nimg="1"
+          decoding="async"
+          height="16"
+          loading="lazy"
+          src="/images/a-tether-company.svg"
+          style="color: transparent;"
+          width="109"
+        />
+      </a>
+    </div>
+  </div>
+</section>
+`;

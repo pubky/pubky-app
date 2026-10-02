@@ -8,6 +8,13 @@ describe('FooterLinks', () => {
     const footerLinks = screen.getByText('Footer text');
     expect(footerLinks).toBeInTheDocument();
   });
+
+  it('renders the muted foreground token at full opacity', () => {
+    render(<FooterLinks>Footer text</FooterLinks>);
+    const footerLinks = screen.getByText('Footer text');
+    expect(footerLinks).toHaveClass('text-muted-foreground');
+    expect(footerLinks).not.toHaveClass('opacity-80');
+  });
 });
 
 describe('FooterLinks - Snapshots', () => {
