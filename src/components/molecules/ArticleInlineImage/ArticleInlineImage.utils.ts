@@ -1,7 +1,26 @@
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { isAttachmentRefScheme, isAuthorFileUri, parseAttachmentRef } from '@/libs/post/articleInlineImages';
+import { getAttachmentAtSlot } from '@/libs/utils/unlockedMedia';
+import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { ResolvedArticleImageSrc } from './ArticleInlineImage.types';
+
+/** Destinations that are not attachment references: `pubky://` and `https:` only. */
+function resolveDirectImageSrc(src: string): ResolvedArticleImageSrc {
+  if (src.startsWith('pubky://')) {
+    const url = pubkyUriToCdnUrl(src, FileVariant.MAIN);
+    return url ? { kind: 'pubky', url } : { kind: 'invalid' };
+  }
+
+  try {
+    const parsed = new URL(src);
+    if (parsed.protocol === 'https:') return { kind: 'external', url: parsed.toString() };
+  } catch {
+    // fall through to invalid
+  }
+
+  return { kind: 'invalid' };
+}
 
 /**
  * Resolves an article inline-image destination to a loadable URL.
@@ -34,17 +53,25 @@ export function resolveArticleImageSrc(params: {
   // Malformed attachment-scheme refs (attachment:01, ATTACHMENT:2, …)
   if (isAttachmentRefScheme(trimmed)) return { kind: 'invalid' };
 
-  if (trimmed.startsWith('pubky://')) {
-    const url = pubkyUriToCdnUrl(trimmed, FileVariant.MAIN);
-    return url ? { kind: 'pubky', url } : { kind: 'invalid' };
-  }
+  return resolveDirectImageSrc(trimmed);
+}
 
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.protocol === 'https:') return { kind: 'external', url: parsed.toString() };
-  } catch {
-    // fall through to invalid
-  }
+/** Unlocked content: the reader already holds the files, so `attachment:{n}` has no owner to check. */
+export function resolveUnlockedArticleImageSrc(params: {
+  src: string | null | undefined;
+  localAttachments: AttachmentConstructed[];
+}): ResolvedArticleImageSrc {
+  const trimmed = params.src?.trim();
+  if (!trimmed) return { kind: 'invalid' };
 
-  return { kind: 'invalid' };
+  const index = parseAttachmentRef(trimmed);
+  if (index !== null) {
+    const attachment = getAttachmentAtSlot(params.localAttachments, index);
+    return attachment?.type.startsWith('image')
+      ? { kind: 'attachment', url: attachment.urls.main, index }
+      : { kind: 'invalid' };
+  }
+  if (isAttachmentRefScheme(trimmed)) return { kind: 'invalid' };
+
+  return resolveDirectImageSrc(trimmed);
 }

@@ -17,6 +17,7 @@ import {
   getHomeserverUrl,
   getPkarrRelays,
   getTestnet,
+  HOMESERVER_CAPABILITIES,
   isStagingHomeserverDeploy,
 } from '@/config/network';
 import { AppError } from '@/libs/error/error';
@@ -44,6 +45,7 @@ import type {
   PubPath,
   TGeneratePassportAuthUrlParams,
   TGenerateSignupAuthUrlParams,
+  THomeserverBytesResult,
   THomeserverFetchParams,
   THomeserverListAllParams,
   THomeserverListParams,
@@ -63,8 +65,7 @@ import {
   resolveOwnedSessionPath,
 } from './homeserver.utils';
 
-const CAPABILITIES = '/pub/pubky.app/:rw';
-const PUB_PATH_PREFIX = '/pub/' as const;
+const STORAGE_PATH_PREFIXES = ['/pub/', '/priv/'] as const;
 const DELETE_IDEMPOTENT_MAX_ATTEMPTS = 3;
 const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
 /** Default limit for list operations */
@@ -96,7 +97,7 @@ export class HomeserverService {
 
   private static resolveOwnedSessionPath(url: string): TOwnedSessionPath | null {
     const session = useAuthStore.getState().selectSession();
-    return resolveOwnedSessionPath({ url, session, pubPathPrefix: PUB_PATH_PREFIX });
+    return resolveOwnedSessionPath({ url, session, allowedPrefixes: STORAGE_PATH_PREFIXES });
   }
 
   /**
@@ -317,7 +318,7 @@ export class HomeserverService {
    * @returns The authentication URL and approval promise
    */
   static async generateAuthUrl(caps?: Capabilities): Promise<TGenerateAuthUrlResult> {
-    const capabilities: Capabilities = caps || CAPABILITIES;
+    const capabilities: Capabilities = caps || HOMESERVER_CAPABILITIES;
 
     try {
       const pubkySdk = this.getPubkySdk();
@@ -349,7 +350,7 @@ export class HomeserverService {
     xCallback,
     caps,
   }: TGeneratePassportAuthUrlParams): Promise<TGenerateAuthUrlResult> {
-    const capabilities: Capabilities = caps || CAPABILITIES;
+    const capabilities: Capabilities = caps || HOMESERVER_CAPABILITIES;
 
     try {
       const pubkySdk = this.getPubkySdk();
@@ -472,7 +473,7 @@ export class HomeserverService {
     if (method !== HttpMethod.GET && !isHttpUrl(url)) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
-        `Authenticated writes must target an owned ${PUB_PATH_PREFIX}* path for the current session.`,
+        `Authenticated writes must target an owned ${STORAGE_PATH_PREFIXES.join('* / ')}* path for the current session.`,
         {
           service: ErrorService.Homeserver,
           operation: 'request',
@@ -520,7 +521,7 @@ export class HomeserverService {
     if (!isHttpUrl(url)) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
-        `Blob uploads must target an owned ${PUB_PATH_PREFIX}* path for the current session.`,
+        `Blob uploads must target an owned ${STORAGE_PATH_PREFIXES.join('* / ')}* path for the current session.`,
         {
           service: ErrorService.Homeserver,
           operation: 'putBlob',
@@ -654,6 +655,44 @@ export class HomeserverService {
 
       return await pubkySdk.publicStorage.get(url as Address);
     } catch (error) {
+      return handleError({ error, additionalContext: { url, method: HttpMethod.GET } });
+    }
+  }
+
+  /** Raw bytes of a resource (owned/public/http). Rejects (via `get`) on a missing or 4xx/5xx path. */
+  static async getBytes(url: string): Promise<Uint8Array> {
+    const response = await this.get(url);
+    return new Uint8Array(await response.arrayBuffer());
+  }
+
+  /**
+   * Bytes of an owned resource plus the server's `Last-Modified`, or null when it is absent (404) —
+   * WITHOUT logging. For existence checks (e.g. unlock detection) where "not there" is an expected
+   * outcome, not an error to report. Calls the SDK directly so a 404 bypasses `handleError`/Sentry,
+   * mirroring `list`'s 404 fallback.
+   *
+   * Only a 404 means "absent": every other failure (403, 5xx, network) rejects, since the resource
+   * may well exist and a null would let the caller record a missing file as a confirmed absence.
+   *
+   * `modifiedAt` is the homeserver's own write timestamp (`entry.modified_at`), so callers get an
+   * ordering key the client cannot forge. `null` if the header is missing or unparseable.
+   */
+  static async getBytesIfExists(url: string): Promise<THomeserverBytesResult | null> {
+    const owned = this.resolveOwnedSessionPath(url);
+    // Unreadable without a session — return null rather than fire an unauthenticated request.
+    if (!owned) return null;
+    try {
+      // `storage.get` resolves for any status, so the response has to be checked here.
+      const response = await owned.session.storage.get(owned.path);
+      if (response.status === HttpStatusCode.NOT_FOUND) return null;
+      await assertOk({ response, url, operation: 'getBytesIfExists' });
+      const lastModified = Date.parse(response.headers.get('last-modified') ?? '');
+      return {
+        bytes: new Uint8Array(await response.arrayBuffer()),
+        modifiedAt: Number.isNaN(lastModified) ? null : lastModified,
+      };
+    } catch (error) {
+      if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return null;
       return handleError({ error, additionalContext: { url, method: HttpMethod.GET } });
     }
   }

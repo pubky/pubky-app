@@ -32,6 +32,8 @@ Hard constraints (review-enforced, not compiler-enforced; `docs/architecture.md`
 - Controllers NEVER call Services directly and never do IO; they go through Application.
 - Coordinators NEVER call Application; they go through Controllers.
 - Application NEVER accesses Stores and never calls Controllers; only Controllers manage stores.
+- Services NEVER access Stores, except session reads in `HomeserverService` / `LocksService` via `getState()`
+  (ADR-0004); reads only, never writes.
 - Pipes are pure: NO IO, NO side effects. Services never call up. Models touch Dexie only.
 - Cross-Application calls (ADR-0009): only PostApplication, NotificationApplication, BootstrapApplication, MigrationApplication,
   HotApplication, PostStreamApplication and TtlApplication may call other Applications; acyclic; depth 1, with one depth-2
@@ -142,8 +144,9 @@ are owned by QA: flag an invalidated spec, do not edit or run e2e yourself. `doc
 - `CLAUDE.md` imports this file for Claude Code; Codex and Cursor read it directly. Keep it short; details go in `docs/`.
 - `next dev` would append its own agent-rules block here; `agentRules` is off in `next.config.ts` so it never does. The
   installed Next.js version's docs are in `node_modules/next/dist/docs/`; read the relevant page before using a Next API.
-- `.cursor/rules/*.mdc` and `.claude/rules/*.md` attach the matching doc when a file under their glob is edited; their
-  bodies only point at `docs/`.
+- `.cursor/rules/*.mdc` and `.claude/rules/*.md` load when a file under their glob is read or edited; their bodies only
+  point at `docs/`. Claude rules name the doc in plain text and never `@`-import it: Claude Code expands such an import
+  at session start regardless of `paths:`.
 - Skills live in `.agents/skills/<name>/` (read natively by Codex and Cursor, symlinked from `.claude/skills/` for Claude
   Code): `pubky-code-review`, `pubky-staging-invite`, `sentry-nextjs-sdk`.
 - Greptile reads `.greptile/config.json` (rules) and `.greptile/files.json` (which docs to attach per path), nothing else.

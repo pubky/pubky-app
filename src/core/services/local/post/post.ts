@@ -265,7 +265,7 @@ export class LocalPostService {
    * @throws {DatabaseError} When database operations fail
    */
   static async create({ compositePostId, post }: TLocalSavePostParams) {
-    const { content, kind, parent: parentUri, attachments, embed } = post;
+    const { content, kind, parent: parentUri, attachments, embed, lock } = post;
 
     const repostedUri = embed?.uri ?? null;
     const normalizedKind = PostNormalizer.postKindToLowerCase(kind);
@@ -280,6 +280,7 @@ export class LocalPostService {
         kind: normalizedKind,
         uri: postUriBuilder(authorId, postId),
         attachments: attachments ?? null,
+        lock: lock ?? null,
       };
 
       const postRelationships: PostRelationshipsModelSchema = {

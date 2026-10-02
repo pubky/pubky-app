@@ -7,6 +7,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { POST_CONTENT_PENDING_PROPS } from '@/hooks/useCardsLayout/useCardsLayout.utils';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
+import { getAttachmentAtSlot } from '@/libs/utils/unlockedMedia';
 import { cn } from '@/libs/utils/utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostText } from '@/molecules/PostText/PostText';
@@ -19,6 +20,8 @@ interface PostArticleProps {
   attachments: PostDetailsModel['attachments'];
   localAttachments: AttachmentConstructed[] | undefined;
   className?: string;
+  /** 'full' reads the whole article, as the post page does; 'preview' clamps it to a card. */
+  variant?: 'preview' | 'full';
   presentation?: 'default' | 'cards';
 }
 
@@ -27,26 +30,27 @@ export const PostArticle = ({
   attachments,
   localAttachments,
   className,
+  variant = 'preview',
   presentation = 'default',
 }: PostArticleProps) => {
+  const isFull = variant === 'full';
   const { title, body, coverImage, hasCover, isCoverLoading } = usePostArticle({
     content,
     attachments,
     coverImageVariant: FileVariant.FEED,
+    localAttachmentCount: localAttachments?.length,
   });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
   // Local entries are index-aligned with attachments; slot 0 is the cover
   // only when the slot-0 rule says so (otherwise it's an inline image).
+  // TODO:[Locks] #2660 — the other half of the cover rule: the hook says a slot 0 exists, this says
+  // whether it is an image, so a video in slot 0 reports a cover that never renders.
+  const localCover = getAttachmentAtSlot(localAttachments, 0);
   const localCoverImage =
-    hasCover && localAttachments?.[0]?.type.startsWith('image')
-      ? {
-          src: localAttachments[0].urls.main,
-          alt: localAttachments[0].name,
-          width: localAttachments[0].width,
-          height: localAttachments[0].height,
-        }
+    hasCover && localCover?.type.startsWith('image')
+      ? { src: localCover.urls.main, alt: localCover.name, width: localCover.width, height: localCover.height }
       : null;
 
   const finalCoverImage = localCoverImage || coverImage;
@@ -55,12 +59,22 @@ export const PostArticle = ({
     <>
       <Container
         className={cn(
-          presentation === 'cards' ? 'gap-3' : 'justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!',
+          presentation === 'cards' ? 'gap-3' : 'justify-between gap-6',
+          presentation !== 'cards' && !isFull && 'lg:flex-row @max-xl/grid:flex-col!',
           className,
         )}
       >
         {presentation === 'cards' && isCoverLoading && !localCoverImage && (
           <span hidden {...POST_CONTENT_PENDING_PROPS} />
+        )}
+        {/* A full read puts the cover above the title, the way the article page does; the preview
+            card keeps it beside the text. */}
+        {isFull && finalCoverImage && (
+          <Image
+            src={finalCoverImage.src}
+            alt={finalCoverImage.alt}
+            className="mb-2 aspect-video w-full rounded-md object-cover object-center"
+          />
         )}
         <Container className="gap-y-1">
           <Container className="flex-row items-start gap-2">
@@ -70,10 +84,18 @@ export const PostArticle = ({
             </Typography>
           </Container>
 
-          <PostText content={body} isArticle onLinkClick={handleLinkClick} className="line-clamp-3" />
+          <PostText
+            content={body}
+            isArticle
+            fullArticle={isFull}
+            // Only unlocked content is read in full here.
+            articleImages={isFull && localAttachments ? { localAttachments } : undefined}
+            onLinkClick={handleLinkClick}
+            className={isFull ? undefined : 'line-clamp-3'}
+          />
         </Container>
 
-        {finalCoverImage && (
+        {!isFull && finalCoverImage && (
           <Image
             src={finalCoverImage.src}
             alt={finalCoverImage.alt}

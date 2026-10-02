@@ -2,6 +2,8 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { APP_ROUTES } from '@/app/routes';
 import { PostStreamApplication } from '@/application/stream/posts/post';
+import { PostController } from '@/controllers/post/post';
+import { FORCE_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
@@ -302,4 +304,123 @@ it('waits for unread hydration when no cursor is cached and re-reads rows replac
 
   expect(await head).toBe(fresh.details.indexed_at);
   expect(await StreamPostsController.getUnreadStream({ streamId })).toBeNull();
+});
+
+it('keeps polling after an initial load when an unread id still has no details (#2608)', async () => {
+  const main = nexusPost('main', Date.now());
+  const mainId = buildCompositeId({ pubky: 'author', id: main.details.id });
+  const pendingId = buildCompositeId({ pubky: 'author', id: 'unavailable' });
+  await PostDetailsModel.create({ ...main.details, id: mainId });
+  await PostStreamModel.upsert(streamId as PostStreamId, [mainId]);
+  await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pendingId]);
+  const hydrate = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus');
+  const fetchByIds = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
+
+  await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+
+  // The id Nexus listed but never served stays unread, where each poll retries it;
+  // merged to the main head it would have no timestamp and polling would stop.
+  expect((await StreamPostsController.getLocalStream({ streamId }))?.stream).toEqual([mainId]);
+  expect((await StreamPostsController.getUnreadStream({ streamId }))?.stream).toEqual([pendingId]);
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(main.details.indexed_at);
+  await hydrate.mock.results[0].value;
+  expect(fetchByIds).toHaveBeenCalledWith(expect.objectContaining({ post_ids: [pendingId] }));
+
+  await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+
+  expect((await StreamPostsController.getUnreadStream({ streamId }))?.stream).toEqual([pendingId]);
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(main.details.indexed_at);
+  await waitFor(() => expect(hydrate).toHaveBeenCalledTimes(2));
+  await hydrate.mock.results[1].value;
+  expect(fetchByIds).toHaveBeenCalledTimes(2);
+});
+
+it('merges a pending id below a hydrated one in polled order, so its edited late arrival cannot move the poll head (#2608)', async () => {
+  const now = Date.now();
+  const main = nexusPost('main', now - 30_000);
+  const ready = nexusPost('ready', now - 20_000);
+  const mainId = buildCompositeId({ pubky: 'author', id: main.details.id });
+  const readyId = buildCompositeId({ pubky: 'author', id: ready.details.id });
+  const pendingId = buildCompositeId({ pubky: 'author', id: 'pending' });
+  await PostDetailsModel.create({ ...main.details, id: mainId });
+  await PostDetailsModel.create({ ...ready.details, id: readyId });
+  await PostStreamModel.upsert(streamId as PostStreamId, [mainId]);
+  // A head poll listed `ready` above `pending`; Nexus has served only `ready`.
+  await UnreadPostStreamModel.upsert(streamId as PostStreamId, [readyId, pendingId]);
+  // The next hydration gets `pending` after an edit bumped its indexed_at above `ready`'s;
+  // its stream position did not move.
+  vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([nexusPost('pending', now - 1_000)]);
+  vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
+
+  await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+
+  // Both merge in polled order; the poll head is `ready`, and the pending id is a cache miss of the main row.
+  expect((await StreamPostsController.getLocalStream({ streamId }))?.stream).toEqual([readyId, pendingId, mainId]);
+  expect(await StreamPostsController.getUnreadStream({ streamId })).toBeNull();
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(ready.details.indexed_at);
+
+  // The card's own local-first read serves it later, as for any main-row post without details,
+  // and the next head poll lists a post created between `ready` and the edit.
+  expect((await PostController.fetch({ compositeId: pendingId }))?.indexed_at).toBe(now - 1_000);
+  const newer = nexusPost('newer', now - 10_000);
+  const newerId = buildCompositeId({ pubky: 'author', id: newer.details.id });
+  await PostDetailsModel.create({ ...newer.details, id: newerId });
+  await UnreadPostStreamModel.upsert(streamId as PostStreamId, [newerId]);
+  await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+
+  // Nothing re-sorts the served post by its edited indexed_at: the merge keeps polled order, so
+  // the poll head is the newest polled post and no post between `ready` and the edit is skipped.
+  expect((await StreamPostsController.getLocalStream({ streamId }))?.stream).toEqual([
+    newerId,
+    readyId,
+    pendingId,
+    mainId,
+  ]);
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(newer.details.indexed_at);
+});
+
+it('keeps polling when the post above a merged id without details is removed from the row (#2608)', async () => {
+  const now = Date.now();
+  const main = nexusPost('main', now - 30_000);
+  const ready = nexusPost('ready', now - 20_000);
+  const mainId = buildCompositeId({ pubky: 'author', id: main.details.id });
+  const readyId = buildCompositeId({ pubky: 'author', id: ready.details.id });
+  const pendingId = buildCompositeId({ pubky: 'author', id: 'pending' });
+  await PostDetailsModel.create({ ...main.details, id: mainId });
+  await PostDetailsModel.create({ ...ready.details, id: readyId });
+  await PostStreamModel.upsert(streamId as PostStreamId, [mainId]);
+  await UnreadPostStreamModel.upsert(streamId as PostStreamId, [readyId, pendingId]);
+  const fetchByIds = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
+  vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
+
+  await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+  // The viewer deletes `ready`, which every timeline row drops: the pending id is now the main head.
+  await PostStreamModel.removeItems(streamId as PostStreamId, [readyId]);
+
+  // The poll runs from the first main-row id with details instead of stopping at a head without them.
+  expect((await StreamPostsController.getLocalStream({ streamId }))?.stream).toEqual([pendingId, mainId]);
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(main.details.indexed_at);
+  expect(fetchByIds).not.toHaveBeenCalled();
+
+  // The next initial load still rebuilds a row whose head has no details.
+  await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+  expect(await StreamPostsController.getLocalStream({ streamId })).toBeNull();
+});
+
+it('polls past a main head without details and rebuilds that row on the next initial load (#2608)', async () => {
+  const main = nexusPost('main', Date.now());
+  const mainId = buildCompositeId({ pubky: 'author', id: main.details.id });
+  const unavailableId = buildCompositeId({ pubky: 'author', id: 'unavailable' });
+  await PostDetailsModel.create({ ...main.details, id: mainId });
+  // The row an earlier build left behind: its whole-row merge put an unserved id at the head.
+  await PostStreamModel.upsert(streamId as PostStreamId, [unavailableId, mainId]);
+  vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
+
+  // The poll runs from the first id with details rather than skipping until the row is rebuilt.
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(main.details.indexed_at);
+
+  await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+
+  expect(await StreamPostsController.getLocalStream({ streamId })).toBeNull();
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(FORCE_FETCH_NEW_POSTS);
 });

@@ -15,6 +15,7 @@ export class PostDetailsModel
   kind: string;
   uri: string;
   attachments: string[] | null;
+  lock?: string | null;
 
   constructor(postDetails: PostDetailsModelSchema) {
     super(postDetails);
@@ -23,6 +24,7 @@ export class PostDetailsModel
     this.kind = postDetails.kind;
     this.uri = postDetails.uri;
     this.attachments = postDetails.attachments;
+    this.lock = postDetails.lock ?? null;
   }
 
   /**

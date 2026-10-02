@@ -29,6 +29,14 @@ interface UsePostArticleParams {
   attachments: PostDetailsModel['attachments'];
   coverImageVariant: FileVariant;
   /**
+   * Attachments the caller holds locally. Unlocked content has no Nexus attachments at all — the
+   * bytes live in the reader's own `/priv` — so without this its cover would never count as one.
+   *
+   * TODO:[Locks] #2660 — a count only answers "is there a slot 0"; whether slot 0 is an image is
+   * decided again in `PostArticle`, so the two can disagree. Take the attachments here instead.
+   */
+  localAttachmentCount?: number;
+  /**
    * Second, larger source for surfaces that render the cover at full width (the article hero).
    * Left unset by feed-sized surfaces, which never want the larger file.
    */
@@ -82,6 +90,7 @@ export function usePostArticle({
   content,
   attachments,
   coverImageVariant,
+  localAttachmentCount,
   coverImageDesktopVariant,
   coverImageDesktopFallbackVariant,
 }: UsePostArticleParams): UsePostArticleResult {
@@ -107,7 +116,7 @@ export function usePostArticle({
   // Slot-0 cover rule, computed synchronously from the published body so the
   // cover never flashes for articles whose slot 0 is an inline image.
   const hasInlineSlotZero = articleHasInlineSlotZero(parseArticleContent(content)?.body ?? '');
-  const hasCover = Boolean(attachments?.length) && !hasInlineSlotZero;
+  const hasCover = Boolean(attachments?.length || localAttachmentCount) && !hasInlineSlotZero;
 
   // Only the cover slot is relevant; inline attachments render inside the
   // article body and are never resolved here. An edit that replaces or removes

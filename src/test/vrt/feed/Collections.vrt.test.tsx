@@ -774,18 +774,20 @@ describe('Single collection — visual layout — visual regression', () => {
   });
 
   it('shows the phone Cards fallback and restores the Visual preference after resize', async () => {
+    const f = await fixtures;
     await renderSingleCollection('visual', VRT_VIEWPORT_MOBILE);
     await page.getByRole('button', { name: 'Layout: Cards', exact: true }).click();
     await expect.element(page.getByRole('menuitem', { name: 'Visual', exact: true })).not.toBeInTheDocument();
+    // Cards is only the phone presentation of a stored Visual layout, so choosing
+    // the already-shown row must not replace that preference.
     await page.getByRole('menuitem', { name: 'Cards', exact: true }).click();
     await expect.poll(() => document.querySelector('[data-cy="timeline-posts-cards"]')).not.toBeNull();
     await page.viewport(VRT_VIEWPORT_DESKTOP.width, VRT_VIEWPORT_DESKTOP.height);
-    await page.getByRole('button', { name: 'Layout: Cards', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Visual', exact: true }).click();
-    const f = await fixtures;
+    await expect.element(page.getByRole('button', { name: 'Layout: Visual', exact: true })).toBeVisible();
     await expect.element(page.getByRole('button', { name: `Open post ${f.collectionItemIds[0]}` })).toBeVisible();
     await page.viewport(VRT_VIEWPORT_MOBILE.width, VRT_VIEWPORT_MOBILE.height);
     await expect.element(page.getByRole('button', { name: 'Layout: Cards', exact: true })).toBeVisible();
+    await expect.poll(() => document.querySelector('[data-cy="timeline-posts-cards"]')).not.toBeNull();
     await page.viewport(VRT_VIEWPORT_DESKTOP.width, VRT_VIEWPORT_DESKTOP.height);
     await expect.element(page.getByRole('button', { name: 'Layout: Visual', exact: true })).toBeVisible();
     await expect.element(page.getByRole('button', { name: `Open post ${f.collectionItemIds[0]}` })).toBeVisible();
