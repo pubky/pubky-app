@@ -17,6 +17,7 @@ import { Home } from '@/templates/Feed/Home/Home';
 import { Fab } from '@/molecules/Fab/Fab';
 import { PostMain } from '@/organisms/PostMain/PostMain';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
+import { APP_ROUTES } from '@/app/routes';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
@@ -460,8 +461,7 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', async () => {
 });
 
 vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => {
-  const result = { feed: null, isLoading: false };
-  return { useCustomFeed: () => result };
+  return { useCustomFeed: () => undefined };
 });
 
 // Header (and its descendants) hooks. Header → HeaderSignIn → SearchInput pulls
@@ -594,6 +594,56 @@ describe('Home (global feed) — visual regression', () => {
     const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await expandFirstQuickReply(screen);
     await matchVrtFrameScreenshot('home-feed-quick-reply-expanded-mobile');
+  });
+});
+
+describe('Feed right drawer', () => {
+  const cases = [
+    { name: 'home-phone', pathname: APP_ROUTES.HOME, viewport: VRT_VIEWPORT_MOBILE },
+    { name: 'custom-feed-phone', pathname: `${APP_ROUTES.FEED}/test-feed`, viewport: VRT_VIEWPORT_MOBILE },
+    { name: 'home-wide-phone', pathname: APP_ROUTES.HOME, viewport: { width: 700, height: 420 } },
+    { name: 'home-tablet', pathname: APP_ROUTES.HOME, viewport: { width: 768, height: 1024 } },
+  ];
+
+  it.each(cases)('preserves the expected layout and actions on $name', async ({ name, pathname, viewport }) => {
+    const config = tryResolveFeedsShellConfig(pathname)!;
+    await renderForVRT(<ContentLayout {...config}>Feed content</ContentLayout>, { viewport });
+    await page.getByRole('button', { name: 'Open right panel' }).click();
+
+    const panel = document.querySelector<HTMLElement>('.fixed.right-0')!;
+    const scrollArea = panel.firstElementChild as HTMLElement;
+    const content = scrollArea.firstElementChild as HTMLElement;
+    const isPhone = viewport.width < 768;
+    await expect.poll(() => panel.getBoundingClientRect().right).toBeCloseTo(viewport.width);
+    expect(panel.getBoundingClientRect().width).toBe(isPhone ? 256 : 385);
+    expect(getComputedStyle(panel).paddingTop).toBe(isPhone ? '24px' : '48px');
+    expect(getComputedStyle(panel).paddingLeft).toBe(isPhone ? '24px' : '48px');
+    if (isPhone) {
+      expect(content.getBoundingClientRect().width).toBe(180);
+      expect(panel.querySelector('[data-testid="active-users"]')).toBeNull();
+    } else {
+      expect(panel.querySelector('[data-testid="active-users"]')).not.toBeNull();
+    }
+    expect(Array.from(content.children).map((section) => section.getAttribute('data-testid'))).toEqual(
+      isPhone
+        ? ['who-to-follow', 'hot-tags', 'feedback-card']
+        : ['who-to-follow', 'active-users', 'hot-tags', 'feedback-card'],
+    );
+    await expect.element(page.getByRole('button', { name: 'Explore all' }).last()).toBeVisible();
+    if (viewport.height === 420) {
+      expect(scrollArea.scrollHeight).toBeGreaterThan(scrollArea.clientHeight);
+      scrollArea.scrollTop = scrollArea.scrollHeight;
+      expect(scrollArea.scrollTop).toBeGreaterThan(0);
+      await expect.element(page.getByRole('button', { name: 'What do you think about Pubky?' }).last()).toBeVisible();
+    } else if (isPhone) {
+      await matchVrtFrameScreenshot(`feed-right-drawer-${name}`);
+    }
+
+    await page.elementLocator(document.querySelector<HTMLElement>('.absolute.inset-0.bg-black')!).click({
+      position: { x: 1, y: 1 },
+    });
+    await expect.poll(() => document.querySelector('.fixed.right-0')).toBeNull();
+    expect(document.body.style.overflow).toBe('');
   });
 });
 
