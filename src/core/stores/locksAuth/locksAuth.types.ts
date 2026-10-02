@@ -14,6 +14,10 @@ export interface LocksAuthState {
   // TODO:[Locks] #2283 — when locks-sdk exposes the creator pubky on `Session`, store it here as `creatorPubky`
   // (mirroring the homeserver store's `currentUserPubky`). Callers then read it from the store
   // instead of extracting `creator` from Lock Server responses (`LocksService`).
+  /**
+   * This Locks session's answer to "is the creator's Paykit setup done", from the setup-status check
+   * or a completed setup. In memory only: the next session asks the Lock Server again (#2627).
+   */
   paykitConnected: boolean;
   hasHydrated: boolean;
 }
