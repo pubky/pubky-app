@@ -28,6 +28,7 @@ import {
 } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
 import type {
   TAddReplyToStreamParams,
   TAlignPageParams,
@@ -454,7 +455,11 @@ export class LocalStreamPostsService {
         const liveRelationships = postRelationships.filter(([id]) => !tombstonedIds.has(id));
         const liveTags = postTags.filter(([id]) => !tombstonedIds.has(id));
         const liveTtl = postTtl.filter(([id]) => !tombstonedIds.has(id));
-        const liveBookmarks = postBookmarks.filter((b) => !tombstonedIds.has(b.id));
+        // A bookmark the viewer removed locally while Nexus was still indexing
+        // the removal must not come back (see `recentUnbookmarks`).
+        const liveBookmarks = postBookmarks.filter(
+          (b) => !tombstonedIds.has(b.id) && !recentUnbookmarks.isProtected(tagGuard.viewerId, b.id),
+        );
         const liveModerations = postModerations.filter((m) => !tombstonedIds.has(m.id));
 
         if (tagGuard.isCurrent && !tagGuard.isCurrent()) return;

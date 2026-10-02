@@ -21,6 +21,13 @@ export const ARTICLE_TITLE_MAX_CHARACTER_LENGTH = 100;
 export const ARTICLE_MAX_CHARACTER_LENGTH =
   validationLimits.postLongContentMaxLength - ARTICLE_TITLE_MAX_CHARACTER_LENGTH - 22;
 
+/** Maximum character length for a lock announcement title */
+export const LOCK_TITLE_MAX_CHARACTER_LENGTH = 100;
+
+/** Maximum character length for a lock announcement teaser (41 characters reserved for JSON string) */
+export const LOCK_TEASER_MAX_CHARACTER_LENGTH =
+  validationLimits.postShortContentMaxLength - LOCK_TITLE_MAX_CHARACTER_LENGTH - 41;
+
 /** Maximum character length for a tag */
 export const TAG_MAX_LENGTH = validationLimits.tagLabelMaxLength;
 
@@ -81,6 +88,15 @@ export const ARTICLE_ATTACHMENT_MAX_FILES = validationLimits.postAttachmentsMaxC
 
 /** Maximum number of cover images per article (the cover picker's cap) */
 export const ARTICLE_COVER_MAX_FILES = 1;
+
+/**
+ * Lock Server default, mirrored because the server offers no way to read it: a lock holds 10
+ * resources, and the locked post is one of them.
+ */
+export const LOCK_ATTACHMENT_MAX_FILES = 9;
+
+/** Decimal, as the server counts it: a file of 10 MiB is already over. */
+export const LOCK_ATTACHMENT_MAX_SIZE = 10_000_000;
 
 /** Human-readable list of supported file types for error messages (derived from MIME types) */
 export const POST_SUPPORTED_FILE_TYPES = POST_SUPPORTED_ATTACHMENT_MIME_TYPES.map((mime) => mime.split('/')[1]).join(

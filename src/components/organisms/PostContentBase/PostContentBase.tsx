@@ -9,8 +9,10 @@ import { PostText } from '@/molecules/PostText/PostText';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import { LockedPostContent } from '../LockedPostContent/LockedPostContent';
 import { PostArticle } from '../PostArticle/PostArticle';
 import { PostAttachments } from '../PostAttachments/PostAttachments';
+import { PostBody } from '../PostBody/PostBody';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
 import { PostContentBaseSkeleton } from './PostContentBase.skeleton';
 import type { PostContentBaseProps } from './PostContentBase.types';
@@ -40,10 +42,26 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
   const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
   const hasAttachments = (postDetails.attachments?.length ?? 0) > 0 || (localAttachments?.length ?? 0) > 0;
   const isCollection = postDetails.kind === 'collection';
+  // Lock detection is by the top-level `lock` URL (points at the public lock.json), not by `kind`
+  // (which now holds the teaser's real type). Nexus delivers `lock` (see NexusPostDetails.lock).
+  const isLock = !!postDetails.lock;
 
   if (isDeleted) return <PostUnavailable message={'This post has been deleted by its author.'} />;
 
   if (isBlurred) return <PostContentBlurred postId={postId} className={className} />;
+
+  if (isLock)
+    return (
+      <LockedPostContent
+        content={postDetails.content}
+        lock={postDetails.lock}
+        postId={postId}
+        attachments={postDetails.attachments}
+        localAttachments={localAttachments}
+        className={className}
+        textClassName={textClassName}
+      />
+    );
 
   if (isArticle)
     return (
@@ -81,16 +99,11 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
 
   return (
     <Container className={cn('min-w-0 gap-3', className)}>
-      {/* Post text */}
-      {hasContent && <PostText content={postDetails.content} className={textClassName} />}
-
-      {/* Link previews from text */}
-      {hasContent && <PostLinkEmbeds content={postDetails.content} />}
-
-      {/* Attachments on this post */}
-      <PostAttachments
+      <PostBody
+        content={postDetails.content}
         attachments={postDetails.attachments}
         localAttachments={localAttachments}
+        textClassName={textClassName}
         {...(mediaVariant !== 'default' ? { mediaVariant } : {})}
       />
     </Container>

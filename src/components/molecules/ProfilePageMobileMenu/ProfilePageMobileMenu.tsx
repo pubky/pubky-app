@@ -6,6 +6,7 @@ import {
   CircleUserRound,
   HeartHandshake,
   Library,
+  LockOpen,
   MessageCircle,
   StickyNote,
   Tag,
@@ -70,6 +71,12 @@ export const PROFILE_MENU_ITEMS: ProfileMenuItem[] = [
     icon: Library,
     label: 'Collections',
     pageType: PROFILE_PAGE_TYPES.COLLECTIONS,
+  },
+  {
+    icon: LockOpen,
+    label: 'Unlocked',
+    pageType: PROFILE_PAGE_TYPES.UNLOCKED,
+    ownProfileOnly: true, // The content lives in the reader's own /priv
   },
 ];
 export interface ProfilePageMobileMenuProps {

@@ -21,6 +21,8 @@ export type AttachmentConstructed = {
     /** CDN-backed images only: a session object URL has no derived variants. */
     large?: string;
   };
+  /** Unlocked content only: position in the locked post's `attachments`. A lost file leaves a gap. */
+  slot?: number;
 };
 
 export type CategorizedAttachments = {

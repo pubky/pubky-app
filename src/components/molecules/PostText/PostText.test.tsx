@@ -1649,10 +1649,23 @@ Even more specific information.`}
 });
 
 vi.mock('@/molecules/ArticleInlineImage/ArticleInlineImage', () => ({
-  ArticleInlineImage: ({ src, alt }: { src?: string; alt?: string }) => (
+  ArticleInlineImage: ({
+    src,
+    alt,
+    localAttachments,
+  }: {
+    src?: string;
+    alt?: string;
+    localAttachments?: unknown[];
+  }) => (
     // Mock renders the RAW destination so tests can assert the custom
     // urlTransform passed it through unmodified
-    <span data-testid="mock-article-inline-image" data-src={src} data-alt={alt} />
+    <span
+      data-testid="mock-article-inline-image"
+      data-src={src}
+      data-alt={alt}
+      data-local-attachments={localAttachments?.length}
+    />
   ),
 }));
 
@@ -1684,6 +1697,19 @@ After"
     const image = screen.getByTestId('mock-article-inline-image');
     expect(image).toHaveAttribute('data-src', 'attachment:1');
     expect(image).toHaveAttribute('data-alt', 'My alt');
+  });
+
+  it('hands the local attachments of unlocked content to the image component', () => {
+    const localAttachments = [
+      { type: 'image/png', name: 'attachment-0', urls: { main: 'blob:cover' }, slot: 0 },
+      { type: 'image/png', name: 'attachment-1', urls: { main: 'blob:inline' }, slot: 1 },
+    ];
+
+    render(<PostText content="![My alt](attachment:1)" isArticle articleImages={{ localAttachments }} />);
+
+    const image = screen.getByTestId('mock-article-inline-image');
+    expect(image).toHaveAttribute('data-src', 'attachment:1');
+    expect(image).toHaveAttribute('data-local-attachments', '2');
   });
 
   it('passes pubky and https destinations through to the image component', () => {

@@ -146,7 +146,7 @@
     },
     {
       "id": "design-tokens-only",
-      "rule": "Use semantic design tokens (bg-primary, text-muted-foreground) and the Tailwind scale. Flag hardcoded hex/rgb colours, arbitrary values (bg-[#1a1a1a], p-[13px], h-[37px]) and z-index values outside -z-10, z-10, z-30, z-40, z-50, z-60. See docs/components.md and docs/z-index.md.",
+      "rule": "Use semantic design tokens (bg-primary, text-muted-foreground) and the Tailwind scale. Flag hardcoded hex/rgb colours (bg-[#1a1a1a]), fixed-length arbitrary values (p-[13px], h-[37px]) and z-index values outside -z-10, z-10, z-30, z-40, z-50, z-60. Do not flag arbitrary values the scale cannot express: a viewport fraction with no named utility (max-h-[75dvh]; the full viewport is h-dvh, max-h-screen, max-w-screen, so flag h-[100dvh] or max-w-[100vw]), calc() over the viewport or a CSS variable (max-h-[calc(100dvh-2rem)] in the Dialog atom) and CSS variables set by a library (var(--radix-…)). See docs/components.md and docs/z-index.md.",
       "scope": ["src/components/**", "src/app/**/*.tsx"],
       "severity": "medium"
     },

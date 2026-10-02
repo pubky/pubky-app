@@ -15,6 +15,7 @@ import {
   serializeArticleBody,
   type SerializeArticleBodyError,
 } from '@/libs/post/articleInlineImages';
+import { buildLockTeaserContent } from '@/libs/post/lockTeaser';
 import { getStorageQuotaToastMessage } from '@/libs/storage/storageQuota';
 import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
@@ -22,7 +23,9 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type {
   ExistingAttachment,
+  SerializedArticle,
   UsePostEditOptions,
+  UsePostOptions,
   UsePostPostOptions,
   UsePostReplyOptions,
   UsePostRepostOptions,
@@ -88,13 +91,14 @@ const showSessionExpiredToast = () =>
     description: 'Session expired. Please sign in.',
   });
 
-export function usePost(): UsePostReturn {
+export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UsePostReturn {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
   const [isArticle, setIsArticle] = useState(false);
   const [articleTitle, setArticleTitle] = useState('');
+  const [lockTitle, setLockTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (post actions return early if null)
@@ -108,6 +112,7 @@ export function usePost(): UsePostReturn {
   // remains the authoritative cap enforcement.
   const inlineImageSession = useInlineImageUpload({
     enabled: isArticle,
+    keepSession: keepInlineImages,
     authorPubky: currentUserId,
     getInlineBudget: () =>
       ARTICLE_ATTACHMENT_MAX_FILES -
@@ -147,10 +152,13 @@ export function usePost(): UsePostReturn {
    * file URIs to `attachment:{n}` slots. Returns null (after toasting) when
    * the body contains destinations that block publishing.
    */
-  const serializeArticleForPublish = (coverPresent: boolean): { body: string; inlineUris: string[] } | null => {
+  const serializeArticleForPublish = (
+    coverPresent: boolean,
+    body = content.trim(),
+  ): { body: string; inlineUris: string[] } | null => {
     if (!currentUserId) return null;
     const serialized = serializeArticleBody({
-      body: content.trim(),
+      body,
       coverPresent,
       authorPubky: currentUserId,
       maxInlineImages: ARTICLE_ATTACHMENT_MAX_FILES - (coverPresent ? 1 : 0),
@@ -182,6 +190,16 @@ export function usePost(): UsePostReturn {
         'Some images reference files from outside this article. Remove them, or insert the images again so they upload fresh.',
     });
     return true;
+  };
+
+  const serializeArticleForLock = (body: string): SerializedArticle | null => {
+    const serialized = serializeArticleForPublish(attachments.length > 0, body.trim());
+    if (!serialized || rejectForeignInlineUris(serialized.inlineUris)) return null;
+
+    const inlineFiles = serialized.inlineUris.map((uri) => inlineImageSession.getSessionFile(uri));
+    // A skipped file would shift every slot after it onto the wrong image.
+    if (!inlineFiles.every((file) => file !== null)) return null;
+    return { body: serialized.body, inlineFiles };
   };
 
   /**
@@ -364,6 +382,7 @@ export function usePost(): UsePostReturn {
 
   const edit = async ({
     editPostId,
+    isLockAnnouncement,
     originalAttachmentUris,
     preservedAttachmentUris,
     onSuccess,
@@ -463,7 +482,9 @@ export function usePost(): UsePostReturn {
         const keptUris = existingAttachments.map((attachment) => attachment.uri);
         const originalUris = originalAttachmentUris ?? keptUris;
         const attachmentsChanged = attachments.length > 0 || keptUris.length !== originalUris.length;
-        editContentPayload = content.trim();
+        editContentPayload = isLockAnnouncement
+          ? buildLockTeaserContent({ lock_title: lockTitle, teaser_description: content })
+          : content.trim();
         editAttachments = attachmentsChanged
           ? { original: originalUris, kept: keptUris, added: attachments }
           : undefined;
@@ -485,6 +506,7 @@ export function usePost(): UsePostReturn {
       setExistingAttachments([]);
       setIsArticle(false);
       setArticleTitle('');
+      setLockTitle('');
       toast({
         title: 'Post updated',
       });
@@ -539,6 +561,8 @@ export function usePost(): UsePostReturn {
     setIsArticle,
     articleTitle,
     setArticleTitle,
+    lockTitle,
+    setLockTitle,
     reply,
     post,
     repost,
@@ -549,5 +573,6 @@ export function usePost(): UsePostReturn {
       getPreviewUrl: inlineImageSession.getPreviewUrl,
     },
     uploadingCount: inlineImageSession.uploadingCount,
+    serializeArticleForLock,
   };
 }
