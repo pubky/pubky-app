@@ -46,6 +46,7 @@ export function ProfilePageLayout({
   children,
   profile,
   stats,
+  unlockedCount,
   actions,
   activePage,
   filterBarActivePage,
@@ -159,6 +160,7 @@ export function ProfilePageLayout({
             activePage={filterBarActivePage}
             onPageChangeAction={navigateToPage}
             stats={stats}
+            unlockedCount={unlockedCount}
             isOwnProfile={isOwnProfile}
           />
 

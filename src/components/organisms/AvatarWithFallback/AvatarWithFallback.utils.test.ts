@@ -231,4 +231,8 @@ describe('resolveAvatarFallbackInitial', () => {
   it('falls back to default initial when name and seed are missing', () => {
     expect(resolveAvatarFallbackInitial({ name: '', seed: '' })).toBe('U');
   });
+
+  it('ignores the [DELETED] sentinel and uses the seed initial', () => {
+    expect(resolveAvatarFallbackInitial({ name: '[DELETED]', seed: 'seed-value' })).toBe('S');
+  });
 });

@@ -87,9 +87,9 @@ vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
   useFeedLayoutResolution: vi.fn(() => ({
     requestedLayout: 'columns',
     effectiveLayout: 'columns',
+    isCardsActive: false,
     isVisualRequested: false,
     isVisualActive: false,
-    isGridActive: false,
     isPhoneViewport: false,
   })),
 }));
@@ -243,27 +243,27 @@ const defaultPaginationResult = {
 const visualLayoutResolution = {
   requestedLayout: 'visual' as const,
   effectiveLayout: 'visual' as const,
+  isCardsActive: false,
   isVisualRequested: true,
   isVisualActive: true,
-  isGridActive: false,
   isPhoneViewport: false,
 };
 
 const phoneColumnsLayoutResolution = {
   requestedLayout: 'visual' as const,
   effectiveLayout: 'columns' as const,
+  isCardsActive: false,
   isVisualRequested: true,
   isVisualActive: false,
-  isGridActive: false,
   isPhoneViewport: true,
 };
 
 const columnsLayoutResolution = {
   requestedLayout: 'columns' as const,
   effectiveLayout: 'columns' as const,
+  isCardsActive: false,
   isVisualRequested: false,
   isVisualActive: false,
-  isGridActive: false,
   isPhoneViewport: false,
 };
 
@@ -326,9 +326,9 @@ describe('TimelineFeed', () => {
     mockUseFeedLayoutResolution.mockReturnValue({
       requestedLayout: 'columns',
       effectiveLayout: 'columns',
+      isCardsActive: false,
       isVisualRequested: false,
       isVisualActive: false,
-      isGridActive: false,
       isPhoneViewport: false,
     });
     // Reset pull-to-refresh mock to idle state
@@ -373,9 +373,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
-        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -389,9 +389,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'columns',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: false,
-        isGridActive: false,
         isPhoneViewport: true,
       });
 
@@ -409,9 +409,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
-        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -428,9 +428,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
-        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -445,9 +445,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
-        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -513,9 +513,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'columns',
         effectiveLayout: 'columns',
+        isCardsActive: true,
         isVisualRequested: false,
         isVisualActive: false,
-        isGridActive: true,
         isPhoneViewport: false,
       });
 
@@ -571,9 +571,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
-        isGridActive: false,
         isPhoneViewport: false,
       });
 

@@ -168,6 +168,12 @@ export const getPkarrRelays = (): string[] => getRuntimeConfig().pkarrRelays;
 export const getTestnet = (): boolean => getRuntimeConfig().testnet;
 export const getDeployEnv = (): DeployEnv => getRuntimeConfig().deployEnv;
 
+// Optional Lock Server pubky the composer's lock flow signs into (undefined = Locks disabled).
+export const getLockServer = (): string | undefined => getRuntimeConfig().lockServer;
+
+// Optional Paykit Server address for the creator's payout setup (undefined = Locks disabled).
+export const getPaykitServerUrl = (): string | undefined => getRuntimeConfig().paykitServerUrl;
+
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
 export const getPulseClientKey = (): string | undefined => getRuntimeConfig().pulseClientKey;
 export const getPulseEndpoint = (): string | undefined => getRuntimeConfig().pulseEndpoint;

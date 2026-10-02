@@ -235,6 +235,8 @@ export type NexusPostDetails = {
   kind: string;
   uri: string;
   attachments: string[] | null;
+  /** URL of the post's public `lock.json`. Present = lock teaser; the sole lock-detection signal. */
+  lock?: string | null;
 };
 
 /** Aggregate counts for post engagement */

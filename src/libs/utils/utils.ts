@@ -56,8 +56,20 @@ export function formatPublicKey({
  * resolve to `[DELETED]` rather than the fallback.
  */
 export function resolveDisplayName(user: { name: string; id: string; deleted?: boolean }): string {
+  return resolveUserDisplayName(user) || formatPublicKey({ key: user.id });
+}
+
+/**
+ * Display label for a user: `[DELETED]` for a tombstone, the user's own name otherwise, and
+ * an empty string when a live user has none. Empty lets the caller keep its own fallback
+ * (public key, "Unknown User", …) while a deleted user never degrades into one. Surfaces
+ * that key on the label (`AvatarWithFallback` picks its glyph from it) must pass the resolved
+ * value, not a raw row name: a new-shape tombstone's row has `name: ''`, which renders a seed
+ * letter instead of the glyph.
+ */
+export function resolveUserDisplayName(user: { name?: string | null; deleted?: boolean } | null | undefined): string {
   if (isUserDeleted(user)) return DELETED_USER_NAME;
-  return user.name || formatPublicKey({ key: user.id });
+  return user?.name ?? '';
 }
 
 /**
@@ -76,6 +88,26 @@ export function resolveDisplayName(user: { name: string; id: string; deleted?: b
  */
 export function isPubkyIdentifier(value: string): boolean {
   return /^[a-z0-9]{52}$/.test(value);
+}
+
+/**
+ * A bare positive integer written as a string — the shape a Lock Server payment amount travels in.
+ *
+ * @example
+ * ```ts
+ * isPositiveIntegerString('1000')                 // true
+ * isPositiveIntegerString('0')                    // false — not positive
+ * isPositiveIntegerString('007')                  // false — leading zeros
+ * isPositiveIntegerString('-1')                   // false — signed
+ * isPositiveIntegerString('1.5')                  // false — decimal
+ * isPositiveIntegerString('1,000')                // false — grouped
+ * isPositiveIntegerString('1e3')                  // false — not bare digits
+ * isPositiveIntegerString(' 12 ')                 // false — not trimmed
+ * isPositiveIntegerString('99999999999999999999') // false — `Number` would round it
+ * ```
+ */
+export function isPositiveIntegerString(value: string): boolean {
+  return /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value));
 }
 
 function parseValidPostCompositeId(compositeId: string): { pubky: string; id: string } | null {
@@ -451,8 +483,16 @@ export const isPostDeleted = (content: string | undefined) => content === '[DELE
  * Whether a user is a Nexus tombstone. Current Nexus sets `deleted: true` and empties the name;
  * rows cached from older builds still carry the legacy `[DELETED]` name instead.
  */
-export const isUserDeleted = (user: { name?: string; deleted?: boolean } | null | undefined) =>
+export const isUserDeleted = (user: { name?: string | null; deleted?: boolean } | null | undefined) =>
   user?.deleted === true || user?.name === DELETED_USER_NAME;
+
+/**
+ * Whether a profile name is reserved for the tombstone label. `[DELETED]` is what the app shows for
+ * a deleted user, so a live profile must not be able to take it: it would render as deleted and
+ * `commitUpdateStatus` refuses the status updates of a row carrying it. Reserved at input by
+ * `UserValidator` and the profile form, both of which gate the name on this.
+ */
+export const isReservedUserName = (name: string) => name.trim() === DELETED_USER_NAME;
 
 /**
  * Get tags that fit within the character budget.

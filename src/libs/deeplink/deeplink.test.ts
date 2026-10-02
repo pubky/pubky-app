@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GenerateDeeplinkOptions, generatePubkyRingDeeplink } from './deeplink';
+import { generateBitkitContactDeeplink, GenerateDeeplinkOptions, generatePubkyRingDeeplink } from './deeplink';
 
 describe('generatePubkyRingDeeplink', () => {
   describe('basic functionality', () => {
@@ -159,5 +159,16 @@ describe('generatePubkyRingDeeplink', () => {
 
       expect(result).toBe('pubkyring://test');
     });
+  });
+});
+
+describe('generateBitkitContactDeeplink', () => {
+  it('builds the contact link Bitkit routes to its add-contact screen', () => {
+    expect(generateBitkitContactDeeplink('pubkylockcreator')).toBe('bitkit://contact?pubky=pubkylockcreator');
+  });
+
+  // Bitkit rejects a link whose value carries anything outside the key, so the value is always encoded.
+  it('encodes the pubky', () => {
+    expect(generateBitkitContactDeeplink('key&other=value')).toBe('bitkit://contact?pubky=key%26other%3Dvalue');
   });
 });
