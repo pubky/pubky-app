@@ -1,3 +1,4 @@
+import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { postUriBuilder } from 'pubky-app-specs';
 import { LocksApplication } from '@/application/locks/locks';
 import type {
@@ -45,6 +46,14 @@ const SIGNOUT_TIMEOUT_MS = 3000;
 export class LocksController {
   private constructor() {} // Prevent instantiation
 
+  /** Bumped when a sign-in starts and when the session is cleared, so an `await` that started earlier cannot write over it. */
+  private static sessionGeneration = 0;
+
+  private static captureSession(): () => boolean {
+    const generation = this.sessionGeneration;
+    return () => this.sessionGeneration === generation;
+  }
+
   /**
    * Builds the `/connect` URL to load in the iframe auth modal.
    *
@@ -78,10 +87,15 @@ export class LocksController {
 
   /**
    * Completes auth from a validated callback: exchanges the one-time code for a session and
-   * persists it (bearer secret) to the store.
+   * persists it (bearer secret) to the store. Null when a logout or a later sign-in discarded it.
    */
-  static async completeAuthFromCallback(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {
+  static async completeAuthFromCallback(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult | null> {
+    // Claimed before the exchange: a logout or a later sign-in, possibly with another Pubky Ring
+    // identity (ADR-0022), must win even when this exchange finishes last.
+    this.sessionGeneration++;
+    const isCurrent = this.captureSession();
     const result = await LocksApplication.exchangeSessionCode(params);
+    if (!isCurrent()) return null;
     useLocksAuthStore.getState().init({ session: result.session, secret: result.secret });
     // Register the creator's default Lock Server pointer in the background on every auth, mirroring
     // the homeserver's post-auth write. Fire-and-forget: a failure (already reported to Sentry by the
@@ -97,6 +111,7 @@ export class LocksController {
    * one logout drops both the homeserver and Locks sessions.
    */
   static async logout(): Promise<void> {
+    this.sessionGeneration++;
     const store = useLocksAuthStore.getState();
     if (store.selectLocksSession()) {
       try {
@@ -107,7 +122,8 @@ export class LocksController {
         // Already reported to Sentry by the service Err factory; swallow so local teardown runs.
       }
     }
-    store.reset();
+    // Bumps again: a sign-in that started during the signout wait must not outlive the logout.
+    this.clearSession();
   }
 
   /**
@@ -118,6 +134,7 @@ export class LocksController {
    * the next creator call fails.
    */
   static clearSession(): void {
+    this.sessionGeneration++;
     useLocksAuthStore.getState().reset();
   }
 
@@ -152,19 +169,24 @@ export class LocksController {
     const store = useLocksAuthStore.getState();
     if (!store.selectLocksSessionSecret() || store.selectLocksSession() !== null) return;
 
+    // A logout or a new sign-in during either await owns the store; this restore must not touch it.
+    const isCurrent = this.captureSession();
+    let session: LocksSdkSession;
     try {
-      store.setSession(await LocksApplication.restoreSession());
+      session = await LocksApplication.restoreSession();
     } catch {
       // Malformed/stale secret — already reported by the service Err factory; clear it so the UI
       // shows unauthenticated rather than a broken session.
-      this.clearSession();
+      if (isCurrent()) this.clearSession();
       return;
     }
+    if (!isCurrent()) return;
+    store.setSession(session);
 
     try {
       await LocksApplication.setLockServiceConfig();
     } catch (error) {
-      if (isAppError(error) && isAuthError(error)) this.clearSession();
+      if (isCurrent() && isAppError(error) && isAuthError(error)) this.clearSession();
     }
   }
 
