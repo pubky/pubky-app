@@ -614,6 +614,69 @@ describe('ContentLayout - right drawer', () => {
 
     expect(within(screen.getByTestId('side-drawer-right')).getByText('Default drawer')).toBeInTheDocument();
   });
+
+  it.each([390, 768])('closes the right drawer when its mobile button disappears at %i px', (width) => {
+    mockUseIsMobile.mockImplementation((options) => width < (options?.breakpoint === 'md' ? 768 : 1024));
+    const { rerender } = render(<ContentLayout {...drawerSnapshotProps}>Home</ContentLayout>);
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    const drawer = screen.getByTestId('side-drawer-right');
+    expect(drawer).toHaveAttribute('data-open', 'true');
+
+    rerender(
+      <ContentLayout {...drawerSnapshotProps} rightDrawerContentMobile={undefined} showRightMobileButton={false}>
+        Search
+      </ContentLayout>,
+    );
+    expect(drawer).toHaveAttribute('data-open', 'false');
+
+    rerender(<ContentLayout {...drawerSnapshotProps}>Home</ContentLayout>);
+    expect(drawer).toHaveAttribute('data-open', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    expect(drawer).toHaveAttribute('data-open', 'true');
+  });
+
+  it('preserves the left drawer when the right mobile button disappears', () => {
+    mockUseIsMobile.mockReturnValue(true);
+    const { rerender } = render(<ContentLayout {...drawerSnapshotProps}>Home</ContentLayout>);
+    fireEvent.click(screen.getByRole('button', { name: 'Left' }));
+
+    rerender(
+      <ContentLayout {...drawerSnapshotProps} showRightMobileButton={false}>
+        Search
+      </ContentLayout>,
+    );
+    expect(screen.getByTestId('side-drawer-left')).toHaveAttribute('data-open', 'true');
+  });
+
+  it('preserves desktop drawer access but closes it when resizing to a hidden mobile button', () => {
+    mockUseIsMobile.mockReturnValue(false);
+    const { rerender } = render(
+      <ContentLayout {...drawerSnapshotProps} layoutOverride="wide">
+        Home
+      </ContentLayout>,
+    );
+    fireEvent.click(screen.getByTestId('button-filters-right'));
+    const drawer = screen.getByTestId('side-drawer-right');
+
+    const search = (
+      <ContentLayout {...drawerSnapshotProps} layoutOverride="wide" showRightMobileButton={false}>
+        Search
+      </ContentLayout>
+    );
+    rerender(search);
+    expect(drawer).toHaveAttribute('data-open', 'true');
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByTestId('button-filters-right'));
+    expect(drawer).toHaveAttribute('data-open', 'true');
+
+    mockUseIsMobile.mockReturnValue(true);
+    rerender(
+      <ContentLayout {...drawerSnapshotProps} layoutOverride="wide" showRightMobileButton={false}>
+        Search on mobile
+      </ContentLayout>,
+    );
+    expect(drawer).toHaveAttribute('data-open', 'false');
+  });
 });
 
 describe('ContentLayout - Snapshots', () => {

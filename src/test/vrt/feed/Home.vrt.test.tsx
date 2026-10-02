@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT, waitForMarkdownEditorReady } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
@@ -18,6 +18,7 @@ import { Fab } from '@/molecules/Fab/Fab';
 import { PostMain } from '@/organisms/PostMain/PostMain';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { APP_ROUTES } from '@/app/routes';
+import { useState } from 'react';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
@@ -29,7 +30,9 @@ import { APP_ROUTES } from '@/app/routes';
 const feedState = vi.hoisted(() => ({
   mode: 'default' as 'default' | 'article',
   keyboardVisible: false,
+  populatedHotTags: false,
 }));
+const mockRouterPush = vi.hoisted(() => vi.fn());
 
 const fixtures = vi.hoisted(async () => {
   const [postsModule, articleModule, profilesModule, whoToFollowModule, navModule, mockApp, repostsModule] =
@@ -71,7 +74,7 @@ const fixtures = vi.hoisted(async () => {
 
 vi.mock('next/navigation', () => {
   const router = {
-    push: vi.fn(),
+    push: mockRouterPush,
     replace: vi.fn(),
     back: vi.fn(),
     prefetch: vi.fn(),
@@ -466,11 +469,14 @@ vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => {
 
 // Header (and its descendants) hooks. Header → HeaderSignIn → SearchInput pulls
 // in fetch-and-cache data hooks that would otherwise hit the network/IndexedDB.
-// Each mock returns the closed/empty state since the screenshot shows the
-// header in its default unfocused form.
-vi.mock('@/hooks/useHotTags/useHotTags', () => {
-  const result = { tags: [], rawTags: [], isLoading: false, error: null, refetch: async () => {} };
-  return { useHotTags: () => result };
+// Default screenshots keep these hooks closed/empty; drawer cases opt into
+// populated hot tags to cover the narrow content area.
+vi.mock('@/hooks/useHotTags/useHotTags', async () => {
+  const { VRT_HOT_TAGS } = await import('@/test/fixtures/feed/hotTags');
+  const empty = { tags: [], rawTags: [], isLoading: false, error: null, refetch: async () => {} };
+  const rawTags = [{ ...VRT_HOT_TAGS[0], label: 'decentralizedsocial', tagged_count: 1234 }, ...VRT_HOT_TAGS.slice(1)];
+  const populated = { ...empty, rawTags, tags: rawTags.map((tag) => ({ name: tag.label, count: tag.tagged_count })) };
+  return { useHotTags: () => (feedState.populatedHotTags ? populated : empty) };
 });
 
 vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', () => {
@@ -597,7 +603,29 @@ describe('Home (global feed) — visual regression', () => {
   });
 });
 
+// Keep ContentLayout mounted while a real HotTags click changes the route config.
+function FeedDrawerNavigation({ initialPathname }: { initialPathname: string }) {
+  const [pathname, setPathname] = useState(initialPathname);
+  mockRouterPush.mockImplementation((href: string) => setPathname(href.split('?')[0]));
+  return (
+    <ContentLayout {...tryResolveFeedsShellConfig(pathname)!}>
+      <input aria-label="Feed draft" defaultValue="" />
+      <button onClick={() => setPathname(initialPathname)}>Return to feed</button>
+    </ContentLayout>
+  );
+}
+
 describe('Feed right drawer', () => {
+  beforeEach(() => {
+    feedState.populatedHotTags = true;
+    mockRouterPush.mockReset();
+  });
+
+  afterEach(() => {
+    feedState.populatedHotTags = false;
+    mockRouterPush.mockReset();
+  });
+
   const cases = [
     { name: 'home-phone', pathname: APP_ROUTES.HOME, viewport: VRT_VIEWPORT_MOBILE },
     { name: 'custom-feed-phone', pathname: `${APP_ROUTES.FEED}/test-feed`, viewport: VRT_VIEWPORT_MOBILE },
@@ -629,6 +657,16 @@ describe('Feed right drawer', () => {
         ? ['who-to-follow', 'hot-tags', 'feedback-card']
         : ['who-to-follow', 'active-users', 'hot-tags', 'feedback-card'],
     );
+    const tag = content.querySelector<HTMLElement>('[data-testid="tag-0"]')!;
+    const tagName = tag.querySelector<HTMLElement>('[data-testid="tag-name"]')!;
+    const tagCount = tag.querySelector<HTMLElement>('[data-testid="tag-count"]')!;
+    expect(tagName.textContent).toBe('decentralizedsocial');
+    expect(tagCount.textContent).toBe('1234');
+    expect(tag.getBoundingClientRect().right).toBeLessThanOrEqual(content.getBoundingClientRect().right);
+    expect(tagCount.getBoundingClientRect().right).toBeLessThanOrEqual(tag.getBoundingClientRect().right);
+    if (isPhone) {
+      expect(tagName.scrollWidth).toBeGreaterThan(tagName.clientWidth);
+    }
     await expect.element(page.getByRole('button', { name: 'Explore all' }).last()).toBeVisible();
     if (viewport.height === 420) {
       expect(scrollArea.scrollHeight).toBeGreaterThan(scrollArea.clientHeight);
@@ -645,6 +683,32 @@ describe('Feed right drawer', () => {
     await expect.poll(() => document.querySelector('.fixed.right-0')).toBeNull();
     expect(document.body.style.overflow).toBe('');
   });
+
+  it.each([APP_ROUTES.HOME, `${APP_ROUTES.FEED}/test-feed`])(
+    'closes the phone drawer after selecting a hot tag on %s',
+    async (initialPathname) => {
+      await renderForVRT(<FeedDrawerNavigation initialPathname={initialPathname} />, { viewport: VRT_VIEWPORT_MOBILE });
+      await page.getByRole('textbox', { name: 'Feed draft' }).fill('Keep this draft');
+      await page.getByRole('button', { name: 'Open right panel' }).click();
+      await page.getByTestId('tag-0').last().click();
+
+      expect(mockRouterPush).toHaveBeenCalledWith(`${APP_ROUTES.SEARCH}?tags=decentralizedsocial`);
+      await expect.poll(() => document.querySelector('.fixed.right-0')).toBeNull();
+      expect(document.body.style.overflow).toBe('');
+      await expect.element(page.getByRole('button', { name: 'Open right panel' })).not.toBeInTheDocument();
+      await expect.element(page.getByRole('textbox', { name: 'Feed draft' })).toHaveValue('Keep this draft');
+
+      await page.getByRole('button', { name: 'Return to feed' }).click();
+      expect(document.querySelector('.fixed.right-0')).toBeNull();
+      await page.getByRole('button', { name: 'Open right panel' }).click();
+      await expect.poll(() => document.querySelector('.fixed.right-0')).not.toBeNull();
+      await page.elementLocator(document.querySelector<HTMLElement>('.absolute.inset-0.bg-black')!).click({
+        position: { x: 1, y: 1 },
+      });
+      await expect.poll(() => document.querySelector('.fixed.right-0')).toBeNull();
+      expect(document.body.style.overflow).toBe('');
+    },
+  );
 });
 
 describe('Repost cards — visual regression', () => {

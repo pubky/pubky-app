@@ -107,6 +107,13 @@ export function ContentLayout({
     }
   }, [isMobile, usesWideShellLayout]);
 
+  // The feed shell stays mounted on navigation; Search hides this mobile control.
+  useEffect(() => {
+    if (isMobile && !showRightMobileButton) {
+      setDrawerRightOpen(false);
+    }
+  }, [isMobile, showRightMobileButton]);
+
   return (
     <>
       {/* Mobile header with drawer icons - hidden on desktop */}
