@@ -143,6 +143,24 @@ describe('PostAttachments', () => {
     mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
   });
 
+  it('keeps Cards pending while attachment metadata resolves, including media-only posts', async () => {
+    const pending = Promise.withResolvers<NexusFileDetails[]>();
+    mockGetMetadata.mockReturnValue(pending.promise);
+    const { container } = render(
+      <PostAttachments
+        attachments={['pubky://user1/pub/pubky.app/files/image1']}
+        localAttachments={undefined}
+        mediaVariant="cards"
+      />,
+    );
+    expect(container.querySelector('[data-post-content-pending]')).not.toBeNull();
+    await act(async () => {
+      pending.resolve([createMockImageMetadata('user1:image1')]);
+    });
+    await waitFor(() => expect(container.querySelector('[data-post-content-pending]')).toBeNull());
+    expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
+  });
+
   describe('Rendering', () => {
     it('renders nothing when attachments is null', () => {
       const { container } = render(<PostAttachments attachments={null} localAttachments={undefined} />);

@@ -69,13 +69,13 @@ export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
 
       {variant === 'sidebar' ? (
         <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
-          <FilterLayout selectedTab={layout} defaultSelectedTab={undefined} disabled showVisual />
+          <FilterLayout selectedTab={layout} defaultSelectedTab={undefined} disabled showVisual showCards />
 
           <FilterContent selectedTab={content} defaultSelectedTab={undefined} disabled />
         </Container>
       ) : (
         <>
-          <FilterLayout selectedTab={layout} defaultSelectedTab={undefined} disabled showVisual />
+          <FilterLayout selectedTab={layout} defaultSelectedTab={undefined} disabled showVisual showCards />
 
           <FilterContent selectedTab={content} defaultSelectedTab={undefined} disabled />
         </>

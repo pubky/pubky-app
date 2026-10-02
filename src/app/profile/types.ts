@@ -8,6 +8,7 @@ export const PROFILE_PAGE_TYPES = {
   FRIENDS: 'friends',
   UNIQUE_TAGS: 'unique_tags',
   COLLECTIONS: 'collections',
+  UNLOCKED: 'unlocked',
 } as const;
 
 export type ProfilePageType =
@@ -19,6 +20,7 @@ export type ProfilePageType =
   | typeof PROFILE_PAGE_TYPES.FOLLOWING
   | typeof PROFILE_PAGE_TYPES.FRIENDS
   | typeof PROFILE_PAGE_TYPES.COLLECTIONS
-  | typeof PROFILE_PAGE_TYPES.UNIQUE_TAGS;
+  | typeof PROFILE_PAGE_TYPES.UNIQUE_TAGS
+  | typeof PROFILE_PAGE_TYPES.UNLOCKED;
 
 export type FilterBarPageType = Exclude<ProfilePageType, typeof PROFILE_PAGE_TYPES.PROFILE>;

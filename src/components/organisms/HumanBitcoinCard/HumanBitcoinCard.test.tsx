@@ -25,7 +25,7 @@ const originalToLocaleString = Number.prototype.toLocaleString;
 
 describe('BitcoinPaymentCard', () => {
   beforeEach(() => {
-    mockUseBtcRate.mockReturnValue({ satUsd: 0.0005 });
+    mockUseBtcRate.mockReturnValue({ rate: { satUsd: 0.0005 }, status: 'ready' });
     mockUseLnVerificationInfo.mockReturnValue({ available: true, amountSat: 1000 });
     // Force US locale for consistent snapshots
     Number.prototype.toLocaleString = function () {
@@ -60,7 +60,7 @@ describe('BitcoinPaymentCard', () => {
   });
 
   it('renders skeleton when rate is loading', () => {
-    mockUseBtcRate.mockReturnValue(null);
+    mockUseBtcRate.mockReturnValue({ rate: null, status: 'loading' });
     const { container } = render(<HumanBitcoinCard />);
 
     // Check for skeleton elements
@@ -95,7 +95,7 @@ describe('BitcoinPaymentCard', () => {
 
   it('matches snapshot when loading', () => {
     mockUseLnVerificationInfo.mockReturnValue(null);
-    mockUseBtcRate.mockReturnValue(null);
+    mockUseBtcRate.mockReturnValue({ rate: null, status: 'loading' });
     const { container } = render(<HumanBitcoinCard />);
     expect(container.firstChild).toMatchSnapshot();
   });

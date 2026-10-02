@@ -78,14 +78,28 @@ vi.mock('@/hooks/useLnVerificationInfo/useLnVerificationInfo', () => ({
   useLnVerificationInfo: () => ({ available: true as const, amountSat: 1000 }),
 }));
 
+// The card reads `useBtcRate().rate`. A flat rate object leaves `rate` undefined,
+// so the price line stays on its skeleton and the screenshot records that instead
+// of ₿ 1,000.
 vi.mock('@/hooks/useSatUsdRate/useSatUsdRate', () => ({
-  useBtcRate: () => ({ satUsd: 0.0005, btcUsd: 50_000, lastUpdatedAt: new Date(0) }),
+  useBtcRate: () => ({
+    rate: { satUsd: 0.0005, btcUsd: 50_000, lastUpdatedAt: new Date(0) },
+    status: 'ready' as const,
+  }),
 }));
 
 async function waitForVerificationCards(screen: Awaited<ReturnType<typeof renderForVRT>>) {
   await expect.element(screen.getByTestId('sms-verification-card')).toBeVisible();
   await expect.element(screen.getByTestId('human-sms-card-receive-sms-btn')).toBeVisible();
   await expect.element(screen.getByTestId('bitcoin-payment-card')).toBeVisible();
+  // The card paints before the price. Both the phone badge and the desktop
+  // headline say "₿ 1,000"; a remaining skeleton means the rate has not landed.
+  await expect
+    .poll(() => {
+      const card = document.querySelector('[data-testid="bitcoin-payment-card"]');
+      return Boolean(card?.textContent?.includes('₿ 1,000') && card.querySelector('[data-slot="skeleton"]') === null);
+    })
+    .toBe(true);
 }
 
 describe('Human (onboarding) — visual regression', () => {
