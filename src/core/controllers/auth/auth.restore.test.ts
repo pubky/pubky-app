@@ -8,23 +8,30 @@ import { AuthErrorCode, ClientErrorCode, ServerErrorCode } from '@/libs/error/er
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
-import { Identity } from '@/libs/identity/identity';
 import * as utils from '@/libs/utils/utils';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { notificationInitialState } from '@/stores/notification/notification.types';
+import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/stores/settings/settings.types';
-import { mockKeypair, mockPubky, mockSession } from '@/test-utils/pubky';
+import { mockPubky, mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { AuthController } from './auth';
 
 const pubkyA = mockPubky('5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y');
 const pubkyB = mockPubky('o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo');
-const sessionA = mockSession({ export: () => 'export-a' });
-const sessionB = mockSession({ export: () => 'export-b' });
+const sessionA = mockSession({
+  info: asOpaque({ publicKey: { z32: () => pubkyA }, capabilities: ['/:rw'] }),
+  export: () => 'export-a',
+});
+const sessionB = mockSession({
+  info: asOpaque({ publicKey: { z32: () => pubkyB }, capabilities: ['/:rw'] }),
+  export: () => 'export-b',
+});
 const savedSettings = {
   notifications: { ...defaultNotificationPreferences, follow: false },
   privacy: { ...defaultPrivacyPreferences, neverShowPosts: true, moderationBot: pubkyB },
@@ -48,30 +55,49 @@ const profileError = () =>
     operation: 'userIsSignedUp',
   });
 
+function persistState() {
+  const state = useAuthStore.getState();
+  localStorage.setItem(
+    AUTH_PERSIST_KEY,
+    JSON.stringify({
+      version: 2,
+      state: {
+        generation: state.generation,
+        currentUserPubky: state.currentUserPubky,
+        sessionReference: state.sessionReference,
+        hasProfile: state.hasProfile,
+        retiringSession: null,
+      },
+    }),
+  );
+}
+
 async function replaceAccount() {
   await AuthController.logout();
-  // The Logout template releases this flag after the controller finishes.
   useAuthStore.getState().setIsLoggingOut(false);
-  await AuthController.signUp({ secretKey: 'test-secret', signupToken: 'test-token' });
+  // A different tab has restored B. Use a distinct generation, as durable adoption does.
+  useAuthStore.getState().init({ session: sessionB, currentUserPubky: pubkyB, hasProfile: false });
+  persistState();
 }
 
 describe('AuthController restored session lifecycle', () => {
   beforeEach(() => {
-    useAuthStore.getState().reset();
+    localStorage.clear();
+    vi.stubGlobal('navigator', { locks: { request: async (_name: string, callback: () => unknown) => callback() } });
+    useAuthStore.setState(authInitialState);
     useSettingsStore.getState().reset();
     useNotificationStore.getState().reset();
     useAuthStore.setState({
       hasHydrated: true,
       isLoggingOut: false,
       sessionExport: 'export-a',
+      sessionReference: { kind: 'cookie', sessionExport: 'export-a' },
       currentUserPubky: pubkyA,
       hasProfile: null,
     });
-    vi.spyOn(Identity, 'z32FromSession').mockImplementation(({ session }) => (session === sessionA ? pubkyA : pubkyB));
-    vi.spyOn(Identity, 'keypairFromSecretKey').mockReturnValue(mockKeypair());
+    persistState();
     vi.spyOn(HomeserverService, 'restoreSession').mockResolvedValue(sessionA);
     vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockResolvedValue(undefined);
-    vi.spyOn(HomeserverService, 'signUp').mockResolvedValue({ session: sessionB });
     vi.spyOn(HomeserverService, 'logout').mockResolvedValue(undefined);
     vi.spyOn(databaseHelpers, 'clearDatabase').mockResolvedValue(undefined);
     vi.spyOn(utils, 'sleep').mockResolvedValue(undefined);
@@ -86,6 +112,7 @@ describe('AuthController restored session lifecycle', () => {
   afterEach(() => {
     AuthController.cancelModerationFollow();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it.each(['exists', 'missing', 'failed'] as const)(
@@ -128,6 +155,7 @@ describe('AuthController restored session lifecycle', () => {
     await vi.waitFor(() => expect(request).toHaveBeenCalledOnce());
 
     useAuthStore.getState().init({ session: sessionB, currentUserPubky: pubkyA, hasProfile: false });
+    persistState();
     profile.resolve({ name: 'Old session profile' });
 
     await expect(restore).resolves.toBe(false);
@@ -144,7 +172,7 @@ describe('AuthController restored session lifecycle', () => {
 
     await AuthController.logout();
 
-    expect(HomeserverService.restoreSession).toHaveBeenCalledOnce();
+    expect(HomeserverService.restoreSession).toHaveBeenCalled();
     expect(HomeserverService.logout).toHaveBeenCalledWith({ session: sessionA });
     expect(request).not.toHaveBeenCalled();
     expect(useAuthStore.getState().sessionExport).toBeNull();
@@ -162,7 +190,7 @@ describe('AuthController restored session lifecycle', () => {
     await logout;
 
     await expect(restore).resolves.toBe(false);
-    expect(HomeserverService.restoreSession).toHaveBeenCalledOnce();
+    expect(HomeserverService.restoreSession).toHaveBeenCalled();
     expect(HomeserverService.logout).toHaveBeenCalledWith({ session: sessionA });
     expect(request).not.toHaveBeenCalled();
     expect(useAuthStore.getState().session).toBeNull();
@@ -184,11 +212,11 @@ describe('AuthController restored session lifecycle', () => {
       method: HttpMethod.GET,
       url: `pubky://${pubkyA}/pub/pubky.app/settings.json`,
     });
-    expect(useAuthStore.getState()).toMatchObject({ hasProfile: null, isResolvingProfile: true });
+    expect(useAuthStore.getState()).toMatchObject({ hasProfile: null, isRestoringSession: true });
 
     bootstrap.resolve(notificationInitialState);
     await expect(restore).resolves.toBe(true);
-    expect(useAuthStore.getState()).toMatchObject({ hasProfile: true, isResolvingProfile: false });
+    expect(useAuthStore.getState()).toMatchObject({ hasProfile: true, isRestoringSession: false });
     expect(useSettingsStore.getState().notifications.follow).toBe(false);
     expect(useSettingsStore.getState().privacy.neverShowPosts).toBe(true);
 
@@ -224,7 +252,7 @@ describe('AuthController restored session lifecycle', () => {
     expect(UserApplication.ensureModerationFollow).not.toHaveBeenCalled();
   });
 
-  it('cleans up its own session when recovered bootstrap fails', async () => {
+  it('preserves its session and offers recovery when bootstrap fails', async () => {
     vi.spyOn(HomeserverService, 'request')
       .mockResolvedValueOnce({ name: 'Account A' })
       .mockResolvedValueOnce(savedSettings);
@@ -232,7 +260,11 @@ describe('AuthController restored session lifecycle', () => {
 
     await expect(AuthController.restorePersistedSession()).resolves.toBe(false);
 
-    expect(useAuthStore.getState()).toMatchObject({ session: null, hasProfile: null, isResolvingProfile: false });
-    expect(databaseHelpers.clearDatabase).toHaveBeenCalledOnce();
+    expect(useAuthStore.getState()).toMatchObject({
+      session: sessionA,
+      hasProfile: null,
+      restoreStatus: 'temporary-error',
+    });
+    expect(databaseHelpers.clearDatabase).not.toHaveBeenCalled();
   });
 });

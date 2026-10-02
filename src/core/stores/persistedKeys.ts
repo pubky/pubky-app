@@ -1,4 +1,7 @@
-export const AUTH_PERSIST_KEY = 'auth-store';
+export const AUTH_PERSIST_KEY = 'auth-store-v2';
+export const LEGACY_AUTH_PERSIST_KEY = 'auth-store';
+// Deliberately survives the logout sweep: an old tab must never revive legacy auth.
+export const AUTH_MIGRATION_KEY = 'auth-store-v2-migrated';
 export const ONBOARDING_PERSIST_KEY = 'onboarding-storage';
 export const NOTIFICATION_PERSIST_KEY = 'notification-store';
 export const SEARCH_PERSIST_KEY = 'search-store';

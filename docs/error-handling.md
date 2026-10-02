@@ -203,3 +203,9 @@ When handling errors:
 - [ ] Using `safeFetch` for HTTP requests?
 - [ ] Checking `category`/`code` instead of parsing messages?
 - [ ] Using decision helpers (`isRetryable`, `requiresLogin`, `isNotFound`)?
+
+### SDK 0.11 session-store absence exception
+
+`HomeserverService.isMissingSessionRecord` is a narrow boundary exception to message-free error classification. The pinned Pubky SDK exposes both missing records and IndexedDB failures as `ClientStateError`, without a structured reason. Its exact `Stored Pubky session not found: <id>` message is emitted only after a successful read finds no record. `browserSessionStore.list()` cannot establish absence: it catches storage failures and returns an empty list.
+
+Keep this check restricted to the SDK boundary, match the full message and requested ID, and retain the real-SDK contract tests in `session-store.contract.test.ts` when updating the SDK. Replace it with a structured discriminator when the SDK provides one. Downstream code continues to use `AppError` code/context (`SESSION_EXPIRED` with `missing_local_grant`); other storage failures remain retryable.

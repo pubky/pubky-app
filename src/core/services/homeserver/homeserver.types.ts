@@ -26,6 +26,8 @@ export type TGenerateAuthUrlResult = {
   authorizationUrl: string;
   awaitApproval: Promise<Session>;
   cancelAuthFlow: () => void;
+  /** Drop resumable material only after the completed session has been persisted. */
+  completeAuthFlow?: () => void;
 };
 
 export type THomeserverRestoreSessionParams = {
@@ -55,13 +57,8 @@ type PrivPath<T extends string = string> = `/priv/${T}`;
 /** The only roots the homeserver accepts writes under — mirrors its `STORAGE_ROOTS`. */
 export type StoragePath<T extends string = string> = PubPath<T> | PrivPath<T>;
 
-export type TGenerateSignupAuthUrlParams = {
-  inviteCode: string;
-  caps?: Capabilities;
-};
-
 /**
- * Pubky Passport auth request: a plain sign-in cookie flow decorated with x-callback-url metadata
+ * Pubky Passport auth request: a sign-in grant flow decorated with x-callback-url metadata
  * (`xSource` label plus same-origin HTTPS success/error/cancel destinations) that Passport shows
  * and navigates to. Passport creates the identity itself when the Google account has none, so
  * sign-up and sign-in share this single request kind.

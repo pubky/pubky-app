@@ -1,10 +1,11 @@
 import { Session } from '@synonymdev/pubky';
+import type { SessionReference } from '@/libs/auth/session.types';
 import type { Pubky } from '@/models/models.types';
 import { ZustandSet } from '../stores.types';
 import { AuthActions, AuthActionTypes, authInitialState, AuthInitParams, AuthStore } from './auth.types';
 
 const safeSessionExport = (session: Session | null): string | null => {
-  if (!session) return null;
+  if (!session || session.grant) return null;
   try {
     if (typeof session.export === 'function') {
       return session.export();
@@ -17,12 +18,27 @@ const safeSessionExport = (session: Session | null): string | null => {
 
 // Actions/Mutators - State modification functions
 export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
-  init: ({ session, currentUserPubky, hasProfile }: AuthInitParams) => {
+  init: ({
+    session,
+    currentUserPubky,
+    hasProfile,
+    sessionReference,
+    generation,
+    retiringSession = null,
+  }: AuthInitParams) => {
+    const sessionExport = safeSessionExport(session);
+    const reference: SessionReference | null =
+      sessionReference ?? (sessionExport ? { kind: 'cookie', sessionExport } : null);
     set(
       (state) => ({
         ...state,
         session,
-        sessionExport: safeSessionExport(session),
+        sessionExport: reference?.kind === 'cookie' ? reference.sessionExport : null,
+        sessionReference: reference,
+        generation: generation ?? crypto.randomUUID(),
+        retiringSession,
+        restoreStatus: session ? 'ready' : 'idle',
+        isRestoringSession: false,
         currentUserPubky,
         hasProfile,
       }),
@@ -35,6 +51,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
     set(
       (state) => ({
         ...authInitialState,
+        generation: state.generation,
         hasHydrated: state.hasHydrated, // Preserve hydration state
         isLoggingOut: state.isLoggingOut, // Preserve logout state to prevent UI flash
       }),
@@ -48,8 +65,17 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
   },
 
   setSession: (session: Session | null) => {
-    set({ session, sessionExport: safeSessionExport(session) }, false, AuthActionTypes.SET_SESSION);
+    const sessionExport = safeSessionExport(session);
+    set(
+      { session, sessionExport, sessionReference: sessionExport ? { kind: 'cookie', sessionExport } : null },
+      false,
+      AuthActionTypes.SET_SESSION,
+    );
   },
+
+  setNeedsAccountSync: (needsAccountSync) => set({ needsAccountSync }),
+  setRestoreStatus: (restoreStatus) => set({ restoreStatus, isRestoringSession: restoreStatus === 'restoring' }),
+  setRetiringSession: (retiringSession) => set({ retiringSession }),
 
   setIsRestoringSession: (isRestoringSession: boolean) => {
     set({ isRestoringSession }, false, AuthActionTypes.SET_IS_RESTORING_SESSION);

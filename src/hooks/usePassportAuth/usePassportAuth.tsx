@@ -207,6 +207,11 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
       try {
         await AuthController.initializeAuthenticatedSession({ session });
       } catch (error) {
+        if (isAuthFlowCanceledError(error)) {
+          // A newer login owns the session. Do not trigger callers' failure/retry handling.
+          settle(attempt, 'superseded');
+          return;
+        }
         const isWrongEnvironment = isWrongEnvironmentHomeserverError(error);
         if (!isWrongEnvironment && !isAppError(error)) {
           Logger.error('Failed to persist Passport session and check profile:', error);

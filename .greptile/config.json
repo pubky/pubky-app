@@ -122,7 +122,7 @@
     },
     {
       "id": "error-handling-conventions",
-      "rule": "Re-throw AppError unchanged and normalize unknowns with toAppError(); use safeFetch + httpResponseToError (or the service's *.utils.ts wrapper) for HTTP instead of raw fetch; branch on error.category / error.code, never on message strings; no raw `throw new Error()` in src/core production code. See docs/error-handling.md.",
+      "rule": "Re-throw AppError unchanged and normalize unknowns with toAppError(); use safeFetch + httpResponseToError (or the service's *.utils.ts wrapper) for HTTP instead of raw fetch; branch on error.category / error.code, never on message strings (the pinned SDK 0.11 missing-session check in HomeserverService is the documented boundary exception and requires real-SDK contract tests); no raw `throw new Error()` in src/core production code. See docs/error-handling.md.",
       "scope": ["src/core/**", "src/hooks/**", "src/libs/**"],
       "severity": "medium"
     },

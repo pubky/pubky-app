@@ -488,6 +488,22 @@ describe('usePassportAuth', () => {
     expect(hook.result.current.isPending).toBe(false);
   });
 
+  it('reports superseded when a newer auth flow invalidates an already-approved grant', async () => {
+    const flow = createFlow();
+    mockGetPassportAuthUrl.mockResolvedValue(flow);
+    const initialization = deferred<void>();
+    mockInitializeAuthenticatedSession.mockReturnValue(initialization.promise);
+    const onAttemptSettled = vi.fn();
+    const hook = renderHook(() => usePassportAuth({ onAttemptSettled }));
+    await startAttempt(hook);
+    await act(async () => flow.approval.resolve(mockSession()));
+    await act(async () => initialization.reject(canceledError()));
+    expect(onAttemptSettled).toHaveBeenCalledExactlyOnceWith({ attemptId: attemptIds[0], result: 'superseded' });
+    expect(toast).not.toHaveBeenCalled();
+    expect(mockLoggerError).not.toHaveBeenCalled();
+    expect(hook.result.current.isPending).toBe(false);
+  });
+
   it('settles failed when initialization throws, with the environment-specific copy', async () => {
     const flow = createFlow();
     mockGetPassportAuthUrl.mockResolvedValue(flow);
