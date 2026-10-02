@@ -8,7 +8,7 @@ import type { QrCodeSlotProps } from './QrCodeSlot.types';
 
 const DEFAULT_QR_SIZE = 176;
 const DEFAULT_RING_LOGO_SIZE = 48;
-const HOVER_OPACITY = 'transition-opacity group-hover:opacity-90 group-active:opacity-80';
+export const QR_HOVER_OPACITY = 'transition-opacity group-hover:opacity-90 group-active:opacity-80';
 
 export function QrCodeSlot({
   isLoading,
@@ -41,7 +41,7 @@ export function QrCodeSlot({
           alt=""
           width={size}
           height={size}
-          className={cn('rounded-md', HOVER_OPACITY)}
+          className={cn('rounded-md', QR_HOVER_OPACITY)}
         />
         <span className="absolute top-1/2 right-0 -translate-y-1/2 bg-card py-2 pr-4 pl-7 text-sm font-bold whitespace-nowrap text-foreground [clip-path:polygon(0%_0%,100%_0%,100%_100%,16px_100%)]">
           {clickToReloadLabel}
@@ -67,7 +67,7 @@ export function QrCodeSlot({
 
   return (
     <>
-      <QRCodeSVG value={url} size={size} className={cn(activeQrHasHoverEffect && HOVER_OPACITY)} />
+      <QRCodeSVG value={url} size={size} className={cn(activeQrHasHoverEffect && QR_HOVER_OPACITY)} />
       <Image
         src="/images/ring-logo.svg"
         alt="Pubky Ring"
@@ -75,7 +75,7 @@ export function QrCodeSlot({
         height={ringLogoSize}
         className={cn(
           'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
-          activeQrHasHoverEffect && HOVER_OPACITY,
+          activeQrHasHoverEffect && QR_HOVER_OPACITY,
         )}
       />
     </>
