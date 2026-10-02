@@ -27,6 +27,7 @@ import type {
   TGetPaykitSetupUrlParams,
   TLocksSessionResult,
   TPaykitConnectionState,
+  TPaykitSetupStatus,
   TUnlockedAttachment,
   TUnlockedContent,
   TUnlockedListItem,
@@ -122,6 +123,19 @@ export class LocksController {
 
   static markPaykitConnected(): void {
     useLocksAuthStore.getState().setPaykitConnected(true);
+  }
+
+  /**
+   * Asks the Lock Server whether this creator's Paykit payout account is already set up. A rejected
+   * session (401 → Auth) is cleared, as on restore, so the creator signs in again instead of retrying.
+   */
+  static async fetchPaykitSetupStatus(): Promise<TPaykitSetupStatus> {
+    try {
+      return await LocksApplication.fetchPaykitSetupStatus();
+    } catch (error) {
+      if (isAppError(error) && isAuthError(error)) this.clearSession();
+      throw error;
+    }
   }
 
   /**
