@@ -439,7 +439,7 @@ export class PostStreamApplication {
    * initial load still rebuilds a row whose head has no details.
    */
   private static async getResolvableMainStreamHeadTimestamp({ streamId }: TStreamIdParams): Promise<number> {
-    const postStream = await PostStreamModel.findById(streamId);
+    const postStream = await this.getLocalStream({ streamId });
     if (!postStream || postStream.stream.length === 0) {
       return FORCE_FETCH_NEW_POSTS;
     }
