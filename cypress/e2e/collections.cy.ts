@@ -230,8 +230,6 @@ describe('collections', () => {
     cy.wait('@unfollowCollection').its('response.statusCode').should('eq', 204);
     goToCollectionsPage();
     sectionDoesNotContainCollection(FOLLOWED_SECTION, collectionName);
-    // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2237
-    cy.reload();
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible');
 
     cy.signOut(HasBackedUp.Yes);

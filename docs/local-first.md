@@ -186,6 +186,18 @@ TTL refresh races are the second class (TTL rules: `docs/data-patterns.md`, _TTL
 - TTL refresh also applies to public content for signed-out visitors (#2486). "Logged out" does not mean "no background refresh".
 - Do not force freshness by clearing stream caches: invalidate the affected scope through the dirty registry (see _Deferred Stream Invalidation_ below) and let the TTL/viewport policy refetch (ADR-0003, ADR-0005).
 
+## Bookmark Removal Protection
+
+`LocalBookmarkService.persist` records a DELETE in `recentUnbookmarks` before the local write and clears that record on PUT. Records are keyed by viewer and composite post ID. When `LocalStreamPostsService.persistPosts` hydrates bookmarks from Nexus, it checks the response's `tagGuard.viewerId` and skips protected bookmarks, so an indexing delay cannot undo the same viewer's local removal. Other post data is still persisted.
+
+Protection lasts five minutes (`BOOKMARK_REMOVAL_PROTECTION_MS` in `src/config/bookmarks.ts`). It is in memory and per tab, and does not survive a page reload. Another tab can still restore a stale bookmark in shared IndexedDB; a genuine re-follow from another device can be held back until protection expires and a later fetch arrives. The guard does not filter bookmark stream IDs or remove ghost bookmarks already stored locally.
+
+Nexus `bookmark.indexed_at` is server indexing time, not the time of the user's action. A previous PUT can be indexed after the local removal while DELETE is still in flight, so comparing it with the browser's removal time is not sufficient to lift protection safely.
+
+Bookmark sync failures currently leave the local write and removal protection in place; there is no automatic rollback or retry queue. A network failure does not prove the server rejected DELETE, so clearing protection on every error could restore a stale bookmark after a successful remote deletion. The record also currently survives a failed local transaction; transaction-abort cleanup and reconciliation of known rejection versus unknown network outcome require separate handling.
+
+Follow-ups: [cross-tab/device reconciliation and ghost rows](https://github.com/pubky/pubky-app/issues/2729), [stale bookmark stream membership](https://github.com/pubky/pubky-app/issues/2730), and [failed-write recovery](https://github.com/pubky/pubky-app/issues/2731).
+
 ## Persistence Order
 
 When writing related entities, persist dependencies first:
