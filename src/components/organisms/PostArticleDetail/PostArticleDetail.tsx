@@ -61,6 +61,8 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     desktopTagsPanelRef.current?.focus();
   };
 
+  const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
+
   const { title, body, coverImage, hasCover, isCoverLoading } = usePostArticle({
     content,
     attachments,
@@ -69,11 +71,10 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     coverImageVariant: POST_COVER_MOBILE_VARIANT,
     coverImageDesktopVariant: POST_COVER_DESKTOP_VARIANT,
     coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
+    localCoverType: localAttachments?.[0]?.type,
   });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
-
-  const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
   // Local entries are index-aligned with attachments; slot 0 is the cover
   // only when the slot-0 rule says so (otherwise it's an inline image).

@@ -37,6 +37,12 @@ interface UsePostArticleParams {
    */
   localAttachmentCount?: number;
   /**
+   * Content type of the caller's local slot-0 entry, when it holds one (a same-session publish or
+   * unlocked content). A known non-image vetoes the provisional cover at once instead of painting a
+   * broken image until the file row says the same.
+   */
+  localCoverType?: string;
+  /**
    * Second, larger source for surfaces that render the cover at full width (the article hero).
    * Left unset by feed-sized surfaces, which never want the larger file.
    */
@@ -91,6 +97,7 @@ export function usePostArticle({
   attachments,
   coverImageVariant,
   localAttachmentCount,
+  localCoverType,
   coverImageDesktopVariant,
   coverImageDesktopFallbackVariant,
 }: UsePostArticleParams): UsePostArticleResult {
@@ -144,9 +151,14 @@ export function usePostArticle({
     coverFile && coverImageDesktopFallbackVariant
       ? pubkyUriToCdnUrl(coverFileUri, coverImageDesktopFallbackVariant)
       : null;
-  // Only the row can say slot 0 is not an image, or that Nexus no longer serves it (the lookup
-  // settles with no row). Until it lands the cover is provisional.
-  const isCoverUnavailable = coverFile ? !coverFile.content_type.startsWith('image') : !isCoverLoading;
+  // A local slot-0 entry already knows its type; otherwise only the row can say slot 0 is not an
+  // image, or that Nexus no longer serves it (the lookup settles with no row). Until it lands the
+  // cover is provisional.
+  const isCoverUnavailable = localCoverType
+    ? !localCoverType.startsWith('image')
+    : coverFile
+      ? !coverFile.content_type.startsWith('image')
+      : !isCoverLoading;
 
   const width = Number(coverFile?.metadata?.width);
   const height = Number(coverFile?.metadata?.height);

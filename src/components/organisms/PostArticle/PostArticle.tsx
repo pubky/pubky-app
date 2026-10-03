@@ -39,6 +39,7 @@ export const PostArticle = ({
     attachments,
     coverImageVariant: FileVariant.FEED,
     localAttachmentCount: localAttachments?.length,
+    localCoverType: getAttachmentAtSlot(localAttachments, 0)?.type,
   });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();

@@ -578,6 +578,39 @@ describe('cover first paint', () => {
     });
   });
 
+  it('vetoes the provisional cover at once when the local slot-0 entry is not an image', () => {
+    // The row is never going to confirm anything in time: the caller already knows the type
+    mockGetMetadata.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        coverImageVariant: FileVariant.FEED,
+        coverImageDesktopVariant: FileVariant.MAIN,
+        localCoverType: 'video/mp4',
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(true);
+    expect(result.current.coverImage).toBeNull();
+  });
+
+  it('keeps the provisional cover when the local slot-0 entry is an image', () => {
+    mockGetMetadata.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        coverImageVariant: FileVariant.FEED,
+        localCoverType: 'image/png',
+      }),
+    );
+
+    expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
+  });
+
   it('fills the alt text from the file row once it lands, keeping the URL', async () => {
     mockGetMetadata.mockResolvedValue([createMockImageMetadata('user123:file456', 'beautiful-cover.jpg')]);
 

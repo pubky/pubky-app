@@ -435,6 +435,7 @@ describe('PostArticle', () => {
         attachments: defaultProps.attachments,
         coverImageVariant: FileVariant.FEED,
         localAttachmentCount: 1,
+        localCoverType: 'image/png',
       });
     });
   });
