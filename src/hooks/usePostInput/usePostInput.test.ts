@@ -803,6 +803,38 @@ describe('usePostInput', () => {
       );
     });
 
+    it('consumes the pending article values on submit, so a trailing debounce commit cannot refill the composer', async () => {
+      vi.useFakeTimers();
+      try {
+        mockContent = '';
+        mockIsArticle = true;
+        mockArticleTitle = 'Title';
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        act(() => {
+          result.current.handleArticleBodyChange('Typed just now', false);
+        });
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        // The state catches up with the editor at submit, not half a second later
+        expect(mockSetContent).toHaveBeenCalledTimes(1);
+        expect(mockSetContent).toHaveBeenCalledWith('Typed just now');
+        mockSetContent.mockClear();
+
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+
+        // The publish has emptied the composer by now: the timer must not write the old body back
+        expect(mockSetContent).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('submits an article whose body only the editor holds yet', async () => {
       // The first keystrokes have not reached `content` through the debounce
       mockContent = '';
@@ -2359,7 +2391,7 @@ describe('usePostInput', () => {
       expect(result.current.getLatestArticle().body).toBe('first, then more');
     });
 
-    it('keeps the latest value when a debounce from an earlier render fires first', () => {
+    it('skips a stale commit from an earlier render and lands the latest value', () => {
       const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
       act(() => {
         result.current.handleArticleBodyChange('first', false);
@@ -2377,8 +2409,16 @@ describe('usePostInput', () => {
         vi.advanceTimersByTime(300);
       });
 
-      expect(mockSetContent).toHaveBeenLastCalledWith('first');
+      // The first timer found a newer pending value and did nothing
+      expect(mockSetContent).not.toHaveBeenCalled();
       expect(result.current.getLatestArticle().body).toBe('first, then more');
+
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+
+      expect(mockSetContent).toHaveBeenCalledTimes(1);
+      expect(mockSetContent).toHaveBeenLastCalledWith('first, then more');
     });
 
     it('goes back to the composer state once the debounce has fired', () => {

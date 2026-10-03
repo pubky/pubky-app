@@ -337,6 +337,11 @@ export function usePostInput({
   const pendingArticleTitleRef = useRef<string | null>(null);
   const pendingArticleBodyRef = useRef<string | null>(null);
 
+  const getLatestArticle = () => ({
+    title: pendingArticleTitleRef.current ?? articleTitle,
+    body: pendingArticleBodyRef.current ?? content,
+  });
+
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
     if (isSubmitting || uploadingCount > 0) return;
@@ -344,9 +349,15 @@ export function usePostInput({
     // Articles publish what the editor holds right now: `articleTitle` and `content` trail the inputs
     // by the debounce, and a publish read from them would drop an image inserted in the last half
     // second, then delete its upload as unreferenced.
-    const latestArticle = isArticle
-      ? { title: pendingArticleTitleRef.current ?? articleTitle, body: pendingArticleBodyRef.current ?? content }
-      : undefined;
+    const latestArticle = isArticle ? getLatestArticle() : undefined;
+    if (latestArticle) {
+      // The state catches up with the inputs here and the pending values are consumed: a debounce
+      // commit that fires after the publish has emptied the composer finds nothing left to apply
+      setArticleTitle(latestArticle.title);
+      setContent(latestArticle.body);
+      pendingArticleTitleRef.current = null;
+      pendingArticleBodyRef.current = null;
+    }
     const hasBody = Boolean((latestArticle?.body ?? content).trim());
 
     // For replies, posts, and edits, require content or attachments. For reposts, content is optional. Content and title is required for articles.
@@ -498,6 +509,9 @@ export function usePostInput({
     seededAttachmentUris,
     editPreservedUris,
     isSubmitting,
+    getLatestArticle,
+    setArticleTitle,
+    setContent,
     uploadingCount,
     onSuccess,
     timelineFeed,
@@ -528,10 +542,11 @@ export function usePostInput({
     [setContent],
   );
 
-  // Each render makes a new debounce and the old one's timer still fires, so a commit can carry an
-  // older value than the input holds: only a commit of the latest value clears it.
+  // Only a commit of the value the input still holds lands: a timer carrying an older value, or one
+  // that fires after a submit consumed the pending value, finds a mismatch and does nothing.
   const commitArticleTitle = useDebounceCallback((value: string) => {
-    if (pendingArticleTitleRef.current === value) pendingArticleTitleRef.current = null;
+    if (pendingArticleTitleRef.current !== value) return;
+    pendingArticleTitleRef.current = null;
     setArticleTitle(value);
   }, 500);
 
@@ -544,7 +559,8 @@ export function usePostInput({
   };
 
   const commitArticleBody = useDebounceCallback((markdown: string) => {
-    if (pendingArticleBodyRef.current === markdown) pendingArticleBodyRef.current = null;
+    if (pendingArticleBodyRef.current !== markdown) return;
+    pendingArticleBodyRef.current = null;
     setContent(markdown);
   }, 500);
 
@@ -554,11 +570,6 @@ export function usePostInput({
     pendingArticleBodyRef.current = markdown;
     commitArticleBody(markdown);
   };
-
-  const getLatestArticle = () => ({
-    title: pendingArticleTitleRef.current ?? articleTitle,
-    body: pendingArticleBodyRef.current ?? content,
-  });
 
   // Emoji insert handler
   const handleEmojiSelect = useEmojiInsert({
