@@ -74,6 +74,35 @@ export const POST_ATTACHMENT_ACCEPT_STRING = POST_SUPPORTED_ATTACHMENT_MIME_TYPE
 
 export const ARTICLE_ATTACHMENT_ACCEPT_STRING = ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.join(',');
 
+/**
+ * Non-image media an article body may embed inline (`![alt](attachment:{n})`), on top of the image
+ * types above. Filtered through the spec list so a spec change can never widen it silently.
+ * The cover stays image-only (`ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES`).
+ */
+export const ARTICLE_INLINE_NON_IMAGE_MIME_TYPES = [
+  'video/mp4',
+  'video/mpeg',
+  'audio/mpeg',
+  'audio/wav',
+  'application/pdf',
+].filter((mime) => POST_SUPPORTED_ATTACHMENT_MIME_TYPES.includes(mime));
+
+/** Every MIME type an article body may embed inline: images plus the non-image media above. */
+export const ARTICLE_INLINE_SUPPORTED_MIME_TYPES = [
+  ...ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
+  ...ARTICLE_INLINE_NON_IMAGE_MIME_TYPES,
+];
+
+export const ARTICLE_INLINE_ACCEPT_STRING = ARTICLE_INLINE_SUPPORTED_MIME_TYPES.join(',');
+
+/** File input accept strings for the per-kind insert buttons of the article editor */
+export const ARTICLE_INLINE_ACCEPT_STRING_BY_KIND = {
+  image: ARTICLE_ATTACHMENT_ACCEPT_STRING,
+  video: ARTICLE_INLINE_NON_IMAGE_MIME_TYPES.filter((mime) => mime.startsWith('video/')).join(','),
+  audio: ARTICLE_INLINE_NON_IMAGE_MIME_TYPES.filter((mime) => mime.startsWith('audio/')).join(','),
+  pdf: ARTICLE_INLINE_NON_IMAGE_MIME_TYPES.filter((mime) => mime === 'application/pdf').join(','),
+} as const;
+
 /** Maximum file size for non-image files (spec) */
 export const ATTACHMENT_MAX_OTHER_SIZE = validationLimits.maxFileSizeBytes;
 
@@ -104,5 +133,9 @@ export const POST_SUPPORTED_FILE_TYPES = POST_SUPPORTED_ATTACHMENT_MIME_TYPES.ma
 );
 
 export const ARTICLE_SUPPORTED_FILE_TYPES = ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.map(
+  (mime) => mime.split('/')[1],
+).join(', ');
+
+export const ARTICLE_INLINE_SUPPORTED_FILE_TYPES = ARTICLE_INLINE_SUPPORTED_MIME_TYPES.map(
   (mime) => mime.split('/')[1],
 ).join(', ');
