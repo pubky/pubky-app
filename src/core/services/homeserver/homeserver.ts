@@ -324,10 +324,15 @@ export class HomeserverService {
       const pubkySdk = this.getPubkySdk();
       // Cookie auth flow on purpose: the grant-auth migration is tracked separately.
       const flow = pubkySdk.startCookieAuthFlow(capabilities, AuthFlowKind.signin(), getDefaultHttpRelay());
-      const approval = createCancelableAuthApproval(flow);
+      const authorizationUrl = flow.authorizationUrl;
+      // The SDK gives up on a flow once the page's network drops in the background; resume reconnects to the
+      // same relay channel when the page is visible again.
+      const approval = createCancelableAuthApproval(flow, {
+        resume: () => pubkySdk.resumeCookieAuthFlow(authorizationUrl),
+      });
 
       return {
-        authorizationUrl: flow.authorizationUrl,
+        authorizationUrl,
         awaitApproval: approval.awaitApproval,
         cancelAuthFlow: approval.cancel,
       };
