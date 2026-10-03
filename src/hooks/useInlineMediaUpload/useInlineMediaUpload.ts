@@ -4,27 +4,46 @@ import { useEffect, useRef, useState } from 'react';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
-  ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
-  ARTICLE_SUPPORTED_FILE_TYPES,
+  ARTICLE_INLINE_SUPPORTED_FILE_TYPES,
+  ARTICLE_INLINE_SUPPORTED_MIME_TYPES,
+  ATTACHMENT_MAX_OTHER_SIZE,
 } from '@/config/posts';
 import { FileController } from '@/controllers/file/file';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
+import { getInlineMediaKindFromMime, type InlineMediaKind } from '@/libs/file/inlineMediaKind';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
 import {
-  INLINE_IMAGE_UPLOAD_REJECTION_NAME,
-  type InlineImageLocalEntry,
-  type UseInlineImageUploadOptions,
-  type UseInlineImageUploadReturn,
-} from './useInlineImageUpload.types';
+  INLINE_MEDIA_UPLOAD_REJECTION_NAME,
+  type InlineMediaLocalEntry,
+  type UseInlineMediaUploadOptions,
+  type UseInlineMediaUploadReturn,
+} from './useInlineMediaUpload.types';
 
 /** Builds a rejection recognized (and silenced) by the global unhandled-rejection handler. */
 function taggedRejection(message: string, cause?: unknown): Error {
   const rejection = new Error(message, cause === undefined ? undefined : { cause });
-  rejection.name = INLINE_IMAGE_UPLOAD_REJECTION_NAME;
+  rejection.name = INLINE_MEDIA_UPLOAD_REJECTION_NAME;
   return rejection;
+}
+
+const MAX_IMAGE_SIZE_LABEL = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
+const MAX_OTHER_SIZE_LABEL = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
+
+/** Static retry copy per media kind; toasts never carry the file name. */
+function uploadFailedMessage(kind: InlineMediaKind | null): string {
+  switch (kind) {
+    case 'image':
+      return 'Could not upload image. Try again.';
+    case 'video':
+      return 'Could not upload video. Try again.';
+    case 'audio':
+      return 'Could not upload audio. Try again.';
+    default:
+      return 'Could not upload file. Try again.';
+  }
 }
 
 interface SessionUpload {
@@ -39,10 +58,10 @@ interface PendingUpload {
 }
 
 /**
- * Tracks the inline images uploaded to the homeserver during one article
- * composer session (create or edit).
+ * Tracks the inline media (images, videos, audio, PDFs) uploaded to the
+ * homeserver during one article composer session (create or edit).
  *
- * Inline images are uploaded at insert time — before the article is
+ * Inline media is uploaded at insert time — before the article is
  * published — so the session is the cleanup boundary for uploads that never
  * make it into a published body: `finalizeSession` (after a successful
  * publish) deletes the uploads no longer referenced, and `discardSession`
@@ -54,12 +73,12 @@ interface PendingUpload {
  * before Nexus generates variants, so `getPreviewUrl` serves the local
  * object URL for anything uploaded this session.
  */
-export function useInlineImageUpload({
+export function useInlineMediaUpload({
   enabled,
   keepSession = false,
   authorPubky,
   getInlineBudget,
-}: UseInlineImageUploadOptions): UseInlineImageUploadReturn {
+}: UseInlineMediaUploadOptions): UseInlineMediaUploadReturn {
   const sessionRef = useRef<Map<string, SessionUpload> | null>(null);
   const [uploadingCount, setUploadingCount] = useState(0);
   // Synchronous twin of uploadingCount: budget checks must see uploads
@@ -97,13 +116,13 @@ export function useInlineImageUpload({
     try {
       await FileController.commitDelete({ fileUris });
     } catch (error) {
-      Logger.warn('[useInlineImageUpload] Best-effort session upload cleanup failed', { fileUris, error });
+      Logger.warn('[useInlineMediaUpload] Best-effort session upload cleanup failed', { fileUris, error });
     }
   };
 
   const rejectWithToast = (description: string): Promise<never> => {
     toast({ variant: 'error', description });
-    return Promise.reject(taggedRejection(`Inline image upload rejected: ${description}`));
+    return Promise.reject(taggedRejection(`Inline media upload rejected: ${description}`));
   };
 
   const runUpload = async (file: File, pubky: Pubky): Promise<string> => {
@@ -113,7 +132,7 @@ export function useInlineImageUpload({
     try {
       uri = await FileController.commitCreate({ file, pubky });
     } catch (error) {
-      Logger.error('[useInlineImageUpload] Inline image upload failed', { error });
+      Logger.error('[useInlineMediaUpload] Inline media upload failed', { error });
       toast({
         variant: 'error',
         // An expired session cannot be retried away: ask for sign-in instead of
@@ -122,11 +141,12 @@ export function useInlineImageUpload({
         description:
           isAppError(error) && requiresLogin(error)
             ? 'Session expired. Please sign in.'
-            : (getImageUploadSizeLimitToastMessage(error) ?? 'Could not upload image. Try again.'),
+            : (getImageUploadSizeLimitToastMessage(error) ??
+              uploadFailedMessage(getInlineMediaKindFromMime(file.type))),
       });
       // Rethrow tagged (message preserved) so callers still see the failure
       // but the global handler doesn't re-report what was just toasted
-      throw taggedRejection(error instanceof Error ? error.message : 'Inline image upload failed', error);
+      throw taggedRejection(error instanceof Error ? error.message : 'Inline media upload failed', error);
     } finally {
       inFlightRef.current -= 1;
       setUploadingCount((count) => count - 1);
@@ -137,29 +157,34 @@ export function useInlineImageUpload({
       // will ever finalize it, so clean up now (silently: the composer is
       // gone) instead of orphaning the file on the homeserver
       void deleteUris([uri]);
-      throw taggedRejection('Inline image upload discarded before completion.');
+      throw taggedRejection('Inline media upload discarded before completion.');
     }
 
     getSession().set(uri, { objectUrl: URL.createObjectURL(file), file });
     return uri;
   };
 
-  const uploadInlineImage = (file: File): Promise<string> => {
+  const uploadInlineMedia = (file: File): Promise<string> => {
     if (!enabled || !authorPubky) {
-      return rejectWithToast('Images can only be uploaded while composing an article.');
+      return rejectWithToast('Files can only be uploaded while composing an article.');
     }
     const pubky = authorPubky;
     // A fresh upload means the composer session is active again (e.g. after
     // an earlier discard in the same mounted composer)
     discardedRef.current = false;
 
-    if (!ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type)) {
-      return rejectWithToast(`Unsupported file type. Supported: ${ARTICLE_SUPPORTED_FILE_TYPES}.`);
+    if (!ARTICLE_INLINE_SUPPORTED_MIME_TYPES.includes(file.type)) {
+      return rejectWithToast(`Unsupported file type. Supported: ${ARTICLE_INLINE_SUPPORTED_FILE_TYPES}.`);
     }
 
-    if (file.size > IMAGE_MAX_RAW_SIZE) {
-      const maxSizeLabel = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
-      return rejectWithToast(`Image exceeds the ${maxSizeLabel} limit.`);
+    // Same caps as post attachments: images are re-encoded under IMAGE_MAX_RAW_SIZE, every other
+    // kind is uploaded as-is under the spec's file size limit.
+    const isImage = file.type.startsWith('image/');
+    if (isImage && file.size > IMAGE_MAX_RAW_SIZE) {
+      return rejectWithToast(`Image exceeds the ${MAX_IMAGE_SIZE_LABEL} limit.`);
+    }
+    if (!isImage && file.size > ATTACHMENT_MAX_OTHER_SIZE) {
+      return rejectWithToast(`File exceeds the ${MAX_OTHER_SIZE_LABEL} limit.`);
     }
 
     // Batch admission: MDXEditor's paste/drop handling calls this once per
@@ -179,10 +204,10 @@ export function useInlineImageUpload({
           if (batch.length > getInlineBudget() - inFlightRef.current) {
             toast({
               variant: 'error',
-              description: `Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} images including the cover.`,
+              description: `Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} attachments including the cover.`,
             });
             const rejection = taggedRejection(
-              'Inline image upload rejected: the batch exceeds the article image limit.',
+              'Inline media upload rejected: the batch exceeds the article attachment limit.',
             );
             for (const entry of batch) entry.reject(rejection);
             return;
@@ -202,6 +227,10 @@ export function useInlineImageUpload({
 
   const getSessionFile = (uri: string): File | null => {
     return getSession().get(uri.trim())?.file ?? null;
+  };
+
+  const getMediaType = (uri: string): string | null => {
+    return getSession().get(uri.trim())?.file.type ?? null;
   };
 
   const registerSessionUpload = (uri: string, file: File) => {
@@ -242,15 +271,17 @@ export function useInlineImageUpload({
     committingRef.current = committing;
   };
 
-  const buildLocalAttachmentEntries = (orderedUris: string[]): (InlineImageLocalEntry | null)[] => {
+  const buildLocalAttachmentEntries = (orderedUris: string[]): (InlineMediaLocalEntry | null)[] => {
     const session = getSession();
     return orderedUris.map((uri) => {
       const upload = session.get(uri);
       if (!upload) return null;
+      // Only images have derived variants; a non-image entry serves `main` alone, like a CDN row
+      const isImage = upload.file.type.startsWith('image/');
       return {
         type: upload.file.type,
         name: upload.file.name,
-        urls: { main: upload.objectUrl, feed: upload.objectUrl },
+        urls: { main: upload.objectUrl, feed: isImage ? upload.objectUrl : undefined },
       };
     });
   };
@@ -277,9 +308,10 @@ export function useInlineImageUpload({
   }, []);
 
   return {
-    uploadInlineImage,
+    uploadInlineMedia,
     getPreviewUrl,
     getSessionFile,
+    getMediaType,
     registerSessionUpload,
     uploadingCount,
     finalizeSession,

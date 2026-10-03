@@ -1,43 +1,47 @@
 import type { Pubky } from '@/models/models.types';
 
 /**
- * Error name tagging expected, already-toasted inline image upload
+ * Error name tagging expected, already-toasted inline media upload
  * rejections. MDXEditor's built-in paste/drop handling rethrows upload
  * rejections inside its own `.catch`, producing a promise nobody owns — the
  * tag lets the global unhandled-rejection handler recognize them as handled
- * instead of reporting an error the user was already told about.
+ * instead of reporting an error the user was already told about. The value
+ * predates video/audio support and stays as-is: Sentry's ignore list matches
+ * on it.
  */
-export const INLINE_IMAGE_UPLOAD_REJECTION_NAME = 'InlineImageUploadRejection';
+export const INLINE_MEDIA_UPLOAD_REJECTION_NAME = 'InlineImageUploadRejection';
 
-export interface UseInlineImageUploadOptions {
-  /** Only articles upload inline images; when false, uploads are rejected and the session is discarded */
+export interface UseInlineMediaUploadOptions {
+  /** Only articles upload inline media; when false, uploads are rejected and the session is discarded */
   enabled: boolean;
   /** A captured lock draft outlives article mode: while true, a false `enabled` discards nothing. */
   keepSession?: boolean;
   authorPubky: Pubky | null;
-  /** Remaining inline-image slots at insert time (serialize-time cap is the authority) */
+  /** Remaining inline media slots at insert time (serialize-time cap is the authority) */
   getInlineBudget: () => number;
 }
 
 /** Shape of a `useLocalFilesStore` post attachment entry backed by a session object URL */
-export interface InlineImageLocalEntry {
+export interface InlineMediaLocalEntry {
   type: string;
   name: string;
   urls: { main: string; feed?: string; large?: string };
 }
 
-export interface UseInlineImageUploadReturn {
+export interface UseInlineMediaUploadReturn {
   /**
-   * MDXEditor `imageUploadHandler` shape: validates, uploads to the
-   * homeserver, and resolves with the `pubky://…/files/{id}` URI. Rejects
-   * (after toasting) on validation or upload failure so the editor inserts
-   * nothing.
+   * MDXEditor `imageUploadHandler` shape, for every inline media kind:
+   * validates, uploads to the homeserver, and resolves with the
+   * `pubky://…/files/{id}` URI. Rejects (after toasting) on validation or
+   * upload failure so the editor inserts nothing.
    */
-  uploadInlineImage: (file: File) => Promise<string>;
+  uploadInlineMedia: (file: File) => Promise<string>;
   /** Object URL for a session-uploaded file URI, for in-editor preview */
   getPreviewUrl: (src: string) => string | null;
   /** The file as picked, before upload sanitization; null for a URI not uploaded this session */
   getSessionFile: (uri: string) => File | null;
+  /** MIME type of a session-uploaded file URI (the editor routes non-images to a media node); null outside the session */
+  getMediaType: (uri: string) => string | null;
   /** Adds an externally uploaded file (e.g. a replacement cover) to the session for cleanup tracking */
   registerSessionUpload: (uri: string, file: File) => void;
   /** Number of uploads currently in flight; publish must be blocked while > 0 */
@@ -53,5 +57,5 @@ export interface UseInlineImageUploadReturn {
    * object URLs; URIs not uploaded this session map to `null`. Call BEFORE
    * `finalizeSession`, which clears the session map.
    */
-  buildLocalAttachmentEntries: (orderedUris: string[]) => (InlineImageLocalEntry | null)[];
+  buildLocalAttachmentEntries: (orderedUris: string[]) => (InlineMediaLocalEntry | null)[];
 }

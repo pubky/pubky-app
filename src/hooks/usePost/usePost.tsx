@@ -5,8 +5,8 @@ import { ARTICLE_ATTACHMENT_MAX_FILES } from '@/config/posts';
 import { FileController } from '@/controllers/file/file';
 import { PostController } from '@/controllers/post/post';
 import type { TEditPostAttachments } from '@/controllers/post/post.types';
-import { useInlineImageUpload } from '@/hooks/useInlineImageUpload/useInlineImageUpload';
-import type { InlineImageLocalEntry } from '@/hooks/useInlineImageUpload/useInlineImageUpload.types';
+import { useInlineMediaUpload } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload';
+import type { InlineMediaLocalEntry } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload.types';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
@@ -52,7 +52,7 @@ function serializeArticleErrorMessage(error: SerializeArticleBodyError): string 
 }
 
 /** Maps a File to a local-store attachment entry backed by a fresh object URL. */
-function fileToLocalAttachment(file: File): InlineImageLocalEntry {
+function fileToLocalAttachment(file: File): InlineMediaLocalEntry {
   const url = URL.createObjectURL(file);
   const isImage = file.type.startsWith('image');
   return { type: file.type, name: file.name, urls: { main: url, feed: isImage ? url : undefined } };
@@ -111,7 +111,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
   // body; `content` lags the editor by its 500ms debounce and in-flight
   // uploads aren't in the body yet, so `serializeArticleBody` at publish
   // remains the authoritative cap enforcement.
-  const inlineImageSession = useInlineImageUpload({
+  const inlineImageSession = useInlineMediaUpload({
     enabled: isArticle,
     keepSession: keepInlineImages,
     authorPubky: currentUserId,
@@ -218,7 +218,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
    * (including a brand-new cover) of their object URLs and exposing them to
    * the CDN variant-readiness window, where fresh variants 404 for a while.
    */
-  const completeInlineSeedEntries = async (inlineUris: string[]): Promise<(InlineImageLocalEntry | null)[]> => {
+  const completeInlineSeedEntries = async (inlineUris: string[]): Promise<(InlineMediaLocalEntry | null)[]> => {
     const sessionEntries = inlineImageSession.buildLocalAttachmentEntries(inlineUris);
     const missingUris = inlineUris.filter((_, index) => sessionEntries[index] === null);
     if (missingUris.length === 0) return sessionEntries;
@@ -253,9 +253,9 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     }
   };
 
-  const seedArticleLocalFiles = (postId: string, entries: (InlineImageLocalEntry | null)[]) => {
+  const seedArticleLocalFiles = (postId: string, entries: (InlineMediaLocalEntry | null)[]) => {
     const complete = entries.every((entry) => entry !== null);
-    useLocalFilesStore.getState().setPostAttachments(postId, complete ? (entries as InlineImageLocalEntry[]) : []);
+    useLocalFilesStore.getState().setPostAttachments(postId, complete ? (entries as InlineMediaLocalEntry[]) : []);
   };
 
   const reply = async ({ postId, onSuccess }: UsePostReplyOptions) => {
@@ -413,7 +413,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     try {
       let editContentPayload: string;
       let editAttachments: TEditPostAttachments | undefined;
-      let articleSeedEntries: (InlineImageLocalEntry | null)[] | undefined;
+      let articleSeedEntries: (InlineMediaLocalEntry | null)[] | undefined;
       let articleNextOrder: string[] | undefined;
 
       if (isArticle) {
@@ -600,7 +600,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     edit,
     isSubmitting,
     inlineImages: {
-      upload: inlineImageSession.uploadInlineImage,
+      upload: inlineImageSession.uploadInlineMedia,
       getPreviewUrl: inlineImageSession.getPreviewUrl,
     },
     uploadingCount: inlineImageSession.uploadingCount,

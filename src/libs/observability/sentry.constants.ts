@@ -1,4 +1,4 @@
-import { INLINE_IMAGE_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineImageUpload/useInlineImageUpload.types';
+import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload.types';
 
 const Z32_ALPHABET = 'ybndrfg8ejkmcpqxot1uwisza345h769';
 
@@ -57,7 +57,7 @@ export const OBSERVABILITY_IGNORE_ERRORS: readonly (string | RegExp)[] = [
   // rethrows them into a promise nobody owns, so Sentry's globalHandlers
   // would report them as unhandled. Genuine upload failures are already
   // captured with full context through the Err.* factory pipeline.
-  INLINE_IMAGE_UPLOAD_REJECTION_NAME,
+  INLINE_MEDIA_UPLOAD_REJECTION_NAME,
   // Native webview bridges (pubky-ring iOS/Android hosts) inject scripts that
   // talk to `window.webkit.messageHandlers` / the Android JavascriptInterface.
   // When the host tears the bridge down mid-navigation those injected scripts
