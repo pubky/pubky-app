@@ -254,6 +254,36 @@ describe('usePost', () => {
       expect(vi.mocked(toast)).toHaveBeenCalledWith({ variant: 'warning', title: 'Articles support one cover image' });
     });
 
+    it('does not latch the restore guard when the draft lands on a composer already in article mode', () => {
+      const { result } = renderHook(() => usePost());
+      const cover = new File(['test'], 'cover.png', { type: 'image/png' });
+      act(() => {
+        result.current.setIsArticle(true);
+      });
+      vi.mocked(toast).mockClear();
+
+      // The lock was dismissed before it applied: the composer was never cleared
+      act(() => {
+        result.current.restoreComposerDraft({
+          content: 'Body',
+          attachments: [cover],
+          isArticle: true,
+          articleTitle: 'T',
+        });
+      });
+      expect(result.current.attachments).toEqual([cover]);
+
+      act(() => {
+        result.current.setIsArticle(false);
+      });
+      act(() => {
+        result.current.setIsArticle(true);
+      });
+
+      expect(result.current.attachments).toEqual([]);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ variant: 'warning', title: 'Articles support one cover image' });
+    });
+
     // Note: This scenario doesn't occur in the actual UI (the form resets entirely),
     // but we test it to verify the useEffect only triggers when isArticle becomes true
     it('should not clear attachments when switching from article mode to regular mode', () => {

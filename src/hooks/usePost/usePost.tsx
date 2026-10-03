@@ -548,12 +548,14 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
    * article-mode effect below: it sees `isArticle` flip true next to a non-empty `attachments` and
    * clears the cover with the "one cover image" warning (the lock-abandon regression).
    */
-  const restoreComposerDraft = ({ content, attachments, isArticle, articleTitle }: ComposerDraft) => {
-    restoringDraftRef.current = isArticle && attachments.length > 0;
-    setContent(content);
-    setAttachments(attachments);
-    setIsArticle(isArticle);
-    setArticleTitle(articleTitle);
+  const restoreComposerDraft = (draft: ComposerDraft) => {
+    // Armed only when the restore flips the mode: a draft put back over an uncleared composer runs
+    // no effect, and a latched flag would skip the next real switch into article mode
+    restoringDraftRef.current = draft.isArticle && !isArticle && draft.attachments.length > 0;
+    setContent(draft.content);
+    setAttachments(draft.attachments);
+    setIsArticle(draft.isArticle);
+    setArticleTitle(draft.articleTitle);
   };
 
   // Clear attachments when switching to article mode.
