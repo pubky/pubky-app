@@ -1,9 +1,24 @@
 /**
- * Constants for the Markdown editor's code block language support.
+ * Constants for the Markdown editor.
  *
  * CODE_BLOCK_LANGUAGES defines the languages available in the editor's code block dropdown.
  * LANGUAGE_ALIASES maps common shorthand/alternative names to supported language keys.
+ * INLINE_MEDIA_KIND_UI names and draws each inline media kind.
  */
+
+import { FileText, Image as ImageIcon, type LucideIcon, Music, Video } from 'lucide-react';
+import type { InlineMediaKind } from '@/libs/file/inlineMediaKind';
+
+/**
+ * The label, icon and wrong-file copy of each inline media kind, shared by both toolbars, the insert
+ * dialog and the in-editor node.
+ */
+export const INLINE_MEDIA_KIND_UI: Record<InlineMediaKind, { label: string; Icon: LucideIcon; wrongFile: string }> = {
+  image: { label: 'Image', Icon: ImageIcon, wrongFile: 'Choose an image file.' },
+  video: { label: 'Video', Icon: Video, wrongFile: 'Choose a video file.' },
+  audio: { label: 'Audio', Icon: Music, wrongFile: 'Choose an audio file.' },
+  pdf: { label: 'PDF', Icon: FileText, wrongFile: 'Choose a PDF file.' },
+};
 
 /**
  * Common programming languages for code blocks in the Markdown editor.

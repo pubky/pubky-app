@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   articleHasInlineSlotZero,
   collectAttachmentRefIndexes,
-  countInlineImageUris,
+  countInlineMediaUris,
   deserializeArticleBody,
   isAttachmentRefScheme,
   isAuthorFileUri,
   parseAttachmentRef,
   parseFileUriOwner,
   serializeArticleBody,
-} from './articleInlineImages';
+} from './articleInlineMedia';
 
 const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 const OTHER = 'z4dr71ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1abc';
@@ -18,7 +18,7 @@ const fileUri = (id: string, owner = AUTHOR) => `pubky://${owner}/pub/pubky.app/
 const blobUri = (id: string, owner = AUTHOR) => `pubky://${owner}/pub/pubky.app/blobs/${id}`;
 
 const serialize = (body: string, overrides?: Partial<Parameters<typeof serializeArticleBody>[0]>) =>
-  serializeArticleBody({ body, coverPresent: false, authorPubky: AUTHOR, maxInlineImages: 9, ...overrides });
+  serializeArticleBody({ body, coverPresent: false, authorPubky: AUTHOR, maxInlineMedia: 9, ...overrides });
 
 describe('parseAttachmentRef', () => {
   it('parses strict references', () => {
@@ -282,8 +282,8 @@ describe('serializeArticleBody', () => {
   it('enforces the inline image cap against unique URIs', () => {
     const body = `![a](${fileUri('a')})\n\n![b](${fileUri('b')})\n\n![a again](${fileUri('a')})`;
 
-    expect(serialize(body, { maxInlineImages: 2 }).errors).toEqual([]);
-    expect(serialize(body, { maxInlineImages: 1 }).errors).toEqual([{ code: 'TOO_MANY_INLINE_IMAGES', max: 1 }]);
+    expect(serialize(body, { maxInlineMedia: 2 }).errors).toEqual([]);
+    expect(serialize(body, { maxInlineMedia: 1 }).errors).toEqual([{ code: 'TOO_MANY_INLINE_IMAGES', max: 1 }]);
   });
 
   it('reports each error code once', () => {
@@ -359,11 +359,11 @@ describe('deserializeArticleBody', () => {
   });
 });
 
-describe('countInlineImageUris', () => {
+describe('countInlineMediaUris', () => {
   it('counts unique author-owned inline image URIs', () => {
     const body = `![a](${fileUri('a')})\n\n![b](${fileUri('b')})\n\n![a again](${fileUri('a')})`;
 
-    expect(countInlineImageUris(body, AUTHOR)).toBe(2);
+    expect(countInlineMediaUris(body, AUTHOR)).toBe(2);
   });
 
   it('ignores external images, other owners, and code fences', () => {
@@ -377,11 +377,11 @@ describe('countInlineImageUris', () => {
       '```',
     ].join('\n');
 
-    expect(countInlineImageUris(body, AUTHOR)).toBe(0);
+    expect(countInlineMediaUris(body, AUTHOR)).toBe(0);
   });
 
   it('returns 0 for empty bodies', () => {
-    expect(countInlineImageUris('', AUTHOR)).toBe(0);
+    expect(countInlineMediaUris('', AUTHOR)).toBe(0);
   });
 });
 

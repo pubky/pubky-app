@@ -3,7 +3,7 @@
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
+import { articleHasInlineSlotZero } from '@/libs/post/articleInlineMedia';
 import {
   categorizeAttachments,
   splitAttachmentsByMediaType,

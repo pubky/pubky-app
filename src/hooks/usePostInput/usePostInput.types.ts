@@ -1,6 +1,6 @@
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import type { RefObject } from 'react';
-import type { ExistingAttachment, UsePostReturn } from '@/hooks/usePost/usePost.types';
+import type { ComposerDraft, ExistingAttachment, UsePostReturn } from '@/hooks/usePost/usePost.types';
 import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
 import type { EditLock, PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
@@ -50,7 +50,7 @@ export interface UsePostInputOptions {
   onArticleModeChange?: (isArticle: boolean) => void;
   /** Optional external work-in-progress check, added to the tracked fields before collapsing */
   hasExternalContent?: () => boolean;
-  keepInlineImages?: boolean;
+  keepInlineMedia?: boolean;
 }
 
 export interface UsePostInputReturn {
@@ -75,14 +75,27 @@ export interface UsePostInputReturn {
   setArticleTitle: React.Dispatch<React.SetStateAction<string>>;
   lockTitle: string;
   setLockTitle: React.Dispatch<React.SetStateAction<string>>;
+  /** Restores a captured draft as one commit, cover included (an abandoned lock). */
+  restoreComposerDraft: (draft: ComposerDraft) => void;
   isDragging: boolean;
   isExpanded: boolean;
   isSubmitting: boolean;
   showEmojiPicker: boolean;
   setShowEmojiPicker: (show: boolean) => void;
-  /** Article inline-image editor surface for the MarkdownEditor */
-  inlineImages: { upload: (file: File) => Promise<string>; getPreviewUrl: (src: string) => string | null };
-  /** Inline image uploads in flight; submit stays disabled while > 0 */
+  /** Article inline media editor surface for the MarkdownEditor */
+  inlineMedia: {
+    upload: (file: File) => Promise<string>;
+    getPreviewUrl: (src: string) => string | null;
+    /** MIME type of a file URI from this session or the edited post's attachments; null otherwise */
+    getMediaType: (uri: string) => string | null;
+  };
+  /**
+   * True while the file rows of an edited article's inline attachments are still resolving, for a
+   * bounded time. The editor imports markdown once, so it waits: a video it cannot yet tell from an
+   * image would mount as a broken picture. Always false outside article edits.
+   */
+  isEditInlineMediaLoading: boolean;
+  /** Inline media uploads in flight; submit stays disabled while > 0 */
   uploadingCount: number;
   serializeArticleForLock: UsePostReturn['serializeArticleForLock'];
   /** The article as the inputs hold it now. `articleTitle` and `content` trail them by the debounce. */

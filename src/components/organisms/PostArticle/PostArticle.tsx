@@ -39,6 +39,7 @@ export const PostArticle = ({
     attachments,
     coverImageVariant: FileVariant.FEED,
     localAttachmentCount: localAttachments?.length,
+    localCoverType: getAttachmentAtSlot(localAttachments, 0)?.type,
   });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
@@ -89,7 +90,7 @@ export const PostArticle = ({
             isArticle
             fullArticle={isFull}
             // Only unlocked content is read in full here.
-            articleImages={isFull && localAttachments ? { localAttachments } : undefined}
+            articleMedia={isFull && localAttachments ? { localAttachments } : undefined}
             onLinkClick={handleLinkClick}
             className={isFull ? undefined : 'line-clamp-3'}
           />

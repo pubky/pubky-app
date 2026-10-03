@@ -57,6 +57,8 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - Local-first writes: Dexie first, homeserver sync after, roll back on failure, refresh every affected `*_ttl` row, persist
   dependencies before dependents; stream cursors only from Nexus, never `indexed_at`. `docs/local-first.md`, `docs/data-patterns.md`
 - Composite post ids `author:postId` via `buildCompositeId` / `parseCompositeId`. `docs/data-patterns.md`
+- Article bodies embed every media kind as `![alt](attachment:{n})`; the kind comes from file metadata, never the
+  markdown, and the cover stays image-only. `docs/data-patterns.md`, ADR-0023
 - Shadcn first and design tokens only (`bg-primary`, not `bg-[#1a1a1a]` or `p-[13px]`); atomic tiers atoms → molecules →
   organisms → templates; z-index only `-z-10, z-10, z-30, z-40, z-50, z-60`. `docs/components.md`, `docs/z-index.md`
 - No `useCallback` / `useMemo` / `React.memo`: the React Compiler handles it. Add one only with profiler evidence.

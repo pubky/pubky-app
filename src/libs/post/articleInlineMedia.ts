@@ -6,14 +6,17 @@ import { gfm } from 'micromark-extension-gfm';
 import { visit } from 'unist-util-visit';
 
 /**
- * Inline article images — the attachment-mapping scheme for `kind: long` posts.
+ * Inline article media — the attachment-mapping scheme for `kind: long` posts.
  *
- * Composer bodies reference uploaded images by their canonical homeserver file
- * URI (`pubky://{author}/pub/pubky.app/files/{fileId}`). Published bodies
- * reference slots of `post.attachments` instead (`![alt](attachment:{n})`), so
- * the body never persists a host-specific CDN URL. `serializeArticleBody`
- * converts composer → published form on create/save; `deserializeArticleBody`
- * converts published → composer form when opening an article for edit.
+ * Images, videos, audio files and PDFs all share markdown image syntax; the
+ * media type is never in the body. Composer bodies reference uploaded files by
+ * their canonical homeserver file URI (`pubky://{author}/pub/pubky.app/files/{fileId}`).
+ * Published bodies reference slots of `post.attachments` instead
+ * (`![alt](attachment:{n})`), so the body never persists a host-specific CDN
+ * URL, and readers resolve each slot's type from its file metadata.
+ * `serializeArticleBody` converts composer → published form on create/save;
+ * `deserializeArticleBody` converts published → composer form when opening an
+ * article for edit.
  *
  * All body inspection is AST-based (never regex over the whole document) so
  * image syntax inside code fences or inline code is never misinterpreted, and
@@ -34,13 +37,13 @@ export type SerializeArticleBodyErrorCode =
   | 'HAND_TYPED_ATTACHMENT_REF'
   /** A `blob:` object URL or homeserver blob URI was used as an image destination */
   | 'BLOB_URI'
-  /** More unique author-owned inline images than the attachment cap allows */
+  /** More unique author-owned inline media files than the attachment cap allows */
   | 'TOO_MANY_INLINE_IMAGES'
   /** Raw HTML contains an author-owned file or blob URI, escaping managed rewriting */
   | 'RAW_HTML_FILE_URI'
   /** A reference-style definition points at an author-owned file URI */
   | 'REFERENCE_STYLE_FILE_URI'
-  /** An image node without source positions cannot be rewritten (never expected) */
+  /** A media node without source positions cannot be rewritten (never expected) */
   | 'UNPROCESSABLE_IMAGE';
 
 export interface SerializeArticleBodyError {
@@ -52,7 +55,7 @@ export interface SerializeArticleBodyError {
 export interface SerializeArticleBodyResult {
   /** Published-form body; unchanged from the input when `errors` is non-empty */
   body: string;
-  /** Unique author-owned inline file URIs in first-appearance order */
+  /** Unique author-owned inline file URIs (any media type) in first-appearance order */
   inlineUris: string[];
   errors: SerializeArticleBodyError[];
 }
@@ -60,7 +63,7 @@ export interface SerializeArticleBodyResult {
 export interface DeserializeArticleBodyResult {
   /** Composer-form body with `attachment:{n}` destinations resolved to file URIs */
   body: string;
-  /** One entry per image that had to be removed because its reference was invalid */
+  /** One entry per media reference that had to be removed because it was invalid */
   warnings: string[];
 }
 
@@ -219,12 +222,13 @@ function collectNodes(tree: Root): CollectedNodes {
 /**
  * Converts a composer-form body to published form: collects unique
  * author-owned inline file URIs in first-appearance order and rewrites each
- * of their image destinations to `attachment:{n}`, where slots start after
- * the cover (`n = index + 1` when `coverPresent`).
+ * of their destinations to `attachment:{n}`, where slots start after the
+ * cover (`n = index + 1` when `coverPresent`). Images, videos, audio and PDFs
+ * all use image syntax, so one pass covers every media type.
  *
  * Returns the input body unchanged (with `errors`) when the body contains
  * destinations that must never be published: hand-typed `attachment:` refs,
- * blob URIs, more managed images than `maxInlineImages`, or author-owned file
+ * blob URIs, more managed files than `maxInlineMedia`, or author-owned file
  * URIs hidden in raw HTML or reference-style definitions.
  *
  * Non-author `pubky://` URLs and external URLs are left verbatim and never
@@ -234,9 +238,9 @@ export function serializeArticleBody(params: {
   body: string;
   coverPresent: boolean;
   authorPubky: string;
-  maxInlineImages: number;
+  maxInlineMedia: number;
 }): SerializeArticleBodyResult {
-  const { body, coverPresent, authorPubky, maxInlineImages } = params;
+  const { body, coverPresent, authorPubky, maxInlineMedia } = params;
   const { images, definitions, htmlNodes } = collectNodes(parseBody(body));
 
   const errors: SerializeArticleBodyError[] = [];
@@ -286,8 +290,8 @@ export function serializeArticleBody(params: {
     }
   }
 
-  if (inlineUris.length > maxInlineImages) {
-    pushError({ code: 'TOO_MANY_INLINE_IMAGES', max: maxInlineImages });
+  if (inlineUris.length > maxInlineMedia) {
+    pushError({ code: 'TOO_MANY_INLINE_IMAGES', max: maxInlineMedia });
   }
 
   if (errors.length > 0) {
@@ -304,9 +308,9 @@ export function serializeArticleBody(params: {
 }
 
 /**
- * Converts a published-form body back to composer form: every image whose
- * destination is a strict `attachment:{n}` reference is resolved to
- * `attachments[n]`. Images with references that cannot be resolved — index out
+ * Converts a published-form body back to composer form: every media node
+ * whose destination is a strict `attachment:{n}` reference is resolved to
+ * `attachments[n]`. References that cannot be resolved — index out
  * of range, target not an author-owned file URI, or a malformed
  * `attachment:`-scheme destination — are removed with a warning instead of
  * failing, so a damaged article always remains editable.
@@ -337,7 +341,7 @@ export function deserializeArticleBody(params: {
       result = replaceImageDestination(result, node, span, uri.trim());
     } else {
       result = result.slice(0, span.start) + result.slice(span.end);
-      warnings.push('An image referencing a missing attachment was removed.');
+      warnings.push('A media reference to a missing attachment was removed.');
     }
   }
 
@@ -345,12 +349,12 @@ export function deserializeArticleBody(params: {
 }
 
 /**
- * Counts the unique author-owned inline image URIs in a composer-form body —
+ * Counts the unique author-owned inline media URIs in a composer-form body —
  * the number of attachment slots the body would consume at publish (excluding
  * the cover). Used for insert-time budget checks; `serializeArticleBody`
  * remains the authoritative cap enforcement at publish.
  */
-export function countInlineImageUris(body: string, authorPubky: string): number {
+export function countInlineMediaUris(body: string, authorPubky: string): number {
   const { images } = collectNodes(parseBody(body));
   const unique = new Set<string>();
   for (const node of images) {
@@ -360,7 +364,7 @@ export function countInlineImageUris(body: string, authorPubky: string): number 
 }
 
 /**
- * Collects every attachment slot referenced by the body's images and
+ * Collects every attachment slot referenced by the body's media nodes and
  * reference-style definitions. Source of truth for the slot-0 cover rule.
  */
 export function collectAttachmentRefIndexes(body: string): Set<number> {
@@ -383,7 +387,7 @@ export function collectAttachmentRefIndexes(body: string): Set<number> {
 
 /**
  * Slot-0 cover rule: when the published body references `attachment:0`,
- * slot 0 is an inline image and the article has no cover.
+ * slot 0 is an inline media file and the article has no cover.
  */
 export function articleHasInlineSlotZero(body: string): boolean {
   // Delegates so cover detection can never disagree with ref collection —

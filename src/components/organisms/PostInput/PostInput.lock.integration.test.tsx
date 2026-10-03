@@ -5,6 +5,7 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
+import type { ComposerDraft } from '@/hooks/usePost/usePost.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -112,6 +113,8 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         existingAttachments: [],
         removeExistingAttachment: vi.fn(),
         uploadingCount: 0,
+        inlineMedia: { upload: vi.fn(), getPreviewUrl: () => null, getMediaType: () => null },
+        isEditInlineMediaLoading: false,
         serializeArticleForLock: vi.fn(),
         getLatestArticle: () => ({ title: articleTitle, body: content }),
         isArticle,
@@ -119,6 +122,12 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         handleArticleClick: vi.fn(),
         articleTitle,
         setArticleTitle,
+        restoreComposerDraft: (draft: ComposerDraft) => {
+          setContent(draft.content);
+          setAttachments(draft.attachments);
+          setIsArticle(draft.isArticle);
+          setArticleTitle(draft.articleTitle);
+        },
         handleArticleTitleChange: vi.fn(),
         handleArticleBodyChange: vi.fn(),
         isDragging: false,

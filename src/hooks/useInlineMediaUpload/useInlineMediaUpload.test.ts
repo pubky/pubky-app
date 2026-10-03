@@ -6,8 +6,8 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
-import { useInlineImageUpload } from './useInlineImageUpload';
-import { INLINE_IMAGE_UPLOAD_REJECTION_NAME } from './useInlineImageUpload.types';
+import { useInlineMediaUpload } from './useInlineMediaUpload';
+import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from './useInlineMediaUpload.types';
 
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
@@ -32,24 +32,24 @@ const imageFile = (name = 'pic.png', type = 'image/png', size = 1024) => {
   return file;
 };
 
-const setup = (overrides?: Partial<Parameters<typeof useInlineImageUpload>[0]>) =>
-  renderHook((props: Parameters<typeof useInlineImageUpload>[0]) => useInlineImageUpload(props), {
+const setup = (overrides?: Partial<Parameters<typeof useInlineMediaUpload>[0]>) =>
+  renderHook((props: Parameters<typeof useInlineMediaUpload>[0]) => useInlineMediaUpload(props), {
     initialProps: { enabled: true, authorPubky: PUBKY, getInlineBudget: () => 9, ...overrides },
   });
 
-describe('useInlineImageUpload', () => {
+describe('useInlineMediaUpload', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('uploadInlineImage', () => {
+  describe('uploadInlineMedia', () => {
     it('uploads a valid image and resolves with the file URI', async () => {
       vi.mocked(FileController.commitCreate).mockResolvedValue(fileUri('a'));
       const { result } = setup();
 
       let uri: string | undefined;
       await act(async () => {
-        uri = await result.current.uploadInlineImage(imageFile());
+        uri = await result.current.uploadInlineMedia(imageFile());
       });
 
       expect(uri).toBe(fileUri('a'));
@@ -60,10 +60,10 @@ describe('useInlineImageUpload', () => {
 
     it('rejects when disabled or unauthenticated', async () => {
       const disabled = setup({ enabled: false });
-      await expect(disabled.result.current.uploadInlineImage(imageFile())).rejects.toThrow();
+      await expect(disabled.result.current.uploadInlineMedia(imageFile())).rejects.toThrow();
 
       const noAuthor = setup({ authorPubky: null });
-      await expect(noAuthor.result.current.uploadInlineImage(imageFile())).rejects.toThrow();
+      await expect(noAuthor.result.current.uploadInlineMedia(imageFile())).rejects.toThrow();
 
       expect(FileController.commitCreate).not.toHaveBeenCalled();
     });
@@ -71,7 +71,7 @@ describe('useInlineImageUpload', () => {
     it('rejects unsupported MIME types with a toast', async () => {
       const { result } = setup();
 
-      await expect(result.current.uploadInlineImage(imageFile('a.mp4', 'video/mp4'))).rejects.toThrow();
+      await expect(result.current.uploadInlineMedia(imageFile('a.zip', 'application/zip'))).rejects.toThrow();
 
       expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({ variant: 'error', description: expect.stringContaining('Unsupported file type') }),
@@ -83,7 +83,7 @@ describe('useInlineImageUpload', () => {
       const { result } = setup();
 
       await expect(
-        result.current.uploadInlineImage(imageFile('big.png', 'image/png', 21 * 1024 * 1024)),
+        result.current.uploadInlineMedia(imageFile('big.png', 'image/png', 21 * 1024 * 1024)),
       ).rejects.toThrow();
 
       expect(vi.mocked(toast)).toHaveBeenCalledWith(
@@ -92,11 +92,66 @@ describe('useInlineImageUpload', () => {
       expect(FileController.commitCreate).not.toHaveBeenCalled();
     });
 
+    it.each([
+      ['video/mp4', 'clip.mp4'],
+      ['video/mpeg', 'clip.mpeg'],
+      ['audio/mpeg', 'song.mp3'],
+      ['audio/wav', 'song.wav'],
+      ['application/pdf', 'paper.pdf'],
+    ])('uploads %s like an image and records its type for the editor', async (type, name) => {
+      vi.mocked(FileController.commitCreate).mockResolvedValue(fileUri('m'));
+      const { result } = setup();
+
+      let uri: string | undefined;
+      await act(async () => {
+        uri = await result.current.uploadInlineMedia(imageFile(name, type));
+      });
+
+      expect(uri).toBe(fileUri('m'));
+      expect(result.current.getMediaType(fileUri('m'))).toBe(type);
+      expect(result.current.getMediaType(fileUri('elsewhere'))).toBeNull();
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    });
+
+    it('caps non-image media at the attachment limit, not the image limit', async () => {
+      vi.mocked(FileController.commitCreate).mockResolvedValue(fileUri('v'));
+      const { result } = setup();
+
+      // 21 MB is over the image cap but well under the 100 MB file cap
+      await act(async () => {
+        await result.current.uploadInlineMedia(imageFile('clip.mp4', 'video/mp4', 21 * 1024 * 1024));
+      });
+      expect(FileController.commitCreate).toHaveBeenCalledTimes(1);
+
+      await expect(
+        result.current.uploadInlineMedia(imageFile('huge.mp4', 'video/mp4', 101 * 1024 * 1024)),
+      ).rejects.toThrow();
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'error', description: 'File exceeds the 100MB limit.' }),
+      );
+      expect(FileController.commitCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('toasts kind-specific retry copy when a non-image upload fails', async () => {
+      vi.mocked(FileController.commitCreate).mockRejectedValue(new Error('boom'));
+      const { result } = setup();
+
+      await expect(result.current.uploadInlineMedia(imageFile('clip.mp4', 'video/mp4'))).rejects.toThrow();
+      expect(vi.mocked(toast)).toHaveBeenLastCalledWith(
+        expect.objectContaining({ variant: 'error', description: 'Could not upload video. Try again.' }),
+      );
+
+      await expect(result.current.uploadInlineMedia(imageFile('paper.pdf', 'application/pdf'))).rejects.toThrow();
+      expect(vi.mocked(toast)).toHaveBeenLastCalledWith(
+        expect.objectContaining({ variant: 'error', description: 'Could not upload file. Try again.' }),
+      );
+    });
+
     it('rejects when the inline budget is exhausted, tagged for the global handler', async () => {
       const { result } = setup({ getInlineBudget: () => 0 });
 
-      await expect(result.current.uploadInlineImage(imageFile())).rejects.toMatchObject({
-        name: INLINE_IMAGE_UPLOAD_REJECTION_NAME,
+      await expect(result.current.uploadInlineMedia(imageFile())).rejects.toMatchObject({
+        name: INLINE_MEDIA_UPLOAD_REJECTION_NAME,
       });
 
       expect(vi.mocked(toast)).toHaveBeenCalledWith(
@@ -113,14 +168,14 @@ describe('useInlineImageUpload', () => {
       let batch!: Promise<string>[];
       act(() => {
         batch = [
-          result.current.uploadInlineImage(imageFile('a.png')),
-          result.current.uploadInlineImage(imageFile('b.png')),
-          result.current.uploadInlineImage(imageFile('c.png')),
+          result.current.uploadInlineMedia(imageFile('a.png')),
+          result.current.uploadInlineMedia(imageFile('b.png')),
+          result.current.uploadInlineMedia(imageFile('c.png')),
         ];
       });
 
       for (const upload of batch) {
-        await expect(upload).rejects.toMatchObject({ name: INLINE_IMAGE_UPLOAD_REJECTION_NAME });
+        await expect(upload).rejects.toMatchObject({ name: INLINE_MEDIA_UPLOAD_REJECTION_NAME });
       }
       expect(FileController.commitCreate).not.toHaveBeenCalled();
       expect(result.current.uploadingCount).toBe(0);
@@ -138,8 +193,8 @@ describe('useInlineImageUpload', () => {
       let batch!: Promise<string>[];
       act(() => {
         batch = [
-          result.current.uploadInlineImage(imageFile('a.png')),
-          result.current.uploadInlineImage(imageFile('b.png')),
+          result.current.uploadInlineMedia(imageFile('a.png')),
+          result.current.uploadInlineMedia(imageFile('b.png')),
         ];
       });
 
@@ -159,17 +214,17 @@ describe('useInlineImageUpload', () => {
 
       let first!: Promise<string>;
       act(() => {
-        first = result.current.uploadInlineImage(imageFile('a.png'));
+        first = result.current.uploadInlineMedia(imageFile('a.png'));
       });
       await waitFor(() => expect(result.current.uploadingCount).toBe(1));
 
       // A second, separate drop while the first upload is still in flight
       let second!: Promise<string>;
       act(() => {
-        second = result.current.uploadInlineImage(imageFile('b.png'));
+        second = result.current.uploadInlineMedia(imageFile('b.png'));
       });
 
-      await expect(second).rejects.toMatchObject({ name: INLINE_IMAGE_UPLOAD_REJECTION_NAME });
+      await expect(second).rejects.toMatchObject({ name: INLINE_MEDIA_UPLOAD_REJECTION_NAME });
       expect(FileController.commitCreate).toHaveBeenCalledTimes(1);
 
       await act(async () => {
@@ -183,9 +238,9 @@ describe('useInlineImageUpload', () => {
       vi.mocked(FileController.commitCreate).mockRejectedValue(new Error('network down'));
       const { result } = setup();
 
-      await expect(result.current.uploadInlineImage(imageFile())).rejects.toMatchObject({
+      await expect(result.current.uploadInlineMedia(imageFile())).rejects.toMatchObject({
         message: 'network down',
-        name: INLINE_IMAGE_UPLOAD_REJECTION_NAME,
+        name: INLINE_MEDIA_UPLOAD_REJECTION_NAME,
       });
 
       expect(vi.mocked(toast)).toHaveBeenCalledWith(
@@ -203,8 +258,8 @@ describe('useInlineImageUpload', () => {
       );
       const { result } = setup();
 
-      await expect(result.current.uploadInlineImage(imageFile())).rejects.toMatchObject({
-        name: INLINE_IMAGE_UPLOAD_REJECTION_NAME,
+      await expect(result.current.uploadInlineMedia(imageFile())).rejects.toMatchObject({
+        name: INLINE_MEDIA_UPLOAD_REJECTION_NAME,
       });
 
       expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
@@ -224,7 +279,7 @@ describe('useInlineImageUpload', () => {
 
       let pending!: Promise<string>;
       act(() => {
-        pending = result.current.uploadInlineImage(imageFile());
+        pending = result.current.uploadInlineMedia(imageFile());
       });
 
       await waitFor(() => expect(result.current.uploadingCount).toBe(1));
@@ -239,11 +294,11 @@ describe('useInlineImageUpload', () => {
   });
 
   describe('session lifecycle', () => {
-    const uploadTwo = async (result: { current: ReturnType<typeof useInlineImageUpload> }) => {
+    const uploadTwo = async (result: { current: ReturnType<typeof useInlineMediaUpload> }) => {
       vi.mocked(FileController.commitCreate).mockResolvedValueOnce(fileUri('a')).mockResolvedValueOnce(fileUri('b'));
       await act(async () => {
-        await result.current.uploadInlineImage(imageFile('a.png'));
-        await result.current.uploadInlineImage(imageFile('b.png'));
+        await result.current.uploadInlineMedia(imageFile('a.png'));
+        await result.current.uploadInlineMedia(imageFile('b.png'));
       });
     };
 
@@ -344,7 +399,7 @@ describe('useInlineImageUpload', () => {
 
       let pending!: Promise<string>;
       act(() => {
-        pending = result.current.uploadInlineImage(imageFile());
+        pending = result.current.uploadInlineMedia(imageFile());
       });
       await waitFor(() => expect(result.current.uploadingCount).toBe(1));
 
@@ -455,7 +510,7 @@ describe('useInlineImageUpload', () => {
       const picked = imageFile('a.png', 'image/png');
 
       await act(async () => {
-        await result.current.uploadInlineImage(picked);
+        await result.current.uploadInlineMedia(picked);
       });
 
       expect(result.current.getSessionFile(fileUri('a'))).toBe(picked);
@@ -469,7 +524,7 @@ describe('useInlineImageUpload', () => {
       const { result } = setup();
 
       await act(async () => {
-        await result.current.uploadInlineImage(imageFile('a.png', 'image/png'));
+        await result.current.uploadInlineMedia(imageFile('a.png', 'image/png'));
       });
 
       const entries = result.current.buildLocalAttachmentEntries([fileUri('kept-old'), fileUri('a')]);
@@ -479,6 +534,23 @@ describe('useInlineImageUpload', () => {
         type: 'image/png',
         name: 'a.png',
         urls: { main: expect.stringMatching(/^blob:mock-/), feed: expect.stringMatching(/^blob:mock-/) },
+      });
+    });
+
+    it('gives a non-image entry its main object URL only', async () => {
+      vi.mocked(FileController.commitCreate).mockResolvedValue(fileUri('v'));
+      const { result } = setup();
+
+      await act(async () => {
+        await result.current.uploadInlineMedia(imageFile('clip.mp4', 'video/mp4'));
+      });
+
+      const [entry] = result.current.buildLocalAttachmentEntries([fileUri('v')]);
+
+      expect(entry).toEqual({
+        type: 'video/mp4',
+        name: 'clip.mp4',
+        urls: { main: expect.stringMatching(/^blob:mock-/), feed: undefined },
       });
     });
   });
