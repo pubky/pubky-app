@@ -36,6 +36,7 @@ exports[`HumanFooter > matches snapshot 1`] = `
   >
     Pubky is powered by 
     <a
+      class="underline"
       data-testid="link"
       href="https://pubky.core"
       target="_blank"

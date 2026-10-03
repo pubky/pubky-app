@@ -3,10 +3,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Typography } from '@/atoms/Typography/Typography';
 
 export function DialogAge() {
+  const handleTriggerKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.currentTarget.click();
+    }
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Typography as="span" size="sm" className="cursor-pointer font-medium text-brand">
+        <Typography
+          as="span"
+          size="sm"
+          role="button"
+          tabIndex={0}
+          onKeyDown={handleTriggerKeyDown}
+          className="cursor-pointer font-medium text-brand"
+        >
           over 18 years old.
         </Typography>
       </DialogTrigger>

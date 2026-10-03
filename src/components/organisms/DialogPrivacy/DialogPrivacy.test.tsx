@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { DialogPrivacy } from './DialogPrivacy';
 
@@ -86,12 +86,15 @@ vi.mock('@/atoms/Typography/Typography', () => {
       children,
       as: Tag = 'p',
       className,
+      size: _size,
+      ...props
     }: {
       children: React.ReactNode;
       as?: React.ElementType;
       className?: string;
-    }) => (
-      <Tag data-testid="typography" className={className}>
+      size?: string;
+    } & React.HTMLAttributes<HTMLElement>) => (
+      <Tag data-testid="typography" className={className} {...props}>
         {children}
       </Tag>
     ),
@@ -123,6 +126,42 @@ describe('DialogPrivacy', () => {
     expect(screen.getByText(/POLICY SUMMARY This summary offers/)).toBeInTheDocument();
     expect(screen.getByText(/Effective Date: January 29, 2026/)).toBeInTheDocument();
     expect(screen.getAllByText(/Synonym Software Ltd/).length).toBeGreaterThan(0);
+  });
+
+  it('exposes the default trigger as a keyboard focusable button', () => {
+    render(<DialogPrivacy />);
+
+    const trigger = screen.getByRole('button', { name: 'Privacy Policy' });
+    expect(trigger).toHaveAttribute('tabindex', '0');
+  });
+
+  it.each(['Enter', ' '])('activates the default trigger on the "%s" key', (key) => {
+    render(<DialogPrivacy />);
+
+    const trigger = screen.getByRole('button', { name: 'Privacy Policy' });
+    const handleClick = vi.fn();
+    trigger.addEventListener('click', handleClick);
+    fireEvent.keyDown(trigger, { key });
+
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores other keys on the default trigger', () => {
+    render(<DialogPrivacy />);
+
+    const trigger = screen.getByRole('button', { name: 'Privacy Policy' });
+    const handleClick = vi.fn();
+    trigger.addEventListener('click', handleClick);
+    fireEvent.keyDown(trigger, { key: 'a' });
+
+    expect(handleClick).not.toHaveBeenCalled();
+  });
+
+  it('renders a custom trigger instead of the default one', () => {
+    render(<DialogPrivacy trigger={<button type="button">Custom trigger</button>} />);
+
+    expect(screen.getByRole('button', { name: 'Custom trigger' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Privacy Policy' })).not.toBeInTheDocument();
   });
 });
 

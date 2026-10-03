@@ -292,6 +292,14 @@ describe('HomeFooter', () => {
     expect(screen.getByTestId('dialog-age')).toBeInTheDocument();
   });
 
+  it('underlines the Pubky Protocol link so it is not distinguished by colour alone', () => {
+    render(<HomeFooter />);
+
+    const link = screen.getByRole('link', { name: 'Pubky Protocol' });
+    expect(link).toHaveAttribute('href', 'https://github.com/pubky/pubky-core');
+    expect(link).toHaveClass('underline');
+  });
+
   it('renders Synonym and Tether branding below the agreement text', () => {
     render(<HomeFooter />);
 

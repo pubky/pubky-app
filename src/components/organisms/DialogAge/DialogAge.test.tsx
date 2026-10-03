@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { DialogAge } from './DialogAge';
 
@@ -51,12 +51,15 @@ vi.mock('@/atoms/Typography/Typography', () => {
       children,
       as: Tag = 'p',
       className,
+      size: _size,
+      ...props
     }: {
       children: React.ReactNode;
       as?: React.ElementType;
       className?: string;
-    }) => (
-      <Tag data-testid="typography" className={className}>
+      size?: string;
+    } & React.HTMLAttributes<HTMLElement>) => (
+      <Tag data-testid="typography" className={className} {...props}>
         {children}
       </Tag>
     ),
@@ -86,6 +89,35 @@ describe('DialogAge', () => {
     const title = screen.getByTestId('dialog-title');
     expect(title).toHaveTextContent('Age minimum: 18');
     expect(screen.getByText(/You can only use Pubky if you are over 18 years old/)).toBeInTheDocument();
+  });
+
+  it('exposes the default trigger as a keyboard focusable button', () => {
+    render(<DialogAge />);
+
+    const trigger = screen.getByRole('button', { name: 'over 18 years old.' });
+    expect(trigger).toHaveAttribute('tabindex', '0');
+  });
+
+  it.each(['Enter', ' '])('activates the default trigger on the "%s" key', (key) => {
+    render(<DialogAge />);
+
+    const trigger = screen.getByRole('button', { name: 'over 18 years old.' });
+    const handleClick = vi.fn();
+    trigger.addEventListener('click', handleClick);
+    fireEvent.keyDown(trigger, { key });
+
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores other keys on the default trigger', () => {
+    render(<DialogAge />);
+
+    const trigger = screen.getByRole('button', { name: 'over 18 years old.' });
+    const handleClick = vi.fn();
+    trigger.addEventListener('click', handleClick);
+    fireEvent.keyDown(trigger, { key: 'a' });
+
+    expect(handleClick).not.toHaveBeenCalled();
   });
 });
 

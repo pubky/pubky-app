@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
-import { InstallCard, InstallHeader, InstallNavigation } from './Install';
+import { InstallCard, InstallFooter, InstallHeader, InstallNavigation } from './Install';
 
 // Mock Next.js Image
 vi.mock('next/image', () => ({
@@ -92,6 +92,27 @@ describe('InstallNavigation', () => {
 
     expect(createButton).toBeDisabled();
     expect(continueButton).toBeDisabled();
+  });
+});
+
+describe('InstallFooter', () => {
+  it('underlines the keychain links so they are not distinguished by colour alone', () => {
+    render(<InstallFooter />);
+
+    const ringLink = screen.getByRole('link', { name: 'Pubky Ring' });
+    const coreLink = screen.getByRole('link', { name: 'Pubky Core' });
+
+    expect(ringLink).toHaveAttribute('target', '_blank');
+    expect(ringLink).toHaveClass('underline');
+    expect(coreLink).toHaveAttribute('target', '_blank');
+    expect(coreLink).toHaveClass('underline');
+  });
+});
+
+describe('InstallFooter - Snapshots', () => {
+  it('matches snapshot for default InstallFooter', () => {
+    const { container } = render(<InstallFooter />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });
 
