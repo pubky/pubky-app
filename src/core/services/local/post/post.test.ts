@@ -150,6 +150,14 @@ describe('LocalPostService.upsertTtlWithDelay', () => {
   });
 });
 
+const curatedItemUri = (postId: string) => {
+  const { pubky, id } = parseCompositeId(postId);
+  return `pubky://${pubky}/pub/pubky.app/posts/${id}`;
+};
+
+const collectionEnvelope = (itemPostIds: string[]) =>
+  JSON.stringify({ name: 'Curated', items: itemPostIds.map(curatedItemUri) });
+
 describe('LocalPostService', () => {
   beforeEach(async () => {
     await db.initialize();
@@ -885,6 +893,156 @@ describe('LocalPostService', () => {
       } finally {
         userCountsSpy.mockRestore();
       }
+    });
+  });
+
+  describe('curated item collections counts', () => {
+    const itemA = buildCompositeId({ pubky: testData.authorPubky, id: 'item-a' });
+    const itemB = buildCompositeId({
+      pubky: 'kyz8rbbeguh56w195ntf65xkdn7kks1pyukogjnpixy8aq4ood7y' as Pubky,
+      id: 'item-b',
+    });
+    const itemC = buildCompositeId({ pubky: testData.authorPubky, id: 'item-c' });
+    const collectionId = buildCompositeId({ pubky: testData.authorPubky, id: 'collection-1' });
+
+    const collectionsCount = async (postId: string) => (await getSavedCounts(postId))?.collections;
+
+    beforeEach(async () => {
+      await setupUserCounts(testData.authorPubky);
+      await setupExistingPost(itemA, 'item a');
+      await setupExistingPost(itemB, 'item b');
+      await setupExistingPost(itemC, 'item c');
+    });
+
+    it('bumps every curated post when a collection is created, and stamps their TTL', async () => {
+      const before = Date.now();
+      const baseParams = createSaveParams(collectionEnvelope([itemA, itemB, itemB]), collectionId);
+      await LocalPostService.create({
+        ...baseParams,
+        post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Collection, undefined, undefined, undefined),
+      });
+
+      // The duplicate item counts once; an uncurated post is untouched.
+      expect(await collectionsCount(itemA)).toBe(1);
+      expect(await collectionsCount(itemB)).toBe(1);
+      expect(await collectionsCount(itemC)).toBeUndefined();
+      expect((await getSavedCounts(collectionId))!.collections).toBe(0);
+      expect((await getPostTtl(itemA))!.lastUpdatedAt).toBeGreaterThanOrEqual(before);
+      expect(await getPostTtl(itemC)).toBeNull();
+    });
+
+    it('leaves counts alone for a short post whose content happens to look like an envelope', async () => {
+      await LocalPostService.create(createSaveParams(collectionEnvelope([itemA]), collectionId));
+
+      expect(await collectionsCount(itemA)).toBeUndefined();
+    });
+
+    it('reconciles counts against the previous envelope on edit', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA, itemB]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 1 } });
+      await PostCountsModel.updateCounts({ postCompositeId: itemB, countChanges: { collections: 1 } });
+
+      // Drop A, keep B, add C.
+      await LocalPostService.edit({ compositePostId: collectionId, content: collectionEnvelope([itemB, itemC]) });
+
+      expect(await collectionsCount(itemA)).toBe(0);
+      expect(await collectionsCount(itemB)).toBe(1);
+      expect(await collectionsCount(itemC)).toBe(1);
+      expect(await getPostTtl(itemA)).not.toBeNull();
+      expect(await getPostTtl(itemB)).toBeNull();
+      expect(await getPostTtl(itemC)).not.toBeNull();
+    });
+
+    it('leaves counts and TTLs alone when an edit only reorders the items', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA, itemB]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 1 } });
+      await PostCountsModel.updateCounts({ postCompositeId: itemB, countChanges: { collections: 1 } });
+
+      await LocalPostService.edit({ compositePostId: collectionId, content: collectionEnvelope([itemB, itemA]) });
+
+      expect(await collectionsCount(itemA)).toBe(1);
+      expect(await collectionsCount(itemB)).toBe(1);
+      expect(await getPostTtl(itemA)).toBeNull();
+      expect(await getPostTtl(itemB)).toBeNull();
+    });
+
+    it('counts one post once when two spellings of its URI appear across an edit', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 1 } });
+
+      await LocalPostService.edit({
+        compositePostId: collectionId,
+        content: JSON.stringify({ name: 'Curated', items: [`${curatedItemUri(itemA)}/`] }),
+      });
+
+      expect(await collectionsCount(itemA)).toBe(1);
+    });
+
+    it('bumps the items when an edit flips a short post into a collection', async () => {
+      await setupExistingPost(testData.fullPostId1, 'Original content');
+
+      await LocalPostService.edit({
+        compositePostId: testData.fullPostId1,
+        content: collectionEnvelope([itemA]),
+        kind: 'collection',
+      });
+
+      expect(await collectionsCount(itemA)).toBe(1);
+    });
+
+    it('tears the counts down when an edit flips a collection to another kind', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 1 } });
+
+      await LocalPostService.edit({ compositePostId: collectionId, content: 'just a short post', kind: 'short' });
+
+      expect(await collectionsCount(itemA)).toBe(0);
+    });
+
+    it('does not read a non-collection edit as an envelope', async () => {
+      await setupExistingPost(testData.fullPostId1, 'Original content');
+
+      await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: collectionEnvelope([itemA]) });
+
+      expect(await collectionsCount(itemA)).toBeUndefined();
+    });
+
+    it('decrements every curated post when a collection is hard deleted', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA, itemB]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 2 } });
+      await PostCountsModel.updateCounts({ postCompositeId: itemB, countChanges: { collections: 1 } });
+
+      await LocalPostService.delete({ compositePostId: collectionId });
+
+      expect((await getSavedPost(collectionId))!.content).toBe(DELETED);
+      expect(await collectionsCount(itemA)).toBe(1);
+      expect(await collectionsCount(itemB)).toBe(0);
+    });
+
+    it('decrements every curated post when a linked collection is soft deleted', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: collectionId, countChanges: { replies: 1 } });
+      await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 1 } });
+
+      const before = Date.now();
+      const softDeleted = await LocalPostService.delete({ compositePostId: collectionId });
+
+      expect(softDeleted).toBe(true);
+      expect((await getSavedPost(collectionId))!.content).toBe(DELETED);
+      expect(await getSavedCounts(collectionId)).toBeTruthy();
+      expect(await collectionsCount(itemA)).toBe(0);
+      // The tombstone is a local write: its TTL is stamped like every other write.
+      expect((await getPostTtl(collectionId))!.lastUpdatedAt).toBeGreaterThanOrEqual(before);
+    });
+
+    it('stamps the tombstone TTL on a hard delete too', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA]), undefined, 'collection');
+
+      const before = Date.now();
+      await LocalPostService.delete({ compositePostId: collectionId });
+
+      expect((await getSavedPost(collectionId))!.content).toBe(DELETED);
+      expect((await getPostTtl(collectionId))!.lastUpdatedAt).toBeGreaterThanOrEqual(before);
     });
   });
 

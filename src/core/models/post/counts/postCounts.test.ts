@@ -21,6 +21,7 @@ describe('PostCountsModel', () => {
     unique_tags: 3,
     replies: 12,
     reposts: 8,
+    collections: 2,
   };
 
   describe('Constructor', () => {
@@ -33,6 +34,14 @@ describe('PostCountsModel', () => {
       expect(postCounts.unique_tags).toBe(3);
       expect(postCounts.replies).toBe(12);
       expect(postCounts.reposts).toBe(8);
+      expect(postCounts.collections).toBe(2);
+    });
+
+    it('should default a missing collections count to zero', () => {
+      const { collections: _collections, ...legacyCounts } = MOCK_NEXUS_POST_COUNTS;
+      const postCounts = new PostCountsModel({ id: testPostId1, ...legacyCounts });
+
+      expect(postCounts.collections).toBe(0);
     });
   });
 
@@ -108,6 +117,7 @@ describe('PostCountsModel', () => {
           unique_tags: MOCK_NEXUS_POST_COUNTS.unique_tags,
           replies: MOCK_NEXUS_POST_COUNTS.replies,
           reposts: MOCK_NEXUS_POST_COUNTS.reposts,
+          collections: MOCK_NEXUS_POST_COUNTS.collections,
         });
       });
 
@@ -130,6 +140,7 @@ describe('PostCountsModel', () => {
         ['reposts', { reposts: -2 }, 6],
         ['tags', { tags: 3 }, 8],
         ['unique_tags', { unique_tags: -1 }, 2],
+        ['collections', { collections: 1 }, 3],
       ])('should update %s field', async (field, countChanges, expected) => {
         await PostCountsModel.updateCounts({
           postCompositeId: testPostId1,
@@ -138,6 +149,17 @@ describe('PostCountsModel', () => {
 
         const updated = await PostCountsModel.findById(testPostId1);
         expect(updated![field as keyof PostCountsModelSchema]).toBe(expected);
+      });
+
+      it('should treat a missing collections count as zero (rows persisted before the field existed)', async () => {
+        const { collections: _collections, ...legacyCounts } = MOCK_NEXUS_POST_COUNTS;
+        await PostCountsModel.create({ id: testPostId2, ...legacyCounts });
+
+        await PostCountsModel.updateCounts({ postCompositeId: testPostId2, countChanges: { collections: 1 } });
+        expect((await PostCountsModel.findById(testPostId2))!.collections).toBe(1);
+
+        await PostCountsModel.updateCounts({ postCompositeId: testPostId2, countChanges: { collections: -5 } });
+        expect((await PostCountsModel.findById(testPostId2))!.collections).toBe(0);
       });
 
       it('should update multiple count fields at once', async () => {

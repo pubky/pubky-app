@@ -9,6 +9,7 @@ import {
   useAuthoredCollectionsPagination,
 } from '@/hooks/useAuthoredCollections/useAuthoredCollections';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
+import { usePostCollections } from '@/hooks/usePostCollections/usePostCollections';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { parseCompositeId } from '@/models/models.utils';
@@ -27,7 +28,8 @@ type UsePostSaveTargetsOptions = {
   /**
    * Whether the picker is open. Drives collection pagination: the picker can
    * hold more collections than one page, so it loads more while open and stays
-   * inert (no fetching, no scroll listener) while closed.
+   * inert (no fetching, no scroll listener) while closed. Also gates the
+   * "Also in collections" list, which is fetched from Nexus only while open.
    */
   isPickerOpen?: boolean;
 };
@@ -42,6 +44,16 @@ type UsePostSaveTargetsResult = {
   hasMoreCollections: boolean;
   isCollectionsLoadingMore: boolean;
   loadMoreCollections: () => Promise<void>;
+  /**
+   * Composite ids of other users' collections that contain the post ("Also in
+   * collections"). The viewer's own curating collections are left out: they are
+   * already listed above with a check mark.
+   */
+  otherCollectionIds: string[];
+  isOtherCollectionsLoading: boolean;
+  hasMoreOtherCollections: boolean;
+  isOtherCollectionsLoadingMore: boolean;
+  loadMoreOtherCollections: () => Promise<void>;
   toggleBookmark: () => Promise<void>;
   toggleCollection: (collectionId: string) => Promise<void>;
   createCollectionWithPost: (name: string) => Promise<void>;
@@ -70,6 +82,21 @@ export function usePostSaveTargets(
   // picker must not arm its scroll sentinel, or a scroll would start a second
   // concurrent load on the same stream.
   const isCollectionsLoadingMore = isCollectionsPageLoading || isCollectionsPageLoadingMore;
+  const {
+    collectionIds: postCollectionIds,
+    isLoading: isOtherCollectionsLoading,
+    hasMore: hasMoreOtherCollections,
+    isLoadingMore: isOtherCollectionsLoadingMore,
+    loadMore: loadMoreOtherCollections,
+  } = usePostCollections(postId, { enabled: isPickerOpen });
+  const otherCollectionIds = postCollectionIds.filter((collectionId) => {
+    // One malformed key from Nexus must not throw out of the picker's render.
+    try {
+      return parseCompositeId(collectionId).pubky !== currentUserPubky;
+    } catch {
+      return false;
+    }
+  });
   const [updatingCollectionIds, setUpdatingCollectionIds] = useState<Set<string>>(new Set());
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
 
@@ -158,6 +185,11 @@ export function usePostSaveTargets(
     hasMoreCollections,
     isCollectionsLoadingMore,
     loadMoreCollections,
+    otherCollectionIds,
+    isOtherCollectionsLoading,
+    hasMoreOtherCollections,
+    isOtherCollectionsLoadingMore,
+    loadMoreOtherCollections,
     toggleBookmark: bookmark.toggle,
     toggleCollection,
     createCollectionWithPost,

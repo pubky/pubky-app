@@ -17,6 +17,7 @@ import {
   buildAuthorCollectionsStreamId,
   buildContentSearchStreamId,
   buildDiscoverCollectionsStreamId,
+  buildPostCollectionsStreamId,
   buildPostReplyStreamId,
   type PostStreamId,
   PostStreamTypes,
@@ -265,6 +266,19 @@ describe('PostStreamApplication', () => {
 
       const result = await PostStreamApplication.filterStreamPosts({
         streamId: PostStreamTypes.TIMELINE_ALL_COLLECTION,
+        postIds: [collectionPostId],
+      });
+
+      expect(result).toEqual([collectionPostId]);
+    });
+
+    it('keeps collection-kind posts in post-collections streams (every post there is a collection)', async () => {
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        // The third segment is the curated post's id, which must not be read as a kind filter.
+        streamId: buildPostCollectionsStreamId(DEFAULT_AUTHOR, 'short-post'),
         postIds: [collectionPostId],
       });
 
