@@ -48,7 +48,7 @@ import {
 } from '@/config/posts';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { MarkdownMark } from '@/icons';
-import { INLINE_MEDIA_KINDS, type InlineMediaKind } from '@/libs/file/inlineMediaKind';
+import { getInlineMediaKindFromMime, INLINE_MEDIA_KINDS, type InlineMediaKind } from '@/libs/file/inlineMediaKind';
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { cn } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
@@ -306,10 +306,16 @@ export default function InitializedMDXEditor({
     }
   };
 
-  const handleMarkdownMediaInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
+  const handleMarkdownMediaInputChange = (event: React.ChangeEvent<HTMLInputElement>, kind: InlineMediaKind) => {
+    const chosen = Array.from(event.target.files ?? []);
     // Allow re-selecting the same file later
     event.target.value = '';
+    // The accept attribute only suggests; a picker set to "All files" hands over anything, and each
+    // button inserts its own kind, as the rich-text dialog does
+    const files = chosen.filter((file) => getInlineMediaKindFromMime(file.type) === kind);
+    if (files.length < chosen.length) {
+      toast({ variant: 'error', description: INLINE_MEDIA_KIND_UI[kind].wrongFile });
+    }
     void uploadAndInsertInMarkdownMode(files);
   };
 
@@ -395,7 +401,7 @@ export default function InitializedMDXEditor({
                     accept={ARTICLE_INLINE_ACCEPT_STRING_BY_KIND[kind]}
                     multiple
                     className="hidden"
-                    onChange={handleMarkdownMediaInputChange}
+                    onChange={(event) => handleMarkdownMediaInputChange(event, kind)}
                     data-testid={`markdown-${kind}-input`}
                   />
                 </Fragment>

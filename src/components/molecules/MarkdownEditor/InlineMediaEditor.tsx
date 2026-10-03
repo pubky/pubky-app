@@ -49,6 +49,7 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
   const [readOnly, previewResolver] = useCellValues(readOnly$, inlineMediaPreviewResolver$);
   const openEditDialog = usePublisher(openEditInlineMediaDialog$);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLSpanElement>(null);
   const editButtonRef = useRef<HTMLButtonElement>(null);
 
   // The host resolves a file URI to something a browser loads (the session's object URL, else the
@@ -78,8 +79,10 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
         (event) => {
           const target = event.target;
           if (!(target instanceof Node) || !wrapperRef.current?.contains(target)) return false;
-          // The native controls keep working: a click on the player itself is playback, not selection
-          if (target instanceof HTMLMediaElement) return false;
+          // The native controls keep working: a click on the player itself is playback, not selection.
+          // The toolbar buttons act on their own: selecting from them too would land in a deferred
+          // update after a delete and leave a node selection pointing at a node that is gone
+          if (target instanceof HTMLMediaElement || toolbarRef.current?.contains(target)) return false;
           if (event.shiftKey) {
             setSelected(!isSelected);
           } else {
@@ -142,7 +145,7 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
           <span className="min-w-0 truncate">{altText || label}</span>
         </span>
         {!readOnly && (
-          <span className="flex shrink-0 gap-1" data-testid="inline-media-toolbar">
+          <span ref={toolbarRef} className="flex shrink-0 gap-1" data-testid="inline-media-toolbar">
             <Button
               ref={editButtonRef}
               type="button"

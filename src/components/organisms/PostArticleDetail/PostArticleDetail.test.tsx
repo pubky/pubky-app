@@ -422,10 +422,23 @@ describe('PostArticleDetail', () => {
     expect(mockUsePostArticle).toHaveBeenLastCalledWith(expect.objectContaining({ localCoverType: undefined }));
   });
 
-  it('types the inline slots only: the cover slot is left to usePostArticle', () => {
-    const attachments = ['pubky://user123/pub/pubky.app/files/cover', 'pubky://user123/pub/pubky.app/files/clip'];
+  it('reads rows only for the slots the body references and the author owns', () => {
+    const attachments = [
+      'pubky://user123/pub/pubky.app/files/cover',
+      'pubky://user123/pub/pubky.app/files/clip',
+      'pubky://user123/pub/pubky.app/files/unreferenced',
+      'pubky://someoneelse/pub/pubky.app/files/foreign',
+    ];
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Article Title',
+      body: 'Text with ![a](attachment:1) and ![b](attachment:3)',
+      coverImage: null,
+      hasCover: true,
+      isCoverLoading: false,
+    });
 
     render(<PostArticleDetail {...defaultProps} attachments={attachments} />);
+    // The cover is usePostArticle's; the unreferenced original and the foreign file never render
     expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [attachments[1]] });
 
     // A body that references slot 0 has no cover, so slot 0 is inline and gets typed too
@@ -437,7 +450,7 @@ describe('PostArticleDetail', () => {
       isCoverLoading: false,
     });
     render(<PostArticleDetail {...defaultProps} attachments={attachments} />);
-    expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: attachments });
+    expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [attachments[0]] });
   });
 
   it('reports the metadata read as unsettled while the inline rows are loading', () => {

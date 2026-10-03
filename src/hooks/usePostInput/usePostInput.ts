@@ -354,6 +354,14 @@ export function usePostInput({
     body: pendingArticleBodyRef.current ?? content,
   });
 
+  // Leaving article mode means the composer was emptied (a publish, a lock capture, a reset); the
+  // pending values went out with it, and a commit still on its timer must not write them back
+  useEffect(() => {
+    if (isArticle) return;
+    pendingArticleTitleRef.current = null;
+    pendingArticleBodyRef.current = null;
+  }, [isArticle]);
+
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
     if (isSubmitting || uploadingCount > 0) return;

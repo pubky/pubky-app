@@ -41,7 +41,6 @@ const COPY: Record<
     urlOnly: string;
     alt: string;
     altPlaceholder: string;
-    wrongFile: string;
     wrongUrl: string | null;
   }
 > = {
@@ -55,7 +54,6 @@ const COPY: Record<
     urlOnly: 'Add an image from a URL',
     alt: 'Alt text',
     altPlaceholder: 'Describe the image',
-    wrongFile: 'Choose an image file.',
     wrongUrl: null,
   },
   video: {
@@ -68,7 +66,6 @@ const COPY: Record<
     urlOnly: 'Add a video from a URL',
     alt: 'Description',
     altPlaceholder: 'Describe the video',
-    wrongFile: 'Choose a video file.',
     wrongUrl: 'Enter a direct link to a video file.',
   },
   audio: {
@@ -81,7 +78,6 @@ const COPY: Record<
     urlOnly: 'Add audio from a URL',
     alt: 'Description',
     altPlaceholder: 'Describe the audio',
-    wrongFile: 'Choose an audio file.',
     wrongUrl: 'Enter a direct link to an audio file.',
   },
   pdf: {
@@ -94,7 +90,6 @@ const COPY: Record<
     urlOnly: 'Add a PDF from a URL',
     alt: 'Description',
     altPlaceholder: 'Describe the document',
-    wrongFile: 'Choose a PDF file.',
     wrongUrl: 'Enter a direct link to a PDF file.',
   },
 };
@@ -210,7 +205,7 @@ function MediaDialogForm({
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const copy = COPY[mediaKind];
-  const { Icon } = INLINE_MEDIA_KIND_UI[mediaKind];
+  const { Icon, wrongFile } = INLINE_MEDIA_KIND_UI[mediaKind];
   const isImage = mediaKind === 'image';
 
   // Object URLs live exactly as long as the chosen file is displayed
@@ -227,7 +222,7 @@ function MediaDialogForm({
     if (!chosen) return;
     // The accept attribute already filters the picker; this guards a file that slipped past it
     if (getInlineMediaKindFromMime(chosen.type) !== mediaKind) {
-      toast({ variant: 'error', description: copy.wrongFile });
+      toast({ variant: 'error', description: wrongFile });
       return;
     }
     setFile(chosen);

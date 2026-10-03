@@ -834,6 +834,32 @@ describe('usePostInput', () => {
       }
     });
 
+    it('drops a pending commit when the composer leaves article mode, as after a lock capture', () => {
+      vi.useFakeTimers();
+      try {
+        mockContent = '';
+        mockIsArticle = true;
+        mockArticleTitle = 'Title';
+
+        const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+        act(() => {
+          result.current.handleArticleBodyChange('Locked body', false);
+        });
+        expect(result.current.getLatestArticle().body).toBe('Locked body');
+
+        // The lock applied and emptied the composer before the debounce fired
+        mockIsArticle = false;
+        rerender();
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+
+        expect(mockSetContent).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('submits an article whose body only the editor holds yet', async () => {
       // The first keystrokes have not reached `content` through the debounce
       mockContent = '';

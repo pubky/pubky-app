@@ -21,7 +21,11 @@ import {
   PASTE_COMMAND,
 } from 'lexical';
 import type * as Mdast from 'mdast';
-import { ARTICLE_INLINE_NON_IMAGE_MIME_TYPES, ARTICLE_INLINE_SUPPORTED_MIME_TYPES } from '@/config/posts';
+import {
+  ARTICLE_INLINE_NON_IMAGE_MIME_TYPES,
+  ARTICLE_INLINE_SUPPORTED_FILE_TYPES,
+  ARTICLE_INLINE_SUPPORTED_MIME_TYPES,
+} from '@/config/posts';
 import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload.types';
 import {
   getInlineMediaKindFromMime,
@@ -163,6 +167,13 @@ function handleMediaPayload(realm: Realm, editor: LexicalEditor, event: Event): 
 
   event.preventDefault();
   const supported = files.filter((file) => ARTICLE_INLINE_SUPPORTED_MIME_TYPES.includes(file.type));
+  // The rest of the payload is claimed too, so it gets the composer's unsupported-type toast here
+  if (supported.length < files.length) {
+    toast({
+      variant: 'error',
+      description: `Unsupported file type. Supported: ${ARTICLE_INLINE_SUPPORTED_FILE_TYPES}.`,
+    });
+  }
   Promise.all(supported.map((file) => upload(file).then((src) => ({ src, type: file.type }))))
     .then((uploads) => {
       // The image insert is imagePlugin's and trusts the selection as it finds it
