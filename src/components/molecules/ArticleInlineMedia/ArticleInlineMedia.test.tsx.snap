@@ -127,24 +127,32 @@ exports[`ArticleInlineMedia - Snapshots > matches snapshot for a loading slot 1`
 `;
 
 exports[`ArticleInlineMedia - Snapshots > matches snapshot for a video slot 1`] = `
-<video
-  aria-label="A clip"
-  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring my-4 aspect-video w-full"
-  controls=""
-  data-testid="article-inline-video"
-  playsinline=""
-  preload="metadata"
-  src="cdn://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:clip?v=main"
-/>
+<span
+  class="my-4 block"
+>
+  <video
+    aria-label="A clip"
+    class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring aspect-video w-full"
+    controls=""
+    data-testid="article-inline-video"
+    playsinline=""
+    preload="metadata"
+    src="cdn://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:clip?v=main"
+  />
+</span>
 `;
 
 exports[`ArticleInlineMedia - Snapshots > matches snapshot for an audio slot 1`] = `
-<audio
-  aria-label="A song"
-  class="w-full my-4"
-  controls=""
-  data-testid="article-inline-audio"
-  preload="metadata"
-  src="cdn://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:song?v=main"
-/>
+<span
+  class="my-4 block"
+>
+  <audio
+    aria-label="A song"
+    class="w-full"
+    controls=""
+    data-testid="article-inline-audio"
+    preload="metadata"
+    src="cdn://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:song?v=main"
+  />
+</span>
 `;

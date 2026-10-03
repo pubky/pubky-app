@@ -169,6 +169,58 @@ describe('ArticleInlineMedia', () => {
     expect(screen.getAllByTestId('article-inline-media-fallback')[1]).toHaveTextContent('Audio unavailable');
   });
 
+  it('pauses only the player the reader scrolled past', () => {
+    type IntersectionCallback = (entries: IntersectionObserverEntry[]) => void;
+    const observed: { callback: IntersectionCallback; target: Element }[] = [];
+    class MockIntersectionObserver {
+      constructor(private readonly callback: IntersectionCallback) {}
+      observe = (target: Element) => {
+        observed.push({ callback: this.callback, target });
+      };
+      disconnect = vi.fn();
+      unobserve = vi.fn();
+      takeRecords = vi.fn(() => []);
+      root = null;
+      rootMargin = '0px';
+      thresholds = [0];
+    }
+    vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+
+    render(
+      <>
+        <ArticleInlineMedia
+          src="attachment:1"
+          attachments={attachments}
+          authorId={AUTHOR}
+          postId={POST_ID}
+          files={files}
+          metadataSettled
+        />
+        <ArticleInlineMedia
+          src="attachment:2"
+          attachments={attachments}
+          authorId={AUTHOR}
+          postId={POST_ID}
+          files={files}
+          metadataSettled
+        />
+      </>,
+    );
+    const video = screen.getByTestId('article-inline-video');
+    const audio = screen.getByTestId('article-inline-audio');
+    // One observer per player, each watching the element around its own media
+    expect(observed).toHaveLength(2);
+    const videoObserver = observed.find(({ target }) => target.contains(video));
+    expect(videoObserver?.target.contains(audio)).toBe(false);
+
+    videoObserver?.callback([{ isIntersecting: false } as IntersectionObserverEntry]);
+
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(pause.mock.contexts).toEqual([video]);
+    vi.unstubAllGlobals();
+  });
+
   it('retries a failed player when its source changes', () => {
     const { rerender } = renderMedia('attachment:1');
     fireEvent.error(screen.getByTestId('article-inline-video'));

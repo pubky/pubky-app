@@ -52,7 +52,7 @@ Rejected in ADR-era discussions of #2437 and unchanged here: host coupling, no o
 
 ## Implementation Notes
 
-- Reader: `ArticleInlineMedia` routes to `ArticleInlineImage` (unchanged), the `Video`/`Audio` atoms or a PDF card; `PostArticleDetail` resolves the inline slots' rows and pauses players outside the viewport.
+- Reader: `ArticleInlineMedia` routes to `ArticleInlineImage` (unchanged), the `Video`/`Audio` atoms or a PDF card; `PostArticleDetail` resolves the inline slots' rows; each player pauses itself once it leaves the viewport.
 - Composer: `inlineMediaPlugin`, `InlineMediaNode`, `InlineMediaEditor`, `MarkdownEditorMediaDialog`; `useInlineMediaUpload` validates per kind; `usePostInput` types the edited post's inline attachments through `useAttachmentsMetadata`.
 - Config: `ARTICLE_INLINE_SUPPORTED_MIME_TYPES` (images plus the spec's video, audio and PDF types); the cover list is untouched.
 

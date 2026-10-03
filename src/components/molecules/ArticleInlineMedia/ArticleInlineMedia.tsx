@@ -6,6 +6,7 @@ import { Audio } from '@/atoms/Audio/Audio';
 import { Button } from '@/atoms/Button/Button';
 import { Link } from '@/atoms/Link/Link';
 import { Video } from '@/atoms/Video/Video';
+import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { cn } from '@/libs/utils/utils';
 import { ArticleInlineImage } from '@/molecules/ArticleInlineImage/ArticleInlineImage';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -25,12 +26,15 @@ const FALLBACK_CLASSNAME = cn(
  * Rendered inside markdown paragraphs, so everything here is phrasing content (`span`, `video`,
  * `audio`, `a`) — no block elements. External sources never preload: media elements carry no
  * referrer policy, so the first request to a third-party host waits for the reader to press play.
+ * Each player is paused on its own once the reader scrolls past it, as post attachments are.
  */
 export const ArticleInlineMedia = ({ src, alt, ...source }: ArticleInlineMediaProps) => {
   const [failed, setFailed] = useState(false);
   const localStoreAttachments = useLocalFilesStore((state) =>
     'postId' in source ? state.posts[source.postId] : undefined,
   );
+
+  const pauseContainerRef = usePauseMediaOutsideViewport();
 
   const resolved = resolveArticleMedia({ src, alt, ...source, localStoreAttachments });
   const mediaUrl = resolved.kind === 'image' || resolved.kind === 'loading' ? null : resolved.url;
@@ -99,30 +103,31 @@ export const ArticleInlineMedia = ({ src, alt, ...source }: ArticleInlineMediaPr
 
   const preload = resolved.external ? 'none' : 'metadata';
 
-  if (resolved.kind === 'video') {
-    return (
-      <Video
-        src={resolved.url}
-        controls
-        playsInline
-        preload={preload}
-        aria-label={alt || undefined}
-        onError={() => setFailed(true)}
-        data-testid="article-inline-video"
-        className="my-4 aspect-video w-full"
-      />
-    );
-  }
-
+  // The observed element is the player itself (the hook pauses the media inside its container), so a
+  // long article does not keep a scrolled-past player going while any part of it is still on screen
   return (
-    <Audio
-      src={resolved.url}
-      controls
-      preload={preload}
-      aria-label={alt || undefined}
-      onError={() => setFailed(true)}
-      data-testid="article-inline-audio"
-      className="my-4"
-    />
+    <span ref={pauseContainerRef} className="my-4 block">
+      {resolved.kind === 'video' ? (
+        <Video
+          src={resolved.url}
+          controls
+          playsInline
+          preload={preload}
+          aria-label={alt || undefined}
+          onError={() => setFailed(true)}
+          data-testid="article-inline-video"
+          className="aspect-video w-full"
+        />
+      ) : (
+        <Audio
+          src={resolved.url}
+          controls
+          preload={preload}
+          aria-label={alt || undefined}
+          onError={() => setFailed(true)}
+          data-testid="article-inline-audio"
+        />
+      )}
+    </span>
   );
 };

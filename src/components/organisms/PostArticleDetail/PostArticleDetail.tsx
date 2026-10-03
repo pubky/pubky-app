@@ -6,7 +6,6 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
-import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import {
@@ -82,8 +81,6 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   const { files: inlineFiles, isLoading: inlineFilesLoading } = useAttachmentsMetadata({
     fileUris: (attachments ?? []).slice(hasCover ? 1 : 0),
   });
-  // Players the reader scrolled past stop playing, as post attachments do
-  const mediaContainerRef = usePauseMediaOutsideViewport();
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
@@ -222,7 +219,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   return (
     <>
       <Container className={cn('mb-6 gap-6', !isColumnsLayout && 'grid grid-cols-1 lg:grid-cols-3')}>
-        <Container ref={mediaContainerRef} className={cn(!isColumnsLayout && 'lg:col-span-2')}>
+        <Container className={cn(!isColumnsLayout && 'lg:col-span-2')}>
           {articleHeader}
           {articleBody}
           {!isColumnsLayout && (
