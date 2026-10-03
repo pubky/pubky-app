@@ -39,5 +39,7 @@ export type ResolvedArticleMedia =
   | { kind: 'image' }
   /** An attachment slot whose type is not known yet: reserve space, request nothing */
   | { kind: 'loading' }
+  /** A slot of a known type the reader has no player for: a placeholder, no request */
+  | { kind: 'unsupported' }
   /** A player or file card for a slot or external URL of a known non-image kind */
   | { kind: InlineNonImageMediaKind; url: string; name?: string; external: boolean };

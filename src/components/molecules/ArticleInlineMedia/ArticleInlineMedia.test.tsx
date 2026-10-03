@@ -99,6 +99,15 @@ describe('ArticleInlineMedia', () => {
     expect(container.querySelector('img, video, audio')).not.toBeInTheDocument();
   });
 
+  it('shows a placeholder for a type it cannot play, without requesting the file', () => {
+    const { container } = renderMedia('attachment:1', {
+      files: [{ uri: fileUri('clip'), content_type: 'application/zip', name: 'archive.zip' }],
+    });
+
+    expect(screen.getByTestId('article-inline-media-fallback')).toHaveAttribute('aria-label', 'File unavailable');
+    expect(container.querySelector('img, video, audio, a')).not.toBeInTheDocument();
+  });
+
   it('falls back to the image path once the metadata read settled without a row', () => {
     renderMedia('attachment:1', { files: [], metadataSettled: true });
 
@@ -259,6 +268,13 @@ describe('ArticleInlineMedia - Snapshots', () => {
 
   it('matches snapshot for a PDF card', () => {
     const { container } = renderMedia('attachment:3');
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for an unsupported slot', () => {
+    const { container } = renderMedia('attachment:1', {
+      files: [{ uri: fileUri('clip'), content_type: 'application/zip', name: 'archive.zip' }],
+    });
     expect(container.firstChild).toMatchSnapshot();
   });
 

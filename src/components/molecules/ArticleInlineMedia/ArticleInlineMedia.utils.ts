@@ -1,4 +1,4 @@
-import { getInlineMediaKindFromMime, inferMediaKindFromUrl, type InlineMediaKind } from '@/libs/file/inlineMediaKind';
+import { getInlineMediaKindFromMime, inferMediaKindFromUrl } from '@/libs/file/inlineMediaKind';
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { isAttachmentRefScheme, isAuthorFileUri, parseAttachmentRef } from '@/libs/post/articleInlineMedia';
 import { getAttachmentAtSlot } from '@/libs/utils/unlockedMedia';
@@ -7,15 +7,16 @@ import { FileVariant } from '@/services/nexus/file/file.types';
 import type { ArticleInlineMediaProps, ResolvedArticleMedia } from './ArticleInlineMedia.types';
 
 const IMAGE: ResolvedArticleMedia = { kind: 'image' };
-
-/** Content types the reader has no player for render as images: `ArticleInlineImage` shows the placeholder. */
-export function mediaKindFromContentType(contentType: string | null | undefined): InlineMediaKind {
-  return getInlineMediaKindFromMime(contentType) ?? 'image';
-}
+const UNSUPPORTED: ResolvedArticleMedia = { kind: 'unsupported' };
 
 function fromEntry(type: string, url: string, name: string | undefined): ResolvedArticleMedia {
-  const kind = mediaKindFromContentType(type);
-  return kind === 'image' ? IMAGE : { kind, url, name, external: false };
+  const kind = getInlineMediaKindFromMime(type);
+  if (kind === 'image') return IMAGE;
+  // A type the reader has no player for (another client's attachment) gets its placeholder without
+  // a request: the image path would pull the whole original through `<img>` before failing. An
+  // empty type says nothing and keeps the image behaviour.
+  if (!kind) return type.trim() ? UNSUPPORTED : IMAGE;
+  return { kind, url, name, external: false };
 }
 
 /**
@@ -26,7 +27,8 @@ function fromEntry(type: string, url: string, name: string | undefined): Resolve
  * - `attachment:{n}` on the CDN: the same-session local entry's type wins (the store is only used
  *   when it is index-aligned with `attachments`), then the `file_details` row matched by uri, then
  *   a skeleton until the metadata read settles. A slot that settled with no row, an out-of-range
- *   or non-author slot, and every malformed ref go to `ArticleInlineImage`, as today.
+ *   or non-author slot, and every malformed ref go to `ArticleInlineImage`, as today; a row of a
+ *   type nothing here renders is a placeholder that requests nothing.
  * - `attachment:{n}` of unlocked content: typed from the bytes the reader holds.
  * - A direct `pubky://` URI stays an image: its metadata is never requested (documented limit).
  * - An `https:` URL is typed by its file extension; anything unknown stays an image.

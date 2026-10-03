@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import type { ArticleMediaFile } from './ArticleInlineMedia.types';
-import { mediaKindFromContentType, resolveArticleMedia } from './ArticleInlineMedia.utils';
+import { resolveArticleMedia } from './ArticleInlineMedia.utils';
 
 vi.mock('@/libs/file/pubkyFileCdnUrl', () => ({
   pubkyUriToCdnUrl: (uri: string, variant: string) => `cdn://${uri}/${variant}`,
@@ -19,17 +19,6 @@ const files: ArticleMediaFile[] = [
 ];
 const cdn = (src: string) =>
   resolveArticleMedia({ src, attachments, authorId: AUTHOR, postId: `${AUTHOR}:p`, files, metadataSettled: true });
-
-describe('mediaKindFromContentType', () => {
-  it('routes images and unknown types to the image path and the rest to their kind', () => {
-    expect(mediaKindFromContentType('image/png')).toBe('image');
-    expect(mediaKindFromContentType('application/zip')).toBe('image');
-    expect(mediaKindFromContentType(undefined)).toBe('image');
-    expect(mediaKindFromContentType('video/mp4')).toBe('video');
-    expect(mediaKindFromContentType('audio/wav')).toBe('audio');
-    expect(mediaKindFromContentType('application/pdf')).toBe('pdf');
-  });
-});
 
 describe('resolveArticleMedia — attachment slots on the CDN', () => {
   it('types each slot from the file row matched by uri, whatever order the rows arrive in', () => {
@@ -52,6 +41,21 @@ describe('resolveArticleMedia — attachment slots on the CDN', () => {
       external: false,
     });
     expect(cdn('attachment:0')).toEqual({ kind: 'image' });
+  });
+
+  it('marks a row of a type nothing renders as unsupported, and an empty type as an image', () => {
+    const typed = (content_type: string) =>
+      resolveArticleMedia({
+        src: 'attachment:1',
+        attachments,
+        authorId: AUTHOR,
+        postId: `${AUTHOR}:p`,
+        files: [{ uri: fileUri('clip'), content_type, name: 'archive.zip' }],
+        metadataSettled: true,
+      });
+
+    expect(typed('application/zip')).toEqual({ kind: 'unsupported' });
+    expect(typed('')).toEqual({ kind: 'image' });
   });
 
   it('leaves invalid references to the image path, which renders the placeholder', () => {

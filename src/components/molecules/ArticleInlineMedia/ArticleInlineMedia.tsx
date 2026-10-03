@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Download, FileText, VideoOff, VolumeX } from 'lucide-react';
+import { Download, FileText, FileX, type LucideIcon, VideoOff, VolumeX } from 'lucide-react';
 import { Audio } from '@/atoms/Audio/Audio';
 import { Button } from '@/atoms/Button/Button';
 import { Link } from '@/atoms/Link/Link';
@@ -16,6 +16,14 @@ import { resolveArticleMedia } from './ArticleInlineMedia.utils';
 const FALLBACK_CLASSNAME = cn(
   'my-4 inline-flex max-w-full items-center gap-2 rounded-md border border-dashed border-input',
   'px-4 py-3 text-sm text-muted-foreground',
+);
+
+/** The dashed placeholder of `ArticleInlineImage`, for a slot that cannot play or never could. */
+const MediaFallback = ({ Icon, label }: { Icon: LucideIcon; label: string }) => (
+  <span role="img" aria-label={label} data-testid="article-inline-media-fallback" className={FALLBACK_CLASSNAME}>
+    <Icon aria-hidden="true" className="size-4 shrink-0" />
+    <span className="min-w-0 truncate">{label}</span>
+  </span>
 );
 
 /**
@@ -37,7 +45,7 @@ export const ArticleInlineMedia = ({ src, alt, ...source }: ArticleInlineMediaPr
   const pauseContainerRef = usePauseMediaOutsideViewport();
 
   const resolved = resolveArticleMedia({ src, alt, ...source, localStoreAttachments });
-  const mediaUrl = resolved.kind === 'image' || resolved.kind === 'loading' ? null : resolved.url;
+  const mediaUrl = 'url' in resolved ? resolved.url : null;
 
   // A new source deserves a fresh attempt, as in ArticleInlineImage: one failed load must not
   // latch the placeholder after an edit or store update points the slot at a working URL
@@ -69,6 +77,10 @@ export const ArticleInlineMedia = ({ src, alt, ...source }: ArticleInlineMediaPr
     );
   }
 
+  if (resolved.kind === 'unsupported') {
+    return <MediaFallback Icon={FileX} label={alt || 'File unavailable'} />;
+  }
+
   if (resolved.kind === 'pdf') {
     // The author's description wins when they wrote one; the file name is the next best label
     const label = alt?.trim() || resolved.name || 'PDF document';
@@ -91,13 +103,10 @@ export const ArticleInlineMedia = ({ src, alt, ...source }: ArticleInlineMediaPr
   }
 
   if (failed) {
-    const label = alt || (resolved.kind === 'video' ? 'Video unavailable' : 'Audio unavailable');
-    const Icon = resolved.kind === 'video' ? VideoOff : VolumeX;
-    return (
-      <span role="img" aria-label={label} data-testid="article-inline-media-fallback" className={FALLBACK_CLASSNAME}>
-        <Icon aria-hidden="true" className="size-4 shrink-0" />
-        <span className="min-w-0 truncate">{label}</span>
-      </span>
+    return resolved.kind === 'video' ? (
+      <MediaFallback Icon={VideoOff} label={alt || 'Video unavailable'} />
+    ) : (
+      <MediaFallback Icon={VolumeX} label={alt || 'Audio unavailable'} />
     );
   }
 
