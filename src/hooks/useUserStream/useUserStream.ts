@@ -91,7 +91,9 @@ export function useUserStream({
 
   // Track skip position for pagination
   const skipRef = useRef(0);
-  const refillAttemptedRef = useRef(false);
+  // Refill steps: 1 reads the cached tail of the stream, 2 asks Nexus when that was not enough
+  const refillStepRef = useRef(0);
+  const lastSliceFromCacheRef = useRef(false);
 
   // Tags state (not reactive via useLiveQuery since it requires fetch)
   const [userTagsMap, setUserTagsMap] = useState<Map<Pubky, NexusTag[]>>(new Map());
@@ -222,7 +224,7 @@ export function useUserStream({
         setIsLoading(true);
         setError(null);
         skipRef.current = 0;
-        refillAttemptedRef.current = false;
+        refillStepRef.current = 0;
         setIsExhausted(false);
       } else {
         setIsLoadingMore(true);
@@ -247,6 +249,8 @@ export function useUserStream({
         if (streamExhausted) {
           setIsExhausted(true);
         }
+        // A slice without a `skip` came from the cache (see `UserStreamApplication.getOrFetchStreamSlice`)
+        lastSliceFromCacheRef.current = nextSkip === undefined && nextPageIds.length > 0;
 
         // Update user IDs
         if (isInitial) {
@@ -298,7 +302,7 @@ export function useUserStream({
   }, [fetchStreamSlice]);
 
   useEffect(() => {
-    if (!excludeFollowing || isLoading || isLoadingMore || isExhausted || refillAttemptedRef.current) return;
+    if (!excludeFollowing || isLoading || isLoadingMore || isExhausted) return;
     if (userIds.length === 0) return;
 
     // Wait for the live queries that feed `eligibleCount` to hydrate before deciding to refill
@@ -309,8 +313,18 @@ export function useUserStream({
 
     if (!shouldRefill) return;
 
-    refillAttemptedRef.current = true;
-    void fetchStreamSlice(false, { forceNetwork: true });
+    // Read the cached tail of the stream first: users an earlier visit fetched past this slice
+    // stay eligible when the viewer followed some of the slice elsewhere. Ask Nexus for fresh
+    // candidates only when that tail was still short, and only once.
+    if (refillStepRef.current === 0) {
+      refillStepRef.current = 1;
+      void fetchStreamSlice(false);
+      return;
+    }
+    if (refillStepRef.current === 1 && lastSliceFromCacheRef.current) {
+      refillStepRef.current = 2;
+      void fetchStreamSlice(false, { forceNetwork: true });
+    }
   }, [
     detailsHydrated,
     eligibleCount,

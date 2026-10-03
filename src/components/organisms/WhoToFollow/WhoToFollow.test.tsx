@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ElementType, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import type { Pubky } from '@/models/models.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -33,10 +32,6 @@ const mockUseUserStream = vi.fn(() => ({
   refetch: vi.fn(),
 }));
 
-const mockUseInfiniteScroll = vi.fn(() => ({
-  sentinelRef: { current: null },
-}));
-
 const mockToggleFollow = vi.fn();
 const mockIsUserLoading = vi.fn(() => false);
 const mockUseFollowUser = vi.fn(() => ({
@@ -48,10 +43,6 @@ const mockUseFollowUser = vi.fn(() => ({
 
 vi.mock('@/hooks/useUserStream/useUserStream', () => ({
   useUserStream: vi.fn(),
-}));
-
-vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
-  useInfiniteScroll: vi.fn(),
 }));
 
 vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
@@ -179,9 +170,6 @@ describe('WhoToFollow', () => {
     vi.clearAllMocks();
     mockToggleFollow.mockResolvedValue(undefined);
     vi.mocked(useUserStream).mockImplementation(mockUseUserStream);
-    vi.mocked(useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
-    );
     vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
   });
 
@@ -194,7 +182,7 @@ describe('WhoToFollow', () => {
   it('renders loading state when isLoading is true', () => {
     vi.mocked(useUserStream).mockReturnValue(mockLoadingResult);
     render(<WhoToFollow />);
-    expect(screen.getAllByTestId('user-list-item-skeleton-full')).toHaveLength(30);
+    expect(screen.getAllByTestId('user-list-item-skeleton-full')).toHaveLength(20);
   });
 
   it('renders users when there are items', () => {
@@ -224,10 +212,9 @@ describe('WhoToFollow', () => {
 
     expect(useUserStream).toHaveBeenCalledWith({
       streamId: 'recommended',
-      limit: 30,
-      bufferSize: 30,
-      refillThreshold: 30,
-      paginated: true,
+      limit: 20,
+      bufferSize: 20,
+      refillThreshold: 20,
       includeRelationships: true,
       includeCounts: true,
       excludeFollowing: true,
@@ -256,9 +243,6 @@ describe('WhoToFollow', () => {
 describe('WhoToFollow - Snapshots', () => {
   beforeEach(() => {
     vi.mocked(useUserStream).mockImplementation(mockUseUserStream);
-    vi.mocked(useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
-    );
     vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
   });
 
@@ -275,6 +259,13 @@ describe('WhoToFollow - Snapshots', () => {
 
   it('matches snapshot with users', () => {
     vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
+
+    const { container } = render(<WhoToFollow />);
+    expect(container).toMatchSnapshot();
+  });
+
+  it('matches snapshot while refilling hidden followed users', () => {
+    vi.mocked(useUserStream).mockReturnValue({ ...mockUsersResult, isLoadingMore: true });
 
     const { container } = render(<WhoToFollow />);
     expect(container).toMatchSnapshot();
