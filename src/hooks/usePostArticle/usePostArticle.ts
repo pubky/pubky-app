@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
+import { articleHasInlineSlotZero } from '@/libs/post/articleInlineMedia';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { toast } from '@/molecules/Toaster/toast';
 import type { FileVariant } from '@/services/nexus/file/file.types';

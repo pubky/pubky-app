@@ -28,7 +28,7 @@ import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
 import type { TLockDraft } from '@/hooks/usePostInputLock/usePostInputLock.types';
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { deserializeArticleBody } from '@/libs/post/articleInlineImages';
+import { deserializeArticleBody } from '@/libs/post/articleInlineMedia';
 import { areLockAttachmentsWithinLimit, hasSvgAttachment } from '@/libs/post/lockAttachments';
 import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';

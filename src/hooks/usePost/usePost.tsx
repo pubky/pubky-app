@@ -11,10 +11,10 @@ import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import {
-  countInlineImageUris,
+  countInlineMediaUris,
   serializeArticleBody,
   type SerializeArticleBodyError,
-} from '@/libs/post/articleInlineImages';
+} from '@/libs/post/articleInlineMedia';
 import { buildLockTeaserContent } from '@/libs/post/lockTeaser';
 import { getStorageQuotaToastMessage } from '@/libs/storage/storageQuota';
 import { toast } from '@/molecules/Toaster/toast';
@@ -118,7 +118,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     getInlineBudget: () =>
       ARTICLE_ATTACHMENT_MAX_FILES -
       Math.min(attachments.length + existingAttachments.length, 1) -
-      (currentUserId ? countInlineImageUris(content, currentUserId) : 0),
+      (currentUserId ? countInlineMediaUris(content, currentUserId) : 0),
   });
 
   /**
@@ -162,7 +162,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
       body,
       coverPresent,
       authorPubky: currentUserId,
-      maxInlineImages: ARTICLE_ATTACHMENT_MAX_FILES - (coverPresent ? 1 : 0),
+      maxInlineMedia: ARTICLE_ATTACHMENT_MAX_FILES - (coverPresent ? 1 : 0),
     });
     if (serialized.errors.length > 0) {
       toast({ variant: 'error', description: serializeArticleErrorMessage(serialized.errors[0]) });

@@ -1,5 +1,5 @@
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
-import { isAttachmentRefScheme, isAuthorFileUri, parseAttachmentRef } from '@/libs/post/articleInlineImages';
+import { isAttachmentRefScheme, isAuthorFileUri, parseAttachmentRef } from '@/libs/post/articleInlineMedia';
 import { getAttachmentAtSlot } from '@/libs/utils/unlockedMedia';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { FileVariant } from '@/services/nexus/file/file.types';

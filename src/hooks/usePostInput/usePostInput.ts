@@ -26,7 +26,7 @@ import { usePost } from '@/hooks/usePost/usePost';
 import { useUndoRepost } from '@/hooks/useUndoRepost/useUndoRepost';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineImages';
+import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineMedia';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
