@@ -308,14 +308,27 @@ export function usePostInput({
   }, [content, isArticle, isExpanded]);
 
   // Handle submit using reply, repost, post, or edit method from hook
+  // The title and body inputs run ahead of `articleTitle` and `content` by the debounce. Null once
+  // the state has caught up.
+  const pendingArticleTitleRef = useRef<string | null>(null);
+  const pendingArticleBodyRef = useRef<string | null>(null);
+
   const handleSubmit = useCallback(async () => {
     if (isSubmitting || uploadingCount > 0) return;
 
     // For replies, posts, and edits, require content or attachments. For reposts, content is optional. Content and title is required for articles.
+    // Articles publish what the editor holds right now: `articleTitle` and `content` trail the inputs
+    // by the debounce, and a publish read from them would drop an image inserted in the last half
+    // second, then delete its upload as unreferenced.
+    const latestArticle = isArticle
+      ? { title: pendingArticleTitleRef.current ?? articleTitle, body: pendingArticleBodyRef.current ?? content }
+      : undefined;
+    const hasBody = Boolean((latestArticle?.body ?? content).trim());
+
     const totalAttachments = attachments.length + existingAttachments.length;
     if (
-      (variant !== POST_INPUT_VARIANT.REPOST && !content.trim() && totalAttachments === 0) ||
-      (isArticle && (!content.trim() || !articleTitle.trim()))
+      (variant !== POST_INPUT_VARIANT.REPOST && !hasBody && totalAttachments === 0) ||
+      (isArticle && (!hasBody || !(latestArticle?.title ?? articleTitle).trim()))
     )
       return;
 
@@ -433,11 +446,12 @@ export function usePostInput({
           originalAttachmentUris: seededAttachmentUris,
           preservedAttachmentUris: editPreservedUris,
           onSuccess: handleSuccess,
+          article: latestArticle,
         });
         break;
       case POST_INPUT_VARIANT.POST:
       default:
-        await post({ onSuccess: handleSuccess });
+        await post({ article: latestArticle, onSuccess: handleSuccess });
         break;
     }
   }, [
@@ -488,11 +502,6 @@ export function usePostInput({
     },
     [setContent],
   );
-
-  // The title and body inputs run ahead of `articleTitle` and `content` by the debounce. Null once
-  // the state has caught up.
-  const pendingArticleTitleRef = useRef<string | null>(null);
-  const pendingArticleBodyRef = useRef<string | null>(null);
 
   // Each render makes a new debounce and the old one's timer still fires, so a commit can carry an
   // older value than the input holds: only a commit of the latest value clears it.

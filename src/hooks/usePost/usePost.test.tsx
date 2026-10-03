@@ -2260,6 +2260,40 @@ describe('usePost — article inline images', () => {
     const fileA = new File(['a'], 'a.png', { type: 'image/png' });
     const fileB = new File(['b'], 'b.png', { type: 'image/png' });
 
+    it('publishes the body and title passed as `article`, not the debounced state', async () => {
+      // The composer hands over what the editor holds; `content` still trails by the debounce and
+      // does not reference the freshly inserted image
+      mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
+      const result = await setupArticle('Intro');
+      await uploadViaSession(result, fileUri('img1'));
+
+      await act(async () => {
+        await result.current.post({ article: { title: 'Fresh title', body: `Intro\n\n![A](${fileUri('img1')})` } });
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: JSON.stringify({ title: 'Fresh title', body: 'Intro\n\n![A](attachment:0)' }),
+          attachmentUris: [fileUri('img1')],
+        }),
+      );
+      // The image is referenced, so the publish sweep keeps its upload
+      expect(vi.mocked(FileController.commitDelete)).not.toHaveBeenCalled();
+    });
+
+    it('publishes an article whose body the debounced state has not received yet', async () => {
+      mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
+      const result = await setupArticle('');
+
+      await act(async () => {
+        await result.current.post({ article: { title: 'My Article', body: 'Typed just now' } });
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ content: JSON.stringify({ title: 'My Article', body: 'Typed just now' }) }),
+      );
+    });
+
     it('serializes the body for a lock and returns its images in slot order, after the cover', async () => {
       const result = await setupArticle('draft', { cover: new File(['x'], 'cover.png', { type: 'image/png' }) });
       await uploadFile(result, fileUri('a'), fileA);

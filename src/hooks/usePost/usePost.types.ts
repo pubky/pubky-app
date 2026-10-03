@@ -19,7 +19,19 @@ export interface UsePostReplyOptions {
   onSuccess?: (createdPostId: string) => void;
 }
 
+/**
+ * The article title and body as the inputs hold them right now. `articleTitle` and `content` trail
+ * the inputs by the composer's debounce, so a publish that read them could drop an image inserted
+ * in the last half second and then delete its upload as unreferenced.
+ */
+export interface LatestArticle {
+  title: string;
+  body: string;
+}
+
 export interface UsePostPostOptions {
+  /** Article publishes pass the latest editor values; omitted, the debounced state is used. */
+  article?: LatestArticle;
   onSuccess?: (createdPostId: string) => void;
 }
 
@@ -55,6 +67,8 @@ export interface UsePostEditOptions {
    * the user did not see and remove.
    */
   preservedAttachmentUris?: string[];
+  /** Article edits pass the latest editor values; omitted, the debounced state is used. */
+  article?: LatestArticle;
   onSuccess?: (createdPostId: string) => void;
 }
 

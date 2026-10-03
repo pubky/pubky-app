@@ -765,6 +765,80 @@ describe('usePostInput', () => {
     });
 
     it('does not submit article when content is empty', async () => {
+      it('publishes the article title and body the inputs hold, ahead of the debounced state', async () => {
+        mockContent = 'Stale body';
+        mockIsArticle = true;
+        mockArticleTitle = 'Stale title';
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        // Neither debounce has fired: the state still holds the stale values
+        act(() => {
+          result.current.handleArticleTitleChange({
+            target: { value: 'Fresh title' },
+          } as React.ChangeEvent<HTMLInputElement>);
+          result.current.handleArticleBodyChange('Fresh body ![a](pubky://user/pub/pubky.app/files/NEW)', false);
+        });
+        expect(mockSetContent).not.toHaveBeenCalled();
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockPost).toHaveBeenCalledWith(
+          expect.objectContaining({
+            article: { title: 'Fresh title', body: 'Fresh body ![a](pubky://user/pub/pubky.app/files/NEW)' },
+          }),
+        );
+      });
+
+      it('submits an article whose body only the editor holds yet', async () => {
+        // The first keystrokes have not reached `content` through the debounce
+        mockContent = '';
+        mockIsArticle = true;
+        mockArticleTitle = 'Test Title';
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        act(() => {
+          result.current.handleArticleBodyChange('Typed just now', false);
+        });
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockPost).toHaveBeenCalledWith(
+          expect.objectContaining({ article: { title: 'Test Title', body: 'Typed just now' } }),
+        );
+      });
+
+      it('passes the latest article values to an edit as well', async () => {
+        mockContent = 'Stale body';
+        mockIsArticle = true;
+        mockArticleTitle = 'Title';
+
+        const { result } = renderHook(() =>
+          usePostInput({
+            variant: 'edit',
+            editPostId: 'post-to-edit-id',
+            editAttachmentUris: [],
+            editIsArticle: true,
+            editContent: JSON.stringify({ title: 'Title', body: 'Stale body' }),
+          }),
+        );
+        act(() => {
+          result.current.handleArticleBodyChange('Edited body', false);
+        });
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockEdit).toHaveBeenCalledWith(
+          expect.objectContaining({ article: { title: 'Title', body: 'Edited body' } }),
+        );
+      });
+
       mockContent = '';
       mockIsArticle = true;
       mockArticleTitle = 'Test Title';
@@ -837,6 +911,7 @@ describe('usePostInput', () => {
 
       expect(mockPost).toHaveBeenCalledWith({
         onSuccess: expect.any(Function),
+        article: { title: 'Test Title', body: 'Test content' },
       });
     });
 

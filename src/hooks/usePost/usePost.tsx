@@ -287,13 +287,15 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     }
   };
 
-  const post = async ({ onSuccess }: UsePostPostOptions) => {
+  const post = async ({ article, onSuccess }: UsePostPostOptions) => {
+    // The inputs run ahead of the debounced state: publish what the editor holds, not what the
+    // state last caught up with, or an image inserted in the last half second is dropped and its
+    // upload deleted as unreferenced.
+    const latestTitle = article?.title ?? articleTitle;
+    const latestBody = article?.body ?? content;
+    const hasBody = Boolean((isArticle ? latestBody : content).trim());
     // allow empty content and attachments if not article
-    if (
-      (!content.trim() && attachments.length === 0) ||
-      (isArticle && (!content.trim() || !articleTitle.trim())) ||
-      !currentUserId
-    )
+    if ((!hasBody && attachments.length === 0) || (isArticle && (!hasBody || !latestTitle.trim())) || !currentUserId)
       return;
 
     setIsSubmitting(true);
@@ -305,7 +307,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
       let articleBody = '';
       let inlineUris: string[] = [];
       if (isArticle) {
-        const serialized = serializeArticleForPublish(attachments.length > 0);
+        const serialized = serializeArticleForPublish(attachments.length > 0, latestBody.trim());
         if (!serialized) return;
         if (rejectForeignInlineUris(serialized.inlineUris)) return;
         articleBody = serialized.body;
@@ -313,7 +315,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
       }
 
       const createdPostId = await PostController.commitCreate({
-        content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: articleBody }) : content.trim(),
+        content: isArticle ? JSON.stringify({ title: latestTitle.trim(), body: articleBody }) : content.trim(),
         authorId: currentUserId,
         tags: tags.length > 0 ? tags : undefined,
         attachments: attachments.length > 0 ? attachments : undefined,
@@ -386,12 +388,17 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     originalAttachmentUris,
     preservedAttachmentUris,
     onSuccess,
+    article,
   }: UsePostEditOptions) => {
     // allow empty content when attachments remain; articles require content and title
+    // See `post()`: the editor's latest values, not the debounced state
+    const latestTitle = article?.title ?? articleTitle;
+    const latestBody = article?.body ?? content;
+    const hasBody = Boolean((isArticle ? latestBody : content).trim());
     const totalAttachments = existingAttachments.length + attachments.length;
     if (
-      (!content.trim() && totalAttachments === 0) ||
-      (isArticle && (!content.trim() || !articleTitle.trim())) ||
+      (!hasBody && totalAttachments === 0) ||
+      (isArticle && (!hasBody || !latestTitle.trim())) ||
       !editPostId ||
       !currentUserId
     )
@@ -417,7 +424,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
 
         // Validate the body before uploading a replacement cover, so a blocked
         // publish uploads nothing.
-        const serialized = serializeArticleForPublish(Boolean(newCoverFile ?? keptCover));
+        const serialized = serializeArticleForPublish(Boolean(newCoverFile ?? keptCover), latestBody.trim());
         if (!serialized) return;
 
         // Removal is diffed against the seeded snapshot, never the live row.
@@ -458,7 +465,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
         const orderChanged =
           nextOrder.length !== originalUris.length || nextOrder.some((uri, index) => uri !== originalUris[index]);
 
-        editContentPayload = JSON.stringify({ title: articleTitle.trim(), body: serialized.body });
+        editContentPayload = JSON.stringify({ title: latestTitle.trim(), body: serialized.body });
         editAttachments = orderChanged ? { original: originalUris, kept, added: [], addedUris, nextOrder } : undefined;
         articleNextOrder = nextOrder;
 
