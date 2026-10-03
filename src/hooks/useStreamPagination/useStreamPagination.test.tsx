@@ -53,6 +53,40 @@ describe('useStreamPagination', () => {
   });
 
   describe('Cursor advances on empty-after-filter pages', () => {
+    it('does not continue scanning filtered pages after the feed unmounts', async () => {
+      const pendingPage = Promise.withResolvers<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValueOnce(pendingPage.promise);
+      const { unmount } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+      await waitFor(() => expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(1));
+
+      unmount();
+      await act(async () => {
+        pendingPage.resolve({ nextPageIds: [], nextCursor: 20, reachedEnd: false, rawScannedCount: 20 });
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not report a late Show more error after the feed unmounts', async () => {
+      const onError = vi.fn();
+      const { result, unmount } = renderHook(() => useStreamPagination({ streamId: mockStreamId, onError }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      const pendingPage = Promise.withResolvers<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValueOnce(pendingPage.promise);
+      let pendingLoad: Promise<void>;
+      act(() => {
+        pendingLoad = result.current.loadMore();
+      });
+
+      unmount();
+      await act(async () => {
+        pendingPage.reject(new Error('Discarded request failed'));
+        await pendingLoad;
+      });
+
+      expect(onError).not.toHaveBeenCalled();
+    });
+
     it('advances streamTail from nextCursor on an empty page so the next loadMore resumes past it', async () => {
       const streamId = 'timeline:all:all' as PostStreamId;
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);

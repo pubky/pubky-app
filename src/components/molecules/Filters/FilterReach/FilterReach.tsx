@@ -34,6 +34,7 @@ const REACH_FILTER_DATA_CY: Record<ReachFilterValue, string> = {
 };
 
 interface FilterReachSharedProps {
+  options?: readonly ReachType[];
   profileTags?: string[];
   onProfileTagAdd?: (tag: string) => void;
   onProfileTagRemove?: (tag: string) => void;
@@ -55,6 +56,7 @@ export function FilterReach({
   defaultSelectedTab = REACH.ALL,
   onTabChange,
   disabled,
+  options,
   showTaggedAs = false,
   profileTags,
   onProfileTagAdd,
@@ -63,7 +65,7 @@ export function FilterReach({
 }: FilterReachProps) {
   const orderedReachKeys: ReachFilterValue[] = showTaggedAs
     ? [REACH.NETWORK, TAGGED_AS_FILTER_KEY, REACH.FOLLOWING, REACH.FRIENDS, REACH.ME, REACH.ALL]
-    : [REACH.ALL, REACH.FOLLOWING, REACH.FRIENDS];
+    : [...(options ?? [REACH.ALL, REACH.FOLLOWING, REACH.FRIENDS])];
 
   const reachItems: FilterListItem<ReachFilterValue>[] = orderedReachKeys.map((key) => ({
     key,

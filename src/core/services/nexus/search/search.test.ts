@@ -107,6 +107,20 @@ describe('NexusSearchService', () => {
   });
 
   describe('usersByTags', () => {
+    it.each(['following', 'friends', 'wot'] as const)(
+      'includes the paired viewer and %s reach on every People page',
+      async (reach) => {
+        mockQueryNexus.mockResolvedValue([]);
+        await NexusSearchService.usersByTags({ tags: 'bitcoin,pubky', skip: 20, limit: 20, reach, user_id: 'viewer' });
+        expect(Object.fromEntries(new URL(mockQueryNexus.mock.calls[0][0].url).searchParams)).toEqual({
+          tags: 'bitcoin,pubky',
+          skip: '20',
+          limit: '20',
+          reach,
+          user_id: 'viewer',
+        });
+      },
+    );
     it('should call queryNexus with correct URL and return scored user ids', async () => {
       const mockResults = [
         { user_id: 'user1', score: 12 },

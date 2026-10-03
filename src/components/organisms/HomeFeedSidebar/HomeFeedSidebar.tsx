@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
@@ -21,6 +22,7 @@ import {
 } from '../Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
 
 interface HomeFeedSidebarProps {
+  reachFilter?: ReactNode;
   hideReachFilter?: boolean;
   hideSortFilter?: boolean;
   hideLayoutFilter?: boolean;
@@ -39,6 +41,7 @@ interface HomeFeedSidebarProps {
  * Gap between sections: 24px (gap-6)
  */
 function HomeFeedFilters({
+  reachFilter,
   hideReachFilter = false,
   hideSortFilter = false,
   hideLayoutFilter = false,
@@ -130,17 +133,18 @@ function HomeFeedFilters({
 
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
-      {!hideReachFilter && (
-        <FilterReach
-          selectedTab={selectedReach}
-          onTabChange={handleReachChange}
-          showTaggedAs
-          profileTags={effectiveProfileTags}
-          onProfileTagAdd={handleProfileTagAdd}
-          onProfileTagRemove={handleProfileTagRemove}
-          profileTagsDisabled={!isAuthenticated || !taggedAsActive}
-        />
-      )}
+      {reachFilter ??
+        (!hideReachFilter && (
+          <FilterReach
+            selectedTab={selectedReach}
+            onTabChange={handleReachChange}
+            showTaggedAs
+            profileTags={effectiveProfileTags}
+            onProfileTagAdd={handleProfileTagAdd}
+            onProfileTagRemove={handleProfileTagRemove}
+            profileTagsDisabled={!isAuthenticated || !taggedAsActive}
+          />
+        ))}
       {!hideSortFilter && <FilterSort selectedTab={sort} onTabChange={handleSortChange} />}
       {variant === 'sidebar' ? (
         <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
@@ -186,6 +190,7 @@ function HomeFeedFilters({
  * Desktop version with sticky positioning.
  */
 export function HomeFeedSidebar({
+  reachFilter,
   hideReachFilter = false,
   hideSortFilter = false,
   allowVisualLayout = false,
@@ -193,6 +198,7 @@ export function HomeFeedSidebar({
 }: HomeFeedSidebarProps) {
   return (
     <HomeFeedFilters
+      reachFilter={reachFilter}
       hideReachFilter={hideReachFilter}
       hideSortFilter={hideSortFilter}
       allowVisualLayout={allowVisualLayout}
@@ -208,6 +214,7 @@ export function HomeFeedSidebar({
  * Left drawer for Home feed (tablet) - manages filter state via useHomeStore.
  */
 export function HomeFeedDrawer({
+  reachFilter,
   hideReachFilter = false,
   hideSortFilter = false,
   allowVisualLayout = false,
@@ -215,6 +222,7 @@ export function HomeFeedDrawer({
 }: HomeFeedSidebarProps) {
   return (
     <HomeFeedFilters
+      reachFilter={reachFilter}
       hideReachFilter={hideReachFilter}
       hideSortFilter={hideSortFilter}
       allowVisualLayout={allowVisualLayout}
@@ -231,6 +239,7 @@ export function HomeFeedDrawer({
  * Note: Mobile version doesn't show layout filter.
  */
 export function HomeFeedDrawerMobile({
+  reachFilter,
   hideReachFilter = false,
   hideSortFilter = false,
   allowVisualLayout = false,
@@ -238,6 +247,7 @@ export function HomeFeedDrawerMobile({
 }: HomeFeedSidebarProps) {
   return (
     <HomeFeedFilters
+      reachFilter={reachFilter}
       hideReachFilter={hideReachFilter}
       hideSortFilter={hideSortFilter}
       hideLayoutFilter

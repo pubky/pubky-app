@@ -1,4 +1,4 @@
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -62,9 +62,11 @@ export class NexusPostStreamService {
       case StreamSource.WOT:
       case StreamSource.WOT_DOMAIN:
       case StreamSource.BOOKMARKS:
-        // TODO: from now, always is going to be
         if (!params.viewer_id) {
-          throw new Error(`Viewer ID is required for ${invokeEndpoint} stream`);
+          throw Err.auth(AuthErrorCode.UNAUTHORIZED, `Viewer ID is required for ${invokeEndpoint} stream`, {
+            service: ErrorService.Nexus,
+            operation: 'fetchPostStream',
+          });
         }
         nexusEndpoint = postStreamApi[invokeEndpoint]({ ...params, observer_id: params.viewer_id });
         break;
@@ -89,7 +91,17 @@ export class NexusPostStreamService {
             context: { invokeEndpoint },
           });
         }
+        if (extraParams.reach && !params.viewer_id) {
+          throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Sign in to search within your network', {
+            service: ErrorService.Nexus,
+            operation: 'fetchPostStream',
+          });
+        }
+        const reachParams =
+          extraParams.reach && params.viewer_id ? { reach: extraParams.reach, user_id: params.viewer_id } : {};
+        // Nexus caps full-text reach at 1,000 authors, prioritizing prolific authors.
         const url = searchApi.byContent({
+          ...reachParams,
           q: extraParams.q,
           // Present only for author-scoped searches (profile "Filter posts").
           author: extraParams.author_id,

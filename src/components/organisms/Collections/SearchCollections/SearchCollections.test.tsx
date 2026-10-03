@@ -205,19 +205,22 @@ describe('SearchCollections', () => {
     expect(vi.mocked(toast)).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
 
-  it('collapses back to the preview when the stream id changes (new tags or sort)', () => {
-    setup({ pagination: { postIds: buildCompositeIds(6) } });
+  it.each([OTHER_STREAM_ID, 'timeline:following:collection:pubky' as PostStreamId])(
+    'collapses the preview when the stream changes to %s',
+    (nextStreamId) => {
+      setup({ pagination: { postIds: buildCompositeIds(6) } });
 
-    const { rerender } = render(<SearchCollections />);
-    fireEvent.click(screen.getByRole('button', { name: 'See all' }));
-    expect(screen.getAllByTestId('collection-card')).toHaveLength(6);
+      const { rerender } = render(<SearchCollections />);
+      fireEvent.click(screen.getByRole('button', { name: 'See all' }));
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(6);
 
-    mockUseSearchStreamId.mockReturnValue(OTHER_STREAM_ID);
-    rerender(<SearchCollections />);
+      mockUseSearchStreamId.mockReturnValue(nextStreamId);
+      rerender(<SearchCollections />);
 
-    expect(screen.getAllByTestId('collection-card')).toHaveLength(SEARCH_COLLECTIONS_PREVIEW_COUNT);
-    expect(screen.getByRole('button', { name: 'See all' })).toBeInTheDocument();
-  });
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(SEARCH_COLLECTIONS_PREVIEW_COUNT);
+      expect(screen.getByRole('button', { name: 'See all' })).toBeInTheDocument();
+    },
+  );
 });
 
 describe('SearchCollections - Snapshots', () => {

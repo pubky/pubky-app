@@ -8,15 +8,18 @@ import { SearchController } from '@/controllers/search/search';
 import { StreamUserController } from '@/controllers/stream/users/users';
 import { UserController } from '@/controllers/user/user';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
+import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { resolveUserDisplayName } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import type { UserListItemData } from '@/organisms/UserListItem/UserListItem.types';
 import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
-import type { TUserTagSearchResult } from '@/services/nexus/search/search.types';
+import type { NexusSearchReach, TUserTagSearchResult } from '@/services/nexus/search/search.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 interface UseSearchPeopleOptions {
+  reach?: NexusSearchReach;
   onError?: (error: unknown) => void;
 }
 
@@ -65,7 +68,12 @@ function uniquePageIds(results: TUserTagSearchResult[]): Pubky[] {
  * `stream/users/by_ids` round trip, and are read back reactively from Dexie.
  * Muted users and users that fail to hydrate (e.g. deleted) are dropped.
  */
-export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOptions = {}): UseSearchPeopleResult {
+export function useSearchPeople(
+  tags: string[],
+  { reach, onError }: UseSearchPeopleOptions = {},
+): UseSearchPeopleResult {
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const session = useAuthStore((state) => state.session);
   // Clamp to the endpoint's hard 1-5 label bound regardless of stream config.
   const tagsKey = tags.slice(0, SEARCH_PEOPLE_MAX_TAGS).join(',');
 
@@ -80,7 +88,7 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
   const [hasMore, setHasMore] = useState(true);
 
   const userIdsRef = useRef<Pubky[]>([]);
-  // Bumped on every tags change and on unmount; in-flight fetches compare
+  // Bumped on every search-scope change and on unmount; in-flight fetches compare
   // against it and drop stale results instead of committing them.
   const generationRef = useRef(0);
   // Keep the latest callback without retriggering the fetch effect. Written
@@ -93,7 +101,7 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
 
   const { isMuted } = useMutedUsers();
 
-  // Initial page — reruns from scratch whenever the searched tags change.
+  // Match the controller's viewer/session guard when restoring or replacing a session.
   useEffect(() => {
     generationRef.current += 1;
     const generation = generationRef.current;
@@ -101,6 +109,7 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
     userIdsRef.current = [];
     setUserIds([]);
     setSkip(0);
+    setLoadingMore(false);
 
     if (!tagsKey) {
       setLoading(false);
@@ -114,6 +123,7 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
     const run = async () => {
       try {
         const results = await SearchController.fetchUsersByTags({
+          reach,
           tags: tagsKey,
           skip: 0,
           limit: SEARCH_PEOPLE_PAGE_SIZE,
@@ -138,7 +148,7 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
       } catch (err) {
         if (generation !== generationRef.current) return;
         setHasMore(false);
-        Logger.error('[useSearchPeople] Initial fetch failed:', err);
+        if (!isAppError(err)) Logger.error('[useSearchPeople] Initial fetch failed:', err);
         onErrorRef.current?.(err);
       } finally {
         if (generation === generationRef.current) {
@@ -151,7 +161,7 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
     return () => {
       generationRef.current += 1;
     };
-  }, [tagsKey]);
+  }, [tagsKey, reach, currentUserPubky, session]);
 
   const loadMore = async () => {
     if (loading || loadingMore || !hasMore || !tagsKey) return;
@@ -160,6 +170,7 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
     setLoadingMore(true);
     try {
       const results = await SearchController.fetchUsersByTags({
+        reach,
         tags: tagsKey,
         skip,
         limit: SEARCH_PEOPLE_PAGE_SIZE,
@@ -187,7 +198,7 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
     } catch (err) {
       if (generation !== generationRef.current) return;
       setHasMore(false);
-      Logger.error('[useSearchPeople] Load more failed:', err);
+      if (!isAppError(err)) Logger.error('[useSearchPeople] Load more failed:', err);
       onErrorRef.current?.(err);
     } finally {
       if (generation === generationRef.current) {

@@ -17,6 +17,7 @@ import { addItemToTop, addTagToArray } from './search.utils';
  * Actions/Mutators - State modification functions
  */
 export const createSearchActions = (set: ZustandSet<SearchStore>): SearchActions => ({
+  setReach: (reach) => set({ reach }, false, SearchActionTypes.SET_REACH),
   /**
    * Add a user to recent searches
    * Moves existing user to top if already present

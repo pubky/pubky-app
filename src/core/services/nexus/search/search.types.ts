@@ -1,5 +1,10 @@
 import type { Pubky } from '@/models/models.types';
-import type { StreamSorting, TPaginationParams, TPaginationRangeParams } from '@/services/nexus/nexus.types';
+import type {
+  StreamSorting,
+  TPaginationParams,
+  TPaginationRangeParams,
+  UserStreamReach,
+} from '@/services/nexus/nexus.types';
 import type { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 
 export type TTagParams = TPaginationParams & {
@@ -15,22 +20,29 @@ export type TPrefixSearchParams = TPaginationParams & {
   prefix: string;
 };
 
-export type TContentSearchParams = TPaginationParams & {
-  q: string;
-  kind?: StreamKind;
-  // Scopes the full-text search to one author's posts (profile "Filter posts").
-  author?: Pubky;
-};
+export type NexusSearchReach = `${Exclude<UserStreamReach, UserStreamReach.FOLLOWERS>}`;
+
+/** Nexus accepts a reach only together with the user whose network it scopes. */
+type TSearchReachParams = { reach: NexusSearchReach; user_id: Pubky } | { reach?: never; user_id?: never };
+
+export type TContentSearchParams = TPaginationParams &
+  TSearchReachParams & {
+    q: string;
+    kind?: StreamKind;
+    // Scopes the full-text search to one author's posts (profile "Filter posts").
+    author?: Pubky;
+  };
 
 export type TContentSearchResult = Array<{
   post_key: string;
   score: number;
 }>;
 
-export type TUsersByTagsSearchParams = TPaginationParams & {
-  // Comma-separated tag labels (1-5); users tagged with any of them match
-  tags: string;
-};
+export type TUsersByTagsSearchParams = TPaginationParams &
+  TSearchReachParams & {
+    // Comma-separated tag labels (1-5); users tagged with any of them match
+    tags: string;
+  };
 
 export type TSearchQueryParams =
   TTagSearchParams | TPrefixSearchParams | TContentSearchParams | TUsersByTagsSearchParams;
