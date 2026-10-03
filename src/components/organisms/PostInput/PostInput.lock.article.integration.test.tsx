@@ -309,6 +309,28 @@ describe('PostInput - locking an article with body images (integration)', () => 
     expect(mocks.commitDeleteFile).not.toHaveBeenCalled();
   });
 
+  it('keeps the cover when the lock is abandoned after it was applied', async () => {
+    await writeArticle();
+    fireEvent.click(screen.getByTestId('add-cover'));
+    applyLock();
+
+    fireEvent.click(screen.getByTestId('lock-switch')); // off: the whole draft, cover included, comes back
+
+    expect(mocks.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Articles support one cover image' }),
+    );
+    fireEvent.click(screen.getByTestId('post-button'));
+    await waitFor(() => expect(mocks.commitCreatePost).toHaveBeenCalledTimes(1));
+
+    expect(mocks.commitCreatePost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: JSON.stringify({ title: 'Essay', body: 'Intro\n\n![shot](attachment:1)\n\nOutro' }),
+        attachments: [expect.objectContaining({ name: 'cover.png' })],
+        attachmentUris: [IMAGE_URI],
+      }),
+    );
+  });
+
   it('locks what the editor reported last, before the composer state caught up with it', async () => {
     await writeArticle();
     // Markdown mode and rich text report the same way; no debounce has passed since this change.

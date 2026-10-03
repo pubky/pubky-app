@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ARTICLE_ATTACHMENT_MAX_FILES } from '@/config/posts';
 import { FileController } from '@/controllers/file/file';
 import { PostController } from '@/controllers/post/post';
@@ -22,6 +22,7 @@ import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type {
+  ComposerDraft,
   ExistingAttachment,
   SerializedArticle,
   UsePostEditOptions,
@@ -387,14 +388,14 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     isLockAnnouncement,
     originalAttachmentUris,
     preservedAttachmentUris,
-    onSuccess,
     article,
+    onSuccess,
   }: UsePostEditOptions) => {
-    // allow empty content when attachments remain; articles require content and title
     // See `post()`: the editor's latest values, not the debounced state
     const latestTitle = article?.title ?? articleTitle;
     const latestBody = article?.body ?? content;
     const hasBody = Boolean((isArticle ? latestBody : content).trim());
+    // allow empty content when attachments remain; articles require content and title
     const totalAttachments = existingAttachments.length + attachments.length;
     if (
       (!hasBody && totalAttachments === 0) ||
@@ -538,6 +539,23 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     }
   };
 
+  // Set when a composer draft is restored whole (an abandoned lock): the restored article mode and
+  // its cover land in the same commit, which the clearing effect below must not read as a switch.
+  const restoringDraftRef = useRef(false);
+
+  /**
+   * Puts a captured composer draft back as it was. Setting the fields one by one would trip the
+   * article-mode effect below: it sees `isArticle` flip true next to a non-empty `attachments` and
+   * clears the cover with the "one cover image" warning (the lock-abandon regression).
+   */
+  const restoreComposerDraft = ({ content, attachments, isArticle, articleTitle }: ComposerDraft) => {
+    restoringDraftRef.current = isArticle && attachments.length > 0;
+    setContent(content);
+    setAttachments(attachments);
+    setIsArticle(isArticle);
+    setArticleTitle(articleTitle);
+  };
+
   // Clear attachments when switching to article mode.
   // `existingAttachments` is deliberately excluded: it is only populated in
   // edit mode, where `isArticle` flips true during prefill in the same commit
@@ -545,6 +563,11 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
   // seeded cover on mount. The article button is hidden in edit mode, so a
   // user-initiated switch can never happen with `existingAttachments` set.
   useEffect(() => {
+    if (restoringDraftRef.current) {
+      // A restored draft brings its cover back on purpose
+      restoringDraftRef.current = false;
+      return;
+    }
     if (isArticle && attachments.length > 0) {
       toast({
         variant: 'warning',
@@ -570,6 +593,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     setArticleTitle,
     lockTitle,
     setLockTitle,
+    restoreComposerDraft,
     reply,
     post,
     repost,

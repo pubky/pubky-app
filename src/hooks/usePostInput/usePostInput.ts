@@ -137,6 +137,7 @@ export function usePostInput({
     setArticleTitle,
     lockTitle,
     setLockTitle,
+    restoreComposerDraft,
     reply,
     post,
     repost,
@@ -307,16 +308,15 @@ export function usePostInput({
     textarea.style.height = `${textarea.scrollHeight}px`;
   }, [content, isArticle, isExpanded]);
 
-  // Handle submit using reply, repost, post, or edit method from hook
   // The title and body inputs run ahead of `articleTitle` and `content` by the debounce. Null once
   // the state has caught up.
   const pendingArticleTitleRef = useRef<string | null>(null);
   const pendingArticleBodyRef = useRef<string | null>(null);
 
+  // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
     if (isSubmitting || uploadingCount > 0) return;
 
-    // For replies, posts, and edits, require content or attachments. For reposts, content is optional. Content and title is required for articles.
     // Articles publish what the editor holds right now: `articleTitle` and `content` trail the inputs
     // by the debounce, and a publish read from them would drop an image inserted in the last half
     // second, then delete its upload as unreferenced.
@@ -325,6 +325,7 @@ export function usePostInput({
       : undefined;
     const hasBody = Boolean((latestArticle?.body ?? content).trim());
 
+    // For replies, posts, and edits, require content or attachments. For reposts, content is optional. Content and title is required for articles.
     const totalAttachments = attachments.length + existingAttachments.length;
     if (
       (variant !== POST_INPUT_VARIANT.REPOST && !hasBody && totalAttachments === 0) ||
@@ -445,8 +446,8 @@ export function usePostInput({
           isLockAnnouncement: isLockAnnouncement || undefined,
           originalAttachmentUris: seededAttachmentUris,
           preservedAttachmentUris: editPreservedUris,
-          onSuccess: handleSuccess,
           article: latestArticle,
+          onSuccess: handleSuccess,
         });
         break;
       case POST_INPUT_VARIANT.POST:
@@ -781,6 +782,7 @@ export function usePostInput({
     setArticleTitle,
     lockTitle,
     setLockTitle,
+    restoreComposerDraft,
     isDragging,
     isExpanded,
     isSubmitting,

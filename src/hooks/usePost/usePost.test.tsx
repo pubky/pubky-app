@@ -210,6 +210,50 @@ describe('usePost', () => {
       });
     });
 
+    it('keeps the cover when a captured article draft is restored whole (abandoned lock)', () => {
+      const { result } = renderHook(() => usePost());
+      const cover = new File(['test'], 'cover.png', { type: 'image/png' });
+      vi.mocked(toast).mockClear();
+
+      act(() => {
+        result.current.restoreComposerDraft({
+          content: 'Body',
+          attachments: [cover],
+          isArticle: true,
+          articleTitle: 'Essay',
+        });
+      });
+
+      expect(result.current.isArticle).toBe(true);
+      expect(result.current.attachments).toEqual([cover]);
+      expect(result.current.content).toBe('Body');
+      expect(result.current.articleTitle).toBe('Essay');
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    });
+
+    it('still clears attachments on the next user switch into article mode after a restore', () => {
+      const { result } = renderHook(() => usePost());
+      const cover = new File(['test'], 'cover.png', { type: 'image/png' });
+
+      act(() => {
+        result.current.restoreComposerDraft({
+          content: 'Body',
+          attachments: [cover],
+          isArticle: true,
+          articleTitle: 'T',
+        });
+      });
+      act(() => {
+        result.current.setIsArticle(false);
+      });
+      act(() => {
+        result.current.setIsArticle(true);
+      });
+
+      expect(result.current.attachments).toEqual([]);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ variant: 'warning', title: 'Articles support one cover image' });
+    });
+
     // Note: This scenario doesn't occur in the actual UI (the form resets entirely),
     // but we test it to verify the useEffect only triggers when isArticle becomes true
     it('should not clear attachments when switching from article mode to regular mode', () => {
@@ -2216,6 +2260,40 @@ describe('usePost — article inline images', () => {
       );
     });
 
+    it('publishes the body and title passed as `article`, not the debounced state', async () => {
+      // The composer hands over what the editor holds; `content` still trails by the debounce and
+      // does not reference the freshly inserted image
+      mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
+      const result = await setupArticle('Intro');
+      await uploadViaSession(result, fileUri('img1'));
+
+      await act(async () => {
+        await result.current.post({ article: { title: 'Fresh title', body: `Intro\n\n![A](${fileUri('img1')})` } });
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: JSON.stringify({ title: 'Fresh title', body: 'Intro\n\n![A](attachment:0)' }),
+          attachmentUris: [fileUri('img1')],
+        }),
+      );
+      // The image is referenced, so the publish sweep keeps its upload
+      expect(vi.mocked(FileController.commitDelete)).not.toHaveBeenCalled();
+    });
+
+    it('publishes an article whose body the debounced state has not received yet', async () => {
+      mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
+      const result = await setupArticle('');
+
+      await act(async () => {
+        await result.current.post({ article: { title: 'My Article', body: 'Typed just now' } });
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ content: JSON.stringify({ title: 'My Article', body: 'Typed just now' }) }),
+      );
+    });
+
     it('blocks publishing when the body contains hand-typed attachment references', async () => {
       const result = await setupArticle('![A](attachment:1)');
 
@@ -2259,40 +2337,6 @@ describe('usePost — article inline images', () => {
     };
     const fileA = new File(['a'], 'a.png', { type: 'image/png' });
     const fileB = new File(['b'], 'b.png', { type: 'image/png' });
-
-    it('publishes the body and title passed as `article`, not the debounced state', async () => {
-      // The composer hands over what the editor holds; `content` still trails by the debounce and
-      // does not reference the freshly inserted image
-      mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
-      const result = await setupArticle('Intro');
-      await uploadViaSession(result, fileUri('img1'));
-
-      await act(async () => {
-        await result.current.post({ article: { title: 'Fresh title', body: `Intro\n\n![A](${fileUri('img1')})` } });
-      });
-
-      expect(mockPostControllerCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          content: JSON.stringify({ title: 'Fresh title', body: 'Intro\n\n![A](attachment:0)' }),
-          attachmentUris: [fileUri('img1')],
-        }),
-      );
-      // The image is referenced, so the publish sweep keeps its upload
-      expect(vi.mocked(FileController.commitDelete)).not.toHaveBeenCalled();
-    });
-
-    it('publishes an article whose body the debounced state has not received yet', async () => {
-      mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
-      const result = await setupArticle('');
-
-      await act(async () => {
-        await result.current.post({ article: { title: 'My Article', body: 'Typed just now' } });
-      });
-
-      expect(mockPostControllerCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ content: JSON.stringify({ title: 'My Article', body: 'Typed just now' }) }),
-      );
-    });
 
     it('serializes the body for a lock and returns its images in slot order, after the cover', async () => {
       const result = await setupArticle('draft', { cover: new File(['x'], 'cover.png', { type: 'image/png' }) });

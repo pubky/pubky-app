@@ -1,6 +1,6 @@
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import type { RefObject } from 'react';
-import type { ExistingAttachment, UsePostReturn } from '@/hooks/usePost/usePost.types';
+import type { ComposerDraft, ExistingAttachment, UsePostReturn } from '@/hooks/usePost/usePost.types';
 import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
 import type { EditLock, PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
@@ -75,6 +75,8 @@ export interface UsePostInputReturn {
   setArticleTitle: React.Dispatch<React.SetStateAction<string>>;
   lockTitle: string;
   setLockTitle: React.Dispatch<React.SetStateAction<string>>;
+  /** Restores a captured draft as one commit, cover included (an abandoned lock). */
+  restoreComposerDraft: (draft: ComposerDraft) => void;
   isDragging: boolean;
   isExpanded: boolean;
   isSubmitting: boolean;

@@ -490,6 +490,7 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     setArticleTitle: mockSetArticleTitle,
     lockTitle: mockUsePostReturn.lockTitle,
     setLockTitle: vi.fn(),
+    restoreComposerDraft: vi.fn(),
     handleArticleTitleChange: vi.fn(),
     handleArticleBodyChange: vi.fn(),
     isDragging: mockUsePostReturn.isDragging,

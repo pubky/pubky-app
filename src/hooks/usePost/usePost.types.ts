@@ -93,6 +93,14 @@ export type ExistingAttachment = {
   resolutionFailed?: boolean;
 };
 
+/** The composer fields a lock captures and, when the lock is abandoned, puts back whole. */
+export interface ComposerDraft {
+  content: string;
+  attachments: File[];
+  isArticle: boolean;
+  articleTitle: string;
+}
+
 export interface UsePostReturn {
   content: string;
   setContent: Dispatch<SetStateAction<string>>;
@@ -108,6 +116,8 @@ export interface UsePostReturn {
   setArticleTitle: Dispatch<SetStateAction<string>>;
   lockTitle: string;
   setLockTitle: Dispatch<SetStateAction<string>>;
+  /** Restores a captured draft as one commit, cover included (an abandoned lock). */
+  restoreComposerDraft: (draft: ComposerDraft) => void;
   reply: (options: UsePostReplyOptions) => Promise<void>;
   post: (options: UsePostPostOptions) => Promise<void>;
   repost: (options: UsePostRepostOptions) => Promise<void>;

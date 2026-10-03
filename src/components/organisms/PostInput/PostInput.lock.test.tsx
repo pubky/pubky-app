@@ -119,6 +119,17 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         handleArticleClick: vi.fn(),
         articleTitle,
         setArticleTitle,
+        restoreComposerDraft: (draft: {
+          content: string;
+          attachments: File[];
+          isArticle: boolean;
+          articleTitle: string;
+        }) => {
+          setContent(draft.content);
+          setAttachments(draft.attachments);
+          setIsArticle(draft.isArticle);
+          setArticleTitle(draft.articleTitle);
+        },
         lockTitle,
         setLockTitle,
         handleArticleTitleChange: vi.fn(),

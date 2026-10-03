@@ -106,6 +106,7 @@ export function PostInput({
     handleArticleClick,
     articleTitle,
     setArticleTitle,
+    restoreComposerDraft,
     lockTitle: editLockTitle,
     setLockTitle: setEditLockTitle,
     handleArticleTitleChange,
@@ -267,12 +268,9 @@ export function PostInput({
 
       return { content: body, attachments, isArticle: true, articleTitle: title, serializedArticle };
     },
-    restoreComposer: (draft) => {
-      setContent(draft.content);
-      setAttachments(draft.attachments);
-      setIsArticle(draft.isArticle);
-      setArticleTitle(draft.articleTitle);
-    },
+    // One commit through `usePost`, which knows to keep the restored cover: setting the fields here
+    // would make article mode flip next to a non-empty attachment list and clear it as a switch.
+    restoreComposer: restoreComposerDraft,
     clearComposer: clearComposerForLock,
     // Announcement (public teaser) = the current composer state once the switch is on.
     announcementContent: content,
