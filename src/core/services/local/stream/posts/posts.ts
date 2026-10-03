@@ -411,7 +411,11 @@ export class LocalStreamPostsService {
     // details when the row's TTL was written at or after the fetch started
     // (an edit landed while the fetch was in flight) or when the Nexus copy
     // is not indexed after the local one (Nexus has not caught up yet).
-    // Counts, tags, relationships and the TTL still refresh for those rows.
+    // Counts, tags, relationships and the TTL still refresh for those rows,
+    // except `collections`: the viewer's own collection writes bump it locally
+    // and stamp the TTL, so a response that started before such a write keeps
+    // the local value (the response would otherwise undo the bump and renew
+    // the TTL, hiding it until the next refresh).
     const detailIds = postDetails.map((d) => d.id);
     await db.transaction(
       'rw',
@@ -428,9 +432,12 @@ export class LocalStreamPostsService {
         const existingDetails = await PostDetailsModel.findByIdsPreserveOrder(detailIds);
         const existingTtl = refreshGuard ? await PostTtlModel.findByIds(detailIds) : [];
         const ttlById = new Map(existingTtl.map((record) => [record.id, record.lastUpdatedAt]));
+        const existingCounts = refreshGuard ? await PostCountsModel.findByIds(detailIds) : [];
+        const localCollectionsById = new Map(existingCounts.map((record) => [record.id, record.collections]));
 
         const tombstonedIds = new Set<string>();
         const locallyNewerIds = new Set<string>();
+        const writtenSinceFetchIds = new Set<string>();
         existingDetails.forEach((existing, index) => {
           const incoming = postDetails[index];
           if (existing?.content === DELETED) {
@@ -440,6 +447,7 @@ export class LocalStreamPostsService {
           if (!refreshGuard || !existing) return;
           const writtenSinceFetch = (ttlById.get(incoming.id) ?? 0) >= refreshGuard.fetchStartedAt;
           const notIndexedAfterLocal = incoming.indexed_at <= existing.indexed_at;
+          if (writtenSinceFetch) writtenSinceFetchIds.add(incoming.id);
           if (writtenSinceFetch || notIndexedAfterLocal) locallyNewerIds.add(incoming.id);
         });
         if (locallyNewerIds.size > 0) {
@@ -450,7 +458,12 @@ export class LocalStreamPostsService {
         }
 
         const liveDetails = postDetails.filter((d) => !tombstonedIds.has(d.id) && !locallyNewerIds.has(d.id));
-        const liveCounts = postCounts.filter(([id]) => !tombstonedIds.has(id));
+        const liveCounts = postCounts
+          .filter(([id]) => !tombstonedIds.has(id))
+          .map(([id, counts]): NexusModelTuple<NexusPostCounts> => {
+            const localCollections = writtenSinceFetchIds.has(id) ? localCollectionsById.get(id) : undefined;
+            return localCollections === undefined ? [id, counts] : [id, { ...counts, collections: localCollections }];
+          });
         const liveRelationships = postRelationships.filter(([id]) => !tombstonedIds.has(id));
         const liveTags = postTags.filter(([id]) => !tombstonedIds.has(id));
         const liveTtl = postTtl.filter(([id]) => !tombstonedIds.has(id));

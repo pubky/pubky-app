@@ -583,6 +583,49 @@ describe('LocalStreamPostsService', () => {
 
       expect((await PostDetailsModel.findById(compositeId))!.content).toBe('nexus copy');
     });
+
+    it('keeps a locally bumped collections count when the TTL row was written since the fetch started', async () => {
+      // The viewer saved the post to a collection while the refresh was in flight: the
+      // response carries the pre-save count and must not undo the bump.
+      await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt });
+      await PostCountsModel.table.put({
+        id: compositeId,
+        tags: 0,
+        unique_tags: 0,
+        replies: 1,
+        reposts: 0,
+        collections: 3,
+      });
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [nexusCopy(BASE_TIMESTAMP + 20_000)],
+        refreshGuard: { fetchStartedAt },
+      });
+
+      const counts = (await PostCountsModel.findById(compositeId))!;
+      expect(counts.collections).toBe(3);
+      // Every other count still refreshes from the response.
+      expect(counts.replies).toBe(7);
+    });
+
+    it('refreshes the collections count when nothing was written locally since the fetch started', async () => {
+      await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+      await PostCountsModel.table.put({
+        id: compositeId,
+        tags: 0,
+        unique_tags: 0,
+        replies: 1,
+        reposts: 0,
+        collections: 3,
+      });
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [nexusCopy(BASE_TIMESTAMP + 20_000)],
+        refreshGuard: { fetchStartedAt },
+      });
+
+      expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
+    });
   });
 
   describe('persistPosts - tombstone guard', () => {

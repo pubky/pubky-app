@@ -118,12 +118,15 @@ describe('usePostSaveTargets', () => {
     expect(mocks.postCollectionsEnabled).toBe(false);
   });
 
-  it('does not promise more other collections before the first page arrived', () => {
-    mocks.postCollectionIds = [];
+  it('keeps Load more reachable after a page that filtered down to nothing', () => {
+    // A page of muted or own collections can leave no visible row while the stream still
+    // has more; the settled `hasMore` from the paginator is what the picker must follow.
+    mocks.postCollectionIds = ['current-user:collection1'];
 
     const { result } = renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: true }));
 
-    expect(result.current.hasMoreOtherCollections).toBe(false);
+    expect(result.current.otherCollectionIds).toEqual([]);
+    expect(result.current.hasMoreOtherCollections).toBe(true);
   });
 
   it('paginates authored collections only while the picker is open', async () => {

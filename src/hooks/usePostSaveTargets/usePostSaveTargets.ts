@@ -85,13 +85,10 @@ export function usePostSaveTargets(
   const {
     collectionIds: postCollectionIds,
     isLoading: isOtherCollectionsLoading,
-    hasMore: hasMorePostCollections,
+    hasMore: hasMoreOtherCollections,
     isLoadingMore: isOtherCollectionsLoadingMore,
     loadMore: loadMoreOtherCollections,
   } = usePostCollections(postId, { enabled: isPickerOpen });
-  // The paginator resets to `hasMore: true` before its first page arrives; only a page that
-  // actually came back can promise a further one.
-  const hasMoreOtherCollections = hasMorePostCollections && postCollectionIds.length > 0;
   const otherCollectionIds = postCollectionIds.filter((collectionId) => {
     // One malformed key from Nexus must not throw out of the picker's render.
     try {
