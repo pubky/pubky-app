@@ -62,6 +62,24 @@ export const isPubkyErrorLike = (error: unknown): error is { name: string; messa
 };
 
 /**
+ * True when the SDK rejected with `PkarrError`: a PKARR lookup or publish failed. Carries no
+ * HTTP status, so it never says anything about what the homeserver did.
+ * @param error - The error to check
+ * @returns True for an SDK `PkarrError`, false for anything else
+ */
+export const isPkarrError = (error: unknown): boolean =>
+  isPubkyErrorLike(error) && error.name === PUBKY_ERROR_NAMES.PKARR_ERROR;
+
+/**
+ * One-line description of an SDK or JS error for log lines and error context. SDK errors are
+ * plain `{ name, message }` objects, so `String(error)` alone would yield "[object Object]".
+ * @param error - The error to describe
+ * @returns `name: message` for error-like values, `String(error)` otherwise
+ */
+export const describeError = (error: unknown): string =>
+  isPubkyErrorLike(error) ? `${error.name}: ${error.message}` : String(error);
+
+/**
  * Throws a SESSION_EXPIRED error for authentication failures.
  * @param errorMessage - The original error message
  * @param additionalContext - Additional context to add to the error

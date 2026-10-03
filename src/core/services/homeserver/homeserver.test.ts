@@ -350,6 +350,150 @@ describe('HomeserverService', () => {
           expect((error as AppError).message).toBe(originalMessage);
         }
       });
+
+      describe('registered sign-up without a session', () => {
+        // The SDK registers the account (spending the invite token) before it publishes the
+        // PKDNS record, so a PkarrError leaves a registered key with no session, and a retry
+        // with that key gets 409. Both must complete the sign-up instead of failing it.
+        const pkarrPublishError = {
+          name: 'PkarrError',
+          message: 'Pkarr operation failed: Failed to publish record to the DHT: found a more recent SignedPacket',
+        };
+        const conflictError = { name: 'RequestError', message: 'User already exists', data: { statusCode: 409 } };
+
+        it('should sign in and return the session when the PKDNS publish fails after registration', async () => {
+          const keypair = createMockKeypair();
+          const expectedSession = createMockSession();
+
+          mockState.signupCookie.mockRejectedValue(pkarrPublishError);
+          mockState.signinCookie.mockResolvedValue(expectedSession);
+
+          const result = await HomeserverService.signUp({ keypair, signupToken: 'token' });
+
+          expect(result).toEqual({ session: expectedSession });
+          expect(mockState.signinCookie).toHaveBeenCalledTimes(1);
+          // The record was resolvable, so nothing is republished over it.
+          expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
+        });
+
+        it('should sign in and return the session when the homeserver reports the key as registered (409)', async () => {
+          const keypair = createMockKeypair();
+          const expectedSession = createMockSession();
+
+          mockState.signupCookie.mockRejectedValue(conflictError);
+          mockState.signinCookie.mockResolvedValue(expectedSession);
+
+          const result = await HomeserverService.signUp({ keypair, signupToken: 'spent-token' });
+
+          expect(result).toEqual({ session: expectedSession });
+          expect(mockState.signinCookie).toHaveBeenCalledTimes(1);
+          expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
+        });
+
+        it('should republish the configured homeserver and sign in again when the first sign-in fails', async () => {
+          const keypair = createMockKeypair();
+          const expectedSession = createMockSession();
+
+          mockState.signupCookie.mockRejectedValue(pkarrPublishError);
+          mockState.signinCookie
+            .mockRejectedValueOnce({ name: 'RequestError', message: 'homeserver not found', data: { statusCode: 404 } })
+            .mockResolvedValueOnce(expectedSession);
+
+          const result = await HomeserverService.signUp({ keypair, signupToken: 'token' });
+
+          expect(result).toEqual({ session: expectedSession });
+          expect(mockState.publishHomeserverForce).toHaveBeenCalledTimes(1);
+          expect(mockState.publishHomeserverForce).toHaveBeenCalledWith(
+            expect.objectContaining({ z32: expect.any(Function) }), // the configured homeserver public key
+          );
+          expect(mockState.signinCookie).toHaveBeenCalledTimes(2);
+          expect(mockState.signinCookie.mock.invocationCallOrder[1]).toBeGreaterThan(
+            mockState.publishHomeserverForce.mock.invocationCallOrder[0]!,
+          );
+        });
+
+        it('should throw the retryable PKARR error, not the recovery error, when recovery fails after a publish failure', async () => {
+          const keypair = createMockKeypair();
+
+          mockState.signupCookie.mockRejectedValue(pkarrPublishError);
+          mockState.signinCookie.mockRejectedValue({
+            name: 'RequestError',
+            message: 'Not Found',
+            data: { statusCode: 404 },
+          });
+          mockState.publishHomeserverForce.mockRejectedValue(pkarrPublishError);
+
+          const error = await HomeserverService.signUp({ keypair, signupToken: 'token' }).catch(
+            (caught: unknown) => caught,
+          );
+
+          expect(error).toMatchObject({
+            category: ErrorCategory.Network,
+            code: NetworkErrorCode.CONNECTION_FAILED,
+            operation: 'signUp',
+            context: expect.objectContaining({ recoveryError: expect.stringContaining('PkarrError: ') }),
+          });
+          expect(isRetryable(error as AppError)).toBe(true);
+        });
+
+        it('should throw the 409 Conflict, not the recovery error, when recovery fails after a conflict', async () => {
+          // The hook keeps the keypair on a conflict: the account exists and the token is spent on it.
+          const keypair = createMockKeypair();
+
+          mockState.signupCookie.mockRejectedValue(conflictError);
+          mockState.signinCookie.mockRejectedValue({ name: 'AuthenticationError', message: 'invalid auth token' });
+
+          const error = await HomeserverService.signUp({ keypair, signupToken: 'spent-token' }).catch(
+            (caught: unknown) => caught,
+          );
+
+          expect(error).toMatchObject({
+            category: ErrorCategory.Client,
+            code: ClientErrorCode.CONFLICT,
+            operation: 'signUp',
+            context: expect.objectContaining({ statusCode: 409 }),
+          });
+          // The HTTP mapping drops extra context, so the recovery failure is reported by its own log line.
+          expect(Logger.warn).toHaveBeenCalledWith(
+            'Completing the registered sign-up failed',
+            expect.objectContaining({ recoveryError: 'AuthenticationError: invalid auth token' }),
+          );
+          expect(mockState.publishHomeserverForce).toHaveBeenCalledTimes(1);
+          expect(mockState.signinCookie).toHaveBeenCalledTimes(2);
+        });
+
+        it('should not sign in or republish when the homeserver rejects the token', async () => {
+          const keypair = createMockKeypair();
+
+          mockState.signupCookie.mockRejectedValue({ name: 'AuthenticationError', message: 'invalid signup token' });
+
+          await expect(HomeserverService.signUp({ keypair, signupToken: 'bad-token' })).rejects.toMatchObject({
+            category: ErrorCategory.Auth,
+            code: AuthErrorCode.SESSION_EXPIRED,
+            operation: 'signUp',
+          });
+          expect(mockState.signinCookie).not.toHaveBeenCalled();
+          expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
+        });
+
+        it('should not sign in or republish when the sign-up request itself fails', async () => {
+          const keypair = createMockKeypair();
+
+          mockState.signupCookie.mockRejectedValue({
+            name: 'RequestError',
+            message: 'Bad Gateway',
+            data: { statusCode: 502 },
+          });
+
+          await expect(HomeserverService.signUp({ keypair, signupToken: 'token' })).rejects.toMatchObject({
+            category: ErrorCategory.Server,
+            code: ServerErrorCode.BAD_GATEWAY,
+            operation: 'signUp',
+          });
+          expect(mockState.signinCookie).not.toHaveBeenCalled();
+          expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
+        });
+      });
     });
 
     describe('verifySignupToken', () => {

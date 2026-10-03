@@ -1,6 +1,7 @@
 'use client';
 import { AuthController } from '@/controllers/auth/auth';
-import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
+import { getRetryAfter, hasHttpStatus, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
+import { HttpStatusCode } from '@/libs/http/http.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import type { UseInviteCodeSignUpResult } from './useInviteCodeSignUp.types';
@@ -17,7 +18,8 @@ const SIGN_UP_RETRY_MAX_DELAY_MS = 5000;
  * during the pubky step). The auth store is updated only when AuthController.signUp succeeds.
  *
  * On success the keys in the onboarding store become the user's real keys.
- * On non-retryable failure clears onboarding secrets; on retryable failure keeps secrets so users can retry safely.
+ * On failure it keeps the secrets whenever the homeserver may already hold an account for them (any
+ * retryable failure, a 409 conflict, or anything after such a failure) and clears them otherwise.
  * In both failure paths it shows a toast and throws so the caller can keep the user on the form.
  *
  * @example
@@ -45,6 +47,11 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
     const secretKey = useOnboardingStore.getState().selectSecretKey();
 
     let lastError: unknown;
+    // The sign-up registers the account (spending the invite code on this keypair) before it publishes
+    // the PKDNS record, so a retryable failure may have landed after the account existed, and a 409
+    // means it did. Once that is possible the keypair must survive every later failure of this call:
+    // clearing it would orphan the registered account, and a fresh keypair could never reuse the code.
+    let keypairMayBeRegistered = false;
 
     for (let attempt = 0; attempt < SIGN_UP_MAX_ATTEMPTS; attempt += 1) {
       let description = 'Could not sign up. Try again.';
@@ -55,19 +62,23 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
       } catch (error) {
         lastError = error;
 
-        const canRetry = isAppError(error) && isRetryable(error) && attempt < SIGN_UP_MAX_ATTEMPTS - 1;
-        if (canRetry) {
+        const retryable = isAppError(error) && isRetryable(error);
+        const conflict = hasHttpStatus(error, HttpStatusCode.CONFLICT);
+        keypairMayBeRegistered ||= retryable || conflict;
+
+        if (retryable && attempt < SIGN_UP_MAX_ATTEMPTS - 1) {
           const retryAfter = getRetryAfter(error);
           await sleep(getRetryDelayMs(attempt, retryAfter));
           continue;
         }
 
-        // Keep secrets for retryable failures to avoid losing a paid signup when transport fails.
-        if (!(isAppError(error) && isRetryable(error))) {
+        if (!keypairMayBeRegistered) {
           useOnboardingStore.getState().clearSecrets();
         }
 
-        if (isAppError(error)) {
+        if (conflict) {
+          description = 'Your pubky is already registered. Try again to finish signing in.';
+        } else if (isAppError(error)) {
           if (isAuthError(error)) {
             description = 'Invite code is invalid or expired.';
           } else if (error.message) {

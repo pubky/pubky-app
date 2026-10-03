@@ -79,7 +79,7 @@ class HomegateService {
 
 Differentiate transient errors (`SERVICE_UNAVAILABLE`, `NETWORK_ERROR`) from fatal ones for smarter retries.
 
-Pubky SDK (`@synonymdev/pubky`) errors are mapped by their `name` in `src/core/services/homeserver/error.utils.ts`: `InvalidInput` → Validation, `AuthenticationError` (or HTTP 401) → Auth `SESSION_EXPIRED`, `PkarrError` (PKARR lookup failed, absence not proven) → Network `CONNECTION_FAILED` (retryable). Anything else falls through to `httpStatusCodeToError`.
+Pubky SDK (`@synonymdev/pubky`) errors are mapped by their `name` in `src/core/services/homeserver/error.utils.ts`: `InvalidInput` → Validation, `AuthenticationError` (or HTTP 401) → Auth `SESSION_EXPIRED`, `PkarrError` (PKARR lookup or publish failed, absence not proven) → Network `CONNECTION_FAILED` (retryable). Anything else falls through to `httpStatusCodeToError`. `HomeserverService.signUp` is the one place that inspects the raw SDK error before mapping it: `signupCookie` registers the account (spending the invite token) before it publishes the PKDNS record, so a `PkarrError` or a 409 on retry means the key is registered without a session, and the service completes the sign-up by signing in (republishing the record if needed) instead of throwing.
 
 When a specific HTTP status is an expected domain state, handle it before calling `httpResponseToError`.
 For example, a geoblocked availability endpoint can return `{ available: false }` for `403`. Keep these cases

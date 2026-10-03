@@ -40,7 +40,7 @@ import type {
   TSignupTokenVerificationStatus,
 } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { extractStatusCode, handleError } from './error.utils';
+import { describeError, extractStatusCode, handleError, isPkarrError } from './error.utils';
 import type {
   PubPath,
   TGeneratePassportAuthUrlParams,
@@ -70,6 +70,14 @@ const DELETE_IDEMPOTENT_MAX_ATTEMPTS = 3;
 const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
 /** Default limit for list operations */
 const LIST_DEFAULT_LIMIT = 500;
+
+/**
+ * `signupCookie` failed after the homeserver registered the key. The SDK registers the account
+ * (consuming the invite token) before it publishes the key's PKDNS record, so a `PkarrError` leaves
+ * a registered account with no session, and a 409 means an earlier attempt already registered it.
+ */
+const isRegisteredSignUpFailure = (error: unknown): boolean =>
+  isPkarrError(error) || extractStatusCode(error) === HttpStatusCode.CONFLICT;
 
 type HomeserverSdkUserEvent = THomeserverUserEvent & {
   free(): void;
@@ -171,7 +179,11 @@ export class HomeserverService {
   }
 
   /**
-   * Signs up a new user in the homeserver
+   * Signs up a new user in the homeserver.
+   *
+   * A sign-up the homeserver registered but that returned no session (PKDNS publish failed, or
+   * a retry after such a failure got 409) is completed through {@link completeRegisteredSignUp}
+   * instead of failing: the invite token is already spent on this keypair.
    * @param keypair - The keypair to sign up with
    * @param signupToken - The signup token to use
    * @returns The session
@@ -187,9 +199,66 @@ export class HomeserverService {
 
       return { session };
     } catch (error) {
+      if (isRegisteredSignUpFailure(error)) {
+        return await this.completeRegisteredSignUp({ keypair, signupError: error });
+      }
       return handleError({
         error,
         additionalContext: { signupTokenProvided: Boolean(signupToken), operation: 'signUp' },
+        statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
+        alwaysUseHomeserverError: true,
+      });
+    }
+  }
+
+  /**
+   * Completes a sign-up the homeserver already registered but that produced no session.
+   *
+   * Signs in with the keypair first: when the PKDNS record is already resolvable (the publish
+   * raced a more recent packet, or a previous attempt published it) that is all that is missing.
+   * Otherwise it publishes the record `signupCookie` would have published, then signs in, like
+   * the republish path of {@link signIn}. The staging environment guard of `signIn` does not
+   * apply: the key is not one the user brought along, the homeserver just registered it (or
+   * reports it as registered), and the record published is the one sign-up itself publishes.
+   *
+   * On failure it throws the mapped original sign-up error so callers see what the sign-up
+   * attempt did (409 Conflict: registered, keep the keypair; PKARR publish: retryable) rather than
+   * which recovery step broke; the recovery failure is logged once, as it is captured nowhere else.
+   */
+  private static async completeRegisteredSignUp({
+    keypair,
+    signupError,
+  }: TKeypairParams & { signupError: unknown }): Promise<THomeserverSessionResult> {
+    const pubky = Identity.pubkyFromKeypair(keypair);
+    Logger.warn('Sign-up registered the key without a session, completing it by signing in', {
+      pubky,
+      signupError: describeError(signupError),
+    });
+
+    try {
+      const signer = this.getSigner(keypair);
+      try {
+        const session = await signer.signinCookie();
+        Logger.debug('Completed registered sign-up', { pubky });
+        return { session };
+      } catch (signinError) {
+        Logger.debug('Sign-in after registered sign-up failed, republishing the homeserver record', {
+          pubky,
+          signinError: describeError(signinError),
+        });
+        await signer.pkdns.publishHomeserverForce(PublicKey.from(getHomeserver()));
+        const session = await signer.signinCookie();
+        Logger.debug('Completed registered sign-up after republish', { pubky });
+        return { session };
+      }
+    } catch (recoveryError) {
+      // Not a log-then-throw: the thrown error reports the sign-up failure, this line reports the
+      // recovery failure, which is never thrown or captured (the HTTP mapping below drops context).
+      const recoveryFailure = describeError(recoveryError);
+      Logger.warn('Completing the registered sign-up failed', { pubky, recoveryError: recoveryFailure });
+      return handleError({
+        error: signupError,
+        additionalContext: { pubky, signupTokenProvided: true, recoveryError: recoveryFailure, operation: 'signUp' },
         statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
         alwaysUseHomeserverError: true,
       });
