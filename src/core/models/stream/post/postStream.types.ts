@@ -1,3 +1,4 @@
+import { toContentSearchKey } from '@/libs/search/contentSearch';
 import type { Pubky } from '@/models/models.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
@@ -12,6 +13,7 @@ import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStre
 // - Example: "postReplies:did:key:abc123:post456"
 //
 // Full-text Content Search Stream ID Pattern: content_search:q~<encodedQuery>:kind
+// - The query is lowercased: "Bitcoin Wallets" and "bitcoin wallets" share one stream
 // - Example: "content_search:q~bitcoin%20wallets:all" (see buildContentSearchStreamId)
 
 // Note: In some cases that we reference PostStreamTypes enum, we need to cast to PostStreamId to avoid type errors.
@@ -213,8 +215,9 @@ export function buildContentSearchStreamId(
   kind: PostStreamKindSegment = 'all',
   author?: Pubky,
 ): ContentSearchStreamId {
+  // Keyed case-insensitively so casing never splits one search into separate stream caches.
   const base =
-    `${CONTENT_SEARCH_STREAM_PREFIX}:${CONTENT_SEARCH_QUERY_MARKER}${encodeURIComponent(query)}:${kind}` as const;
+    `${CONTENT_SEARCH_STREAM_PREFIX}:${CONTENT_SEARCH_QUERY_MARKER}${encodeURIComponent(toContentSearchKey(query))}:${kind}` as const;
   return author ? `${base}:${author}` : base;
 }
 
