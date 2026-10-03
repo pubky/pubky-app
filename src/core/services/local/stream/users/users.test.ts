@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getModeratedTags } from '@/config/moderation';
+import { getTtlRetryDelayMs, getTtlUserMs } from '@/libs/runtime-config/runtime-config';
 import { APP_RUNTIME_DEFAULTS } from '@/libs/runtime-config/runtime-config.schema';
 import type { Pubky } from '@/models/models.types';
 import { ModerationModel } from '@/models/moderation/moderation';
@@ -12,6 +13,7 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { LocalUserService } from '@/services/local/user/user';
 import { NexusSocialGraphStatus, type NexusTag, type NexusUser } from '@/services/nexus/nexus.types';
 import { asInvalid } from '@/test-utils/type-assertions';
 
@@ -439,6 +441,96 @@ describe('LocalStreamUsersService', () => {
         );
 
         expect((await UserRelationshipsModel.findById(userId))?.following).toBe(true);
+      });
+    });
+
+    describe('profile freshness', () => {
+      const userId = 'user-edited' as Pubky;
+      const otherId = 'user-other' as Pubky;
+      const editedAt = Date.now();
+      const withDetails = (id: Pubky, details: Partial<NexusUser['details']>): NexusUser => {
+        const user = createMockNexusUser(id);
+        return { ...user, details: { ...user.details, ...details } };
+      };
+
+      beforeEach(async () => {
+        // The user just published a new name on top of revision 1
+        await UserDetailsModel.upsert({
+          ...createMockNexusUser(userId).details,
+          name: 'Local edit',
+          indexed_at: editedAt,
+          nexusIndexedAt: 1,
+          localUpdatedAt: editedAt,
+        });
+        await UserTtlModel.upsert({ id: userId, lastUpdatedAt: editedAt });
+      });
+
+      it('keeps a pending local edit and its TTL, while saving the rest of the batch', async () => {
+        await LocalStreamUsersService.persistUsers(
+          [withDetails(userId, { name: 'Other change', indexed_at: 2 }), createMockNexusUser(otherId)],
+          { viewerId: VIEWER_ID, validatedAt: editedAt + 1 },
+        );
+
+        expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Local edit', localUpdatedAt: editedAt });
+        expect(await UserTtlModel.findById(userId)).toMatchObject({ lastUpdatedAt: editedAt });
+        expect(await UserCountsModel.findById(userId)).toBeTruthy();
+        expect(await UserRelationshipsModel.findById(userId)).toBeTruthy();
+        await verifyUserPersisted(otherId, `User ${otherId}`);
+      });
+
+      it('accepts a newer revision that includes the pending edit and clears the marker', async () => {
+        await LocalStreamUsersService.persistUsers([withDetails(userId, { name: 'Local edit', indexed_at: 2 })], {
+          viewerId: VIEWER_ID,
+          validatedAt: editedAt + 1,
+        });
+
+        const details = await UserDetailsModel.findById(userId);
+        expect(details).toMatchObject({ name: 'Local edit', nexusIndexedAt: 2 });
+        expect(details!.localUpdatedAt).toBeUndefined();
+      });
+
+      it('never replaces a newer revision with an older one', async () => {
+        await UserDetailsModel.upsert({
+          ...createMockNexusUser(userId).details,
+          name: 'Revision 5',
+          nexusIndexedAt: 5,
+        });
+
+        await LocalStreamUsersService.persistUsers([withDetails(userId, { name: 'Revision 3', indexed_at: 3 })]);
+
+        expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Revision 5', nexusIndexedAt: 5 });
+        expect(await UserTtlModel.findById(userId)).toMatchObject({ lastUpdatedAt: editedAt });
+      });
+
+      it('waits the retry delay after a rejected refresh instead of refetching on every tick', async () => {
+        const isStale = async () => {
+          const ttl = await UserTtlModel.findById(userId);
+          return !ttl || Date.now() - ttl.lastUpdatedAt > getTtlUserMs();
+        };
+        vi.useFakeTimers({ toFake: ['Date'], now: editedAt + 1_000 });
+
+        try {
+          // A late bootstrap that found the user not yet indexed shortens the edit's TTL
+          await LocalUserService.upsertTtlWithDelay(userId, getTtlRetryDelayMs());
+          vi.setSystemTime(Date.now() + getTtlRetryDelayMs() + 1);
+          expect(await isStale()).toBe(true);
+
+          // The refresh still returns the profile from before the edit, which is rejected
+          await LocalStreamUsersService.persistUsers(
+            [withDetails(userId, { name: 'Before the edit', indexed_at: 2 })],
+            {
+              viewerId: VIEWER_ID,
+              validatedAt: Date.now(),
+            },
+          );
+
+          expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Local edit' });
+          expect(await isStale()).toBe(false);
+          vi.setSystemTime(Date.now() + getTtlRetryDelayMs() + 1);
+          expect(await isStale()).toBe(true);
+        } finally {
+          vi.useRealTimers();
+        }
       });
     });
 
