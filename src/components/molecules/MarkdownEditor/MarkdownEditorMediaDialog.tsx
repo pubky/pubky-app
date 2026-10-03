@@ -23,6 +23,7 @@ import { toast } from '@/molecules/Toaster/toast';
 import {
   closeInlineMediaDialog$,
   inlineMediaDialogState$,
+  inlineMediaTypeResolver$,
   inlineMediaUploadHandler$,
   saveInlineMedia$,
 } from './inlineMediaPlugin';
@@ -119,11 +120,12 @@ const COPY: Record<
  * the same static component serves every editor instance.
  */
 export function MarkdownEditorMediaDialog() {
-  const [imageState, imageUploadHandler, mediaState, mediaUploadHandler] = useCellValues(
+  const [imageState, imageUploadHandler, mediaState, mediaUploadHandler, resolveMediaType] = useCellValues(
     imageDialogState$,
     imageUploadHandler$,
     inlineMediaDialogState$,
     inlineMediaUploadHandler$,
+    inlineMediaTypeResolver$,
   );
   const saveImage = usePublisher(saveImage$);
   const closeImageDialog = usePublisher(closeImageDialog$);
@@ -152,6 +154,7 @@ export function MarkdownEditorMediaDialog() {
         // users (or other clients) put on the image
         initialTitle={initialValues?.title}
         upload={imageUploadHandler}
+        resolveType={() => null}
         onSave={saveImage}
         onClose={() => closeImageDialog()}
       />
@@ -171,6 +174,7 @@ export function MarkdownEditorMediaDialog() {
         initialAltText={initialValues?.altText ?? ''}
         initialTitle={initialValues?.title}
         upload={mediaUploadHandler}
+        resolveType={resolveMediaType}
         onSave={(values) => saveMedia({ ...values, mediaKind })}
         onClose={() => closeMediaDialog()}
       />
@@ -187,6 +191,8 @@ interface MediaDialogFormProps {
   initialAltText: string;
   initialTitle?: string;
   upload: ((file: File) => Promise<string>) | null;
+  /** MIME type of a file URI the composer knows (this session's uploads, the edited post's rows) */
+  resolveType: (uri: string) => string | null;
   onSave: (values: { src: string; altText: string; title?: string }) => void;
   onClose: () => void;
 }
@@ -198,6 +204,7 @@ function MediaDialogForm({
   initialAltText,
   initialTitle,
   upload,
+  resolveType,
   onSave,
   onClose,
 }: MediaDialogFormProps) {
@@ -260,11 +267,17 @@ function MediaDialogForm({
     }
 
     const trimmedSrc = src.trim();
-    // An external URL must name a file of this kind: the reader types external media by its
-    // extension. An uploaded file (a `pubky://` URI, as when editing) is typed by its metadata.
-    if (copy.wrongUrl && !trimmedSrc.startsWith('pubky://') && inferMediaKindFromUrl(trimmedSrc) !== mediaKind) {
-      toast({ variant: 'error', description: copy.wrongUrl });
-      return;
+    // The source must be of this kind, the way the reader will type it: an external URL by its
+    // extension, a file URI by the metadata the composer holds. The URI being edited is accepted
+    // as it is; any other file URI the composer cannot type would turn into an image on publish.
+    if (copy.wrongUrl && !(isEditing && trimmedSrc === initialSrc)) {
+      const sourceKind = trimmedSrc.startsWith('pubky://')
+        ? getInlineMediaKindFromMime(resolveType(trimmedSrc))
+        : inferMediaKindFromUrl(trimmedSrc);
+      if (sourceKind !== mediaKind) {
+        toast({ variant: 'error', description: copy.wrongUrl });
+        return;
+      }
     }
     onSave({ src: trimmedSrc, altText, title: initialTitle });
   };

@@ -1,9 +1,11 @@
 import { createRef } from 'react';
-import { imagePlugin, MDXEditor, type MDXEditorMethods } from '@mdxeditor/editor';
+import { imagePlugin, MDXEditor, type MDXEditorMethods, toolbarPlugin } from '@mdxeditor/editor';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { serializeArticleBody } from '@/libs/post/articleInlineMedia';
 import { inlineMediaPlugin } from './inlineMediaPlugin';
+import { InsertInlineMediaButton } from './InsertInlineMediaButton';
+import { MarkdownEditorMediaDialog } from './MarkdownEditorMediaDialog';
 
 /**
  * The real MDXEditor with the real plugin: the import/export visitors, the drop and paste
@@ -15,6 +17,7 @@ import { inlineMediaPlugin } from './inlineMediaPlugin';
 vi.mock('@/libs/file/pubkyFileCdnUrl', () => ({
   pubkyUriToCdnUrl: (uri: string) => (uri.startsWith('pubky://') ? `cdn://${uri}/main` : null),
 }));
+vi.mock('@/molecules/Toaster/toast', () => ({ toast: vi.fn() }));
 
 const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 const fileUri = (id: string) => `pubky://${AUTHOR}/pub/pubky.app/files/${id}`;
@@ -32,7 +35,12 @@ type UploadMock = ReturnType<typeof vi.fn<(file: File) => Promise<string>>>;
 
 const mountEditor = (
   markdown: string,
-  options?: { getMediaType?: (uri: string) => string | null; imageUpload?: UploadMock; mediaUpload?: UploadMock },
+  options?: {
+    getMediaType?: (uri: string) => string | null;
+    imageUpload?: UploadMock;
+    mediaUpload?: UploadMock;
+    readOnly?: boolean;
+  },
 ) => {
   const ref = createRef<MDXEditorMethods>();
   const imageUpload = options?.imageUpload ?? vi.fn<(file: File) => Promise<string>>();
@@ -41,8 +49,14 @@ const mountEditor = (
     <MDXEditor
       ref={ref}
       markdown={markdown}
+      readOnly={options?.readOnly}
       plugins={[
-        imagePlugin({ imageUploadHandler: imageUpload, disableImageResize: true }),
+        toolbarPlugin({ toolbarContents: () => <InsertInlineMediaButton mediaKind="audio" /> }),
+        imagePlugin({
+          imageUploadHandler: imageUpload,
+          disableImageResize: true,
+          ImageDialog: MarkdownEditorMediaDialog,
+        }),
         inlineMediaPlugin({
           uploadHandler: mediaUpload,
           getMediaType: options?.getMediaType ?? ((uri) => mediaTypes[uri] ?? null),
@@ -55,6 +69,12 @@ const mountEditor = (
 };
 
 const getMarkdown = (ref: React.RefObject<MDXEditorMethods | null>) => ref.current?.getMarkdown() ?? '';
+const contentEditable = () => document.querySelector('[contenteditable="true"]')!;
+const submitDialog = async () => {
+  await act(async () => {
+    fireEvent.submit(document.querySelector('form')!);
+  });
+};
 
 const dropFiles = (files: File[]) => {
   const root = document.querySelector('[contenteditable="true"]')!;
@@ -233,5 +253,110 @@ describe('inlineMediaPlugin', () => {
     // The paragraph that held the node stays, as it does when an image is deleted
     expect(getMarkdown(ref)).toMatch(/^Before\n+After$/);
     expect(getMarkdown(ref)).not.toContain(VIDEO_URI);
+  });
+
+  it.each([
+    ['Delete', 46],
+    ['Backspace', 8],
+  ])('removes the node with %s only while it is the selection', async (key, keyCode) => {
+    const { ref } = mountEditor(`Before\n\n![Clip](${VIDEO_URI})\n\nAfter\n`);
+    await screen.findByTestId('inline-media-node');
+
+    // Nothing selected: the key leaves the node alone
+    await act(async () => {
+      fireEvent.keyDown(contentEditable(), { key, keyCode });
+    });
+    expect(screen.getByTestId('inline-media-node')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('inline-media-header'));
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('inline-media-node').className).toContain('ring-2');
+    });
+    await act(async () => {
+      fireEvent.keyDown(contentEditable(), { key, keyCode });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('inline-media-node')).not.toBeInTheDocument();
+    });
+    expect(getMarkdown(ref)).not.toContain(VIDEO_URI);
+  });
+
+  it('leaves a click on the player to playback: the node stays unselected', async () => {
+    mountEditor(`![Clip](${VIDEO_URI})\n`);
+    const video = await screen.findByTestId('inline-media-video');
+
+    await act(async () => {
+      fireEvent.click(video);
+    });
+
+    expect(screen.getByTestId('inline-media-node').className).not.toContain('ring-2');
+  });
+
+  it('hides the edit and delete buttons in a read-only editor', async () => {
+    mountEditor(`![Clip](${VIDEO_URI})\n`, { readOnly: true });
+    await screen.findByTestId('inline-media-node');
+
+    expect(screen.queryByTestId('inline-media-toolbar')).not.toBeInTheDocument();
+  });
+
+  it('never requests an external source before play, in the editor as in the reader', async () => {
+    mountEditor(`![Ext](https://example.com/clip.mp4)\n\n![Clip](${VIDEO_URI})\n`);
+    const players = await screen.findAllByTestId('inline-media-video');
+
+    expect(players[0]).toHaveAttribute('preload', 'none');
+    expect(players[1]).toHaveAttribute('preload', 'metadata');
+  });
+
+  it('claims a dragover from the item types alone, which is all a browser exposes mid-drag', async () => {
+    mountEditor('Text\n');
+    await act(async () => {});
+    const dragOver = (type: string) =>
+      fireEvent.dragOver(contentEditable(), {
+        dataTransfer: { files: [], items: [{ kind: 'file', type, getAsFile: () => null }], types: ['Files'] },
+      });
+
+    // fireEvent reports false once a handler called preventDefault, which is what allows the drop
+    expect(dragOver('video/mp4')).toBe(false);
+    expect(dragOver('text/plain')).toBe(true);
+  });
+
+  it('edits a node description through the dialog and keeps its source', async () => {
+    const { ref } = mountEditor(`![Clip](${VIDEO_URI})\n`);
+    await screen.findByTestId('inline-media-node');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
+    });
+    const altInput = await screen.findByTestId('video-dialog-alt-input');
+    expect(altInput).toHaveValue('Clip');
+    fireEvent.change(altInput, { target: { value: 'New clip' } });
+    await submitDialog();
+
+    await waitFor(() => {
+      expect(getMarkdown(ref)).toBe(`![New clip](${VIDEO_URI})`);
+    });
+    expect(screen.getByTestId('inline-media-header')).toHaveTextContent('New clip');
+    expect(screen.queryByTestId('video-dialog-alt-input')).not.toBeInTheDocument();
+  });
+
+  it('inserts a node from the toolbar dialog with a direct link', async () => {
+    const { ref } = mountEditor('Text\n');
+    await act(async () => {});
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('insert-inline-audio'));
+    });
+    const srcInput = await screen.findByTestId('audio-dialog-src-input');
+    fireEvent.change(srcInput, { target: { value: 'https://example.com/song.mp3' } });
+    await submitDialog();
+
+    await waitFor(() => {
+      expect(getMarkdown(ref)).toContain('![](https://example.com/song.mp3)');
+    });
+    expect(await screen.findByTestId('inline-media-audio')).toHaveAttribute('preload', 'none');
+    expect(screen.queryByTestId('audio-dialog-src-input')).not.toBeInTheDocument();
   });
 });

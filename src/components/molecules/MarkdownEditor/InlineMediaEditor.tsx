@@ -61,6 +61,9 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
   // Browsers can't load pubky:// URIs: prefer the session's object URL (also covers the CDN
   // readiness window right after upload), then the CDN, then pass an external URL through
   const previewSrc = previewResolver(src) ?? pubkyUriToCdnUrl(src, FileVariant.MAIN) ?? src;
+  // An external source gets no request before the author presses play, as in the reader: media
+  // elements carry no referrer policy, and the node mounts on every open and mode switch
+  const preload = src.startsWith('pubky://') ? 'metadata' : 'none';
 
   const removeNode = () => {
     const node = $getNodeByKey(nodeKey);
@@ -177,7 +180,7 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
           src={previewSrc}
           controls
           playsInline
-          preload="metadata"
+          preload={preload}
           aria-label={altText || undefined}
           className="w-full rounded-none"
           data-testid="inline-media-video"
@@ -187,7 +190,7 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
         <Audio
           src={previewSrc}
           controls
-          preload="metadata"
+          preload={preload}
           aria-label={altText || undefined}
           className="px-3 pb-3"
           data-testid="inline-media-audio"

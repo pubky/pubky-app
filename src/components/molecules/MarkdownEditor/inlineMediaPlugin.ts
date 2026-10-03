@@ -21,11 +21,14 @@ import {
 } from 'lexical';
 import type * as Mdast from 'mdast';
 import { ARTICLE_INLINE_NON_IMAGE_MIME_TYPES, ARTICLE_INLINE_SUPPORTED_MIME_TYPES } from '@/config/posts';
+import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload.types';
 import {
   getInlineMediaKindFromMime,
   inferMediaKindFromUrl,
   type InlineNonImageMediaKind,
 } from '@/libs/file/inlineMediaKind';
+import { Logger } from '@/libs/logger/logger';
+import { toast } from '@/molecules/Toaster/toast';
 import { $insertInlineMediaNode, $isInlineMediaNode, InlineMediaNode } from './InlineMediaNode';
 import type { InlineMediaDialogState, InlineMediaPluginParams, SaveInlineMediaParams } from './inlineMediaPlugin.types';
 
@@ -115,6 +118,15 @@ function resolveMediaKind(realm: Realm, url: string): InlineNonImageMediaKind | 
 const hasNonImageMedia = (files: File[]) =>
   files.some((file) => ARTICLE_INLINE_NON_IMAGE_MIME_TYPES.includes(file.type));
 
+/**
+ * While a drag is over the editor the data store is in protected mode: `files` is empty and
+ * `getAsFile()` returns null, so only the item types can say what is being dragged.
+ */
+const hasNonImageMediaItems = (dataTransfer: DataTransfer | null) =>
+  Array.from(dataTransfer?.items ?? []).some(
+    (item) => item.kind === 'file' && ARTICLE_INLINE_NON_IMAGE_MIME_TYPES.includes(item.type),
+  );
+
 function filesOf(dataTransfer: DataTransfer | null): File[] {
   if (!dataTransfer) return [];
   const files = Array.from(dataTransfer.files ?? []);
@@ -157,8 +169,12 @@ function handleMediaPayload(realm: Realm, editor: LexicalEditor, event: Event): 
         });
       }
     })
-    .catch(() => {
-      // The upload handler toasted the failure and tagged the rejection; nothing is inserted
+    .catch((error: unknown) => {
+      // A refused upload was already toasted and tagged by the upload handler; anything else is an
+      // insert that failed after the upload succeeded, which the author must hear about
+      if (error instanceof Error && error.name === INLINE_MEDIA_UPLOAD_REJECTION_NAME) return;
+      Logger.error('[inlineMediaPlugin] Failed to insert dropped or pasted media', { error });
+      toast({ variant: 'error', description: 'Could not insert the file. Try again.' });
     });
   return true;
 }
@@ -204,7 +220,7 @@ export const inlineMediaPlugin = realmPlugin<InlineMediaPluginParams>({
         editor.registerCommand(
           DRAGOVER_COMMAND,
           (event) => {
-            if (!hasNonImageMedia(filesOf(event.dataTransfer))) return false;
+            if (!hasNonImageMediaItems(event.dataTransfer)) return false;
             event.preventDefault();
             return true;
           },

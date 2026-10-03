@@ -11,7 +11,11 @@ import {
   type Spread,
 } from 'lexical';
 import type { JSX } from 'react';
-import type { InlineNonImageMediaKind } from '@/libs/file/inlineMediaKind';
+import {
+  inferMediaKindFromUrl,
+  type InlineNonImageMediaKind,
+  isInlineNonImageMediaKind,
+} from '@/libs/file/inlineMediaKind';
 import { InlineMediaEditor } from './InlineMediaEditor';
 
 export type SerializedInlineMediaNode = Spread<
@@ -49,7 +53,14 @@ export class InlineMediaNode extends DecoratorNode<JSX.Element> {
 
   static importJSON(serializedNode: SerializedInlineMediaNode): InlineMediaNode {
     const { src, altText, title, mediaKind } = serializedNode;
-    return $createInlineMediaNode({ src, altText, title, mediaKind });
+    // Pasted editor JSON is not this editor's: an unknown kind falls back to what the source says,
+    // then to the one rendering that never loads the source
+    return $createInlineMediaNode({
+      src,
+      altText,
+      title,
+      mediaKind: isInlineNonImageMediaKind(mediaKind) ? mediaKind : (inferMediaKindFromUrl(src) ?? 'pdf'),
+    });
   }
 
   constructor(src: string, altText: string, title: string, mediaKind: InlineNonImageMediaKind, key?: NodeKey) {

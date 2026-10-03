@@ -10,6 +10,11 @@ export const INLINE_MEDIA_KINDS: readonly InlineMediaKind[] = ['image', 'video',
 /** Media kinds that are not images: the ones a reader must route away from `<img>`. */
 export type InlineNonImageMediaKind = Exclude<InlineMediaKind, 'image'>;
 
+/** Runtime check for data that crosses a trust boundary, such as an editor node pasted as JSON. */
+export function isInlineNonImageMediaKind(value: unknown): value is InlineNonImageMediaKind {
+  return value === 'video' || value === 'audio' || value === 'pdf';
+}
+
 const VIDEO_EXTENSIONS = new Set(['mp4', 'mpeg', 'mpg', 'webm', 'mov', 'm4v', 'ogv']);
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'm4a', 'ogg', 'oga', 'flac']);
 const PDF_EXTENSIONS = new Set(['pdf']);

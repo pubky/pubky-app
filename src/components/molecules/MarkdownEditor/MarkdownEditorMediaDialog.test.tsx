@@ -27,6 +27,7 @@ const { mockRealm } = vi.hoisted(() => ({
     closeImageDialog: vi.fn(),
     mediaState: { type: 'inactive' } as MediaDialogState,
     mediaUploadHandler: null as ((file: File) => Promise<string>) | null,
+    resolveType: (_uri: string): string | null => null,
     saveMedia: vi.fn(),
     closeMediaDialog: vi.fn(),
   },
@@ -37,6 +38,7 @@ vi.mock('@/molecules/Toaster/toast', () => ({ toast: vi.fn() }));
 vi.mock('./inlineMediaPlugin', () => ({
   inlineMediaDialogState$: 'inlineMediaDialogState$',
   inlineMediaUploadHandler$: 'inlineMediaUploadHandler$',
+  inlineMediaTypeResolver$: 'inlineMediaTypeResolver$',
   saveInlineMedia$: 'saveInlineMedia$',
   closeInlineMediaDialog$: 'closeInlineMediaDialog$',
 }));
@@ -61,6 +63,7 @@ vi.mock('@mdxeditor/gurx', () => ({
     mockRealm.uploadHandler,
     mockRealm.mediaState,
     mockRealm.mediaUploadHandler,
+    mockRealm.resolveType,
   ]),
   usePublisher: vi.fn((cell: string) => publishers[cell]()),
 }));
@@ -233,6 +236,7 @@ describe('MarkdownEditorMediaDialog — video, audio and PDF', () => {
     mockRealm.uploadHandler = null;
     mockRealm.mediaState = { type: 'new', mediaKind: 'video' };
     mockRealm.mediaUploadHandler = vi.fn();
+    mockRealm.resolveType = () => null;
   });
 
   it.each([
@@ -309,6 +313,30 @@ describe('MarkdownEditorMediaDialog — video, audio and PDF', () => {
       mediaKind: 'video',
     });
     expect(mockRealm.saveImage).not.toHaveBeenCalled();
+  });
+
+  it('accepts a file URI the composer knows as this kind and refuses one it cannot type', () => {
+    mockRealm.resolveType = (uri) => (uri === VIDEO_URI ? 'video/mp4' : null);
+    render(<MarkdownEditorMediaDialog />);
+
+    fireEvent.change(screen.getByTestId('video-dialog-src-input'), {
+      target: { value: 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/files/unknown' },
+    });
+    submitForm();
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Enter a direct link to a video file.',
+    });
+    expect(mockRealm.saveMedia).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByTestId('video-dialog-src-input'), { target: { value: VIDEO_URI } });
+    submitForm();
+    expect(mockRealm.saveMedia).toHaveBeenCalledWith({
+      src: VIDEO_URI,
+      altText: '',
+      title: undefined,
+      mediaKind: 'video',
+    });
   });
 
   it('prefills when editing and keeps the title passthrough', () => {

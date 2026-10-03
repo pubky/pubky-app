@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getInlineMediaKindFromMime, inferMediaKindFromUrl, INLINE_MEDIA_KINDS } from './inlineMediaKind';
+import {
+  getInlineMediaKindFromMime,
+  inferMediaKindFromUrl,
+  INLINE_MEDIA_KINDS,
+  isInlineNonImageMediaKind,
+} from './inlineMediaKind';
 
 describe('getInlineMediaKindFromMime', () => {
   it.each([
@@ -28,6 +33,18 @@ describe('getInlineMediaKindFromMime', () => {
 
   it('lists every kind once', () => {
     expect(INLINE_MEDIA_KINDS).toEqual(['image', 'video', 'audio', 'pdf']);
+  });
+});
+
+describe('isInlineNonImageMediaKind', () => {
+  it('accepts the three non-image kinds and nothing else', () => {
+    expect(isInlineNonImageMediaKind('video')).toBe(true);
+    expect(isInlineNonImageMediaKind('audio')).toBe(true);
+    expect(isInlineNonImageMediaKind('pdf')).toBe(true);
+    expect(isInlineNonImageMediaKind('image')).toBe(false);
+    expect(isInlineNonImageMediaKind('')).toBe(false);
+    expect(isInlineNonImageMediaKind(undefined)).toBe(false);
+    expect(isInlineNonImageMediaKind({ kind: 'video' })).toBe(false);
   });
 });
 
