@@ -18,7 +18,7 @@ import {
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
 } from 'lexical';
-import { FileText, Pencil, Trash2 } from 'lucide-react';
+import { FileText, type LucideIcon, Music, Pencil, Trash2, Video as VideoIcon } from 'lucide-react';
 import { Audio } from '@/atoms/Audio/Audio';
 import { Button } from '@/atoms/Button/Button';
 import { Video } from '@/atoms/Video/Video';
@@ -37,10 +37,18 @@ interface InlineMediaEditorProps {
   nodeKey: string;
 }
 
+const KIND_LABELS: Record<InlineNonImageMediaKind, { label: string; Icon: LucideIcon }> = {
+  video: { label: 'Video', Icon: VideoIcon },
+  audio: { label: 'Audio', Icon: Music },
+  pdf: { label: 'PDF document', Icon: FileText },
+};
+
 /**
- * The in-editor rendering of an `InlineMediaNode`: a native player (or a PDF card) plus, while the
- * node is selected, a small toolbar to edit its description or delete it. Selection, delete and
- * keyboard handling mirror MDXEditor's `ImageEditor` so the two node kinds feel the same.
+ * The in-editor rendering of an `InlineMediaNode`: a header row (kind, description, and the
+ * edit-description and delete buttons) above a native player; a PDF is the header alone. The
+ * header is where the node is selected from: a click on the player itself is playback, since the
+ * native controls cover the whole element, so unlike an image the node needs its own click target.
+ * Delete and keyboard handling mirror MDXEditor's `ImageEditor`.
  */
 export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: InlineMediaEditorProps) {
   const [editor] = useLexicalComposerContext();
@@ -54,10 +62,18 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
   // readiness window right after upload), then the CDN, then pass an external URL through
   const previewSrc = previewResolver(src) ?? pubkyUriToCdnUrl(src, FileVariant.MAIN) ?? src;
 
+  const removeNode = () => {
+    const node = $getNodeByKey(nodeKey);
+    if ($isInlineMediaNode(node)) node.remove();
+  };
+
   useEffect(() => {
-    const removeNode = () => {
-      const node = $getNodeByKey(nodeKey);
-      if ($isInlineMediaNode(node)) node.remove();
+    // Delete and Backspace remove the node while it is the selection, as ImageEditor does
+    const onDelete = (event: KeyboardEvent) => {
+      if (!isSelected || !$isNodeSelection($getSelection())) return false;
+      event.preventDefault();
+      removeNode();
+      return true;
     };
 
     return mergeRegister(
@@ -78,26 +94,8 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
         },
         COMMAND_PRIORITY_LOW,
       ),
-      editor.registerCommand<KeyboardEvent>(
-        KEY_DELETE_COMMAND,
-        (event) => {
-          if (!isSelected || !$isNodeSelection($getSelection())) return false;
-          event.preventDefault();
-          removeNode();
-          return true;
-        },
-        COMMAND_PRIORITY_LOW,
-      ),
-      editor.registerCommand<KeyboardEvent>(
-        KEY_BACKSPACE_COMMAND,
-        (event) => {
-          if (!isSelected || !$isNodeSelection($getSelection())) return false;
-          event.preventDefault();
-          removeNode();
-          return true;
-        },
-        COMMAND_PRIORITY_LOW,
-      ),
+      editor.registerCommand<KeyboardEvent>(KEY_DELETE_COMMAND, onDelete, COMMAND_PRIORITY_LOW),
+      editor.registerCommand<KeyboardEvent>(KEY_BACKSPACE_COMMAND, onDelete, COMMAND_PRIORITY_LOW),
       editor.registerCommand<KeyboardEvent>(
         KEY_ENTER_COMMAND,
         (event) => {
@@ -125,13 +123,11 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
         COMMAND_PRIORITY_LOW,
       ),
     );
+    // removeNode only reads nodeKey, which is a dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, isSelected, nodeKey, setSelected, clearSelection]);
 
-  const deleteNode = () =>
-    editor.update(() => {
-      const node = $getNodeByKey(nodeKey);
-      if ($isInlineMediaNode(node)) node.remove();
-    });
+  const { label, Icon } = KIND_LABELS[mediaKind];
 
   return (
     <div
@@ -139,8 +135,43 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
       data-editor-block-type="inline-media"
       data-media-kind={mediaKind}
       data-testid="inline-media-node"
-      className={cn('relative my-2 max-w-full rounded-md', isSelected && 'ring-2 ring-ring')}
+      className={cn('my-2 max-w-full overflow-hidden rounded-md bg-muted', isSelected && 'ring-2 ring-ring')}
     >
+      <span
+        className="flex items-center justify-between gap-2 px-3 py-2 text-sm text-muted-foreground"
+        data-testid="inline-media-header"
+      >
+        <span className="flex min-w-0 items-center gap-x-2">
+          <Icon aria-hidden="true" className="size-4 shrink-0" />
+          <span className="min-w-0 truncate">{altText || label}</span>
+        </span>
+        {!readOnly && (
+          <span className="flex shrink-0 gap-1" data-testid="inline-media-toolbar">
+            <Button
+              ref={editButtonRef}
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7 rounded-full"
+              aria-label="Edit description"
+              onClick={() => openEditDialog({ mediaKind, nodeKey, initialValues: { src, altText, title } })}
+            >
+              <Pencil className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7 rounded-full"
+              aria-label="Delete media"
+              onClick={() => editor.update(removeNode)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </span>
+        )}
+      </span>
+
       {mediaKind === 'video' && (
         <Video
           src={previewSrc}
@@ -148,7 +179,7 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
           playsInline
           preload="metadata"
           aria-label={altText || undefined}
-          className="w-full"
+          className="w-full rounded-none"
           data-testid="inline-media-video"
         />
       )}
@@ -158,40 +189,9 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
           controls
           preload="metadata"
           aria-label={altText || undefined}
+          className="px-3 pb-3"
           data-testid="inline-media-audio"
         />
-      )}
-      {mediaKind === 'pdf' && (
-        <span className="flex items-center gap-x-2 rounded-md bg-muted p-4" data-testid="inline-media-file">
-          <FileText aria-hidden="true" className="size-6 shrink-0" />
-          <span className="min-w-0 truncate text-sm font-bold">{altText || 'PDF document'}</span>
-        </span>
-      )}
-
-      {!readOnly && isSelected && (
-        <span className="absolute top-2 right-2 flex gap-1" data-testid="inline-media-toolbar">
-          <Button
-            ref={editButtonRef}
-            type="button"
-            variant="secondary"
-            size="icon"
-            className="size-8 rounded-full"
-            aria-label="Edit description"
-            onClick={() => openEditDialog({ mediaKind, nodeKey, initialValues: { src, altText, title } })}
-          >
-            <Pencil className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            className="size-8 rounded-full"
-            aria-label="Delete media"
-            onClick={deleteNode}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </span>
       )}
     </div>
   );

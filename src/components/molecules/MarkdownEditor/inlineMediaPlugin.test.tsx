@@ -208,15 +208,20 @@ describe('inlineMediaPlugin', () => {
     expect(getMarkdown(ref)).toBe('Text');
   });
 
-  it('selects a media node on click and deletes it from the toolbar', async () => {
+  it('selects a media node from its header and deletes it from the always-visible toolbar', async () => {
     const { ref } = mountEditor(`Before\n\n![Clip](${VIDEO_URI})\n\nAfter\n`);
     const node = await screen.findByTestId('inline-media-node');
-    expect(screen.queryByTestId('inline-media-toolbar')).not.toBeInTheDocument();
+    expect(screen.getByTestId('inline-media-header')).toHaveTextContent('Clip');
+    expect(node.className).not.toContain('ring-2');
 
     await act(async () => {
-      fireEvent.click(node);
+      fireEvent.click(screen.getByTestId('inline-media-header'));
     });
-    const deleteButton = await screen.findByRole('button', { name: 'Delete media' });
+    await waitFor(() => {
+      expect(screen.getByTestId('inline-media-node').className).toContain('ring-2');
+    });
+
+    const deleteButton = screen.getByRole('button', { name: 'Delete media' });
 
     await act(async () => {
       fireEvent.click(deleteButton);
