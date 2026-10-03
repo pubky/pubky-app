@@ -142,6 +142,16 @@ describe('FeedApplication', () => {
     ...overrides,
   });
 
+  // The homeserver service normalizes every SDK rejection, so a PUT failure reaches commit as an AppError.
+  const createPutFailure = () =>
+    new AppError({
+      category: ErrorCategory.Server,
+      code: ServerErrorCode.INTERNAL_ERROR,
+      message: 'Failed to PUT to homeserver: 500',
+      service: ErrorService.Homeserver,
+      operation: 'request',
+    });
+
   // Helper functions
   const setupMocks = () => {
     return {
@@ -400,7 +410,7 @@ describe('FeedApplication', () => {
 
       createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: null }));
       rollbackSpy.mockResolvedValue(true);
-      requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
+      requestSpy.mockRejectedValue(createPutFailure());
 
       await expect(FeedApplication.persist({ userId: testUserId, params: mockParams })).rejects.toThrow(
         'Failed to PUT to homeserver: 500',
@@ -427,7 +437,7 @@ describe('FeedApplication', () => {
       readSpy.mockResolvedValue(priorFeed);
       createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: priorFeed }));
       rollbackSpy.mockResolvedValue(true);
-      requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
+      requestSpy.mockRejectedValue(createPutFailure());
 
       await expect(FeedApplication.persist({ userId: testUserId, params: mockParams })).rejects.toThrow(
         'Failed to PUT to homeserver: 500',
@@ -452,7 +462,7 @@ describe('FeedApplication', () => {
       const priorFeed = createMockFeedSchema({ name: 'Original Name', created_at: 1000000 });
       createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: priorFeed }));
       rollbackSpy.mockResolvedValue(true);
-      requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
+      requestSpy.mockRejectedValue(createPutFailure());
 
       await expect(FeedApplication.persist({ userId: testUserId, params: mockParams })).rejects.toThrow(
         'Failed to PUT to homeserver: 500',
@@ -468,7 +478,7 @@ describe('FeedApplication', () => {
       createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: null }));
       const rollbackError = new Error('IndexedDB unavailable');
       rollbackSpy.mockRejectedValue(rollbackError);
-      requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
+      requestSpy.mockRejectedValue(createPutFailure());
 
       await expect(FeedApplication.persist({ userId: testUserId, params: mockParams })).rejects.toThrow(
         'Failed to PUT to homeserver: 500',
@@ -479,6 +489,27 @@ describe('FeedApplication', () => {
         'Failed to rollback local feed write',
         expect.objectContaining({ feedId: 'feed123', rollbackError }),
       );
+    });
+
+    it('should normalize a non-AppError homeserver failure after rolling back', async () => {
+      const mockParams = createMockCreateParams();
+      const { createOrUpdateSpy, rollbackSpy, requestSpy } = setupMocks();
+
+      createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: null }));
+      rollbackSpy.mockResolvedValue(true);
+      requestSpy.mockRejectedValue(new Error('socket hang up'));
+
+      const thrown = await FeedApplication.persist({ userId: testUserId, params: mockParams }).catch((e) => e);
+
+      expect(thrown).toBeInstanceOf(AppError);
+      expect(thrown).toMatchObject({
+        category: ErrorCategory.Server,
+        code: ServerErrorCode.UNKNOWN_ERROR,
+        message: 'socket hang up',
+        service: ErrorService.Homeserver,
+        operation: 'commit',
+      });
+      expect(rollbackSpy).toHaveBeenCalledWith(expect.objectContaining({ feedId: 'feed123', priorFeed: null }));
     });
 
     it('should not log a failed rollback again when it is already an AppError', async () => {
@@ -496,7 +527,7 @@ describe('FeedApplication', () => {
           context: { table: 'feeds', id: 'feed123' },
         }),
       );
-      requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
+      requestSpy.mockRejectedValue(createPutFailure());
 
       await expect(FeedApplication.persist({ userId: testUserId, params: mockParams })).rejects.toThrow(
         'Failed to PUT to homeserver: 500',

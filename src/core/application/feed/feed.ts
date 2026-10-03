@@ -6,7 +6,7 @@ import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { isAppError } from '@/libs/error/error.utils';
+import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { FeedModel } from '@/models/feed/feed';
@@ -298,7 +298,7 @@ export class FeedApplication {
         if (!isAppError(rollbackError))
           Logger.error('Failed to rollback local feed write', { feedId: persistedFeed.id, rollbackError });
       }
-      throw error;
+      throw toAppError(error, ErrorService.Homeserver, 'commit');
     }
 
     return persistedFeed;
