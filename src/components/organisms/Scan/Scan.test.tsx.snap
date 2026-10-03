@@ -80,6 +80,7 @@ exports[`Scan Components - Snapshots > ScanFooter - Snapshots > matches snapshot
 >
   Use 
   <a
+    class="underline"
     data-testid="link"
     href="https://pubkyring.app/"
     target="_blank"
@@ -88,6 +89,7 @@ exports[`Scan Components - Snapshots > ScanFooter - Snapshots > matches snapshot
   </a>
    or any other 
   <a
+    class="underline"
     data-testid="link"
     href="https://pubky.org"
     target="_blank"

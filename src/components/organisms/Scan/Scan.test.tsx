@@ -169,8 +169,18 @@ vi.mock('@/atoms/FooterLinks/FooterLinks', () => {
 
 vi.mock('@/atoms/Link/Link', () => {
   return {
-    Link: ({ children, href, target }: { children: React.ReactNode; href: string; target?: string }) => (
-      <a data-testid="link" href={href} target={target}>
+    Link: ({
+      children,
+      href,
+      target,
+      className,
+    }: {
+      children: React.ReactNode;
+      href: string;
+      target?: string;
+      className?: string;
+    }) => (
+      <a data-testid="link" href={href} target={target} className={className}>
         {children}
       </a>
     ),
@@ -374,6 +384,14 @@ describe('ScanFooter', () => {
 
     const coreLink = links.find((link) => link.getAttribute('href') === getPubkyCoreLink());
     expect(coreLink).toBeDefined();
+  });
+
+  it('underlines the in-text links so they are not distinguished by colour alone', () => {
+    render(<ScanFooter />);
+
+    screen.getAllByRole('link').forEach((link) => {
+      expect(link).toHaveClass('underline');
+    });
   });
 });
 
