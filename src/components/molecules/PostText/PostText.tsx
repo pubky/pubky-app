@@ -9,7 +9,7 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { remarkDisallowMarkdownLinks, remarkPlaintextTables } from '@/libs/post/markdown';
 import { cn } from '@/libs/utils/utils';
-import { ArticleInlineImage } from '@/molecules/ArticleInlineImage/ArticleInlineImage';
+import { ArticleInlineMedia } from '@/molecules/ArticleInlineMedia/ArticleInlineMedia';
 import { PostMentions } from '@/organisms/PostMentions/PostMentions';
 import { PostCodeBlock } from '../PostCodeBlock/PostCodeBlock';
 import { PostHashtags } from '../PostHashtags/PostHashtags';
@@ -34,10 +34,10 @@ import { PostTextLink } from './PostTextLink';
 // prose styling instead (outside markers with padding), which handles loose items.
 const compactListClassName = (listStyle: 'list-decimal' | 'list-disc') =>
   cn('list-inside whitespace-normal [&>li>p:first-child]:inline', listStyle);
-// Image `src` values pass through raw so ArticleInlineImage can resolve the
+// Image `src` values pass through raw so ArticleInlineMedia can resolve the
 // custom schemes (`attachment:{n}`, `pubky://`) itself — the default transform
 // would strip them. Everything else (hrefs, …) keeps the default policy.
-const articleImageUrlTransform: UrlTransform = (url, key, node) =>
+const articleMediaUrlTransform: UrlTransform = (url, key, node) =>
   key === 'src' && node.tagName === 'img' ? url : defaultUrlTransform(url);
 
 /**
@@ -64,7 +64,7 @@ export const PostText = memo(function PostText({
   content,
   isArticle,
   fullArticle,
-  articleImages,
+  articleMedia,
   compactUrls = true,
   onLinkClick,
   className,
@@ -76,17 +76,17 @@ export const PostText = memo(function PostText({
   const contentTruncated = !isArticle && !onPostPage && !isExpanded ? truncatePostPreviewText(content) : null;
   const showMoreButton = Boolean(contentTruncated);
 
-  // Inline images render only on surfaces that explicitly pass articleImages
-  // (the article detail page) — never based on the current pathname, which
-  // would also full-render embedded article cards on post pages.
-  const renderArticleImages = Boolean(isArticle && articleImages);
+  // Inline media renders only on surfaces that explicitly pass articleMedia
+  // (the article detail page, unlocked content) — never based on the current
+  // pathname, which would also full-render embedded article cards on post pages.
+  const renderArticleMedia = Boolean(isArticle && articleMedia);
 
   const remarkPlugins = [
     remarkGfm,
     remarkPlaintextTables,
     ...(isArticle
       ? [
-          ...(renderArticleImages ? [] : [remarkStripImages]),
+          ...(renderArticleMedia ? [] : [remarkStripImages]),
           ...(!onPostPage && !fullArticle ? [remarkExtractFirstParagraph] : []),
         ]
       : [remarkDisallowMarkdownLinks]),
@@ -115,9 +115,9 @@ export const PostText = memo(function PostText({
       'hr',
       'button',
       ...(isArticle ? ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] : []),
-      ...(renderArticleImages ? ['img'] : []),
+      ...(renderArticleMedia ? ['img'] : []),
     ],
-    [isArticle, renderArticleImages],
+    [isArticle, renderArticleMedia],
   );
 
   return (
@@ -146,16 +146,17 @@ export const PostText = memo(function PostText({
         allowedElements={allowedElements}
         unwrapDisallowed
         remarkPlugins={remarkPlugins}
-        urlTransform={renderArticleImages ? articleImageUrlTransform : undefined}
+        urlTransform={renderArticleMedia ? articleMediaUrlTransform : undefined}
         components={{
-          ...(renderArticleImages && articleImages
+          ...(renderArticleMedia && articleMedia
             ? {
+                // Every inline media kind arrives as an `img` node; ArticleInlineMedia routes it
                 img(props: { src?: string | Blob; alt?: string }) {
                   return (
-                    <ArticleInlineImage
+                    <ArticleInlineMedia
                       src={typeof props.src === 'string' ? props.src : undefined}
                       alt={props.alt}
-                      {...articleImages}
+                      {...articleMedia}
                     />
                   );
                 },

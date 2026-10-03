@@ -1,0 +1,150 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ArticleInlineMedia - Snapshots > matches snapshot for a PDF card 1`] = `
+<span
+  class="my-4 flex max-w-full items-center justify-between gap-2 rounded-md bg-muted p-4"
+  data-testid="article-inline-file"
+>
+  <span
+    class="flex min-w-0 items-center gap-x-2"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-file-text size-6 shrink-0"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+      />
+      <path
+        d="M14 2v5a1 1 0 0 0 1 1h5"
+      />
+      <path
+        d="M10 9H8"
+      />
+      <path
+        d="M16 13H8"
+      />
+      <path
+        d="M16 17H8"
+      />
+    </svg>
+    <span
+      class="min-w-0 truncate text-sm font-bold"
+    >
+      paper.pdf
+    </span>
+  </span>
+  <a
+    aria-label="Open PDF"
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs text-foreground border-card size-9 h-8 w-10 shrink-0 border-none bg-card hover:bg-card/70"
+    data-size="icon"
+    data-slot="button"
+    data-variant="dark"
+    href="cdn://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:paper?v=main"
+    rel="noopener noreferrer"
+    target="_blank"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-download size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 15V3"
+      />
+      <path
+        d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+      />
+      <path
+        d="m7 10 5 5 5-5"
+      />
+    </svg>
+  </a>
+</span>
+`;
+
+exports[`ArticleInlineMedia - Snapshots > matches snapshot for a failed video 1`] = `
+<span
+  aria-label="Broken clip"
+  class="my-4 inline-flex max-w-full items-center gap-2 rounded-md border border-dashed border-input px-4 py-3 text-sm text-muted-foreground"
+  data-testid="article-inline-media-fallback"
+  role="img"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-video-off size-4 shrink-0"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M10.66 6H14a2 2 0 0 1 2 2v2.5l5.248-3.062A.5.5 0 0 1 22 7.87v8.196"
+    />
+    <path
+      d="M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"
+    />
+    <path
+      d="m2 2 20 20"
+    />
+  </svg>
+  <span
+    class="min-w-0 truncate"
+  >
+    Broken clip
+  </span>
+</span>
+`;
+
+exports[`ArticleInlineMedia - Snapshots > matches snapshot for a loading slot 1`] = `
+<span
+  aria-hidden="true"
+  class="my-4 block aspect-video w-full max-w-full animate-pulse rounded-md bg-muted"
+  data-testid="article-inline-media-loading"
+/>
+`;
+
+exports[`ArticleInlineMedia - Snapshots > matches snapshot for a video slot 1`] = `
+<video
+  aria-label="A clip"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring my-4 aspect-video w-full"
+  controls=""
+  data-testid="article-inline-video"
+  playsinline=""
+  preload="metadata"
+  src="cdn://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:clip?v=main"
+/>
+`;
+
+exports[`ArticleInlineMedia - Snapshots > matches snapshot for an audio slot 1`] = `
+<audio
+  aria-label="A song"
+  class="w-full my-4"
+  controls=""
+  data-testid="article-inline-audio"
+  preload="metadata"
+  src="cdn://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:song?v=main"
+/>
+`;

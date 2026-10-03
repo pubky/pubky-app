@@ -1,6 +1,7 @@
 import React, { type ElementType, forwardRef, type ReactNode, useImperativeHandle } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import {
   POST_COVER_DESKTOP_FALLBACK_VARIANT,
@@ -8,6 +9,7 @@ import {
   POST_COVER_DESKTOP_VARIANT,
   POST_COVER_MOBILE_VARIANT,
 } from '@/libs/post/postCoverVariant';
+import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -30,6 +32,10 @@ const failCoverLoad = (failedSrc: string) => {
 
 vi.mock('@/hooks/usePostArticle/usePostArticle', () => ({
   usePostArticle: vi.fn(),
+}));
+
+vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', () => ({
+  useAttachmentsMetadata: vi.fn(() => ({ files: [], isLoading: false })),
 }));
 
 vi.mock('@/hooks/useLinkConfirmation/useLinkConfirmation', () => ({
@@ -70,21 +76,21 @@ vi.mock('@/atoms/Typography/Typography', () => ({
 }));
 
 // Recorded rather than rendered, so the snapshots do not carry it.
-const postTextProps = vi.hoisted(() => ({ articleImages: undefined as unknown }));
+const postTextProps = vi.hoisted(() => ({ articleMedia: undefined as unknown }));
 
 vi.mock('@/molecules/PostText/PostText', () => ({
   PostText: ({
     content,
     isArticle,
     fullArticle,
-    articleImages,
+    articleMedia,
   }: {
     content: string;
     isArticle?: boolean;
     fullArticle?: boolean;
-    articleImages?: unknown;
+    articleMedia?: unknown;
   }) => {
-    postTextProps.articleImages = articleImages;
+    postTextProps.articleMedia = articleMedia;
     return (
       <div data-testid="post-text" data-is-article={isArticle} data-full-article={fullArticle}>
         {content}
@@ -220,6 +226,7 @@ vi.mock('../PostInlineTagsActions/PostInlineTagsActions', () => ({
 }));
 
 const mockUsePostArticle = vi.mocked(usePostArticle);
+const mockUseAttachmentsMetadata = vi.mocked(useAttachmentsMetadata);
 const mockUseLocalFilesStore = vi.mocked(useLocalFilesStore);
 
 describe('PostArticleDetail', () => {
@@ -251,6 +258,7 @@ describe('PostArticleDetail', () => {
       isCoverLoading: false,
     });
     mockUseLocalFilesStore.mockImplementation((selector) => selector(createMockLocalFilesStore()));
+    mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
   });
 
   it('renders article detail content with inline tags and actions in columns layout', () => {
@@ -360,10 +368,60 @@ describe('PostArticleDetail', () => {
     expect(screen.getByTestId('post-text')).toHaveAttribute('data-full-article', 'true');
   });
 
-  it("resolves body images through the post's own attachments and their owner", () => {
+  it("resolves body media through the post's own attachments, their owner and their file rows", () => {
+    const attachments = ['pubky://user123/pub/pubky.app/files/cover', 'pubky://user123/pub/pubky.app/files/clip'];
+    const files: NexusFileDetails[] = [
+      {
+        id: 'user123:clip',
+        uri: attachments[1],
+        owner_id: 'user123',
+        content_type: 'video/mp4',
+        name: 'clip.mp4',
+        src: 'pubky://user123/pub/pubky.app/blobs/clip',
+        size: 1024,
+        created_at: 0,
+        indexed_at: 0,
+        metadata: {},
+        urls: { main: 'main', feed: 'feed', small: 'small' },
+      },
+    ];
+    mockUseAttachmentsMetadata.mockReturnValue({ files, isLoading: false });
+
+    render(<PostArticleDetail {...defaultProps} attachments={attachments} />);
+
+    expect(postTextProps.articleMedia).toEqual({
+      attachments,
+      authorId: 'user123',
+      postId: 'user123:post456',
+      files,
+      metadataSettled: true,
+    });
+  });
+
+  it('types the inline slots only: the cover slot is left to usePostArticle', () => {
+    const attachments = ['pubky://user123/pub/pubky.app/files/cover', 'pubky://user123/pub/pubky.app/files/clip'];
+
+    render(<PostArticleDetail {...defaultProps} attachments={attachments} />);
+    expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [attachments[1]] });
+
+    // A body that references slot 0 has no cover, so slot 0 is inline and gets typed too
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Article Title',
+      body: 'Text with ![a](attachment:0)',
+      coverImage: null,
+      hasCover: false,
+      isCoverLoading: false,
+    });
+    render(<PostArticleDetail {...defaultProps} attachments={attachments} />);
+    expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: attachments });
+  });
+
+  it('reports the metadata read as unsettled while the inline rows are loading', () => {
+    mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: true });
+
     render(<PostArticleDetail {...defaultProps} />);
 
-    expect(postTextProps.articleImages).toEqual({ attachments: [], authorId: 'user123', postId: 'user123:post456' });
+    expect(postTextProps.articleMedia).toEqual(expect.objectContaining({ metadataSettled: false }));
   });
 
   it('renders dialogs in closed state initially', () => {
@@ -976,6 +1034,50 @@ describe('PostArticleDetail', () => {
   it('matches snapshot in wide layout', () => {
     useHomeStore.getState().setLayout(LAYOUT.WIDE);
 
+    const { container } = render(<PostArticleDetail {...defaultProps} />);
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostArticleDetail - Mobile Snapshots', () => {
+  const defaultProps = {
+    postId: 'user123:post456',
+    content: '{"title":"Test Article Title","body":"Test article body content"}',
+    attachments: null,
+    isBlurred: false,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useHomeStore.getState().reset();
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Article Title',
+      body: 'Test article body content',
+      coverImage: null,
+      hasCover: true,
+      isCoverLoading: false,
+    });
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector({
+        profile: null,
+        posts: {},
+        collections: {},
+        setProfile: vi.fn(),
+        setPostAttachments: vi.fn(),
+        setCollectionCover: vi.fn(),
+        reset: vi.fn(),
+      }),
+    );
+    mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const { container } = render(<PostArticleDetail {...defaultProps} />);
 
     expect(container.firstChild).toMatchSnapshot();

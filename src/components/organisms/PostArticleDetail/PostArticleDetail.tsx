@@ -3,8 +3,10 @@
 import { type SyntheticEvent, useRef, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
+import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import {
@@ -73,6 +75,15 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
     localCoverType: localAttachments?.[0]?.type,
   });
+
+  // Inline slots are typed from their file rows (the markdown never says video or image). The
+  // cover slot is left out: `usePostArticle` already resolves it, and a body that references slot 0
+  // has no cover, so slot 0 is included exactly when it is inline.
+  const { files: inlineFiles, isLoading: inlineFilesLoading } = useAttachmentsMetadata({
+    fileUris: (attachments ?? []).slice(hasCover ? 1 : 0),
+  });
+  // Players the reader scrolled past stop playing, as post attachments do
+  const mediaContainerRef = usePauseMediaOutsideViewport();
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
@@ -196,7 +207,13 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
         content={body}
         isArticle
         fullArticle
-        articleImages={{ attachments: attachments ?? [], authorId: articleAuthorId, postId }}
+        articleMedia={{
+          attachments: attachments ?? [],
+          authorId: articleAuthorId,
+          postId,
+          files: inlineFiles,
+          metadataSettled: !inlineFilesLoading,
+        }}
         onLinkClick={handleLinkClick}
       />
     </>
@@ -205,7 +222,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   return (
     <>
       <Container className={cn('mb-6 gap-6', !isColumnsLayout && 'grid grid-cols-1 lg:grid-cols-3')}>
-        <Container className={cn(!isColumnsLayout && 'lg:col-span-2')}>
+        <Container ref={mediaContainerRef} className={cn(!isColumnsLayout && 'lg:col-span-2')}>
           {articleHeader}
           {articleBody}
           {!isColumnsLayout && (
