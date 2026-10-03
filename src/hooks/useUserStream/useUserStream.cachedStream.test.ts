@@ -96,7 +96,7 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
     expect(shownIds(result)).toEqual(RECOMMENDED.slice(0, WHO_TO_FOLLOW_PAGE_SIZE));
   });
 
-  it('refills once past users the viewer already follows, merging the overlap', async () => {
+  it('fills in for followed users from the cached tail without asking Nexus', async () => {
     await seedCachedStream(25);
     const followed = RECOMMENDED.slice(0, 3);
     await UserRelationshipsModel.bulkSave(followed.map((id) => [id, { following: true, followed_by: false }]));
@@ -107,9 +107,24 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
       expect(result.current.users).toHaveLength(WHO_TO_FOLLOW_PAGE_SIZE);
     });
 
-    expect(requestedPages()).toEqual([{ skip: WHO_TO_FOLLOW_PAGE_SIZE, limit: NEXUS_USER_IDS_MAX_LIMIT }]);
-    // The cached row minus the followed users, then the sampled ids the row did not hold yet.
+    expect(fetchStream).not.toHaveBeenCalled();
     expect(shownIds(result)).toEqual(RECOMMENDED.slice(3, 3 + WHO_TO_FOLLOW_PAGE_SIZE));
+  });
+
+  it('asks Nexus once, within the limit, when the cached tail does not cover the followed users', async () => {
+    await seedCachedStream(25);
+    const followed = RECOMMENDED.slice(0, 6);
+    await UserRelationshipsModel.bulkSave(followed.map((id) => [id, { following: true, followed_by: false }]));
+
+    const { result } = renderHook(() => useUserStream(whoToFollowPageParams));
+
+    await waitFor(() => {
+      expect(result.current.users).toHaveLength(WHO_TO_FOLLOW_PAGE_SIZE);
+    });
+
+    expect(requestedPages()).toEqual([{ skip: 25, limit: NEXUS_USER_IDS_MAX_LIMIT }]);
+    // The cached row minus the followed users, then the sampled ids the row did not hold yet.
+    expect(shownIds(result)).toEqual(RECOMMENDED.slice(6, 6 + WHO_TO_FOLLOW_PAGE_SIZE));
   });
 
   it('serves a revisit from the cached row without asking Nexus', async () => {

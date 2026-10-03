@@ -680,17 +680,13 @@ describe('useUserStream', () => {
       expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
     });
 
-    it('makes one bounded refill request when eligible recommendations fall below threshold', async () => {
+    it('makes one bounded refill read when eligible recommendations fall below threshold', async () => {
       const ids = ['user-1', 'user-2', 'user-3'];
+      // The read past the first slice finds nothing cached and goes to Nexus (a `skip` comes back)
       mockGetOrFetchStreamSlice.mockResolvedValue({
         nextPageIds: ids,
         skip: ids.length,
         isExhausted: false,
-      });
-      mockRefreshStreamSlice.mockResolvedValue({
-        nextPageIds: ['user-4', 'user-5'],
-        skip: 5,
-        isExhausted: true,
       });
       mockLiveQueryMaps({
         details: createDetailsMap(ids),
@@ -708,13 +704,54 @@ describe('useUserStream', () => {
       );
 
       await waitFor(() => {
-        expect(mockRefreshStreamSlice).toHaveBeenCalledTimes(1);
+        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
       });
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(mockRefreshStreamSlice).toHaveBeenCalledWith({
+      expect(mockGetOrFetchStreamSlice).toHaveBeenLastCalledWith({
         streamId: UserStreamTypes.RECOMMENDED,
         limit: DEFAULT_USER_STREAM_BUFFER_SIZE,
         skip: ids.length,
+        allowPartialCache: true,
+      });
+      expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
+    });
+
+    it('asks Nexus for fresh candidates only when the cached tail was still short', async () => {
+      const ids = ['user-1', 'user-2', 'user-3'];
+      const cachedTail = ['user-4'];
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce({ nextPageIds: ids, skip: undefined, isExhausted: false })
+        .mockResolvedValueOnce({ nextPageIds: cachedTail, skip: undefined, isExhausted: false });
+      mockRefreshStreamSlice.mockResolvedValue({
+        nextPageIds: ['user-5', 'user-6'],
+        skip: 6,
+        isExhausted: true,
+      });
+      mockLiveQueryMaps({
+        details: createDetailsMap([...ids, ...cachedTail]),
+        relationships: new Map([...ids, ...cachedTail].map((id) => [id, { id, following: false, followed_by: false }])),
+      });
+
+      renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+          refillThreshold: 6,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(mockRefreshStreamSlice).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+      expect(mockRefreshStreamSlice).toHaveBeenCalledWith({
+        streamId: UserStreamTypes.RECOMMENDED,
+        limit: DEFAULT_USER_STREAM_BUFFER_SIZE,
+        skip: ids.length + cachedTail.length,
       });
     });
   });
