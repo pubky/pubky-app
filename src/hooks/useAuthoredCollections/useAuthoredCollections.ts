@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { PostController } from '@/controllers/post/post';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
@@ -15,18 +16,28 @@ type UseAuthoredCollectionsResult = {
   isLoading: boolean;
 };
 
-export function useAuthoredCollections(enabled = true): UseAuthoredCollectionsResult {
+export function useAuthoredCollections(enabled = true, localReadVersion = 0): UseAuthoredCollectionsResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   const { data, isLoading } = useLocalFirstQuery<AuthoredCollections>({
     queryFn: () => PostController.getAuthoredCollections({ authorId: currentUserPubky! }),
     fetchFn: () => PostController.fetchAuthoredCollections({ authorId: currentUserPubky!, viewerId: currentUserPubky }),
-    deps: [currentUserPubky],
+    deps: [currentUserPubky, localReadVersion],
     enabled: enabled && !!currentUserPubky,
   });
 
+  // A completed write can precede its live-query notification. A new version
+  // forces a local read; keep the existing rows mounted while that read resolves.
+  const [snapshot, setSnapshot] = useState({ viewerId: currentUserPubky, data });
+  if (snapshot.viewerId !== currentUserPubky) {
+    setSnapshot({ viewerId: currentUserPubky, data: undefined });
+  } else if (data !== undefined && snapshot.data !== data) {
+    setSnapshot({ viewerId: currentUserPubky, data });
+  }
+  const previousData = enabled && snapshot.viewerId === currentUserPubky ? snapshot.data : undefined;
+
   return {
-    collections: data ?? [],
+    collections: (data === undefined && localReadVersion > 0 ? previousData : data) ?? [],
     isLoading,
   };
 }

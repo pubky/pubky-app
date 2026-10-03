@@ -322,6 +322,7 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
   const feedVariant = feed?.variant;
   const feedCollectionId = feed?.collectionId;
   const removePosts = feed?.removePosts;
+  const retainPost = feed?.retainPost;
   const [open, setOpen] = useState(false);
   const saveTargets = usePostSaveTargets(postId, { isPickerOpen: open });
   const isBookmarkBusy = saveTargets.isBookmarkLoading || saveTargets.isBookmarkToggling;
@@ -341,6 +342,18 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
     currentCollectionTarget !== undefined &&
     !currentCollectionTarget.isUpdating &&
     !currentCollectionTarget.isSaved;
+
+  const shouldRetainCollectionCard =
+    currentCollectionTarget !== undefined &&
+    (open ||
+      currentCollectionTarget.isUpdating ||
+      // The picker's and feed's live queries can observe a rollback in separate
+      // renders. Release only after the feed has also observed the restored item.
+      (currentCollectionTarget.isSaved && feed?.collectionMembershipPostIds?.includes(postId) === false));
+  useEffect(() => {
+    if (!shouldRetainCollectionCard || !retainPost) return;
+    return retainPost(postId);
+  }, [postId, retainPost, shouldRetainCollectionCard]);
 
   // Closing the picker commits the save session. On finite library feeds, a post
   // that no longer belongs to the current target should leave the grid so the

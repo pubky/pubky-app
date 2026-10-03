@@ -11,6 +11,7 @@ import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { isCollectionItemsStream, isSkipPaginatedStream } from '@/models/stream/post/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
+import { useCollectionStreamMembership } from './useStreamPagination.collection';
 import type { UseStreamPaginationOptions, UseStreamPaginationResult } from './useStreamPagination.types';
 
 function resolveDisplayedPostIds(
@@ -70,6 +71,7 @@ export function useStreamPagination({
   limit = NEXUS_POSTS_PER_PAGE,
   resetOnStreamChange = true,
   preserveCachedStream = false,
+  collectionMembership,
   onError,
 }: UseStreamPaginationOptions): UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);
@@ -311,9 +313,9 @@ export function useStreamPagination({
    * Load more function - fetches next page
    */
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
+    if (loading || loadingMore || !hasMore) return;
     await fetchStreamSlice(false);
-  }, [loadingMore, hasMore, fetchStreamSlice]);
+  }, [loading, loadingMore, hasMore, fetchStreamSlice]);
 
   /**
    * Add post(s) to the timeline, sorted by timestamp
@@ -510,33 +512,32 @@ export function useStreamPagination({
   // Inert result: an undefined `streamId` means the consumer is not paginating
   // right now (e.g. a closed picker). Report an empty settled stream and no-op
   // every action so callers never render a permanent loading state.
-  if (!streamId) {
-    return {
-      postIds: [],
-      loading: false,
-      loadingMore: false,
-      error: null,
-      hasMore: false,
-      loadMore: async () => {},
-      refresh: async () => {},
-      prependPosts: async () => {},
-      prependOptimisticPosts: () => {},
-      removePosts: () => {},
-      removePostsOptimistically: () => ({ commit: () => {}, rollback: () => {} }),
-    };
-  }
-
-  return {
-    postIds,
-    loading,
-    loadingMore,
-    error,
-    hasMore,
-    loadMore,
-    refresh,
-    prependPosts,
-    prependOptimisticPosts,
-    removePosts,
-    removePostsOptimistically,
-  };
+  const result: UseStreamPaginationResult = !streamId
+    ? {
+        postIds: [],
+        loading: false,
+        loadingMore: false,
+        error: null,
+        hasMore: false,
+        loadMore: async () => {},
+        refresh: async () => {},
+        prependPosts: async () => {},
+        prependOptimisticPosts: () => {},
+        removePosts: () => {},
+        removePostsOptimistically: () => ({ commit: () => {}, rollback: () => {} }),
+      }
+    : {
+        postIds,
+        loading,
+        loadingMore,
+        error,
+        hasMore,
+        loadMore,
+        refresh,
+        prependPosts,
+        prependOptimisticPosts,
+        removePosts,
+        removePostsOptimistically,
+      };
+  return useCollectionStreamMembership(streamId, collectionMembership, result);
 }

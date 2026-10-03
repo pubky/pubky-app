@@ -96,11 +96,24 @@ describe('useAuthoredCollections', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it('keeps rows during a completion read without leaking them to another viewer', () => {
+    const { result, rerender } = renderHook(({ version }) => useAuthoredCollections(true, version), {
+      initialProps: { version: 0 },
+    });
+    mocks.localFirstResult = { data: undefined, isLoading: true };
+    rerender({ version: 1 });
+    expect(result.current.collections).toEqual(authoredCollections);
+    expect(result.current.isLoading).toBe(true);
+    mocks.currentUserPubky = 'other-user';
+    rerender({ version: 1 });
+    expect(result.current.collections).toEqual([]);
+  });
+
   it('wires local and network collection reads to the current user', async () => {
     renderHook(() => useAuthoredCollections());
 
     expect(mocks.capturedParams).toMatchObject({
-      deps: ['current-user'],
+      deps: ['current-user', 0],
       enabled: true,
     });
 
@@ -126,7 +139,7 @@ describe('useAuthoredCollections', () => {
     expect(result.current.collections).toEqual([]);
     expect(result.current.isLoading).toBe(false);
     expect(mocks.capturedParams).toMatchObject({
-      deps: [null],
+      deps: [null, 0],
       enabled: false,
     });
   });
@@ -135,7 +148,7 @@ describe('useAuthoredCollections', () => {
     renderHook(() => useAuthoredCollections(false));
 
     expect(mocks.capturedParams).toMatchObject({
-      deps: ['current-user'],
+      deps: ['current-user', 0],
       enabled: false,
     });
   });

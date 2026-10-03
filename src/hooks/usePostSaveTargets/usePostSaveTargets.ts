@@ -53,7 +53,11 @@ export function usePostSaveTargets(
 ): UsePostSaveTargetsResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const bookmark = useBookmark(postId);
-  const { collections, isLoading: isCollectionsLoading } = useAuthoredCollections(Boolean(currentUserPubky));
+  const [localReadVersion, setLocalReadVersion] = useState(0);
+  const { collections, isLoading: isCollectionsLoading } = useAuthoredCollections(
+    Boolean(currentUserPubky),
+    localReadVersion,
+  );
   // `useAuthoredCollections` reads the whole cached stream, so it already renders
   // every page this driver persists: the picker list grows through the live read
   // rather than through a page-scoped list that would shrink back to one page.
@@ -76,13 +80,17 @@ export function usePostSaveTargets(
   const { pubky, id } = parseCompositeId(postId);
   const postUri = postUriBuilder(pubky, id);
 
-  const saveTargets: PostSaveCollectionTarget[] = collections.map((collection) => ({
-    id: collection.details.id,
-    name: collection.content.name,
-    description: collection.content.description ?? '',
-    isSaved: (collection.content.items ?? []).includes(postUri),
-    isUpdating: updatingCollectionIds.has(collection.details.id),
-  }));
+  const saveTargets: PostSaveCollectionTarget[] = collections.map((collection) => {
+    const id = collection.details.id;
+    const isSaved = (collection.content.items ?? []).includes(postUri);
+    return {
+      id,
+      name: collection.content.name,
+      description: collection.content.description ?? '',
+      isSaved,
+      isUpdating: updatingCollectionIds.has(id) || (localReadVersion > 0 && isCollectionsLoading),
+    };
+  });
 
   const setCollectionUpdating = (collectionId: string, isUpdating: boolean) => {
     setUpdatingCollectionIds((current) => {
@@ -118,6 +126,10 @@ export function usePostSaveTargets(
         description: isAppError(error) ? error.message : 'Failed to update collection.',
       });
     } finally {
+      // Observe the current database after success/rollback, including writes
+      // from other pickers. Waiting for an expected boolean can never settle
+      // when another writer has already superseded this operation.
+      setLocalReadVersion((version) => version + 1);
       setCollectionUpdating(collectionId, false);
     }
   };
@@ -153,7 +165,7 @@ export function usePostSaveTargets(
     isBookmarkLoading: bookmark.isLoading,
     isBookmarkToggling: bookmark.isToggling,
     collections: saveTargets,
-    isCollectionsLoading,
+    isCollectionsLoading: isCollectionsLoading && collections.length === 0,
     isCreatingCollection,
     hasMoreCollections,
     isCollectionsLoadingMore,

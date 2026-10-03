@@ -240,26 +240,17 @@ function CollectionTimelineFeed({
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   // The envelope's `items` (a live Dexie query) is the local-first source of
-  // truth for ordering; the Nexus `collection` stream re-indexes asynchronously
-  // and can serve a stale order right after an add/remove/reorder commit.
-  // Sorting the stream's ids by the envelope makes commits render instantly.
-  const { postDetails } = usePostDetails(collectionId);
-  const envelopeItems = postDetails ? parseCollectionContent(postDetails.content)?.items : undefined;
+  // truth for membership and ordering; the Nexus `collection` stream re-indexes
+  // asynchronously and may still be empty right after a local save.
+  const { postDetails, isLoading: isCollectionLoading } = usePostDetails(collectionId);
+  const envelopeItems =
+    postDetails === undefined || isCollectionLoading
+      ? undefined
+      : (parseCollectionContent(postDetails?.content ?? '')?.items ?? []);
   const membershipPostIds = collectionItemsToPostIds(envelopeItems);
 
-  // Viewers also hand the membership to the feed: the items stream is fetched
-  // once and never polled, so when the TTL coordinator refreshes the envelope
-  // (the owner added or removed posts elsewhere) the feed applies the delta in
-  // place and the grid tracks the count badge. Guests are included: the hero
-  // subscribes the envelope to the public TTL refresh (ADR 0020), so their
-  // count badge updates and the grid must follow it. One exclusion:
-  // - Owners: their own flows already update this feed (optimistic inserts
-  //   from the add dialog / FAB, the save picker's close-gated removal,
-  //   deleted-post removal), and mirroring their local envelope writes would
-  //   race those flows — e.g. yank a card out from under the open save picker.
+  // Scope transient picker/removal state to both the collection and its viewer.
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const isOwn = !!userId && currentUserPubky === userId;
-  const mirrorsMembership = !isOwn;
 
   return (
     <TimelineFeedWithStream
@@ -273,7 +264,8 @@ function CollectionTimelineFeed({
       trailingSlot={trailingSlot}
       visualHiddenItemsNotice={visualHiddenItemsNotice}
       transformPostIds={(postIds) => sortPostIdsByMembership(postIds, membershipPostIds)}
-      membershipPostIds={mirrorsMembership ? membershipPostIds : undefined}
+      membershipPostIds={membershipPostIds}
+      key={`${streamId}:${currentUserPubky ?? 'guest'}`}
     >
       {children}
     </TimelineFeedWithStream>
