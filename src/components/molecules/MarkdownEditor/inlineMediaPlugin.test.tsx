@@ -339,16 +339,23 @@ describe('inlineMediaPlugin', () => {
   });
 
   it('claims a dragover from the item types alone, which is all a browser exposes mid-drag', async () => {
-    mountEditor('Text\n');
-    await act(async () => {});
-    const dragOver = (type: string) =>
-      fireEvent.dragOver(contentEditable(), {
-        dataTransfer: { files: [], items: [{ kind: 'file', type, getAsFile: () => null }], types: ['Files'] },
-      });
+    // jsdom has no DragEvent, and Lexical's own dragover handler reads that global when a dragover
+    // this plugin declines reaches it; a stand-in keeps the declined case runnable here
+    vi.stubGlobal('DragEvent', class DragEvent extends Event {});
+    try {
+      mountEditor('Text\n');
+      await act(async () => {});
+      const dragOver = (type: string) =>
+        fireEvent.dragOver(contentEditable(), {
+          dataTransfer: { files: [], items: [{ kind: 'file', type, getAsFile: () => null }], types: ['Files'] },
+        });
 
-    // fireEvent reports false once a handler called preventDefault, which is what allows the drop
-    expect(dragOver('video/mp4')).toBe(false);
-    expect(dragOver('text/plain')).toBe(true);
+      // fireEvent reports false once a handler called preventDefault, which is what allows the drop
+      expect(dragOver('video/mp4')).toBe(false);
+      expect(dragOver('text/plain')).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('edits a node description through the dialog and keeps its source', async () => {
