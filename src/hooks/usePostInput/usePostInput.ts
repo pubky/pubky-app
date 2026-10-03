@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
-import { useDebounceCallback } from 'usehooks-ts';
+import { useDebounceCallback, useTimeout } from 'usehooks-ts';
 import { REPOST_OPTIMISTIC_PREPEND_VARIANTS } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
@@ -52,6 +52,13 @@ import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.typ
  * - Clipboard paste handling for file attachments
  */
 type AttachmentRejectionReason = 'maxFiles' | 'unsupportedType' | 'imageTooLarge' | 'fileTooLarge';
+
+/**
+ * How long an article edit waits for the file rows of its inline attachments before the editor opens
+ * anyway. The read normally settles from Dexie at once; the cap keeps a degraded Nexus (its retries
+ * run for a minute) or a hung request from leaving the editor behind its skeleton.
+ */
+const EDIT_INLINE_MEDIA_MAX_WAIT_MS = 5000;
 
 const MAX_IMAGE_SIZE_LABEL = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
 const MAX_OTHER_SIZE_LABEL = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
@@ -174,15 +181,20 @@ export function usePostInput({
   // The inline attachments the body references at open. Their file rows type each one (the
   // markdown never says video or image), and the rich editor imports the body only once, so the
   // editor waits for them: `useEditAttachments` seeds the cover strip alone and never sees these.
-  const editInlineUris =
-    editRefIndexes === undefined
-      ? undefined
-      : (editAttachmentUris ?? []).filter((_uri, index) => editRefIndexes.has(index));
-  const { files: editInlineFiles, isLoading: isEditInlineMediaLoading } = useAttachmentsMetadata({
-    fileUris: editInlineUris ?? [],
-    enabled: variant === POST_INPUT_VARIANT.EDIT && Boolean(editIsArticle),
+  const editInlineUris = editRefIndexes
+    ? (editAttachmentUris ?? []).filter((_uri, index) => editRefIndexes.has(index))
+    : [];
+  const { files: editInlineFiles, isLoading: isEditInlineMetadataLoading } = useAttachmentsMetadata({
+    fileUris: editInlineUris,
   });
-  const isEditInlineMediaResolved = !isEditInlineMediaLoading;
+  // Past the cap the editor opens with whatever rows landed: a slot without one imports as an image,
+  // exactly as it does when the read settles without a row
+  const [editInlineWaitExpired, setEditInlineWaitExpired] = useState(false);
+  useTimeout(
+    () => setEditInlineWaitExpired(true),
+    isEditInlineMetadataLoading && !editInlineWaitExpired ? EDIT_INLINE_MEDIA_MAX_WAIT_MS : null,
+  );
+  const isEditInlineMediaLoading = isEditInlineMetadataLoading && !editInlineWaitExpired;
   // Session uploads know their own type; an edited article's attachments are typed by their rows
   const inlineMedia = {
     upload: inlineMediaSession.upload,
@@ -825,7 +837,7 @@ export function usePostInput({
     showEmojiPicker,
     setShowEmojiPicker,
     inlineMedia,
-    isEditInlineMediaResolved,
+    isEditInlineMediaLoading,
     uploadingCount,
     serializeArticleForLock,
     getLatestArticle,

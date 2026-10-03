@@ -90,11 +90,11 @@ export interface UsePostInputReturn {
     getMediaType: (uri: string) => string | null;
   };
   /**
-   * False while the file rows of an edited article's inline attachments are still resolving. The
-   * editor imports markdown once, so it waits: a video it cannot yet tell from an image would mount
-   * as a broken picture. Always true outside article edits.
+   * True while the file rows of an edited article's inline attachments are still resolving, for a
+   * bounded time. The editor imports markdown once, so it waits: a video it cannot yet tell from an
+   * image would mount as a broken picture. Always false outside article edits.
    */
-  isEditInlineMediaResolved: boolean;
+  isEditInlineMediaLoading: boolean;
   /** Inline media uploads in flight; submit stays disabled while > 0 */
   uploadingCount: number;
   serializeArticleForLock: UsePostReturn['serializeArticleForLock'];

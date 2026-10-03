@@ -534,7 +534,7 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handleDrop: vi.fn(),
     handlePaste: vi.fn(),
     inlineMedia: { upload: vi.fn(), getPreviewUrl: vi.fn(() => null), getMediaType: vi.fn(() => null) },
-    isEditInlineMediaResolved: true,
+    isEditInlineMediaLoading: false,
     uploadingCount: 0,
     serializeArticleForLock: vi.fn(() => null),
     getLatestArticle: vi.fn(() => ({ title: '', body: '' })),
@@ -1139,7 +1139,7 @@ describe('PostInput', () => {
 
   it('holds the article editor behind its skeleton until the inline attachment types resolve', () => {
     mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
-      createUsePostInputReturn(options, { isArticle: true, isEditInlineMediaResolved: false }),
+      createUsePostInputReturn(options, { isArticle: true, isEditInlineMediaLoading: true }),
     );
 
     const { rerender } = render(
@@ -1155,7 +1155,7 @@ describe('PostInput', () => {
     expect(screen.queryByTestId('markdown-editor')).not.toBeInTheDocument();
 
     mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
-      createUsePostInputReturn(options, { isArticle: true, isEditInlineMediaResolved: true }),
+      createUsePostInputReturn(options, { isArticle: true, isEditInlineMediaLoading: false }),
     );
     rerender(
       <PostInput

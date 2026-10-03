@@ -72,7 +72,7 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 
 const mockInlineImageUpload = vi.fn();
 const mockGetMediaType = vi.fn((): string | null => null);
-const mockUseAttachmentsMetadata = vi.fn((_params: { fileUris: readonly string[]; enabled?: boolean }) => ({
+const mockUseAttachmentsMetadata = vi.fn((_params: { fileUris: readonly string[] }) => ({
   files: [] as { uri: string; content_type: string }[],
   isLoading: false,
 }));
@@ -107,8 +107,7 @@ vi.mock('@/hooks/usePost/usePost', () => ({
 
 // The inline slots of an edited article are typed through this hook; its own tests cover the read.
 vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', () => ({
-  useAttachmentsMetadata: (params: { fileUris: readonly string[]; enabled?: boolean }) =>
-    mockUseAttachmentsMetadata(params),
+  useAttachmentsMetadata: (params: { fileUris: readonly string[] }) => mockUseAttachmentsMetadata(params),
 }));
 
 // Seeding/resolution of existing attachments is covered by useEditAttachments' own tests.
@@ -3513,11 +3512,11 @@ describe('usePostInput', () => {
 
       const { result } = editArticle();
 
-      expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [CLIP], enabled: true });
+      expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [CLIP] });
       expect(result.current.inlineMedia.getMediaType(CLIP)).toBe('video/mp4');
       expect(result.current.inlineMedia.getMediaType(` ${CLIP} `)).toBe('video/mp4');
       expect(result.current.inlineMedia.getMediaType(COVER)).toBeNull();
-      expect(result.current.isEditInlineMediaResolved).toBe(true);
+      expect(result.current.isEditInlineMediaLoading).toBe(false);
     });
 
     it('lets a same-session upload answer before the edited post rows', () => {
@@ -3532,21 +3531,43 @@ describe('usePostInput', () => {
       expect(result.current.inlineMedia.getMediaType(CLIP)).toBe('audio/wav');
     });
 
-    it('reports the editor as unresolved while the rows are still loading', () => {
+    it('reports the editor as loading while the rows are still resolving', () => {
       mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: true });
 
       const { result } = editArticle();
 
-      expect(result.current.isEditInlineMediaResolved).toBe(false);
+      expect(result.current.isEditInlineMediaLoading).toBe(true);
     });
 
-    it('never gates a new article: the metadata read is disabled, so nothing is pending', () => {
+    it('opens the editor after the wait cap even when the rows never settle', () => {
+      vi.useFakeTimers();
+      try {
+        mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: true });
+
+        const { result } = editArticle();
+        expect(result.current.isEditInlineMediaLoading).toBe(true);
+
+        act(() => {
+          vi.advanceTimersByTime(4999);
+        });
+        expect(result.current.isEditInlineMediaLoading).toBe(true);
+
+        act(() => {
+          vi.advanceTimersByTime(1);
+        });
+        expect(result.current.isEditInlineMediaLoading).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('never gates a new article: nothing is requested, so nothing is pending', () => {
       mockIsArticle = true;
 
       const { result } = renderHook(() => usePostInput({ variant: 'post' }));
 
-      expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [], enabled: false });
-      expect(result.current.isEditInlineMediaResolved).toBe(true);
+      expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [] });
+      expect(result.current.isEditInlineMediaLoading).toBe(false);
     });
   });
 });

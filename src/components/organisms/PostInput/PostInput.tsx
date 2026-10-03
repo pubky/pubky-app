@@ -131,7 +131,7 @@ export function PostInput({
     handleDrop,
     handlePaste,
     inlineMedia,
-    isEditInlineMediaResolved,
+    isEditInlineMediaLoading,
     uploadingCount,
     serializeArticleForLock,
     getLatestArticle,
@@ -608,7 +608,7 @@ export function PostInput({
                   onChange={handleArticleBodyChangeWithAuth}
                   readOnly={isSubmitting || !isAuthenticated}
                   inlineMedia={{ ...inlineMedia, uploadingCount }}
-                  isLoading={!isEditInlineMediaResolved}
+                  isLoading={isEditInlineMediaLoading}
                 />
               )}
 
