@@ -203,7 +203,7 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(result.current.coverImage).not.toBeNull();
+        expect(result.current.coverImage?.alt).toBe('cover.jpg');
       });
 
       expect(mockGetFileUrl).toHaveBeenCalledWith({
@@ -288,7 +288,7 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(result.current.coverImage).not.toBeNull();
+        expect(result.current.coverImage?.alt).toBe('cover.jpg');
       });
 
       rerender({ attachments: null });
@@ -313,7 +313,7 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(result.current.coverImage).not.toBeNull();
+        expect(result.current.coverImage?.alt).toBe('cover.jpg');
       });
 
       mockGetMetadata.mockResolvedValue([createMockPdfMetadata('user123:file789')]);
@@ -528,7 +528,7 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(result.current.coverImage).not.toBeNull();
+        expect(result.current.coverImage?.alt).toBe('image.jpg');
       });
 
       expect(mockGetFileUrl).toHaveBeenLastCalledWith({
@@ -656,7 +656,7 @@ describe('slot-0 cover rule (inline images)', () => {
 
     expect(result.current.hasCover).toBe(true);
     await waitFor(() => {
-      expect(result.current.coverImage).not.toBeNull();
+      expect(result.current.coverImage?.alt).toBe('cover.jpg');
     });
     // Only the cover slot is resolved, never the inline attachments
     expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [attachments[0]] });
