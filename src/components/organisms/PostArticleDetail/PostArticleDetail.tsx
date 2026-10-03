@@ -72,7 +72,13 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     coverImageVariant: POST_COVER_MOBILE_VARIANT,
     coverImageDesktopVariant: POST_COVER_DESKTOP_VARIANT,
     coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
-    localCoverType: localAttachments?.[0]?.type,
+    // Read only while the store is index-aligned with the attachments: right after an edit it already
+    // holds the new order while this render still shows the old post, and a non-image in the new
+    // slot 0 must not veto the cover the old post still has
+    localCoverType:
+      localAttachments && localAttachments.length === (attachments?.length ?? 0)
+        ? localAttachments[0]?.type
+        : undefined,
   });
 
   // Inline slots are typed from their file rows (the markdown never says video or image). The

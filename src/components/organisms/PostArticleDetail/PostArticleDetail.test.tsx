@@ -398,6 +398,27 @@ describe('PostArticleDetail', () => {
     });
   });
 
+  it('vetoes the cover from the local slot 0 type only while the store matches the attachment list', () => {
+    const attachments = ['pubky://user123/pub/pubky.app/files/cover', 'pubky://user123/pub/pubky.app/files/clip'];
+    const aligned = [
+      { type: 'video/mp4', name: 'clip.mp4', urls: { main: 'blob:clip' } },
+      { type: 'image/png', name: 'cover.png', urls: { main: 'blob:cover' } },
+    ];
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(createMockLocalFilesStore({ [defaultProps.postId]: aligned })),
+    );
+
+    const { rerender } = render(<PostArticleDetail {...defaultProps} attachments={attachments} />);
+    expect(mockUsePostArticle).toHaveBeenLastCalledWith(expect.objectContaining({ localCoverType: 'video/mp4' }));
+
+    // The store already holds a reordered edit while the post row still describes the old one
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(createMockLocalFilesStore({ [defaultProps.postId]: aligned.slice(0, 1) })),
+    );
+    rerender(<PostArticleDetail {...defaultProps} attachments={attachments} />);
+    expect(mockUsePostArticle).toHaveBeenLastCalledWith(expect.objectContaining({ localCoverType: undefined }));
+  });
+
   it('types the inline slots only: the cover slot is left to usePostArticle', () => {
     const attachments = ['pubky://user123/pub/pubky.app/files/cover', 'pubky://user123/pub/pubky.app/files/clip'];
 
