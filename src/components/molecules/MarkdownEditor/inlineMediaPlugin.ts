@@ -30,7 +30,13 @@ import {
 } from '@/libs/file/inlineMediaKind';
 import { Logger } from '@/libs/logger/logger';
 import { toast } from '@/molecules/Toaster/toast';
-import { $createInlineMediaNode, $insertInlineMediaNode, $isInlineMediaNode, InlineMediaNode } from './InlineMediaNode';
+import {
+  $createInlineMediaNode,
+  $ensureInsertionSelection,
+  $insertInlineMediaNode,
+  $isInlineMediaNode,
+  InlineMediaNode,
+} from './InlineMediaNode';
 import type { InlineMediaDialogState, InlineMediaPluginParams, SaveInlineMediaParams } from './inlineMediaPlugin.types';
 
 /**
@@ -159,6 +165,8 @@ function handleMediaPayload(realm: Realm, editor: LexicalEditor, event: Event): 
   const supported = files.filter((file) => ARTICLE_INLINE_SUPPORTED_MIME_TYPES.includes(file.type));
   Promise.all(supported.map((file) => upload(file).then((src) => ({ src, type: file.type }))))
     .then((uploads) => {
+      // The image insert is imagePlugin's and trusts the selection as it finds it
+      editor.update(() => $ensureInsertionSelection());
       for (const { src, type } of uploads) {
         const kind = getInlineMediaKindFromMime(type);
         if (!kind || kind === 'image') {

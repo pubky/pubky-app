@@ -215,6 +215,33 @@ describe('inlineMediaPlugin', () => {
     expect(await screen.findByTestId('inline-media-audio')).toBeInTheDocument();
   });
 
+  it('still inserts a drop after a node was deleted from its toolbar', async () => {
+    // Lexical leaves a node selection pointing at the removed node, and `$insertNodes` on such a
+    // selection is a silent no-op: the upload would succeed and nothing would appear
+    const NEXT_URI = fileUri('next');
+    const upload = vi.fn<(file: File) => Promise<string>>().mockResolvedValue(NEXT_URI);
+    const { ref } = mountEditor(`![Clip](${VIDEO_URI})\n`, {
+      upload,
+      getMediaType: (uri) => (uri === NEXT_URI ? 'audio/mpeg' : (mediaTypes[uri] ?? null)),
+    });
+    await screen.findByTestId('inline-media-node');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Delete media' }));
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId('inline-media-node')).not.toBeInTheDocument();
+    });
+
+    await act(async () => {
+      dropFiles([new File(['x'], 'song.mp3', { type: 'audio/mpeg' })]);
+    });
+
+    await waitFor(() => {
+      expect(getMarkdown(ref)).toBe(`![](${NEXT_URI})`);
+    });
+    expect(await screen.findByTestId('inline-media-audio')).toBeInTheDocument();
+  });
+
   it('inserts nothing when the upload is refused', async () => {
     const upload = vi.fn<(file: File) => Promise<string>>().mockRejectedValue(new Error('refused'));
     const { ref } = mountEditor('Text\n', { upload });

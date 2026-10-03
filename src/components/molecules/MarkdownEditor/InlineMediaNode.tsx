@@ -1,7 +1,10 @@
 import { $wrapNodeInElement } from '@lexical/utils';
 import {
   $createParagraphNode,
+  $getRoot,
+  $getSelection,
   $insertNodes,
+  $isNodeSelection,
   $isRootOrShadowRoot,
   DecoratorNode,
   type EditorConfig,
@@ -151,9 +154,20 @@ export function $isInlineMediaNode(node: LexicalNode | null | undefined): node i
   return node instanceof InlineMediaNode;
 }
 
+/**
+ * Gives `$insertNodes` somewhere to insert. A node selection whose nodes have left the tree (the
+ * state after a node was deleted from its toolbar) makes it a silent no-op, so such a selection is
+ * moved to the end of the document first.
+ */
+export function $ensureInsertionSelection(): void {
+  const selection = $getSelection();
+  if ($isNodeSelection(selection) && selection.getNodes().length === 0) $getRoot().selectEnd();
+}
+
 /** Inserts at the selection the way `imagePlugin` inserts an image, wrapping a root-level node in a paragraph. */
 export function $insertInlineMediaNode(params: CreateInlineMediaNodeParams): InlineMediaNode {
   const node = $createInlineMediaNode(params);
+  $ensureInsertionSelection();
   $insertNodes([node]);
   if ($isRootOrShadowRoot(node.getParentOrThrow())) {
     $wrapNodeInElement(node, $createParagraphNode).selectEnd();
