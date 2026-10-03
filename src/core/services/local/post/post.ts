@@ -440,10 +440,12 @@ export class LocalPostService {
       try {
         await db.transaction('rw', [PostDetailsModel.table, PostCountsModel.table, PostTtlModel.table], async () => {
           await PostDetailsModel.update(compositePostId, { content: DELETED });
-          // A tombstoned collection curates nothing any more (Nexus drops its COLLECTED edges too).
-          await Promise.all(
-            this.updateCuratedPostCounts(this.curatedItemIds(existing?.kind, existing?.content), new Set()),
-          );
+          await Promise.all([
+            // The tombstone is a local write like any other: stamp its TTL.
+            PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }),
+            // A tombstoned collection curates nothing any more (Nexus drops its COLLECTED edges too).
+            ...this.updateCuratedPostCounts(this.curatedItemIds(existing?.kind, existing?.content), new Set()),
+          ]);
         });
       } catch (error) {
         throw Err.database(DatabaseErrorCode.DELETE_FAILED, 'Failed to delete post', {
@@ -526,6 +528,9 @@ export class LocalPostService {
               ops.push(PostTtlModel.upsert({ id: repostedPostId, lastUpdatedAt: Date.now() }));
             }
           }
+
+          // The tombstone left behind is a local write like any other: stamp its TTL.
+          ops.push(PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }));
 
           // A deleted collection curates nothing any more: its items lose one `collections` count.
           ops.push(...this.updateCuratedPostCounts(this.curatedItemIds(kind, postDetails?.content), new Set()));

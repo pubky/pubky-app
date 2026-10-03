@@ -1024,12 +1024,25 @@ describe('LocalPostService', () => {
       await PostCountsModel.updateCounts({ postCompositeId: collectionId, countChanges: { replies: 1 } });
       await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 1 } });
 
+      const before = Date.now();
       const softDeleted = await LocalPostService.delete({ compositePostId: collectionId });
 
       expect(softDeleted).toBe(true);
       expect((await getSavedPost(collectionId))!.content).toBe(DELETED);
       expect(await getSavedCounts(collectionId)).toBeTruthy();
       expect(await collectionsCount(itemA)).toBe(0);
+      // The tombstone is a local write: its TTL is stamped like every other write.
+      expect((await getPostTtl(collectionId))!.lastUpdatedAt).toBeGreaterThanOrEqual(before);
+    });
+
+    it('stamps the tombstone TTL on a hard delete too', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA]), undefined, 'collection');
+
+      const before = Date.now();
+      await LocalPostService.delete({ compositePostId: collectionId });
+
+      expect((await getSavedPost(collectionId))!.content).toBe(DELETED);
+      expect((await getPostTtl(collectionId))!.lastUpdatedAt).toBeGreaterThanOrEqual(before);
     });
   });
 

@@ -175,11 +175,12 @@ function OtherCollectionRow({ layout, collectionId }: { layout: SavePickerLayout
   if (!name) return null;
 
   const href = getCollectionRoute(authorId, id);
-  // The design's pill fill is white at 5% (its `background-dark:input/30` token), which the app's
-  // `outline` variant does not reproduce because `--input` is an opaque grey here.
+  // The design's pill fill (its `background-dark:input/30` token) is a faint lift over the popover
+  // that the app's `outline` variant does not reproduce, because `--input` is an opaque grey here;
+  // the muted surface token at low alpha lands on the same value and follows the theme.
   const className = cn(
     buttonVariants({ variant: 'outline', size: 'sm' }),
-    'w-full justify-start bg-white/5 hover:bg-white/10',
+    'w-full justify-start bg-muted/25 hover:bg-muted/50',
   );
   const content = (
     <>
