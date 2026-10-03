@@ -123,12 +123,12 @@ vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', async () => {
     MarkdownEditor: (props: {
       markdown: string;
       onChange: (markdown: string, initialMarkdownNormalize: boolean) => void;
-      inlineImages: { upload: (file: File) => Promise<string> };
+      inlineMedia: { upload: (file: File) => Promise<string> };
     }) => {
       mocks.editor = {
         markdown: props.markdown,
         change: (markdown) => props.onChange(markdown, false),
-        upload: props.inlineImages.upload,
+        upload: props.inlineMedia.upload,
       };
       useEffect(
         () => () => {

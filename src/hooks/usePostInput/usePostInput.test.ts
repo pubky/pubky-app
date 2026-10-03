@@ -71,6 +71,11 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 }));
 
 const mockInlineImageUpload = vi.fn();
+const mockGetMediaType = vi.fn((): string | null => null);
+const mockUseAttachmentsMetadata = vi.fn((_params: { fileUris: readonly string[]; enabled?: boolean }) => ({
+  files: [] as { uri: string; content_type: string }[],
+  isLoading: false,
+}));
 
 vi.mock('@/hooks/usePost/usePost', () => ({
   usePost: vi.fn(() => ({
@@ -94,10 +99,16 @@ vi.mock('@/hooks/usePost/usePost', () => ({
     repost: mockRepost,
     edit: mockEdit,
     isSubmitting: mockIsSubmitting,
-    inlineImages: { upload: mockInlineImageUpload, getPreviewUrl: vi.fn(() => null) },
+    inlineMedia: { upload: mockInlineImageUpload, getPreviewUrl: vi.fn(() => null), getMediaType: mockGetMediaType },
     uploadingCount: 0,
     serializeArticleForLock: vi.fn(() => null),
   })),
+}));
+
+// The inline slots of an edited article are typed through this hook; its own tests cover the read.
+vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', () => ({
+  useAttachmentsMetadata: (params: { fileUris: readonly string[]; enabled?: boolean }) =>
+    mockUseAttachmentsMetadata(params),
 }));
 
 // Seeding/resolution of existing attachments is covered by useEditAttachments' own tests.
@@ -2942,6 +2953,47 @@ describe('usePostInput', () => {
         expect(mockSetAttachments).toHaveBeenCalled();
       });
 
+      it('routes a video dropped inside the rich-text editor to inline insertion too', async () => {
+        mockIsArticle = true;
+        mockInlineImageUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/clip1');
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        const insertMarkdown = vi.fn();
+        const focus = vi.fn();
+        result.current.markdownEditorRef.current = asOpaque<
+          NonNullable<(typeof result.current.markdownEditorRef)['current']>
+        >({ insertMarkdown, focus });
+
+        const editorRoot = document.createElement('div');
+        editorRoot.className = 'mdxeditor dark-theme';
+        const island = document.createElement('video');
+        editorRoot.appendChild(island);
+        document.body.appendChild(editorRoot);
+
+        const clip = new File(['test'], 'clip.mp4', { type: 'video/mp4' });
+        const dropEvent = mockDragEvent({
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+          target: island,
+          dataTransfer: asOpaque<DataTransfer>({ items: [{ kind: 'file', getAsFile: () => clip }] }),
+        });
+
+        try {
+          act(() => {
+            result.current.handleDrop(dropEvent);
+          });
+
+          await waitFor(() => {
+            expect(insertMarkdown).toHaveBeenCalledWith('![](pubky://author/pub/pubky.app/files/clip1)');
+          });
+          expect(mockInlineImageUpload).toHaveBeenCalledWith(clip);
+          expect(mockSetAttachments).not.toHaveBeenCalled();
+        } finally {
+          document.body.removeChild(editorRoot);
+        }
+      });
+
       it('routes article drops landing inside the rich-text editor to inline insertion', async () => {
         mockIsArticle = true;
         mockInlineImageUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/img1');
@@ -3391,6 +3443,70 @@ describe('usePostInput', () => {
 
       expect(mockSetContent).not.toHaveBeenCalled();
       textarea.remove();
+    });
+  });
+
+  describe('inline media types for the editor', () => {
+    const COVER = 'pubky://user/pub/pubky.app/files/COVER';
+    const CLIP = 'pubky://user/pub/pubky.app/files/CLIP';
+    const editArticle = () =>
+      renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+          editAttachmentUris: [COVER, CLIP],
+          editIsArticle: true,
+          editContent: JSON.stringify({ title: 'Title', body: 'Text with ![a](attachment:1)' }),
+        }),
+      );
+
+    beforeEach(() => {
+      mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
+      mockGetMediaType.mockReturnValue(null);
+    });
+
+    it('types the inline slots of an edited article from their file rows, not the cover', () => {
+      mockUseAttachmentsMetadata.mockReturnValue({
+        files: [{ uri: CLIP, content_type: 'video/mp4' }],
+        isLoading: false,
+      });
+
+      const { result } = editArticle();
+
+      expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [CLIP], enabled: true });
+      expect(result.current.inlineMedia.getMediaType(CLIP)).toBe('video/mp4');
+      expect(result.current.inlineMedia.getMediaType(` ${CLIP} `)).toBe('video/mp4');
+      expect(result.current.inlineMedia.getMediaType(COVER)).toBeNull();
+      expect(result.current.isEditInlineMediaResolved).toBe(true);
+    });
+
+    it('lets a same-session upload answer before the edited post rows', () => {
+      mockUseAttachmentsMetadata.mockReturnValue({
+        files: [{ uri: CLIP, content_type: 'video/mp4' }],
+        isLoading: false,
+      });
+      mockGetMediaType.mockReturnValue('audio/wav');
+
+      const { result } = editArticle();
+
+      expect(result.current.inlineMedia.getMediaType(CLIP)).toBe('audio/wav');
+    });
+
+    it('reports the editor as unresolved while the rows are still loading', () => {
+      mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: true });
+
+      const { result } = editArticle();
+
+      expect(result.current.isEditInlineMediaResolved).toBe(false);
+    });
+
+    it('never gates a new article: the metadata read is disabled, so nothing is pending', () => {
+      mockIsArticle = true;
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [], enabled: false });
+      expect(result.current.isEditInlineMediaResolved).toBe(true);
     });
   });
 });

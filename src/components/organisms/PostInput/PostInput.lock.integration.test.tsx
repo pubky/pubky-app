@@ -112,6 +112,8 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         existingAttachments: [],
         removeExistingAttachment: vi.fn(),
         uploadingCount: 0,
+        inlineMedia: { upload: vi.fn(), getPreviewUrl: () => null, getMediaType: () => null },
+        isEditInlineMediaResolved: true,
         serializeArticleForLock: vi.fn(),
         getLatestArticle: () => ({ title: articleTitle, body: content }),
         isArticle,

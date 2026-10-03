@@ -34,7 +34,7 @@ import {
   UndoRedo,
 } from '@mdxeditor/editor';
 import { useCellValues } from '@mdxeditor/gurx';
-import { AlertTriangle, Image as ImageIcon, Smile, Type } from 'lucide-react';
+import { AlertTriangle, FileText, Image as ImageIcon, type LucideIcon, Music, Smile, Type, Video } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
@@ -42,12 +42,13 @@ import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import {
-  ARTICLE_ATTACHMENT_ACCEPT_STRING,
+  ARTICLE_INLINE_ACCEPT_STRING_BY_KIND,
+  ARTICLE_INLINE_SUPPORTED_MIME_TYPES,
   ARTICLE_MAX_CHARACTER_LENGTH,
-  ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
 } from '@/config/posts';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { MarkdownMark } from '@/icons';
+import { INLINE_MEDIA_KINDS, type InlineMediaKind } from '@/libs/file/inlineMediaKind';
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { cn } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
@@ -55,8 +56,18 @@ import { FileVariant } from '@/services/nexus/file/file.types';
 import { EmojiPickerDialog } from '../EmojiPickerDialog/EmojiPickerDialog';
 import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
 import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
-import type { MarkdownEditorInlineImages } from './MarkdownEditor.types';
-import { MarkdownEditorImageDialog } from './MarkdownEditorImageDialog';
+import { inlineMediaDialogState$, inlineMediaPlugin } from './inlineMediaPlugin';
+import { InsertInlineMediaButton } from './InsertInlineMediaButton';
+import type { MarkdownEditorInlineMedia } from './MarkdownEditor.types';
+import { MarkdownEditorMediaDialog } from './MarkdownEditorMediaDialog';
+
+/** Markdown-mode insert buttons, one per media kind, in toolbar order */
+const MARKDOWN_MEDIA_BUTTONS: { kind: InlineMediaKind; title: string; Icon: LucideIcon }[] = [
+  { kind: 'image', title: 'Image', Icon: ImageIcon },
+  { kind: 'video', title: 'Video', Icon: Video },
+  { kind: 'audio', title: 'Audio', Icon: Music },
+  { kind: 'pdf', title: 'PDF', Icon: FileText },
+];
 
 /**
  * Preload all CodeMirror language support modules to prevent layout shift
@@ -88,13 +99,14 @@ type EditorMode = 'richtext' | 'markdown';
 
 /**
  * Invisible bridge rendered inside the editor toolbar (and therefore inside
- * the MDXEditor realm) that mirrors the image dialog's open state out to the
+ * the MDXEditor realm) that mirrors the insert dialogs' open state out to the
  * host component — used to show a single uploading indicator at a time (the
- * dialog has its own spinner).
+ * dialog has its own spinner). Images and the other media kinds have separate
+ * dialog cells; either one open hides the pill.
  */
-function ImageDialogOpenReporter({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
-  const [dialogState] = useCellValues(imageDialogState$);
-  const isOpen = dialogState.type !== 'inactive';
+function MediaDialogOpenReporter({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
+  const [imageDialogState, mediaDialogState] = useCellValues(imageDialogState$, inlineMediaDialogState$);
+  const isOpen = imageDialogState.type !== 'inactive' || mediaDialogState.type !== 'inactive';
 
   useEffect(() => {
     onOpenChange(isOpen);
@@ -108,14 +120,14 @@ function ImageDialogOpenReporter({ onOpenChange }: { onOpenChange: (open: boolea
 export default function InitializedMDXEditor({
   editorRef,
   readOnly,
-  inlineImages,
+  inlineMedia,
   ...props
 }: {
   editorRef: ForwardedRef<MDXEditorMethods> | null;
-  inlineImages?: MarkdownEditorInlineImages;
+  inlineMedia?: MarkdownEditorInlineMedia;
 } & MDXEditorProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [isMediaDialogOpen, setIsMediaDialogOpen] = useState(false);
   const [maxLengthWarning, setMaxLengthWarning] = useState<null | 'approaching' | 'reached'>(null);
   const [mode, setMode] = useState<EditorMode>('richtext');
   const [markdownText, setMarkdownText] = useState('');
@@ -126,7 +138,8 @@ export default function InitializedMDXEditor({
   // the selected text. Mounting the popups in-tree keeps them inside the focus trap.
   const [overlayContainer, setOverlayContainer] = useState<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const markdownImageInputRef = useRef<HTMLInputElement>(null);
+  // One hidden file input per media kind, so each toolbar button opens a picker filtered to its kind
+  const markdownMediaInputRefs = useRef<Partial<Record<InlineMediaKind, HTMLInputElement | null>>>({});
   // Synchronous mirror of markdownText: the async image-upload flows read and
   // splice the freshest text through this ref, so back-to-back placeholder
   // swaps never operate on a stale value while a render is still pending.
@@ -222,7 +235,7 @@ export default function InitializedMDXEditor({
       // No room for the real markdown — drop the placeholder instead of
       // leaving it stuck (handleMarkdownTextChange refuses over-cap text)
       replaceMarkdownPlaceholder(placeholder, '');
-      toast({ variant: 'error', description: 'Not enough space left in the article for the image.' });
+      toast({ variant: 'error', description: 'Not enough space left in the article for the file.' });
       return;
     }
 
@@ -240,15 +253,16 @@ export default function InitializedMDXEditor({
   };
 
   /**
-   * Markdown-mode image insertion with a visible loading state: an
+   * Markdown-mode media insertion with a visible loading state: an
    * `![Uploading name…]()` placeholder lands at the caret immediately, then
    * each finished upload swaps its placeholder for the file-URI markdown in
    * place — or removes it on failure (the upload handler toasts the error).
+   * Every media kind shares the image syntax, so one flow covers them all.
    * The insert-after-success invariant holds: a placeholder never contains a
    * URI, and a failed upload leaves no markdown behind.
    */
   const uploadAndInsertInMarkdownMode = async (files: File[]) => {
-    if (!inlineImages || files.length === 0) return;
+    if (!inlineMedia || files.length === 0) return;
 
     const current = markdownTextRef.current;
     const offset = Math.min(textareaRef.current?.selectionStart ?? current.length, current.length);
@@ -265,7 +279,7 @@ export default function InitializedMDXEditor({
     const next = current.slice(0, offset) + snippet + current.slice(offset);
     if (next.length > ARTICLE_MAX_CHARACTER_LENGTH) {
       // Checked before uploading anything, so blocking here leaves no orphans
-      toast({ variant: 'error', description: 'Not enough space left in the article for the image.' });
+      toast({ variant: 'error', description: 'Not enough space left in the article for the file.' });
       return;
     }
 
@@ -285,7 +299,7 @@ export default function InitializedMDXEditor({
     // textarea content
     for (const [index, file] of files.entries()) {
       try {
-        const uri = await inlineImages.upload(file);
+        const uri = await inlineMedia.upload(file);
         replaceMarkdownPlaceholder(placeholders[index], `![](${uri})`);
       } catch {
         // The upload handler already surfaced the failure to the user
@@ -294,7 +308,7 @@ export default function InitializedMDXEditor({
     }
   };
 
-  const handleMarkdownImageInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMarkdownMediaInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     // Allow re-selecting the same file later
     event.target.value = '';
@@ -302,31 +316,31 @@ export default function InitializedMDXEditor({
   };
 
   const handleMarkdownTextareaPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    if (!inlineImages || readOnly) return;
+    if (!inlineMedia || readOnly) return;
 
     // File-first, like GitHub: real clipboards bundle image files with
-    // text/html flavors (screenshots, images copied from apps), so any image
+    // text/html flavors (screenshots, images copied from apps), so any media
     // file wins over the accompanying text. Text-only payloads paste normally.
     const files = Array.from(event.clipboardData?.items ?? [])
       .filter((item) => item.kind === 'file')
       .map((item) => item.getAsFile())
-      .filter((file): file is File => file !== null && ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type));
+      .filter((file): file is File => file !== null && ARTICLE_INLINE_SUPPORTED_MIME_TYPES.includes(file.type));
     if (files.length === 0) return;
 
-    // preventDefault (without stopPropagation) also signals the composer
-    // container's paste handler to leave these files to the article body.
+    // preventDefault only: the event still bubbles so the composer container
+    // can reset its drag state, but its defaultPrevented guard skips the files.
     event.preventDefault();
     void uploadAndInsertInMarkdownMode(files);
   };
 
   const handleMarkdownTextareaDrop = (event: React.DragEvent<HTMLTextAreaElement>) => {
-    if (!inlineImages || readOnly) return;
+    if (!inlineMedia || readOnly) return;
 
-    // Supported image types only (not image/* — e.g. HEIC would flash a
+    // Supported media types only (not image/* — e.g. HEIC would flash a
     // placeholder the upload then rejects); anything else bubbles to the
     // composer container, whose handler shows the unsupported-type toast
     const files = Array.from(event.dataTransfer?.files ?? []).filter((file) =>
-      ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type),
+      ARTICLE_INLINE_SUPPORTED_MIME_TYPES.includes(file.type),
     );
     if (files.length === 0) return;
 
@@ -358,31 +372,36 @@ export default function InitializedMDXEditor({
             <Smile className="size-6" />
           </Button>
 
-          {inlineImages && (
-            <>
+          {inlineMedia &&
+            MARKDOWN_MEDIA_BUTTONS.map(({ kind, title, Icon }) => (
               <Button
+                key={kind}
                 variant="ghost"
                 size="icon"
-                title={'Image'}
-                onClick={() => markdownImageInputRef.current?.click()}
+                title={title}
+                onClick={() => markdownMediaInputRefs.current[kind]?.click()}
                 disabled={readOnly}
                 className="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
-                data-testid="markdown-image-button"
+                data-testid={`markdown-${kind}-button`}
               >
-                <ImageIcon className="size-6" />
+                <Icon className="size-6" />
               </Button>
-
+            ))}
+          {inlineMedia &&
+            INLINE_MEDIA_KINDS.map((kind) => (
               <Input
-                ref={markdownImageInputRef}
+                key={kind}
+                ref={(element) => {
+                  markdownMediaInputRefs.current[kind] = element;
+                }}
                 type="file"
-                accept={ARTICLE_ATTACHMENT_ACCEPT_STRING}
+                accept={ARTICLE_INLINE_ACCEPT_STRING_BY_KIND[kind]}
                 multiple
                 className="hidden"
-                onChange={handleMarkdownImageInputChange}
-                data-testid="markdown-image-input"
+                onChange={handleMarkdownMediaInputChange}
+                data-testid={`markdown-${kind}-input`}
               />
-            </>
-          )}
+            ))}
 
           <Button
             variant="ghost"
@@ -391,7 +410,7 @@ export default function InitializedMDXEditor({
             onClick={switchToRichTextMode}
             // Mode switches while an upload is in flight would strand the
             // async placeholder swap in the hidden editor pane
-            disabled={readOnly || (inlineImages?.uploadingCount ?? 0) > 0}
+            disabled={readOnly || (inlineMedia?.uploadingCount ?? 0) > 0}
             className="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
             data-testid="markdown-richtext-button"
           >
@@ -440,8 +459,11 @@ export default function InitializedMDXEditor({
                 <ListsToggle options={['bullet', 'number']} />
                 <InsertThematicBreak />
                 <CreateLink />
-                {inlineImages && <InsertImage />}
-                {inlineImages && <ImageDialogOpenReporter onOpenChange={setIsImageDialogOpen} />}
+                {inlineMedia && <InsertImage />}
+                {inlineMedia && <InsertInlineMediaButton mediaKind="video" />}
+                {inlineMedia && <InsertInlineMediaButton mediaKind="audio" />}
+                {inlineMedia && <InsertInlineMediaButton mediaKind="pdf" />}
+                {inlineMedia && <MediaDialogOpenReporter onOpenChange={setIsMediaDialogOpen} />}
                 <CodeToggle />
                 <InsertCodeBlock />
                 <ButtonWithTooltip title={'Emoji'} onClick={() => setShowEmojiPicker(true)}>
@@ -452,7 +474,7 @@ export default function InitializedMDXEditor({
                   onClick={switchToMarkdownMode}
                   // Mode switches while an upload is in flight would insert the
                   // async result into the hidden editor pane
-                  disabled={(inlineImages?.uploadingCount ?? 0) > 0}
+                  disabled={(inlineMedia?.uploadingCount ?? 0) > 0}
                 >
                   <MarkdownMark className="size-6" />
                 </ButtonWithTooltip>
@@ -475,23 +497,31 @@ export default function InitializedMDXEditor({
             codeMirrorExtensions: [oneDark],
           }),
           maxLengthPlugin(ARTICLE_MAX_CHARACTER_LENGTH),
-          ...(inlineImages
+          ...(inlineMedia
             ? [
                 imagePlugin({
-                  imageUploadHandler: inlineImages.upload,
+                  imageUploadHandler: inlineMedia.upload,
                   // Browsers can't load pubky:// URIs: prefer the session's
                   // local object URL (also covers the CDN variant-readiness
                   // window right after upload), then the Nexus CDN URL, then
                   // pass external URLs through untouched.
                   imagePreviewHandler: async (imageSource) =>
-                    inlineImages.getPreviewUrl(imageSource) ??
+                    inlineMedia.getPreviewUrl(imageSource) ??
                     pubkyUriToCdnUrl(imageSource, FileVariant.MAIN) ??
                     imageSource,
                   // CRITICAL: resized images serialize as raw HTML <img> mdast
                   // nodes, escaping the AST-based attachment rewrite on publish.
                   disableImageResize: true,
-                  // App-styled responsive dialog with an upload loading state
-                  ImageDialog: MarkdownEditorImageDialog,
+                  // App-styled responsive dialog with an upload loading state,
+                  // shared with the video/audio/PDF insert flows
+                  ImageDialog: MarkdownEditorMediaDialog,
+                }),
+                // Video, audio and PDF nodes: claims the image-syntax nodes whose
+                // file type the composer knows is not an image (see the plugin)
+                inlineMediaPlugin({
+                  uploadHandler: inlineMedia.upload,
+                  getMediaType: inlineMedia.getMediaType,
+                  getPreviewUrl: inlineMedia.getPreviewUrl,
                 }),
               ]
             : []),
@@ -508,11 +538,11 @@ export default function InitializedMDXEditor({
           pill is the only feedback while they're in flight. Portaled to the
           body and fixed to the viewport (like a toast): every in-dialog anchor
           can scroll out of view when a long article makes the dialog scroll.
-          Hidden while the image dialog is open — its Save button already
+          Hidden while an insert dialog is open — its Save button already
           shows the uploading state, and two indicators at once is confusing. */}
       {mode === 'richtext' &&
-        !isImageDialogOpen &&
-        (inlineImages?.uploadingCount ?? 0) > 0 &&
+        !isMediaDialogOpen &&
+        (inlineMedia?.uploadingCount ?? 0) > 0 &&
         createPortal(
           <Container
             overrideDefaults
@@ -521,9 +551,9 @@ export default function InitializedMDXEditor({
           >
             <Spinner size="sm" />
             <Typography overrideDefaults className="text-sm text-muted-foreground">
-              {(inlineImages?.uploadingCount ?? 0) > 1
-                ? `Uploading ${inlineImages?.uploadingCount} images…`
-                : 'Uploading image…'}
+              {(inlineMedia?.uploadingCount ?? 0) > 1
+                ? `Uploading ${inlineMedia?.uploadingCount} files…`
+                : 'Uploading file…'}
             </Typography>
           </Container>,
           document.body,

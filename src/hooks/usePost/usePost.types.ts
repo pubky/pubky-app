@@ -123,12 +123,14 @@ export interface UsePostReturn {
   repost: (options: UsePostRepostOptions) => Promise<void>;
   edit: (options: UsePostEditOptions) => Promise<void>;
   isSubmitting: boolean;
-  /** Article inline-image editor surface (upload at insert time + session preview lookup). */
-  inlineImages: {
+  /** Article inline media editor surface (upload at insert time, session preview and type lookup). */
+  inlineMedia: {
     upload: (file: File) => Promise<string>;
     getPreviewUrl: (src: string) => string | null;
+    /** MIME type of a file uploaded this session; null for any other URI */
+    getMediaType: (uri: string) => string | null;
   };
-  /** Inline image uploads currently in flight; publishing is blocked while > 0. */
+  /** Inline media uploads currently in flight; publishing is blocked while > 0. */
   uploadingCount: number;
   /** Null, after a toast, when a normal publish would refuse the body too. */
   serializeArticleForLock: (body: string) => SerializedArticle | null;

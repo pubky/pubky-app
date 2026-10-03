@@ -82,9 +82,20 @@ export interface UsePostInputReturn {
   isSubmitting: boolean;
   showEmojiPicker: boolean;
   setShowEmojiPicker: (show: boolean) => void;
-  /** Article inline-image editor surface for the MarkdownEditor */
-  inlineImages: { upload: (file: File) => Promise<string>; getPreviewUrl: (src: string) => string | null };
-  /** Inline image uploads in flight; submit stays disabled while > 0 */
+  /** Article inline media editor surface for the MarkdownEditor */
+  inlineMedia: {
+    upload: (file: File) => Promise<string>;
+    getPreviewUrl: (src: string) => string | null;
+    /** MIME type of a file URI from this session or the edited post's attachments; null otherwise */
+    getMediaType: (uri: string) => string | null;
+  };
+  /**
+   * False while the file rows of an edited article's inline attachments are still resolving. The
+   * editor imports markdown once, so it waits: a video it cannot yet tell from an image would mount
+   * as a broken picture. Always true outside article edits.
+   */
+  isEditInlineMediaResolved: boolean;
+  /** Inline media uploads in flight; submit stays disabled while > 0 */
   uploadingCount: number;
   serializeArticleForLock: UsePostReturn['serializeArticleForLock'];
   /** The article as the inputs hold it now. `articleTitle` and `content` trail them by the debounce. */

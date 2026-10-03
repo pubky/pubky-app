@@ -130,7 +130,8 @@ export function PostInput({
     handleDragOver,
     handleDrop,
     handlePaste,
-    inlineImages,
+    inlineMedia,
+    isEditInlineMediaResolved,
     uploadingCount,
     serializeArticleForLock,
     getLatestArticle,
@@ -359,8 +360,8 @@ export function PostInput({
               variant: 'warning',
               description:
                 deserialized.warnings.length === 1
-                  ? 'An image with a broken attachment reference was removed from the article.'
-                  : `${deserialized.warnings.length} images with broken attachment references were removed from the article.`,
+                  ? 'An attachment with a broken reference was removed from the article.'
+                  : `${deserialized.warnings.length} attachments with broken references were removed from the article.`,
             });
           }
         } else {
@@ -606,7 +607,8 @@ export function PostInput({
                   markdown={sanitizeCodeBlockLanguages(content)}
                   onChange={handleArticleBodyChangeWithAuth}
                   readOnly={isSubmitting || !isAuthenticated}
-                  inlineImages={{ ...inlineImages, uploadingCount }}
+                  inlineMedia={{ ...inlineMedia, uploadingCount }}
+                  isLoading={!isEditInlineMediaResolved}
                 />
               )}
 

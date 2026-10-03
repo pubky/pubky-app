@@ -7,6 +7,7 @@ import { REPOST_OPTIMISTIC_PREPEND_VARIANTS } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_COVER_MAX_FILES,
+  ARTICLE_INLINE_SUPPORTED_MIME_TYPES,
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
   ARTICLE_SUPPORTED_FILE_TYPES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
@@ -17,6 +18,7 @@ import {
   POST_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
+import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useEditAttachments } from '@/hooks/useEditAttachments/useEditAttachments';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
@@ -143,7 +145,7 @@ export function usePostInput({
     repost,
     edit,
     isSubmitting,
-    inlineImages,
+    inlineMedia: inlineMediaSession,
     uploadingCount,
     serializeArticleForLock,
   } = usePost({ keepInlineImages });
@@ -168,6 +170,28 @@ export function usePostInput({
           const isCover = index === 0 && !editRefIndexes.has(0);
           return !isCover && !editRefIndexes.has(index);
         });
+
+  // The inline attachments the body references at open. Their file rows type each one (the
+  // markdown never says video or image), and the rich editor imports the body only once, so the
+  // editor waits for them: `useEditAttachments` seeds the cover strip alone and never sees these.
+  const editInlineUris =
+    editRefIndexes === undefined
+      ? undefined
+      : (editAttachmentUris ?? []).filter((_uri, index) => editRefIndexes.has(index));
+  const { files: editInlineFiles, isLoading: isEditInlineMediaLoading } = useAttachmentsMetadata({
+    fileUris: editInlineUris ?? [],
+    enabled: variant === POST_INPUT_VARIANT.EDIT && Boolean(editIsArticle),
+  });
+  const isEditInlineMediaResolved = !isEditInlineMediaLoading;
+  // Session uploads know their own type; an edited article's attachments are typed by their rows
+  const inlineMedia = {
+    upload: inlineMediaSession.upload,
+    getPreviewUrl: inlineMediaSession.getPreviewUrl,
+    getMediaType: (uri: string) =>
+      inlineMediaSession.getMediaType(uri) ??
+      editInlineFiles.find((file) => file.uri === uri.trim())?.content_type ??
+      null,
+  };
 
   // Seed and resolve the post's current attachments for the edit composer
   const { seededUris: seededAttachmentUris } = useEditAttachments({
@@ -663,13 +687,14 @@ export function usePostInput({
     e.stopPropagation();
   }, []);
 
-  // Uploads image files and inserts their markdown at the rich-text editor's
+  // Uploads media files and inserts their markdown at the rich-text editor's
   // caret. Fallback for drops Lexical ignores (see handleDrop); the viewport
-  // uploading pill provides the in-flight feedback.
-  const insertInlineImagesAtCaret = async (files: File[]) => {
+  // uploading pill provides the in-flight feedback. Every kind shares the
+  // image syntax; the editor's import routes non-images by their session type.
+  const insertInlineMediaAtCaret = async (files: File[]) => {
     for (const file of files) {
       try {
-        const uri = await inlineImages.upload(file);
+        const uri = await inlineMedia.upload(file);
         markdownEditorRef.current?.focus();
         markdownEditorRef.current?.insertMarkdown(`![](${uri})`);
       } catch {
@@ -714,17 +739,17 @@ export function usePostInput({
       // at the editor: insert inline instead. Unsupported files fall through
       // to handleFilesAdded for its standard unsupported-type toast.
       if (isArticle && e.target instanceof Element && e.target.closest('.mdxeditor')) {
-        const imageFiles = files.filter((file) => ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type));
-        if (imageFiles.length > 0) {
-          void insertInlineImagesAtCaret(imageFiles);
+        const mediaFiles = files.filter((file) => ARTICLE_INLINE_SUPPORTED_MIME_TYPES.includes(file.type));
+        if (mediaFiles.length > 0) {
+          void insertInlineMediaAtCaret(mediaFiles);
           return;
         }
       }
 
       handleFilesAdded(files);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- insertInlineImagesAtCaret only uses stable refs and the upload handle
-    [handleFilesAdded, isArticle, inlineImages],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- insertInlineMediaAtCaret only uses stable refs and the upload handle
+    [handleFilesAdded, isArticle, inlineMediaSession],
   );
 
   // Trigger file input click
@@ -788,7 +813,8 @@ export function usePostInput({
     isSubmitting,
     showEmojiPicker,
     setShowEmojiPicker,
-    inlineImages,
+    inlineMedia,
+    isEditInlineMediaResolved,
     uploadingCount,
     serializeArticleForLock,
     getLatestArticle,

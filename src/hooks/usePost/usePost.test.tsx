@@ -2212,7 +2212,7 @@ describe('usePost — article inline images', () => {
   const uploadViaSession = async (result: { current: ReturnType<typeof usePost> }, uri: string, name = 'img.png') => {
     vi.mocked(FileController.commitCreate).mockResolvedValueOnce(uri);
     await act(async () => {
-      await result.current.inlineImages.upload(new File(['x'], name, { type: 'image/png' }));
+      await result.current.inlineMedia.upload(new File(['x'], name, { type: 'image/png' }));
     });
   };
 
@@ -2332,7 +2332,7 @@ describe('usePost — article inline images', () => {
     const uploadFile = async (result: { current: ReturnType<typeof usePost> }, uri: string, file: File) => {
       vi.mocked(FileController.commitCreate).mockResolvedValueOnce(uri);
       await act(async () => {
-        await result.current.inlineImages.upload(file);
+        await result.current.inlineMedia.upload(file);
       });
     };
     const fileA = new File(['a'], 'a.png', { type: 'image/png' });
@@ -2570,7 +2570,7 @@ describe('usePost — article inline images', () => {
 
       // newC is uploaded through this composer session
       await act(async () => {
-        await result.current.inlineImages.upload(new File(['x'], 'newC.png', { type: 'image/png' }));
+        await result.current.inlineMedia.upload(new File(['x'], 'newC.png', { type: 'image/png' }));
       });
       act(() => {
         result.current.setContent(`![A](${oldA})\n\n![C](${newC})`);

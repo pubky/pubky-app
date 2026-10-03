@@ -37,17 +37,17 @@ import type {
 function serializeArticleErrorMessage(error: SerializeArticleBodyError): string {
   switch (error.code) {
     case 'HAND_TYPED_ATTACHMENT_REF':
-      return 'Articles cannot link images as attachment references directly. Remove them or insert the image again.';
+      return 'Articles cannot link files as attachment references directly. Remove them or insert the file again.';
     case 'BLOB_URI':
-      return 'Articles cannot reference blob URLs. Insert the image through the editor instead.';
+      return 'Articles cannot reference blob URLs. Insert the file through the editor instead.';
     case 'TOO_MANY_INLINE_IMAGES':
-      return `Too many images. Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} images including the cover.`;
+      return `Too many files. Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} attachments including the cover.`;
     case 'RAW_HTML_FILE_URI':
-      return 'Uploaded images cannot be used inside raw HTML. Use image markdown instead.';
+      return 'Uploaded files cannot be used inside raw HTML. Use the editor to insert them instead.';
     case 'REFERENCE_STYLE_FILE_URI':
-      return 'Uploaded images cannot use reference-style links. Use inline image syntax instead.';
+      return 'Uploaded files cannot use reference-style links. Use inline image syntax instead.';
     case 'UNPROCESSABLE_IMAGE':
-      return 'An image in the article could not be processed. Remove it and insert it again.';
+      return 'A file in the article could not be processed. Remove it and insert it again.';
   }
 }
 
@@ -188,7 +188,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     toast({
       variant: 'error',
       description:
-        'Some images reference files from outside this article. Remove them, or insert the images again so they upload fresh.',
+        'Some attachments reference files from outside this article. Remove them, or insert the files again so they upload fresh.',
     });
     return true;
   };
@@ -599,9 +599,10 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     repost,
     edit,
     isSubmitting,
-    inlineImages: {
+    inlineMedia: {
       upload: inlineImageSession.uploadInlineMedia,
       getPreviewUrl: inlineImageSession.getPreviewUrl,
+      getMediaType: inlineImageSession.getMediaType,
     },
     uploadingCount: inlineImageSession.uploadingCount,
     serializeArticleForLock,
