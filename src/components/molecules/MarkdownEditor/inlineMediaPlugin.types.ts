@@ -11,12 +11,11 @@ export type InlineMediaDialogState =
       initialValues: { src: string; altText: string; title?: string };
     };
 
+/** Uploads go through `imagePlugin`'s `imageUploadHandler`, the one handler every kind shares. */
 export interface InlineMediaPluginParams {
-  /** Uploads a picked file and resolves with its `pubky://…/files/{id}` URI (the same handler images use). */
-  uploadHandler: (file: File) => Promise<string>;
   /** MIME type of a file URI known to the composer session or the edited post; null for anything else. */
   getMediaType: (uri: string) => string | null;
-  /** Same-session object URL for a file URI, so a fresh upload previews before the CDN has it. */
+  /** A URL a browser can load for a file URI (the session's object URL, else the CDN); null for anything else. */
   getPreviewUrl: (uri: string) => string | null;
 }
 

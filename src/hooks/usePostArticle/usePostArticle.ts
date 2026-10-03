@@ -154,11 +154,8 @@ export function usePostArticle({
   // A local slot-0 entry already knows its type; otherwise only the row can say slot 0 is not an
   // image, or that Nexus no longer serves it (the lookup settles with no row). Until it lands the
   // cover is provisional.
-  const isCoverUnavailable = localCoverType
-    ? !localCoverType.startsWith('image')
-    : coverFile
-      ? !coverFile.content_type.startsWith('image')
-      : !isCoverLoading;
+  const coverType = localCoverType ?? coverFile?.content_type;
+  const isCoverUnavailable = coverType ? !coverType.startsWith('image') : !isCoverLoading;
 
   const width = Number(coverFile?.metadata?.width);
   const height = Number(coverFile?.metadata?.height);

@@ -18,14 +18,13 @@ import {
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
 } from 'lexical';
-import { FileText, type LucideIcon, Music, Pencil, Trash2, Video as VideoIcon } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { Audio } from '@/atoms/Audio/Audio';
 import { Button } from '@/atoms/Button/Button';
 import { Video } from '@/atoms/Video/Video';
 import type { InlineNonImageMediaKind } from '@/libs/file/inlineMediaKind';
-import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { cn } from '@/libs/utils/utils';
-import { FileVariant } from '@/services/nexus/file/file.types';
+import { INLINE_MEDIA_KIND_UI } from './InitializedMDXEditor.constants';
 import { $isInlineMediaNode } from './InlineMediaNode';
 import { inlineMediaPreviewResolver$, openEditInlineMediaDialog$ } from './inlineMediaPlugin';
 
@@ -36,12 +35,6 @@ interface InlineMediaEditorProps {
   mediaKind: InlineNonImageMediaKind;
   nodeKey: string;
 }
-
-const KIND_LABELS: Record<InlineNonImageMediaKind, { label: string; Icon: LucideIcon }> = {
-  video: { label: 'Video', Icon: VideoIcon },
-  audio: { label: 'Audio', Icon: Music },
-  pdf: { label: 'PDF document', Icon: FileText },
-};
 
 /**
  * The in-editor rendering of an `InlineMediaNode`: a header row (kind, description, and the
@@ -58,9 +51,9 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
   const wrapperRef = useRef<HTMLDivElement>(null);
   const editButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Browsers can't load pubky:// URIs: prefer the session's object URL (also covers the CDN
-  // readiness window right after upload), then the CDN, then pass an external URL through
-  const previewSrc = previewResolver(src) ?? pubkyUriToCdnUrl(src, FileVariant.MAIN) ?? src;
+  // The host resolves a file URI to something a browser loads (the session's object URL, else the
+  // CDN); an external URL passes through
+  const previewSrc = previewResolver(src) ?? src;
   // An external source gets no request before the author presses play, as in the reader: media
   // elements carry no referrer policy, and the node mounts on every open and mode switch
   const preload = src.startsWith('pubky://') ? 'metadata' : 'none';
@@ -130,7 +123,7 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, isSelected, nodeKey, setSelected, clearSelection]);
 
-  const { label, Icon } = KIND_LABELS[mediaKind];
+  const { label, Icon } = INLINE_MEDIA_KIND_UI[mediaKind];
 
   return (
     <div

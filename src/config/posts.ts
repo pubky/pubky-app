@@ -93,8 +93,6 @@ export const ARTICLE_INLINE_SUPPORTED_MIME_TYPES = [
   ...ARTICLE_INLINE_NON_IMAGE_MIME_TYPES,
 ];
 
-export const ARTICLE_INLINE_ACCEPT_STRING = ARTICLE_INLINE_SUPPORTED_MIME_TYPES.join(',');
-
 /** File input accept strings for the per-kind insert buttons of the article editor */
 export const ARTICLE_INLINE_ACCEPT_STRING_BY_KIND = {
   image: ARTICLE_ATTACHMENT_ACCEPT_STRING,
@@ -136,6 +134,7 @@ export const ARTICLE_SUPPORTED_FILE_TYPES = ARTICLE_SUPPORTED_ATTACHMENT_MIME_TY
   (mime) => mime.split('/')[1],
 ).join(', ');
 
-export const ARTICLE_INLINE_SUPPORTED_FILE_TYPES = ARTICLE_INLINE_SUPPORTED_MIME_TYPES.map(
-  (mime) => mime.split('/')[1],
-).join(', ');
+/** De-duplicated: `video/mpeg` and `audio/mpeg` share a subtype */
+export const ARTICLE_INLINE_SUPPORTED_FILE_TYPES = [
+  ...new Set(ARTICLE_INLINE_SUPPORTED_MIME_TYPES.map((mime) => mime.split('/')[1])),
+].join(', ');

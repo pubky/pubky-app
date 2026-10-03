@@ -1,7 +1,7 @@
 'use client';
 
 import '@mdxeditor/editor/style.css';
-import { type ForwardedRef, useEffect, useRef, useState } from 'react';
+import { type ForwardedRef, Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { languages } from '@codemirror/language-data';
 import { oneDark } from '@codemirror/theme-one-dark';
@@ -34,7 +34,7 @@ import {
   UndoRedo,
 } from '@mdxeditor/editor';
 import { useCellValues } from '@mdxeditor/gurx';
-import { AlertTriangle, FileText, Image as ImageIcon, type LucideIcon, Music, Smile, Type, Video } from 'lucide-react';
+import { AlertTriangle, Smile, Type } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
@@ -54,20 +54,12 @@ import { cn } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { EmojiPickerDialog } from '../EmojiPickerDialog/EmojiPickerDialog';
-import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
+import { CODE_BLOCK_LANGUAGES, INLINE_MEDIA_KIND_UI } from './InitializedMDXEditor.constants';
 import { sanitizeCodeBlockLanguages } from './InitializedMDXEditor.utils';
 import { inlineMediaDialogState$, inlineMediaPlugin } from './inlineMediaPlugin';
 import { InsertInlineMediaButton } from './InsertInlineMediaButton';
 import type { MarkdownEditorInlineMedia } from './MarkdownEditor.types';
 import { MarkdownEditorMediaDialog } from './MarkdownEditorMediaDialog';
-
-/** Markdown-mode insert buttons, one per media kind, in toolbar order */
-const MARKDOWN_MEDIA_BUTTONS: { kind: InlineMediaKind; title: string; Icon: LucideIcon }[] = [
-  { kind: 'image', title: 'Image', Icon: ImageIcon },
-  { kind: 'video', title: 'Video', Icon: Video },
-  { kind: 'audio', title: 'Audio', Icon: Music },
-  { kind: 'pdf', title: 'PDF', Icon: FileText },
-];
 
 /**
  * Preload all CodeMirror language support modules to prevent layout shift
@@ -140,6 +132,12 @@ export default function InitializedMDXEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // One hidden file input per media kind, so each toolbar button opens a picker filtered to its kind
   const markdownMediaInputRefs = useRef<Partial<Record<InlineMediaKind, HTMLInputElement | null>>>({});
+
+  // Browsers can't load pubky:// URIs: prefer the session's local object URL (also covers the CDN
+  // variant-readiness window right after upload), then the Nexus CDN URL, then pass an external
+  // URL through untouched. Shared by the image previews and the video/audio/PDF nodes.
+  const resolvePreview = (source: string) =>
+    inlineMedia?.getPreviewUrl(source) ?? pubkyUriToCdnUrl(source, FileVariant.MAIN) ?? source;
   // Synchronous mirror of markdownText: the async image-upload flows read and
   // splice the freshest text through this ref, so back-to-back placeholder
   // swaps never operate on a stale value while a render is still pending.
@@ -327,8 +325,8 @@ export default function InitializedMDXEditor({
       .filter((file): file is File => file !== null && ARTICLE_INLINE_SUPPORTED_MIME_TYPES.includes(file.type));
     if (files.length === 0) return;
 
-    // preventDefault only: the event still bubbles so the composer container
-    // can reset its drag state, but its defaultPrevented guard skips the files.
+    // preventDefault stops the textarea's own paste of the clipboard text; nothing above the
+    // editor handles paste
     event.preventDefault();
     void uploadAndInsertInMarkdownMode(files);
   };
@@ -372,36 +370,37 @@ export default function InitializedMDXEditor({
             <Smile className="size-6" />
           </Button>
 
+          {/* One insert button per media kind, each with its own hidden picker */}
           {inlineMedia &&
-            MARKDOWN_MEDIA_BUTTONS.map(({ kind, title, Icon }) => (
-              <Button
-                key={kind}
-                variant="ghost"
-                size="icon"
-                title={title}
-                onClick={() => markdownMediaInputRefs.current[kind]?.click()}
-                disabled={readOnly}
-                className="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
-                data-testid={`markdown-${kind}-button`}
-              >
-                <Icon className="size-6" />
-              </Button>
-            ))}
-          {inlineMedia &&
-            INLINE_MEDIA_KINDS.map((kind) => (
-              <Input
-                key={kind}
-                ref={(element) => {
-                  markdownMediaInputRefs.current[kind] = element;
-                }}
-                type="file"
-                accept={ARTICLE_INLINE_ACCEPT_STRING_BY_KIND[kind]}
-                multiple
-                className="hidden"
-                onChange={handleMarkdownMediaInputChange}
-                data-testid={`markdown-${kind}-input`}
-              />
-            ))}
+            INLINE_MEDIA_KINDS.map((kind) => {
+              const { label, Icon } = INLINE_MEDIA_KIND_UI[kind];
+              return (
+                <Fragment key={kind}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title={label}
+                    onClick={() => markdownMediaInputRefs.current[kind]?.click()}
+                    disabled={readOnly}
+                    className="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
+                    data-testid={`markdown-${kind}-button`}
+                  >
+                    <Icon className="size-6" />
+                  </Button>
+                  <Input
+                    ref={(element) => {
+                      markdownMediaInputRefs.current[kind] = element;
+                    }}
+                    type="file"
+                    accept={ARTICLE_INLINE_ACCEPT_STRING_BY_KIND[kind]}
+                    multiple
+                    className="hidden"
+                    onChange={handleMarkdownMediaInputChange}
+                    data-testid={`markdown-${kind}-input`}
+                  />
+                </Fragment>
+              );
+            })}
 
           <Button
             variant="ghost"
@@ -459,11 +458,15 @@ export default function InitializedMDXEditor({
                 <ListsToggle options={['bullet', 'number']} />
                 <InsertThematicBreak />
                 <CreateLink />
-                {inlineMedia && <InsertImage />}
-                {inlineMedia && <InsertInlineMediaButton mediaKind="video" />}
-                {inlineMedia && <InsertInlineMediaButton mediaKind="audio" />}
-                {inlineMedia && <InsertInlineMediaButton mediaKind="pdf" />}
-                {inlineMedia && <MediaDialogOpenReporter onOpenChange={setIsMediaDialogOpen} />}
+                {inlineMedia && (
+                  <>
+                    <InsertImage />
+                    <InsertInlineMediaButton mediaKind="video" />
+                    <InsertInlineMediaButton mediaKind="audio" />
+                    <InsertInlineMediaButton mediaKind="pdf" />
+                    <MediaDialogOpenReporter onOpenChange={setIsMediaDialogOpen} />
+                  </>
+                )}
                 <CodeToggle />
                 <InsertCodeBlock />
                 <ButtonWithTooltip title={'Emoji'} onClick={() => setShowEmojiPicker(true)}>
@@ -501,14 +504,7 @@ export default function InitializedMDXEditor({
             ? [
                 imagePlugin({
                   imageUploadHandler: inlineMedia.upload,
-                  // Browsers can't load pubky:// URIs: prefer the session's
-                  // local object URL (also covers the CDN variant-readiness
-                  // window right after upload), then the Nexus CDN URL, then
-                  // pass external URLs through untouched.
-                  imagePreviewHandler: async (imageSource) =>
-                    inlineMedia.getPreviewUrl(imageSource) ??
-                    pubkyUriToCdnUrl(imageSource, FileVariant.MAIN) ??
-                    imageSource,
+                  imagePreviewHandler: async (imageSource) => resolvePreview(imageSource),
                   // CRITICAL: resized images serialize as raw HTML <img> mdast
                   // nodes, escaping the AST-based attachment rewrite on publish.
                   disableImageResize: true,
@@ -518,11 +514,7 @@ export default function InitializedMDXEditor({
                 }),
                 // Video, audio and PDF nodes: claims the image-syntax nodes whose
                 // file type the composer knows is not an image (see the plugin)
-                inlineMediaPlugin({
-                  uploadHandler: inlineMedia.upload,
-                  getMediaType: inlineMedia.getMediaType,
-                  getPreviewUrl: inlineMedia.getPreviewUrl,
-                }),
+                inlineMediaPlugin({ getMediaType: inlineMedia.getMediaType, getPreviewUrl: resolvePreview }),
               ]
             : []),
         ]}

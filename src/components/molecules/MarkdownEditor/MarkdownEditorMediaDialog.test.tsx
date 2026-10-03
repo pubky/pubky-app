@@ -26,7 +26,6 @@ const { mockRealm } = vi.hoisted(() => ({
     saveImage: vi.fn(),
     closeImageDialog: vi.fn(),
     mediaState: { type: 'inactive' } as MediaDialogState,
-    mediaUploadHandler: null as ((file: File) => Promise<string>) | null,
     resolveType: (_uri: string): string | null => null,
     saveMedia: vi.fn(),
     closeMediaDialog: vi.fn(),
@@ -37,7 +36,6 @@ vi.mock('@/molecules/Toaster/toast', () => ({ toast: vi.fn() }));
 
 vi.mock('./inlineMediaPlugin', () => ({
   inlineMediaDialogState$: 'inlineMediaDialogState$',
-  inlineMediaUploadHandler$: 'inlineMediaUploadHandler$',
   inlineMediaTypeResolver$: 'inlineMediaTypeResolver$',
   saveInlineMedia$: 'saveInlineMedia$',
   closeInlineMediaDialog$: 'closeInlineMediaDialog$',
@@ -58,13 +56,7 @@ const publishers: Record<string, () => unknown> = {
 };
 
 vi.mock('@mdxeditor/gurx', () => ({
-  useCellValues: vi.fn(() => [
-    mockRealm.state,
-    mockRealm.uploadHandler,
-    mockRealm.mediaState,
-    mockRealm.mediaUploadHandler,
-    mockRealm.resolveType,
-  ]),
+  useCellValues: vi.fn(() => [mockRealm.state, mockRealm.uploadHandler, mockRealm.mediaState, mockRealm.resolveType]),
   usePublisher: vi.fn((cell: string) => publishers[cell]()),
 }));
 
@@ -83,7 +75,6 @@ describe('MarkdownEditorMediaDialog — images (MDXEditor dialog cells)', () => 
     mockRealm.state = { type: 'new' };
     mockRealm.uploadHandler = vi.fn();
     mockRealm.mediaState = { type: 'inactive' };
-    mockRealm.mediaUploadHandler = null;
   });
 
   it('renders nothing while inactive', () => {
@@ -235,7 +226,7 @@ describe('MarkdownEditorMediaDialog — video, audio and PDF', () => {
     mockRealm.state = { type: 'inactive' };
     mockRealm.uploadHandler = null;
     mockRealm.mediaState = { type: 'new', mediaKind: 'video' };
-    mockRealm.mediaUploadHandler = vi.fn();
+    mockRealm.uploadHandler = vi.fn();
     mockRealm.resolveType = () => null;
   });
 
@@ -255,7 +246,7 @@ describe('MarkdownEditorMediaDialog — video, audio and PDF', () => {
 
   it('shows the chosen file by name (no image preview) and uploads it before saving with its kind', async () => {
     const upload = vi.fn().mockResolvedValue(VIDEO_URI);
-    mockRealm.mediaUploadHandler = upload;
+    mockRealm.uploadHandler = upload;
     render(<MarkdownEditorMediaDialog />);
 
     const clip = new File(['x'], 'clip.mp4', { type: 'video/mp4' });

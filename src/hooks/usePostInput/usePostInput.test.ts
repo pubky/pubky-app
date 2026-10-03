@@ -2450,9 +2450,9 @@ describe('usePostInput', () => {
 
   describe('inline image session', () => {
     it('tells usePost to keep the uploaded images while a lock draft holds them', () => {
-      renderHook(() => usePostInput({ variant: 'post', keepInlineImages: true }));
+      renderHook(() => usePostInput({ variant: 'post', keepInlineMedia: true }));
 
-      expect(usePost).toHaveBeenLastCalledWith({ keepInlineImages: true });
+      expect(usePost).toHaveBeenLastCalledWith({ keepInlineMedia: true });
     });
   });
 

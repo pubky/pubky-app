@@ -50,7 +50,7 @@ export interface UsePostInputOptions {
   onArticleModeChange?: (isArticle: boolean) => void;
   /** Optional external work-in-progress check, added to the tracked fields before collapsing */
   hasExternalContent?: () => boolean;
-  keepInlineImages?: boolean;
+  keepInlineMedia?: boolean;
 }
 
 export interface UsePostInputReturn {

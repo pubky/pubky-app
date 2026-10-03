@@ -109,7 +109,7 @@ export function usePostInput({
   onContentChange,
   onArticleModeChange,
   hasExternalContent,
-  keepInlineImages,
+  keepInlineMedia,
 }: UsePostInputOptions): UsePostInputReturn {
   const isLockAnnouncement = editLock != null;
 
@@ -155,7 +155,7 @@ export function usePostInput({
     inlineMedia: inlineMediaSession,
     uploadingCount,
     serializeArticleForLock,
-  } = usePost({ keepInlineImages });
+  } = usePost({ keepInlineMedia });
   const timelineFeed = useTimelineFeedContext();
   const { undoRepost } = useUndoRepost(isCollectionShare);
 
@@ -361,7 +361,9 @@ export function usePostInput({
     // Articles publish what the editor holds right now: `articleTitle` and `content` trail the inputs
     // by the debounce, and a publish read from them would drop an image inserted in the last half
     // second, then delete its upload as unreferenced.
-    const latestArticle = isArticle ? getLatestArticle() : undefined;
+    const latestArticle = isArticle
+      ? { title: pendingArticleTitleRef.current ?? articleTitle, body: pendingArticleBodyRef.current ?? content }
+      : undefined;
     if (latestArticle) {
       // The state catches up with the inputs here and the pending values are consumed: a debounce
       // commit that fires after the publish has emptied the composer finds nothing left to apply
@@ -521,7 +523,6 @@ export function usePostInput({
     seededAttachmentUris,
     editPreservedUris,
     isSubmitting,
-    getLatestArticle,
     setArticleTitle,
     setContent,
     uploadingCount,

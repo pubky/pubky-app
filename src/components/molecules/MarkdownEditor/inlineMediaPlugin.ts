@@ -5,6 +5,7 @@ import {
   addImportVisitor$,
   addLexicalNode$,
   createActiveEditorSubscription$,
+  imageUploadHandler$,
   insertImage$,
   type LexicalVisitor,
   type MdastImportVisitor,
@@ -29,7 +30,7 @@ import {
 } from '@/libs/file/inlineMediaKind';
 import { Logger } from '@/libs/logger/logger';
 import { toast } from '@/molecules/Toaster/toast';
-import { $insertInlineMediaNode, $isInlineMediaNode, InlineMediaNode } from './InlineMediaNode';
+import { $createInlineMediaNode, $insertInlineMediaNode, $isInlineMediaNode, InlineMediaNode } from './InlineMediaNode';
 import type { InlineMediaDialogState, InlineMediaPluginParams, SaveInlineMediaParams } from './inlineMediaPlugin.types';
 
 /**
@@ -49,7 +50,12 @@ import type { InlineMediaDialogState, InlineMediaPluginParams, SaveInlineMediaPa
  * all-or-nothing against the upload budget); pure-image payloads are left to `imagePlugin`.
  */
 
-export const inlineMediaUploadHandler$ = Cell<((file: File) => Promise<string>) | null>(null);
+/** The host's live resolvers, republished on every render; nothing in the UI subscribes to it directly. */
+const inlineMediaParams$ = Cell<InlineMediaPluginParams | null>(null);
+/**
+ * Stable delegates onto `inlineMediaParams$`: the host rebuilds its resolvers every render, and a
+ * cell that changed identity each time would re-render every mounted node and the dialog with it.
+ */
 export const inlineMediaTypeResolver$ = Cell<(uri: string) => string | null>(() => null);
 export const inlineMediaPreviewResolver$ = Cell<(uri: string) => string | null>(() => null);
 export const inlineMediaDialogState$ = Cell<InlineMediaDialogState>({ type: 'inactive' });
@@ -96,12 +102,7 @@ export const saveInlineMedia$ = Signal<SaveInlineMediaParams>((r) => {
         }
         return;
       }
-      $insertInlineMediaNode({
-        src: values.src,
-        altText: values.altText,
-        title: values.title,
-        mediaKind: values.mediaKind,
-      });
+      $insertInlineMediaNode(values);
     });
     r.pub(inlineMediaDialogState$, { type: 'inactive' });
   });
@@ -151,7 +152,7 @@ function dataTransferOf(event: Event): DataTransfer | null {
 function handleMediaPayload(realm: Realm, editor: LexicalEditor, event: Event): boolean {
   const files = filesOf(dataTransferOf(event));
   if (!hasNonImageMedia(files)) return false;
-  const upload = realm.getValue(inlineMediaUploadHandler$);
+  const upload = realm.getValue(imageUploadHandler$);
   if (!upload) return false;
 
   event.preventDefault();
@@ -188,7 +189,14 @@ export const inlineMediaPlugin = realmPlugin<InlineMediaPluginParams>({
       visitNode({ mdastNode, actions }) {
         const mediaKind = resolveMediaKind(realm, mdastNode.url);
         if (!mediaKind) return;
-        actions.addAndStepInto($insertNode(mdastNode.url, mdastNode.alt ?? '', mdastNode.title ?? '', mediaKind));
+        actions.addAndStepInto(
+          $createInlineMediaNode({
+            src: mdastNode.url,
+            altText: mdastNode.alt ?? '',
+            title: mdastNode.title ?? '',
+            mediaKind,
+          }),
+        );
       },
     };
 
@@ -210,9 +218,9 @@ export const inlineMediaPlugin = realmPlugin<InlineMediaPluginParams>({
       [addLexicalNode$]: InlineMediaNode,
       [addImportVisitor$]: importVisitor,
       [addExportVisitor$]: exportVisitor,
-      [inlineMediaUploadHandler$]: params?.uploadHandler ?? null,
-      [inlineMediaTypeResolver$]: params?.getMediaType ?? (() => null),
-      [inlineMediaPreviewResolver$]: params?.getPreviewUrl ?? (() => null),
+      [inlineMediaParams$]: params ?? null,
+      [inlineMediaTypeResolver$]: (uri: string) => realm.getValue(inlineMediaParams$)?.getMediaType(uri) ?? null,
+      [inlineMediaPreviewResolver$]: (uri: string) => realm.getValue(inlineMediaParams$)?.getPreviewUrl(uri) ?? null,
     });
 
     realm.pub(createActiveEditorSubscription$, (editor) =>
@@ -242,14 +250,6 @@ export const inlineMediaPlugin = realmPlugin<InlineMediaPluginParams>({
   update(realm, params) {
     // The resolvers close over live composer state (session map, edit metadata): republish on
     // every render so an import after a type lands sees it
-    realm.pubIn({
-      [inlineMediaUploadHandler$]: params?.uploadHandler ?? null,
-      [inlineMediaTypeResolver$]: params?.getMediaType ?? (() => null),
-      [inlineMediaPreviewResolver$]: params?.getPreviewUrl ?? (() => null),
-    });
+    realm.pub(inlineMediaParams$, params ?? null);
   },
 });
-
-function $insertNode(src: string, altText: string, title: string, mediaKind: InlineNonImageMediaKind) {
-  return new InlineMediaNode(src, altText, title, mediaKind);
-}

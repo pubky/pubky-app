@@ -229,37 +229,40 @@ const mockUsePostArticle = vi.mocked(usePostArticle);
 const mockUseAttachmentsMetadata = vi.mocked(useAttachmentsMetadata);
 const mockUseLocalFilesStore = vi.mocked(useLocalFilesStore);
 
+const defaultProps = {
+  postId: 'user123:post456',
+  content: '{"title":"Test Article Title","body":"Test article body content"}',
+  attachments: null,
+  isBlurred: false,
+};
+
+const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[] | undefined> = {}) => ({
+  profile: null,
+  posts,
+  collections: {},
+  setProfile: vi.fn(),
+  setPostAttachments: vi.fn(),
+  setCollectionCover: vi.fn(),
+  reset: vi.fn(),
+});
+
+/** The desktop and mobile blocks start from the same article: no cover resolved, no rows, an empty store. */
+const resetMocks = () => {
+  vi.clearAllMocks();
+  useHomeStore.getState().reset();
+  mockUsePostArticle.mockReturnValue({
+    title: 'Test Article Title',
+    body: 'Test article body content',
+    coverImage: null,
+    hasCover: true,
+    isCoverLoading: false,
+  });
+  mockUseLocalFilesStore.mockImplementation((selector) => selector(createMockLocalFilesStore()));
+  mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
+};
+
 describe('PostArticleDetail', () => {
-  const defaultProps = {
-    postId: 'user123:post456',
-    content: '{"title":"Test Article Title","body":"Test article body content"}',
-    attachments: null,
-    isBlurred: false,
-  };
-
-  const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[] | undefined> = {}) => ({
-    profile: null,
-    posts,
-    collections: {},
-    setProfile: vi.fn(),
-    setPostAttachments: vi.fn(),
-    setCollectionCover: vi.fn(),
-    reset: vi.fn(),
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    useHomeStore.getState().reset();
-    mockUsePostArticle.mockReturnValue({
-      title: 'Test Article Title',
-      body: 'Test article body content',
-      coverImage: null,
-      hasCover: true,
-      isCoverLoading: false,
-    });
-    mockUseLocalFilesStore.mockImplementation((selector) => selector(createMockLocalFilesStore()));
-    mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
-  });
+  beforeEach(resetMocks);
 
   it('renders article detail content with inline tags and actions in columns layout', () => {
     render(<PostArticleDetail {...defaultProps} />);
@@ -1062,35 +1065,8 @@ describe('PostArticleDetail', () => {
 });
 
 describe('PostArticleDetail - Mobile Snapshots', () => {
-  const defaultProps = {
-    postId: 'user123:post456',
-    content: '{"title":"Test Article Title","body":"Test article body content"}',
-    attachments: null,
-    isBlurred: false,
-  };
-
   beforeEach(() => {
-    vi.clearAllMocks();
-    useHomeStore.getState().reset();
-    mockUsePostArticle.mockReturnValue({
-      title: 'Test Article Title',
-      body: 'Test article body content',
-      coverImage: null,
-      hasCover: true,
-      isCoverLoading: false,
-    });
-    mockUseLocalFilesStore.mockImplementation((selector) =>
-      selector({
-        profile: null,
-        posts: {},
-        collections: {},
-        setProfile: vi.fn(),
-        setPostAttachments: vi.fn(),
-        setCollectionCover: vi.fn(),
-        reset: vi.fn(),
-      }),
-    );
-    mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
+    resetMocks();
     setMobileViewport();
   });
 

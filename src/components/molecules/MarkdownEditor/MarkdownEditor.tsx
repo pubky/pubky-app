@@ -10,8 +10,8 @@ import type { MarkdownEditorInlineMedia } from './MarkdownEditor.types';
 const MarkdownEditorSkeleton = () => (
   <Container className="flex flex-col">
     <Skeleton className="h-11 w-full rounded-md" />
-    {/* mt-[28px] is so the skeleton is aligned with the editor placeholder */}
-    <Skeleton className="mt-[28px] h-4 w-3/5 rounded-md" />
+    {/* mt-7 aligns the skeleton with the editor placeholder */}
+    <Skeleton className="mt-7 h-4 w-3/5 rounded-md" />
   </Container>
 );
 

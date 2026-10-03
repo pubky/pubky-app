@@ -35,16 +35,11 @@ type UploadMock = ReturnType<typeof vi.fn<(file: File) => Promise<string>>>;
 
 const mountEditor = (
   markdown: string,
-  options?: {
-    getMediaType?: (uri: string) => string | null;
-    imageUpload?: UploadMock;
-    mediaUpload?: UploadMock;
-    readOnly?: boolean;
-  },
+  options?: { getMediaType?: (uri: string) => string | null; upload?: UploadMock; readOnly?: boolean },
 ) => {
   const ref = createRef<MDXEditorMethods>();
-  const imageUpload = options?.imageUpload ?? vi.fn<(file: File) => Promise<string>>();
-  const mediaUpload = options?.mediaUpload ?? vi.fn<(file: File) => Promise<string>>();
+  // One upload handler for every kind: the plugin reads the one imagePlugin holds
+  const upload = options?.upload ?? vi.fn<(file: File) => Promise<string>>();
   const utils = render(
     <MDXEditor
       ref={ref}
@@ -53,19 +48,18 @@ const mountEditor = (
       plugins={[
         toolbarPlugin({ toolbarContents: () => <InsertInlineMediaButton mediaKind="audio" /> }),
         imagePlugin({
-          imageUploadHandler: imageUpload,
+          imageUploadHandler: upload,
           disableImageResize: true,
           ImageDialog: MarkdownEditorMediaDialog,
         }),
         inlineMediaPlugin({
-          uploadHandler: mediaUpload,
           getMediaType: options?.getMediaType ?? ((uri) => mediaTypes[uri] ?? null),
-          getPreviewUrl: () => null,
+          getPreviewUrl: (uri) => (uri.startsWith('pubky://') ? `cdn://${uri}/main` : null),
         }),
       ]}
     />,
   );
-  return { ...utils, ref, imageUpload, mediaUpload };
+  return { ...utils, ref, upload };
 };
 
 const getMarkdown = (ref: React.RefObject<MDXEditorMethods | null>) => ref.current?.getMarkdown() ?? '';
@@ -103,11 +97,16 @@ describe('inlineMediaPlugin', () => {
   });
 
   it('leaves images and unknown file URIs to the image plugin', async () => {
-    mountEditor(`![Pic](${IMAGE_URI})\n\n![Unknown](${fileUri('mystery')})\n`);
+    const { ref } = mountEditor(`![Pic](${IMAGE_URI})\n\n![Unknown](${fileUri('mystery')})\n`);
 
     await act(async () => {});
     expect(screen.queryByTestId('inline-media-node')).not.toBeInTheDocument();
-    expect(document.querySelectorAll('[data-editor-block-type="image"]').length).toBeGreaterThanOrEqual(0);
+    // Both nodes are the image plugin's decorators (jsdom never loads the image, so they stay
+    // placeholders) and survive the round trip
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-lexical-decorator="true"]')).toHaveLength(2);
+    });
+    expect(getMarkdown(ref)).toBe(`![Pic](${IMAGE_URI})\n\n![Unknown](${fileUri('mystery')})`);
   });
 
   it('types an external https URL by its extension', async () => {
@@ -156,10 +155,10 @@ describe('inlineMediaPlugin', () => {
   });
 
   it('takes a mixed image and video drop as one batch and inserts both in order', async () => {
-    const mediaUpload = vi
+    const upload = vi
       .fn<(file: File) => Promise<string>>()
       .mockImplementation((file) => Promise.resolve(file.type.startsWith('image') ? IMAGE_URI : VIDEO_URI));
-    const { ref, imageUpload } = mountEditor('', { mediaUpload });
+    const { ref } = mountEditor('', { upload });
     await act(async () => {});
 
     const png = new File(['x'], 'pic.png', { type: 'image/png' });
@@ -172,14 +171,13 @@ describe('inlineMediaPlugin', () => {
       expect(getMarkdown(ref)).toContain(`![](${VIDEO_URI})`);
     });
     expect(getMarkdown(ref)).toContain(`![](${IMAGE_URI})`);
-    expect(mediaUpload).toHaveBeenCalledTimes(2);
-    expect(imageUpload).not.toHaveBeenCalled();
+    expect(upload).toHaveBeenCalledTimes(2);
     expect(await screen.findByTestId('inline-media-video')).toBeInTheDocument();
   });
 
   it('leaves a pure-image drop to the image plugin', async () => {
-    const imageUpload = vi.fn<(file: File) => Promise<string>>().mockResolvedValue(IMAGE_URI);
-    const { mediaUpload } = mountEditor('', { imageUpload });
+    const upload = vi.fn<(file: File) => Promise<string>>().mockResolvedValue(IMAGE_URI);
+    const { ref } = mountEditor('', { upload });
     await act(async () => {});
 
     await act(async () => {
@@ -187,14 +185,17 @@ describe('inlineMediaPlugin', () => {
     });
 
     await waitFor(() => {
-      expect(imageUpload).toHaveBeenCalledTimes(1);
+      expect(upload).toHaveBeenCalledTimes(1);
     });
-    expect(mediaUpload).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(getMarkdown(ref)).toBe(`![](${IMAGE_URI})`);
+    });
+    expect(screen.queryByTestId('inline-media-node')).not.toBeInTheDocument();
   });
 
   it('inserts a pasted audio file', async () => {
-    const mediaUpload = vi.fn<(file: File) => Promise<string>>().mockResolvedValue(AUDIO_URI);
-    const { ref } = mountEditor('', { mediaUpload });
+    const upload = vi.fn<(file: File) => Promise<string>>().mockResolvedValue(AUDIO_URI);
+    const { ref } = mountEditor('', { upload });
     await act(async () => {});
 
     const mp3 = new File(['x'], 'song.mp3', { type: 'audio/mpeg' });
@@ -215,8 +216,8 @@ describe('inlineMediaPlugin', () => {
   });
 
   it('inserts nothing when the upload is refused', async () => {
-    const mediaUpload = vi.fn<(file: File) => Promise<string>>().mockRejectedValue(new Error('refused'));
-    const { ref } = mountEditor('Text\n', { mediaUpload });
+    const upload = vi.fn<(file: File) => Promise<string>>().mockRejectedValue(new Error('refused'));
+    const { ref } = mountEditor('Text\n', { upload });
     await act(async () => {});
 
     await act(async () => {
@@ -224,7 +225,7 @@ describe('inlineMediaPlugin', () => {
     });
     await act(async () => {});
 
-    expect(mediaUpload).toHaveBeenCalledTimes(1);
+    expect(upload).toHaveBeenCalledTimes(1);
     expect(getMarkdown(ref)).toBe('Text');
   });
 

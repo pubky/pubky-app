@@ -2,6 +2,7 @@ import React, { createRef } from 'react';
 import { imagePlugin, type MDXEditorMethods } from '@mdxeditor/editor';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { asOpaque } from '@/test-utils/type-assertions';
 import InitializedMDXEditor from './InitializedMDXEditor';
 import { inlineMediaPlugin } from './inlineMediaPlugin';
@@ -30,7 +31,6 @@ vi.mock('@/config/posts', () => {
 vi.mock('./inlineMediaPlugin', () => ({
   inlineMediaPlugin: vi.fn(() => ({ type: 'inline-media' })),
   inlineMediaDialogState$: 'inlineMediaDialogState$',
-  inlineMediaUploadHandler$: 'inlineMediaUploadHandler$',
   inlineMediaPreviewResolver$: 'inlineMediaPreviewResolver$',
   inlineMediaTypeResolver$: 'inlineMediaTypeResolver$',
   openNewInlineMediaDialog$: 'openNewInlineMediaDialog$',
@@ -1088,13 +1088,19 @@ describe('Inline images', () => {
     expect(screen.queryByTestId('markdown-video-button')).not.toBeInTheDocument();
   });
 
-  it('registers the inline media plugin with the shared upload, type and preview handlers', () => {
+  it('registers the inline media plugin with the type resolver and the shared preview chain', () => {
     const upload = vi.fn().mockResolvedValue(FILE_URI);
     const getMediaType = vi.fn(() => 'video/mp4');
-    const getPreviewUrl = vi.fn(() => null);
+    const getPreviewUrl = vi.fn((uri: string) => (uri === FILE_URI ? 'blob:session' : null));
     render(<InitializedMDXEditor editorRef={null} markdown="" inlineMedia={{ upload, getPreviewUrl, getMediaType }} />);
 
-    expect(inlineMediaPlugin).toHaveBeenCalledWith({ uploadHandler: upload, getMediaType, getPreviewUrl });
+    expect(inlineMediaPlugin).toHaveBeenCalledWith({ getMediaType, getPreviewUrl: expect.any(Function) });
+    const { getPreviewUrl: resolvePreview } = vi.mocked(inlineMediaPlugin).mock.calls[0][0]!;
+    // Session object URL first, then the CDN for any other file URI, then an external URL as is
+    expect(resolvePreview(FILE_URI)).toBe('blob:session');
+    vi.mocked(pubkyUriToCdnUrl).mockReturnValueOnce('cdn://other-file');
+    expect(resolvePreview('pubky://other/pub/pubky.app/files/x')).toBe('cdn://other-file');
+    expect(resolvePreview('https://example.com/clip.mp4')).toBe('https://example.com/clip.mp4');
   });
 
   it('adds a video, audio and PDF button next to the image button in both toolbars', () => {
@@ -1377,7 +1383,7 @@ describe('Upload-in-flight guards', () => {
     expect(screen.getByTestId('markdown-richtext-button')).toBeEnabled();
   });
 
-  it('ignores non-image files dropped on the markdown textarea (no placeholder, no upload)', () => {
+  it('ignores unsupported files dropped on the markdown textarea (no placeholder, no upload)', () => {
     const upload = vi.fn();
     render(
       <InitializedMDXEditor

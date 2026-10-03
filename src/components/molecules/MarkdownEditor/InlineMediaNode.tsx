@@ -18,12 +18,12 @@ import {
 } from '@/libs/file/inlineMediaKind';
 import { InlineMediaEditor } from './InlineMediaEditor';
 
-export type SerializedInlineMediaNode = Spread<
+type SerializedInlineMediaNode = Spread<
   { src: string; altText: string; title: string; mediaKind: InlineNonImageMediaKind },
   SerializedLexicalNode
 >;
 
-export interface CreateInlineMediaNodeParams {
+interface CreateInlineMediaNodeParams {
   src: string;
   altText?: string;
   title?: string;

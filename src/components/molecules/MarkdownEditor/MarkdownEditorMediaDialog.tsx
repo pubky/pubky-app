@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { closeImageDialog$, imageDialogState$, imageUploadHandler$, saveImage$ } from '@mdxeditor/editor';
 import { useCellValues, usePublisher } from '@mdxeditor/gurx';
-import { FileText, Image as ImageIcon, type LucideIcon, Music, Trash2, Video } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -20,11 +20,11 @@ import { Spinner } from '@/atoms/Spinner/Spinner';
 import { ARTICLE_INLINE_ACCEPT_STRING_BY_KIND } from '@/config/posts';
 import { getInlineMediaKindFromMime, inferMediaKindFromUrl, type InlineMediaKind } from '@/libs/file/inlineMediaKind';
 import { toast } from '@/molecules/Toaster/toast';
+import { INLINE_MEDIA_KIND_UI } from './InitializedMDXEditor.constants';
 import {
   closeInlineMediaDialog$,
   inlineMediaDialogState$,
   inlineMediaTypeResolver$,
-  inlineMediaUploadHandler$,
   saveInlineMedia$,
 } from './inlineMediaPlugin';
 
@@ -43,7 +43,6 @@ const COPY: Record<
     altPlaceholder: string;
     wrongFile: string;
     wrongUrl: string | null;
-    Icon: LucideIcon;
   }
 > = {
   image: {
@@ -58,7 +57,6 @@ const COPY: Record<
     altPlaceholder: 'Describe the image',
     wrongFile: 'Choose an image file.',
     wrongUrl: null,
-    Icon: ImageIcon,
   },
   video: {
     add: 'Add video',
@@ -72,7 +70,6 @@ const COPY: Record<
     altPlaceholder: 'Describe the video',
     wrongFile: 'Choose a video file.',
     wrongUrl: 'Enter a direct link to a video file.',
-    Icon: Video,
   },
   audio: {
     add: 'Add audio',
@@ -86,7 +83,6 @@ const COPY: Record<
     altPlaceholder: 'Describe the audio',
     wrongFile: 'Choose an audio file.',
     wrongUrl: 'Enter a direct link to an audio file.',
-    Icon: Music,
   },
   pdf: {
     add: 'Add PDF',
@@ -100,7 +96,6 @@ const COPY: Record<
     altPlaceholder: 'Describe the document',
     wrongFile: 'Choose a PDF file.',
     wrongUrl: 'Enter a direct link to a PDF file.',
-    Icon: FileText,
   },
 };
 
@@ -116,15 +111,15 @@ const COPY: Record<
  * plugin only ever receives a resolved `src`, which it processes synchronously. A failed upload
  * keeps the dialog open for retry (the upload handler surfaces the error toast).
  *
- * Needs no props: the upload handlers and dialog states come from the editor's realm cells, so
- * the same static component serves every editor instance.
+ * Needs no props: the upload handler (the one `imagePlugin` holds, shared by every kind) and the
+ * dialog states come from the editor's realm cells, so the same static component serves every
+ * editor instance.
  */
 export function MarkdownEditorMediaDialog() {
-  const [imageState, imageUploadHandler, mediaState, mediaUploadHandler, resolveMediaType] = useCellValues(
+  const [imageState, uploadHandler, mediaState, resolveMediaType] = useCellValues(
     imageDialogState$,
     imageUploadHandler$,
     inlineMediaDialogState$,
-    inlineMediaUploadHandler$,
     inlineMediaTypeResolver$,
   );
   const saveImage = usePublisher(saveImage$);
@@ -153,7 +148,7 @@ export function MarkdownEditorMediaDialog() {
         // Invisible passthrough: editing must not wipe a title that markdown-mode
         // users (or other clients) put on the image
         initialTitle={initialValues?.title}
-        upload={imageUploadHandler}
+        upload={uploadHandler}
         resolveType={() => null}
         onSave={saveImage}
         onClose={() => closeImageDialog()}
@@ -173,7 +168,7 @@ export function MarkdownEditorMediaDialog() {
         initialSrc={initialValues?.src ?? ''}
         initialAltText={initialValues?.altText ?? ''}
         initialTitle={initialValues?.title}
-        upload={mediaUploadHandler}
+        upload={uploadHandler}
         resolveType={resolveMediaType}
         onSave={(values) => saveMedia({ ...values, mediaKind })}
         onClose={() => closeMediaDialog()}
@@ -215,6 +210,7 @@ function MediaDialogForm({
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const copy = COPY[mediaKind];
+  const { Icon } = INLINE_MEDIA_KIND_UI[mediaKind];
   const isImage = mediaKind === 'image';
 
   // Object URLs live exactly as long as the chosen file is displayed
@@ -314,7 +310,7 @@ function MediaDialogForm({
                 >
                   {file && !isImage && (
                     <span className="flex max-w-full items-center gap-x-2 px-4 text-sm text-muted-foreground">
-                      <copy.Icon aria-hidden="true" className="size-5 shrink-0" />
+                      <Icon aria-hidden="true" className="size-5 shrink-0" />
                       <span className="min-w-0 truncate" data-testid={`${testId}-file-name`}>
                         {file.name}
                       </span>
@@ -345,7 +341,7 @@ function MediaDialogForm({
                       aria-label={copy.choose}
                       data-testid={`${testId}-file-choose-button`}
                     >
-                      <copy.Icon className="size-4" />
+                      <Icon className="size-4" />
                       {copy.choose}
                     </Button>
                   )}

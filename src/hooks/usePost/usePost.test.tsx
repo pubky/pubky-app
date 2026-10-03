@@ -2419,7 +2419,7 @@ describe('usePost — article inline images', () => {
       act(() => view.result.current.setContent(BODY));
 
       // The switch captures the draft first; applying the lock then empties the composer.
-      view.rerender({ keepInlineImages: true });
+      view.rerender({ keepInlineMedia: true });
       await act(async () => {
         view.result.current.setContent('');
         view.result.current.setArticleTitle('');
@@ -2437,7 +2437,7 @@ describe('usePost — article inline images', () => {
     it('deletes the public uploads once the published lock lets go of them', async () => {
       const { rerender } = await setupCapturedArticle();
 
-      rerender({ keepInlineImages: false });
+      rerender({ keepInlineMedia: false });
 
       await waitFor(() => {
         expect(FileController.commitDelete).toHaveBeenCalledWith({ fileUris: [fileUri('img1')] });
@@ -2454,7 +2454,7 @@ describe('usePost — article inline images', () => {
         result.current.setArticleTitle('My Article');
         result.current.setIsArticle(true);
       });
-      rerender({ keepInlineImages: false });
+      rerender({ keepInlineMedia: false });
       await act(async () => {
         await result.current.post({});
       });

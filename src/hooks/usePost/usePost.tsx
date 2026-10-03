@@ -24,6 +24,7 @@ import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type {
   ComposerDraft,
   ExistingAttachment,
+  LatestArticle,
   SerializedArticle,
   UsePostEditOptions,
   UsePostOptions,
@@ -92,7 +93,7 @@ const showSessionExpiredToast = () =>
     description: 'Session expired. Please sign in.',
   });
 
-export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UsePostReturn {
+export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePostReturn {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -111,9 +112,9 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
   // body; `content` lags the editor by its 500ms debounce and in-flight
   // uploads aren't in the body yet, so `serializeArticleBody` at publish
   // remains the authoritative cap enforcement.
-  const inlineImageSession = useInlineMediaUpload({
+  const inlineMediaSession = useInlineMediaUpload({
     enabled: isArticle,
-    keepSession: keepInlineImages,
+    keepSession: keepInlineMedia,
     authorPubky: currentUserId,
     getInlineBudget: () =>
       ARTICLE_ATTACHMENT_MAX_FILES -
@@ -181,7 +182,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
   const rejectForeignInlineUris = (inlineUris: string[], originalUris: readonly string[] = []): boolean => {
     const originalSet = new Set(originalUris);
     const hasForeign = inlineUris.some(
-      (uri) => inlineImageSession.getPreviewUrl(uri) === null && !originalSet.has(uri),
+      (uri) => inlineMediaSession.getPreviewUrl(uri) === null && !originalSet.has(uri),
     );
     if (!hasForeign) return false;
 
@@ -197,7 +198,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     const serialized = serializeArticleForPublish(attachments.length > 0, body.trim());
     if (!serialized || rejectForeignInlineUris(serialized.inlineUris)) return null;
 
-    const inlineFiles = serialized.inlineUris.map((uri) => inlineImageSession.getSessionFile(uri));
+    const inlineFiles = serialized.inlineUris.map((uri) => inlineMediaSession.getSessionFile(uri));
     // A skipped file would shift every slot after it onto the wrong image.
     if (!inlineFiles.every((file) => file !== null)) return null;
     return { body: serialized.body, inlineFiles };
@@ -219,7 +220,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
    * the CDN variant-readiness window, where fresh variants 404 for a while.
    */
   const completeInlineSeedEntries = async (inlineUris: string[]): Promise<(InlineMediaLocalEntry | null)[]> => {
-    const sessionEntries = inlineImageSession.buildLocalAttachmentEntries(inlineUris);
+    const sessionEntries = inlineMediaSession.buildLocalAttachmentEntries(inlineUris);
     const missingUris = inlineUris.filter((_, index) => sessionEntries[index] === null);
     if (missingUris.length === 0) return sessionEntries;
 
@@ -288,13 +289,17 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     }
   };
 
+  // The inputs run ahead of the debounced state: a publish takes what the editor holds, not what
+  // the state last caught up with, or an image inserted in the last half second is dropped and its
+  // upload deleted as unreferenced. A plain post has no article and reads the state.
+  const latestOf = (article?: LatestArticle) => ({
+    title: article?.title ?? articleTitle,
+    body: article?.body ?? content,
+  });
+
   const post = async ({ article, onSuccess }: UsePostPostOptions) => {
-    // The inputs run ahead of the debounced state: publish what the editor holds, not what the
-    // state last caught up with, or an image inserted in the last half second is dropped and its
-    // upload deleted as unreferenced.
-    const latestTitle = article?.title ?? articleTitle;
-    const latestBody = article?.body ?? content;
-    const hasBody = Boolean((isArticle ? latestBody : content).trim());
+    const { title: latestTitle, body: latestBody } = latestOf(article);
+    const hasBody = Boolean(latestBody.trim());
     // allow empty content and attachments if not article
     if ((!hasBody && attachments.length === 0) || (isArticle && (!hasBody || !latestTitle.trim())) || !currentUserId)
       return;
@@ -302,7 +307,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     setIsSubmitting(true);
     // From here until finally, discarding the session must not delete files:
     // the commit may succeed and the published article would reference them
-    inlineImageSession.setCommitting(true);
+    inlineMediaSession.setCommitting(true);
 
     try {
       let articleBody = '';
@@ -331,7 +336,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
           ...attachments.map(fileToLocalAttachment),
           ...(await completeInlineSeedEntries(inlineUris)),
         ]);
-        void inlineImageSession.finalizeSession(inlineUris);
+        void inlineMediaSession.finalizeSession(inlineUris);
       }
 
       setContent('');
@@ -347,7 +352,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
       Logger.error('[usePost] Failed to create post:', err);
       showCommitErrorToast(err, 'Could not create post. Try again.');
     } finally {
-      inlineImageSession.setCommitting(false);
+      inlineMediaSession.setCommitting(false);
       setIsSubmitting(false);
     }
   };
@@ -391,10 +396,8 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     article,
     onSuccess,
   }: UsePostEditOptions) => {
-    // See `post()`: the editor's latest values, not the debounced state
-    const latestTitle = article?.title ?? articleTitle;
-    const latestBody = article?.body ?? content;
-    const hasBody = Boolean((isArticle ? latestBody : content).trim());
+    const { title: latestTitle, body: latestBody } = latestOf(article);
+    const hasBody = Boolean(latestBody.trim());
     // allow empty content when attachments remain; articles require content and title
     const totalAttachments = existingAttachments.length + attachments.length;
     if (
@@ -408,7 +411,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     setIsSubmitting(true);
     // From here until finally, discarding the session must not delete files:
     // the commit may succeed and the edited article would reference them
-    inlineImageSession.setCommitting(true);
+    inlineMediaSession.setCommitting(true);
 
     try {
       let editContentPayload: string;
@@ -438,7 +441,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
           coverUri = await FileController.commitCreate({ file: newCoverFile, pubky: currentUserId });
           // Joining the session means a failed commit below leaves cleanup to
           // the session's discard sweep.
-          inlineImageSession.registerSessionUpload(coverUri, newCoverFile);
+          inlineMediaSession.registerSessionUpload(coverUri, newCoverFile);
         }
         const referencedOrder = [...(coverUri ? [coverUri] : []), ...serialized.inlineUris];
         // Original attachments the user was never shown (not the cover, not
@@ -506,7 +509,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
 
       if (isArticle && articleSeedEntries && articleNextOrder) {
         seedArticleLocalFiles(editPostId, articleSeedEntries);
-        void inlineImageSession.finalizeSession(articleNextOrder);
+        void inlineMediaSession.finalizeSession(articleNextOrder);
       }
 
       setContent('');
@@ -534,7 +537,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
         description: getImageUploadSizeLimitToastMessage(err) ?? 'Could not update post. Try again.',
       });
     } finally {
-      inlineImageSession.setCommitting(false);
+      inlineMediaSession.setCommitting(false);
       setIsSubmitting(false);
     }
   };
@@ -602,11 +605,11 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     edit,
     isSubmitting,
     inlineMedia: {
-      upload: inlineImageSession.uploadInlineMedia,
-      getPreviewUrl: inlineImageSession.getPreviewUrl,
-      getMediaType: inlineImageSession.getMediaType,
+      upload: inlineMediaSession.uploadInlineMedia,
+      getPreviewUrl: inlineMediaSession.getPreviewUrl,
+      getMediaType: inlineMediaSession.getMediaType,
     },
-    uploadingCount: inlineImageSession.uploadingCount,
+    uploadingCount: inlineMediaSession.uploadingCount,
     serializeArticleForLock,
   };
 }

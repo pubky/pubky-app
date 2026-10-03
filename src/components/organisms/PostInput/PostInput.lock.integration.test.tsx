@@ -5,6 +5,7 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
+import type { ComposerDraft } from '@/hooks/usePost/usePost.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -121,12 +122,7 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         handleArticleClick: vi.fn(),
         articleTitle,
         setArticleTitle,
-        restoreComposerDraft: (draft: {
-          content: string;
-          attachments: File[];
-          isArticle: boolean;
-          articleTitle: string;
-        }) => {
+        restoreComposerDraft: (draft: ComposerDraft) => {
           setContent(draft.content);
           setAttachments(draft.attachments);
           setIsArticle(draft.isArticle);

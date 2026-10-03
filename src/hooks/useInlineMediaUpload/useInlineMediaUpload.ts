@@ -11,7 +11,7 @@ import {
 import { FileController } from '@/controllers/file/file';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getInlineMediaKindFromMime, type InlineMediaKind } from '@/libs/file/inlineMediaKind';
-import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
+import { getImageUploadSizeLimitLabelMb, getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
@@ -29,7 +29,7 @@ function taggedRejection(message: string, cause?: unknown): Error {
   return rejection;
 }
 
-const MAX_IMAGE_SIZE_LABEL = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
+const MAX_IMAGE_SIZE_LABEL = getImageUploadSizeLimitLabelMb('raw');
 const MAX_OTHER_SIZE_LABEL = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
 
 /** Static retry copy per media kind; toasts never carry the file name. */
@@ -229,9 +229,7 @@ export function useInlineMediaUpload({
     return getSession().get(uri.trim())?.file ?? null;
   };
 
-  const getMediaType = (uri: string): string | null => {
-    return getSession().get(uri.trim())?.file.type ?? null;
-  };
+  const getMediaType = (uri: string): string | null => getSessionFile(uri)?.type ?? null;
 
   const registerSessionUpload = (uri: string, file: File) => {
     getSession().set(uri, { objectUrl: URL.createObjectURL(file), file });

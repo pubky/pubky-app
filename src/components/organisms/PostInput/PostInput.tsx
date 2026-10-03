@@ -162,7 +162,7 @@ export function PostInput({
     hasExternalContent: () => isLockEnabled,
     // TODO:[Locks] #2684 — once this goes false the public copies are deleted best-effort; a failed
     // deletion leaves paid images public and nobody is told.
-    keepInlineImages: lockDraft?.isArticle === true,
+    keepInlineMedia: lockDraft?.isArticle === true,
   });
 
   const {
