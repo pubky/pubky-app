@@ -12,6 +12,7 @@ import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { LocalBookmarkService } from '@/services/local/bookmark/bookmark';
+import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { asInvalid } from '@/test-utils/type-assertions';
 
@@ -83,6 +84,7 @@ const setupPostDetails = async (
 
 describe('LocalBookmarkService', () => {
   beforeEach(async () => {
+    recentUnbookmarks.reset();
     await db.initialize();
     await db.transaction(
       'rw',
@@ -207,6 +209,20 @@ describe('LocalBookmarkService', () => {
 
       const savedBookmark = await getSavedBookmark();
       expect(savedBookmark).toBeUndefined();
+    });
+
+    it('should keep a stale Nexus copy of the removed bookmark from restoring it', async () => {
+      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
+
+      expect(recentUnbookmarks.isProtected(testData.userPubky, testData.compositePostId)).toBe(true);
+    });
+
+    it('should let a re-bookmark lift the protection of an earlier removal', async () => {
+      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
+      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
+
+      expect(recentUnbookmarks.isProtected(testData.userPubky, testData.compositePostId)).toBe(false);
+      expect(await getSavedBookmark()).toBeTruthy();
     });
 
     it('should decrement user bookmarks count when deleting bookmark', async () => {
