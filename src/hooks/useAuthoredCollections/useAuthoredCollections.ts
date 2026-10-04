@@ -14,6 +14,8 @@ type AuthoredCollections = CollectionPost[];
 type UseAuthoredCollectionsResult = {
   collections: AuthoredCollections;
   isLoading: boolean;
+  /** The `localReadVersion` whose local read `collections` reflects. */
+  readVersion: number;
 };
 
 export function useAuthoredCollections(enabled = true, localReadVersion = 0): UseAuthoredCollectionsResult {
@@ -28,17 +30,21 @@ export function useAuthoredCollections(enabled = true, localReadVersion = 0): Us
 
   // A completed write can precede its live-query notification. A new version
   // forces a local read; keep the existing rows mounted while that read resolves.
-  const [snapshot, setSnapshot] = useState({ viewerId: currentUserPubky, data });
+  const [snapshot, setSnapshot] = useState({ viewerId: currentUserPubky, data, version: localReadVersion });
   if (snapshot.viewerId !== currentUserPubky) {
-    setSnapshot({ viewerId: currentUserPubky, data: undefined });
+    setSnapshot({ viewerId: currentUserPubky, data: undefined, version: localReadVersion });
   } else if (data !== undefined && snapshot.data !== data) {
-    setSnapshot({ viewerId: currentUserPubky, data });
+    // Keyed by the read's identity: the render that bumps the version still sees the
+    // previous lifetime's rows, which must not be stamped with the new version.
+    setSnapshot({ viewerId: currentUserPubky, data, version: localReadVersion });
   }
   const previousData = enabled && snapshot.viewerId === currentUserPubky ? snapshot.data : undefined;
+  const showsPrevious = data === undefined && localReadVersion > 0;
 
   return {
-    collections: (data === undefined && localReadVersion > 0 ? previousData : data) ?? [],
+    collections: (showsPrevious ? previousData : data) ?? [],
     isLoading,
+    readVersion: showsPrevious ? snapshot.version : localReadVersion,
   };
 }
 

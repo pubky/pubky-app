@@ -53,11 +53,14 @@ export function usePostSaveTargets(
 ): UsePostSaveTargetsResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const bookmark = useBookmark(postId);
-  const [localReadVersion, setLocalReadVersion] = useState(0);
-  const { collections, isLoading: isCollectionsLoading } = useAuthoredCollections(
-    Boolean(currentUserPubky),
-    localReadVersion,
-  );
+  // Each completed toggle forces a fresh local read and stays busy until that read lands.
+  // `pendingReads` maps a collection to the read version its last toggle waits for.
+  const [localReads, setLocalReads] = useState({ version: 0, pendingReads: new Map<string, number>() });
+  const {
+    collections,
+    isLoading: isCollectionsLoading,
+    readVersion,
+  } = useAuthoredCollections(Boolean(currentUserPubky), localReads.version);
   // `useAuthoredCollections` reads the whole cached stream, so it already renders
   // every page this driver persists: the picker list grows through the live read
   // rather than through a page-scoped list that would shrink back to one page.
@@ -88,7 +91,7 @@ export function usePostSaveTargets(
       name: collection.content.name,
       description: collection.content.description ?? '',
       isSaved,
-      isUpdating: updatingCollectionIds.has(id) || (localReadVersion > 0 && isCollectionsLoading),
+      isUpdating: updatingCollectionIds.has(id) || (localReads.pendingReads.get(id) ?? 0) > readVersion,
     };
   });
 
@@ -128,8 +131,12 @@ export function usePostSaveTargets(
     } finally {
       // Observe the current database after success/rollback, including writes
       // from other pickers. Waiting for an expected boolean can never settle
-      // when another writer has already superseded this operation.
-      setLocalReadVersion((version) => version + 1);
+      // when another writer has already superseded this operation. Only this
+      // collection waits for the read; the other rows stay interactive.
+      setLocalReads(({ version, pendingReads }) => ({
+        version: version + 1,
+        pendingReads: new Map(pendingReads).set(collectionId, version + 1),
+      }));
       setCollectionUpdating(collectionId, false);
     }
   };

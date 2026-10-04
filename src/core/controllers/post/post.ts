@@ -2,7 +2,11 @@ import { postUriBuilder, PubkyAppPostKind } from 'pubky-app-specs';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { PostApplication } from '@/application/post/post';
-import type { TGetDetailsByIdsParams, TGetOrFetchPostParams } from '@/application/post/post.types';
+import type {
+  TGetDetailsByIdsParams,
+  TGetOrFetchPostParams,
+  TGetRelationshipsByIdsParams,
+} from '@/application/post/post.types';
 import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
 import { POST_MAX_TAGS } from '@/config/posts';
 import type {
@@ -92,6 +96,18 @@ export class PostController {
    */
   static async getRelationships({ compositeId }: TCompositeId): Promise<PostRelationshipsModelSchema | null> {
     return await PostApplication.getRelationships({ compositeId });
+  }
+
+  /**
+   * Bulk read post relationships for multiple posts from the local database, preserving input order.
+   * @param params - Parameters object
+   * @param params.compositeIds - Composite post IDs in format "authorId:postId"
+   * @returns Array of post relationships aligned to `compositeIds` (undefined for missing posts)
+   */
+  static async getRelationshipsByIds({
+    compositeIds,
+  }: TGetRelationshipsByIdsParams): Promise<(PostRelationshipsModelSchema | undefined)[]> {
+    return await PostApplication.getRelationshipsByIds({ compositeIds });
   }
 
   /**

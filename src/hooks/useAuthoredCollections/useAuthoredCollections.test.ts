@@ -104,6 +104,11 @@ describe('useAuthoredCollections', () => {
     rerender({ version: 1 });
     expect(result.current.collections).toEqual(authoredCollections);
     expect(result.current.isLoading).toBe(true);
+    expect(result.current.readVersion).toBe(0);
+    mocks.localFirstResult = { data: [...authoredCollections], isLoading: false };
+    rerender({ version: 1 });
+    expect(result.current.readVersion).toBe(1);
+    mocks.localFirstResult = { data: undefined, isLoading: true };
     mocks.currentUserPubky = 'other-user';
     rerender({ version: 1 });
     expect(result.current.collections).toEqual([]);

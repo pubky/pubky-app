@@ -2,11 +2,9 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { postUriBuilder } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
-import { useAuthoredCollections } from '@/hooks/useAuthoredCollections/useAuthoredCollections';
 import { usePostSaveTargets } from '@/hooks/usePostSaveTargets/usePostSaveTargets';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
-import type { CollectionPost } from '@/models/post/collection/collectionPost.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
@@ -63,27 +61,4 @@ describe('concurrent picker regression', () => {
       await waitFor(() => expect(target(first)?.isUpdating).toBe(false));
     },
   );
-});
-
-afterEach(() => vi.restoreAllMocks());
-
-it('does not preserve prior account collections during a new account read', async () => {
-  useAuthStore.setState({ currentUserPubky: AUTHOR });
-  vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
-  const id = await PostController.commitCreateCollection({ authorId: AUTHOR, name: 'Account A collection', items: [] });
-  const view = renderHook(() => useAuthoredCollections(true, 1));
-  await waitFor(() => expect(view.result.current.collections[0]?.details.id).toBe(id));
-  const pending = Promise.withResolvers<CollectionPost[] | null>();
-  const original = PostController.getAuthoredCollections;
-  vi.spyOn(PostController, 'getAuthoredCollections').mockImplementation((params) =>
-    params.authorId === AUTHOR ? original.call(PostController, params) : pending.promise,
-  );
-  act(() => {
-    useAuthStore.setState({ currentUserPubky: 'account-b' as Pubky });
-  });
-  expect(view.result.current.isLoading).toBe(true);
-  expect(view.result.current.collections).toEqual([]);
-  await act(async () => {
-    pending.resolve([]);
-  });
 });

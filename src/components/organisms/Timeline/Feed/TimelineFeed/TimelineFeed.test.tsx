@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -824,7 +825,6 @@ describe('TimelineFeed', () => {
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
         streamId: buildCollectionItemsStreamId(collectionAuthor, collectionPost),
         limit: NEXUS_STREAM_MAX_LIMIT,
-        collectionMembership: { postIds: undefined, viewerId: null },
       });
       expect(mockUsePostDetails).toHaveBeenCalledWith(`${collectionAuthor}:${collectionPost}`);
     });
@@ -840,7 +840,7 @@ describe('TimelineFeed', () => {
         isLoading: false,
       });
 
-    it('passes a signed-in viewer’s membership to pagination and renders its projected items', () => {
+    it('renders a signed-in viewer’s collection in envelope order', () => {
       orderedEnvelope();
       mockUseStreamPagination.mockReturnValue({
         ...defaultPaginationResult,
@@ -851,11 +851,6 @@ describe('TimelineFeed', () => {
       try {
         render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
 
-        expect(mockUseStreamPagination).toHaveBeenCalledWith(
-          expect.objectContaining({
-            collectionMembership: { postIds: ['author_a:post_a', 'author_b:post_b'], viewerId: 'viewer' },
-          }),
-        );
         expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
           'data-post-ids',
           'author_a:post_a,author_b:post_b',
@@ -874,15 +869,10 @@ describe('TimelineFeed', () => {
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
 
-      expect(mockUseStreamPagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          collectionMembership: { postIds: ['author_a:post_a', 'author_b:post_b'], viewerId: null },
-        }),
-      );
       expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'author_a:post_a,author_b:post_b');
     });
 
-    it('preserves explicitly retained ids returned by pagination for the owner', () => {
+    it('hides stream ids the owner’s envelope does not list', () => {
       orderedEnvelope();
       mockUseStreamPagination.mockReturnValue({
         ...defaultPaginationResult,
@@ -893,9 +883,54 @@ describe('TimelineFeed', () => {
       try {
         render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
 
+        // The envelope is authoritative for every viewer: a stale Nexus page cannot
+        // reintroduce a removed member, and an item added elsewhere waits for the envelope.
         expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
           'data-post-ids',
-          'author_a:post_a,author_b:post_b,stranger:post_x',
+          'author_a:post_a,author_b:post_b',
+        );
+      } finally {
+        useAuthStore.getState().reset();
+      }
+    });
+
+    it('remounts the feed when the viewer changes so no interaction state carries over', () => {
+      orderedEnvelope();
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['author_a:post_a', 'author_b:post_b'],
+      });
+      useAuthStore.getState().setCurrentUserPubky(collectionAuthor as Pubky);
+      const feed: { current: ReturnType<typeof useTimelineFeedContext> } = { current: null };
+      function FeedProbe() {
+        const context = useTimelineFeedContext();
+        useEffect(() => {
+          feed.current = context;
+        });
+        return null;
+      }
+
+      try {
+        render(
+          <TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS}>
+            <FeedProbe />
+          </TimelineFeed>,
+        );
+        expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
+          'data-post-ids',
+          'author_a:post_a,author_b:post_b',
+        );
+        act(() => {
+          feed.current?.removePosts?.('author_a:post_a');
+        });
+        expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'author_b:post_b');
+
+        act(() => {
+          useAuthStore.getState().setCurrentUserPubky('viewer' as Pubky);
+        });
+        expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
+          'data-post-ids',
+          'author_a:post_a,author_b:post_b',
         );
       } finally {
         useAuthStore.getState().reset();
@@ -903,20 +938,14 @@ describe('TimelineFeed', () => {
     });
 
     it('distinguishes a pending cache miss from a settled missing envelope', () => {
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds: [], hasMore: false });
       mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: true });
       const { rerender } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
-      expect(mockUseStreamPagination).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          collectionMembership: { postIds: undefined, viewerId: null },
-        }),
-      );
+      expect(screen.getByTestId('loading')).toHaveTextContent('true');
       mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
       rerender(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
-      expect(mockUseStreamPagination).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          collectionMembership: { postIds: [], viewerId: null },
-        }),
-      );
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', '');
     });
 
     it('leaves the stream order untouched while the envelope has not resolved', () => {

@@ -116,8 +116,6 @@ describe('collections', () => {
     togglePostInCollectionViaSavePicker(curator.postText1, editedName);
 
     openCollectionFromMyCollections(editedName);
-    // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
-    cy.reload();
     cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', curator.postText1);
     collectionCounterEq(1);
 
@@ -158,8 +156,6 @@ describe('collections', () => {
     // * remove one post from the collection via the post's save picker in the feed
     togglePostInCollectionViaSavePicker(curator.postText1, editedName);
     openCollectionFromMyCollections(editedName);
-    // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
-    cy.reload();
     cy.get('[data-cy="timeline-posts-cards"]').should('not.contain.text', curator.postText1);
     cy.get('[data-cy="timeline-posts-cards"]').find('[data-cy="post-card"]').should('have.length', 2);
     collectionCounterEq(2);
@@ -203,8 +199,6 @@ describe('collections', () => {
     // * the followed collection contains the correct post and its hero offers Unfollow
     findCollectionCardInSection(FOLLOWED_SECTION, collectionName).click();
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
-    // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
-    cy.reload();
     cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', curator.postText3);
     cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Unfollow');
 
@@ -304,8 +298,6 @@ describe('collections', () => {
     cy.get('[data-cy="button-filters-left"]').should('be.visible').click();
     cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').should('have.attr', 'aria-checked', 'true');
     cy.go('back');
-    // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
-    cy.reload();
     cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent);
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', replyContent);
 

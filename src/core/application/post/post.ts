@@ -6,6 +6,7 @@ import type {
   TEditPostInput,
   TGetDetailsByIdsParams,
   TGetOrFetchPostParams,
+  TGetRelationshipsByIdsParams,
 } from '@/application/post/post.types';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { TagApplication } from '@/application/tag/tag';
@@ -76,6 +77,17 @@ export class PostApplication {
    */
   static async getRelationships({ compositeId }: TCompositeId): Promise<PostRelationshipsModelSchema | null> {
     return await LocalPostService.readRelationships(compositeId);
+  }
+
+  /**
+   * Bulk reads post relationships from the local database, preserving input order.
+   * @param compositeIds - Array of composite post IDs in format "authorId:postId"
+   * @returns Array of post relationships aligned to `compositeIds` (undefined for missing posts)
+   */
+  static async getRelationshipsByIds({
+    compositeIds,
+  }: TGetRelationshipsByIdsParams): Promise<(PostRelationshipsModelSchema | undefined)[]> {
+    return await LocalPostService.readRelationshipsByIds(compositeIds);
   }
 
   /**

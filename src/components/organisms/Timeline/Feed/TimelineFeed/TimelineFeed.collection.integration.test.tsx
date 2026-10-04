@@ -15,6 +15,7 @@ import { parseCompositeId } from '@/models/models.utils';
 import { PostSavePicker } from '@/organisms/PostSavePicker/PostSavePicker';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { LAYOUT } from '@/stores/home/home.types';
@@ -131,14 +132,20 @@ describe('collection feed with local membership', () => {
     showFeed(collectionId);
     await openPicker();
     const originalCard = screen.getByTestId(postId);
-    const before = vi.mocked(NexusPostStreamService.fetch).mock.calls.length;
+    // The open picker pages its own collections list through the same service; count
+    // only this collection's item pages, or a slow run attributes that request to the refresh.
+    const collectionPageRequests = () =>
+      vi
+        .mocked(NexusPostStreamService.fetch)
+        .mock.calls.filter(([request]) => request.invokeEndpoint === StreamSource.COLLECTION).length;
+    const before = collectionPageRequests();
     const replacement = Promise.withResolvers<Awaited<ReturnType<typeof NexusPostStreamService.fetch>>>();
     vi.mocked(NexusPostStreamService.fetch).mockReturnValueOnce(replacement.promise);
     let refreshing: Promise<void> | undefined;
     act(() => {
       refreshing = refresh();
     });
-    await waitFor(() => expect(NexusPostStreamService.fetch).toHaveBeenCalledTimes(before + 1));
+    await waitFor(() => expect(collectionPageRequests()).toBe(before + 1));
     expect(screen.getByTestId(postId)).toBe(originalCard);
     expect(screen.getByText('Reading list')).toBeVisible();
     await act(async () => {

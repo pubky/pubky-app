@@ -62,6 +62,8 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
       },
     ],
     isLoading: version > 0 && mocks.completionReadPending,
+    // A pending forced read still shows the rows of the previous version.
+    readVersion: version > 0 && mocks.completionReadPending ? version - 1 : version,
   }),
 }));
 
@@ -188,6 +190,7 @@ describe('usePostSaveTargets', () => {
       await update;
     });
     expect(result.current.collections[0].isUpdating).toBe(true);
+    expect(result.current.collections[1].isUpdating).toBe(false);
     mocks.collection1Saved = true;
     mocks.completionReadPending = false;
     rerender();
@@ -195,6 +198,29 @@ describe('usePostSaveTargets', () => {
     mocks.collection1Saved = false;
     rerender();
     expect(result.current.collections[0]).toMatchObject({ isSaved: false, isUpdating: false });
+  });
+
+  it('keeps the other collections interactive while a completed toggle waits for its fresh read', async () => {
+    const { result, rerender } = renderHook(() => usePostSaveTargets('author:post1'));
+    mocks.completionReadPending = true;
+    await act(async () => {
+      await result.current.toggleCollection('author:collection1');
+    });
+    expect(result.current.collections.map((collection) => collection.isUpdating)).toEqual([true, false]);
+
+    await act(async () => {
+      await result.current.toggleCollection('author:collection2');
+    });
+    expect(mocks.commitUpdateCollectionItem).toHaveBeenLastCalledWith({
+      collectionId: 'author:collection2',
+      postId: 'author:post1',
+      shouldAdd: true,
+    });
+    // The mocked list now reflects the first toggle's read; only the second waits.
+    expect(result.current.collections.map((collection) => collection.isUpdating)).toEqual([false, true]);
+    mocks.completionReadPending = false;
+    rerender();
+    expect(result.current.collections.map((collection) => collection.isUpdating)).toEqual([false, false]);
   });
 
   it('creates a collection with the current post URI as first item', async () => {

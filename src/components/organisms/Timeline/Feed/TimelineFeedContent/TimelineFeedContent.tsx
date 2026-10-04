@@ -8,6 +8,7 @@ import { CONTENT_AREA_STACK_CLASS } from '@/config/layoutClasses';
 import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { COLLECTION_ITEMS_MAX_COUNT } from '@/config/posts';
 import { useApplyPendingFeedInsert } from '@/hooks/useApplyPendingFeedInsert/useApplyPendingFeedInsert';
+import { useCollectionStreamMembership } from '@/hooks/useCollectionStreamMembership/useCollectionStreamMembership';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
@@ -18,7 +19,6 @@ import { PullToRefreshIndicator } from '@/molecules/PullToRefreshIndicator/PullT
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
 import { TimelineCardsPosts } from '../../Posts/CardsPosts/CardsPosts';
 import { TimelinePosts } from '../../Posts/Posts';
@@ -57,13 +57,7 @@ interface TimelineFeedContentProps {
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
   trailingSlot?: TimelineFeedTrailingSlot;
   visualHiddenItemsNotice?: TimelineFeedVisualHiddenItemsNotice;
-  /**
-   * Optional reorder applied to the deduped stream ids before rendering.
-   * Used by the COLLECTION variant to sort the (asynchronously indexed) Nexus
-   * stream by the local-first envelope order. Must be pure.
-   */
-  transformPostIds?: (postIds: string[]) => string[];
-  /** Complete local collection membership; undefined while its local read resolves. */
+  /** Complete local collection membership in collection order; undefined while its local read resolves. */
   membershipPostIds?: string[];
 }
 
@@ -79,7 +73,6 @@ interface TimelineFeedWithStreamProps {
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
   trailingSlot?: TimelineFeedTrailingSlot;
   visualHiddenItemsNotice?: TimelineFeedVisualHiddenItemsNotice;
-  transformPostIds?: TimelineFeedContentProps['transformPostIds'];
   membershipPostIds?: TimelineFeedContentProps['membershipPostIds'];
 }
 
@@ -101,7 +94,6 @@ export function TimelineFeedWithStream({
   pullToRefreshContainerRef,
   trailingSlot,
   visualHiddenItemsNotice,
-  transformPostIds,
   membershipPostIds,
 }: TimelineFeedWithStreamProps) {
   if (!streamId) {
@@ -120,7 +112,6 @@ export function TimelineFeedWithStream({
       trailingSlot={trailingSlot}
       persistentHeader={persistentHeader}
       visualHiddenItemsNotice={visualHiddenItemsNotice}
-      transformPostIds={transformPostIds}
       membershipPostIds={membershipPostIds}
     >
       {children}
@@ -153,7 +144,6 @@ function TimelineFeedContent({
   pullToRefreshContainerRef,
   trailingSlot,
   visualHiddenItemsNotice,
-  transformPostIds,
   membershipPostIds,
 }: TimelineFeedContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -163,11 +153,50 @@ function TimelineFeedContent({
   const isVisualActive = layoutResolution?.isVisualActive ?? false;
   const isCardsActive = layoutResolution?.isCardsActive ?? false;
   const isCollectionFeed = variant === TIMELINE_FEED_VARIANT.COLLECTION;
-  const viewerId = useAuthStore((state) => state.currentUserPubky);
   const { mutedUserIdSet, isLoading: mutedUsersLoading } = useMutedUsers();
+  const stream = useStreamPagination({
+    streamId,
+    // Collections are finite (≤100 items per envelope spec) — fetch at the
+    // Nexus max page size so the eager full load below takes ≤2 requests.
+    ...(isCollectionFeed ? { limit: NEXUS_STREAM_MAX_LIMIT } : {}),
+  });
+  const {
+    loading: streamLoading,
+    loadingMore: streamLoadingMore,
+    hasMore: streamHasMore,
+    loadMore: streamLoadMore,
+  } = stream;
+
+  // Keep eagerly hydrating the bounded collection stream in batches. Membership
+  // and ordering already come from the local envelope; these pages fill the
+  // referenced post records and maintain Nexus pagination independently.
+  // A fetch error sets hasMore=false, which stops the eager loop.
+  // The rounds cap is a defensive bound in case the backend ever misreports
+  // `reachedEnd` — if it trips, the feed degrades to normal scroll-to-load
+  // (the infinite-scroll sentinel stays active while hasMore is true) and the
+  // members it never hydrated fall back to their own cards.
+  const eagerLoadRoundsRef = useRef(0);
+  const [eagerLoadExhausted, setEagerLoadExhausted] = useState(false);
+  useEffect(() => {
+    // A fresh initial load (mount or pull-to-refresh) restarts
+    // the stream from page one, so the eager budget resets with it.
+    if (streamLoading) {
+      eagerLoadRoundsRef.current = 0;
+      setEagerLoadExhausted(false);
+    }
+  }, [streamLoading]);
+  useEffect(() => {
+    if (!isCollectionFeed || streamLoading || streamLoadingMore || !streamHasMore) return;
+    if (eagerLoadRoundsRef.current >= COLLECTION_EAGER_LOAD_MAX_ROUNDS) {
+      setEagerLoadExhausted(true);
+      return;
+    }
+    eagerLoadRoundsRef.current += 1;
+    void streamLoadMore();
+  }, [isCollectionFeed, streamLoading, streamLoadingMore, streamHasMore, streamLoadMore]);
+
   const {
     postIds: rawPostIds,
-    loading,
     loadingMore,
     error,
     hasMore,
@@ -178,44 +207,17 @@ function TimelineFeedContent({
     removePosts,
     removePostsOptimistically,
     retainPost,
-  } = useStreamPagination({
+    displayLoading: feedDisplayLoading,
+    isHydratingMembers,
+  } = useCollectionStreamMembership({
+    enabled: isCollectionFeed,
     streamId,
-    // Collections are finite (≤100 items per envelope spec) — fetch at the
-    // Nexus max page size so the eager full load below takes ≤2 requests.
-    ...(isCollectionFeed
-      ? { limit: NEXUS_STREAM_MAX_LIMIT, collectionMembership: { postIds: membershipPostIds, viewerId } }
-      : {}),
+    membershipPostIds,
+    pagination: stream,
+    hydrationCapped: eagerLoadExhausted,
   });
 
-  // Keep eagerly hydrating the bounded collection stream in batches. Membership
-  // and ordering already come from the local envelope; these pages fill the
-  // referenced post records and maintain Nexus pagination independently.
-  // A fetch error sets hasMore=false, which stops the eager loop.
-  // The rounds cap is a defensive bound in case the backend ever misreports
-  // `reachedEnd` — if it trips, the feed degrades to normal scroll-to-load
-  // (the infinite-scroll sentinel stays active while hasMore is true).
-  const eagerLoadRoundsRef = useRef(0);
-  const [eagerLoadExhausted, setEagerLoadExhausted] = useState(false);
-  useEffect(() => {
-    // A fresh initial load (mount or pull-to-refresh) restarts
-    // the stream from page one, so the eager budget resets with it.
-    if (loading) {
-      eagerLoadRoundsRef.current = 0;
-      setEagerLoadExhausted(false);
-    }
-  }, [loading]);
-  useEffect(() => {
-    if (!isCollectionFeed || loading || loadingMore || !hasMore) return;
-    if (eagerLoadRoundsRef.current >= COLLECTION_EAGER_LOAD_MAX_ROUNDS) {
-      setEagerLoadExhausted(true);
-      return;
-    }
-    eagerLoadRoundsRef.current += 1;
-    void loadMore();
-  }, [isCollectionFeed, loading, loadingMore, hasMore, loadMore]);
-
-  const dedupedPostIds = [...new Set(rawPostIds)];
-  const orderedPostIds = transformPostIds ? transformPostIds(dedupedPostIds) : dedupedPostIds;
+  const orderedPostIds = [...new Set(rawPostIds)];
   // Membership supplies the complete local list. Muting remains a display filter,
   // so unmuting restores members without treating a mute as an explicit removal.
   const postIds = isCollectionFeed
@@ -223,14 +225,10 @@ function TimelineFeedContent({
       ? []
       : MuteFilter.filterPostsSafe(orderedPostIds, mutedUserIdSet)
     : orderedPostIds;
-  const displayLoading = isCollectionFeed
-    ? membershipPostIds === undefined ||
-      mutedUsersLoading ||
-      (membershipPostIds.length > 0 &&
-        rawPostIds.length === 0 &&
-        !eagerLoadExhausted &&
-        (loading || loadingMore || hasMore))
-    : loading;
+  const displayLoading = feedDisplayLoading || (isCollectionFeed && mutedUsersLoading);
+  // Members still hydrating behind cards that are already shown get the same
+  // loading row as a next page, instead of popping in without notice.
+  const isLoadingMore = loadingMore || isHydratingMembers;
 
   // Drain optimistic posts the global FAB enqueued for this feed. The FAB lives
   // outside this feed's React tree, so it cannot call `prependOptimisticPosts`
@@ -330,7 +328,7 @@ function TimelineFeedContent({
             <TimelineCardsPosts
               postIds={postIds}
               loading={displayLoading}
-              loadingMore={loadingMore}
+              loadingMore={isLoadingMore}
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}
@@ -342,7 +340,7 @@ function TimelineFeedContent({
             <VisualTimelinePosts
               postIds={postIds}
               loading={displayLoading}
-              loadingMore={loadingMore}
+              loadingMore={isLoadingMore}
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}
@@ -356,7 +354,7 @@ function TimelineFeedContent({
             <TimelinePosts
               postIds={postIds}
               loading={displayLoading}
-              loadingMore={loadingMore}
+              loadingMore={isLoadingMore}
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}

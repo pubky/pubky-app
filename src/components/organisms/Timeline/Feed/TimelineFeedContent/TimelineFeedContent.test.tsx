@@ -1,4 +1,4 @@
-import { createRef, type ReactNode } from 'react';
+import { createRef, type ReactNode, useEffect } from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -78,6 +78,7 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
     TimelinePosts: ({
       postIds,
       loading,
+      loadingMore,
       hasMore,
       emptyState,
       trailingSlot,
@@ -102,6 +103,7 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
       >
         <span data-testid="post-count">{postIds.length}</span>
         <span data-testid="loading">{loading.toString()}</span>
+        <span data-testid="loading-more">{loadingMore.toString()}</span>
         <span data-testid="has-more">{hasMore.toString()}</span>
         {postIds.length === 0 ? emptyState : null}
         {trailingSlot}
@@ -357,7 +359,6 @@ describe('TimelineFeedContent', () => {
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
         streamId: COLLECTION_STREAM_ID,
         limit: NEXUS_STREAM_MAX_LIMIT,
-        collectionMembership: { postIds: undefined, viewerId: null },
       });
     });
 
@@ -496,47 +497,6 @@ describe('TimelineFeedContent', () => {
 
       expect(mockUseStreamPagination).toHaveBeenCalledWith({ streamId: PostStreamTypes.TIMELINE_ALL_ALL });
       expect(mockLoadMore).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('transformPostIds', () => {
-    it('applies the transform to the deduped stream ids before rendering', () => {
-      mockUseStreamPagination.mockReturnValue({
-        ...defaultPaginationResult,
-        postIds: ['post1', 'post2', 'post1', 'post3'],
-      });
-      const transformPostIds = vi.fn((postIds: string[]) => [...postIds].reverse());
-
-      render(
-        <TimelineFeedWithStream
-          streamId={COLLECTION_STREAM_ID}
-          variant={TIMELINE_FEED_VARIANT.COLLECTION}
-          tagsLayout="inline"
-          collectionId="author-pubky:collection-post"
-          transformPostIds={transformPostIds}
-        />,
-      );
-
-      expect(transformPostIds).toHaveBeenCalledWith(['post1', 'post2', 'post3']);
-      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post3,post2,post1');
-    });
-
-    it('renders the deduped ids as-is when no transform is provided', () => {
-      mockUseStreamPagination.mockReturnValue({
-        ...defaultPaginationResult,
-        postIds: ['post1', 'post2', 'post1'],
-      });
-
-      render(
-        <TimelineFeedWithStream
-          streamId={COLLECTION_STREAM_ID}
-          variant={TIMELINE_FEED_VARIANT.COLLECTION}
-          tagsLayout="inline"
-          collectionId="author-pubky:collection-post"
-        />,
-      );
-
-      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,post2');
     });
   });
 
@@ -715,26 +675,51 @@ describe('TimelineFeedContent', () => {
       />
     );
 
-    it('passes the complete local membership to pagination without issuing feed mutations', () => {
+    it('projects the local membership over the stream without issuing feed mutations', () => {
       const { rerender } = render(collectionFeed(undefined));
       rerender(collectionFeed(['post3', 'post1']));
       expect(mockUseStreamPagination).toHaveBeenLastCalledWith({
         streamId: COLLECTION_STREAM_ID,
         limit: NEXUS_STREAM_MAX_LIMIT,
-        collectionMembership: { postIds: ['post3', 'post1'], viewerId: null },
       });
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post3,post1');
       expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
       expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
       expect(mockRefresh).not.toHaveBeenCalled();
     });
 
-    it('renders the projected ids, including cards retained by an open picker', () => {
-      mockUseStreamPagination.mockReturnValue({
-        ...defaultPaginationResult,
-        postIds: ['post3', 'retained', 'post1'],
-      });
-      render(collectionFeed(['post3', 'post1']));
-      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post3,retained,post1');
+    it('keeps a card retained by an open picker in its slot after membership drops it', () => {
+      function RetainProbe({ postId }: { postId: string }) {
+        const retainPost = useTimelineFeedContext()?.retainPost;
+        useEffect(() => retainPost?.(postId), [retainPost, postId]);
+        return null;
+      }
+      const retainedFeed = (membershipPostIds: string[]) => (
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          membershipPostIds={membershipPostIds}
+        >
+          <RetainProbe postId="post2" />
+        </TimelineFeedWithStream>
+      );
+      const { rerender } = render(retainedFeed(['post3', 'post2', 'post1']));
+      rerender(retainedFeed(['post3', 'post1']));
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post3,post2,post1');
+    });
+
+    it('shows the loading row while members hydrate behind cards that are already shown', () => {
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds: ['post1'], loading: true });
+      const { rerender } = render(collectionFeed(['post1', 'uncached:post']));
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1');
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('loading-more')).toHaveTextContent('true');
+
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds: ['post1'], hasMore: false });
+      rerender(collectionFeed(['post1', 'uncached:post']));
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,uncached:post');
+      expect(screen.getByTestId('loading-more')).toHaveTextContent('false');
     });
 
     it('waits for the local membership, then displays it even while Nexus is loading', () => {

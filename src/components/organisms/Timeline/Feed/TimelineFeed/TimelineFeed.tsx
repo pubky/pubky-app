@@ -11,7 +11,7 @@ import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
-import { collectionItemsToPostIds, sortPostIdsByMembership } from '@/libs/post/collectionItemOrder';
+import { collectionItemsToPostIds } from '@/libs/post/collectionItemOrder';
 import { buildCompositeId } from '@/models/models.utils';
 import {
   type AuthorStreamCompositeId,
@@ -249,7 +249,8 @@ function CollectionTimelineFeed({
       : (parseCollectionContent(postDetails?.content ?? '')?.items ?? []);
   const membershipPostIds = collectionItemsToPostIds(envelopeItems);
 
-  // Scope transient picker/removal state to both the collection and its viewer.
+  // Remount per collection and viewer so transient picker/removal state and the
+  // raw pagination never carry over to another collection or account.
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   return (
@@ -263,7 +264,6 @@ function CollectionTimelineFeed({
       pullToRefreshContainerRef={pullToRefreshContainerRef}
       trailingSlot={trailingSlot}
       visualHiddenItemsNotice={visualHiddenItemsNotice}
-      transformPostIds={(postIds) => sortPostIdsByMembership(postIds, membershipPostIds)}
       membershipPostIds={membershipPostIds}
       key={`${streamId}:${currentUserPubky ?? 'guest'}`}
     >

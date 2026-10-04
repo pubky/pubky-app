@@ -304,8 +304,10 @@ describe('PostSavePicker', () => {
     expect(removePosts).not.toHaveBeenCalled();
   });
 
-  it('removes the post from the collection grid when the picker closes after removing it from the current collection', async () => {
+  it('releases the collection card when the picker closes after removing it from the current collection', async () => {
     const removePosts = vi.fn();
+    const release = vi.fn();
+    const retainPost = vi.fn(() => release);
 
     renderPicker({
       variant: TIMELINE_FEED_VARIANT.COLLECTION,
@@ -314,26 +316,34 @@ describe('PostSavePicker', () => {
       prependPosts: vi.fn(),
       prependOptimisticPosts: vi.fn(),
       removePosts,
+      retainPost,
+      collectionMembershipPostIds: [],
     });
 
     openPicker();
     await screen.findByText('Proof of Work');
+    expect(retainPost).toHaveBeenCalledWith('author:post1');
 
     mockState.collection1Saved = false;
     closePicker();
 
-    expect(removePosts).toHaveBeenCalledWith('author:post1');
+    // The feed renders live membership, so ending retention is what removes the card.
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(removePosts).not.toHaveBeenCalled();
   });
 
-  it('removes the post from the collection grid after an in-flight collection removal resolves', async () => {
-    const removePosts = vi.fn();
+  it('keeps the collection card retained until an in-flight collection removal resolves', async () => {
+    const release = vi.fn();
+    const retainPost = vi.fn(() => release);
     const { rerenderPicker } = renderPicker({
       variant: TIMELINE_FEED_VARIANT.COLLECTION,
       collectionId: 'author:collection1',
       streamId: TEST_STREAM_ID,
       prependPosts: vi.fn(),
       prependOptimisticPosts: vi.fn(),
-      removePosts,
+      removePosts: vi.fn(),
+      retainPost,
+      collectionMembershipPostIds: [],
     });
 
     openPicker();
@@ -343,12 +353,12 @@ describe('PostSavePicker', () => {
     mockState.collection1Updating = true;
     closePicker();
 
-    expect(removePosts).not.toHaveBeenCalled();
+    expect(release).not.toHaveBeenCalled();
 
     mockState.collection1Updating = false;
     rerenderPicker();
 
-    expect(removePosts).toHaveBeenCalledWith('author:post1');
+    expect(release).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the post in the collection grid when it still belongs to the current collection on close', async () => {
