@@ -850,6 +850,21 @@ describe('LocalPostService', () => {
       const postDetails = await getSavedPost(postId);
       expect(postDetails).toBeTruthy();
       expect(postDetails!.content).toBe(DELETED);
+      expect(postDetails!.deleted).toBe(true);
+    });
+
+    it('sets the deleted flag on the soft-delete tombstone too', async () => {
+      const postId = testData.fullPostId1;
+      await setupExistingPost(postId, 'Original post content');
+      await setupUserCounts(testData.authorPubky);
+      await PostCountsModel.update(postId, { replies: 1 });
+
+      const result = await LocalPostService.delete({ compositePostId: postId });
+      expect(result).toBe(true);
+
+      const postDetails = await getSavedPost(postId);
+      expect(postDetails!.content).toBe(DELETED);
+      expect(postDetails!.deleted).toBe(true);
     });
 
     it('short-circuits a re-delete of a Nexus-shaped tombstone (flag, empty content)', async () => {
@@ -924,6 +939,19 @@ describe('LocalPostService', () => {
       expect(details!.content).toBe('Edited content');
       expect(details!.attachments).toEqual(existingAttachments);
       expect(details!.kind).toBe('image');
+    });
+
+    it('clears the deleted flag when an edit restores live content', async () => {
+      const postId = testData.fullPostId1;
+      await setupExistingPost(postId, 'Original content');
+      // A tombstoned row (the Nexus shape) that an edit writes live content over.
+      await PostDetailsModel.table.update(postId, { content: '', deleted: true });
+
+      await LocalPostService.edit({ compositePostId: postId, content: 'Restored content' });
+
+      const details = await getSavedPost(postId);
+      expect(details!.content).toBe('Restored content');
+      expect(details!.deleted).toBe(false);
     });
 
     it('should touch post TTL on every edit', async () => {
