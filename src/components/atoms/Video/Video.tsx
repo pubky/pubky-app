@@ -32,7 +32,7 @@ export const Video = forwardRef<HTMLVideoElement, VideoProps>(function Video(
   }, [src]);
 
   useEffect(() => {
-    if (retrySource !== src || pauseVideo || (canObserve && !isVisible)) return;
+    if (retrySource !== src || (canObserve && !isVisible)) return;
     const video = internalRef.current;
     if (!video) return;
 
@@ -46,7 +46,7 @@ export const Video = forwardRef<HTMLVideoElement, VideoProps>(function Video(
     }, INITIAL_LOAD_RETRY_DELAYS_MS[retryCount.current]);
 
     return () => clearTimeout(timer);
-  }, [retrySource, src, pauseVideo, canObserve, isVisible]);
+  }, [retrySource, src, canObserve, isVisible]);
 
   useEffect(() => {
     const videoElement = internalRef.current;

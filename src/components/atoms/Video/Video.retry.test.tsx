@@ -103,14 +103,18 @@ describe('Video - initial load recovery', () => {
     const video = screen.getByTestId('video') as HTMLVideoElement;
     failVideo(video);
     setVisible(true);
+    advance(1_000);
+    expect(video.load).toHaveBeenCalledOnce();
+    failVideo(video);
+    setVisible(true);
     advance(500);
     rerender(<Video src="/second.mp4" />);
     advance(10_000);
-    expect(video.load).not.toHaveBeenCalled();
+    expect(video.load).toHaveBeenCalledOnce();
     failVideo(video);
     setVisible(true);
     advance(1_000);
-    expect(video.load).toHaveBeenCalledOnce();
+    expect(video.load).toHaveBeenCalledTimes(2);
   });
 
   it('cancels the retry on unmount', () => {
@@ -145,19 +149,19 @@ describe('Video - initial load recovery', () => {
     expect(video.load).not.toHaveBeenCalled();
   });
 
-  it('defers recovery while the lightbox or another slide pauses the video', () => {
-    const { rerender } = render(<Video src="/video.mp4" pauseVideo />);
+  it('recovers a visible player that its caller keeps paused', () => {
+    // The list-layout thumbnail passes a permanent pauseVideo; load() never
+    // starts playback without autoPlay, so visibility alone gates recovery.
+    render(<Video src="/video.mp4" controls={false} muted playsInline pauseVideo />);
     const video = screen.getByTestId('video') as HTMLVideoElement;
     failVideo(video);
     setVisible(true);
-    advance(10_000);
-    expect(video.load).not.toHaveBeenCalled();
-    rerender(<Video src="/video.mp4" pauseVideo={false} />);
     advance(1_000);
     expect(video.load).toHaveBeenCalledOnce();
   });
 
   it.each([
+    { src: '/video.mp4', code: 1, readyState: 0 },
     { src: '/video.mp4', code: 3, readyState: 0 },
     { src: '/video.mp4', code: 2, readyState: 2 },
     { src: 'blob:local-video', code: 4, readyState: 0 },
