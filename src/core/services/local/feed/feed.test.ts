@@ -30,11 +30,12 @@ describe('LocalFeedService', () => {
     it('should create a new feed', async () => {
       const feed = createFeedSchema({ id: 'feed-new' });
 
-      const persistedFeed = await LocalFeedService.createOrUpdate(feed);
+      const { persisted: persistedFeed, prior } = await LocalFeedService.createOrUpdate(feed);
 
       expect(persistedFeed).toBeTruthy();
       expect(persistedFeed.id).toBe('feed-new');
       expect(persistedFeed.name).toBe(feed.name);
+      expect(prior).toBeNull();
 
       const saved = await FeedModel.table.get(persistedFeed.id);
       expect(saved).toBeTruthy();
@@ -43,23 +44,24 @@ describe('LocalFeedService', () => {
 
     it('should update an existing feed', async () => {
       const feed = createFeedSchema({ id: 'feed-update' });
-      const createdFeed = await LocalFeedService.createOrUpdate(feed);
+      const { persisted: createdFeed } = await LocalFeedService.createOrUpdate(feed);
 
       const updated = { ...createdFeed, name: 'Updated Name', tags: ['newTag'] };
-      const updatedFeed = await LocalFeedService.createOrUpdate(updated);
+      const { persisted: updatedFeed, prior } = await LocalFeedService.createOrUpdate(updated);
 
       expect(updatedFeed.id).toBe('feed-update');
       expect(updatedFeed.name).toBe('Updated Name');
       expect(updatedFeed.tags).toEqual(['newTag']);
+      expect(prior).toEqual(createdFeed);
     });
 
     it('should preserve created_at on update', async () => {
       const originalCreatedAt = Date.now() - 10000;
       const feed = createFeedSchema({ id: 'feed-timestamps', created_at: originalCreatedAt });
-      const createdFeed = await LocalFeedService.createOrUpdate(feed);
+      const { persisted: createdFeed } = await LocalFeedService.createOrUpdate(feed);
 
       const updated = { ...createdFeed, name: 'Updated', updated_at: Date.now() };
-      const updatedFeed = await LocalFeedService.createOrUpdate(updated);
+      const { persisted: updatedFeed } = await LocalFeedService.createOrUpdate(updated);
 
       expect(updatedFeed.created_at).toBe(originalCreatedAt);
       expect(updatedFeed.updated_at).toBeGreaterThan(originalCreatedAt);
@@ -70,9 +72,9 @@ describe('LocalFeedService', () => {
       const feed2 = createFeedSchema({ id: 'feed-2', name: 'Feed 2' });
       const feed3 = createFeedSchema({ id: 'feed-3', name: 'Feed 3' });
 
-      const persisted1 = await LocalFeedService.createOrUpdate(feed1);
-      const persisted2 = await LocalFeedService.createOrUpdate(feed2);
-      const persisted3 = await LocalFeedService.createOrUpdate(feed3);
+      const { persisted: persisted1 } = await LocalFeedService.createOrUpdate(feed1);
+      const { persisted: persisted2 } = await LocalFeedService.createOrUpdate(feed2);
+      const { persisted: persisted3 } = await LocalFeedService.createOrUpdate(feed3);
 
       expect(persisted1.id).toBe('feed-1');
       expect(persisted2.id).toBe('feed-2');
@@ -93,6 +95,67 @@ describe('LocalFeedService', () => {
 
     it('should not throw when deleting non-existent feed', async () => {
       await expect(LocalFeedService.delete({ feedId: 'nonexistent' })).resolves.not.toThrow();
+    });
+  });
+
+  describe('rollback', () => {
+    it('restores the prior row while it still carries the failed write', async () => {
+      const prior = createFeedSchema({ id: 'feed-rollback', name: 'Original', updated_at: 1000 });
+      await LocalFeedService.createOrUpdate(prior);
+      await LocalFeedService.createOrUpdate({ ...prior, name: 'Renamed', updated_at: 2000 });
+
+      const changed = await LocalFeedService.rollback({
+        feedId: 'feed-rollback',
+        expectedUpdatedAt: 2000,
+        priorFeed: prior,
+      });
+
+      expect(changed).toBe(true);
+      const saved = await FeedModel.table.get('feed-rollback');
+      expect(saved!.name).toBe('Original');
+      expect(saved!.updated_at).toBe(1000);
+    });
+
+    it('deletes the row when the failed write created it', async () => {
+      await LocalFeedService.createOrUpdate(createFeedSchema({ id: 'feed-created', updated_at: 2000 }));
+
+      const changed = await LocalFeedService.rollback({
+        feedId: 'feed-created',
+        expectedUpdatedAt: 2000,
+        priorFeed: null,
+      });
+
+      expect(changed).toBe(true);
+      expect(await FeedModel.table.get('feed-created')).toBeUndefined();
+    });
+
+    it('leaves a newer write to the same row alone', async () => {
+      const prior = createFeedSchema({ id: 'feed-newer', name: 'Original', updated_at: 1000 });
+      await LocalFeedService.createOrUpdate(prior);
+      await LocalFeedService.createOrUpdate({ ...prior, name: 'Renamed', updated_at: 2000 });
+      await LocalFeedService.createOrUpdate({ ...prior, name: 'Renamed again', updated_at: 3000 });
+
+      const changed = await LocalFeedService.rollback({
+        feedId: 'feed-newer',
+        expectedUpdatedAt: 2000,
+        priorFeed: prior,
+      });
+
+      expect(changed).toBe(false);
+      const saved = await FeedModel.table.get('feed-newer');
+      expect(saved!.name).toBe('Renamed again');
+      expect(saved!.updated_at).toBe(3000);
+    });
+
+    it('does nothing when the row is already gone', async () => {
+      const changed = await LocalFeedService.rollback({
+        feedId: 'feed-missing',
+        expectedUpdatedAt: 2000,
+        priorFeed: createFeedSchema({ id: 'feed-missing' }),
+      });
+
+      expect(changed).toBe(false);
+      expect(await FeedModel.table.get('feed-missing')).toBeUndefined();
     });
   });
 
@@ -208,7 +271,7 @@ describe('LocalFeedService', () => {
 
       const persistedFeeds = await Promise.all(feeds.map((feed) => LocalFeedService.createOrUpdate(feed)));
 
-      const ids = persistedFeeds.map((f) => f.id);
+      const ids = persistedFeeds.map(({ persisted }) => persisted.id);
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(5);
 
