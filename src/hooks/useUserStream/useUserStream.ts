@@ -14,7 +14,6 @@ import type { NexusTag, NexusUserCounts, NexusUserDetails } from '@/services/nex
 import {
   DEFAULT_USER_STREAM_BUFFER_SIZE,
   DEFAULT_USER_STREAM_LIMIT,
-  DEFAULT_USER_STREAM_PAGE_SIZE,
   DEFAULT_USER_STREAM_REFILL_THRESHOLD,
 } from './useUserStream.constants';
 import type {
@@ -46,18 +45,16 @@ interface LiveQuerySnapshot<T> {
  * Hook for fetching users from a user stream (e.g., influencers, recommended).
  * Uses StreamUserController for fetching IDs and useLiveQuery for reactive details.
  *
+ * With `excludeFollowing`, followed users are hidden and the list is refilled once from the
+ * cached stream beyond the first read, then once from Nexus when that was still short.
+ *
  * @example
  * ```tsx
- * // Sidebar usage (fixed limit)
  * const { users, isLoading } = useUserStream({
  *   streamId: UserStreamTypes.RECOMMENDED,
  *   limit: 3,
- * });
- *
- * // Full page with infinite scroll
- * const { users, hasMore, loadMore } = useUserStream({
- *   streamId: UserStreamTypes.RECOMMENDED,
- *   paginated: true,
+ *   bufferSize: 10,
+ *   excludeFollowing: true,
  * });
  * ```
  */
@@ -67,13 +64,12 @@ export function useUserStream({
   includeCounts = false,
   includeRelationships = false,
   includeTags = false,
-  paginated = false,
   excludeFollowing = false,
   preserveFollowedUserIds = EMPTY_PRESERVED_FOLLOWED_USER_IDS,
   bufferSize,
   refillThreshold,
 }: UseUserStreamParams): UseUserStreamResult {
-  const effectiveLimit = limit ?? (paginated ? DEFAULT_USER_STREAM_PAGE_SIZE : DEFAULT_USER_STREAM_LIMIT);
+  const effectiveLimit = limit ?? DEFAULT_USER_STREAM_LIMIT;
   const fetchLimit = Math.max(
     effectiveLimit,
     bufferSize ?? (excludeFollowing ? DEFAULT_USER_STREAM_BUFFER_SIZE : effectiveLimit),
@@ -81,15 +77,14 @@ export function useUserStream({
   const effectiveRefillThreshold =
     refillThreshold ?? (excludeFollowing ? DEFAULT_USER_STREAM_REFILL_THRESHOLD : effectiveLimit);
 
-  // Pagination state
+  // Stream state
   const [userIds, setUserIds] = useState<Pubky[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(paginated);
   const [error, setError] = useState<string | null>(null);
   const [isExhausted, setIsExhausted] = useState(false);
 
-  // Track skip position for pagination
+  // Track how far into the stream the reads have gone
   const skipRef = useRef(0);
   // Refill steps: 1 reads the cached tail of the stream, 2 asks Nexus when that was not enough
   const refillStepRef = useRef(0);
@@ -199,7 +194,7 @@ export function useUserStream({
   }
 
   const eligibleCount = eligible.length;
-  const users = excludeFollowing && !paginated ? eligible.slice(0, effectiveLimit) : eligible;
+  const users = excludeFollowing ? eligible.slice(0, effectiveLimit) : eligible;
 
   // Track whether the live queries that feed eligibility have settled for the current `userIds`.
   // `useLiveQuery` yields `undefined` synchronously and only resolves on the next tick, so we use
@@ -264,9 +259,6 @@ export function useUserStream({
           });
           skipRef.current = nextSkip ?? skipRef.current + nextPageIds.length;
         }
-
-        // Update hasMore based on whether we got a full page
-        setHasMore(paginated && !streamExhausted && nextPageIds.length >= fetchLimit);
       } catch (err) {
         if (isInitial) {
           setError(isAppError(err) ? err.message : 'Failed to fetch users');
@@ -280,21 +272,12 @@ export function useUserStream({
         }
       }
     },
-    [streamId, fetchLimit, paginated, excludeFollowing],
+    [streamId, fetchLimit, excludeFollowing],
   );
 
-  const loadMore = useCallback(async () => {
-    if (!paginated || isLoadingMore || !hasMore) return;
-    await fetchStreamSlice(false);
-  }, [paginated, isLoadingMore, hasMore, fetchStreamSlice]);
-
   const refetch = useCallback(async () => {
-    if (paginated) {
-      setUserIds([]);
-      setHasMore(true);
-    }
     await fetchStreamSlice(true);
-  }, [paginated, fetchStreamSlice]);
+  }, [fetchStreamSlice]);
 
   // Initial fetch on mount or when streamId changes
   useEffect(() => {
@@ -309,7 +292,7 @@ export function useUserStream({
     // (see the comment on `detailsHydrated` / `relationshipsHydrated` above).
     if (!detailsHydrated || !relationshipsHydrated) return;
 
-    const shouldRefill = eligibleCount < effectiveRefillThreshold || (!paginated && eligibleCount < effectiveLimit);
+    const shouldRefill = eligibleCount < effectiveRefillThreshold || eligibleCount < effectiveLimit;
 
     if (!shouldRefill) return;
 
@@ -335,7 +318,6 @@ export function useUserStream({
     isExhausted,
     isLoading,
     isLoadingMore,
-    paginated,
     relationshipsHydrated,
     userIds.length,
   ]);
@@ -350,9 +332,7 @@ export function useUserStream({
     userIds,
     isLoading: isLoading || isHydrating,
     isLoadingMore,
-    hasMore,
     error,
-    loadMore,
     refetch,
   };
 }

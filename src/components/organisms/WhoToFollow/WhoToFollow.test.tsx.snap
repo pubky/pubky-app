@@ -110,6 +110,56 @@ exports[`WhoToFollow - Snapshots > matches snapshot when loading 1`] = `
       >
         Skeleton item
       </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton item
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton item
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton item
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton item
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton item
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton item
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton item
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton item
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton item
+      </div>
+      <div
+        data-testid="user-list-item-skeleton-full"
+      >
+        Skeleton item
+      </div>
     </div>
   </div>
 </div>

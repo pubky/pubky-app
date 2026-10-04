@@ -26,9 +26,7 @@ const mockUseUserStream = vi.fn(() => ({
   userIds: [],
   isLoading: false,
   isLoadingMore: false,
-  hasMore: false,
   error: null,
-  loadMore: vi.fn(),
   refetch: vi.fn(),
 }));
 
@@ -148,9 +146,7 @@ const mockLoadingResult = {
   userIds: [],
   isLoading: true,
   isLoadingMore: false,
-  hasMore: false,
   error: null,
-  loadMore: vi.fn(),
   refetch: vi.fn(),
 };
 
@@ -159,9 +155,7 @@ const mockUsersResult = {
   userIds: mockUsers.map((u) => u.id),
   isLoading: false,
   isLoadingMore: false,
-  hasMore: true,
   error: null,
-  loadMore: vi.fn(),
   refetch: vi.fn(),
 };
 
@@ -182,7 +176,7 @@ describe('WhoToFollow', () => {
   it('renders loading state when isLoading is true', () => {
     vi.mocked(useUserStream).mockReturnValue(mockLoadingResult);
     render(<WhoToFollow />);
-    expect(screen.getAllByTestId('user-list-item-skeleton-full')).toHaveLength(20);
+    expect(screen.getAllByTestId('user-list-item-skeleton-full')).toHaveLength(30);
   });
 
   it('renders users when there are items', () => {
@@ -212,9 +206,9 @@ describe('WhoToFollow', () => {
 
     expect(useUserStream).toHaveBeenCalledWith({
       streamId: 'recommended',
-      limit: 20,
-      bufferSize: 20,
-      refillThreshold: 20,
+      limit: 30,
+      bufferSize: 30,
+      refillThreshold: 30,
       includeRelationships: true,
       includeCounts: true,
       excludeFollowing: true,

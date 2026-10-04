@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
+import { NEXUS_USER_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { StreamUserController } from '@/controllers/stream/users/users';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
@@ -13,16 +14,16 @@ import { WHO_TO_FOLLOW_BUFFER_SIZE, WHO_TO_FOLLOW_PAGE_SIZE } from './useUserStr
 
 /**
  * The Who to Follow page reads the `recommended` row it shares with the sidebar, so it opens on
- * whatever an earlier surface cached: nothing, the sidebar's buffer, or a row a previous visit
- * filled. Nexus rejects `limit` above 20 on `/v0/stream/users/ids`, and serves `recommended` as a
- * sample of the user's pool whatever the `skip`, so a refill overlaps what is cached already.
+ * whatever an earlier surface cached: nothing, the sidebar's buffer, the full row bootstrap
+ * persisted, or a row a previous visit filled. The page shows up to 30 from that row in one read,
+ * while Nexus rejects `limit` above 20 on `/v0/stream/users/ids` and serves `recommended` as a
+ * sample of the user's pool whatever the `skip`, so a top-up overlaps what is cached already.
  *
  * Real Dexie, real controller and application, only the Nexus read service replaced.
  */
 
-const NEXUS_USER_IDS_MAX_LIMIT = 20;
 const VIEWER = mockPubky('viewer');
-const RECOMMENDED = Array.from({ length: 30 }, (_, i) => mockPubky(`recommended-${i}`));
+const RECOMMENDED = Array.from({ length: 40 }, (_, i) => mockPubky(`recommended-${i}`));
 
 const whoToFollowPageParams = {
   streamId: UserStreamTypes.RECOMMENDED,
@@ -35,6 +36,12 @@ const whoToFollowPageParams = {
 
 const seedCachedStream = async (length: number) => {
   await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.RECOMMENDED, stream: RECOMMENDED.slice(0, length) });
+};
+
+const markFollowed = async (count: number) => {
+  await UserRelationshipsModel.bulkSave(
+    RECOMMENDED.slice(0, count).map((id) => [id, { following: true, followed_by: false }]),
+  );
 };
 
 describe('useUserStream reading the Who to Follow page over a cached stream', () => {
@@ -72,18 +79,23 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
     useAuthStore.setState({ currentUserPubky: null });
   });
 
-  it('reads one page within the Nexus limit when nothing is cached', async () => {
+  it('never asks Nexus for more than its limit when nothing is cached', async () => {
     const { result } = renderHook(() => useUserStream(whoToFollowPageParams));
 
     await waitFor(() => {
-      expect(result.current.users).toHaveLength(WHO_TO_FOLLOW_PAGE_SIZE);
+      expect(result.current.users).toHaveLength(NEXUS_USER_STREAM_MAX_LIMIT);
     });
+    await act(async () => {});
 
-    expect(requestedPages()).toEqual([{ skip: 0, limit: NEXUS_USER_IDS_MAX_LIMIT }]);
-    expect(shownIds(result)).toEqual(RECOMMENDED.slice(RECOMMENDED.length - WHO_TO_FOLLOW_PAGE_SIZE));
+    // One page, then one top-up that the sample cannot extend: both within the limit, no third.
+    expect(requestedPages()).toEqual([
+      { skip: 0, limit: NEXUS_USER_STREAM_MAX_LIMIT },
+      { skip: NEXUS_USER_STREAM_MAX_LIMIT, limit: NEXUS_USER_STREAM_MAX_LIMIT },
+    ]);
+    expect(shownIds(result)).toEqual(RECOMMENDED.slice(RECOMMENDED.length - NEXUS_USER_STREAM_MAX_LIMIT));
   });
 
-  it('refills a sidebar-seeded row once, within the Nexus limit', async () => {
+  it('tops up a sidebar-seeded row once, within the Nexus limit', async () => {
     await seedCachedStream(WHO_TO_FOLLOW_BUFFER_SIZE);
 
     const { result } = renderHook(() => useUserStream(whoToFollowPageParams));
@@ -92,43 +104,15 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
       expect(result.current.users).toHaveLength(WHO_TO_FOLLOW_PAGE_SIZE);
     });
 
-    expect(requestedPages()).toEqual([{ skip: WHO_TO_FOLLOW_BUFFER_SIZE, limit: NEXUS_USER_IDS_MAX_LIMIT }]);
-    expect(shownIds(result)).toEqual(RECOMMENDED.slice(0, WHO_TO_FOLLOW_PAGE_SIZE));
+    expect(requestedPages()).toEqual([{ skip: WHO_TO_FOLLOW_BUFFER_SIZE, limit: NEXUS_USER_STREAM_MAX_LIMIT }]);
+    expect(shownIds(result)).toEqual([
+      ...RECOMMENDED.slice(0, WHO_TO_FOLLOW_BUFFER_SIZE),
+      ...RECOMMENDED.slice(RECOMMENDED.length - NEXUS_USER_STREAM_MAX_LIMIT),
+    ]);
   });
 
-  it('fills in for followed users from the cached tail without asking Nexus', async () => {
-    await seedCachedStream(25);
-    const followed = RECOMMENDED.slice(0, 3);
-    await UserRelationshipsModel.bulkSave(followed.map((id) => [id, { following: true, followed_by: false }]));
-
-    const { result } = renderHook(() => useUserStream(whoToFollowPageParams));
-
-    await waitFor(() => {
-      expect(result.current.users).toHaveLength(WHO_TO_FOLLOW_PAGE_SIZE);
-    });
-
-    expect(fetchStream).not.toHaveBeenCalled();
-    expect(shownIds(result)).toEqual(RECOMMENDED.slice(3, 3 + WHO_TO_FOLLOW_PAGE_SIZE));
-  });
-
-  it('asks Nexus once, within the limit, when the cached tail does not cover the followed users', async () => {
-    await seedCachedStream(25);
-    const followed = RECOMMENDED.slice(0, 6);
-    await UserRelationshipsModel.bulkSave(followed.map((id) => [id, { following: true, followed_by: false }]));
-
-    const { result } = renderHook(() => useUserStream(whoToFollowPageParams));
-
-    await waitFor(() => {
-      expect(result.current.users).toHaveLength(WHO_TO_FOLLOW_PAGE_SIZE);
-    });
-
-    expect(requestedPages()).toEqual([{ skip: 25, limit: NEXUS_USER_IDS_MAX_LIMIT }]);
-    // The cached row minus the followed users, then the sampled ids the row did not hold yet.
-    expect(shownIds(result)).toEqual(RECOMMENDED.slice(6, 6 + WHO_TO_FOLLOW_PAGE_SIZE));
-  });
-
-  it('serves a revisit from the cached row without asking Nexus', async () => {
-    await seedCachedStream(25);
+  it('shows the whole cached row in one read when it already holds a full page', async () => {
+    await seedCachedStream(WHO_TO_FOLLOW_PAGE_SIZE);
     const refresh = vi.spyOn(StreamUserController, 'refreshStreamSlice');
 
     const { result } = renderHook(() => useUserStream(whoToFollowPageParams));
@@ -142,5 +126,34 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
     expect(refresh).not.toHaveBeenCalled();
     expect(fetchStream).not.toHaveBeenCalled();
     expect(shownIds(result)).toEqual(RECOMMENDED.slice(0, WHO_TO_FOLLOW_PAGE_SIZE));
+  });
+
+  it('fills in for followed users from the cached tail without asking Nexus', async () => {
+    await seedCachedStream(35);
+    await markFollowed(3);
+
+    const { result } = renderHook(() => useUserStream(whoToFollowPageParams));
+
+    await waitFor(() => {
+      expect(result.current.users).toHaveLength(WHO_TO_FOLLOW_PAGE_SIZE);
+    });
+
+    expect(fetchStream).not.toHaveBeenCalled();
+    expect(shownIds(result)).toEqual(RECOMMENDED.slice(3, 3 + WHO_TO_FOLLOW_PAGE_SIZE));
+  });
+
+  it('asks Nexus once, within the limit, when the cached row does not cover the followed users', async () => {
+    await seedCachedStream(25);
+    await markFollowed(6);
+
+    const { result } = renderHook(() => useUserStream(whoToFollowPageParams));
+
+    await waitFor(() => {
+      expect(result.current.users).toHaveLength(WHO_TO_FOLLOW_PAGE_SIZE);
+    });
+
+    expect(requestedPages()).toEqual([{ skip: 25, limit: NEXUS_USER_STREAM_MAX_LIMIT }]);
+    // The cached row minus the followed users, then the sampled ids the row did not hold yet.
+    expect(shownIds(result)).toEqual([...RECOMMENDED.slice(6, 25), ...RECOMMENDED.slice(25, 36)]);
   });
 });
