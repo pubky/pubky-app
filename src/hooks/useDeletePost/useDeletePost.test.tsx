@@ -265,6 +265,20 @@ describe('useDeletePost', () => {
     expect(mockPrependPosts).not.toHaveBeenCalled();
   });
 
+  it('does not restore when the row is a Nexus-shaped tombstone (empty content, flag set)', async () => {
+    mockDelete.mockRejectedValue(new Error('homeserver sync failed'));
+    mockGetPostDetails.mockResolvedValue({ id: mockPostId, content: '', deleted: true });
+
+    const { result } = renderHook(() => useDeletePost());
+
+    await act(async () => {
+      await result.current.deletePost(mockPostId);
+    });
+
+    expect(mockGetPostDetails).toHaveBeenCalledWith({ compositeId: mockPostId });
+    expect(mockPrependPosts).not.toHaveBeenCalled();
+  });
+
   it('shows error toast on deletion failure', async () => {
     const error = new Error('Deletion failed');
     mockDelete.mockRejectedValue(error);

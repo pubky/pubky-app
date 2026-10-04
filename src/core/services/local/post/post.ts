@@ -7,6 +7,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { getTtlPostMs } from '@/libs/runtime-config/runtime-config';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -404,15 +405,15 @@ export class LocalPostService {
   static async delete({ compositePostId }: TDeletePostParams): Promise<boolean> {
     const { pubky: authorId } = parseCompositeId(compositePostId);
 
-    // Idempotency guard: if the post is already tombstoned (`content ===
-    // DELETED`), short-circuit. Otherwise a stray re-delete would re-run the
-    // hard-delete transaction's `UserCountsModel.updateCounts({ posts: -1 })`
-    // and drift the author's post count. In normal UX this is unreachable —
-    // every render path for a tombstoned post shows the deleted-state
-    // component with no delete button — but the guard keeps the function
-    // idempotent against races and stale clients.
+    // Idempotency guard: if the post is already tombstoned (the `deleted` flag,
+    // or the legacy `content === DELETED` sentinel), short-circuit. Otherwise a
+    // stray re-delete would re-run the hard-delete transaction's
+    // `UserCountsModel.updateCounts({ posts: -1 })` and drift the author's post
+    // count. In normal UX this is unreachable — every render path for a
+    // tombstoned post shows the deleted-state component with no delete button —
+    // but the guard keeps the function idempotent against races and stale clients.
     const existing = await PostDetailsModel.findById(compositePostId);
-    if (existing?.content === DELETED) {
+    if (isPostDeleted(existing)) {
       Logger.warn('[LocalPostService.delete] post already tombstoned, skipping', { compositePostId });
       return false;
     }

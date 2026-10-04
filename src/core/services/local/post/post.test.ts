@@ -852,6 +852,22 @@ describe('LocalPostService', () => {
       expect(postDetails!.content).toBe(DELETED);
     });
 
+    it('short-circuits a re-delete of a Nexus-shaped tombstone (flag, empty content)', async () => {
+      const postId = testData.fullPostId1;
+      await setupExistingPost(postId, 'Test post');
+      await setupUserCounts(testData.authorPubky);
+      await PostDetailsModel.table.update(postId, { content: '', deleted: true });
+
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+      try {
+        const result = await LocalPostService.delete({ compositePostId: postId });
+        expect(result).toBe(false);
+        expect(userCountsSpy).not.toHaveBeenCalled();
+      } finally {
+        userCountsSpy.mockRestore();
+      }
+    });
+
     it('should handle deleting non-existent post gracefully (idempotent)', async () => {
       const nonExistentPostId = 'nonexistent:post123';
 

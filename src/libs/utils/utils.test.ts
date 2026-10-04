@@ -952,32 +952,42 @@ describe('Utils', () => {
   });
 
   describe('isPostDeleted', () => {
-    it('should return true for "[DELETED]" content', () => {
-      expect(isPostDeleted('[DELETED]')).toBe(true);
+    it('returns true for the legacy [DELETED] content sentinel', () => {
+      expect(isPostDeleted({ content: '[DELETED]' })).toBe(true);
+    });
+
+    it('returns true when Nexus flags the post as deleted', () => {
+      expect(isPostDeleted({ content: '', deleted: true })).toBe(true);
+    });
+
+    it('returns true for a flagged tombstone that still carries the sentinel', () => {
+      expect(isPostDeleted({ content: '[DELETED]', deleted: true })).toBe(true);
     });
 
     it('should return false for regular content', () => {
-      expect(isPostDeleted('Hello world')).toBe(false);
+      expect(isPostDeleted({ content: 'Hello world' })).toBe(false);
     });
 
-    it('should return false for empty string', () => {
-      expect(isPostDeleted('')).toBe(false);
+    it('should return false for empty content without the flag', () => {
+      expect(isPostDeleted({ content: '' })).toBe(false);
+      expect(isPostDeleted({ content: '', deleted: false })).toBe(false);
     });
 
-    it('should return false for undefined', () => {
+    it('should return false for undefined or null details', () => {
       expect(isPostDeleted(undefined)).toBe(false);
+      expect(isPostDeleted(null)).toBe(false);
     });
 
     it('should return false for similar but not exact match', () => {
-      expect(isPostDeleted('[deleted]')).toBe(false);
-      expect(isPostDeleted('DELETED')).toBe(false);
-      expect(isPostDeleted('[DELETED] ')).toBe(false);
-      expect(isPostDeleted(' [DELETED]')).toBe(false);
+      expect(isPostDeleted({ content: '[deleted]' })).toBe(false);
+      expect(isPostDeleted({ content: 'DELETED' })).toBe(false);
+      expect(isPostDeleted({ content: '[DELETED] ' })).toBe(false);
+      expect(isPostDeleted({ content: ' [DELETED]' })).toBe(false);
     });
 
     it('should return false for content containing "[DELETED]"', () => {
-      expect(isPostDeleted('This post is [DELETED]')).toBe(false);
-      expect(isPostDeleted('[DELETED] post')).toBe(false);
+      expect(isPostDeleted({ content: 'This post is [DELETED]' })).toBe(false);
+      expect(isPostDeleted({ content: '[DELETED] post' })).toBe(false);
     });
   });
 
