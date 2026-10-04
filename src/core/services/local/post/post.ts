@@ -182,7 +182,11 @@ export class LocalPostService {
     kind?: string;
   }) {
     try {
-      const changes: Partial<PostDetailsModelSchema> = { content };
+      // `deleted: false` clears the tombstone flag on any write that restores
+      // live content: `commitEdit` (and its rollback after a failed PUT) reuse
+      // this method, and a row left flagged deleted would keep rendering as a
+      // tombstone even though its content is back.
+      const changes: Partial<PostDetailsModelSchema> = { content, deleted: false };
       if (attachments !== undefined) {
         changes.attachments = attachments;
       }
@@ -420,9 +424,9 @@ export class LocalPostService {
 
     // TODO: There is an edge case where the post counts are not found, but the post is linked. This should be handled.
     const postCounts = await PostCountsModel.findById(compositePostId);
-    // If counts exist and post is linked → soft delete (mark as DELETED, keep records)
+    // If counts exist and post is linked → soft delete (tombstone, keep records)
     if (postCounts && this.isPostLinked(postCounts)) {
-      await PostDetailsModel.update(compositePostId, { content: DELETED });
+      await PostDetailsModel.update(compositePostId, { content: DELETED, deleted: true });
       return true;
     }
 
@@ -463,7 +467,7 @@ export class LocalPostService {
             // stays deleted. Auxiliary records (relationships, counts,
             // tags) still get fully removed below — only the details row
             // sticks around as a tombstone.
-            PostDetailsModel.update(compositePostId, { content: DELETED }),
+            PostDetailsModel.update(compositePostId, { content: DELETED, deleted: true }),
             PostRelationshipsModel.deleteById(compositePostId),
             PostCountsModel.deleteById(compositePostId),
             PostTagsModel.deleteById(compositePostId),
