@@ -221,7 +221,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
             {/* The shell's embed layout is the 192px QR panel, or the deep-link button on touch.
                 It also posts a `locks-auth-resize` height we could adopt instead, but a fixed box
                 keeps the loader from collapsing before the iframe mounts. */}
-            <Container className="flex min-h-[192px] w-full items-center justify-center pointer-coarse:min-h-[60px]">
+            <Container className="flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-15">
               {locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL && connectUrl ? (
                 <iframe
                   ref={locksIframeRef}
@@ -231,7 +231,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
                   // Without allow-same-origin, sandboxed postMessage uses origin "null" and gets rejected.
                   // The other flags let /connect run JS, submit its approval form, and open Pubky Ring.
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                  className="h-[192px] w-full pointer-coarse:h-[60px]"
+                  className="h-48 w-full pointer-coarse:h-15"
                 />
               ) : (
                 <LoaderCircle className="size-8 animate-spin text-brand" />
@@ -251,7 +251,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
 
         {isBitkitStep && (
           <Container className="flex flex-col items-center justify-center gap-6 py-3">
-            <Container className="flex min-h-[192px] w-full items-center justify-center pointer-coarse:min-h-[60px]">
+            <Container className="flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-15">
               {setupUrl ? (
                 <iframe
                   ref={paykitIframeRef}
@@ -261,7 +261,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
                   // sandboxed postMessage arrives as origin "null" and is rejected. allow-popups is
                   // for the Bitkit deep link Paykit's page opens on touch devices.
                   sandbox="allow-scripts allow-same-origin allow-popups"
-                  className="h-[192px] w-full pointer-coarse:h-[60px]"
+                  className="h-48 w-full pointer-coarse:h-15"
                 />
               ) : (
                 <LoaderCircle className="size-8 animate-spin text-brand" />

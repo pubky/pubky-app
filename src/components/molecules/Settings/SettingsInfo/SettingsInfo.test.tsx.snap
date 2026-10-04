@@ -419,7 +419,7 @@ exports[`SettingsInfo - Snapshots > matches snapshot 1`] = `
          
         <a
           class="cursor-pointer transition-colors text-muted-foreground hover:text-brand text-base font-medium"
-          href="https://github.com/pubky/pubky-app/releases/tag/1.2.3"
+          href="https://github.com/pubky/pubky-app/releases/tag/v1.2.3"
           rel="noopener noreferrer"
           target="_blank"
         >
