@@ -11,7 +11,7 @@ import { UserStreamModel } from '@/models/stream/user/userStream';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
-import { canReplaceUserDetails } from '@/models/user/details/userDetails.utils';
+import { getUserDetailsRejectionReason } from '@/models/user/details/userDetails.utils';
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import type { TUserStreamUpsertParams } from '@/services/local/stream/users/users.types';
@@ -184,12 +184,12 @@ export class LocalStreamUsersService {
   /**
    * Writes details, relationships and TTL in one transaction, reading before writing.
    *
-   * A details row `canReplaceUserDetails` rejects (an older revision, or a pending local
-   * edit the payload doesn't include) is kept, and its TTL isn't renewed: an expired one
-   * waits the retry delay, as for users Nexus omits, instead of being refetched on every
-   * coordinator tick, and a fresher one stays. Guest / viewer-less payloads skip the
-   * relationship row (#1803). When `fetchStartedAt` is set, a user TTL written at or after
-   * that stamp means a local follow landed during the request — keep that row.
+   * A rejected details row is kept. Pending edits retry after the retry delay without
+   * shortening a fresher TTL. Older revisions without a pending edit renew the normal TTL:
+   * the cached row is already newer, so repeated short retries cannot improve it.
+   * Guest / viewer-less payloads skip the relationship row (#1803). When `fetchStartedAt`
+   * is set, a user TTL written at or after that stamp means a local follow landed during
+   * the request — keep that row.
    */
   private static async persistDetailsRelationshipsAndTtl(
     userIds: Pubky[],
@@ -207,17 +207,17 @@ export class LocalStreamUsersService {
 
       const now = Date.now();
       const pendingEditMs = getProfileLocalEditTtlMs();
-      const keptIds = new Set<Pubky>();
+      const pendingIds = new Set<Pubky>();
       const detailsToSave = userDetails.filter((details, index) => {
-        const replace = canReplaceUserDetails({
+        const rejection = getUserDetailsRejectionReason({
           existing: existingDetails[index],
           incoming: details,
           responseStartedAt: tagGuard.validatedAt,
           now,
           pendingEditMs,
         });
-        if (!replace) keptIds.add(details.id);
-        return replace;
+        if (rejection === 'pending-local-edit') pendingIds.add(details.id);
+        return rejection === null;
       });
 
       let relationshipsToSave = tagGuard.viewerId ? userRelationships : [];
@@ -235,7 +235,7 @@ export class LocalStreamUsersService {
       const retryAt = now - (getTtlUserMs() - getTtlRetryDelayMs());
       const ttlById = new Map(existingTtl.map((row) => [row.id, row.lastUpdatedAt]));
       const ttlToSave = userTtl.flatMap(([id, ttl]): NexusModelTuple<{ lastUpdatedAt: number }>[] => {
-        if (!keptIds.has(id)) return [[id, ttl]];
+        if (!pendingIds.has(id)) return [[id, ttl]];
         return (ttlById.get(id) ?? -Infinity) < retryAt ? [[id, { lastUpdatedAt: retryAt }]] : [];
       });
 

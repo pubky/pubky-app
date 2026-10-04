@@ -324,3 +324,88 @@ describe('useProfileForm edit sends only the fields the user changed', () => {
     expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: { links: [] } });
   });
 });
+
+describe('useProfileForm effective link changes', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it.each([
+    { label: 'removing an empty placeholder', original: [], edited: [{ label: 'WEBSITE', url: '' }], expected: {} },
+    {
+      label: 'whitespace in an empty placeholder',
+      original: [],
+      edited: [{ label: 'WEBSITE', url: '  ' }],
+      expected: {},
+    },
+    {
+      label: 'whitespace around a real URL',
+      original: [{ title: 'Website', url: 'https://example.com/' }],
+      edited: [{ label: 'WEBSITE', url: ' https://example.com/ ' }],
+      expected: {},
+    },
+    {
+      label: 'equivalent X handle',
+      original: [{ title: 'X (TWITTER)', url: 'https://x.com/alice' }],
+      edited: [{ label: 'X (TWITTER)', url: '@alice' }],
+      expected: {},
+    },
+    {
+      label: 'repairing a stored bare X handle',
+      original: [{ title: 'X (TWITTER)', url: '@alice' }],
+      edited: [{ label: 'X (TWITTER)', url: 'https://x.com/alice' }],
+      expected: { links: [{ label: 'X (TWITTER)', url: 'https://x.com/alice' }] },
+    },
+    {
+      label: 'removing an unsafe legacy link',
+      original: [{ title: 'Website', url: 'javascript:alert(1)' }],
+      edited: [],
+      expected: { links: [] },
+    },
+    {
+      label: 'removing a stored blank link',
+      original: [{ title: 'Website', url: ' ' }],
+      edited: [],
+      expected: { links: [] },
+    },
+    {
+      label: 'leaving a stored blank link untouched',
+      original: [{ title: 'Website', url: ' ' }],
+      edited: [{ label: 'WEBSITE', url: ' ' }],
+      expected: {},
+    },
+    {
+      label: 'editing a real URL',
+      original: [{ title: 'Website', url: 'https://example.com/' }],
+      edited: [{ label: 'WEBSITE', url: 'https://example.com/new' }],
+      expected: { links: [{ label: 'WEBSITE', url: 'https://example.com/new' }] },
+    },
+    {
+      label: 'editing a label',
+      original: [{ title: 'Website', url: 'https://example.com/' }],
+      edited: [{ label: 'BLOG', url: 'https://example.com/' }],
+      expected: { links: [{ label: 'BLOG', url: 'https://example.com/' }] },
+    },
+  ])('handles $label without republishing unrelated cached links', async ({ original, edited, expected }) => {
+    const userDetails: NexusUserDetails = {
+      id: pubky,
+      name: 'Valid User',
+      bio: '',
+      links: original,
+      image: null,
+      status: null,
+      indexed_at: 1,
+    };
+    const { result } = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails }));
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+    act(() => {
+      result.current.handlers.setLinks(edited);
+      result.current.handlers.setBio('New bio');
+    });
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+    expect(ProfileController.commitUpdate).toHaveBeenCalledExactlyOnceWith({
+      pubky,
+      changes: { bio: 'New bio', ...expected },
+    });
+  });
+});

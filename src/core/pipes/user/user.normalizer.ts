@@ -1,4 +1,5 @@
-import { PubkyAppUser, UserResult } from 'pubky-app-specs';
+import { UserResult } from 'pubky-app-specs';
+import { z } from 'zod';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -8,6 +9,16 @@ import type { ProfileChanges, ProfileFields, UserValidatorData } from '@/pipes/p
 import type { NexusUserLink } from '@/services/nexus/nexus.types';
 
 export type UiLink = { label: string; url: string };
+
+// Read structure only: an older client may have published values outside today's limits.
+// UserNormalizer.to validates the complete profile after the user's corrections are merged.
+const publishedProfileSchema = z.object({
+  name: z.string(),
+  bio: z.string().nullish(),
+  image: z.string().nullish(),
+  links: z.array(z.object({ title: z.string(), url: z.string() })).nullish(),
+  status: z.string().nullish(),
+});
 
 export class UserNormalizer {
   private constructor() {}
@@ -21,12 +32,12 @@ export class UserNormalizer {
   }
 
   /**
-   * Validates a `profile.json` read from the homeserver and returns its fields, filling in
+   * Checks the shape of a `profile.json` read from the homeserver and returns its fields, filling in
    * absent optional ones.
    */
   static fromPublished(profileJson: unknown): ProfileFields {
     try {
-      const profile = PubkyAppUser.fromJson(profileJson);
+      const profile = publishedProfileSchema.parse(profileJson);
       return {
         name: profile.name,
         bio: profile.bio ?? '',

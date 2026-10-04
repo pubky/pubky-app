@@ -25,12 +25,13 @@ function sameProfile(left: ProfileFields, right: ProfileFields): boolean {
 }
 
 /**
- * Whether a Nexus profile may replace the cached row. An older revision never does. While a
- * local edit is pending, only a response that started after the edit, carries a newer revision
- * and publishes the same fields does: equal content alone can be a cached or pre-edit copy.
+ * Why a Nexus profile must be kept out of the cached row, or null if it may replace it.
+ * An older revision never replaces the row. While a local edit is pending, only a response
+ * that started after the edit, carries a newer revision and publishes the same fields does:
+ * equal content alone can be a cached or pre-edit copy.
  * Once `pendingEditMs` has passed the edit is no longer protected, confirmed or not.
  */
-export function canReplaceUserDetails({
+export function getUserDetailsRejectionReason({
   existing,
   incoming,
   responseStartedAt,
@@ -42,18 +43,23 @@ export function canReplaceUserDetails({
   responseStartedAt: number | undefined;
   now: number;
   pendingEditMs: number;
-}): boolean {
-  if (!existing) return true;
+}): 'older-revision' | 'pending-local-edit' | null {
+  if (!existing) return null;
   const knownRevision = existing.nexusIndexedAt;
-  if (knownRevision !== undefined && incoming.indexed_at < knownRevision) return false;
-
+  const isOlderRevision = knownRevision !== undefined && incoming.indexed_at < knownRevision;
   const pendingSince = existing.localUpdatedAt;
-  if (pendingSince === undefined || now - pendingSince >= pendingEditMs) return true;
+  if (pendingSince !== undefined && now - pendingSince < pendingEditMs) {
+    const confirmsEdit =
+      responseStartedAt !== undefined &&
+      responseStartedAt > pendingSince &&
+      (knownRevision === undefined || incoming.indexed_at > knownRevision) &&
+      sameProfile(existing, incoming);
+    // Even an older revision needs a short retry while a local edit awaits confirmation.
+    if (!confirmsEdit) return 'pending-local-edit';
+  }
+  return isOlderRevision ? 'older-revision' : null;
+}
 
-  return (
-    responseStartedAt !== undefined &&
-    responseStartedAt > pendingSince &&
-    (knownRevision === undefined || incoming.indexed_at > knownRevision) &&
-    sameProfile(existing, incoming)
-  );
+export function canReplaceUserDetails(params: Parameters<typeof getUserDetailsRejectionReason>[0]): boolean {
+  return getUserDetailsRejectionReason(params) === null;
 }

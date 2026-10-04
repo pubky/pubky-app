@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getModeratedTags } from '@/config/moderation';
-import { getTtlRetryDelayMs, getTtlUserMs } from '@/libs/runtime-config/runtime-config';
+import { getTtlRetryDelayMs, getTtlUserMs, resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 import { APP_RUNTIME_DEFAULTS } from '@/libs/runtime-config/runtime-config.schema';
 import type { Pubky } from '@/models/models.types';
 import { ModerationModel } from '@/models/moderation/moderation';
@@ -499,7 +499,62 @@ describe('LocalStreamUsersService', () => {
         await LocalStreamUsersService.persistUsers([withDetails(userId, { name: 'Revision 3', indexed_at: 3 })]);
 
         expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Revision 5', nexusIndexedAt: 5 });
-        expect(await UserTtlModel.findById(userId)).toMatchObject({ lastUpdatedAt: editedAt });
+        expect((await UserTtlModel.findById(userId))?.lastUpdatedAt).toBeGreaterThanOrEqual(editedAt);
+      });
+
+      it.each([undefined, editedAt - 300_000])(
+        'renews the normal TTL for an older revision without an active edit (%s)',
+        async (localUpdatedAt) => {
+          const now = editedAt + 1_000;
+          vi.useFakeTimers({ toFake: ['Date'], now });
+          try {
+            await UserDetailsModel.upsert({
+              ...createMockNexusUser(userId).details,
+              name: 'Revision 5',
+              nexusIndexedAt: 5,
+              localUpdatedAt,
+            });
+            await UserTtlModel.upsert({ id: userId, lastUpdatedAt: now - getTtlUserMs() - 1 });
+            await LocalStreamUsersService.persistUsers([withDetails(userId, { name: 'Revision 3', indexed_at: 3 })]);
+            expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Revision 5', nexusIndexedAt: 5 });
+            expect(await UserTtlModel.findById(userId)).toMatchObject({ lastUpdatedAt: now });
+
+            // A later newer revision can still replace the kept row.
+            await LocalStreamUsersService.persistUsers([withDetails(userId, { name: 'Revision 6', indexed_at: 6 })]);
+            expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Revision 6', nexusIndexedAt: 6 });
+          } finally {
+            vi.useRealTimers();
+          }
+        },
+      );
+
+      it('keeps the short retry for an older revision while a longer configured edit window is active', async () => {
+        const now = editedAt + getTtlUserMs() + 1;
+        vi.useFakeTimers({ toFake: ['Date'], now });
+        vi.stubEnv('PUBKY_RUNTIME_PROFILE_LOCAL_EDIT_TTL_MS', String(getTtlUserMs() * 3));
+        resetRuntimeConfigForTests();
+        try {
+          await LocalStreamUsersService.persistUsers([withDetails(userId, { name: 'Old revision', indexed_at: 0 })]);
+          expect(await UserDetailsModel.findById(userId)).toMatchObject({
+            name: 'Local edit',
+            localUpdatedAt: editedAt,
+          });
+          expect(await UserTtlModel.findById(userId)).toMatchObject({
+            lastUpdatedAt: now - getTtlUserMs() + getTtlRetryDelayMs(),
+          });
+
+          // The next retry confirms the edit, including when protection exceeds the regular TTL.
+          vi.setSystemTime(now + getTtlRetryDelayMs() + 1);
+          await LocalStreamUsersService.persistUsers([withDetails(userId, { name: 'Local edit', indexed_at: 2 })], {
+            validatedAt: Date.now(),
+          });
+          expect((await UserDetailsModel.findById(userId))?.localUpdatedAt).toBeUndefined();
+          expect(await UserTtlModel.findById(userId)).toMatchObject({ lastUpdatedAt: Date.now() });
+        } finally {
+          vi.useRealTimers();
+          vi.unstubAllEnvs();
+          resetRuntimeConfigForTests();
+        }
       });
 
       it('waits the retry delay after a rejected refresh instead of refetching on every tick', async () => {

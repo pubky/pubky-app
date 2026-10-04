@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   escapeForInlineScript,
+  getProfileLocalEditTtlMs,
   getPulseClientKey,
   getPulseEndpoint,
   getRuntimeConfig,
@@ -131,6 +132,39 @@ describe('runtime-config resolver', () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('VITEST', '');
   }
+
+  describe('profile indexing protection', () => {
+    it('is optional in a deployed config and defaults to five minutes', () => {
+      simulateDeployedEnv();
+      setNetworkRuntimeEnv();
+      expect(readServerConfig().profileLocalEditTtlMs).toBe(300_000);
+    });
+
+    it('uses the configured window in deployed mode and in the injected client config', () => {
+      simulateDeployedEnv();
+      setNetworkRuntimeEnv();
+      process.env[PUBKY_RUNTIME_ENV_NAMES.profileLocalEditTtlMs] = '1800000';
+      process.env[PUBKY_RUNTIME_ENV_NAMES.ttlUserMs] = '60000';
+      const serverConfig = readServerConfig();
+      expect(serverConfig.profileLocalEditTtlMs).toBe(1_800_000);
+      window[RUNTIME_CONFIG_WINDOW_KEY] = serverConfig;
+      expect(getProfileLocalEditTtlMs()).toBe(1_800_000);
+      expect(serializeRuntimeConfig()).toContain('"profileLocalEditTtlMs":1800000');
+    });
+
+    it.each(['0', '-1', '1.5', 'invalid'])('rejects an invalid configured window: %s', (value) => {
+      process.env[PUBKY_RUNTIME_ENV_NAMES.profileLocalEditTtlMs] = value;
+      expect(() => readServerConfig()).toThrow();
+      simulateDeployedEnv();
+      setNetworkRuntimeEnv();
+      expect(() => readServerConfig()).toThrow();
+    });
+
+    it('rejects an invalid injected window', () => {
+      window[RUNTIME_CONFIG_WINDOW_KEY] = { ...readServerConfig(), profileLocalEditTtlMs: 0 };
+      expect(() => readClientConfig()).toThrow();
+    });
+  });
 
   describe('server', () => {
     it('parses PUBKY_RUNTIME_* when present', () => {

@@ -73,8 +73,15 @@ function getProfileChanges(
   const changes: TCommitUpdateDetailsParams['changes'] = {};
   if (user.name !== (userDetails?.name || '').trim()) changes.name = user.name;
   if ((user.bio ?? '') !== (userDetails?.bio || '').trim()) changes.bio = user.bio ?? '';
-  // The validator drops empty links, so emptying the list must still be sent as a clear.
-  if (!areProfileLinksEqual(links, userDetails ? getProfileFormLinks(userDetails) : DEFAULT_LINKS)) {
+  // Compare what would be published, excluding UI-only placeholders and URL whitespace.
+  // Keep invalid stored URLs as-is (including bare X handles) so correcting or removing
+  // one is still an edit; only new form input gets the X-handle rewrite.
+  const originalLinks = (userDetails?.links ?? []).map((link) => ({
+    label: link.title.toUpperCase(),
+    url: link.url.trim(),
+  }));
+  const rowsChanged = !areProfileLinksEqual(links, userDetails ? getProfileFormLinks(userDetails) : DEFAULT_LINKS);
+  if (rowsChanged && !areProfileLinksEqual(user.links ?? [], originalLinks)) {
     changes.links = user.links ?? [];
   }
   return changes;

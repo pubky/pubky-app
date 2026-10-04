@@ -1,19 +1,25 @@
-import { describe, expect, it, vi } from 'vitest';
-import { getTtlUserMs } from '@/config/sync';
-import { getProfileLocalEditTtlMs, PROFILE_LOCAL_EDIT_TTL_MS } from './user';
-
-vi.mock('@/config/sync', () => ({ getTtlUserMs: vi.fn() }));
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetRuntimeConfigForTests, RUNTIME_CONFIG_WINDOW_KEY } from '@/libs/runtime-config/runtime-config';
+import { getProfileLocalEditTtlMs } from './user';
 
 describe('getProfileLocalEditTtlMs', () => {
-  it('uses the protection window when the user TTL is longer', () => {
-    vi.mocked(getTtlUserMs).mockReturnValue(PROFILE_LOCAL_EDIT_TTL_MS * 2);
-
-    expect(getProfileLocalEditTtlMs()).toBe(PROFILE_LOCAL_EDIT_TTL_MS);
+  beforeEach(() => {
+    delete window[RUNTIME_CONFIG_WINDOW_KEY];
+    vi.stubEnv('PUBKY_RUNTIME_PROFILE_LOCAL_EDIT_TTL_MS', undefined);
+    resetRuntimeConfigForTests();
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    resetRuntimeConfigForTests();
   });
 
-  it('never outlasts a shorter user TTL', () => {
-    vi.mocked(getTtlUserMs).mockReturnValue(60_000);
+  it('defaults to five minutes', () => {
+    expect(getProfileLocalEditTtlMs()).toBe(300_000);
+  });
 
-    expect(getProfileLocalEditTtlMs()).toBe(60_000);
+  it('allows a deployer to extend protection beyond the normal user TTL', () => {
+    vi.stubEnv('PUBKY_RUNTIME_PROFILE_LOCAL_EDIT_TTL_MS', '1800000');
+    vi.stubEnv('PUBKY_RUNTIME_TTL_USER_MS', '60000');
+    expect(getProfileLocalEditTtlMs()).toBe(1_800_000);
   });
 });

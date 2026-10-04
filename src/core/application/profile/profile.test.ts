@@ -29,12 +29,6 @@ vi.mock('pubky-app-specs', () => ({
       };
     }
   },
-  PubkyAppUser: {
-    fromJson: (json: { name?: unknown } | undefined) => {
-      if (typeof json?.name !== 'string') throw new Error('missing field `name`');
-      return json;
-    },
-  },
   baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
   userUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/profile.json`,
   getValidMimeTypes: () => ['image/jpeg', 'image/png'],
