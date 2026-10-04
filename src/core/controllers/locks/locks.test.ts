@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   restoreSession: vi.fn(),
   signout: vi.fn(),
   setLockServiceConfig: vi.fn(),
+  fetchPaykitSetupStatus: vi.fn(),
   createLockContent: vi.fn(),
   fetchLockFile: vi.fn(),
   hasPaykitReceiver: vi.fn(),
@@ -42,6 +43,7 @@ vi.mock('@/application/locks/locks', () => ({
     restoreSession: mocks.restoreSession,
     signout: mocks.signout,
     setLockServiceConfig: mocks.setLockServiceConfig,
+    fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
     createLockContent: mocks.createLockContent,
     fetchLockFile: mocks.fetchLockFile,
     hasPaykitReceiver: mocks.hasPaykitReceiver,
@@ -247,6 +249,34 @@ describe('LocksController (auth)', () => {
       const store = useLocksAuthStore.getState();
       expect(store.selectIsLocksAuthenticated()).toBe(false);
       expect(store.selectLocksSessionSecret()).toBeNull();
+    });
+  });
+
+  describe('fetchPaykitSetupStatus', () => {
+    beforeEach(() => {
+      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+    });
+
+    it('clears the session when the Lock Server rejects it (401 → Auth)', async () => {
+      const rejected = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', {
+        service: ErrorService.Locks,
+        operation: 'test',
+      });
+      mocks.fetchPaykitSetupStatus.mockRejectedValue(rejected);
+
+      await expect(LocksController.fetchPaykitSetupStatus()).rejects.toBe(rejected);
+
+      const store = useLocksAuthStore.getState();
+      expect(store.selectIsLocksAuthenticated()).toBe(false);
+      expect(store.selectLocksSessionSecret()).toBeNull();
+    });
+
+    it('keeps the session when the check fails for a non-auth reason', async () => {
+      mocks.fetchPaykitSetupStatus.mockRejectedValue(new Error('network down'));
+
+      await expect(LocksController.fetchPaykitSetupStatus()).rejects.toThrow('network down');
+
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
     });
   });
 });

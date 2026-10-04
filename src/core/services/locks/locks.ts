@@ -26,13 +26,19 @@ import type {
   TGuardedResource,
   TLocksSessionResult,
   TPaykitConnectionState,
+  TPaykitSetupStatus,
   TRegisterGuardedResourceParams,
   TRegisterGuardedResourceResult,
   TSubmitProofResult,
   TSubmittedProofBundle,
   TVerificationTask,
 } from './locks.types';
-import { paykitConnectionStateResponseSchema, submitProofResultSchema, verificationStatusSchema } from './locks.types';
+import {
+  paykitConnectionStateResponseSchema,
+  paykitSetupStatusResponseSchema,
+  submitProofResultSchema,
+  verificationStatusSchema,
+} from './locks.types';
 import {
   buildLocksOptions,
   ensureLocksSdkReady,
@@ -316,6 +322,27 @@ export class LocksService {
       await session.creator.setLockServicePointer(new SetLockServicePointerOptions(getLockServerPubky()));
     } catch (error) {
       throw toLocksError(error, 'LocksService.setLockServiceConfig');
+    }
+  }
+
+  /**
+   * Whether the creator's Paykit payout account is set up (`GET /creator/paykit/setup-status`). The Lock
+   * Server asks Paykit server-to-server about the creator of this session; the browser sends nothing else.
+   */
+  static async lookupPaykitSetupStatus(): Promise<TPaykitSetupStatus> {
+    const session = getLockSession();
+    try {
+      const response = paykitSetupStatusResponseSchema.safeParse(await session.creator.paykitSetupStatus());
+      if (!response.success) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'paykit setup status response is invalid', {
+          service: ErrorService.Locks,
+          operation: 'LocksService.lookupPaykitSetupStatus',
+          cause: response.error,
+        });
+      }
+      return response.data.status;
+    } catch (error) {
+      throw toLocksError(error, 'LocksService.lookupPaykitSetupStatus');
     }
   }
 

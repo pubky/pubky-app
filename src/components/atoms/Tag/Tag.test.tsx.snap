@@ -184,7 +184,7 @@ exports[`Tag - Snapshots > matches snapshot without clicked 1`] = `
   class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md px-3 transition-all duration-200"
   data-cy="tag"
   data-testid="tag"
-  style="background-color: rgba(0, 22, 255, 0.3); border: 1px solid transparent;"
+  style="background-color: rgba(0, 255, 238, 0.3); border: 1px solid transparent;"
   title="clicked false"
 >
   <p

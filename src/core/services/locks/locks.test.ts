@@ -10,10 +10,11 @@ import { LocksService } from './locks';
 
 const mocks = vi.hoisted(() => {
   const setLockServicePointer = vi.fn(async () => {});
+  const paykitSetupStatus = vi.fn(async (): Promise<unknown> => ({ status: 'ready' }));
   const fakeSession = {
     exportSecret: vi.fn(() => 'secret-abc'),
     signout: vi.fn(async () => {}),
-    creator: { setLockServicePointer },
+    creator: { setLockServicePointer, paykitSetupStatus },
   };
   const fakeViewer = {
     id: 'viewer',
@@ -38,6 +39,7 @@ const mocks = vi.hoisted(() => {
     getLockServer: vi.fn((): string | undefined => 'lockserverpubky'),
     getPaykitServerUrl: vi.fn((): string | undefined => 'https://paykit.server'),
     setLockServicePointer,
+    paykitSetupStatus,
     fakeSession,
     fakeLocks,
     fakeViewer,
@@ -225,10 +227,30 @@ describe('LocksService (auth)', () => {
     );
   });
 
+  it('lookupPaykitSetupStatus returns the status the Lock Server reports for the session creator', async () => {
+    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'setup_required' });
+
+    await expect(LocksService.lookupPaykitSetupStatus()).resolves.toBe('setup_required');
+    expect(mocks.paykitSetupStatus).toHaveBeenCalledWith(); // the creator comes from the session
+  });
+
+  // The SDK types the response `any`: an unknown status must fail, not read as a setup answer.
+  it('lookupPaykitSetupStatus rejects an unknown status', async () => {
+    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'connected' });
+
+    const error = await LocksService.lookupPaykitSetupStatus().catch((caught: unknown) => caught);
+
+    expect(isAppError(error)).toBe(true);
+    expect((error as { category: ErrorCategory }).category).toBe(ErrorCategory.Validation);
+  });
+
   // Session-backed auth calls share the content calls' 401 → typed-auth-error promotion.
   it.each([
     ['signout', () => LocksService.signout(), () => mocks.fakeSession.signout],
     ['setLockServiceConfig', () => LocksService.setLockServiceConfig(), () => mocks.setLockServicePointer],
+    ['lookupPaykitSetupStatus', () => LocksService.lookupPaykitSetupStatus(), () => mocks.paykitSetupStatus],
   ])('%s promotes an HTTP 401 to an auth error', async (_name, call, mock) => {
     useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     mock().mockRejectedValueOnce(new Error('Lock Server request failed with HTTP 401'));
