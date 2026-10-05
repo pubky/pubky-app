@@ -92,9 +92,9 @@ export function useStreamPagination({
   // flight from the cursor it writes back. Reset in `clearState` (a fresh
   // fetch recounts consumed rows from scratch).
   const committedRemovalsRef = useRef(0);
-  // Monotonic token bumped by `clearState` (stream switch, refresh). A fetch snapshots it at
-  // entry and drops ALL of its state writes — success and failure — if a reset happened during
-  // its flight: a late-resolving request for a previous stream (or a pre-refresh cursor) must
+  // Monotonic token bumped by `clearState` (stream switch, refresh) and by the initial-load
+  // effect's cleanup (stream switch, unmount). A fetch snapshots it at entry and drops ALL of its
+  // state writes — success and failure — if a reset happened during its flight: a late-resolving request for a previous stream (or a pre-refresh cursor) must
   // not overwrite the fresh stream's posts, cursors, hasMore, error, or loading flags.
   const fetchGenerationRef = useRef(0);
   const activeStreamIdRef = useRef(streamId);
@@ -245,7 +245,8 @@ export function useStreamPagination({
         if (anchor !== undefined) setLastPostId(anchor);
         setHasMore(!reachedEnd);
       } catch (err) {
-        Logger.error('Failed to fetch stream slice:', err);
+        // AppErrors are logged by their factory; anything else is logged here, even when stale.
+        if (!isAppError(err)) Logger.error('Failed to fetch stream slice:', err);
         // A stale failure belongs to a discarded request: surfacing it (error banner,
         // hasMore=false, onError) would poison the fresh stream's state.
         if (isStale()) return;
@@ -254,8 +255,8 @@ export function useStreamPagination({
         setHasMore(false);
         onError?.(err);
       } finally {
-        // The fresh stream's fetch owns the loading flags now; `clearState` already
-        // reset `loadingMore` so a skipped write here cannot strand it.
+        // The fresh stream's fetch owns the loading flags now; `clearState` or the
+        // initial-load effect already reset `loadingMore`, so a skipped write here cannot strand it.
         if (!isStale()) {
           setLoadingState(isInitialLoad, false);
         }
@@ -502,9 +503,17 @@ export function useStreamPagination({
 
     if (resetOnStreamChange) {
       clearState();
+    } else {
+      // The previous run's cleanup made any in-flight loadMore stale, so it will skip its own
+      // finally-clear; without this the flag would stay set and block `loadMore` for good.
+      setLoadingMore(false);
     }
     fetchStreamSlice(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // A stream switch or unmount (e.g. a keyed feed replacement) discards this run's pending work.
+    return () => {
+      fetchGenerationRef.current += 1;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pagination state changes must not restart the initial load
   }, [streamId]);
 
   // Inert result: an undefined `streamId` means the consumer is not paginating

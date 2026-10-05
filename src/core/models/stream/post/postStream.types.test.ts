@@ -36,6 +36,20 @@ const TEST_POST_ID = 'post-pubky-id';
 
 describe('post-stream id builders', () => {
   describe('buildContentSearchStreamId', () => {
+    it.each(['following', 'friends', 'wot'] as const)(
+      'keeps %s search separate from All and profile search',
+      (reach) => {
+        const streamId = buildContentSearchStreamId('bitcoin: wallets 🔥', 'all', { type: 'reach', reach });
+
+        expect(streamId).toBe(`content_search:q~bitcoin%3A%20wallets%20%F0%9F%94%A5:all:reach:${reach}`);
+        expect(parseContentSearchStreamId(streamId)).toEqual({ query: 'bitcoin: wallets 🔥', kind: 'all', reach });
+        expect(isSkipPaginatedStream(streamId)).toBe(true);
+        expect(isAuthorScopedContentSearchStream(streamId)).toBe(false);
+        expect(isAuthorStreamSkippingMuteFilter(streamId)).toBe(false);
+        expect(getPostStreamKind(streamId)).toBe('all');
+      },
+    );
+
     it('round-trips queries with spaces and punctuation without changing their kind', () => {
       const streamId = buildContentSearchStreamId('bitcoin: wallets & privacy', StreamKind.COLLECTION);
 
@@ -77,7 +91,10 @@ describe('post-stream id builders', () => {
     });
 
     it('round-trips author-scoped ids (profile "Filter posts") preserving the q~ marker', () => {
-      const streamId = buildContentSearchStreamId('bitcoin: wallets & privacy', StreamKind.COLLECTION, TEST_PUBKY);
+      const streamId = buildContentSearchStreamId('bitcoin: wallets & privacy', StreamKind.COLLECTION, {
+        type: 'author',
+        author: TEST_PUBKY,
+      });
 
       expect(streamId).toBe(`content_search:q~bitcoin%3A%20wallets%20%26%20privacy:collection:${TEST_PUBKY}`);
       expect(isContentSearchStream(streamId)).toBe(true);
@@ -95,7 +112,7 @@ describe('post-stream id builders', () => {
       expect(parseContentSearchStreamId(unscoped)).toEqual({ query: 'key:value colons', kind: 'all' });
 
       // The encoded query can never leak a ':' that would shift the author segment.
-      const scoped = buildContentSearchStreamId('key:value colons', 'all', TEST_PUBKY);
+      const scoped = buildContentSearchStreamId('key:value colons', 'all', { type: 'author', author: TEST_PUBKY });
       expect(parseContentSearchStreamId(scoped)).toEqual({
         query: 'key:value colons',
         kind: 'all',
@@ -113,6 +130,12 @@ describe('post-stream id builders', () => {
       expect(parseContentSearchStreamId(`content_search:q~bitcoin:all:${TEST_PUBKY}:extra`)).toBeNull();
       // A trailing ':' (empty author segment) is malformed, not an unscoped search.
       expect(parseContentSearchStreamId('content_search:q~bitcoin:all:')).toBeNull();
+      expect(parseContentSearchStreamId('content_search:q~bitcoin:all:reach')).toBeNull();
+      expect(parseContentSearchStreamId('content_search:q~bitcoin:all:reach:')).toBeNull();
+      expect(parseContentSearchStreamId('content_search:q~bitcoin:all:reach:all')).toBeNull();
+      expect(parseContentSearchStreamId('content_search:q~bitcoin:all:reach:bogus')).toBeNull();
+      expect(parseContentSearchStreamId('content_search:q~bitcoin:all:reach:followers')).toBeNull();
+      expect(parseContentSearchStreamId('content_search:q~bitcoin:all:reach:friends:extra')).toBeNull();
       expect(parseContentSearchStreamId('content_search:q~:all')).toBeNull();
       expect(isAuthorScopedContentSearchStream('content_search:q~bitcoin:all:')).toBe(false);
     });
@@ -127,7 +150,11 @@ describe('post-stream id builders', () => {
     });
 
     it('skips the mute filter only for author-scoped content searches (profile timeline stance)', () => {
-      expect(isAuthorStreamSkippingMuteFilter(buildContentSearchStreamId('bitcoin', 'all', TEST_PUBKY))).toBe(true);
+      expect(
+        isAuthorStreamSkippingMuteFilter(
+          buildContentSearchStreamId('bitcoin', 'all', { type: 'author', author: TEST_PUBKY }),
+        ),
+      ).toBe(true);
       expect(isAuthorStreamSkippingMuteFilter(buildContentSearchStreamId('bitcoin'))).toBe(false);
     });
   });
@@ -280,7 +307,11 @@ describe('post-stream id builders', () => {
 describe('isSkipPaginatedStream', () => {
   it('returns true for relevance-ordered content-search streams', () => {
     expect(isSkipPaginatedStream(buildContentSearchStreamId('bitcoin wallets'))).toBe(true);
-    expect(isSkipPaginatedStream(buildContentSearchStreamId('bitcoin wallets', 'all', TEST_PUBKY))).toBe(true);
+    expect(
+      isSkipPaginatedStream(
+        buildContentSearchStreamId('bitcoin wallets', 'all', { type: 'author', author: TEST_PUBKY }),
+      ),
+    ).toBe(true);
   });
 
   it('returns true for engagement streams (no stable score cursor)', () => {
@@ -354,9 +385,11 @@ describe('getPostStreamKind', () => {
   it('extracts the kind from content-search streams', () => {
     expect(getPostStreamKind(buildContentSearchStreamId('bitcoin', StreamKind.COLLECTION))).toBe(StreamKind.COLLECTION);
     expect(getPostStreamKind(buildContentSearchStreamId('bitcoin'))).toBe('all');
-    expect(getPostStreamKind(buildContentSearchStreamId('bitcoin', StreamKind.COLLECTION, TEST_PUBKY))).toBe(
-      StreamKind.COLLECTION,
-    );
+    expect(
+      getPostStreamKind(
+        buildContentSearchStreamId('bitcoin', StreamKind.COLLECTION, { type: 'author', author: TEST_PUBKY }),
+      ),
+    ).toBe(StreamKind.COLLECTION);
   });
 
   it('extracts the kind from sorting-first stream ids', () => {

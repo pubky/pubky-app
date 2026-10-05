@@ -1,4 +1,13 @@
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
+import type { NexusSearchReach } from '@/services/nexus/search/search.types';
+import { REACH } from '@/stores/home/home.types';
+import { getSourceFromReach } from '@/stores/home/home.utils';
+import type { SearchReach } from './search.types';
+
+/** The Nexus reach for a Search selection; All sends none. */
+export function getSearchNexusReach(reach: SearchReach): NexusSearchReach | undefined {
+  return reach === REACH.ALL ? undefined : getSourceFromReach(reach);
+}
 
 /**
  * Shared utility for adding a tag to an array with business logic:

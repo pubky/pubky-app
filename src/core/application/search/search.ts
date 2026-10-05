@@ -2,7 +2,7 @@ import { NexusSearchService } from '@/services/nexus/search/search';
 import type {
   TPrefixSearchParams,
   TSearchResult,
-  TUsersByTagsSearchParams,
+  TUsersByTagsFetchParams,
   TUserTagSearchResult,
 } from '@/services/nexus/search/search.types';
 
@@ -41,7 +41,7 @@ export class SearchApplication {
    * Search users by profile tags
    * @returns User ids with tagger-count scores, ordered by score
    */
-  static async fetchUsersByTags(params: TUsersByTagsSearchParams): Promise<TUserTagSearchResult[]> {
+  static async fetchUsersByTags(params: TUsersByTagsFetchParams): Promise<TUserTagSearchResult[]> {
     return await NexusSearchService.usersByTags(params);
   }
 }
