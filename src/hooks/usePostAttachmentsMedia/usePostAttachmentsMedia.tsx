@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { FileController } from '@/controllers/file/file';
+import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
@@ -13,7 +12,7 @@ import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAtta
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 interface UsePostAttachmentsMediaResult {
-  /** Resolved image/video attachments for the post (local-first). Empty until resolved / on error. */
+  /** Resolved image/video attachments for the post (local-first). Empty until resolved. */
   mediaItems: AttachmentConstructed[];
 }
 
@@ -22,79 +21,46 @@ interface UsePostAttachmentsMediaResult {
  *
  * 1. If locally-attached (unsynced) files exist for this post in the
  *    LocalFilesStore, categorize and return those.
- * 2. Otherwise, when post details are available, fetch file metadata via
- *    FileController and split into media buckets.
+ * 2. Otherwise, when post details are available, resolve file metadata through
+ *    `useAttachmentsMetadata`: local rows are read live, and the rows the local
+ *    table does not have yet are fetched from Nexus. A thumbnail that lost the
+ *    `persistPosts`/`persistFiles` race therefore still appears once the file
+ *    rows land, without navigation.
  *
- * Network errors fall back to an empty list so the consumer simply renders
- * nothing — matching the prior inline behaviour. The component should treat
- * `mediaItems` as the source of truth for what to display.
+ * The component should treat `mediaItems` as the source of truth for what to display.
  */
 export function usePostAttachmentsMedia(postId: string): UsePostAttachmentsMediaResult {
   const { postDetails } = usePostDetails(postId);
   const localAttachments = useLocalFilesStore((state) => state.posts[postId]);
-  const [mediaItems, setMediaItems] = useState<AttachmentConstructed[]>([]);
 
-  useEffect(() => {
-    let cancelled = false;
+  // Articles carry inline body images in `attachments`, but only the cover
+  // (slot-0 rule) is post-level media — inline images render inside the
+  // article body, never as thumbnails or gallery items.
+  const isArticle = postDetails?.kind === 'long';
+  const articleHasCover =
+    isArticle &&
+    Boolean(postDetails.attachments?.length) &&
+    !articleHasInlineSlotZero(parseArticleContent(postDetails.content)?.body ?? '');
+  const mediaSlotCount = articleHasCover ? 1 : 0;
 
-    // Articles carry inline body images in `attachments`, but only the cover
-    // (slot-0 rule) is post-level media — inline images render inside the
-    // article body, never as thumbnails or gallery items.
-    const isArticle = postDetails?.kind === 'long';
-    const articleHasCover =
-      isArticle &&
-      Boolean(postDetails.attachments?.length) &&
-      !articleHasInlineSlotZero(parseArticleContent(postDetails.content)?.body ?? '');
-    const mediaSlotCount = articleHasCover ? 1 : 0;
+  const remoteAttachmentUris = isArticle
+    ? (postDetails?.attachments ?? []).slice(0, mediaSlotCount)
+    : (postDetails?.attachments ?? []);
 
-    const resolveMedia = async () => {
-      // Wait for the details row before resolving anything: right after a
-      // publish the store is already seeded while details are still loading,
-      // and treating not-yet-loaded as not-an-article would leak inline
-      // images into post-level media for that interim render
-      if (!postDetails) {
-        if (!cancelled) {
-          setMediaItems([]);
-        }
-        return;
-      }
+  const { files } = useAttachmentsMetadata({
+    fileUris: remoteAttachmentUris,
+    enabled: Boolean(postDetails) && !localAttachments,
+  });
 
-      if (localAttachments) {
-        const localMedia = isArticle ? localAttachments.slice(0, mediaSlotCount) : localAttachments;
-        if (!cancelled) {
-          setMediaItems(categorizeAttachments(localMedia).imagesAndVideos);
-        }
-        return;
-      }
+  // Wait for the details row before resolving anything: right after a publish
+  // the store is already seeded while details are still loading, and treating
+  // not-yet-loaded as not-an-article would leak inline images into post-level
+  // media for that interim render.
+  if (!postDetails) return { mediaItems: [] };
 
-      const attachmentUris = isArticle
-        ? (postDetails?.attachments ?? []).slice(0, mediaSlotCount)
-        : (postDetails?.attachments ?? []);
-      if (attachmentUris.length === 0) {
-        if (!cancelled) {
-          setMediaItems([]);
-        }
-        return;
-      }
-
-      try {
-        const metadata = await FileController.getMetadata({ fileAttachments: attachmentUris });
-        if (cancelled) return;
-
-        setMediaItems(splitAttachmentsByMediaType(metadata).imagesAndVideos);
-      } catch {
-        if (!cancelled) {
-          setMediaItems([]);
-        }
-      }
-    };
-
-    void resolveMedia();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [localAttachments, postDetails]);
+  const mediaItems = localAttachments
+    ? categorizeAttachments(isArticle ? localAttachments.slice(0, mediaSlotCount) : localAttachments).imagesAndVideos
+    : splitAttachmentsByMediaType(files).imagesAndVideos;
 
   return { mediaItems };
 }

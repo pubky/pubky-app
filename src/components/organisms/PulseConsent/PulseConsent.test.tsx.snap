@@ -1,0 +1,49 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PulseConsent - Snapshots > renders the first-visit banner 1`] = `
+<section
+  aria-label="Pubky Pulse analytics consent"
+  class="fixed inset-x-4 bottom-24 z-50 mx-auto flex max-w-2xl flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-lg sm:bottom-4 sm:p-6"
+>
+  <div
+    class="space-y-2"
+  >
+    <h2
+      class="text-2xl text-foreground font-semibold"
+      data-testid="typography"
+    >
+      Help improve Pubky
+    </h2>
+    <p
+      class="text-sm font-medium text-muted-foreground"
+      data-testid="typography"
+    >
+      Allow Pubky Pulse to store an anonymous ID in this browser and measure how you use Pubky across visits, including page views, errors, and which browser and operating system you use. This helps us improve the app.
+    </p>
+    <p
+      class="text-sm font-medium text-muted-foreground"
+      data-testid="typography"
+    >
+      Optional, and this choice covers Pubky Pulse only. You can use Pubky with Pulse off, and change your choice anytime in Pulse analytics or Settings → Privacy and Safety.
+    </p>
+  </div>
+  <div
+    class="flex flex-wrap gap-3"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 gap-1 px-4 py-2 has-[>svg]:px-4 flex-1"
+      data-slot="button"
+      data-variant="secondary"
+    >
+      Decline
+    </button>
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 gap-1 px-4 py-2 has-[>svg]:px-4 flex-1"
+      data-slot="button"
+      data-variant="secondary"
+    >
+      Accept
+    </button>
+  </div>
+</section>
+`;

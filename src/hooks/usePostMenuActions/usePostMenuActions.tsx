@@ -31,6 +31,7 @@ import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
 import { isArticleContent } from '@/libs/post/articleContent';
@@ -61,7 +62,9 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const { copyToClipboard: copyPubky } = useCopyToClipboard({
     successTitle: 'Pubky copied to clipboard',
   });
-  const { copyToClipboard: copyLink } = useCopyToClipboard({
+  // Touch devices (an installed PWA has no address bar) get the native share sheet;
+  // everywhere else the link is copied, as the label promises.
+  const { shareUrl: copyLink } = useShareUrl({
     successTitle: 'Link copied to clipboard',
   });
   const { copyToClipboard: copyText } = useCopyToClipboard({
@@ -96,14 +99,8 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
     label: 'Copy pubky',
     icon: Key,
     onClick: async () => {
-      try {
-        await copyPubky(withPubkyPrefix(postAuthorId));
-      } catch (error) {
-        toast({
-          variant: 'error',
-          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
-        });
-      }
+      // useCopyToClipboard reports its own success/failure toasts and never throws.
+      await copyPubky(withPubkyPrefix(postAuthorId));
     },
     variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
   });
@@ -112,14 +109,8 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
     label: 'Copy link to post',
     icon: Link,
     onClick: async () => {
-      try {
-        await copyLink(postUrl);
-      } catch (error) {
-        toast({
-          variant: 'error',
-          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
-        });
-      }
+      // useShareUrl reports its own success/failure toasts and never throws.
+      await copyLink(postUrl);
     },
     variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
   });
@@ -129,14 +120,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       label: 'Copy text of post',
       icon: FileText,
       onClick: async () => {
-        try {
-          await copyText(postDetails?.content ?? '');
-        } catch (error) {
-          toast({
-            variant: 'error',
-            description: isAppError(error) ? error.message : 'Could not copy to clipboard',
-          });
-        }
+        await copyText(postDetails?.content ?? '');
       },
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
     });

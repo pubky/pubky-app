@@ -3,7 +3,8 @@
 import type { ToastVariant } from '@/atoms/Toast/Toast.variants';
 import type { ToastActionDescriptor } from './toast';
 
-// Max number of toasts visible at once
+// Max number of transient toasts visible at once. Persistent toasts (see `persistent` in
+// toast.ts) are exempt: they stack next to the transient one until acted on or dismissed.
 const TOAST_LIMIT = 1;
 // Delay before removing a dismissed toast from React state (after visual dismiss)
 export const TOAST_REMOVE_DELAY = 20_000;
@@ -17,6 +18,7 @@ interface ToasterToast {
   description?: string;
   dismissButton: boolean;
   action?: ToastActionDescriptor;
+  persistent: boolean;
   open: boolean;
 }
 
@@ -37,7 +39,7 @@ export function genId() {
 }
 
 // Pending timers per toast id. Cleared when the toast leaves state early
-// (limit eviction, manual dismiss) so no timer ever fires for an absent toast.
+// (transient limit eviction, manual dismiss) so no timer ever fires for an absent toast.
 const dismissTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 const removeTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -56,11 +58,16 @@ const clearToastTimers = (toastId: string) => {
 
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case 'ADD_TOAST':
+    case 'ADD_TOAST': {
+      // Persistent toasts hold state the user must resolve, so they never count toward the
+      // limit and are never evicted by it; only transient toasts compete for TOAST_LIMIT.
+      const toasts = [action.toast, ...state.toasts];
+      const keptTransient = toasts.filter((t) => !t.persistent).slice(0, TOAST_LIMIT);
       return {
         ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+        toasts: toasts.filter((t) => t.persistent || keptTransient.includes(t)),
       };
+    }
 
     case 'DISMISS_TOAST':
       if (!state.toasts.some((t) => t.id === action.toastId && t.open)) return state;
@@ -93,20 +100,23 @@ export function dispatch(action: Action) {
   // Timers are scheduled here rather than in the reducer so the reducer stays pure.
   switch (action.type) {
     case 'ADD_TOAST': {
-      const { id } = action.toast;
+      const { id, persistent } = action.toast;
       // Radix Toast's internal timer fails to start when isClosePausedRef stays true
       // after user interaction (e.g. clicking a button inside a toast), which left the
       // delete success toast stuck open in the repost → undo flow. Known unresolved bug:
       // https://github.com/radix-ui/primitives/issues/2233
       // The store therefore owns auto-dismiss, and the Toaster disarms Radix's own
-      // timer with duration={Infinity}.
-      dismissTimeouts.set(
-        id,
-        setTimeout(() => {
-          dismissTimeouts.delete(id);
-          dispatch({ type: 'DISMISS_TOAST', toastId: id });
-        }, TOAST_DURATION),
-      );
+      // timer with duration={Infinity}. A persistent toast gets no timer at all: it
+      // leaves only through its action, the dismiss button, or a swipe.
+      if (!persistent) {
+        dismissTimeouts.set(
+          id,
+          setTimeout(() => {
+            dismissTimeouts.delete(id);
+            dispatch({ type: 'DISMISS_TOAST', toastId: id });
+          }, TOAST_DURATION),
+        );
+      }
       for (const evicted of previous.toasts) {
         if (!next.toasts.includes(evicted)) clearToastTimers(evicted.id);
       }

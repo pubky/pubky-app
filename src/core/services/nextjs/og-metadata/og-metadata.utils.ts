@@ -5,7 +5,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { extractFromHtml, OG_PATTERNS } from '@/libs/html/html';
 import { HttpStatusCode } from '@/libs/http/http.types';
-import { decodeHtmlEntities, truncateMiddle, truncateString } from '@/libs/utils/utils';
+import { truncateMiddle, truncateString } from '@/libs/utils/utils';
 import { isHttpProtocol, normalizeImageUrl } from '../nextjs.utils';
 
 const MEDIA_TYPES = ['image', 'video', 'audio'] as const;
@@ -27,24 +27,32 @@ export function detectMediaType(url: string, response: Response): TOgMetadataRes
 }
 
 /**
+ * Whether the HTML carries an Open Graph tag the preview card can use (`og:title` or `og:image`).
+ *
+ * Bot-walled hosts answer a browser identity with a client-rendered shell: a 200 whose head has no
+ * Open Graph tags at all, sometimes with only a generic `<title>`. The service uses this to decide
+ * whether a 200 is worth one retry with a crawler identity.
+ */
+export function hasOgMetadata(html: string): boolean {
+  return extractFromHtml(html, OG_PATTERNS.TITLE) !== null || extractFromHtml(html, OG_PATTERNS.IMAGE) !== null;
+}
+
+/**
  * Extracts OG metadata from HTML, normalizes image URLs, and applies truncation.
  */
 export async function extractMetadata(url: string, html: string): Promise<TOgMetadataResult> {
-  // Extract title (og:title → <title> fallback)
-  const ogTitle = extractFromHtml(html, OG_PATTERNS.TITLE);
-  const titleTag = html.match(OG_PATTERNS.TITLE_TAG)?.[1] || null;
-  const rawTitle = ogTitle || titleTag;
-  const title = rawTitle ? decodeHtmlEntities(rawTitle) : null;
+  // Extract title: og:title, then the document <title> as the last fallback. The extractor skips
+  // blank and placeholder captures, so a shell page cannot become a card title.
+  const title = extractFromHtml(html, [...OG_PATTERNS.TITLE, OG_PATTERNS.TITLE_TAG]);
 
-  // Extract og:image
+  // Extract og:image. The extractor never returns a placeholder, which is not a path: resolving it
+  // against the page URL would turn "undefined" into https://<host>/undefined.
   const image = extractFromHtml(html, OG_PATTERNS.IMAGE);
-
-  // Normalize and validate image URL
   const normalizedImage = image ? await normalizeImageUrl(image, url) : null;
 
   return {
     url: truncateMiddle(url, URL_TRUNCATE_LENGTH),
-    title: title ? truncateString(title.trim(), TITLE_TRUNCATE_LENGTH) : null,
+    title: title ? truncateString(title, TITLE_TRUNCATE_LENGTH) : null,
     image: normalizedImage,
     type: 'website',
   };

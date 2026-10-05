@@ -2,7 +2,6 @@
 
 exports[`LogoutContent - Snapshots > matches the signed-out illustration layout 1`] = `
 <div
-  class="mb-6"
   data-size="container"
 >
   <header>

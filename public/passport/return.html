@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#05050A" />
+    <title>Back to Pubky - Pubky App</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #05050a;
+        color: #ffffff;
+        font-family: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      main {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 1rem;
+        text-align: center;
+      }
+      h1 {
+        margin: 1rem 0 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+      p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.7);
+      }
+      a.return {
+        margin-top: 0.5rem;
+        display: inline-block;
+        background: #c8ff00;
+        color: #05050a;
+        border-radius: 9999px;
+        padding: 0.75rem 1.5rem;
+        font: inherit;
+        font-weight: 700;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/pubky-logo.svg" alt="Pubky" width="109" height="36" />
+      <h1>Back to Pubky.</h1>
+      <p>You can close this window and return to Pubky to continue.</p>
+      <a class="return" href="/" data-testid="passport-return-link">Return to Pubky</a>
+    </main>
+    <script>
+      // Pubky Passport fallback callback. Passport navigates the popup here
+      // (?attempt=<id>&outcome=success|error|cancel) only when it could not hand the outcome to
+      // the opener with postMessage. This page relays that untrusted outcome to the opener on the
+      // same origin and closes itself. It never authenticates anyone: only the SDK session the
+      // opener receives from the relay does.
+      //
+      // Deliberately a static file, not a Next route: a route under the root layout would boot
+      // DatabaseProvider / RouteGuardProvider and run the session restore inside the popup while
+      // the opener is bootstrapping the same origin (see docs/pwa.md for the same rule on the
+      // offline page). Keep this in sync with src/config/passport.ts (PASSPORT_RETURN_MESSAGE_TYPE,
+      // PASSPORT_RETURN_QUERY) and src/libs/passport/passport.ts (parsePassportReturnMessage).
+      (function relayPassportOutcome() {
+        var MESSAGE_TYPE = 'pubky-app.passport-return';
+        var OUTCOMES = ['success', 'error', 'cancel'];
+        var params = new URLSearchParams(window.location.search);
+        var attemptId = params.get('attempt');
+        var outcome = params.get('outcome');
+        if (!attemptId || OUTCOMES.indexOf(outcome) === -1) return;
+
+        var opener = window.opener;
+        if (!opener || opener.closed) return;
+        try {
+          opener.postMessage({ type: MESSAGE_TYPE, attemptId: attemptId, outcome: outcome }, window.location.origin);
+        } catch (error) {
+          return;
+        }
+        // Close on the next tick so the posted message is delivered before the opener can observe
+        // `popup.closed`.
+        window.setTimeout(function () {
+          window.close();
+        }, 0);
+      })();
+    </script>
+  </body>
+</html>

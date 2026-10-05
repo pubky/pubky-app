@@ -17,6 +17,7 @@ const {
   mockUseMuteUser,
   mockUseMutedUsers,
   mockUseCopyToClipboard,
+  mockUseShareUrl,
 } = vi.hoisted(() => ({
   mockIsAppError: vi.fn(),
   mockParseCompositeId: vi.fn(),
@@ -28,6 +29,7 @@ const {
   mockUseMuteUser: vi.fn(),
   mockUseMutedUsers: vi.fn(),
   mockUseCopyToClipboard: vi.fn(),
+  mockUseShareUrl: vi.fn(),
 }));
 
 // Mock dependencies
@@ -66,6 +68,10 @@ vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
 
 vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
   useCopyToClipboard: mockUseCopyToClipboard,
+}));
+
+vi.mock('@/hooks/useShareUrl/useShareUrl', () => ({
+  useShareUrl: mockUseShareUrl,
 }));
 
 // Mock Molecules
@@ -114,6 +120,7 @@ describe('usePostMenuActions', () => {
     isMuteUserLoading: vi.fn().mockReturnValue(false),
     isMuted: vi.fn().mockReturnValue(false),
     copyToClipboard: vi.fn().mockResolvedValue(true),
+    shareUrl: vi.fn().mockResolvedValue(true),
   };
 
   beforeEach(() => {
@@ -166,6 +173,9 @@ describe('usePostMenuActions', () => {
 
     mockUseCopyToClipboard.mockReturnValue({
       copyToClipboard: defaultMocks.copyToClipboard,
+    });
+    mockUseShareUrl.mockReturnValue({
+      shareUrl: defaultMocks.shareUrl,
     });
   });
 
@@ -485,7 +495,7 @@ describe('usePostMenuActions', () => {
       expect(copyLinkItem?.label).toBe('Copy link to post');
     });
 
-    it('calls copyToClipboard with post URL on copy link click', async () => {
+    it('hands the post URL to shareUrl on copy link click', async () => {
       const { result } = renderHook(() =>
         usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
       );
@@ -496,7 +506,7 @@ describe('usePostMenuActions', () => {
         await copyLinkItem?.onClick();
       });
 
-      expect(defaultMocks.copyToClipboard).toHaveBeenCalledWith('https://example.com/post/author123/post456');
+      expect(defaultMocks.shareUrl).toHaveBeenCalledWith('https://example.com/post/author123/post456');
     });
 
     it('includes copy text action for short posts', () => {

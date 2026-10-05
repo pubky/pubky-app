@@ -77,13 +77,15 @@ vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
       continueText,
       onHandleBackButton,
       onHandleContinueButton,
+      className,
     }: {
       backText: string;
       continueText: string;
       onHandleBackButton: () => void;
       onHandleContinueButton: () => void;
+      className?: string;
     }) => (
-      <div data-testid="buttons-navigation">
+      <div data-testid="buttons-navigation" data-class={className}>
         <button onClick={onHandleBackButton}>{backText}</button>
         <button onClick={onHandleContinueButton}>{continueText}</button>
       </div>
@@ -100,7 +102,11 @@ vi.mock('@/molecules/Content/Content', () => {
 vi.mock('@/molecules/Logout/Logout', () => {
   return {
     LogoutContent: () => <div data-testid="logout-content">Logout content</div>,
-    LogoutNavigation: () => <div data-testid="logout-navigation">Logout navigation</div>,
+    LogoutNavigation: ({ className }: { className?: string }) => (
+      <div data-testid="logout-navigation" data-class={className}>
+        Logout navigation
+      </div>
+    ),
   };
 });
 
@@ -264,5 +270,26 @@ describe('Logout', () => {
     fireEvent.click(screen.getByText('Homepage'));
 
     expect(mocks.mockPush).toHaveBeenCalledWith('/');
+  });
+
+  it('drops the doubled mobile bottom inset on the signed-out navigation', () => {
+    mocks.authState.session = null;
+    mocks.authState.sessionExport = null;
+
+    render(<Logout />);
+
+    expect(screen.getByTestId('logout-navigation')).toHaveAttribute('data-class', 'pb-0 lg:pb-6');
+  });
+
+  it('drops the doubled mobile bottom inset on the error-state navigation', async () => {
+    mocks.mockLogout.mockRejectedValue(new Error('clear failed'));
+
+    render(<Logout />);
+
+    await waitFor(() => {
+      expect(screen.getByText("We couldn't sign you out yet")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('buttons-navigation')).toHaveAttribute('data-class', 'pb-0 lg:pb-6');
   });
 });

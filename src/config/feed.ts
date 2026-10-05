@@ -40,16 +40,6 @@ export const TIMELINE_FEED_VARIANT = {
 export type TimelineFeedVariant = (typeof TIMELINE_FEED_VARIANT)[keyof typeof TIMELINE_FEED_VARIANT];
 
 /**
- * Feed variants that render their posts in a fixed card grid rather than the
- * default vertical timeline (decision D5).
- *
- * Grid is intrinsic to these variants rather than user-selectable. Collection
- * feeds are intentionally excluded because their creator default/viewer
- * override chooses between Grid and List.
- */
-export const GRID_LAYOUT_VARIANTS = new Set<TimelineFeedVariant>([TIMELINE_FEED_VARIANT.BOOKMARKS]);
-
-/**
  * Feed variants where a repost may be optimistically prepended via the active
  * `TimelineFeedContext`. Reposts belong on the user's timeline, not on
  * membership feeds (collection, bookmarks) or someone else's profile.
@@ -76,17 +66,19 @@ export function isProfileTagReachSupported(reach: string): reach is ProfileTagSu
 }
 
 /**
- * Responsive column classes for the shared card grid (`TimelineGridPosts`).
+ * Responsive column classes for the Cards and reorder grids.
  * One column on phones, two at `md`, three at `xl` — mirrors the 3-up Figma grid.
- * Breakpoints may be retuned in the Phase C spike once the real cell width is measured.
  */
 export const GRID_FEED_COLUMNS_CLASS = 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
 
 /**
- * Gap between cards in the shared card grid (`TimelineGridPosts`). Matches the
+ * Gap between cards in the Cards and reorder grids. Matches the
  * Figma grid spacing; shared by the renderer and its skeleton to avoid drift.
  */
 export const GRID_FEED_GAP_CLASS = 'gap-3 lg:gap-6';
+
+/** Initial card placeholders for Cards. */
+export const GRID_FEED_SKELETON_COUNT = 6;
 
 /**
  * Session-storage flag set by feed-cluster nav entry points (Pubky logo,

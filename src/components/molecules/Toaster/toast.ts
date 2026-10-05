@@ -17,6 +17,11 @@ interface ToastOptionsBase {
   variant?: ToastVariant;
   dismissButton?: boolean;
   action?: ToastActionDescriptor;
+  /**
+   * Stays open until the user acts on it or dismisses it, instead of auto-dismissing.
+   * Reserve it for state the user must resolve (e.g. an app update waiting to install).
+   */
+  persistent?: boolean;
 }
 
 export type ToastOptions = ToastOptionsBase &
@@ -34,6 +39,7 @@ export function toast(options: ToastOptions): ToastHandle {
       description: options.description,
       dismissButton: options.dismissButton ?? false,
       action: options.action,
+      persistent: options.persistent ?? false,
       open: true,
     },
   });

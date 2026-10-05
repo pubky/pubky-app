@@ -6,12 +6,15 @@
   "scope": "/",
   "lang": "en",
   "orientation": "portrait-primary",
-  "categories": ["social"],
+  "categories": [
+    "social"
+  ],
   "icons": [
     {
       "src": "/pubky-logo.svg",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any",
+      "sizes": "any"
     },
     {
       "src": "/images/manifest/web-app-manifest-48x48.png",
@@ -68,7 +71,7 @@
       "purpose": "any"
     },
     {
-      "src": "/images/manifest/web-app-manifest-512x512.png",
+      "src": "/images/manifest/web-app-manifest-512x512-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -80,23 +83,74 @@
       "purpose": "any"
     }
   ],
-  "theme_color": "#000000",
-  "background_color": "#000000",
+  "theme_color": "#05050A",
+  "background_color": "#05050A",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
-  "start_url": "/",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "start_url": "/home",
   "screenshots": [
     {
       "src": "/images/manifest/web-app-manifest-1280x720.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "wide"
+      "form_factor": "wide",
+      "label": "Pubky landing page on desktop"
     },
     {
       "src": "/images/manifest/web-app-manifest-640x1136.png",
       "sizes": "640x1136",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Pubky landing page on mobile"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Home",
+      "url": "/home",
+      "icons": [
+        {
+          "src": "/images/manifest/web-app-manifest-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Hot",
+      "url": "/hot",
+      "icons": [
+        {
+          "src": "/images/manifest/web-app-manifest-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "url": "/search",
+      "icons": [
+        {
+          "src": "/images/manifest/web-app-manifest-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "url": "/profile",
+      "icons": [
+        {
+          "src": "/images/manifest/web-app-manifest-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
     }
   ],
   "protocol_handlers": [

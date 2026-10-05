@@ -2,7 +2,9 @@ import { PubkyAppPostKind } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostApplication } from '@/application/post/post';
+import { TagKind } from '@/application/tag/tag.types';
 import { COLLECTION_LAYOUT } from '@/config/collections';
+import { POST_MAX_TAGS } from '@/config/posts';
 import type { TCreatePostParams, TFetchPostTaggersParams } from '@/controllers/post/post.types';
 import { db } from '@/database/franky/franky';
 import { AuthErrorCode, DatabaseErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
@@ -468,6 +470,25 @@ describe('PostController', () => {
       );
     });
 
+    it('should infer video kind when content links to a video', async () => {
+      const { PostController } = await import('./post');
+
+      await PostController.commitCreate({
+        content: 'Watch https://youtu.be/dQw4w9WgXcQ',
+        authorId: testData.authorPubky,
+      });
+
+      const allPosts = await PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content === 'Watch https://youtu.be/dQw4w9WgXcQ');
+
+      expect(savedPost?.kind).toBe('video');
+      expect(HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'video' }),
+        }),
+      );
+    });
+
     it('should use long kind when isArticle is true', async () => {
       const { PostController } = await import('./post');
 
@@ -625,6 +646,135 @@ describe('PostController', () => {
       const { tags: tagList } = postCommitSpy.mock.calls[0][0];
       expect(tagList?.[0]?.taggedId).toBe(createdId);
       expect(tagList?.[0]?.label).toBe('nft');
+    });
+
+    describe('hashtags in content (#1882)', () => {
+      it('creates a tag on the new post for a hashtag in the content', async () => {
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+
+        const { PostController } = await import('./post');
+        const createdId = await PostController.commitCreate(createPostParams('Shipping #pubky today'));
+
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList).toHaveLength(1);
+        expect(tagList?.[0]?.label).toBe('pubky');
+        expect(tagList?.[0]?.taggedId).toBe(createdId);
+        expect(tagList?.[0]?.taggedKind).toBe(TagKind.POST);
+      });
+
+      it.each([false, true])('persists a tag exposed by a table rewrite (article: %s)', async (isArticle) => {
+        const body = '| Topic |\n| --- |\n| #pubky |';
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+        const { PostController } = await import('./post');
+        const createdId = await PostController.commitCreate({
+          ...createPostParams(isArticle ? JSON.stringify({ title: 'Table', body }) : body),
+          isArticle,
+        });
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList?.map((tag) => tag.label)).toEqual(['pubky']);
+        expect(tagList?.[0]?.taggedId).toBe(createdId);
+      });
+
+      it.each([false, true])('preserves article versus short-post link semantics (article: %s)', async (isArticle) => {
+        const body = '[Discuss #pubky here](https://example.com)';
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+        const { PostController } = await import('./post');
+        await PostController.commitCreate({
+          ...createPostParams(isArticle ? JSON.stringify({ title: 'Link', body }) : body),
+          isArticle,
+        });
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList?.map((tag) => tag.label)).toEqual(isArticle ? [] : ['pubky']);
+      });
+
+      it('keeps the composer tags first and appends the hashtags from the content', async () => {
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+
+        const { PostController } = await import('./post');
+        await PostController.commitCreate({
+          ...createPostParams('More on #nostr'),
+          tags: ['bitcoin'],
+        });
+
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList?.map((tag) => tag.label)).toEqual(['bitcoin', 'nostr']);
+      });
+
+      it('does not repeat a hashtag that is already a composer tag', async () => {
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+
+        const { PostController } = await import('./post');
+        await PostController.commitCreate({
+          ...createPostParams('About #Bitcoin'),
+          tags: ['bitcoin'],
+        });
+
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList?.map((tag) => tag.label)).toEqual(['bitcoin']);
+      });
+
+      it('stops adding hashtags at the per-post tag limit', async () => {
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+
+        const { PostController } = await import('./post');
+        await PostController.commitCreate({
+          ...createPostParams('#two #three #four #five #six'),
+          tags: ['one'],
+        });
+
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList).toHaveLength(POST_MAX_TAGS);
+        expect(tagList?.map((tag) => tag.label)).toEqual(['one', 'two', 'three', 'four', 'five']);
+      });
+
+      it('ignores hashtags the renderer does not link', async () => {
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+
+        const { PostController } = await import('./post');
+        await PostController.commitCreate(createPostParams('# Heading with #nope\n\n```\n#nope\n```\n\nReal #tag'));
+
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList?.map((tag) => tag.label)).toEqual(['tag']);
+      });
+
+      it('passes an empty tag list when the content has no hashtags', async () => {
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+
+        const { PostController } = await import('./post');
+        await PostController.commitCreate(createPostParams('Hello, world!'));
+
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList).toEqual([]);
+      });
+
+      it('tags a reply from a hashtag in its content', async () => {
+        await setupExistingPost();
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+
+        const { PostController } = await import('./post');
+        const createdId = await PostController.commitCreate(
+          createPostParams('Replying about #nostr', testData.fullPostId),
+        );
+
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList?.map((tag) => tag.label)).toEqual(['nostr']);
+        expect(tagList?.[0]?.taggedId).toBe(createdId);
+      });
+
+      it('tags an article from a hashtag in its body, not its title', async () => {
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+
+        const { PostController } = await import('./post');
+        const createdId = await PostController.commitCreate({
+          authorId: testData.authorPubky,
+          isArticle: true,
+          content: JSON.stringify({ title: 'Title with #nope', body: 'Body with #inarticle' }),
+        });
+
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList?.map((tag) => tag.label)).toEqual(['inarticle']);
+        expect(tagList?.[0]?.taggedId).toBe(createdId);
+      });
     });
 
     it('normalizes file attachments sequentially to avoid concurrent image decodes', async () => {
@@ -1176,7 +1326,7 @@ describe('PostController', () => {
             name: 'Saved posts',
             description: '',
             items: [targetPostUri],
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -1215,7 +1365,7 @@ describe('PostController', () => {
             name: 'Saved posts',
             description: '',
             items: [targetPostUri, existingItemUri],
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -1247,7 +1397,7 @@ describe('PostController', () => {
             name: 'Saved posts',
             description: '',
             items: [],
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -1405,7 +1555,7 @@ describe('PostController', () => {
             name: 'Saved posts',
             description: '',
             items: [uriC, uriA, uriB],
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -1445,7 +1595,7 @@ describe('PostController', () => {
               name: 'Saved posts',
               description: '',
               items: [uriC, uriB, uriA],
-              layout: COLLECTION_LAYOUT.GRID,
+              layout: COLLECTION_LAYOUT.CARDS,
             }),
           }),
         );
@@ -1616,7 +1766,7 @@ describe('PostController', () => {
             description: 'Updated description',
             items: [existingItemUri],
             cover_image: 'pubky://author/pub/pubky.app/files/oldcover',
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -1664,7 +1814,7 @@ describe('PostController', () => {
             description: 'Updated description',
             items: [existingItemUri],
             cover_image: 'pubky://author/pub/pubky.app/files/newcover',
-            layout: COLLECTION_LAYOUT.GRID,
+            layout: COLLECTION_LAYOUT.CARDS,
           }),
           currentUserPubky: testData.authorPubky,
         });

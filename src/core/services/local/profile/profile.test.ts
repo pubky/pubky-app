@@ -1,9 +1,11 @@
+import type { PubkyAppUser } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalUserService } from '@/services/local/user/user';
 import { NexusSocialGraphStatus, type NexusUserCounts, type NexusUserDetails } from '@/services/nexus/nexus.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { LocalProfileService } from './profile';
 
 describe('LocalProfileService', () => {
@@ -75,6 +77,34 @@ describe('LocalProfileService', () => {
       indexed_at: 1,
     };
 
+    it('keeps a newer profile and its social graph tier when an older response arrives', async () => {
+      const newerDetails = {
+        ...baseDetails,
+        name: 'Newer name',
+        bio: 'Newer bio',
+        image: 'https://example.com/new-avatar.jpg',
+        status: 'Available',
+        links: [{ title: 'Website', url: 'https://example.com' }],
+        indexed_at: 2,
+        nexusIndexedAt: 2,
+        social_graph_status: NexusSocialGraphStatus.NETWORKED,
+      };
+      await UserDetailsModel.upsert(newerDetails);
+
+      await LocalProfileService.upsertDetails(baseDetails);
+
+      expect(await UserDetailsModel.findById(userId)).toMatchObject(newerDetails);
+    });
+
+    it.each([true, false])('keeps the newer concurrent write (older first: %s)', async (olderFirst) => {
+      const newerDetails = { ...baseDetails, name: 'Newer name', indexed_at: 2 };
+      const details = olderFirst ? [baseDetails, newerDetails] : [newerDetails, baseDetails];
+
+      await Promise.all(details.map((user) => LocalProfileService.upsertDetails(user)));
+
+      expect(await UserDetailsModel.findById(userId)).toMatchObject(newerDetails);
+    });
+
     it('should keep a social graph tier persisted by a full user view', async () => {
       await UserDetailsModel.upsert({ ...baseDetails, social_graph_status: NexusSocialGraphStatus.NETWORKED });
 
@@ -99,6 +129,32 @@ describe('LocalProfileService', () => {
 
       const result = await UserDetailsModel.findById(userId);
       expect(result!.social_graph_status).toBeUndefined();
+    });
+  });
+
+  describe('updateDetails', () => {
+    const userId = 'test-user-id' as Pubky;
+
+    it('should clear a cached tombstone when the profile is written', async () => {
+      await UserDetailsModel.upsert({
+        id: userId,
+        name: '',
+        bio: '',
+        image: null,
+        status: null,
+        links: null,
+        indexed_at: 1,
+        deleted: true,
+      });
+
+      await LocalProfileService.updateDetails(
+        asOpaque<PubkyAppUser>({ name: 'Revived', bio: 'Back again', image: null, links: [] }),
+        userId,
+      );
+
+      const result = await UserDetailsModel.findById(userId);
+      expect(result!.name).toBe('Revived');
+      expect(result!.deleted).toBe(false);
     });
   });
 

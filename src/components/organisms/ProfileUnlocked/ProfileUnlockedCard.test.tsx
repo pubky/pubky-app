@@ -1,0 +1,189 @@
+import { render as rtlRender, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { LocksController } from '@/controllers/locks/locks';
+import type { ReplicatedPost } from '@/services/locks/locks.types';
+import { ProfileUnlockedCard } from './ProfileUnlockedCard';
+
+const render = (ui: ReactElement) => rtlRender(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
+
+// The card renders through PostBody → PostText, which reads the route to decide truncation.
+vi.mock('next/navigation', () => ({ usePathname: () => '/profile/unlocked' }));
+vi.mock('@/controllers/locks/locks', () => ({
+  LocksController: { fetchReplicatedAttachments: vi.fn().mockResolvedValue([]) },
+}));
+
+const post = (attachments: ReplicatedPost['attachments'] = null): ReplicatedPost => ({
+  content: 'secret body',
+  kind: 'short',
+  attachments,
+});
+
+describe('ProfileUnlockedCard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([]);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:media');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+  });
+
+  it('renders the post text', () => {
+    render(<ProfileUnlockedCard post={post()} />);
+
+    expect(screen.getByText('secret body')).toBeInTheDocument();
+  });
+
+  it('skips the media read when the post has no attachments', async () => {
+    render(<ProfileUnlockedCard post={post()} />);
+
+    await Promise.resolve();
+    expect(LocksController.fetchReplicatedAttachments).not.toHaveBeenCalled();
+  });
+
+  it('loads the bytes for a post that has attachments', async () => {
+    const attachments = [{ url: 'pubky://me/priv/social/unlocked/LOCK1/img1', content_type: 'image/png' }];
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([
+      { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 },
+    ]);
+
+    render(<ProfileUnlockedCard post={post(attachments)} />);
+
+    await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalledTimes(1));
+    expect(LocksController.fetchReplicatedAttachments).toHaveBeenCalledWith({ post: post(attachments) });
+  });
+
+  // The kinds a locked post can carry, per `inferPostKindForCreate`. Collection is unreachable here.
+  describe('by post kind', () => {
+    const withMedia = async (contentType: string) => {
+      vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([
+        { id: 'file1', contentType, bytes: new Uint8Array([1]), slot: 0 },
+      ]);
+      return [{ url: 'pubky://me/priv/social/unlocked/LOCK1/file1', content_type: contentType }];
+    };
+
+    it('short: renders the body text', () => {
+      render(<ProfileUnlockedCard post={{ ...post(), kind: 'short' }} />);
+
+      expect(screen.getByText('secret body')).toBeInTheDocument();
+    });
+
+    it('long: renders the article title, which plain body text would drop', () => {
+      const content = JSON.stringify({ title: 'My Title', body: 'Body' });
+
+      render(<ProfileUnlockedCard post={{ ...post(), kind: 'long', content }} />);
+
+      expect(screen.getByText('My Title')).toBeInTheDocument();
+    });
+
+    it('link: renders the URL from the body', () => {
+      render(<ProfileUnlockedCard post={{ ...post(), kind: 'link', content: 'https://example.com/article' }} />);
+
+      // PostText compacts the visible label to the host; the full URL stays on the anchor.
+      expect(screen.getByRole('link', { name: 'https://example.com/article' })).toHaveAttribute(
+        'href',
+        'https://example.com/article',
+      );
+    });
+
+    it('image: renders the attachment from its object URL', async () => {
+      const attachments = await withMedia('image/png');
+
+      render(<ProfileUnlockedCard post={{ ...post(attachments), kind: 'image' }} />);
+
+      await waitFor(() => expect(screen.getByAltText('attachment-0')).toHaveAttribute('src', 'blob:media'));
+    });
+
+    it('video: renders the attachment from its object URL', async () => {
+      const attachments = await withMedia('video/mp4');
+
+      const { container } = render(<ProfileUnlockedCard post={{ ...post(attachments), kind: 'video' }} />);
+
+      await waitFor(() => expect(container.querySelector('video')).toHaveAttribute('src', 'blob:media'));
+    });
+
+    it('file: renders the download entry with its name', async () => {
+      const attachments = await withMedia('application/pdf');
+
+      render(<ProfileUnlockedCard post={{ ...post(attachments), kind: 'file' }} />);
+
+      await waitFor(() => expect(screen.getByText('attachment-0')).toBeInTheDocument());
+    });
+  });
+
+  it('expands a truncated body in place — an unlocked copy has no post page to navigate to', async () => {
+    const long = 'x'.repeat(1200);
+    const user = userEvent.setup();
+
+    render(<ProfileUnlockedCard post={{ ...post(), content: long }} />);
+    const showMore = screen.getByRole('button', { name: 'Show full post content' });
+
+    await user.click(showMore);
+
+    expect(screen.getByText(long)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+  });
+
+  it('reads a full article in place when there is no post page to open', async () => {
+    const tail = 'y'.repeat(400);
+    const body = ['Intro paragraph', '![one](attachment:1)', tail].join('\n\n');
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([
+      { id: 'one', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 1 },
+    ]);
+    const attachments = [{ url: 'pubky://me/priv/social/unlocked/LOCK1/one', content_type: 'image/png' }];
+    const user = userEvent.setup();
+
+    render(
+      <ProfileUnlockedCard
+        post={{ content: JSON.stringify({ title: 'My Title', body }), kind: 'long', attachments }}
+      />,
+    );
+
+    // Collapsed: the card previews the article, so the rest of the body and its images are not read yet.
+    expect(screen.getByText('Intro paragraph')).toBeInTheDocument();
+    expect(screen.queryByText(tail)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('article-inline-image')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Read full article' }));
+
+    expect(screen.getByText(tail)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('article-inline-image')).toHaveAttribute('src', 'blob:media'));
+    expect(screen.queryByRole('button', { name: 'Read full article' })).not.toBeInTheDocument();
+  });
+
+  it('renders the surviving media when the replica lost some attachments', async () => {
+    // The application drops the 404s; the card must still show the text and whatever came back.
+    const refs = Array.from({ length: 5 }, (_, index) => ({
+      url: `pubky://me/priv/social/unlocked/LOCK1/img${index}`,
+      content_type: 'image/png',
+    }));
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue(
+      [0, 2, 4].map((index) => ({
+        id: `img${index}`,
+        contentType: 'image/png',
+        bytes: new Uint8Array([index]),
+        slot: index,
+      })),
+    );
+
+    render(<ProfileUnlockedCard post={post(refs)} />);
+
+    await waitFor(() => expect(screen.getAllByRole('img')).toHaveLength(3));
+    expect(screen.getByText('secret body')).toBeInTheDocument();
+  });
+
+  it('releases the object URLs on unmount, so the blobs are not leaked', async () => {
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([
+      { id: 'img1', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 },
+    ]);
+    const attachments = [{ url: 'pubky://me/priv/social/unlocked/LOCK1/img1', content_type: 'image/png' }];
+
+    const { unmount } = render(<ProfileUnlockedCard post={post(attachments)} />);
+    await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalled());
+
+    unmount();
+
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:media');
+  });
+});

@@ -56,6 +56,7 @@ interface PendingUpload {
  */
 export function useInlineImageUpload({
   enabled,
+  keepSession = false,
   authorPubky,
   getInlineBudget,
 }: UseInlineImageUploadOptions): UseInlineImageUploadReturn {
@@ -199,6 +200,10 @@ export function useInlineImageUpload({
     return getSession().get(src.trim())?.objectUrl ?? null;
   };
 
+  const getSessionFile = (uri: string): File | null => {
+    return getSession().get(uri.trim())?.file ?? null;
+  };
+
   const registerSessionUpload = (uri: string, file: File) => {
     getSession().set(uri, { objectUrl: URL.createObjectURL(file), file });
   };
@@ -259,10 +264,11 @@ export function useInlineImageUpload({
     discardRef.current = discardSession;
   });
 
+  const isSessionNeeded = enabled || keepSession;
   useEffect(() => {
-    if (enabled) return;
+    if (isSessionNeeded) return;
     void discardRef.current();
-  }, [enabled]);
+  }, [isSessionNeeded]);
 
   useEffect(() => {
     return () => {
@@ -273,6 +279,7 @@ export function useInlineImageUpload({
   return {
     uploadInlineImage,
     getPreviewUrl,
+    getSessionFile,
     registerSessionUpload,
     uploadingCount,
     finalizeSession,

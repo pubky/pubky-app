@@ -12,7 +12,6 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
 import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
-import { useCollectionsNavDiscovery } from '@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Github2, Telegram, XTwitter } from '@/icons';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
@@ -138,8 +137,6 @@ type NavigationButtonProps = {
   isActive: boolean;
   dataCy?: string;
   isFeedRoute?: boolean;
-  showNew?: boolean;
-  newLabel?: string;
 };
 const NavigationButton = ({
   href,
@@ -149,54 +146,31 @@ const NavigationButton = ({
   isActive,
   dataCy,
   isFeedRoute,
-  showNew = false,
-  newLabel,
 }: NavigationButtonProps) => {
-  const accessibleLabel = showNew && newLabel ? `${label}, ${newLabel}` : label;
   const button = (
     <Button
       data-cy={href ? undefined : dataCy}
-      className={cn(
-        'h-12 w-12 backdrop-blur-md',
-        isActive ? '' : 'border bg-white/5',
-        showNew && 'border-brand bg-white/5 text-brand hover:bg-brand/10',
-      )}
+      className={cn('h-12 w-12 backdrop-blur-md', isActive ? '' : 'border bg-white/5')}
       variant="secondary"
       size="icon"
-      aria-label={accessibleLabel}
-      onClick={href ? undefined : onClick}
+      aria-label={label}
+      onClick={onClick}
     >
       <Icon className="size-6" />
     </Button>
-  );
-  const content = (
-    <>
-      {button}
-      {showNew && newLabel ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute top-14 left-1/2 -translate-x-1/2 text-xs font-semibold text-brand uppercase"
-        >
-          {newLabel}
-        </span>
-      ) : null}
-    </>
   );
   return href ? (
     <Link
       href={href}
       data-cy={dataCy}
-      className={showNew ? 'relative inline-flex' : undefined}
-      onClick={(event) => {
-        onClick?.();
-        if (!isFeedRoute) return;
-        handleFeedNavClick(event, { isActive, smoothScrollWhenActive: true });
-      }}
+      onClick={
+        isFeedRoute ? (event) => handleFeedNavClick(event, { isActive, smoothScrollWhenActive: true }) : undefined
+      }
     >
-      {content}
+      {button}
     </Link>
   ) : (
-    <span className={showNew ? 'relative inline-flex' : undefined}>{content}</span>
+    button
   );
 };
 export function HeaderNavigationButtons({
@@ -207,27 +181,20 @@ export function HeaderNavigationButtons({
   className,
 }: HeaderNavigationButtonsProps) {
   const pathname = usePathname();
-  const { showCollectionsNew, markCollectionsNavSeen } = useCollectionsNavDiscovery();
   const counterString = counter > 21 ? '21+' : counter.toString();
   return (
     <Container className={cn('hidden w-auto flex-row items-center justify-start gap-3 lg:flex', className)}>
-      {NAVIGATION_ITEMS.map((item) => {
-        const isCollectionsItem = item.href === APP_ROUTES.COLLECTIONS;
-        return (
-          <NavigationButton
-            key={item.href}
-            href={item.href}
-            onClick={isCollectionsItem ? markCollectionsNavSeen : undefined}
-            icon={item.icon}
-            label={item.label}
-            isActive={isNavItemActive(pathname, item)}
-            dataCy={item.dataCy}
-            isFeedRoute={item.isFeedRoute}
-            showNew={isCollectionsItem && showCollectionsNew}
-            newLabel={'New'}
-          />
-        );
-      })}
+      {NAVIGATION_ITEMS.map((item) => (
+        <NavigationButton
+          key={item.href}
+          href={item.href}
+          icon={item.icon}
+          label={item.label}
+          isActive={isNavItemActive(pathname, item)}
+          dataCy={item.dataCy}
+          isFeedRoute={item.isFeedRoute}
+        />
+      ))}
 
       <Link data-cy="header-nav-profile-btn" className="relative" href={APP_ROUTES.PROFILE}>
         <AvatarWithFallback

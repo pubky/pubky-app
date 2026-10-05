@@ -4,7 +4,7 @@ import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/post
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import { getSafeExternalUrl } from './safeExternalUrl';
-import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
+import { DELETED_USER_NAME, RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 import type {
   CopyToClipboardProps,
   ExtractInitialsProps,
@@ -52,10 +52,24 @@ export function formatPublicKey({
 /**
  * Resolves a user's display name, falling back to a shortened public key when
  * the profile has no `name` set. Mirrors the app's UI convention
- * (`user.name || formatPublicKey(...)`, e.g. in `UserListItem`).
+ * (`user.name || formatPublicKey(...)`, e.g. in `UserListItem`). Deleted users
+ * resolve to `[DELETED]` rather than the fallback.
  */
-export function resolveDisplayName(user: { name: string; id: string }): string {
-  return user.name || formatPublicKey({ key: user.id });
+export function resolveDisplayName(user: { name: string; id: string; deleted?: boolean }): string {
+  return resolveUserDisplayName(user) || formatPublicKey({ key: user.id });
+}
+
+/**
+ * Display label for a user: `[DELETED]` for a tombstone, the user's own name otherwise, and
+ * an empty string when a live user has none. Empty lets the caller keep its own fallback
+ * (public key, "Unknown User", …) while a deleted user never degrades into one. Surfaces
+ * that key on the label (`AvatarWithFallback` picks its glyph from it) must pass the resolved
+ * value, not a raw row name: a new-shape tombstone's row has `name: ''`, which renders a seed
+ * letter instead of the glyph.
+ */
+export function resolveUserDisplayName(user: { name?: string | null; deleted?: boolean } | null | undefined): string {
+  if (isUserDeleted(user)) return DELETED_USER_NAME;
+  return user?.name ?? '';
 }
 
 /**
@@ -74,6 +88,26 @@ export function resolveDisplayName(user: { name: string; id: string }): string {
  */
 export function isPubkyIdentifier(value: string): boolean {
   return /^[a-z0-9]{52}$/.test(value);
+}
+
+/**
+ * A bare positive integer written as a string — the shape a Lock Server payment amount travels in.
+ *
+ * @example
+ * ```ts
+ * isPositiveIntegerString('1000')                 // true
+ * isPositiveIntegerString('0')                    // false — not positive
+ * isPositiveIntegerString('007')                  // false — leading zeros
+ * isPositiveIntegerString('-1')                   // false — signed
+ * isPositiveIntegerString('1.5')                  // false — decimal
+ * isPositiveIntegerString('1,000')                // false — grouped
+ * isPositiveIntegerString('1e3')                  // false — not bare digits
+ * isPositiveIntegerString(' 12 ')                 // false — not trimmed
+ * isPositiveIntegerString('99999999999999999999') // false — `Number` would round it
+ * ```
+ */
+export function isPositiveIntegerString(value: string): boolean {
+  return /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value));
 }
 
 function parseValidPostCompositeId(compositeId: string): { pubky: string; id: string } | null {
@@ -171,6 +205,7 @@ const customCases = [
   { name: 'pubky', color: '#C8FF00' },
   { name: 'blocktank', color: '#FFAE00' },
   { name: 'tether', color: '#26A17B' },
+  { name: 'ai', color: '#00C8FF' },
 ];
 
 /**
@@ -211,7 +246,14 @@ export function generateRandomColor(str: string): string {
   ];
 
   // Select pattern based on the hash
-  const pattern = patterns[positiveHash % patterns.length];
+  const patternIndex = positiveHash % patterns.length;
+  // The blue-heavy patterns span 220–260° when their variable channel is <= 85.
+  // Remap only that range to teal/cyan (165–195°), keeping the hash's variation.
+  if ((patternIndex === 3 || patternIndex === 4) && randomByte <= 85) {
+    const cyanHex = (255 - Math.round(randomByte * 0.75)).toString(16).padStart(2, '0');
+    return patternIndex === 3 ? `#00${cyanHex}FF` : `#00FF${cyanHex}`;
+  }
+  const pattern = patterns[patternIndex];
 
   return `#${pattern}`;
 }
@@ -444,6 +486,21 @@ export const convertHmsToSeconds = (
 };
 
 export const isPostDeleted = (content: string | undefined) => content === '[DELETED]';
+
+/**
+ * Whether a user is a Nexus tombstone. Current Nexus sets `deleted: true` and empties the name;
+ * rows cached from older builds still carry the legacy `[DELETED]` name instead.
+ */
+export const isUserDeleted = (user: { name?: string | null; deleted?: boolean } | null | undefined) =>
+  user?.deleted === true || user?.name === DELETED_USER_NAME;
+
+/**
+ * Whether a profile name is reserved for the tombstone label. `[DELETED]` is what the app shows for
+ * a deleted user, so a live profile must not be able to take it: it would render as deleted and
+ * `commitUpdateStatus` refuses the status updates of a row carrying it. Reserved at input by
+ * `UserValidator` and the profile form, both of which gate the name on this.
+ */
+export const isReservedUserName = (name: string) => name.trim() === DELETED_USER_NAME;
 
 /**
  * Get tags that fit within the character budget.

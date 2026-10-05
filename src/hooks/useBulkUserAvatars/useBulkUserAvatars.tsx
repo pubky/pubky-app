@@ -6,6 +6,7 @@ import { FileController } from '@/controllers/file/file';
 import { StreamUserController } from '@/controllers/stream/users/users';
 import { UserController } from '@/controllers/user/user';
 import { Logger } from '@/libs/logger/logger';
+import { resolveUserDisplayName } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import type { UseBulkUserAvatarsResult, UserWithAvatar } from './useBulkUserAvatars.types';
@@ -73,10 +74,12 @@ export function useBulkUserAvatars(userIds: Pubky[]): UseBulkUserAvatarsResult {
     const map = new Map<Pubky, UserWithAvatar>();
     for (const id of uniqueUserIds) {
       const details = userDetailsMap.get(id);
-      const avatarUrl = details?.image ? FileController.getAvatarUrl(id) : undefined;
+      // Version by indexed_at: a stale CDN copy would otherwise survive the
+      // profile edit that refreshed this row.
+      const avatarUrl = details?.image ? FileController.getAvatarUrl(id, details.indexed_at) : undefined;
       map.set(id, {
         id,
-        name: details?.name,
+        name: details ? resolveUserDisplayName(details) : undefined,
         avatarUrl,
       });
     }

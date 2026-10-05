@@ -13,6 +13,7 @@ import { usePostAttachmentsMedia } from './usePostAttachmentsMedia';
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getMetadata: vi.fn(),
+    fetchFiles: vi.fn(),
     getFileUrl: vi.fn(),
   },
 }));

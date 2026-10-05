@@ -1,4 +1,4 @@
-import type { Capabilities, PublicKey, Session } from '@synonymdev/pubky';
+import type { Capabilities, PublicKey, Session, XCallbackParams } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { HttpMethod } from '@/libs/http/http.types';
 
@@ -49,8 +49,25 @@ export type CancelableAuthApproval = {
  */
 export type PubPath<T extends string = string> = `/pub/${T}`;
 
+/** Private counterpart of {@link PubPath}: readable/writable only by the owning session. */
+type PrivPath<T extends string = string> = `/priv/${T}`;
+
+/** The only roots the homeserver accepts writes under — mirrors its `STORAGE_ROOTS`. */
+export type StoragePath<T extends string = string> = PubPath<T> | PrivPath<T>;
+
 export type TGenerateSignupAuthUrlParams = {
   inviteCode: string;
+  caps?: Capabilities;
+};
+
+/**
+ * Pubky Passport auth request: a plain sign-in cookie flow decorated with x-callback-url metadata
+ * (`xSource` label plus same-origin HTTPS success/error/cancel destinations) that Passport shows
+ * and navigates to. Passport creates the identity itself when the Google account has none, so
+ * sign-up and sign-in share this single request kind.
+ */
+export type TGeneratePassportAuthUrlParams = {
+  xCallback: XCallbackParams;
   caps?: Capabilities;
 };
 
@@ -94,12 +111,12 @@ export type TParseResponseOrUndefinedParams = {
 export type TResolveOwnedSessionPathParams = {
   url: string;
   session: Session | null;
-  pubPathPrefix: string;
+  allowedPrefixes: readonly string[];
 };
 
 export type TOwnedSessionPath = {
   session: Session;
-  path: PubPath<string>;
+  path: StoragePath<string>;
 };
 
 export type TCheckSessionExpirationParams = {
@@ -115,7 +132,7 @@ export type TAssertOkParams = {
 
 export type TGetOwnedResponseParams = {
   session: Session;
-  path: PubPath<string>;
+  path: StoragePath<string>;
   url: string;
 };
 
@@ -153,4 +170,10 @@ export type THandleErrorParams = {
   additionalContext?: Record<string, unknown>;
   statusCode?: number;
   alwaysUseHomeserverError?: boolean;
+};
+
+export type THomeserverBytesResult = {
+  bytes: Uint8Array;
+  /** Server-side write time from `Last-Modified`; null when the header is missing or unparseable. */
+  modifiedAt: number | null;
 };

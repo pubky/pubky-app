@@ -97,11 +97,100 @@ describe('extractMetadata', () => {
     expect(result.title).toBeNull();
   });
 
+  it('should ignore the placeholder "undefined" that client-rendered shells serve for og:title and <title>', async () => {
+    const html = '<html><head><meta property="og:title" content="undefined" /><title>undefined</title></head></html>';
+    const result = await extractMetadata('https://music.youtube.com/playlist?list=OLAK5uy_x', html);
+    expect(result.title).toBeNull();
+  });
+
+  it('should match placeholders exactly, keeping a title that differs only by case', async () => {
+    const html = '<html><head><meta property="og:title" content="  Null  " /></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBe('Null');
+  });
+
+  it('should ignore a placeholder og:title with surrounding whitespace', async () => {
+    const html = '<html><head><meta property="og:title" content="  undefined  " /></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBeNull();
+  });
+
+  it('should ignore a placeholder og:title that is entity-encoded', async () => {
+    const html = '<html><head><meta property="og:title" content="undefined&nbsp;" /></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBeNull();
+  });
+
+  it('should fall back to <title> when og:title is whitespace only', async () => {
+    const html = '<html><head><meta property="og:title" content="&nbsp;" /><title>Real Title</title></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBe('Real Title');
+  });
+
+  it('should ignore a "null" placeholder title', async () => {
+    const html = '<html><head><meta property="og:title" content="null" /></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBeNull();
+  });
+
+  it('should fall back to <title> when og:title is a placeholder', async () => {
+    const html = '<html><head><meta property="og:title" content="undefined" /><title>Real Title</title></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBe('Real Title');
+  });
+
+  it('should pick a later real og:title over the <title> fallback when the first og:title is a placeholder', async () => {
+    const html =
+      '<html><head><meta property="og:title" content="undefined" /><meta property="og:title" content="Real OG Title" /><title>Fallback</title></head></html>';
+    const result = await extractMetadata('https://music.youtube.com/playlist?list=OLAK5uy_x', html);
+    expect(result.title).toBe('Real OG Title');
+  });
+
+  it('should normalize a later real og:image when the first og:image is a placeholder', async () => {
+    mockNormalizeImageUrl.mockResolvedValue('https://cdn.example.com/a.jpg');
+    const html =
+      '<html><head><meta property="og:image" content="undefined" /><meta property="og:image" content="https://cdn.example.com/a.jpg" /></head></html>';
+    const result = await extractMetadata('https://music.youtube.com/playlist?list=OLAK5uy_x', html);
+    expect(mockNormalizeImageUrl).toHaveBeenCalledTimes(1);
+    expect(mockNormalizeImageUrl).toHaveBeenCalledWith(
+      'https://cdn.example.com/a.jpg',
+      'https://music.youtube.com/playlist?list=OLAK5uy_x',
+    );
+    expect(result.image).toBe('https://cdn.example.com/a.jpg');
+  });
+
+  it('should not use an SVG <title> from the body when the document title is a placeholder', async () => {
+    const html =
+      '<html><head><meta property="og:title" content="undefined" /><title>undefined</title></head><body><svg><title>Close menu</title></svg></body></html>';
+    const result = await extractMetadata('https://music.youtube.com/playlist?list=OLAK5uy_x', html);
+    expect(result.title).toBeNull();
+  });
+
+  it('should not resolve a placeholder og:image against the page URL', async () => {
+    const html =
+      '<html><head><meta property="og:title" content="Real Title" /><meta property="og:image" content="undefined" /></head></html>';
+    const result = await extractMetadata('https://music.youtube.com/playlist?list=OLAK5uy_x', html);
+    expect(mockNormalizeImageUrl).not.toHaveBeenCalled();
+    expect(result.image).toBeNull();
+  });
+
   it('should call normalizeImageUrl when og:image is found', async () => {
     mockNormalizeImageUrl.mockResolvedValue('https://example.com/img.png');
     const html = '<html><head><meta property="og:image" content="/img.png" /></head></html>';
     const result = await extractMetadata('https://example.com/', html);
     expect(mockNormalizeImageUrl).toHaveBeenCalledWith('/img.png', 'https://example.com/');
+    expect(result.image).toBe('https://example.com/img.png');
+  });
+
+  it('should decode HTML entities in og:image before normalizing it', async () => {
+    mockNormalizeImageUrl.mockResolvedValue('https://example.com/img.png');
+    const html =
+      '<html><head><meta property="og:image" content="https://cdn.example.com/a.jpg?w=600&amp;h=400" /></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(mockNormalizeImageUrl).toHaveBeenCalledWith(
+      'https://cdn.example.com/a.jpg?w=600&h=400',
+      'https://example.com/',
+    );
     expect(result.image).toBe('https://example.com/img.png');
   });
 
@@ -153,6 +242,48 @@ describe('buildFallbackMetadata', () => {
     const result = buildFallbackMetadata(longUrl);
     expect(result.url).toContain('...');
     expect(result.url.length).toBeLessThanOrEqual(URL_TRUNCATE_LENGTH);
+  });
+});
+
+describe('hasOgMetadata', () => {
+  let hasOgMetadata: typeof import('./og-metadata.utils').hasOgMetadata;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    const mod = await import('./og-metadata.utils');
+    hasOgMetadata = mod.hasOgMetadata;
+  });
+
+  it('should return true for an og:title tag', () => {
+    expect(hasOgMetadata('<html><head><meta property="og:title" content="Title" /></head></html>')).toBe(true);
+  });
+
+  it('should return true for an og:image tag', () => {
+    expect(hasOgMetadata('<html><head><meta property="og:image" content="/img.png" /></head></html>')).toBe(true);
+  });
+
+  it('should return false for a page with only a <title> tag', () => {
+    expect(hasOgMetadata('<html><head><title>Reddit - The heart of the internet</title></head></html>')).toBe(false);
+  });
+
+  it('should return false for a head with no metadata', () => {
+    expect(hasOgMetadata('<html><head></head><body></body></html>')).toBe(false);
+  });
+
+  it('should return false for an empty og:title value', () => {
+    expect(hasOgMetadata('<html><head><meta property="og:title" content="" /></head></html>')).toBe(false);
+  });
+
+  it('should return false when the only tags are placeholders', () => {
+    const html =
+      '<html><head><meta property="og:title" content="undefined" /><meta property="og:image" content="null" /><title>undefined</title></head></html>';
+    expect(hasOgMetadata(html)).toBe(false);
+  });
+
+  it('should return true when the only usable tag is a later occurrence', () => {
+    const html =
+      '<html><head><meta property="og:title" content="undefined" /><meta property="og:title" content="Real Title" /></head></html>';
+    expect(hasOgMetadata(html)).toBe(true);
   });
 });
 

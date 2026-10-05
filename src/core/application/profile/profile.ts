@@ -13,6 +13,7 @@ import { hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
+import { DELETED_USER_NAME } from '@/libs/utils/utils.constants';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
@@ -39,15 +40,18 @@ export class ProfileApplication {
       await HomeserverService.request({ method: HttpMethod.PUT, url, bodyJson: profile.toJson() });
       // Persist the successfully-created profile immediately so onboarding revisit
       // and the welcome dialog do not depend on Nexus indexing catching up first.
-      await LocalProfileService.upsertDetails({
-        id: pubky,
-        name: profile.name,
-        bio: profile.bio ?? '',
-        image: profile.image ?? null,
-        links: profile.links?.map((link) => ({ title: link.title, url: link.url })) ?? [],
-        status: profile.status || null,
-        indexed_at: Date.now(),
-      });
+      await LocalProfileService.upsertDetails(
+        {
+          id: pubky,
+          name: profile.name,
+          bio: profile.bio ?? '',
+          image: profile.image ?? null,
+          links: profile.links?.map((link) => ({ title: link.title, url: link.url })) ?? [],
+          status: profile.status || null,
+          indexed_at: Date.now(),
+        },
+        'local',
+      );
       // Tell Nexus this user exists (best-effort, never rejects; see NexusBootstrapService.ingest).
       void NexusBootstrapService.ingest(pubky);
       const authStore = useAuthStore.getState();
@@ -108,6 +112,20 @@ export class ProfileApplication {
       });
     }
 
+    // The PUT below republishes the whole cached profile, so a tombstoned row would send its
+    // cleared name (`''`, or the legacy `[DELETED]` sentinel) as the user's name and recreate
+    // the profile Nexus has already removed. Nothing here can recover a real name, so refuse.
+    // A row that still carries a name stays writable: the flag alone is stale, and the upsert
+    // below clears it.
+    const cachedName = currentUser.name?.trim() ?? '';
+    if (cachedName === '' || cachedName === DELETED_USER_NAME) {
+      throw Err.client(ClientErrorCode.GONE, 'Cannot update the status of a deleted profile', {
+        service: ErrorService.Local,
+        operation: 'commitUpdateStatus',
+        context: { pubky },
+      });
+    }
+
     // Build complete user object with updated status
     // According to spec, we must send the full profile, not just the status field
     const { user, meta } = UserNormalizer.to(
@@ -128,6 +146,7 @@ export class ProfileApplication {
     await UserDetailsModel.upsert({
       ...currentUser,
       status: status || null,
+      deleted: false,
     });
   }
 

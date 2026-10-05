@@ -38,9 +38,71 @@ describe('extractMentionQuery', () => {
       expect(result.atQuery).toBe('john');
     });
 
-    it('returns null when @ pattern is not at the end', () => {
+    it.each([
+      '🚀Alice',
+      'Rocket🚀',
+      '👩🏽‍💻 Alice',
+      '🇷🇸 Alice',
+      '✌️ Alice',
+      '#️⃣Alice',
+      '*️⃣Alice',
+      '🏴\u{e0067}\u{e0062}\u{e0065}\u{e006e}\u{e0067}\u{e007f} Alice',
+    ])('preserves emoji in the name %s', (name) => {
+      const prefix = `Hello @${name}`;
+      const content = `${prefix} remaining text`;
+      expect(extractMentionQuery(content, prefix.length)).toEqual({
+        atQuery: name,
+        pkQuery: null,
+        range: { start: 6, end: prefix.length },
+      });
+      expect(getContentWithMention(content, prefix.length, 'selected-user')).toEqual({
+        content: 'Hello pubkyselected-user  remaining text',
+        caret: 'Hello pubkyselected-user '.length,
+      });
+    });
+
+    it('extracts a multiword name up to the caret', () => {
+      // 'Hello @John Carvalho' - the space between the name's words does not end the query (#1638)
+      const result = extractMentionQuery('Hello @John Carvalho');
+      expect(result.atQuery).toBe('John Carvalho');
+      expect(result.range).toEqual({ start: 6, end: 20 });
+    });
+
+    it('keeps the query alive on the space typed between two name words', () => {
+      // 'Hello @John |' - the caret is just past the space, so the name search still runs
+      const result = extractMentionQuery('Hello @John ');
+      expect(result.atQuery).toBe('John');
+      expect(result.range).toEqual({ start: 6, end: 12 });
+    });
+
+    it('preserves internal spaces of a name query', () => {
+      const result = extractMentionQuery('Hello @John  Carvalho  ');
+      expect(result.atQuery).toBe('John  Carvalho');
+    });
+
+    it('keeps the whole typed run when words follow the name', () => {
+      // Words alone cannot tell a three-word display name from prose, so the query
+      // runs to the caret and the name search is what closes the popover
       const result = extractMentionQuery('@john is here');
+      expect(result.atQuery).toBe('john is here');
+    });
+
+    it('ends the query at a newline', () => {
+      const result = extractMentionQuery('Hello @John\nCarvalho');
       expect(result.atQuery).toBeNull();
+      expect(result.range).toBeNull();
+    });
+
+    it('ends the query at sentence punctuation', () => {
+      const result = extractMentionQuery('Thanks @John Carvalho, see you');
+      expect(result.atQuery).toBeNull();
+      expect(result.range).toBeNull();
+    });
+
+    it('does not start a query on a space right after @', () => {
+      const result = extractMentionQuery('Hello @ John');
+      expect(result.atQuery).toBeNull();
+      expect(result.range).toBeNull();
     });
 
     it('handles special characters in username', () => {
@@ -191,10 +253,12 @@ describe('extractMentionQuery', () => {
       expect(result.pkQuery).toBe('user123');
     });
 
-    it('extracts only pubky when both present but only pubky is at absolute end', () => {
+    it('keeps the pubky range when a name run precedes the pubky ID', () => {
+      // The name run reaches the caret, so it is searched too; the pubky ID wins the range
       const result = extractMentionQuery('Hello @john pubkyuser123');
-      expect(result.atQuery).toBeNull();
+      expect(result.atQuery).toBe('john pubkyuser123');
       expect(result.pkQuery).toBe('user123');
+      expect(result.range).toEqual({ start: 12, end: 24 });
     });
 
     it('extracts only pk: when @ is not at end', () => {
@@ -288,9 +352,25 @@ describe('extractMentionQuery', () => {
       expect(result.range).toBeNull();
     });
 
-    it('returns no range when the caret sits outside the pattern', () => {
-      // 'Hello @jo |world' - the caret moved past the pattern's trailing space
+    it('keeps the mention range when the caret sits just past the space of a name', () => {
+      // 'Hello @jo |world' - the space belongs to the name run, so the mention is still live (#1638)
       const result = extractMentionQuery('Hello @jo world', 10);
+
+      expect(result.atQuery).toBe('jo');
+      expect(result.range).toEqual({ start: 6, end: 10 });
+    });
+
+    it('extracts the multiword name the caret sits in when text follows it', () => {
+      // 'Hello @John Carv|alho world' - only the words before the caret count
+      const result = extractMentionQuery('Hello @John Carvalho world', 16);
+
+      expect(result.atQuery).toBe('John Carv');
+      expect(result.range).toEqual({ start: 6, end: 16 });
+    });
+
+    it('returns no range when the caret sits outside the pattern', () => {
+      // 'Hello @jo,| world' - the comma ended the mention
+      const result = extractMentionQuery('Hello @jo, world', 10);
 
       expect(result.atQuery).toBeNull();
       expect(result.range).toBeNull();
@@ -343,6 +423,15 @@ describe('getContentWithMention', () => {
     it('only replaces the @ pattern at the end', () => {
       expect(atEnd('@alice mentioned @bob').content).toBe(`@alice mentioned pubky${userId} `);
     });
+
+    it('replaces a multiword name with pubky{userId}', () => {
+      // '@John Carvalho' is one mention, not an '@John' plus prose (#1638)
+      expect(atEnd('Hello @John Carvalho').content).toBe(`Hello pubky${userId} `);
+    });
+
+    it('writes over the space of a name instead of leaving a second one', () => {
+      expect(atEnd('Hello @John ').content).toBe(`Hello pubky${userId} `);
+    });
   });
 
   describe('replaces pk: pattern at end with pubky format', () => {
@@ -388,8 +477,9 @@ describe('getContentWithMention', () => {
       expect(atEnd('').content).toBe(`pubky${userId} `);
     });
 
-    it('appends when @ pattern is not at the end', () => {
-      expect(atEnd('@john is cool').content).toBe(`@john is cool pubky${userId} `);
+    it('appends when the @ pattern is not live at the caret', () => {
+      // '@john, is cool' - the comma ended the mention, so there is nothing to complete
+      expect(atEnd('@john, is cool').content).toBe(`@john, is cool pubky${userId} `);
     });
 
     it('appends when pubky: (with colon) is at the end (invalid format)', () => {
@@ -417,6 +507,14 @@ describe('getContentWithMention', () => {
 
       expect(result.content.slice(0, result.caret)).toBe(`Hello pubky${userId} `);
       expect(result.content.slice(result.caret)).toBe(' world');
+    });
+
+    it('replaces a multiword name before the caret and keeps the text after it', () => {
+      // 'Hello @John Carvalho|, thanks' - the whole name run is written over
+      const result = getContentWithMention('Hello @John Carvalho, thanks', 20, userId);
+
+      expect(result.content).toBe(`Hello pubky${userId} , thanks`);
+      expect(result.content.slice(result.caret)).toBe(', thanks');
     });
 
     it('replaces a pk: pattern before the caret', () => {

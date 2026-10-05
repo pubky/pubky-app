@@ -94,6 +94,22 @@ describe('generateMetadata', () => {
     expect(metadata.alternates?.canonical).toBe(`/profile/${PUBKY}`);
   });
 
+  it('swaps raw pubky mentions in the bio description for display names, like the app renders them', async () => {
+    const mentioned = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
+    // First fetch = user details, second = counts (left as 404), third = the mentioned profile.
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        jsonResponse({ name: 'Alice', bio: `Building with pk:${mentioned}`, id: PUBKY, indexed_at: 1 }),
+      )
+      .mockResolvedValueOnce(new Response('Not Found', { status: 404 }))
+      .mockResolvedValueOnce(jsonResponse({ id: mentioned, name: 'Bob' }));
+
+    const metadata = await generateMetadata({ params: Promise.resolve({ pubky: PUBKY }) });
+
+    expect(metadata.description).toBe('Building with @Bob');
+    expect(metadata.openGraph?.description).toBe('Building with @Bob');
+  });
+
   it('uses a shortened public key in the title when the profile has no name', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(jsonResponse({ name: '', bio: '', id: PUBKY, indexed_at: 1 }));
 

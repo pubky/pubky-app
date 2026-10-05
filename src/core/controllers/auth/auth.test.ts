@@ -1,7 +1,9 @@
+import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
+import { LocksApplication } from '@/application/locks/locks';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
@@ -11,6 +13,7 @@ import { NotificationCoordinator } from '@/coordinators/notifications/notificati
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
+import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -27,6 +30,7 @@ import type { AuthStore } from '@/stores/auth/auth.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { useHotStore } from '@/stores/hot/hot.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import type { NotificationState } from '@/stores/notification/notification.types';
@@ -40,7 +44,7 @@ import {
   type SettingsState,
 } from '@/stores/settings/settings.types';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
-import { mockSession as buildMockSession } from '@/test-utils/pubky';
+import { mockPubky as buildMockPubky, mockSession as buildMockSession } from '@/test-utils/pubky';
 import {
   mockAuthStore,
   mockHomeStore,
@@ -1101,7 +1105,29 @@ describe('AuthController', () => {
       expect(generateAuthUrlSpy).toHaveBeenCalled();
     });
 
-    it('should free stale auth flows when multiple requests overlap (StrictMode)', async () => {
+    it('rejects a superseded start as canceled without generating its URL (StrictMode double-mount)', async () => {
+      mockClearDatabase.mockResolvedValue(undefined);
+
+      const cancelAuthFlowB = vi.fn();
+      const generateAuthUrlSpy = vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue({
+        authorizationUrl: 'https://example.com/auth?token=B',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelAuthFlowB,
+      });
+
+      const firstCall = AuthController.getAuthUrl();
+      const secondCall = AuthController.getAuthUrl();
+
+      const result = await secondCall;
+      await expect(firstCall).rejects.toMatchObject({ name: AUTH_FLOW_CANCELED_ERROR_NAME });
+
+      // The first start lost ownership while its database cleanup was in flight: it never generated a URL.
+      expect(generateAuthUrlSpy).toHaveBeenCalledTimes(1);
+      expect(result.authorizationUrl).toBe('https://example.com/auth?token=B');
+      expect(cancelAuthFlowB).not.toHaveBeenCalled();
+    });
+
+    it('cancels a flow whose generation finishes after a newer start took ownership', async () => {
       mockClearDatabase.mockResolvedValue(undefined);
 
       const cancelAuthFlowA = vi.fn();
@@ -1123,20 +1149,119 @@ describe('AuthController', () => {
         });
 
       const firstCall = AuthController.getAuthUrl();
+      // Let the first start pass its database cleanup and begin generating before the second start.
+      await Promise.resolve();
+      await Promise.resolve();
       const secondCall = AuthController.getAuthUrl();
 
-      // Resolve the first call after the second call already started.
+      const second = await secondCall;
+
+      // The first generation completes after the second flow already owns the state.
       resolveFirst!({
         authorizationUrl: 'https://example.com/auth?token=A',
         awaitApproval: new Promise(() => {}),
         cancelAuthFlow: cancelAuthFlowA,
       });
 
-      await secondCall;
-      await firstCall;
-
+      await expect(firstCall).rejects.toMatchObject({ name: AUTH_FLOW_CANCELED_ERROR_NAME });
+      expect(second.authorizationUrl).toBe('https://example.com/auth?token=B');
       expect(cancelAuthFlowA).toHaveBeenCalled();
       expect(cancelAuthFlowB).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getPassportAuthUrl', () => {
+    const xCallback = {
+      xSource: 'Pubky',
+      xSuccess: 'https://app.example.com/passport/return?attempt=a&outcome=success',
+      xError: 'https://app.example.com/passport/return?attempt=a&outcome=error',
+      xCancel: 'https://app.example.com/passport/return?attempt=a&outcome=cancel',
+    };
+
+    beforeEach(() => {
+      setupOnboardingStore();
+    });
+
+    it('generates the Passport auth URL through the shared auth-flow wrapper', async () => {
+      const cancelAuthFlow = vi.fn();
+      const mockAuthUrl = {
+        authorizationUrl: 'pubkyauth:///?caps=/pub/pubky.app/:rw&secret=s&relay=https://relay.example.com/inbox',
+        awaitApproval: Promise.resolve(buildMockSession()),
+        cancelAuthFlow,
+      };
+      const generateSpy = vi.spyOn(AuthApplication, 'generatePassportAuthUrl').mockResolvedValue(mockAuthUrl);
+      const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+
+      const result = await AuthController.getPassportAuthUrl({ xCallback });
+
+      expect(clearDatabaseSpy).toHaveBeenCalled();
+      expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
+      expect(storeMocks.resetSettingsStore).toHaveBeenCalled();
+      expect(generateSpy).toHaveBeenCalledWith({ xCallback });
+      expect(result.authorizationUrl).toBe(mockAuthUrl.authorizationUrl);
+      expect(result.cancelAuthFlow).toBe(cancelAuthFlow);
+    });
+
+    it('takes ownership before database cleanup so a slower Ring start cannot cancel Passport', async () => {
+      let resolveRingClear!: () => void;
+      mockClearDatabase
+        .mockImplementationOnce(
+          () =>
+            new Promise<void>((resolve) => {
+              resolveRingClear = resolve;
+            }),
+        )
+        .mockResolvedValueOnce(undefined);
+
+      const cancelRing = vi.fn();
+      const cancelPassport = vi.fn();
+      const generateRingSpy = vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue({
+        authorizationUrl: 'pubkyauth:///?ring',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelRing,
+      });
+      vi.spyOn(AuthApplication, 'generatePassportAuthUrl').mockResolvedValue({
+        authorizationUrl: 'pubkyauth:///?passport',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelPassport,
+      });
+
+      const ringCall = AuthController.getAuthUrl();
+      const passportCall = AuthController.getPassportAuthUrl({ xCallback });
+
+      const passport = await passportCall;
+      expect(passport.authorizationUrl).toBe('pubkyauth:///?passport');
+
+      // Ring's database cleanup finishes only now, after Passport owns the flow.
+      resolveRingClear!();
+
+      await expect(ringCall).rejects.toMatchObject({ name: AUTH_FLOW_CANCELED_ERROR_NAME });
+      expect(generateRingSpy).not.toHaveBeenCalled();
+      expect(cancelRing).not.toHaveBeenCalled();
+      expect(cancelPassport).not.toHaveBeenCalled();
+    });
+
+    it('starting Passport cancels a Ring flow that already owns the state', async () => {
+      mockClearDatabase.mockResolvedValue(undefined);
+
+      const cancelRing = vi.fn();
+      const cancelPassport = vi.fn();
+      vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue({
+        authorizationUrl: 'pubkyauth:///?ring',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelRing,
+      });
+      vi.spyOn(AuthApplication, 'generatePassportAuthUrl').mockResolvedValue({
+        authorizationUrl: 'pubkyauth:///?passport',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelPassport,
+      });
+
+      await AuthController.getAuthUrl();
+      await AuthController.getPassportAuthUrl({ xCallback });
+
+      expect(cancelRing).toHaveBeenCalledTimes(1);
+      expect(cancelPassport).not.toHaveBeenCalled();
     });
   });
 
@@ -1178,40 +1303,25 @@ describe('AuthController', () => {
       expect(generateSignupAuthUrlSpy).toHaveBeenCalledWith('INVITE-CODE');
     });
 
-    it('should free stale auth flows when multiple requests overlap (StrictMode)', async () => {
+    it('rejects a superseded signup start as canceled (StrictMode double-mount)', async () => {
       mockClearDatabase.mockResolvedValue(undefined);
 
-      const cancelAuthFlowA = vi.fn();
       const cancelAuthFlowB = vi.fn();
-
-      type GenerateSignupAuthUrlResult = Awaited<ReturnType<typeof AuthApplication.generateSignupAuthUrl>>;
-
-      let resolveFirst!: (value: GenerateSignupAuthUrlResult) => void;
-      const first = new Promise<GenerateSignupAuthUrlResult>((resolve) => {
-        resolveFirst = resolve;
+      const generateSpy = vi.spyOn(AuthApplication, 'generateSignupAuthUrl').mockResolvedValue({
+        authorizationUrl: 'https://example.com/auth?token=B',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelAuthFlowB,
       });
-
-      vi.spyOn(AuthApplication, 'generateSignupAuthUrl')
-        .mockImplementationOnce(() => first)
-        .mockResolvedValueOnce({
-          authorizationUrl: 'https://example.com/auth?token=B',
-          awaitApproval: new Promise(() => {}),
-          cancelAuthFlow: cancelAuthFlowB,
-        });
 
       const firstCall = AuthController.getSignupAuthUrl('CODE-A');
       const secondCall = AuthController.getSignupAuthUrl('CODE-B');
 
-      resolveFirst!({
-        authorizationUrl: 'https://example.com/auth?token=A',
-        awaitApproval: new Promise(() => {}),
-        cancelAuthFlow: cancelAuthFlowA,
-      });
+      const result = await secondCall;
+      await expect(firstCall).rejects.toMatchObject({ name: AUTH_FLOW_CANCELED_ERROR_NAME });
 
-      await secondCall;
-      await firstCall;
-
-      expect(cancelAuthFlowA).toHaveBeenCalled();
+      expect(generateSpy).toHaveBeenCalledTimes(1);
+      expect(generateSpy).toHaveBeenCalledWith('CODE-B');
+      expect(result.authorizationUrl).toBe('https://example.com/auth?token=B');
       expect(cancelAuthFlowB).not.toHaveBeenCalled();
     });
   });
@@ -1235,6 +1345,7 @@ describe('AuthController', () => {
       vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
       vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ session: mockSession });
       vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      const resolveSpy = vi.spyOn(AuthApplication, 'resolveUserIsSignedUp');
 
       const result = await AuthController.restorePersistedSession();
 
@@ -1246,6 +1357,107 @@ describe('AuthController', () => {
         currentUserPubky: mockPubky,
         hasProfile: true,
       });
+      // A restored session with a known profile state needs no extra homeserver round-trip
+      expect(resolveSpy).not.toHaveBeenCalled();
+    });
+
+    const buildRestoreStore = (overrides: Partial<AuthStore> = {}) =>
+      mockAuthStore({
+        ...storeMocks.getAuthState(),
+        hasHydrated: true,
+        session: null,
+        sessionExport: 'session-export',
+        isRestoringSession: false,
+        setIsRestoringSession: vi.fn(),
+        init: vi.fn(),
+        ...overrides,
+      });
+
+    it('should resolve an undetermined profile state for a restored session', async () => {
+      const mockSession = buildMockSession();
+      const mockPubky = TEST_PUBKY as Pubky;
+      const setHasProfile = vi.fn();
+      const setIsResolvingProfile = vi.fn();
+      const authStore = buildRestoreStore({ hasProfile: null, setHasProfile, setIsResolvingProfile });
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ session: mockSession });
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      const resolveSpy = vi.spyOn(AuthApplication, 'resolveUserIsSignedUp').mockResolvedValue(true);
+      setupNotificationMocks();
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore());
+      vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue({
+        unread: 0,
+        lastRead: 0,
+        lastPolledTimestamp: undefined,
+      });
+
+      const result = await AuthController.restorePersistedSession();
+
+      expect(result).toBe(true);
+      expect(resolveSpy).toHaveBeenCalledWith({ pubky: mockPubky });
+      // The session is stored with the undetermined profile and resolved afterwards
+      expect(authStore.init).toHaveBeenCalledWith({
+        session: mockSession,
+        currentUserPubky: mockPubky,
+        hasProfile: null,
+      });
+      expect(setHasProfile).toHaveBeenCalledWith(true);
+      expect(setIsResolvingProfile.mock.calls).toEqual([[true], [false]]);
+      expect(authStore.reset).not.toHaveBeenCalled();
+    });
+
+    it('should keep a real new user without a profile on the profile-creation path', async () => {
+      const mockSession = buildMockSession();
+      const mockPubky = TEST_PUBKY as Pubky;
+      const setHasProfile = vi.fn();
+      const setIsResolvingProfile = vi.fn();
+      const authStore = buildRestoreStore({ hasProfile: null, setHasProfile, setIsResolvingProfile });
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ session: mockSession });
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      vi.spyOn(AuthApplication, 'resolveUserIsSignedUp').mockResolvedValue(false);
+
+      const result = await AuthController.restorePersistedSession();
+
+      expect(result).toBe(true);
+      expect(setHasProfile).toHaveBeenCalledWith(false);
+      expect(setIsResolvingProfile.mock.calls).toEqual([[true], [false]]);
+      expect(authStore.reset).not.toHaveBeenCalled();
+    });
+
+    it('should clean up and report failure when the restored profile state cannot be resolved', async () => {
+      const mockSession = buildMockSession();
+      const mockPubky = TEST_PUBKY as Pubky;
+      const setHasProfile = vi.fn();
+      const setIsResolvingProfile = vi.fn();
+      const authStore = buildRestoreStore({ hasProfile: null, setHasProfile, setIsResolvingProfile });
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ session: mockSession });
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      vi.spyOn(AuthApplication, 'resolveUserIsSignedUp').mockResolvedValue(null);
+      const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+      await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
+      vi.spyOn(PubkySpecsSingleton, 'reset');
+      spyOnCancelModerationFollow();
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(mockHomeStore(storeMocks.getHomeState()));
+      vi.spyOn(useSearchStore, 'getState').mockReturnValue(mockSearchStore(storeMocks.getSearchState()));
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore(storeMocks.getNotificationState()),
+      );
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(storeMocks.getSettingsState()));
+
+      const result = await AuthController.restorePersistedSession();
+
+      expect(result).toBe(false);
+      // An undetermined profile is never reported as a missing one
+      expect(setHasProfile).not.toHaveBeenCalled();
+      expect(setIsResolvingProfile.mock.calls).toEqual([[true], [false]]);
+      expect(authStore.reset).toHaveBeenCalled();
+      expect(clearDatabaseSpy).toHaveBeenCalled();
     });
 
     it('should return false and run full cleanup when restoration fails', async () => {
@@ -1613,6 +1825,131 @@ describe('AuthController', () => {
     });
   });
 
+  describe('getUpgradeAuthUrl', () => {
+    it("tracks the flow without wiping the signed-in user's local state", async () => {
+      const cancelAuthFlow = vi.fn();
+      const generateAuthUrlSpy = vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue({
+        authorizationUrl: 'https://example.com/auth?token=upgrade',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow,
+      });
+      const result = await AuthController.getUpgradeAuthUrl();
+
+      expect(result.authorizationUrl).toBe('https://example.com/auth?token=upgrade');
+      expect(generateAuthUrlSpy).toHaveBeenCalled();
+      expect(mockClearDatabase).not.toHaveBeenCalled();
+      expect(storeMocks.resetSettingsStore).not.toHaveBeenCalled();
+      expect(storeMocks.resetMigrationStore).not.toHaveBeenCalled();
+      // Still tracked: a later flow cancels this one.
+      await AuthController.getUpgradeAuthUrl();
+      expect(cancelAuthFlow).toHaveBeenCalled();
+    });
+  });
+
+  describe('upgradeSession', () => {
+    const currentUserPubky = buildMockPubky(TEST_PUBKY);
+
+    const mockSignedInStore = (overrides: Partial<AuthStore> = {}) => {
+      const authStore = { ...storeMocks.getAuthState(), currentUserPubky, hasProfile: true, ...overrides };
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
+      return authStore;
+    };
+
+    it('replaces the stored session and touches nothing else', async () => {
+      const oldSession = buildMockSession({ signout: vi.fn() });
+      const authStore = mockSignedInStore({ session: oldSession });
+      const signInStore = storeMocks.getSignInState();
+      vi.spyOn(useSignInStore, 'getState').mockReturnValue(mockSignInStore(signInStore));
+      const logoutSpy = vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+      const newSession = buildMockSession();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(currentUserPubky);
+
+      await AuthController.upgradeSession({ session: newSession });
+
+      expect(authStore.setSession).toHaveBeenCalledWith(newSession);
+      // Not a sign-in: no store re-init, no profile check, no sign-in progress, no redirect trigger.
+      expect(authStore.init).not.toHaveBeenCalled();
+      expect(authStore.setHasProfile).not.toHaveBeenCalled();
+      expect(authStore.reset).not.toHaveBeenCalled();
+      expect(signInStore.reset).not.toHaveBeenCalled();
+      // The old session stays signed in on the homeserver: its cookie is the new session's cookie.
+      expect(logoutSpy).not.toHaveBeenCalled();
+      expect(oldSession.signout).not.toHaveBeenCalled();
+    });
+
+    // The producing flow cancels itself on settle, so anything still active belongs to a newer flow
+    // the user just started — cancelling it would leave their fresh QR polling for nothing.
+    it('leaves a newer auth flow running', async () => {
+      const cancelAuthFlow = vi.fn();
+      vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue({
+        authorizationUrl: 'https://example.com/auth?token=abc123',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow,
+      });
+      await AuthController.getAuthUrl();
+      mockSignedInStore();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(currentUserPubky);
+
+      await AuthController.upgradeSession({ session: buildMockSession() });
+
+      expect(cancelAuthFlow).not.toHaveBeenCalled();
+    });
+
+    // The homeserver check is a network round trip: a sign-out or account switch during it must not
+    // be overwritten by the approval that was in flight.
+    it('discards the session when the account changes while the check runs', async () => {
+      const authStore = mockSignedInStore();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(currentUserPubky);
+      vi.spyOn(AuthApplication, 'assertUserHomeserverAllowed').mockImplementation(async () => {
+        vi.spyOn(useAuthStore, 'getState').mockReturnValue(
+          mockAuthStore({ ...storeMocks.getAuthState(), currentUserPubky: null }),
+        );
+      });
+
+      await expect(AuthController.upgradeSession({ session: buildMockSession() })).resolves.toBe(false);
+
+      expect(authStore.setSession).not.toHaveBeenCalled();
+    });
+
+    it('refuses a session whose key now resolves to another homeserver', async () => {
+      const authStore = mockSignedInStore();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(currentUserPubky);
+      vi.spyOn(AuthApplication, 'assertUserHomeserverAllowed').mockRejectedValue(
+        Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'wrong homeserver', {
+          service: ErrorService.Homeserver,
+          operation: 'assertUserHomeserverAllowed',
+        }),
+      );
+
+      await expect(AuthController.upgradeSession({ session: buildMockSession() })).rejects.toMatchObject({
+        code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+      });
+
+      expect(authStore.setSession).not.toHaveBeenCalled();
+    });
+
+    // Picking the wrong identity in Ring is a user choice, so it comes back as `false` instead of an
+    // AppError — an AppError would file every mis-tap in Sentry as a fault.
+    it('reports a session approved with another key without throwing, and leaves the store untouched', async () => {
+      const authStore = mockSignedInStore();
+      const logoutSpy = vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+      const otherSession = buildMockSession();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(buildMockPubky('other-pubky'));
+
+      await expect(AuthController.upgradeSession({ session: otherSession })).resolves.toBe(false);
+
+      expect(authStore.setSession).not.toHaveBeenCalled();
+      expect(logoutSpy).toHaveBeenCalledWith({ session: otherSession });
+    });
+
+    it('reports a successful swap', async () => {
+      mockSignedInStore();
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(currentUserPubky);
+
+      await expect(AuthController.upgradeSession({ session: buildMockSession() })).resolves.toBe(true);
+    });
+  });
+
   describe('logout', () => {
     const createAuthStore = (overrides: Partial<AuthStore> = {}): AuthStore =>
       mockAuthStore({
@@ -1756,6 +2093,34 @@ describe('AuthController', () => {
       expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
     });
 
+    // The Lock Server sits in front of the local teardown, so a silent one must not keep the device
+    // signed in. `LocksController` bounds its own wait; this checks the rest of logout still runs.
+    it('should clear cookies and the database when the Lock Server never answers', async () => {
+      vi.useFakeTimers();
+      try {
+        vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+        vi.spyOn(LocksApplication, 'signout').mockReturnValue(new Promise(() => {})); // never settles
+        useLocksAuthStore.getState().init({ session: asOpaque<LocksSdkSession>({}), secret: 'secret-abc' });
+        const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+        const clearCookiesSpy = await spyOnClearCookies();
+        await spyOnClearAllQueryClients();
+
+        vi.spyOn(useAuthStore, 'getState').mockReturnValue(createAuthStore());
+        vi.spyOn(useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
+        vi.spyOn(useLocalFilesStore, 'getState').mockReturnValue(createLocalFilesStore());
+
+        const done = AuthController.logout();
+        await vi.advanceTimersByTimeAsync(60_000);
+        await done;
+
+        expect(clearCookiesSpy).toHaveBeenCalled();
+        expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
+        expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('should restore a persisted session before homeserver logout when only sessionExport exists', async () => {
       const restoredSession = buildMockSession({
         export: vi.fn(() => 'restored-export'),
@@ -1787,12 +2152,8 @@ describe('AuthController', () => {
       vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(settingsStore));
 
       const restorePersistedSessionSpy = vi
-        .spyOn(AuthController, 'restorePersistedSession')
-        .mockImplementation(async () => {
-          authStore.session = restoredSession;
-          authStore.sessionExport = null;
-          return true;
-        });
+        .spyOn(AuthApplication, 'restorePersistedSession')
+        .mockResolvedValue({ session: restoredSession });
 
       await AuthController.logout();
 
@@ -1802,7 +2163,7 @@ describe('AuthController', () => {
       expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('should not run local cleanup twice when persisted session restore fails', async () => {
+    it('should run local cleanup once when persisted session restore fails', async () => {
       const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
       const clearCookiesSpy = await spyOnClearCookies();
       await spyOnClearAllQueryClients();
@@ -1815,13 +2176,13 @@ describe('AuthController', () => {
 
       vi.spyOn(useAuthStore, 'getState').mockImplementation(() => authStore);
       vi.spyOn(useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
-      vi.spyOn(AuthController, 'restorePersistedSession').mockResolvedValue(false);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue(null);
 
       await AuthController.logout();
 
       expect(logoutSpy).not.toHaveBeenCalled();
-      expect(clearCookiesSpy).not.toHaveBeenCalled();
-      expect(clearDatabaseSpy).not.toHaveBeenCalled();
+      expect(clearCookiesSpy).toHaveBeenCalledOnce();
+      expect(clearDatabaseSpy).toHaveBeenCalledOnce();
     });
 
     it('should reset PubkySpecsSingleton even when homeserver logout fails (issue #538)', async () => {

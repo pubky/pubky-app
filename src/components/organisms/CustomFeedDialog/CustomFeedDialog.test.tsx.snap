@@ -438,12 +438,51 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
         data-override-defaults="true"
         data-testid="layout-filter-section"
       >
-        <label
-          class="text-xs tracking-wide text-muted-foreground uppercase"
-          data-testid="label"
+        <div
+          class="flex items-center gap-1"
+          data-override-defaults="true"
+          data-testid="container"
         >
-          Layout
-        </label>
+          <label
+            class="text-xs tracking-wide text-muted-foreground uppercase"
+            data-testid="label"
+          >
+            Layout
+          </label>
+          <button
+            aria-label="About layout settings"
+            class="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            data-state="closed"
+            data-testid="layout-tooltip-trigger"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-circle-question-mark size-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+              <path
+                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+              />
+              <path
+                d="M12 17h.01"
+              />
+            </svg>
+          </button>
+        </div>
         <div
           data-disabled="false"
           data-testid="layout-select"
@@ -533,7 +572,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-layout-grid"
+                class="lucide lucide-grid2x2 lucide-grid-2x2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -544,33 +583,18 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
+                <path
+                  d="M12 3v18"
+                />
+                <path
+                  d="M3 12h18"
+                />
                 <rect
-                  height="7"
-                  rx="1"
-                  width="7"
+                  height="18"
+                  rx="2"
+                  width="18"
                   x="3"
                   y="3"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="14"
-                  y="3"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="14"
-                  y="14"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="3"
-                  y="14"
                 />
               </svg>
                
@@ -612,6 +636,55 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
               </svg>
                
               List
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-dashboard"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="12"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="16"
+                />
+              </svg>
+               
+              Cards
             </div>
           </div>
           <input
@@ -1416,12 +1489,51 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
         data-override-defaults="true"
         data-testid="layout-filter-section"
       >
-        <label
-          class="text-xs tracking-wide text-muted-foreground uppercase"
-          data-testid="label"
+        <div
+          class="flex items-center gap-1"
+          data-override-defaults="true"
+          data-testid="container"
         >
-          Layout
-        </label>
+          <label
+            class="text-xs tracking-wide text-muted-foreground uppercase"
+            data-testid="label"
+          >
+            Layout
+          </label>
+          <button
+            aria-label="About layout settings"
+            class="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            data-state="closed"
+            data-testid="layout-tooltip-trigger"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-circle-question-mark size-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+              <path
+                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+              />
+              <path
+                d="M12 17h.01"
+              />
+            </svg>
+          </button>
+        </div>
         <div
           data-disabled="false"
           data-testid="layout-select"
@@ -1511,7 +1623,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-layout-grid"
+                class="lucide lucide-grid2x2 lucide-grid-2x2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -1522,33 +1634,18 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
+                <path
+                  d="M12 3v18"
+                />
+                <path
+                  d="M3 12h18"
+                />
                 <rect
-                  height="7"
-                  rx="1"
-                  width="7"
+                  height="18"
+                  rx="2"
+                  width="18"
                   x="3"
                   y="3"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="14"
-                  y="3"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="14"
-                  y="14"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="3"
-                  y="14"
                 />
               </svg>
                
@@ -1590,6 +1687,55 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
               </svg>
                
               List
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-dashboard"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="12"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="16"
+                />
+              </svg>
+               
+              Cards
             </div>
           </div>
           <input
@@ -2392,12 +2538,51 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
         data-override-defaults="true"
         data-testid="layout-filter-section"
       >
-        <label
-          class="text-xs tracking-wide text-muted-foreground uppercase"
-          data-testid="label"
+        <div
+          class="flex items-center gap-1"
+          data-override-defaults="true"
+          data-testid="container"
         >
-          Layout
-        </label>
+          <label
+            class="text-xs tracking-wide text-muted-foreground uppercase"
+            data-testid="label"
+          >
+            Layout
+          </label>
+          <button
+            aria-label="About layout settings"
+            class="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            data-state="closed"
+            data-testid="layout-tooltip-trigger"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-circle-question-mark size-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+              <path
+                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+              />
+              <path
+                d="M12 17h.01"
+              />
+            </svg>
+          </button>
+        </div>
         <div
           data-disabled="false"
           data-testid="layout-select"
@@ -2487,7 +2672,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-layout-grid"
+                class="lucide lucide-grid2x2 lucide-grid-2x2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -2498,33 +2683,18 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
+                <path
+                  d="M12 3v18"
+                />
+                <path
+                  d="M3 12h18"
+                />
                 <rect
-                  height="7"
-                  rx="1"
-                  width="7"
+                  height="18"
+                  rx="2"
+                  width="18"
                   x="3"
                   y="3"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="14"
-                  y="3"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="14"
-                  y="14"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="3"
-                  y="14"
                 />
               </svg>
                
@@ -2566,6 +2736,55 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
               </svg>
                
               List
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-dashboard"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="12"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="16"
+                />
+              </svg>
+               
+              Cards
             </div>
           </div>
           <input
@@ -3442,12 +3661,51 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
         data-override-defaults="true"
         data-testid="layout-filter-section"
       >
-        <label
-          class="text-xs tracking-wide text-muted-foreground uppercase"
-          data-testid="label"
+        <div
+          class="flex items-center gap-1"
+          data-override-defaults="true"
+          data-testid="container"
         >
-          Layout
-        </label>
+          <label
+            class="text-xs tracking-wide text-muted-foreground uppercase"
+            data-testid="label"
+          >
+            Layout
+          </label>
+          <button
+            aria-label="About layout settings"
+            class="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            data-state="closed"
+            data-testid="layout-tooltip-trigger"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-circle-question-mark size-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+              <path
+                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+              />
+              <path
+                d="M12 17h.01"
+              />
+            </svg>
+          </button>
+        </div>
         <div
           data-disabled="false"
           data-testid="layout-select"
@@ -3537,7 +3795,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-layout-grid"
+                class="lucide lucide-grid2x2 lucide-grid-2x2"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -3548,33 +3806,18 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
                 width="24"
                 xmlns="http://www.w3.org/2000/svg"
               >
+                <path
+                  d="M12 3v18"
+                />
+                <path
+                  d="M3 12h18"
+                />
                 <rect
-                  height="7"
-                  rx="1"
-                  width="7"
+                  height="18"
+                  rx="2"
+                  width="18"
                   x="3"
                   y="3"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="14"
-                  y="3"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="14"
-                  y="14"
-                />
-                <rect
-                  height="7"
-                  rx="1"
-                  width="7"
-                  x="3"
-                  y="14"
                 />
               </svg>
                
@@ -3616,6 +3859,55 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
               </svg>
                
               List
+            </div>
+            <div
+              data-testid="select-item-4"
+              data-value="4"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-dashboard"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="12"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="16"
+                />
+              </svg>
+               
+              Cards
             </div>
           </div>
           <input

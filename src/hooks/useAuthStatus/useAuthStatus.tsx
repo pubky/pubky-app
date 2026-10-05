@@ -9,19 +9,29 @@ export function useAuthStatus(): AuthStatusResult {
   const authStore = useAuthStore();
 
   const authStatusResult = useMemo((): AuthStatusResult => {
-    // On page reload sessionExport (serialized credentials in localStorage) is restored
-    // before session (live auth object) is recreated. This flag prevents premature
-    // redirects by keeping isLoading true until session restoration is completed.
-    const isSessionRestorePending = authStore.sessionExport !== null && authStore.session === null;
-
-    const isLoading =
-      !onboardingStore.hasHydrated || !authStore.hasHydrated || authStore.isRestoringSession || isSessionRestorePending;
-
     // Check if user has keypair (session)
     const hasKeypair = authStore.session !== null;
 
     // Check if user has profile data
     const hasProfile = authStore.hasProfile;
+
+    // On page reload sessionExport (serialized credentials in localStorage) is restored
+    // before session (live auth object) is recreated. This flag prevents premature
+    // redirects by keeping isLoading true until session restoration is completed.
+    const isSessionRestorePending = authStore.sessionExport !== null && authStore.session === null;
+
+    // A restored session can carry an undetermined profile (`hasProfile: null`, persisted by a
+    // reload before the profile check completed) until the controller resolves it with the
+    // homeserver. Keeping the app loading here stops the landing page from rendering behind the
+    // signed-in header (issue #2070).
+    const isProfileUndetermined = hasKeypair && hasProfile === null && authStore.isResolvingProfile;
+
+    const isLoading =
+      !onboardingStore.hasHydrated ||
+      !authStore.hasHydrated ||
+      authStore.isRestoringSession ||
+      isSessionRestorePending ||
+      isProfileUndetermined;
 
     // Determine the authentication status
     let status: AuthStatus;
@@ -34,7 +44,8 @@ export function useAuthStatus(): AuthStatusResult {
     else if (hasKeypair && hasProfile === true) {
       status = AuthStatus.AUTHENTICATED;
     }
-    // No session OR hasProfile is null (still determining) - unauthenticated
+    // No session, or a profile an interactive sign-in is still determining (that flow owns the
+    // screen and reports its own progress) - unauthenticated
     else {
       status = AuthStatus.UNAUTHENTICATED;
     }
@@ -50,6 +61,7 @@ export function useAuthStatus(): AuthStatusResult {
     onboardingStore.hasHydrated,
     authStore.hasHydrated,
     authStore.isRestoringSession,
+    authStore.isResolvingProfile,
     authStore.sessionExport,
     authStore.session,
     authStore.hasProfile,

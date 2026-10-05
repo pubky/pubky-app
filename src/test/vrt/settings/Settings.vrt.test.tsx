@@ -98,10 +98,11 @@ vi.mock('@/stores/home/home.store', () => {
 
 vi.mock('@/stores/auth/auth.store', async () => {
   const f = await fixtures;
+  const { mockRingSession } = await import('@/test-utils/pubky');
   return {
     useAuthStore: createZustandLikeHook({
       currentUserPubky: f.viewerPubky,
-      session: { pubky: f.viewerPubky },
+      session: mockRingSession(['/:rw'], f.viewerPubky),
       sessionExport: null,
       hasProfile: true,
       hasHydrated: true,
@@ -217,13 +218,6 @@ vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', () => {
   const result = { tags: [], users: [], isLoading: false, error: null };
   return { useSearchAutocomplete: () => result };
 });
-
-vi.mock('@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery', () => ({
-  useCollectionsNavDiscovery: () => ({
-    showCollectionsNew: false,
-    markCollectionsNavSeen: () => {},
-  }),
-}));
 
 vi.mock('@/hooks/useSignOut/useSignOut', () => ({
   useSignOut: () => ({ handleSignOut: async () => {}, isLoading: false }),

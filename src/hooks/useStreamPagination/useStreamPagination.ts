@@ -69,6 +69,7 @@ export function useStreamPagination({
   streamId,
   limit = NEXUS_POSTS_PER_PAGE,
   resetOnStreamChange = true,
+  preserveCachedStream = false,
   onError,
 }: UseStreamPaginationOptions): UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);
@@ -126,6 +127,10 @@ export function useStreamPagination({
    */
   const fetchStreamSlice = useCallback(
     async (isInitialLoad: boolean) => {
+      // Inert hook (no `streamId`): nothing to paginate, so never load and never
+      // touch the loading flags the derived return masks anyway.
+      if (!streamId) return;
+
       setLoadingState(isInitialLoad, true);
       setError(null);
       const generationAtRequest = fetchGenerationRef.current;
@@ -139,8 +144,14 @@ export function useStreamPagination({
         let cursor = streamTail;
 
         if (isInitialLoad) {
-          // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream
-          await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+          // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream.
+          // Skipped for a caller that paginates a stream another surface owns and renders
+          // from its cached rows (`preserveCachedStream`): this reset deletes the shared row
+          // before the replacement page arrives, so a failed fetch would leave the caller
+          // with nothing to render. The load below stays additive either way.
+          if (!preserveCachedStream) {
+            await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+          }
 
           const cachedLastPostTimestamp = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
           if (isStale()) return;
@@ -250,7 +261,7 @@ export function useStreamPagination({
         }
       }
     },
-    [streamId, lastPostId, streamTail, limit, setLoadingState, onError],
+    [streamId, lastPostId, streamTail, limit, setLoadingState, preserveCachedStream, onError],
   );
 
   /**
@@ -287,6 +298,8 @@ export function useStreamPagination({
    * Refresh function - clears state and fetches from beginning
    */
   const refresh = useCallback(async () => {
+    if (!streamId) return;
+
     clearState({
       preserveOptimisticPostIds: isCollectionItemsStream(streamId),
       preserveHiddenPostIds: true,
@@ -417,6 +430,10 @@ export function useStreamPagination({
   }, []);
 
   const removePostsOptimistically = (postIds: string | string[]) => {
+    if (!streamId) {
+      return { commit: () => {}, rollback: () => {} };
+    }
+
     const existingPostIds = new Set([...postIdsRef.current, ...optimisticPostIdsRef.current]);
     const idsToRemove = [...new Set(Array.isArray(postIds) ? postIds : [postIds])].filter((id) =>
       existingPostIds.has(id),
@@ -475,12 +492,39 @@ export function useStreamPagination({
 
   // Initial load and reset when streamId changes
   useEffect(() => {
+    if (!streamId) {
+      // Inert: no stream to load. `clearState` still invalidates an in-flight
+      // load from a previously active stream so its late response cannot land
+      // on the next one.
+      clearState();
+      return;
+    }
+
     if (resetOnStreamChange) {
       clearState();
     }
     fetchStreamSlice(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamId]);
+
+  // Inert result: an undefined `streamId` means the consumer is not paginating
+  // right now (e.g. a closed picker). Report an empty settled stream and no-op
+  // every action so callers never render a permanent loading state.
+  if (!streamId) {
+    return {
+      postIds: [],
+      loading: false,
+      loadingMore: false,
+      error: null,
+      hasMore: false,
+      loadMore: async () => {},
+      refresh: async () => {},
+      prependPosts: async () => {},
+      prependOptimisticPosts: () => {},
+      removePosts: () => {},
+      removePostsOptimistically: () => ({ commit: () => {}, rollback: () => {} }),
+    };
+  }
 
   return {
     postIds,

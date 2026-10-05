@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#05050A" />
+    <title>Offline - Pubky App</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #05050a;
+        color: #ffffff;
+        font-family: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      main {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 1rem;
+        text-align: center;
+      }
+      h1 {
+        margin: 1rem 0 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+      p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.7);
+      }
+      button {
+        margin-top: 0.5rem;
+        background: #c8ff00;
+        color: #05050a;
+        border: 0;
+        border-radius: 9999px;
+        padding: 0.75rem 1.5rem;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/pubky-logo.svg" alt="Pubky" width="109" height="36" />
+      <h1>You're offline</h1>
+      <p>Check your connection and try again.</p>
+      <button type="button" onclick="location.reload()">Retry</button>
+    </main>
+    <script>
+      // Served in place of the page the user asked for, so a reload retries that page.
+      window.addEventListener('online', function () {
+        location.reload();
+      });
+    </script>
+  </body>
+</html>

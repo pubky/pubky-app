@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import { ProfilePageTaggedAs } from './ProfilePageTaggedAs';
@@ -11,10 +11,16 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock TaggedItem
+// Mock TaggedItem. The avatar marker only renders when `hideAvatars` is falsy,
+// so the sidebar snapshots (which always hide avatars) stay unchanged.
 vi.mock('@/molecules/TaggedItem/TaggedItem', () => {
   return {
-    TaggedItem: ({ tag }: { tag: TagWithAvatars }) => <div data-testid="tagged-item">{tag.label}</div>,
+    TaggedItem: ({ tag, hideAvatars }: { tag: TagWithAvatars; hideAvatars?: boolean }) => (
+      <div data-testid="tagged-item">
+        {tag.label}
+        {!hideAvatars && <span data-testid="tagged-item-avatars" />}
+      </div>
+    ),
   };
 });
 
@@ -90,6 +96,61 @@ describe('ProfilePageTaggedAs', () => {
   it('renders skeleton when isLoading', () => {
     render(<ProfilePageTaggedAs tags={[]} onTagClick={mockOnTagClick} isLoading />);
     expect(screen.getByTestId('profile-tagged-skeleton')).toBeInTheDocument();
+  });
+});
+
+describe('ProfilePageTaggedAs - mobile variant', () => {
+  const mockOnTagAdd = vi.fn().mockResolvedValue({ success: true });
+  const mobileProps = {
+    tags: defaultTags,
+    onTagClick: mockOnTagClick,
+    variant: 'mobile' as const,
+    count: 7,
+    onTagAdd: mockOnTagAdd,
+  };
+
+  it('renders the total tag count in the heading', () => {
+    render(<ProfilePageTaggedAs {...mobileProps} />);
+    expect(screen.getByText('Tagged (7)')).toBeInTheDocument();
+    expect(screen.queryByText('Tagged as')).not.toBeInTheDocument();
+  });
+
+  it('renders the total count, not the number of preview rows', () => {
+    render(<ProfilePageTaggedAs {...mobileProps} />);
+    expect(screen.getAllByTestId('tagged-item')).toHaveLength(defaultTags.length);
+    expect(screen.getByText('Tagged (7)')).toBeInTheDocument();
+  });
+
+  it('renders the inline add tag input', () => {
+    render(<ProfilePageTaggedAs {...mobileProps} />);
+    expect(screen.getByPlaceholderText('add tag')).toBeInTheDocument();
+  });
+
+  it('adds a tag typed into the input', async () => {
+    render(<ProfilePageTaggedAs {...mobileProps} />);
+    const input = screen.getByPlaceholderText('add tag');
+    fireEvent.change(input, { target: { value: 'cypherpunk' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(mockOnTagAdd).toHaveBeenCalledWith('cypherpunk'));
+  });
+
+  it('renders tagger avatars for every preview row', () => {
+    render(<ProfilePageTaggedAs {...mobileProps} />);
+    expect(screen.getAllByTestId('tagged-item-avatars')).toHaveLength(defaultTags.length);
+  });
+
+  it('replaces the Add Tag button with See All', () => {
+    render(<ProfilePageTaggedAs {...mobileProps} />);
+    expect(screen.getByText('See All')).toBeInTheDocument();
+    expect(screen.queryByText('Add Tag')).not.toBeInTheDocument();
+  });
+
+  it('keeps the sidebar variant free of the input and avatars', () => {
+    render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} count={7} onTagAdd={mockOnTagAdd} />);
+    expect(screen.getByText('Tagged as')).toBeInTheDocument();
+    expect(screen.getByText('Add Tag')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('add tag')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('tagged-item-avatars')).not.toBeInTheDocument();
   });
 });
 

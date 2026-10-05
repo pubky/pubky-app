@@ -2,34 +2,32 @@ import { QueryClient } from '@tanstack/react-query';
 import { getRetryAfter } from '@/libs/error/error.utils';
 import { isAppError } from '../error/error';
 import { HttpStatusCode } from '../http/http.types';
-import type { QueryClientConfig } from './query-client.types';
+import type { QueryClientConfig, RetryConfig } from './query-client.types';
 
 const queryClientRegistry: QueryClient[] = [];
 
 /**
- * Cancels and clears all query clients created via createQueryClient.
+ * The retry decision functions derived from a `RetryConfig`.
  */
-export function clearAllQueryClients(): void {
-  for (const client of queryClientRegistry) {
-    client.cancelQueries();
-    client.clear();
-  }
-}
+export type RetryPolicy = {
+  /** Whether another attempt is allowed for a failure. */
+  shouldRetry: (failureCount: number, error: unknown) => boolean;
+  /** Backoff before the next attempt, in milliseconds. */
+  retryDelay: (attemptIndex: number, error: unknown) => number;
+};
 
 /**
- * Creates a TanStack QueryClient with configurable retry behavior.
+ * Builds the retry decision functions for a retry configuration.
  *
- * Each service can define its own retry strategy:
- * - Which error types are non-retryable (permanent failures)
- * - Retry limits per status code category
- * - Exponential backoff delays
+ * Exported so a service can scope a per-query override (a different limit for one
+ * status category, derived from the same config) without reimplementing the policy.
+ * TanStack replaces the client-level retry option wholesale when a query sets its own,
+ * so an override has to carry the whole policy.
  *
- * @param config - Configuration for retry behavior, stale time, and cache time
- * @returns A configured QueryClient instance
+ * @param retry - Retry configuration for the client or the scoped query
+ * @returns The retry and delay decision functions
  */
-export function createQueryClient(config: QueryClientConfig): QueryClient {
-  const { retry, staleTime = 0, gcTime = 30 * 60 * 1000 } = config;
-
+export function createRetryPolicy(retry: RetryConfig): RetryPolicy {
   /**
    * Determines if an error should be retried based on configuration.
    */
@@ -105,6 +103,34 @@ export function createQueryClient(config: QueryClientConfig): QueryClient {
     // Default delays
     return Math.min(delays.default.initial * 2 ** attemptIndex, delays.default.max);
   }
+
+  return { shouldRetry, retryDelay };
+}
+
+/**
+ * Cancels and clears all query clients created via createQueryClient.
+ */
+export function clearAllQueryClients(): void {
+  for (const client of queryClientRegistry) {
+    client.cancelQueries();
+    client.clear();
+  }
+}
+
+/**
+ * Creates a TanStack QueryClient with configurable retry behavior.
+ *
+ * Each service can define its own retry strategy:
+ * - Which error types are non-retryable (permanent failures)
+ * - Retry limits per status code category
+ * - Exponential backoff delays
+ *
+ * @param config - Configuration for retry behavior, stale time, and cache time
+ * @returns A configured QueryClient instance
+ */
+export function createQueryClient(config: QueryClientConfig): QueryClient {
+  const { retry, staleTime = 0, gcTime = 30 * 60 * 1000 } = config;
+  const { shouldRetry, retryDelay } = createRetryPolicy(retry);
 
   const client = new QueryClient({
     defaultOptions: {

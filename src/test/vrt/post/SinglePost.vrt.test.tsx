@@ -152,10 +152,11 @@ vi.mock('@/stores/home/home.store', async () => {
 
 vi.mock('@/stores/auth/auth.store', async () => {
   const f = await fixtures;
+  const { mockRingSession } = await import('@/test-utils/pubky');
   return {
     useAuthStore: createZustandLikeHook({
       currentUserPubky: f.viewerPubky,
-      session: { pubky: f.viewerPubky },
+      session: mockRingSession(['/:rw'], f.viewerPubky),
       sessionExport: null,
       hasProfile: true,
       hasHydrated: true,
@@ -167,8 +168,7 @@ vi.mock('@/stores/auth/auth.store', async () => {
   };
 });
 
-// Header SearchInput fetches on mount. Collections nav would show a NEW badge
-// from empty localStorage. Current-user profile would miss IndexedDB and skeleton.
+// Header SearchInput fetches on mount. Current-user profile would miss IndexedDB and skeleton.
 vi.mock('@/hooks/useHotTags/useHotTags', () => {
   const result = { tags: [], rawTags: [], isLoading: false, error: null, refetch: async () => {} };
   return { useHotTags: () => result };
@@ -178,13 +178,6 @@ vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', () => {
   const result = { tags: [], users: [], isLoading: false, error: null };
   return { useSearchAutocomplete: () => result };
 });
-
-vi.mock('@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery', () => ({
-  useCollectionsNavDiscovery: () => ({
-    showCollectionsNew: false,
-    markCollectionsNavSeen: () => {},
-  }),
-}));
 
 vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', async () => {
   const f = await fixtures;
