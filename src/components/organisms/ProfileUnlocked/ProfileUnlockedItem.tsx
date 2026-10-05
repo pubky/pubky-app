@@ -22,7 +22,7 @@ export function ProfileUnlockedItem({
 
   // A temporary load failure is deliberately not told apart from a deleted post (#2432): both show
   // the content the reader already owns rather than an error.
-  if (!announcementPostId || postMissing || isPostDeleted(postDetails?.content)) {
+  if (!announcementPostId || postMissing || isPostDeleted(postDetails)) {
     return <ProfileUnlockedCard post={post} />;
   }
 

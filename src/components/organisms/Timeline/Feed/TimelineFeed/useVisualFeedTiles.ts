@@ -351,7 +351,7 @@ export function useVisualFeedTiles({
           return [];
         }
 
-        if (isPostDeleted(post.content)) {
+        if (isPostDeleted(post)) {
           return showUnavailablePosts ? [buildPlaceholderTile(postId, 'deleted', post.indexed_at)] : [];
         }
 

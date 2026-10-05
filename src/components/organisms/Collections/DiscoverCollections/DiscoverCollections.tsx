@@ -377,7 +377,7 @@ export function DiscoverCollections() {
     for (let i = 0; i < visibleIds.length; i += 1) {
       const detail = details[i];
       if (!detail) continue;
-      if (isPostDeleted(detail.content)) {
+      if (isPostDeleted(detail)) {
         hide.add(visibleIds[i]);
         continue;
       }

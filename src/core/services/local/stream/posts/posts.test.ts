@@ -695,6 +695,30 @@ describe('LocalStreamPostsService', () => {
       expect(live!.content).toBe('Post live content');
       expect(await PostCountsModel.findById(liveId)).toBeTruthy();
     });
+
+    it('skips the reanimating write for a Nexus-shaped tombstone (empty content, flag set)', async () => {
+      const compositeId = buildCompositeId({ pubky: 'author-1', id: 'flagged' });
+
+      // The current Nexus tombstone shape: content cleared, `deleted: true`.
+      await PostDetailsModel.table.put({
+        id: compositeId,
+        content: '',
+        deleted: true,
+        indexed_at: BASE_TIMESTAMP,
+        kind: 'short',
+        uri: 'pubky://author-1/pub/pubky.app/posts/flagged',
+        attachments: null,
+      });
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [createMockNexusPost('flagged', 'author-1', BASE_TIMESTAMP)],
+      });
+
+      const persisted = await PostDetailsModel.findById(compositeId);
+      expect(persisted!.content).toBe('');
+      expect(persisted!.deleted).toBe(true);
+      expect(await PostCountsModel.findById(compositeId)).toBeFalsy();
+    });
   });
 
   describe('persistNewStreamChunk', () => {

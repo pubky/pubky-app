@@ -43,7 +43,7 @@ export function useNotificationPostContent({
   const kind = postDetails?.kind;
   const lock = postDetails?.lock ?? null;
 
-  const isDeleted = rawContent !== null && isPostDeleted(rawContent);
+  const isDeleted = isPostDeleted(postDetails);
   // The post is gone entirely (never resolvable), as opposed to content that merely
   // failed to derive a label while the post itself exists.
   const isMissing = compositeId !== null && !isLoading && postDetails === null;
@@ -55,7 +55,15 @@ export function useNotificationPostContent({
 
   // Deleted notices, lock titles, article titles and collection names follow the app-wide preview
   // policy, kept in postPreview so the surfaces never drift apart.
-  const preview = rawContent === null ? null : deriveTextPreview({ content: rawContent, kind: kind ?? '', lock });
+  const preview =
+    rawContent === null
+      ? null
+      : deriveTextPreview({
+          content: rawContent,
+          kind: kind ?? '',
+          lock,
+          deleted: postDetails?.deleted ?? false,
+        });
 
   // Mentions are resolved on the derived label, not the stored content: a lock announcement's title
   // and teaser are composer text that can carry them. Article titles and collection names never do.
