@@ -45,6 +45,36 @@ describe('FilterReach', () => {
     });
   });
 
+  it('renders the given options in their order and reports only those', () => {
+    const mockOnTabChange = vi.fn();
+    render(
+      <FilterReach
+        options={[REACH.ALL, REACH.NETWORK, REACH.FOLLOWING, REACH.FRIENDS]}
+        selectedTab={REACH.ALL}
+        onTabChange={mockOnTabChange}
+      />,
+    );
+
+    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('aria-label'))).toEqual([
+      'All',
+      'My network',
+      'Following',
+      'Friends',
+    ]);
+    fireEvent.click(screen.getByLabelText('My network'));
+    expect(mockOnTabChange).toHaveBeenCalledWith(REACH.NETWORK);
+  });
+
+  it('renders All, Following and Friends without options', () => {
+    render(<FilterReach />);
+
+    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('aria-label'))).toEqual([
+      'All',
+      'Following',
+      'Friends',
+    ]);
+  });
+
   it('renders the standalone Tagged-as Home order', () => {
     const mockOnTabChange = vi.fn();
     render(<FilterReach showTaggedAs onTabChange={mockOnTabChange} />);
@@ -449,6 +479,13 @@ describe('FilterReach - Snapshots', () => {
 
   it('matches snapshot with disabled state', () => {
     const { container } = render(<FilterReach disabled />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with custom options', () => {
+    const { container } = render(
+      <FilterReach options={[REACH.ALL, REACH.NETWORK, REACH.FOLLOWING, REACH.FRIENDS]} selectedTab={REACH.NETWORK} />,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });

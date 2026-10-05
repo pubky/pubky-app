@@ -40,30 +40,36 @@ interface FilterReachSharedProps {
   profileTagsDisabled?: boolean;
 }
 
-interface StandardFilterReachProps extends BaseFilterProps<ReachType>, FilterReachSharedProps {
+const DEFAULT_REACH_OPTIONS = [REACH.ALL, REACH.FOLLOWING, REACH.FRIENDS] as const;
+
+/** `options` sets the reaches and their order; `onTabChange` only ever receives one of them. */
+interface StandardFilterReachProps<T extends ReachType> extends BaseFilterProps<T>, FilterReachSharedProps {
+  options?: readonly T[];
   showTaggedAs?: false;
 }
 
 interface TaggedAsFilterReachProps extends BaseFilterProps<ReachFilterValue>, FilterReachSharedProps {
+  options?: never;
   showTaggedAs: true;
 }
 
-type FilterReachProps = StandardFilterReachProps | TaggedAsFilterReachProps;
+type FilterReachProps<T extends ReachType> = StandardFilterReachProps<T> | TaggedAsFilterReachProps;
 
-export function FilterReach({
+export function FilterReach<T extends ReachType = ReachType>({
   selectedTab,
-  defaultSelectedTab = REACH.ALL,
+  defaultSelectedTab,
   onTabChange,
   disabled,
+  options,
   showTaggedAs = false,
   profileTags,
   onProfileTagAdd,
   onProfileTagRemove,
   profileTagsDisabled = false,
-}: FilterReachProps) {
-  const orderedReachKeys: ReachFilterValue[] = showTaggedAs
+}: FilterReachProps<T>) {
+  const orderedReachKeys: readonly ReachFilterValue[] = showTaggedAs
     ? [REACH.NETWORK, TAGGED_AS_FILTER_KEY, REACH.FOLLOWING, REACH.FRIENDS, REACH.ME, REACH.ALL]
-    : [REACH.ALL, REACH.FOLLOWING, REACH.FRIENDS];
+    : (options ?? DEFAULT_REACH_OPTIONS);
 
   const reachItems: FilterListItem<ReachFilterValue>[] = orderedReachKeys.map((key) => ({
     key,
@@ -78,8 +84,9 @@ export function FilterReach({
       return;
     }
 
+    // Items are built from `options`, so a standard selection is always a `T`.
     if (value !== TAGGED_AS_FILTER_KEY) {
-      (onTabChange as StandardFilterReachProps['onTabChange'])?.(value);
+      (onTabChange as StandardFilterReachProps<T>['onTabChange'])?.(value as T);
     }
   };
 
@@ -99,7 +106,7 @@ export function FilterReach({
       items={reachItems}
       itemExtras={showTaggedAs ? { [TAGGED_AS_FILTER_KEY]: profileTagEditor } : undefined}
       selectedValue={selectedTab}
-      defaultValue={defaultSelectedTab}
+      defaultValue={defaultSelectedTab ?? REACH.ALL}
       onChange={handleReachChange}
       testId="filter-reach-radiogroup"
       dataCy="filter-reach-radiogroup"
