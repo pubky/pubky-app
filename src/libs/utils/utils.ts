@@ -2,6 +2,7 @@ import type { SnapshotSerializer } from 'vitest';
 import { STARTER_PACK_RESERVED_TAGS } from '@/config/nexus';
 import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
 import { parseCompositeId } from '@/models/models.utils';
+import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import { getSafeExternalUrl } from './safeExternalUrl';
 import { DELETED_USER_NAME, RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
@@ -485,7 +486,13 @@ export const convertHmsToSeconds = (
   return h * 3600 + m * 60 + s;
 };
 
-export const isPostDeleted = (content: string | undefined) => content === '[DELETED]';
+/**
+ * Whether a post is a Nexus tombstone. Current Nexus sets `deleted: true` and empties the
+ * content; rows cached from older builds still carry the legacy `[DELETED]` content instead.
+ * Takes the details rather than the content string, so a call site cannot silently drop the flag.
+ */
+export const isPostDeleted = (post: { content?: string | null; deleted?: boolean } | null | undefined) =>
+  post?.deleted === true || post?.content === DELETED;
 
 /**
  * Whether a user is a Nexus tombstone. Current Nexus sets `deleted: true` and empties the name;

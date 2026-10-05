@@ -135,7 +135,7 @@ export function PostMainListRow({
     return <PostMainListRowSkeleton />;
   }
 
-  if (isPostDeleted(displayPostDetails.content) || isPostDeleted(previewPostDetails.content)) {
+  if (isPostDeleted(displayPostDetails) || isPostDeleted(previewPostDetails)) {
     return <PostUnavailable message={'This post has been deleted by its author.'} />;
   }
 
