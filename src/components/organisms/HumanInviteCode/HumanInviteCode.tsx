@@ -209,7 +209,7 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
           id="human-invite-back-btn"
           size="lg"
           className="w-full flex-1 rounded-full md:flex-0"
-          variant="secondary"
+          variant="outline"
           onClick={onBack}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
