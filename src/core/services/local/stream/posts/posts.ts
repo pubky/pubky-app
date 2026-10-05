@@ -401,7 +401,10 @@ export class LocalStreamPostsService {
     // relative to the delete index, see `LocalPostService.delete`'s
     // hard-delete branch). Tombstoned ids are dropped from every per-table
     // batch below so we don't leave behind orphan counts / tags /
-    // relationships / bookmarks pointing at a deleted post.
+    // relationships / bookmarks pointing at a deleted post. The freshness
+    // record is the exception: a tombstone still advances its TTL (see
+    // `liveTtl`), so a visible deleted placeholder is not force-refetched on
+    // every refresh tick.
     //
     // Refresh guard (TTL path only). A local-first edit is newer than
     // anything Nexus can return until Nexus has re-indexed it, and the owner's
@@ -452,7 +455,12 @@ export class LocalStreamPostsService {
         const liveCounts = postCounts.filter(([id]) => !tombstonedIds.has(id));
         const liveRelationships = postRelationships.filter(([id]) => !tombstonedIds.has(id));
         const liveTags = postTags.filter(([id]) => !tombstonedIds.has(id));
-        const liveTtl = postTtl.filter(([id]) => !tombstonedIds.has(id));
+        // The freshness record is the one row a tombstone still refreshes:
+        // `TtlApplication.findStalePostsByIds` returns every id whose TTL is
+        // missing or expired, and `deferOmittedIds` cannot hold back an id
+        // Nexus returned, so a tombstone left without one is force-refetched
+        // on every refresh tick. Content and auxiliary rows stay protected.
+        const liveTtl = postTtl;
         // A bookmark the viewer removed locally while Nexus was still indexing
         // the removal must not come back (see `recentUnbookmarks`).
         const liveBookmarks = postBookmarks.filter(
