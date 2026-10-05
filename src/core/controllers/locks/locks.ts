@@ -13,8 +13,11 @@ import type {
   TStartPaymentParams,
   TStartPaymentResult,
 } from '@/application/locks/locks.types';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isAuthError } from '@/libs/error/error.utils';
-import { sleep } from '@/libs/utils/utils';
+import { sleep, stripPubkyPrefix } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { LockContentParser, LockFileParser } from '@/pipes/locks/locks.parser';
 import type {
@@ -33,6 +36,7 @@ import type {
   TUnlockedListItem,
   TVerificationStatus,
 } from '@/services/locks/locks.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 
 /** How long logout waits for the Lock Server before it gives up and clears the device anyway. */
@@ -82,6 +86,17 @@ export class LocksController {
    */
   static async completeAuthFromCallback(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {
     const result = await LocksApplication.exchangeSessionCode(params);
+    // TODO:[Locks] #2283 — for now the Locks account must be the signed-in pubky.app account (a == b).
+    // The final plan allows a different account (a != b); remove this check then.
+    const creator = stripPubkyPrefix(result.session.creatorPubky() ?? '');
+    if (creator !== useAuthStore.getState().currentUserPubky) {
+      // The secret is dropped here, so close the session now instead of leaving it open until it expires.
+      void LocksApplication.signout(result.session).catch(() => {});
+      throw Err.auth(AuthErrorCode.FORBIDDEN, 'Approve with the account you are signed in with.', {
+        service: ErrorService.Locks,
+        operation: 'LocksController.completeAuthFromCallback',
+      });
+    }
     useLocksAuthStore.getState().init({ session: result.session, secret: result.secret });
     // Register the creator's default Lock Server pointer in the background on every auth, mirroring
     // the homeserver's post-auth write. Fire-and-forget: a failure (already reported to Sentry by the

@@ -299,9 +299,8 @@ export class LocksService {
     }
   }
 
-  /** Signs the Locks session out on the Lock Server. */
-  static async signout(): Promise<void> {
-    const session = getLockSession();
+  /** Signs a Locks session out on the Lock Server; the stored one by default. */
+  static async signout(session: LocksSdkSession = getLockSession()): Promise<void> {
     try {
       await session.signout();
     } catch (error) {
