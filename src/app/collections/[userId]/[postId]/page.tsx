@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
     const username = resolveDisplayName(user);
     const { content } = post;
 
-    const description = isPostDeleted(content)
+    const description = isPostDeleted(post)
       ? 'This collection has been deleted by its author.'
       : (parseCollectionContent(content)?.name ?? content);
 
