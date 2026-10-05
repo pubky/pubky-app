@@ -103,6 +103,8 @@ export function MobileFooter({ className }: MobileFooterProps) {
             <Link
               key={item.href}
               href={item.href}
+              // Active feed links only scroll; prefetching Search can loop with query params (#2755).
+              prefetch={item.isFeedRoute && itemIsActive ? false : undefined}
               aria-label={item.label}
               onClick={(event) => {
                 if (!isAuthenticated && protectedNavHrefs.has(item.href)) {
