@@ -719,6 +719,35 @@ describe('LocalStreamPostsService', () => {
       expect(persisted!.deleted).toBe(true);
       expect(await PostCountsModel.findById(compositeId)).toBeFalsy();
     });
+
+    it('refreshes the freshness record for a tombstoned id so it stops re-fetching every tick', async () => {
+      const compositeId = buildCompositeId({ pubky: 'author-1', id: 'tombstoned' });
+
+      // Seed the tombstone with an expired TTL, as the refresh path finds it
+      // once `TtlApplication.findStalePostsByIds` has returned the id.
+      await PostDetailsModel.table.put({
+        id: compositeId,
+        content: DELETED,
+        indexed_at: BASE_TIMESTAMP,
+        kind: 'short',
+        uri: 'pubky://author-1/pub/pubky.app/posts/tombstoned',
+        attachments: null,
+      });
+      await PostTtlModel.table.put({ id: compositeId, lastUpdatedAt: BASE_TIMESTAMP });
+
+      const before = Date.now();
+      await LocalStreamPostsService.persistPosts({
+        posts: [createMockNexusPost('tombstoned', 'author-1', BASE_TIMESTAMP)],
+        refreshGuard: { fetchStartedAt: before - 1_000 },
+      });
+
+      // Content and auxiliary rows stay protected...
+      expect((await PostDetailsModel.findById(compositeId))!.content).toBe(DELETED);
+      expect(await PostCountsModel.findById(compositeId)).toBeFalsy();
+      // ...but the freshness record must advance, or `findStalePostsByIds`
+      // keeps returning the id and the client re-fetches it on every tick.
+      expect((await PostTtlModel.findById(compositeId))!.lastUpdatedAt).toBeGreaterThanOrEqual(before);
+    });
   });
 
   describe('persistNewStreamChunk', () => {
