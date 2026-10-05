@@ -197,6 +197,20 @@ describe('HomeFeedSidebar', () => {
     expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
   });
 
+  it('renders a reach filter override instead of the Home reach filter', () => {
+    render(<HomeFeedSidebar reachFilter={<div data-testid="search-reach-filter" />} />);
+
+    expect(screen.getByTestId('search-reach-filter')).toBeInTheDocument();
+    expect(screen.queryByTestId('filter-reach')).not.toBeInTheDocument();
+  });
+
+  it('renders no reach filter for a null override', () => {
+    render(<HomeFeedSidebar reachFilter={null} />);
+
+    expect(screen.queryByTestId('filter-reach')).not.toBeInTheDocument();
+    expect(screen.getByTestId('filter-sort')).toBeInTheDocument();
+  });
+
   it('can hide sort without hiding layout or content', () => {
     render(<HomeFeedSidebar hideSortFilter />);
 
@@ -502,7 +516,12 @@ describe('HomeFeedSidebar - scroll to top on stream change', () => {
   });
 
   it('scrolls to the top from the mobile drawer on Search', () => {
-    render(<HomeFeedDrawerMobile hideReachFilter feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />);
+    render(
+      <HomeFeedDrawerMobile
+        reachFilter={<div data-testid="search-reach-filter" />}
+        feedVariant={TIMELINE_FEED_VARIANT.SEARCH}
+      />,
+    );
 
     act(() => lastProps(mockFilterContent)?.onTabChange?.(CONTENT.VIDEOS));
 
@@ -549,12 +568,12 @@ describe('HomeFeedSidebar - Snapshots', () => {
     expect(container).toMatchSnapshot();
   });
 
-  it('matches snapshot with Sort hidden', () => {
+  it('matches snapshot with a reach filter override and Sort hidden', () => {
     const { container } = render(
       <HomeFeedSidebar
         allowVisualLayout={true}
         feedVariant={TIMELINE_FEED_VARIANT.SEARCH}
-        hideReachFilter
+        reachFilter={<div data-testid="search-reach-filter" />}
         hideSortFilter
       />,
     );

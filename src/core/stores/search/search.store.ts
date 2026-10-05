@@ -19,7 +19,7 @@ export const useSearchStore = create<SearchStore>()(
       }),
       {
         name: SEARCH_PERSIST_KEY,
-        // Persist all recent searches (active tags stay URL-derived)
+        // Recent searches persist; active tags are URL-derived and reach is session-only.
         partialize: (state) => ({
           recentUsers: state.recentUsers,
           recentTags: state.recentTags,
