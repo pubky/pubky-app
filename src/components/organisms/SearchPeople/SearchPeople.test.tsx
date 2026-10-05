@@ -6,6 +6,7 @@ import { useSearchPeople } from '@/hooks/useSearchPeople/useSearchPeople';
 import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
 import type { UserListItemData } from '@/organisms/UserListItem/UserListItem.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { REACH } from '@/stores/home/home.types';
 import { useSearchStore } from '@/stores/search/search.store';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -34,10 +35,6 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
 }));
 
 const CURRENT_USER = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
-    selector({ currentUserPubky: CURRENT_USER }),
-}));
 
 vi.mock('@/organisms/UserListItem/UserListItem', () => ({
   UserListItem: ({
@@ -97,6 +94,7 @@ function setup({ people = {} }: { people?: Partial<typeof defaultPeople> } = {})
 }
 
 beforeEach(() => {
+  useAuthStore.setState({ currentUserPubky: CURRENT_USER });
   useSearchStore.getState().reset();
   vi.clearAllMocks();
   setup();
@@ -115,6 +113,14 @@ describe('SearchPeople', () => {
     act(() => useSearchStore.getState().setReach(REACH.NETWORK));
     expect(screen.getByRole('button', { name: 'See all' })).toBeInTheDocument();
     expect(mockUseSearchPeople).toHaveBeenLastCalledWith(['synonym'], expect.objectContaining({ reach: 'wot' }));
+  });
+  it('collapses the preview when the viewer changes', () => {
+    setup({ people: { users: buildUsers(6) } });
+    render(<SearchPeople />);
+    fireEvent.click(screen.getByRole('button', { name: 'See all' }));
+    expect(screen.queryByRole('button', { name: 'See all' })).not.toBeInTheDocument();
+    act(() => useAuthStore.setState({ currentUserPubky: 'other-viewer' }));
+    expect(screen.getByRole('button', { name: 'See all' })).toBeInTheDocument();
   });
   it('renders nothing without a tag search', () => {
     mockUseSearchCriteria.mockReturnValue({ mode: 'none' });

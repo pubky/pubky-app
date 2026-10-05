@@ -62,6 +62,20 @@ function uniquePageIds(results: TUserTagSearchResult[]): Pubky[] {
 }
 
 /**
+ * Hydration skips its local writes when the session changes mid-call. For the same viewer (a Locks
+ * session upgrade) that would silently drop those users from the list, so retry once under the
+ * new session. A different viewer is left to the scope effect, which restarts the search.
+ */
+async function hydrateUsers(userIds: Pubky[]): Promise<void> {
+  const { currentUserPubky, session } = useAuthStore.getState();
+  await StreamUserController.getOrFetchUsers({ userIds });
+  const current = useAuthStore.getState();
+  if (current.currentUserPubky === currentUserPubky && current.session !== session) {
+    await StreamUserController.getOrFetchUsers({ userIds });
+  }
+}
+
+/**
  * Users whose profile is tagged with the searched tags, in backend score
  * order, for the `/search` People section. Ids come from
  * `search/users/by_tags` (skip-paginated), are hydrated in one
@@ -73,7 +87,6 @@ export function useSearchPeople(
   { reach, onError }: UseSearchPeopleOptions = {},
 ): UseSearchPeopleResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const session = useAuthStore((state) => state.session);
   // Clamp to the endpoint's hard 1-5 label bound regardless of stream config.
   const tagsKey = tags.slice(0, SEARCH_PEOPLE_MAX_TAGS).join(',');
 
@@ -101,7 +114,7 @@ export function useSearchPeople(
 
   const { isMuted } = useMutedUsers();
 
-  // Match the controller's viewer/session guard when restoring or replacing a session.
+  // Initial page — reruns from scratch whenever the tags, reach or viewer change.
   useEffect(() => {
     generationRef.current += 1;
     const generation = generationRef.current;
@@ -133,7 +146,7 @@ export function useSearchPeople(
         const ids = uniquePageIds(results);
         if (ids.length > 0) {
           // One POST `by_ids` fills details/counts/tags/relationship in Dexie.
-          await StreamUserController.getOrFetchUsers({ userIds: ids });
+          await hydrateUsers(ids);
         }
         if (generation !== generationRef.current) return;
 
@@ -161,7 +174,7 @@ export function useSearchPeople(
     return () => {
       generationRef.current += 1;
     };
-  }, [tagsKey, reach, currentUserPubky, session]);
+  }, [tagsKey, reach, currentUserPubky]);
 
   const loadMore = async () => {
     if (loading || loadingMore || !hasMore || !tagsKey) return;
@@ -185,7 +198,7 @@ export function useSearchPeople(
       const existingIds = new Set(userIdsRef.current);
       const newUniqueIds = uniquePageIds(results).filter((id) => !existingIds.has(id));
       if (newUniqueIds.length > 0) {
-        await StreamUserController.getOrFetchUsers({ userIds: newUniqueIds });
+        await hydrateUsers(newUniqueIds);
       }
       if (generation !== generationRef.current) return;
 

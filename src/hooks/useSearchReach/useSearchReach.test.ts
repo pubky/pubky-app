@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { REACH } from '@/stores/home/home.types';
@@ -12,6 +12,10 @@ describe('Search reach', () => {
     useHomeStore.getState().reset();
     useAuthStore.setState({ currentUserPubky: 'viewer', showSignInDialog: false });
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.mocked(window.scrollTo).mockRestore();
   });
 
   it('keeps Search and Home independent and retains Search during navigation', () => {

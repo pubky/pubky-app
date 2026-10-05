@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_SECTION_PAGE_SIZE, SEARCH_COLLECTIONS_PREVIEW_COUNT } from '@/config/collections';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { SearchCollections } from './SearchCollections';
 
@@ -68,6 +69,7 @@ function setup({ pagination = {} }: { pagination?: Partial<typeof defaultPaginat
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useAuthStore.setState({ currentUserPubky: null });
   setup();
 });
 
@@ -221,6 +223,19 @@ describe('SearchCollections', () => {
       expect(screen.getByRole('button', { name: 'See all' })).toBeInTheDocument();
     },
   );
+
+  it('collapses the preview when the viewer changes on the same stream', () => {
+    useAuthStore.setState({ currentUserPubky: 'viewer' });
+    setup({ pagination: { postIds: buildCompositeIds(6) } });
+
+    render(<SearchCollections />);
+    fireEvent.click(screen.getByRole('button', { name: 'See all' }));
+    expect(screen.getAllByTestId('collection-card')).toHaveLength(6);
+
+    act(() => useAuthStore.setState({ currentUserPubky: 'other-viewer' }));
+
+    expect(screen.getAllByTestId('collection-card')).toHaveLength(SEARCH_COLLECTIONS_PREVIEW_COUNT);
+  });
 });
 
 describe('SearchCollections - Snapshots', () => {

@@ -9,14 +9,14 @@ import { type ContentType } from '@/stores/home/home.types';
 import { getKindFromContent, getStreamIdFromFilters } from '@/stores/home/home.utils';
 
 /**
- * Custom hook that returns the search streamId based on the URL search criteria
- * and Sort/Content filters.
+ * Custom hook that returns the search streamId based on the URL search criteria,
+ * the Search reach (independent of Home) and the Sort/Content filters.
  *
  * Stream ID formats:
- * - Tag search: `{sorting}:{source}:{kind}:{tags}` (e.g. `timeline:all:all:pubky,bitcoin`)
- * - Full-text search: `content_search:q~{encodedQuery}:{kind}` (ignores sort; relevance-ranked)
+ * - Tag search: `{sorting}:{source}:{kind}:{tags}` (e.g. `timeline:wot:all:pubky,bitcoin`)
+ * - Full-text search: `content_search:q~{encodedQuery}:{kind}[:reach:{following|friends|wot}]`
+ *   (ignores sort; relevance-ranked)
  *
- * Reach belongs to Search, independently of Home.
  * Tags are limited to PUBKY_RUNTIME_MAX_STREAM_TAGS (default 5).
  *
  * @returns The search streamId, or undefined when there is no valid search criteria

@@ -20,9 +20,9 @@ import { SearchPersonCardSkeleton } from './SearchPeople.skeleton';
  * SearchPeople
  *
  * "People" section on `/search` — users whose profile is tagged with the
- * searched tags, via `search/users/by_tags`. Collapsed to a preview of
- * `SEARCH_PEOPLE_PREVIEW_COUNT` cards; "See all" expands in place to the
- * paginated grid. Renders nothing without a tag search (a full-text query has
+ * searched tags, within the Search reach, via `search/users/by_tags`.
+ * Collapsed to a preview of `SEARCH_PEOPLE_PREVIEW_COUNT` cards; "See all"
+ * expands in place to the paginated grid. Renders nothing without a tag search (a full-text query has
  * no tags to match) or without matches.
  */
 export function SearchPeople() {
@@ -35,8 +35,13 @@ export function SearchPeople() {
 
   const tags = criteria.tags;
 
+  // Remount on any viewer, reach or tag change so the expansion resets with the scope.
   return (
-    <SearchPeopleContent key={JSON.stringify([tags, nexusReach, currentUserPubky])} tags={tags} reach={nexusReach} />
+    <SearchPeopleContent
+      key={`${currentUserPubky ?? 'public'}:${nexusReach ?? 'all'}:${tags.join(',')}`}
+      tags={tags}
+      reach={nexusReach}
+    />
   );
 }
 

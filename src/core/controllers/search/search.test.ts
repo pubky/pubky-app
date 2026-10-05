@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchApplication } from '@/application/search/search';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { SearchController } from './search';
 
 describe('SearchController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useAuthStore.setState({ currentUserPubky: 'viewer' });
+    useAuthStore.setState({ currentUserPubky: 'viewer', session: null });
   });
 
   describe('fetchUsersById', () => {
@@ -93,21 +94,29 @@ describe('SearchController', () => {
   });
   describe('fetchUsersByTags', () => {
     it.each(['following', 'friends', 'wot'] as const)(
-      'uses the current viewer for %s People results',
+      'passes the current viewer with %s People searches',
       async (reach) => {
         const fetch = vi.spyOn(SearchApplication, 'fetchUsersByTags').mockResolvedValue([]);
         await SearchController.fetchUsersByTags({ tags: 'bitcoin,pubky', skip: 20, limit: 20, reach });
-        expect(fetch).toHaveBeenCalledWith({ tags: 'bitcoin,pubky', skip: 20, limit: 20, reach, user_id: 'viewer' });
+        expect(fetch).toHaveBeenCalledWith({ tags: 'bitcoin,pubky', skip: 20, limit: 20, reach, viewerId: 'viewer' });
       },
     );
 
-    it('rejects scoped People search without an account', async () => {
+    it('passes no viewer for a guest, leaving a scoped reach to the service guard', async () => {
       useAuthStore.setState({ currentUserPubky: null });
-      const fetch = vi.spyOn(SearchApplication, 'fetchUsersByTags');
-      await expect(SearchController.fetchUsersByTags({ tags: 'pubky', reach: 'wot' })).rejects.toMatchObject({
-        code: 'UNAUTHORIZED',
+      const fetch = vi.spyOn(SearchApplication, 'fetchUsersByTags').mockResolvedValue([]);
+      await SearchController.fetchUsersByTags({ tags: 'pubky', reach: 'wot' });
+      expect(fetch).toHaveBeenCalledWith({ tags: 'pubky', reach: 'wot', viewerId: undefined });
+    });
+
+    it('returns results that land after a same-viewer session swap', async () => {
+      const results = [{ user_id: 'user1', score: 12 }];
+      vi.spyOn(SearchApplication, 'fetchUsersByTags').mockImplementation(async () => {
+        useAuthStore.setState({ session: mockSession() });
+        return results;
       });
-      expect(fetch).not.toHaveBeenCalled();
+
+      await expect(SearchController.fetchUsersByTags({ tags: 'pubky', reach: 'friends' })).resolves.toEqual(results);
     });
 
     it('should call SearchApplication.fetchUsersByTags with correct params', async () => {
@@ -120,7 +129,7 @@ describe('SearchController', () => {
 
       const result = await SearchController.fetchUsersByTags(params);
 
-      expect(usersByTagsSpy).toHaveBeenCalledWith(params);
+      expect(usersByTagsSpy).toHaveBeenCalledWith({ ...params, viewerId: 'viewer' });
       expect(result).toEqual(mockResults);
     });
 

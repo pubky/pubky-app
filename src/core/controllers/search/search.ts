@@ -1,13 +1,8 @@
 import { SearchApplication } from '@/application/search/search';
-import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
-import { AuthErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
 import type {
-  NexusSearchReach,
   TPrefixSearchParams,
   TSearchResult,
-  TUsersByTagsSearchParams,
+  TUsersByTagsQuery,
   TUserTagSearchResult,
 } from '@/services/nexus/search/search.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -39,26 +34,12 @@ export class SearchController {
   }
 
   /**
-   * Search users by profile tags
+   * Search users by profile tags, optionally within the viewer's network.
+   * Read-only, so callers drop the results of a scope they have left.
    * @returns User ids with tagger-count scores, ordered by score
    */
-  static async fetchUsersByTags({
-    reach,
-    ...params
-  }: Omit<TUsersByTagsSearchParams, 'user_id' | 'reach'> & { reach?: NexusSearchReach }): Promise<
-    TUserTagSearchResult[]
-  > {
-    const userId = useAuthStore.getState().currentUserPubky;
-    if (reach && !userId) {
-      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Sign in to search within your network', {
-        service: ErrorService.Nexus,
-        operation: 'SearchController.fetchUsersByTags',
-      });
-    }
-    const isCurrent = captureViewerSession();
-    const results = await SearchApplication.fetchUsersByTags(
-      reach && userId ? { ...params, reach, user_id: userId } : params,
-    );
-    return isCurrent() ? results : [];
+  static async fetchUsersByTags(params: TUsersByTagsQuery): Promise<TUserTagSearchResult[]> {
+    const viewerId = useAuthStore.getState().currentUserPubky ?? undefined;
+    return await SearchApplication.fetchUsersByTags({ ...params, viewerId });
   }
 }

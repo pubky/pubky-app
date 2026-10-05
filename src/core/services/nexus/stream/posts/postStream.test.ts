@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, test, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
+import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { buildContentSearchStreamId, type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { type NexusPost, type NexusPostsKeyStream, StreamSorting } from '@/services/nexus/nexus.types';
@@ -1410,35 +1412,45 @@ describe('NexusPostStreamService', () => {
         invokeEndpoint: StreamSource.FOLLOWING,
         params: { limit: 10 }, // Missing viewer_id
         extraParams: {},
-        expectedError: 'Viewer ID is required',
+        expectedError: 'Sign in to see this feed',
+        expectedCategory: ErrorCategory.Auth,
+        expectedCode: AuthErrorCode.UNAUTHORIZED,
       },
       {
         name: 'FRIENDS requires viewer_id',
         invokeEndpoint: StreamSource.FRIENDS,
         params: { limit: 10 }, // Missing viewer_id
         extraParams: {},
-        expectedError: 'Viewer ID is required',
+        expectedError: 'Sign in to see this feed',
+        expectedCategory: ErrorCategory.Auth,
+        expectedCode: AuthErrorCode.UNAUTHORIZED,
       },
       {
         name: 'BOOKMARKS requires viewer_id',
         invokeEndpoint: StreamSource.BOOKMARKS,
         params: { limit: 10 }, // Missing viewer_id
         extraParams: {},
-        expectedError: 'Viewer ID is required',
+        expectedError: 'Sign in to see this feed',
+        expectedCategory: ErrorCategory.Auth,
+        expectedCode: AuthErrorCode.UNAUTHORIZED,
       },
       {
         name: 'WOT requires viewer_id',
         invokeEndpoint: StreamSource.WOT,
         params: { limit: 10 }, // Missing viewer_id
         extraParams: {},
-        expectedError: 'Viewer ID is required',
+        expectedError: 'Sign in to see this feed',
+        expectedCategory: ErrorCategory.Auth,
+        expectedCode: AuthErrorCode.UNAUTHORIZED,
       },
       {
         name: 'WOT_DOMAIN requires viewer_id',
         invokeEndpoint: StreamSource.WOT_DOMAIN,
         params: { limit: 10 }, // Missing viewer_id
         extraParams: {},
-        expectedError: 'Viewer ID is required',
+        expectedError: 'Sign in to see this feed',
+        expectedCategory: ErrorCategory.Auth,
+        expectedCode: AuthErrorCode.UNAUTHORIZED,
       },
       {
         name: 'CONTENT_SEARCH requires a search query',
@@ -1446,8 +1458,10 @@ describe('NexusPostStreamService', () => {
         params: { limit: 10 },
         extraParams: {}, // Missing q
         expectedError: 'Search query is required for content_search stream',
+        expectedCategory: ErrorCategory.Validation,
+        expectedCode: ValidationErrorCode.INVALID_INPUT,
       },
-    ])('$name', async ({ invokeEndpoint, params, extraParams, expectedError }) => {
+    ])('$name', async ({ invokeEndpoint, params, extraParams, expectedError, expectedCategory, expectedCode }) => {
       const fetchParams: TPostStreamFetchParams = {
         params,
         invokeEndpoint,
@@ -1456,6 +1470,10 @@ describe('NexusPostStreamService', () => {
 
       await expect(NexusPostStreamService.fetch(fetchParams)).rejects.toThrow(expectedError);
       await expect(NexusPostStreamService.fetch(fetchParams)).rejects.toBeInstanceOf(AppError);
+      await expect(NexusPostStreamService.fetch(fetchParams)).rejects.toMatchObject({
+        category: expectedCategory,
+        code: expectedCode,
+      });
       expect(mockQueryNexus).not.toHaveBeenCalled();
     });
 

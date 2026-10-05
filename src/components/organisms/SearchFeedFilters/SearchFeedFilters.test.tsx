@@ -59,10 +59,13 @@ beforeEach(() => useSearchStore.getState().reset());
 
 describe('SearchFeedFilters', () => {
   beforeEach(() => {
-    useSearchStore.getState().reset();
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     mocks.searchParams = new URLSearchParams({ tags: 'bitcoin' });
     mocks.isPhoneViewport = false;
+  });
+
+  afterEach(() => {
+    vi.mocked(window.scrollTo).mockRestore();
   });
 
   it.each(['sidebar', 'drawer', 'mobile'] as const)(

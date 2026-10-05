@@ -1,11 +1,12 @@
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import type { NexusSearchReach } from '@/services/nexus/search/search.types';
 import { REACH } from '@/stores/home/home.types';
+import { getSourceFromReach } from '@/stores/home/home.utils';
 import type { SearchReach } from './search.types';
 
+/** The Nexus reach for a Search selection; All sends none. */
 export function getSearchNexusReach(reach: SearchReach): NexusSearchReach | undefined {
-  if (reach === REACH.ALL) return undefined;
-  return reach === REACH.NETWORK ? 'wot' : reach;
+  return reach === REACH.ALL ? undefined : getSourceFromReach(reach);
 }
 
 /**

@@ -132,6 +132,7 @@ describe('post-stream id builders', () => {
       expect(parseContentSearchStreamId('content_search:q~bitcoin:all:reach:')).toBeNull();
       expect(parseContentSearchStreamId('content_search:q~bitcoin:all:reach:all')).toBeNull();
       expect(parseContentSearchStreamId('content_search:q~bitcoin:all:reach:bogus')).toBeNull();
+      expect(parseContentSearchStreamId('content_search:q~bitcoin:all:reach:followers')).toBeNull();
       expect(parseContentSearchStreamId('content_search:q~bitcoin:all:reach:friends:extra')).toBeNull();
       expect(parseContentSearchStreamId('content_search:q~:all')).toBeNull();
       expect(isAuthorScopedContentSearchStream('content_search:q~bitcoin:all:')).toBe(false);

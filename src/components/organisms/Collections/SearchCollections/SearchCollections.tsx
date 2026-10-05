@@ -20,9 +20,10 @@ import { CONTENT } from '@/stores/home/home.types';
  * SearchCollections
  *
  * "Collections" section on `/search` — collections matching the searched tags
- * via the tagged collection stream (`<sort>:all:collection:<tags>`). Collapsed
- * to a preview of `SEARCH_COLLECTIONS_PREVIEW_COUNT` cards; "See all" expands
- * in place to the paginated grid. Renders nothing without tags or matches.
+ * within the Search reach, via the tagged collection stream
+ * (`<sort>:<reach source>:collection:<tags>`). Collapsed to a preview of
+ * `SEARCH_COLLECTIONS_PREVIEW_COUNT` cards; "See all" expands in place to the
+ * paginated grid. Renders nothing without tags or matches.
  */
 export function SearchCollections() {
   const streamId = useSearchStreamId(CONTENT.COLLECTIONS);
@@ -32,6 +33,7 @@ export function SearchCollections() {
     return null;
   }
 
+  // Remount on any viewer or stream change so the expansion resets with the scope.
   return <SearchCollectionsStream key={`${currentUserPubky ?? 'public'}:${streamId}`} streamId={streamId} />;
 }
 

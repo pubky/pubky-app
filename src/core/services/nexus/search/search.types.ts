@@ -1,8 +1,8 @@
 import type { Pubky } from '@/models/models.types';
-import type {
-  StreamSorting,
-  TPaginationParams,
-  TPaginationRangeParams,
+import {
+  type StreamSorting,
+  type TPaginationParams,
+  type TPaginationRangeParams,
   UserStreamReach,
 } from '@/services/nexus/nexus.types';
 import type { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
@@ -22,8 +22,17 @@ export type TPrefixSearchParams = TPaginationParams & {
 
 export type NexusSearchReach = `${Exclude<UserStreamReach, UserStreamReach.FOLLOWERS>}`;
 
+// Derived from the same enum as NexusSearchReach, so the runtime check and the type cannot drift.
+const NEXUS_SEARCH_REACHES: ReadonlySet<string> = new Set(
+  Object.values(UserStreamReach).filter((reach) => reach !== UserStreamReach.FOLLOWERS),
+);
+
+export function isNexusSearchReach(value: string | undefined): value is NexusSearchReach {
+  return value !== undefined && NEXUS_SEARCH_REACHES.has(value);
+}
+
 /** Nexus accepts a reach only together with the user whose network it scopes. */
-type TSearchReachParams = { reach: NexusSearchReach; user_id: Pubky } | { reach?: never; user_id?: never };
+export type TSearchReachParams = { reach: NexusSearchReach; user_id: Pubky } | { reach?: never; user_id?: never };
 
 export type TContentSearchParams = TPaginationParams &
   TSearchReachParams & {
@@ -43,6 +52,17 @@ export type TUsersByTagsSearchParams = TPaginationParams &
     // Comma-separated tag labels (1-5); users tagged with any of them match
     tags: string;
   };
+
+/** People search as the UI asks for it; the controller adds the viewer. */
+export type TUsersByTagsQuery = TPaginationParams & {
+  tags: string;
+  reach?: NexusSearchReach;
+};
+
+/** People search with the viewer a scoped reach needs; the service pairs them for Nexus. */
+export type TUsersByTagsFetchParams = TUsersByTagsQuery & {
+  viewerId?: Pubky;
+};
 
 export type TSearchQueryParams =
   TTagSearchParams | TPrefixSearchParams | TContentSearchParams | TUsersByTagsSearchParams;

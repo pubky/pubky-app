@@ -25,15 +25,14 @@ import { CollectionsEmpty } from '@/molecules/CollectionsEmpty/CollectionsEmpty'
 import { FilterPostsBar } from '@/molecules/FilterPostsBar/FilterPostsBar';
 import { FilterPostsEmpty } from '@/molecules/FilterPostsEmpty/FilterPostsEmpty';
 import { PostsEmpty } from '@/molecules/PostsEmpty/PostsEmpty';
-import { SearchEmptyState } from '@/molecules/SearchEmptyState/SearchEmptyState';
+import { SearchResultsEmpty } from '@/molecules/SearchResultsEmpty/SearchResultsEmpty';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, REACH } from '@/stores/home/home.types';
-import { LAYOUT } from '@/stores/home/home.types';
+import { CONTENT, LAYOUT, REACH } from '@/stores/home/home.types';
 import { TimelineFeedWithStream } from '../TimelineFeedContent/TimelineFeedContent';
 import type { HomeTimelineFeedProps, TimelineFeedProps } from './TimelineFeed.types';
 import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
@@ -314,15 +313,15 @@ function SearchTimelineFeed({ children }: { children?: TimelineFeedProps['childr
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   return (
+    // useStreamPagination resets in place on a stream change; the key only covers a viewer swap.
     <TimelineFeedWithStream
-      key={`${currentUserPubky ?? 'public'}:${streamId}`}
+      key={currentUserPubky ?? 'public'}
       streamId={streamId}
       variant={TIMELINE_FEED_VARIANT.SEARCH}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
       emptyState={
-        <SearchEmptyState
-          variant="results"
+        <SearchResultsEmpty
           isCollections={resolvedContent === CONTENT.COLLECTIONS}
           onSearchAll={reach === REACH.ALL ? undefined : () => setReach(REACH.ALL)}
         />

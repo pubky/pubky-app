@@ -208,21 +208,56 @@ describe('useSearchPeople', () => {
     expect(mockFetchUsersByTags).toHaveBeenLastCalledWith({ tags: 'pubky', reach: 'wot', skip: 0, limit: 3 });
   });
 
-  it('restarts an in-flight search when the same viewer restores or replaces their session', async () => {
-    const staleRequest = Promise.withResolvers<ReturnType<typeof scored>>();
-    mockFetchUsersByTags.mockReturnValueOnce(staleRequest.promise).mockResolvedValueOnce(scored([USER_B]));
-    seedUser(USER_B, 'Bob');
+  it('keeps loaded pages when the same viewer swaps sessions (Locks upgrade)', async () => {
+    [USER_A, USER_B, USER_C, USER_D].forEach((id) => seedUser(id, id));
+    mockFetchUsersByTags
+      .mockResolvedValueOnce(scored([USER_A, USER_B, USER_C]))
+      .mockResolvedValueOnce(scored([USER_D]));
     const { result } = renderHook(() => useSearchPeople(['pubky'], { reach: 'friends' }));
+    await waitFor(() => expect(result.current.users).toHaveLength(3));
+    await act(async () => result.current.loadMore());
+    await waitFor(() => expect(result.current.users).toHaveLength(4));
 
     act(() => useAuthStore.setState({ session: mockSession() }));
-    await waitFor(() => expect(mockFetchUsersByTags).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    // The controller discards the previous session's response as an empty list.
-    await act(async () => staleRequest.resolve([]));
 
-    expect(result.current.users.map((user) => user.id)).toEqual([USER_B]);
-    expect(mockFetchUsersByTags).toHaveBeenLastCalledWith({ tags: 'pubky', reach: 'friends', skip: 0, limit: 3 });
+    expect(result.current.loading).toBe(false);
+    expect(result.current.users.map((user) => user.id)).toEqual([USER_A, USER_B, USER_C, USER_D]);
+    expect(mockFetchUsersByTags).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-hydrates once when the same viewer swaps sessions mid-hydration', async () => {
+    seedUser(USER_A, 'Alice');
+    const hydration = Promise.withResolvers<void>();
+    mockFetchUsersByTags.mockResolvedValueOnce(scored([USER_A]));
+    mockGetOrFetchUsers.mockReturnValueOnce(hydration.promise);
+    const { result } = renderHook(() => useSearchPeople(['pubky'], { reach: 'friends' }));
+    await waitFor(() => expect(mockGetOrFetchUsers).toHaveBeenCalledTimes(1));
+
+    act(() => useAuthStore.setState({ session: mockSession() }));
+    await act(async () => hydration.resolve());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(mockGetOrFetchUsers).toHaveBeenCalledTimes(2);
+    expect(mockGetOrFetchUsers).toHaveBeenLastCalledWith({ userIds: [USER_A] });
+    expect(mockFetchUsersByTags).toHaveBeenCalledTimes(1);
+    expect(result.current.users.map((user) => user.id)).toEqual([USER_A]);
+  });
+
+  it('leaves a viewer change mid-hydration to the restarted search', async () => {
+    seedUser(USER_A, 'Alice');
+    const hydration = Promise.withResolvers<void>();
+    mockFetchUsersByTags.mockResolvedValueOnce(scored([USER_A]));
+    mockGetOrFetchUsers.mockReturnValueOnce(hydration.promise);
+    const { result } = renderHook(() => useSearchPeople(['pubky'], { reach: 'friends' }));
+    await waitFor(() => expect(mockGetOrFetchUsers).toHaveBeenCalledTimes(1));
+
+    act(() => useAuthStore.setState({ currentUserPubky: 'other-viewer', session: mockSession() }));
+    await act(async () => hydration.resolve());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
     expect(mockGetOrFetchUsers).toHaveBeenCalledTimes(1);
+    expect(mockFetchUsersByTags).toHaveBeenCalledTimes(2);
+    expect(result.current.users).toEqual([]);
   });
 
   it('fetches the first page with joined tags and hydrates the returned ids', async () => {
