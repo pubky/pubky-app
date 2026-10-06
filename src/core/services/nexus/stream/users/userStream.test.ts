@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NEXUS_USERS_BY_IDS_MAX_IDS } from '@/config/nexus';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
@@ -561,6 +562,33 @@ describe('NexusUserStreamService.fetchByIds', () => {
       body: JSON.stringify({ user_ids: ['auser', 'muser', 'zuser'] }),
     });
     expect(result).toEqual(mockUsers);
+  });
+
+  it('splits more ids than one request takes into sequential sorted slices', async () => {
+    const userIds = Array.from({ length: NEXUS_USERS_BY_IDS_MAX_IDS * 2 + 50 }, (_, i) =>
+      String(i).padStart(3, '0'),
+    ).reverse() as Pubky[];
+    const sortedIds = [...userIds].sort();
+    const queryNexusSpy = vi
+      .mocked(queryNexus)
+      .mockImplementation(async ({ body }) =>
+        (JSON.parse(body as string) as { user_ids: string[] }).user_ids.map((id) => ({ details: { id } }) as never),
+      );
+
+    const result = await NexusUserStreamService.fetchByIds({ user_ids: userIds, viewer_id: 'viewer' as Pubky });
+
+    const requestedBatches = queryNexusSpy.mock.calls.map(
+      ([{ body }]) => (JSON.parse(body as string) as { user_ids: string[] }).user_ids,
+    );
+    expect(requestedBatches).toEqual([
+      sortedIds.slice(0, NEXUS_USERS_BY_IDS_MAX_IDS),
+      sortedIds.slice(NEXUS_USERS_BY_IDS_MAX_IDS, NEXUS_USERS_BY_IDS_MAX_IDS * 2),
+      sortedIds.slice(NEXUS_USERS_BY_IDS_MAX_IDS * 2),
+    ]);
+    expect(queryNexusSpy.mock.calls.every(([{ body }]) => (body as string).includes('"viewer_id":"viewer"'))).toBe(
+      true,
+    );
+    expect(result.map((user) => user.details.id)).toEqual(sortedIds);
   });
 
   it('keeps viewer_id alongside the sorted user_ids', async () => {

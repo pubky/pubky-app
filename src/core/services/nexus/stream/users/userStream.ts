@@ -1,3 +1,4 @@
+import { NEXUS_USERS_BY_IDS_MAX_IDS } from '@/config/nexus';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -83,12 +84,19 @@ export class NexusUserStreamService {
     }
     // Canonicalize (sorted user_ids) so identical concurrent batches share one query key and
     // coalesce in the query cache instead of racing the rate-limited by_ids endpoint (PUBKY-APP-B3).
-    const { url, body } = userStreamApi.usersByIds({ ...params, user_ids: [...params.user_ids].sort() });
-    return await queryNexus<NexusUser[]>({
-      url,
-      method: HttpMethod.POST,
-      body: JSON.stringify(body),
-      force,
-    });
+    // Nexus takes at most NEXUS_USERS_BY_IDS_MAX_IDS ids per request, so a longer list goes in
+    // sequential slices of the sorted ids.
+    const sortedIds = [...params.user_ids].sort();
+    const users: NexusUser[] = [];
+    for (let start = 0; start < sortedIds.length; start += NEXUS_USERS_BY_IDS_MAX_IDS) {
+      const { url, body } = userStreamApi.usersByIds({
+        ...params,
+        user_ids: sortedIds.slice(start, start + NEXUS_USERS_BY_IDS_MAX_IDS),
+      });
+      users.push(
+        ...(await queryNexus<NexusUser[]>({ url, method: HttpMethod.POST, body: JSON.stringify(body), force })),
+      );
+    }
+    return users;
   }
 }
