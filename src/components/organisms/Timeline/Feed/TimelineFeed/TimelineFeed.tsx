@@ -7,6 +7,7 @@ import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeed
 import { useHotStreamId } from '@/hooks/useHotStreamId/useHotStreamId';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useProfilePostsFilter } from '@/hooks/useProfilePostsFilter/useProfilePostsFilter';
+import { useSearchReach } from '@/hooks/useSearchReach/useSearchReach';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
@@ -24,13 +25,14 @@ import { CollectionsEmpty } from '@/molecules/CollectionsEmpty/CollectionsEmpty'
 import { FilterPostsBar } from '@/molecules/FilterPostsBar/FilterPostsBar';
 import { FilterPostsEmpty } from '@/molecules/FilterPostsEmpty/FilterPostsEmpty';
 import { PostsEmpty } from '@/molecules/PostsEmpty/PostsEmpty';
+import { SearchResultsEmpty } from '@/molecules/SearchResultsEmpty/SearchResultsEmpty';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { LAYOUT } from '@/stores/home/home.types';
+import { CONTENT, LAYOUT, REACH } from '@/stores/home/home.types';
 import { TimelineFeedWithStream } from '../TimelineFeedContent/TimelineFeedContent';
 import type { HomeTimelineFeedProps, TimelineFeedProps } from './TimelineFeed.types';
 import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
@@ -170,7 +172,7 @@ function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['child
   const streamId = !pubky
     ? undefined
     : activeQuery
-      ? buildContentSearchStreamId(activeQuery, 'all', pubky)
+      ? buildContentSearchStreamId(activeQuery, 'all', { type: 'author', author: pubky })
       : (`${StreamSource.AUTHOR}:${pubky}` as AuthorStreamCompositeId);
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.PROFILE);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
@@ -298,6 +300,7 @@ function HotTimelineFeed({ children }: { children?: TimelineFeedProps['children'
 }
 
 function SearchTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
+  const { reach, currentUserPubky, setReach } = useSearchReach();
   const content = useHomeStore((state) => state.content);
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.SEARCH);
   const resolvedContent = resolveVisualFeedContent({
@@ -310,11 +313,19 @@ function SearchTimelineFeed({ children }: { children?: TimelineFeedProps['childr
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   return (
+    // useStreamPagination resets in place on a stream change; the key only covers a viewer swap.
     <TimelineFeedWithStream
+      key={currentUserPubky ?? 'public'}
       streamId={streamId}
       variant={TIMELINE_FEED_VARIANT.SEARCH}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
+      emptyState={
+        <SearchResultsEmpty
+          isCollections={resolvedContent === CONTENT.COLLECTIONS}
+          onSearchAll={reach === REACH.ALL ? undefined : () => setReach(REACH.ALL)}
+        />
+      }
     >
       {children}
     </TimelineFeedWithStream>

@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
+import { isNexusSearchReach, type NexusSearchReach } from '@/services/nexus/search/search.types';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 
 // Post Stream ID Pattern: sorting:source:kind
@@ -11,8 +12,8 @@ import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStre
 // - compositePostId format: author:postId (e.g., "did:key:abc123:post456")
 // - Example: "postReplies:did:key:abc123:post456"
 //
-// Full-text Content Search Stream ID Pattern: content_search:q~<encodedQuery>:kind
-// - Example: "content_search:q~bitcoin%20wallets:all" (see buildContentSearchStreamId)
+// Full-text Content Search Stream ID Pattern: content_search:q~<encodedQuery>:kind[:<authorPubky>|:reach:<reach>]
+// - Example: "content_search:q~bitcoin%20wallets:all:reach:wot" (see buildContentSearchStreamId)
 
 // Note: In some cases that we reference PostStreamTypes enum, we need to cast to PostStreamId to avoid type errors.
 // TypeScript's generic inference narrows PostStreamTypes enum to the enum type instead of widening to PostStreamId union.
@@ -139,10 +140,13 @@ export const CONTENT_SEARCH_STREAM_PREFIX = 'content_search' as const;
 // The marker plus encodeURIComponent (which escapes ':') guarantees the query segment can never
 // satisfy any legacy segment-based classifier (reserved words like 'bookmarks'/'author'/'wot').
 const CONTENT_SEARCH_QUERY_MARKER = 'q~' as const;
-// Optional trailing author segment scopes the search to one profile's posts (profile "Filter
-// posts"): `content_search:q~<encodedQuery>:<kind>[:<authorPubky>]`. Pubkys contain no ':'.
+const CONTENT_SEARCH_REACH_MARKER = 'reach' as const;
+// Optional scope suffix: `:<authorPubky>` for profile "Filter posts", or
+// `:reach:<following|friends|wot>` for Search. Pubkys contain no ':'.
 export type ContentSearchStreamId =
   `${typeof CONTENT_SEARCH_STREAM_PREFIX}:${typeof CONTENT_SEARCH_QUERY_MARKER}${string}:${PostStreamKindSegment}${'' | `:${string}`}`;
+
+type ContentSearchScope = { type: 'author'; author: Pubky } | { type: 'reach'; reach: NexusSearchReach };
 
 export function buildPostReplyStreamId(compositePostId: string): ReplyStreamCompositeId {
   return `${StreamSource.REPLIES}:${compositePostId}`;
@@ -211,25 +215,26 @@ export function buildCollectionItemsStreamId(authorPubky: Pubky, postId: string)
 export function buildContentSearchStreamId(
   query: string,
   kind: PostStreamKindSegment = 'all',
-  author?: Pubky,
+  scope?: ContentSearchScope,
 ): ContentSearchStreamId {
   const base =
     `${CONTENT_SEARCH_STREAM_PREFIX}:${CONTENT_SEARCH_QUERY_MARKER}${encodeURIComponent(query)}:${kind}` as const;
-  return author ? `${base}:${author}` : base;
+  if (scope?.type === 'author') return `${base}:${scope.author}`;
+  if (scope?.type === 'reach') return `${base}:${CONTENT_SEARCH_REACH_MARKER}:${scope.reach}`;
+  return base;
 }
 
 export function parseContentSearchStreamId(
   streamId: string,
-): { query: string; kind: PostStreamKindSegment; author?: Pubky } | null {
-  const [prefix, markedQuery, kind, author, ...extra] = streamId.split(':');
+): { query: string; kind: PostStreamKindSegment; author?: Pubky; reach?: NexusSearchReach } | null {
+  const [prefix, markedQuery, kind, ...scope] = streamId.split(':');
   const parsedKind = toPostStreamKindSegment(kind);
   if (
     prefix !== CONTENT_SEARCH_STREAM_PREFIX ||
     !markedQuery?.startsWith(CONTENT_SEARCH_QUERY_MARKER) ||
     !parsedKind ||
-    extra.length > 0 ||
-    // A trailing ':' (empty author segment) is malformed, not an unscoped search.
-    author === ''
+    scope.length > 2 ||
+    scope.some((segment) => !segment)
   ) {
     return null;
   }
@@ -239,7 +244,14 @@ export function parseContentSearchStreamId(
     if (!query) {
       return null;
     }
-    return author ? { query, kind: parsedKind, author } : { query, kind: parsedKind };
+    const result = { query, kind: parsedKind };
+    if (scope.length === 0) return result;
+    const [scopeKey, scopeValue] = scope;
+    if (scope.length === 1 && scopeKey !== CONTENT_SEARCH_REACH_MARKER) return { ...result, author: scopeKey };
+    if (scopeKey === CONTENT_SEARCH_REACH_MARKER && isNexusSearchReach(scopeValue)) {
+      return { ...result, reach: scopeValue };
+    }
+    return null;
   } catch {
     return null;
   }
