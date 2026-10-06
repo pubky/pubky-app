@@ -69,3 +69,14 @@ export const HOMESERVER_CAPABILITIES = [APP_CAPABILITIES, ...LOCKS_CAPABILITIES]
 export function getHomeserverCapabilities(): Capabilities {
   return [...new Set([APP_CAPABILITIES, ...LOCKS_CAPABILITIES, ...SHOP_CAPABILITIES])].join(',') as Capabilities;
 }
+
+// The grant a social v1 migration runs under, asked for through Ring when the user starts one;
+// not part of `HOMESERVER_CAPABILITIES` yet, so no existing session is prompted before the
+// migration ships. Spelled as the `pubky-social-specs` package spells `MIGRATION_CAPS`, which a
+// test asserts once the package is a dependency.
+// - /pub/social/v1/:rw      - the public v1 tree the migration writes
+// - /priv/social/v1/:rw     - feeds, bookmarks, mutes and the migration flag
+// - /priv/app.pubky/v1/:rw  - the app's own files (settings, last read) imported after a run
+// - /pub/pubky.app/:rw      - the legacy tree, still reachable for deletions of migrated objects
+export const SOCIAL_V1_CAPABILITIES =
+  '/pub/social/v1/:rw,/priv/social/v1/:rw,/priv/app.pubky/v1/:rw,/pub/pubky.app/:rw';
