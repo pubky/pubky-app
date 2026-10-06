@@ -11,7 +11,7 @@ import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { mockAuthStore } from '@/test-utils/stores';
-import { usePostTags } from './usePostTags';
+import { mergePostTagLists, usePostTags } from './usePostTags';
 
 // Hoisted I/O and auth mocks
 const { mockGetOrFetchTags, mockAuthStoreSelector } = vi.hoisted(() => ({
@@ -512,5 +512,58 @@ describe('usePostTags', () => {
         expect(labels[0]).not.toBe('zeta');
       });
     });
+  });
+});
+
+describe('mergePostTagLists', () => {
+  const tag = (label: string, taggers: string[], relationship = false): NexusTag => ({
+    label,
+    taggers,
+    taggers_count: taggers.length,
+    relationship,
+  });
+
+  it('returns the primary list untouched when the secondary is empty', () => {
+    const primary = [tag('✌️', ['a'])];
+
+    expect(mergePostTagLists(primary, [])).toBe(primary);
+  });
+
+  it('keeps a label only the secondary carries', () => {
+    const merged = mergePostTagLists([tag('✌️', ['a'])], [tag('☮️', ['b'])]);
+
+    expect(merged.map((t) => t.label)).toEqual(['✌️', '☮️']);
+  });
+
+  it('unions the taggers of a label on both ids without duplicates', () => {
+    const merged = mergePostTagLists([tag('✌️', ['a', 'b'])], [tag('✌️', ['b', 'c'])]);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].taggers).toEqual(['a', 'b', 'c']);
+    // Both sides list their complete tagger set, so the union is the exact count.
+    expect(merged[0].taggers_count).toBe(3);
+  });
+
+  it('falls back to the summed totals when a tagger list is truncated', () => {
+    const original: NexusTag = { label: '✌️', taggers: ['a', 'b'], taggers_count: 7, relationship: false };
+    const repost: NexusTag = { label: '✌️', taggers: ['z'], taggers_count: 1, relationship: false };
+
+    const merged = mergePostTagLists([original], [repost]);
+
+    // 5 of the original's 7 taggers are not listed, so the overlap is unknown: the summed
+    // per-id totals are the upper bound.
+    expect(merged[0].taggers_count).toBe(8);
+    expect(merged[0].taggers).toEqual(['a', 'b', 'z']);
+  });
+
+  it('ORs the viewer relationship and leaves the inputs alone', () => {
+    const primary = [tag('true', ['a'], false)];
+    const secondary = [tag('true', ['b'], true)];
+
+    const merged = mergePostTagLists(primary, secondary);
+
+    expect(merged[0].relationship).toBe(true);
+    expect(primary[0].taggers).toEqual(['a']);
+    expect(secondary[0].taggers).toEqual(['b']);
   });
 });

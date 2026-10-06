@@ -18,8 +18,9 @@ const EMPTY_TAGS: NexusTag[] = [];
 
 /**
  * Union of two tag lists by label. Taggers are unioned without duplicates and `relationship` is
- * the OR. A label on both sides counts `max(summed, tagger union)`, so a tagger present in both
- * truncated lists is never counted twice beyond what the sources report.
+ * the OR. When both sides report their complete tagger list the union is the exact count; when
+ * either list is truncated by Nexus the same tagger may be on both ids, so the summed per-id
+ * totals are the best available upper bound.
  */
 export function mergePostTagLists(primary: NexusTag[], secondary: NexusTag[]): NexusTag[] {
   if (secondary.length === 0) return primary;
@@ -32,10 +33,13 @@ export function mergePostTagLists(primary: NexusTag[], secondary: NexusTag[]): N
       continue;
     }
     const taggers = Array.from(new Set([...existing.taggers, ...tag.taggers]));
+    const bothComplete = existing.taggers.length === existing.taggers_count && tag.taggers.length === tag.taggers_count;
     merged.set(tag.label, {
       label: tag.label,
       taggers,
-      taggers_count: Math.max(existing.taggers_count + tag.taggers_count, taggers.length),
+      taggers_count: bothComplete
+        ? taggers.length
+        : Math.max(existing.taggers_count + tag.taggers_count, taggers.length),
       relationship: existing.relationship || tag.relationship,
     });
   }
