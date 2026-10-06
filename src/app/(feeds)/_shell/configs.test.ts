@@ -32,6 +32,8 @@ describe('tryResolveFeedsShellConfig', () => {
     expect(config?.feedVariant).toBe(TIMELINE_FEED_VARIANT.HOME);
     expect(config?.showRightMobileButton).toBeUndefined();
     expect(config?.rightDrawerContent).toBeDefined();
+    expect(config?.rightDrawerContentMobile).toBeDefined();
+    expect(config?.classNameRightDrawer).toBe('w-64 p-6 sm:w-64 sm:p-6');
     expect(config?.hasGradientBackground).toBe(false);
     expect(config?.classNameMobileHeader).toBe('pb-0');
   });
@@ -41,6 +43,8 @@ describe('tryResolveFeedsShellConfig', () => {
     expect(config).not.toBeNull();
     expect(config?.feedVariant).toBe(TIMELINE_FEED_VARIANT.CUSTOM);
     expect(config?.rightDrawerContent).toBeDefined();
+    expect(config?.rightDrawerContentMobile).toBeDefined();
+    expect(config?.classNameRightDrawer).toBe('w-64 p-6 sm:w-64 sm:p-6');
     expect(config?.hasGradientBackground).toBe(false);
     expect(config?.classNameMobileHeader).toBe('pb-0');
   });
@@ -50,6 +54,8 @@ describe('tryResolveFeedsShellConfig', () => {
     expect(config).not.toBeNull();
     expect(config?.feedVariant).toBe(TIMELINE_FEED_VARIANT.SEARCH);
     expect(config?.showRightMobileButton).toBe(false);
+    expect(config?.rightDrawerContentMobile).toBeUndefined();
+    expect(config?.classNameRightDrawer).toBeUndefined();
   });
 
   it('returns null for the intercepted-post pathname', () => {
