@@ -30,6 +30,29 @@ exports[`HomeFeedRightDrawer > matches snapshot 1`] = `
 </div>
 `;
 
+exports[`HomeFeedRightDrawerMobile - Snapshots > matches snapshot with the phone sidebar content 1`] = `
+<div
+  class="flex w-(--filter-bar-width) flex-col gap-6"
+  data-testid="container"
+>
+  <div
+    data-testid="who-to-follow"
+  >
+    WhoToFollowSidebar
+  </div>
+  <div
+    data-testid="hot-tags"
+  >
+    HotTags
+  </div>
+  <div
+    data-testid="feedback-card"
+  >
+    FeedbackCard
+  </div>
+</div>
+`;
+
 exports[`HomeFeedRightSidebar > matches snapshot 1`] = `
 <div>
   <div
