@@ -32,6 +32,7 @@ const whoToFollowPageParams = {
   refillThreshold: WHO_TO_FOLLOW_PAGE_SIZE,
   includeRelationships: true,
   excludeFollowing: true,
+  showAll: true,
 };
 
 const seedCachedStream = async (length: number) => {
@@ -128,18 +129,19 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
     expect(shownIds(result)).toEqual(RECOMMENDED.slice(0, WHO_TO_FOLLOW_PAGE_SIZE));
   });
 
-  it('fills in for followed users from the cached tail without asking Nexus', async () => {
+  it('shows a cached row that grew past the page size whole, minus followed users, without asking Nexus', async () => {
     await seedCachedStream(35);
     await markFollowed(3);
 
     const { result } = renderHook(() => useUserStream(whoToFollowPageParams));
 
     await waitFor(() => {
-      expect(result.current.users).toHaveLength(WHO_TO_FOLLOW_PAGE_SIZE);
+      expect(result.current.users).toHaveLength(32);
     });
+    await act(async () => {});
 
     expect(fetchStream).not.toHaveBeenCalled();
-    expect(shownIds(result)).toEqual(RECOMMENDED.slice(3, 3 + WHO_TO_FOLLOW_PAGE_SIZE));
+    expect(shownIds(result)).toEqual(RECOMMENDED.slice(3, 35));
   });
 
   it('asks Nexus once, within the limit, when the cached row does not cover the followed users', async () => {
@@ -149,11 +151,11 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
     const { result } = renderHook(() => useUserStream(whoToFollowPageParams));
 
     await waitFor(() => {
-      expect(result.current.users).toHaveLength(WHO_TO_FOLLOW_PAGE_SIZE);
+      expect(result.current.users).toHaveLength(34);
     });
 
     expect(requestedPages()).toEqual([{ skip: 25, limit: NEXUS_USER_STREAM_MAX_LIMIT }]);
-    // The cached row minus the followed users, then the sampled ids the row did not hold yet.
-    expect(shownIds(result)).toEqual([...RECOMMENDED.slice(6, 25), ...RECOMMENDED.slice(25, 36)]);
+    // The cached row minus the followed users, then every sampled id the row did not hold yet.
+    expect(shownIds(result)).toEqual([...RECOMMENDED.slice(6, 25), ...RECOMMENDED.slice(25, 40)]);
   });
 });

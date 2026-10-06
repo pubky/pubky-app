@@ -65,6 +65,7 @@ export function useUserStream({
   includeRelationships = false,
   includeTags = false,
   excludeFollowing = false,
+  showAll = false,
   preserveFollowedUserIds = EMPTY_PRESERVED_FOLLOWED_USER_IDS,
   bufferSize,
   refillThreshold,
@@ -194,7 +195,7 @@ export function useUserStream({
   }
 
   const eligibleCount = eligible.length;
-  const users = excludeFollowing ? eligible.slice(0, effectiveLimit) : eligible;
+  const users = excludeFollowing && !showAll ? eligible.slice(0, effectiveLimit) : eligible;
 
   // Track whether the live queries that feed eligibility have settled for the current `userIds`.
   // `useLiveQuery` yields `undefined` synchronously and only resolves on the next tick, so we use
@@ -226,6 +227,22 @@ export function useUserStream({
       }
 
       try {
+        // A failed read must not pass for the cached slice before it (see the refill effect)
+        lastSliceFromCacheRef.current = false;
+
+        // Showing every eligible user starts from the whole cached row, which can have grown past
+        // one slice over earlier visits; a shorter row takes the slice read below instead.
+        if (isInitial && showAll) {
+          const cachedIds = await StreamUserController.getStreamUserIds(streamId);
+          if (cachedIds.length > fetchLimit) {
+            await StreamUserController.getOrFetchUsers({ userIds: cachedIds });
+            lastSliceFromCacheRef.current = true;
+            setUserIds(cachedIds);
+            skipRef.current = cachedIds.length;
+            return;
+          }
+        }
+
         const readStreamSlice = options.forceNetwork
           ? StreamUserController.refreshStreamSlice
           : StreamUserController.getOrFetchStreamSlice;
@@ -272,7 +289,7 @@ export function useUserStream({
         }
       }
     },
-    [streamId, fetchLimit, excludeFollowing],
+    [streamId, fetchLimit, excludeFollowing, showAll],
   );
 
   const refetch = useCallback(async () => {

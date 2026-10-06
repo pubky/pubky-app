@@ -17,8 +17,8 @@ const LOAD_MORE_SKELETON_COUNT = 2;
  * WhoToFollow
  *
  * Main content component for the Who To Follow page.
- * Displays one list of recommended users: Nexus serves `recommended` as a random sample of a
- * small per-user pool and ignores `skip`, so there is no stream to page through.
+ * Displays every recommended user the cached stream holds, in one list: Nexus serves `recommended`
+ * as a random sample of a small per-user pool and ignores `skip`, so there is no stream to page.
  */
 export function WhoToFollow() {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
@@ -31,6 +31,7 @@ export function WhoToFollow() {
     includeRelationships: true,
     includeCounts: true,
     excludeFollowing: true,
+    showAll: true,
     preserveFollowedUserIds: preservedFollowedUserIds,
   });
 

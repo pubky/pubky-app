@@ -212,6 +212,7 @@ describe('WhoToFollow', () => {
       includeRelationships: true,
       includeCounts: true,
       excludeFollowing: true,
+      showAll: true,
       preserveFollowedUserIds: [],
     });
   });

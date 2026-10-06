@@ -4,11 +4,14 @@ import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { useUserStream } from './useUserStream';
 import { DEFAULT_USER_STREAM_BUFFER_SIZE, DEFAULT_USER_STREAM_LIMIT } from './useUserStream.constants';
 
-const { mockUseLiveQuery, mockGetOrFetchStreamSlice, mockRefreshStreamSlice } = vi.hoisted(() => ({
-  mockUseLiveQuery: vi.fn(),
-  mockGetOrFetchStreamSlice: vi.fn(),
-  mockRefreshStreamSlice: vi.fn(),
-}));
+const { mockUseLiveQuery, mockGetOrFetchStreamSlice, mockRefreshStreamSlice, mockGetStreamUserIds } = vi.hoisted(
+  () => ({
+    mockUseLiveQuery: vi.fn(),
+    mockGetOrFetchStreamSlice: vi.fn(),
+    mockRefreshStreamSlice: vi.fn(),
+    mockGetStreamUserIds: vi.fn(),
+  }),
+);
 
 // Mock dexie-react-hooks. The details/relationships queries (the two-argument calls, no default)
 // resolve to a `{ forIds, map }` snapshot tagged with the ids they ran for; tests keep returning
@@ -31,6 +34,8 @@ vi.mock('@/controllers/stream/users/users', () => ({
   StreamUserController: {
     getOrFetchStreamSlice: (...args: unknown[]) => mockGetOrFetchStreamSlice(...args),
     refreshStreamSlice: (...args: unknown[]) => mockRefreshStreamSlice(...args),
+    getStreamUserIds: (...args: unknown[]) => mockGetStreamUserIds(...args),
+    getOrFetchUsers: vi.fn().mockResolvedValue(undefined),
   },
 }));
 vi.mock('@/controllers/user/user', () => ({
@@ -80,6 +85,7 @@ describe('useUserStream', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRefreshStreamSlice.mockResolvedValue({ nextPageIds: [], skip: undefined, isExhausted: true });
+    mockGetStreamUserIds.mockResolvedValue([]);
     // Default mock for useLiveQuery - returns the details map
     mockUseLiveQuery.mockReturnValue(mockUserDetails);
   });
@@ -606,6 +612,66 @@ describe('useUserStream', () => {
         limit: DEFAULT_USER_STREAM_BUFFER_SIZE,
         skip: ids.length + cachedTail.length,
       });
+    });
+
+    it('does not ask Nexus again when the read after a cache hit fails', async () => {
+      const ids = ['user-1', 'user-2', 'user-3'];
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce({ nextPageIds: ids, skip: undefined, isExhausted: false })
+        // Fails only after the loading render, as a real transport error does
+        .mockImplementationOnce(
+          () => new Promise((_, reject) => setTimeout(() => reject(new Error('Nexus unavailable')), 10)),
+        );
+      mockLiveQueryMaps({
+        details: createDetailsMap(ids),
+        relationships: new Map(ids.map((id) => [id, { id, following: false, followed_by: false }])),
+      });
+
+      renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+          refillThreshold: 6,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
+    });
+
+    it('shows the whole cached row at once when asked to show all', async () => {
+      const ids = Array.from({ length: 12 }, (_, i) => `user-${i}`);
+      mockGetStreamUserIds.mockResolvedValue(ids);
+      mockLiveQueryMaps({
+        details: createDetailsMap(ids),
+        relationships: new Map(ids.map((id) => [id, { id, following: false, followed_by: false }])),
+      });
+
+      const { result } = renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 10,
+          bufferSize: 10,
+          refillThreshold: 10,
+          includeRelationships: true,
+          excludeFollowing: true,
+          showAll: true,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.users).toHaveLength(ids.length);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockGetOrFetchStreamSlice).not.toHaveBeenCalled();
+      expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
     });
   });
 });

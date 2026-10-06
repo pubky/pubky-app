@@ -37,6 +37,11 @@ export interface UseUserStreamParams {
   includeTags?: boolean;
   /** Hide users whose local relationship says the viewer already follows them. Default: false */
   excludeFollowing?: boolean;
+  /**
+   * Show every eligible user the stream holds instead of the first `limit`, reading the whole
+   * cached row at once; `limit` then only sets how many to keep available. Default: false
+   */
+  showAll?: boolean;
   /** Followed users to keep visible even when excludeFollowing is enabled. */
   preserveFollowedUserIds?: Pubky[];
   /** Minimum candidate IDs to request/cache per stream fetch. Defaults to the visible limit. */
