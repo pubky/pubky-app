@@ -52,6 +52,17 @@ export function HomeFeedRightDrawer() {
   );
 }
 
+/** Phone feed drawer content; ActiveUsers remains in the tablet and desktop sidebars. */
+export function HomeFeedRightDrawerMobile() {
+  return (
+    <Container overrideDefaults className="flex w-(--filter-bar-width) flex-col gap-6">
+      <WhoToFollowSidebar />
+      <HotTags />
+      <FeedbackCard />
+    </Container>
+  );
+}
+
 // ============================================================================
 // Hot Feed Right Sidebar Components
 // ============================================================================

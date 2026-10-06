@@ -33,6 +33,27 @@ exports[`SideDrawer - Snapshots > matches snapshot with complex children 1`] = `
 </div>
 `;
 
+exports[`SideDrawer - Snapshots > matches snapshot with feed drawer sizing overrides 1`] = `
+<div
+  class="fixed inset-0 z-50"
+>
+  <div
+    class="absolute inset-0 bg-black transition-opacity duration-300 opacity-0"
+  />
+  <div
+    class="fixed top-0 z-50 h-full bg-background shadow-xl md:p-12 transition-transform duration-300 ease-in-out md:w-[385px] right-0 border-l border-border translate-x-full w-64 p-6 sm:w-64 sm:p-6"
+  >
+    <div
+      class="h-full overflow-y-auto"
+    >
+      <div>
+        Feed content
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`SideDrawer - Snapshots > matches snapshot with left position 1`] = `
 <div
   class="fixed inset-0 z-50"
