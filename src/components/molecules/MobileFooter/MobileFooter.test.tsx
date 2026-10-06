@@ -221,25 +221,38 @@ describe('MobileFooter', () => {
 
     const linkPrefetches = vi.mocked(Link).mock.calls.map(([{ href, prefetch }]) => ({ href, prefetch }));
     expect(linkPrefetches).toContainEqual({ href: pathname, prefetch: false });
+    expect(linkPrefetches).toContainEqual({ href: '/search', prefetch: false });
     for (const href of ['/home', '/search', '/hot', '/collections', '/settings/account'].filter(
-      (href) => href !== pathname,
+      (href) => href !== pathname && href !== '/search',
     )) {
       expect(linkPrefetches).toContainEqual({ href, prefetch: undefined });
     }
   });
 
-  it('restores Search prefetch after leaving Search', () => {
-    vi.mocked(usePathname).mockReturnValue('/search');
-    const { rerender } = render(<MobileFooter />);
+  it.each([
+    { pathname: '/home', authenticated: true },
+    { pathname: '/home', authenticated: false },
+    { pathname: '/post/test-author/test-post', authenticated: true },
+    { pathname: '/post/test-author/test-post', authenticated: false },
+  ])(
+    'keeps Search prefetch disabled after navigating to $pathname (authenticated: $authenticated)',
+    ({ pathname, authenticated }) => {
+      vi.mocked(usePathname).mockReturnValue('/search');
+      mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
+      mockIsCoreExploreRoute = true;
+      const { rerender } = render(<MobileFooter />);
 
-    vi.mocked(Link).mockClear();
-    vi.mocked(usePathname).mockReturnValue('/home');
-    rerender(<MobileFooter />);
+      vi.mocked(Link).mockClear();
+      vi.mocked(usePathname).mockReturnValue(pathname);
+      mockIsCoreExploreRoute = pathname === '/home';
+      mockIsPublicRoute = pathname.startsWith('/post/');
+      rerender(<MobileFooter />);
 
-    const linkPrefetches = vi.mocked(Link).mock.calls.map(([{ href, prefetch }]) => ({ href, prefetch }));
-    expect(linkPrefetches).toContainEqual({ href: '/search', prefetch: undefined });
-    expect(linkPrefetches).toContainEqual({ href: '/home', prefetch: false });
-  });
+      const linkPrefetches = vi.mocked(Link).mock.calls.map(([{ href, prefetch }]) => ({ href, prefetch }));
+      expect(linkPrefetches).toContainEqual({ href: '/search', prefetch: false });
+      expect(linkPrefetches).toContainEqual({ href: '/home', prefetch: pathname === '/home' ? false : undefined });
+    },
+  );
 
   it.each([
     { pathname: '/settings/notifications', href: '/settings/account' },
