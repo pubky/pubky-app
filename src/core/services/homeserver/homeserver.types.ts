@@ -5,6 +5,7 @@ import { HttpMethod } from '@/libs/http/http.types';
 export type FetchOptions = {
   method?: HttpMethod;
   body?: string | Uint8Array;
+  cache?: RequestCache;
 };
 
 export type THomeserverSignUpParams = TKeypairParams & {
