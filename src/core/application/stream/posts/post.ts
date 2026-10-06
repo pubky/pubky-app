@@ -24,11 +24,11 @@ import type {
 } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
-import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import {
   isAuthorScopedContentSearchStream,
@@ -439,7 +439,7 @@ export class PostStreamApplication {
    * initial load still rebuilds a row whose head has no details.
    */
   private static async getResolvableMainStreamHeadTimestamp({ streamId }: TStreamIdParams): Promise<number> {
-    const postStream = await PostStreamModel.findById(streamId);
+    const postStream = await this.getLocalStream({ streamId });
     if (!postStream || postStream.stream.length === 0) {
       return FORCE_FETCH_NEW_POSTS;
     }
@@ -1022,7 +1022,7 @@ export class PostStreamApplication {
     // for good: re-fetching can never classify it, and the deleted filter drops it
     // anyway, so flagging it would issue a futile by_ids request on every page load.
     const missingRelationshipsIds = postIds.filter(
-      (_postId, index) => !relationships[index] && details[index]?.content !== DELETED,
+      (_postId, index) => !relationships[index] && !isPostDeleted(details[index]),
     );
     return Array.from(new Set([...missingDetailsIds, ...missingRelationshipsIds]));
   }
