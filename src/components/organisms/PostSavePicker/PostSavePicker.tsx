@@ -15,7 +15,7 @@ import {
 } from '@/atoms/DropdownMenu/DropdownMenu';
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
 import { Typography } from '@/atoms/Typography/Typography';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { COLLECTION_NAME_MAX_CHARACTER_LENGTH } from '@/config/posts';
@@ -52,7 +52,9 @@ type PostSavePickerProps = {
 type SavePickerLayout = 'dropdown' | 'sheet';
 /**
  * - `saved`: the viewer bookmarked the post or holds it in one of their own collections (brand icon).
- * - `collected`: only other users' collections curate it (foreground icon).
+ * - `collected`: only other users' collections curate it (foreground icon). Own membership is
+ *   read from the viewer's cached authored collections, so an own collection beyond the pages
+ *   loaded so far reads as `collected` until the picker pages it in.
  * - `default`: nothing curates it.
  */
 type SaveTriggerIconState = 'default' | 'saved' | 'collected';
@@ -214,10 +216,14 @@ function OtherCollectionRow({ layout, collectionId }: { layout: SavePickerLayout
     );
   }
 
+  // The sheet does not close on its own: a same-route tap (the row for the collection page the
+  // viewer is already on) would otherwise leave it open over the page.
   return (
-    <Link ref={ttlRef} href={href} className={className} data-cy="post-save-other-collection">
-      {content}
-    </Link>
+    <SheetClose asChild>
+      <Link ref={ttlRef} href={href} className={className} data-cy="post-save-other-collection">
+        {content}
+      </Link>
+    </SheetClose>
   );
 }
 

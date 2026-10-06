@@ -423,9 +423,10 @@ export class LocalStreamPostsService {
     // The `collections` guard applies on every path that persists a post response, not only
     // the TTL refresh: notification hydration re-fetches cached posts with `force` and would
     // otherwise accept a count from before a save that landed while its request was in flight.
-    // Its fetch boundary is the TTL path's explicit stamp, else the time the query layer
-    // recorded for this response; a response it did not time accepts the Nexus count.
-    const collectionsGuardAt = refreshGuard?.fetchStartedAt ?? getNexusResponseStartedAt(posts);
+    // Its fetch boundary is the TTL path's explicit stamp, else the request start the tag
+    // guard resolved above (the time the query layer recorded for this response, or the one
+    // bootstrap passes for its nested page); a response nobody timed accepts the Nexus count.
+    const collectionsGuardAt = refreshGuard?.fetchStartedAt ?? tagGuard.validatedAt;
     await db.transaction(
       'rw',
       [
@@ -454,12 +455,12 @@ export class LocalStreamPostsService {
             return;
           }
           if (!existing) return;
+          // On the TTL path `collectionsGuardAt` is `refreshGuard.fetchStartedAt`, so this one
+          // check feeds both the count guard and the details guard below.
           const ttlWrittenAt = ttlById.get(incoming.id) ?? 0;
-          if (collectionsGuardAt !== undefined && ttlWrittenAt >= collectionsGuardAt) {
-            writtenSinceFetchIds.add(incoming.id);
-          }
+          const writtenSinceFetch = collectionsGuardAt !== undefined && ttlWrittenAt >= collectionsGuardAt;
+          if (writtenSinceFetch) writtenSinceFetchIds.add(incoming.id);
           if (!refreshGuard) return;
-          const writtenSinceFetch = ttlWrittenAt >= refreshGuard.fetchStartedAt;
           const notIndexedAfterLocal = incoming.indexed_at <= existing.indexed_at;
           if (writtenSinceFetch || notIndexedAfterLocal) locallyNewerIds.add(incoming.id);
         });

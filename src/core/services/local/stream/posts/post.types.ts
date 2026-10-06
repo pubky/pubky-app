@@ -62,8 +62,8 @@ export interface TPersistPostsParams {
    * Nexus copy is not indexed after the local one. The check and the writes run
    * in one transaction so a local-first edit cannot slip in between. The local
    * `collections` count is kept on every persistence path, guard or not, for
-   * rows whose TTL was written since the response's request started (see
-   * `persistPosts`).
+   * rows whose TTL was written since the response's request started: this
+   * stamp, else the tag guard's `validatedAt` (see `persistPosts`).
    */
   refreshGuard?: { fetchStartedAt: number };
 }

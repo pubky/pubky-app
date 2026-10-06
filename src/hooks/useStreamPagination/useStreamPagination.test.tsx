@@ -463,6 +463,49 @@ describe('useStreamPagination', () => {
       expect(result.current.hasMore).toBe(true);
     });
 
+    it('reads as loading on the render that enables a stream again after an inert spell', async () => {
+      // A consumer that gates its stream (a closed picker) hands in `undefined`. The next
+      // enable must not show the previous stream's settled `loading: false` beside the
+      // `hasMore: true` that `clearState` reset, or a "Load more" row flashes before the
+      // first page of the new stream is even requested.
+      let streamId: PostStreamId | undefined = mockStreamId;
+      const { result, rerender } = renderHook(() => useStreamPagination({ streamId }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      streamId = undefined;
+      rerender();
+      expect(result.current.loading).toBe(false);
+      expect(result.current.hasMore).toBe(false);
+
+      // Reopen, and close again before the first page of that lifetime lands: the page is
+      // stale by then and must neither settle `loading` nor show up on the next reopen.
+      const stalePage = Promise.withResolvers<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValueOnce(stalePage.promise);
+      streamId = mockStreamId;
+      rerender();
+      expect(result.current.loading).toBe(true);
+      await waitFor(() => expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(2));
+      streamId = undefined;
+      rerender();
+      await act(async () => {
+        stalePage.resolve({ nextPageIds: ['stale'], nextCursor: 1, reachedEnd: true });
+      });
+
+      const freshPage = Promise.withResolvers<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValueOnce(freshPage.promise);
+      streamId = mockStreamId;
+      rerender();
+      expect(result.current.loading).toBe(true);
+      expect(result.current.hasMore).toBe(true);
+      expect(result.current.postIds).toEqual([]);
+      await act(async () => {
+        freshPage.resolve({ nextPageIds: mockPostIds, nextCursor: 2, reachedEnd: false });
+      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.postIds).toEqual(mockPostIds);
+      expect(result.current.hasMore).toBe(true);
+    });
+
     it('should accept custom limit parameter', async () => {
       const customLimit = 50;
       renderHook(() =>

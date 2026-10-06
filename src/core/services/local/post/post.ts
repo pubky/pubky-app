@@ -215,6 +215,9 @@ export class LocalPostService {
       });
       Logger.debug('Post edited successfully', { compositePostId });
     } catch (error) {
+      // A model failure is already an AppError with its own code and context:
+      // rethrow it unchanged (docs/error-handling.md); wrap only raw failures.
+      if (isAppError(error)) throw error;
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to edit post', {
         service: ErrorService.Local,
         operation: 'edit',
@@ -404,6 +407,9 @@ export class LocalPostService {
         },
       );
     } catch (error) {
+      // A model failure is already an AppError with its own code and context:
+      // rethrow it unchanged (docs/error-handling.md); wrap only raw failures.
+      if (isAppError(error)) throw error;
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to save post', {
         service: ErrorService.Local,
         operation: 'create',
@@ -450,7 +456,12 @@ export class LocalPostService {
           // released its curated memberships already. Diffing from that stale
           // `existing` would take the items' `collections` count below the truth.
           const current = await PostDetailsModel.findById(compositePostId);
-          if (!current || isPostDeleted(current)) return;
+          if (!current || isPostDeleted(current)) {
+            Logger.warn('[LocalPostService.delete] post tombstoned by a concurrent delete, skipping', {
+              compositePostId,
+            });
+            return;
+          }
           await PostDetailsModel.update(compositePostId, { content: DELETED, deleted: true });
           await Promise.all([
             // The tombstone is a local write like any other: stamp its TTL.
@@ -474,8 +485,6 @@ export class LocalPostService {
     }
 
     // Hard delete - proceed even if postCounts missing (treat as not linked)
-    let alreadyDeleted = false;
-
     try {
       await db.transaction(
         'rw',
@@ -494,7 +503,9 @@ export class LocalPostService {
           // delete that tombstoned the row first already ran every decrement below.
           const postDetails = await PostDetailsModel.findById(compositePostId);
           if (isPostDeleted(postDetails)) {
-            alreadyDeleted = true;
+            Logger.warn('[LocalPostService.delete] post tombstoned by a concurrent delete, skipping', {
+              compositePostId,
+            });
             return;
           }
           const postRelationships = await PostRelationshipsModel.findById(compositePostId);
@@ -574,12 +585,11 @@ export class LocalPostService {
           await Promise.all(ops);
         },
       );
-
-      if (alreadyDeleted) {
-        Logger.warn('[LocalPostService.delete] post tombstoned by a concurrent delete, skipping', { compositePostId });
-      }
       return false;
     } catch (error) {
+      // A model failure is already an AppError with its own code and context:
+      // rethrow it unchanged (docs/error-handling.md); wrap only raw failures.
+      if (isAppError(error)) throw error;
       throw Err.database(DatabaseErrorCode.DELETE_FAILED, 'Failed to delete post', {
         service: ErrorService.Local,
         operation: 'delete',

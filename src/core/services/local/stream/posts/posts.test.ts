@@ -711,6 +711,20 @@ describe('LocalStreamPostsService', () => {
         expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
       });
 
+      it('keeps a collections count written since a bootstrap request started (start passed via the tag guard)', async () => {
+        // Bootstrap persists `bootstrapData.posts`, a nested page the query layer never timed:
+        // its request start arrives as `tagGuard.validatedAt` instead.
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt });
+        await PostCountsModel.table.put(localCounts);
+
+        await LocalStreamPostsService.persistPosts({
+          posts: [nexusCopy(BASE_TIMESTAMP + 20_000)],
+          tagGuard: { validatedAt: fetchStartedAt },
+        });
+
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(3);
+      });
+
       it('accepts the response count when the query layer recorded no request start', async () => {
         await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt });
         await PostCountsModel.table.put(localCounts);

@@ -496,8 +496,11 @@ export function useStreamPagination({
     if (!streamId) {
       // Inert: no stream to load. `clearState` still invalidates an in-flight
       // load from a previously active stream so its late response cannot land
-      // on the next one.
+      // on the next one. `loading` is re-armed like on a first mount so the
+      // render that enables the next stream reads as loading, not as the
+      // previous stream's settled flags beside `clearState`'s `hasMore: true`.
       clearState();
+      setLoading(true);
       return;
     }
 

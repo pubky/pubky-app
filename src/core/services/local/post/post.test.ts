@@ -353,6 +353,21 @@ describe('LocalPostService', () => {
       vi.spyOn(PostDetailsModel, 'create').mockImplementation(originalCreate);
     });
 
+    it('rethrows a model AppError unchanged instead of wrapping it', async () => {
+      const modelError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to create post details', {
+        service: ErrorService.Local,
+        operation: 'create',
+        context: { table: 'post_details', id: testData.fullPostId1 },
+      });
+      const spy = vi.spyOn(PostDetailsModel, 'create').mockRejectedValueOnce(modelError);
+
+      try {
+        await expect(LocalPostService.create(createSaveParams('Will fail'))).rejects.toBe(modelError);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
     it('should touch post TTL when creating a root post', async () => {
       await setupUserCounts(testData.authorPubky);
 
@@ -1033,6 +1048,20 @@ describe('LocalPostService', () => {
       expect(await collectionsCount(itemA)).toBe(0);
     });
 
+    it('restores the curated counts when an edit is rolled back to the previous envelope', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 1 } });
+
+      // `PostApplication.commitEdit` rolls a failed homeserver PUT back by editing the
+      // original envelope in again: the same diff runs in reverse and undoes the bump.
+      await LocalPostService.edit({ compositePostId: collectionId, content: collectionEnvelope([itemA, itemB]) });
+      expect(await collectionsCount(itemB)).toBe(1);
+      await LocalPostService.edit({ compositePostId: collectionId, content: collectionEnvelope([itemA]) });
+
+      expect(await collectionsCount(itemA)).toBe(1);
+      expect(await collectionsCount(itemB)).toBe(0);
+    });
+
     it('does not read a non-collection edit as an envelope', async () => {
       await setupExistingPost(testData.fullPostId1, 'Original content');
 
@@ -1109,6 +1138,22 @@ describe('LocalPostService', () => {
         context: { table: 'post_details', id: collectionId },
       });
       const spy = vi.spyOn(PostDetailsModel, 'update').mockRejectedValueOnce(modelError);
+
+      try {
+        await expect(LocalPostService.delete({ compositePostId: collectionId })).rejects.toBe(modelError);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('rethrows a model AppError from the unlinked (hard) delete unchanged', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA]), undefined, 'collection');
+      const modelError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to update post counts', {
+        service: ErrorService.Local,
+        operation: 'update',
+        context: { table: 'post_counts', id: itemA },
+      });
+      const spy = vi.spyOn(PostCountsModel, 'updateCounts').mockRejectedValueOnce(modelError);
 
       try {
         await expect(LocalPostService.delete({ compositePostId: collectionId })).rejects.toBe(modelError);
@@ -1227,6 +1272,24 @@ describe('LocalPostService', () => {
 
         const details = await getSavedPost(testData.fullPostId1);
         expect(details!.content).toBe('Original content');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('rethrows a model AppError unchanged instead of wrapping it', async () => {
+      await setupExistingPost(testData.fullPostId1, 'Original content');
+      const modelError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to update post details', {
+        service: ErrorService.Local,
+        operation: 'update',
+        context: { table: 'post_details', id: testData.fullPostId1 },
+      });
+      const spy = vi.spyOn(PostDetailsModel, 'update').mockRejectedValueOnce(modelError);
+
+      try {
+        await expect(
+          LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'Edited content' }),
+        ).rejects.toBe(modelError);
       } finally {
         spy.mockRestore();
       }

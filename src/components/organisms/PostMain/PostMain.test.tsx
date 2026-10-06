@@ -17,6 +17,7 @@ import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/Timelin
 import { TimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { TimelineCardsPosts } from '@/organisms/Timeline/Posts/CardsPosts/CardsPosts';
 import { TimelineFeedItem } from '@/organisms/Timeline/Posts/FeedItem/TimelineFeedItem';
+import { idlePostSaveTargets } from '@/test/mocks/usePostSaveTargets';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMain } from './PostMain';
 import { PostMainLayoutProvider } from './PostMainLayoutContext';
@@ -1156,23 +1157,11 @@ describe('PostMain', () => {
       const toggleBookmark = vi.fn();
       const toggleCollection = vi.fn();
       vi.mocked(usePostSaveTargets).mockReturnValue({
+        ...idlePostSaveTargets,
         isBookmarked: true,
-        isBookmarkLoading: false,
-        isBookmarkToggling: false,
         collections: [{ id: 'me:collection', name: 'Saved posts', description: '', isSaved: true, isUpdating: false }],
-        isCollectionsLoading: false,
-        isCreatingCollection: false,
-        hasMoreCollections: false,
-        isCollectionsLoadingMore: false,
-        loadMoreCollections: vi.fn(),
-        otherCollectionIds: [],
-        isOtherCollectionsLoading: false,
-        hasMoreOtherCollections: false,
-        isOtherCollectionsLoadingMore: false,
-        loadMoreOtherCollections: vi.fn(),
         toggleBookmark,
         toggleCollection,
-        createCollectionWithPost: vi.fn(),
       });
       const context: TimelineFeedContextValue = {
         variant,

@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { parseCompositeId } from '@/models/models.utils';
@@ -31,13 +30,6 @@ type UsePostCollectionsResult = {
 };
 
 /**
- * Where the current lifetime of the stream stands: `idle` until the paginator
- * starts its first load, `loading` while that load runs, `settled` after it.
- * Every enable starts a new lifetime.
- */
-type LoadPhase = 'idle' | 'loading' | 'settled';
-
-/**
  * The collections that contain `postId`, read from Nexus's `post_collections`
  * stream (pubky-nexus#1067) through the shared stream layer.
  *
@@ -62,27 +54,10 @@ export function usePostCollections(
     limit: COLLECTIONS_SECTION_PAGE_SIZE,
   });
 
-  // `loading` flips to true only once the paginator's own effect starts the first
-  // load, so the render right after enabling still shows the previous lifetime's
-  // settled flags. Track the lifetime here so `hasMore` is honoured only after a
-  // page of this lifetime came back, even one the stream layer filtered to nothing.
-  const [phase, setPhase] = useState<LoadPhase>('idle');
-  useEffect(() => {
-    if (!enabled) {
-      setPhase('idle');
-      return;
-    }
-    if (loading) {
-      setPhase('loading');
-      return;
-    }
-    setPhase((current) => (current === 'loading' ? 'settled' : current));
-  }, [enabled, loading]);
-
   return {
     collectionIds: postIds,
     isLoading: loading,
-    hasMore: hasMore && phase === 'settled',
+    hasMore,
     isLoadingMore: loadingMore,
     loadMore,
   };

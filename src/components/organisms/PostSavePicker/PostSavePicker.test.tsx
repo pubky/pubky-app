@@ -162,49 +162,49 @@ const resetMockState = () => {
   mockState.isOtherCollectionsLoadingMore = false;
 };
 
+const renderPicker = (feedContext?: TimelineFeedContextValue) => {
+  const createPicker = () => {
+    const picker = (
+      <PostSavePicker
+        postId="author:post1"
+        buttonClassName="border-none shadow-xs"
+        countClassName="text-xs leading-4 font-bold text-muted-foreground"
+      />
+    );
+    return feedContext ? (
+      <TimelineFeedContext.Provider value={feedContext}>{picker}</TimelineFeedContext.Provider>
+    ) : (
+      picker
+    );
+  };
+  const result = render(createPicker());
+  return { ...result, rerenderPicker: () => result.rerender(createPicker()) };
+};
+
+const getTriggerIcon = (container: HTMLElement) => {
+  const icon = container.querySelector('[data-cy="post-save-trigger-icon"]');
+  if (!(icon instanceof HTMLElement)) {
+    throw new Error('Expected post save trigger icon to render');
+  }
+  return icon;
+};
+
+const openPicker = () => {
+  // The accessible name carries the collections count when there is one.
+  const trigger = screen.getByRole('button', { name: /^Save post/ });
+  fireEvent.pointerDown(trigger);
+  fireEvent.click(trigger);
+};
+
+const closePicker = () => {
+  // Escape dismisses the Radix dropdown, which drives onOpenChange(false).
+  fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape', code: 'Escape' });
+};
+
 describe('PostSavePicker', () => {
   beforeEach(() => {
     resetMockState();
   });
-
-  const renderPicker = (feedContext?: TimelineFeedContextValue) => {
-    const createPicker = () => {
-      const picker = (
-        <PostSavePicker
-          postId="author:post1"
-          buttonClassName="border-none shadow-xs"
-          countClassName="text-xs leading-4 font-bold text-muted-foreground"
-        />
-      );
-      return feedContext ? (
-        <TimelineFeedContext.Provider value={feedContext}>{picker}</TimelineFeedContext.Provider>
-      ) : (
-        picker
-      );
-    };
-    const result = render(createPicker());
-    return { ...result, rerenderPicker: () => result.rerender(createPicker()) };
-  };
-
-  const getTriggerIcon = (container: HTMLElement) => {
-    const icon = container.querySelector('[data-cy="post-save-trigger-icon"]');
-    if (!(icon instanceof HTMLElement)) {
-      throw new Error('Expected post save trigger icon to render');
-    }
-    return icon;
-  };
-
-  const openPicker = () => {
-    // The accessible name carries the collections count when there is one.
-    const trigger = screen.getByRole('button', { name: /^Save post/ });
-    fireEvent.pointerDown(trigger);
-    fireEvent.click(trigger);
-  };
-
-  const closePicker = () => {
-    // Escape dismisses the Radix dropdown, which drives onOpenChange(false).
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape', code: 'Escape' });
-  };
 
   it('opens the desktop save menu with bookmarks and collections', async () => {
     renderPicker();
@@ -375,6 +375,10 @@ describe('PostSavePicker', () => {
     const link = (await screen.findByText('Bitcoin Industry')).closest('a');
     expect(link).toHaveAttribute('href', `/collections/${OTHER_AUTHOR}/collection-a`);
     expect(link).not.toHaveAttribute('role', 'menuitem');
+
+    // A same-route tap keeps the page mounted, so the row closes the sheet itself.
+    fireEvent.click(link!);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('toggles bookmark and collection targets from the desktop menu', async () => {
@@ -639,6 +643,12 @@ describe('PostSavePicker', () => {
 
     expect(mockState.resumeAutoLoad).toHaveBeenCalledTimes(1);
   });
+});
+
+describe('PostSavePicker - Snapshots', () => {
+  beforeEach(() => {
+    resetMockState();
+  });
 
   it('matches desktop picker snapshot when open', async () => {
     renderPicker();
@@ -677,9 +687,9 @@ describe('PostSavePicker - Mobile Snapshots', () => {
   });
 
   it('matches snapshot on mobile viewport', async () => {
-    render(<PostSavePicker postId="author:post1" buttonClassName="border-none shadow-xs" />);
+    renderPicker();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save post' }));
+    openPicker();
 
     await screen.findByText('Bookmarks');
 
