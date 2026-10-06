@@ -139,8 +139,8 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
 }));
 
 vi.mock('../../ClickableTagsList/ClickableTagsList', () => ({
-  ClickableTagsList: ({ taggedId }: { taggedId: string }) => (
-    <div data-testid="clickable-tags-list" data-tagged-id={taggedId} />
+  ClickableTagsList: ({ taggedId, mergeTaggedId }: { taggedId: string; mergeTaggedId?: string }) => (
+    <div data-testid="clickable-tags-list" data-tagged-id={taggedId} data-merge-tagged-id={mergeTaggedId} />
   ),
 }));
 
@@ -811,6 +811,11 @@ describe('PostMainListRow', () => {
     // The row still renders the repost card; only the interaction target moves.
     expect(screen.getByTestId('post-content')).toHaveAttribute('data-post-id', 'author:post');
     expect(screen.getByTestId('post-actions-bar')).toHaveAttribute('data-post-id', 'original-author:original-post');
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute(
+      'data-tagged-id',
+      'original-author:original-post',
+    );
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-merge-tagged-id', 'author:post');
     fireEvent.click(screen.getByTestId('reply-button'));
     fireEvent.click(screen.getByTestId('repost-button'));
     fireEvent.click(screen.getByTestId('tag-button'));

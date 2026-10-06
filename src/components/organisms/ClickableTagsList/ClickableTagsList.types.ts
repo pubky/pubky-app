@@ -8,6 +8,8 @@ export interface ClickableTagsListProps {
   taggedId: string;
   /** The kind of the tagged entity */
   taggedKind: TagKind;
+  /** Optional second entity whose tags merge into the list (read-only; writes go to `taggedId`) */
+  mergeTaggedId?: string;
   /** Optional: pre-loaded tags (if not provided, will fetch from IndexedDB) */
   tags?: NexusTag[];
   /** Maximum tag count shared by the display list and add-tag input. */

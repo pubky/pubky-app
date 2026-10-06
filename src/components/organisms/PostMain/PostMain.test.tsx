@@ -92,6 +92,7 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
   return {
     ClickableTagsList: ({
       taggedId,
+      mergeTaggedId,
       taggedKind,
       showCount: _showCount,
       showInput: _showInput,
@@ -99,6 +100,7 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
       addMode: _addMode,
     }: {
       taggedId: string;
+      mergeTaggedId?: string;
       taggedKind: unknown;
       showCount?: boolean;
       showInput?: boolean;
@@ -109,6 +111,7 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
       <div
         data-testid="clickable-tags-list"
         data-tagged-id={taggedId}
+        data-merge-tagged-id={mergeTaggedId}
         data-tagged-kind={String(taggedKind)}
         data-show-add-button={String(_showAddButton)}
       >
@@ -1251,6 +1254,7 @@ describe('PostMain', () => {
     expect(screen.queryByTestId('repost-header')).not.toBeInTheDocument();
     expect(screen.getByTestId('post-header')).toHaveTextContent('PostHeader other-user:repost-1');
     expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-tagged-id', 'author:original-1');
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-merge-tagged-id', 'other-user:repost-1');
     expect(screen.getByTestId('post-actions')).toHaveTextContent('Actions author:original-1');
 
     fireEvent.click(screen.getByTestId('tag-button'));

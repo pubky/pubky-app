@@ -64,6 +64,7 @@ export function PostInlineTagsActions({
       ) : (
         <ClickableTagsList
           taggedId={postId}
+          mergeTaggedId={tagsMergePostId}
           taggedKind={TagKind.POST}
           maxTagLength={POST_TAGS_MAX_LENGTH}
           maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}

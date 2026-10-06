@@ -43,6 +43,7 @@ import type { ClickableTagsListProps } from './ClickableTagsList.types';
 export function ClickableTagsList({
   taggedId,
   taggedKind,
+  mergeTaggedId,
   tags: providedTags,
   maxTags,
   maxVisibleTags,
@@ -73,7 +74,7 @@ export function ClickableTagsList({
     isViewerTagger,
     handleTagToggle,
     handleTagAdd,
-  } = useEntityTags(taggedId, taggedKind, { providedTags });
+  } = useEntityTags(taggedId, taggedKind, { providedTags, mergeEntityId: mergeTaggedId });
 
   // Enrich tags with user details for proper avatar fallbacks
   const { enrichedTags } = useEnrichedTags(fetchedTags);

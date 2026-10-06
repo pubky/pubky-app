@@ -240,6 +240,7 @@ export function PostMainListRow({
           {!tagsExpanded ? (
             <ClickableTagsList
               taggedId={interactionPostId}
+              mergeTaggedId={tagsMergePostId}
               taggedKind={TagKind.POST}
               maxTags={1}
               showCount={true}

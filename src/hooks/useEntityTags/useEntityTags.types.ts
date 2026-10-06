@@ -6,6 +6,11 @@ export interface UseEntityTagsOptions {
   viewerId?: string;
   /** Tags to use instead of fetching (for controlled mode) */
   providedTags?: NexusTag[];
+  /**
+   * POST only: second post whose cached tags merge into the list (a contentless repost beside
+   * its original). Writes still target `entityId`.
+   */
+  mergeEntityId?: string | null;
 }
 
 export interface UseEntityTagsResult {
