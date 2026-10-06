@@ -168,6 +168,16 @@ docker run -p 3000:3000 \
 
 Omit the `PUBKY_RUNTIME_SENTRY_*` lines to run without Sentry, and the `PUBKY_RUNTIME_PULSE_*` lines to run without Pulse (no consent banner, no analytics controls). Set both Pulse values together: a client key with no endpoint sends to Pubky's hosted ingest host. Other public runtime values are optional/defaulted; set them only when you need to tune polling/TTL behavior, branding/metadata, analytics, moderation, Prelude, exchange rates, or external links. Note for Sentry users: the image ships without browser source maps (Debug IDs only) — see the source-maps section of [docs/sentry.md](sentry.md).
 
+### Profile indexing protection
+
+`PUBKY_RUNTIME_PROFILE_LOCAL_EDIT_TTL_MS` is an optional positive integer in milliseconds
+(default `300000`). It protects a locally saved profile while Nexus catches up. Five minutes
+matches the existing tag-mutation grace period; it is not a measured indexing SLA. The window
+is independent of `PUBKY_RUNTIME_TTL_USER_MS`, so a deployer can extend it without changing the
+normal refresh frequency. Rejected refreshes during that window use `PUBKY_RUNTIME_TTL_RETRY_DELAY_MS`.
+A longer window also delays accepting conflicting edits from another device. Matching, newer
+Nexus data requested after the local edit can confirm it early; expiry alone does not prove indexing.
+
 ### Homeserver mute list sync
 
 Cross-session mute alignment uses the `@synonymdev/pubky` homeserver **event stream** (SSE). Debouncing uses a fixed delay in [`src/config/mute-sync.ts`](src/config/mute-sync.ts) (`MUTE_SYNC_DEBOUNCE_MS`), not an environment variable.

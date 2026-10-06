@@ -5,6 +5,8 @@
 
 import validationLimits from 'pubky-app-specs/validationLimits.json';
 
+export { getProfileLocalEditTtlMs } from '@/libs/runtime-config/runtime-config';
+
 /** Minimum character length for user name */
 export const USER_NAME_MIN_LENGTH = validationLimits.userNameMinLength;
 

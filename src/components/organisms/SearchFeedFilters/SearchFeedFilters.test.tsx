@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { REACH } from '@/stores/home/home.types';
+import { useSearchStore } from '@/stores/search/search.store';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { SearchFeedFilters } from './SearchFeedFilters';
 
@@ -53,11 +55,35 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   }),
 }));
 
+beforeEach(() => useSearchStore.getState().reset());
+
 describe('SearchFeedFilters', () => {
   beforeEach(() => {
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     mocks.searchParams = new URLSearchParams({ tags: 'bitcoin' });
     mocks.isPhoneViewport = false;
   });
+
+  afterEach(() => {
+    vi.mocked(window.scrollTo).mockRestore();
+  });
+
+  it.each(['sidebar', 'drawer', 'mobile'] as const)(
+    'shows the Search choices in the %s and changes only Search',
+    (variant) => {
+      render(<SearchFeedFilters variant={variant} />);
+      const reach = screen.getByTestId('filter-reach-radiogroup');
+      expect(
+        within(reach)
+          .getAllByRole('radio')
+          .map((radio) => radio.getAttribute('aria-label')),
+      ).toEqual(['All', 'My network', 'Following', 'Friends']);
+      fireEvent.click(within(reach).getByRole('radio', { name: 'Following' }));
+      expect(useSearchStore.getState().reach).toBe(REACH.FOLLOWING);
+      expect(mocks.homeState.setReach).not.toHaveBeenCalled();
+      expect(within(reach).getByRole('radio', { name: 'Following' })).toHaveAttribute('aria-checked', 'true');
+    },
+  );
 
   it('keeps Sort for tag search', () => {
     render(<SearchFeedFilters variant="sidebar" />);
