@@ -81,6 +81,7 @@ const markFollowed = async (count: number) => {
 
 describe('useUserStream reading the Who to Follow page over a cached stream', () => {
   let fetchStream: MockInstance<typeof NexusUserStreamService.fetch>;
+  let readSlice: MockInstance<typeof StreamUserController.getOrFetchStreamSlice>;
 
   const requestedPages = () =>
     fetchStream.mock.calls.map(([{ params }]) => ({ skip: params.skip, limit: params.limit }));
@@ -90,6 +91,8 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
 
   beforeEach(async () => {
     useAuthStore.setState({ currentUserPubky: VIEWER });
+    // The hook enters every slice read here synchronously, so its call count is exact after a flush
+    readSlice = vi.spyOn(StreamUserController, 'getOrFetchStreamSlice');
     // Nexus answers with a full page sampled from the pool whatever the `skip`: the back of it,
     // which overlaps a longer cached row and extends a shorter one.
     fetchStream = vi
@@ -119,13 +122,21 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
 
     await waitFor(
       () => {
-        expect(result.current.users).toHaveLength(NEXUS_USER_STREAM_MAX_LIMIT);
+        expect(fetchStream).toHaveBeenCalledTimes(2);
+      },
+      { timeout: WAIT_FOR_TIMEOUT_MS },
+    );
+    await waitFor(
+      () => {
+        expect(result.current.isLoadingMore).toBe(false);
       },
       { timeout: WAIT_FOR_TIMEOUT_MS },
     );
     await act(async () => {});
 
     // One page, then one top-up that the sample cannot extend: both within the limit, no third.
+    expect(readSlice).toHaveBeenCalledTimes(2);
+    expect(result.current.users).toHaveLength(NEXUS_USER_STREAM_MAX_LIMIT);
     expect(requestedPages()).toEqual([
       { skip: 0, limit: NEXUS_USER_STREAM_MAX_LIMIT },
       { skip: NEXUS_USER_STREAM_MAX_LIMIT, limit: NEXUS_USER_STREAM_MAX_LIMIT },
@@ -167,7 +178,9 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
     // Flush the refill effect that would follow a short list before asserting it never ran.
     await act(async () => {});
 
+    // A row of exactly one page is served by the slice read; only a longer row is read whole
     expect(refresh).not.toHaveBeenCalled();
+    expect(readSlice).toHaveBeenCalledTimes(1);
     expect(fetchStream).not.toHaveBeenCalled();
     expect(shownIds(result)).toEqual(RECOMMENDED.slice(0, WHO_TO_FOLLOW_PAGE_SIZE));
   });
@@ -267,6 +280,7 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
     );
     await act(async () => {});
 
+    expect(readSlice).toHaveBeenCalledTimes(2);
     expect(fetchStream).not.toHaveBeenCalled();
     expect(shownIds(result)).toEqual([RECOMMENDED[8], RECOMMENDED[9], RECOMMENDED[10]]);
   });
@@ -302,6 +316,7 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
     );
     await act(async () => {});
 
+    expect(readSlice).toHaveBeenCalledTimes(1);
     expect(fetchStream).not.toHaveBeenCalled();
     expect(shownIds(result)).toEqual(RECOMMENDED.slice(0, WHO_TO_FOLLOW_USER_LIMIT));
   });
@@ -320,6 +335,7 @@ describe('useUserStream reading the Who to Follow page over a cached stream', ()
     );
     await act(async () => {});
 
+    expect(readSlice).toHaveBeenCalledTimes(2);
     expect(fetchStream).not.toHaveBeenCalled();
     expect(shownIds(result)).toEqual(RECOMMENDED.slice(5, 5 + STARTER_PACK_SUGGESTIONS_LIMIT));
   });

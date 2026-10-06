@@ -404,6 +404,7 @@ describe('useUserStream', () => {
       });
       await new Promise((resolve) => setTimeout(resolve, 0));
 
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
       expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
     });
 
@@ -478,6 +479,7 @@ describe('useUserStream', () => {
       });
       await new Promise((resolve) => setTimeout(resolve, 0));
 
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
       expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
     });
 
@@ -543,11 +545,9 @@ describe('useUserStream', () => {
     it('makes one bounded refill read when eligible recommendations fall below threshold', async () => {
       const ids = ['user-1', 'user-2', 'user-3'];
       // The read past the first slice finds nothing cached and goes to Nexus (a `skip` comes back)
-      mockGetOrFetchStreamSlice.mockResolvedValue({
-        nextPageIds: ids,
-        skip: ids.length,
-        isExhausted: false,
-      });
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce({ nextPageIds: ids, skip: ids.length, isExhausted: false })
+        .mockResolvedValueOnce({ nextPageIds: ids, skip: ids.length * 2, isExhausted: false });
       mockLiveQueryMaps({
         details: createDetailsMap(ids),
         relationships: new Map(ids.map((id) => [id, { id, following: false, followed_by: false }])),
@@ -733,6 +733,55 @@ describe('useUserStream', () => {
 
       expect(result.current.isLoading).toBe(false);
       expect(result.current.users.map((user) => user.id)).toEqual(['user-2', 'user-3', 'user-5']);
+    });
+
+    it('shows skeletons again for a new stream until its own ids hydrate', async () => {
+      const firstIds = ['user-1', 'user-2', 'user-3'];
+      const secondIds = ['user-4', 'user-5', 'user-6'];
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce({ nextPageIds: firstIds, skip: 3, isExhausted: true })
+        .mockResolvedValueOnce({ nextPageIds: secondIds, skip: 3, isExhausted: true });
+      const relationships = new Map(
+        [...firstIds, ...secondIds].map((id) => [id, { id, following: false, followed_by: false }] as const),
+      );
+      // Details cover both streams; the relationships live query lags behind the stream switch
+      let relationshipsLag = false;
+      let callCount = 0;
+      mockUseLiveQuery.mockImplementation((_querier: unknown, deps: unknown[]) => {
+        const index = callCount % 3;
+        callCount += 1;
+        if (index === 0) return createDetailsMap([...firstIds, ...secondIds]);
+        if (index === 1) return new Map();
+        return { forIds: relationshipsLag ? firstIds : deps[0], map: relationships };
+      });
+
+      const { result, rerender } = renderHook(
+        ({
+          streamId,
+        }: {
+          streamId: typeof UserStreamTypes.RECOMMENDED | typeof UserStreamTypes.TODAY_INFLUENCERS_ALL;
+        }) => useUserStream({ streamId, limit: 3, includeRelationships: true, excludeFollowing: true }),
+        { initialProps: { streamId: UserStreamTypes.RECOMMENDED } },
+      );
+
+      await waitFor(() => {
+        expect(result.current.users.map((user) => user.id)).toEqual(firstIds);
+      });
+
+      relationshipsLag = true;
+      rerender({ streamId: UserStreamTypes.TODAY_INFLUENCERS_ALL });
+      await waitFor(() => {
+        expect(result.current.userIds).toEqual(secondIds);
+      });
+
+      // The new ids are listed but their relationships are not: skeletons, not a stale list
+      expect(result.current.isLoading).toBe(true);
+
+      relationshipsLag = false;
+      rerender({ streamId: UserStreamTypes.TODAY_INFLUENCERS_ALL });
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.users.map((user) => user.id)).toEqual(secondIds);
     });
   });
 });

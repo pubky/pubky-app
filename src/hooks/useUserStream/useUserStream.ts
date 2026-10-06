@@ -45,8 +45,9 @@ interface LiveQuerySnapshot<T> {
  * Hook for fetching users from a user stream (e.g., influencers, recommended).
  * Uses StreamUserController for fetching IDs and useLiveQuery for reactive details.
  *
- * With `excludeFollowing`, followed users are hidden and the list is refilled once from the
- * cached stream beyond the first read, then once from Nexus when that was still short.
+ * With `excludeFollowing`, followed users are hidden and the list is refilled once with the next
+ * slice (from the cache when it holds one, else from Nexus), then once more from Nexus only when
+ * that slice came from the cache and the list is still short.
  *
  * @example
  * ```tsx
@@ -84,9 +85,9 @@ export function useUserStream({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isExhausted, setIsExhausted] = useState(false);
-  // Whether the live queries have settled once since the initial read; only that first wait
-  // shows skeletons, a refill keeps the settled list on screen while its ids hydrate
-  const [hasHydratedOnce, setHasHydratedOnce] = useState(false);
+  // The ids the initial read produced; only their hydration shows skeletons, a refill appends a
+  // new array and keeps the settled list on screen while its ids hydrate
+  const [initialReadIds, setInitialReadIds] = useState<Pubky[] | null>(null);
 
   // Track how far into the stream the reads have gone
   const skipRef = useRef(0);
@@ -231,7 +232,6 @@ export function useUserStream({
         skipRef.current = 0;
         refillStepRef.current = 0;
         setIsExhausted(false);
-        setHasHydratedOnce(false);
       } else {
         setIsLoadingMore(true);
       }
@@ -247,6 +247,7 @@ export function useUserStream({
           if (cachedIds.length > fetchLimit) {
             await StreamUserController.getOrFetchUsers({ userIds: cachedIds });
             lastSliceFromCacheRef.current = true;
+            setInitialReadIds(cachedIds);
             setUserIds(cachedIds);
             skipRef.current = cachedIds.length;
             return;
@@ -276,6 +277,7 @@ export function useUserStream({
 
         // Update user IDs
         if (isInitial) {
+          setInitialReadIds(nextPageIds);
           setUserIds(nextPageIds);
           skipRef.current = nextSkip ?? nextPageIds.length;
         } else if (nextPageIds.length > 0) {
@@ -350,17 +352,13 @@ export function useUserStream({
     userIds.length,
   ]);
 
-  const hydrated = detailsHydrated && relationshipsHydrated;
-  useEffect(() => {
-    if (hydrated && userIds.length > 0) setHasHydratedOnce(true);
-  }, [hydrated, userIds.length]);
-
   // When `excludeFollowing` is on, the visible users depend on the relationships live query.
   // Keep skeletons up until BOTH details and relationships are hydrated after the initial read,
   // otherwise the consumer briefly sees an unfiltered slice of the buffer that gets reshuffled
   // once relationships arrive. A refill append keeps the settled list instead (see
   // `relationshipsCoveredIds`), so the list never drops to skeletons once shown.
-  const isHydrating = excludeFollowing && userIds.length > 0 && !hasHydratedOnce && !hydrated;
+  const isHydrating =
+    excludeFollowing && userIds.length > 0 && userIds === initialReadIds && !(detailsHydrated && relationshipsHydrated);
 
   return {
     users,
