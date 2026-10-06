@@ -47,8 +47,8 @@ describe('useUnlockedList', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 
-  it('merges matching cached and homeserver entries, with the homeserver entry winning', async () => {
-    vi.mocked(LocksController.getUnlockedList).mockResolvedValue([item('LOCK1', 1)]);
+  it('replaces the cached list with the homeserver list', async () => {
+    vi.mocked(LocksController.getUnlockedList).mockResolvedValue([item('LOCK1', 1), item('STALE', 0)]);
     vi.mocked(LocksController.fetchUnlockedList).mockResolvedValue([item('LOCK1', 2)]);
 
     const { result } = renderHook(() => useUnlockedList());

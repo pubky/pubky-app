@@ -1,4 +1,8 @@
 import { db } from '@/database/franky/franky';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { isAppError } from '@/libs/error/error.utils';
 import { withPubkyPrefix } from '@/libs/utils/utils';
 import { LockModel } from '@/models/locks/locks';
 import type { LockModelSchema } from '@/models/locks/locks.schema';
@@ -10,15 +14,19 @@ export class LocalLocksService {
   }
 
   static async upsertDescriptor({ lockId, descriptor }: { lockId: string; descriptor: LockFile }): Promise<void> {
-    await db.transaction('rw', LockModel.table, async () => {
-      const existing = await LockModel.findById(lockId);
-      await LockModel.upsert({
-        ...existing,
-        id: lockId,
-        creator: withPubkyPrefix(descriptor.creator),
-        descriptor,
+    try {
+      await db.transaction('rw', LockModel.table, async () => {
+        const existing = await LockModel.findById(lockId);
+        await LockModel.upsert({
+          ...existing,
+          id: lockId,
+          creator: withPubkyPrefix(descriptor.creator),
+          descriptor,
+        });
       });
-    });
+    } catch (error) {
+      throw this.toWriteError(error, 'upsertDescriptor', lockId);
+    }
   }
 
   /** Preserve an independently cached descriptor when post and descriptor writes race. */
@@ -33,16 +41,20 @@ export class LocalLocksService {
     post: ReplicatedPost;
     unlockedAt?: number;
   }): Promise<void> {
-    await db.transaction('rw', LockModel.table, async () => {
-      const existing = await LockModel.findById(lockId);
-      await LockModel.upsert({
-        ...existing,
-        id: lockId,
-        creator: withPubkyPrefix(existing?.descriptor?.creator ?? creator ?? existing?.creator ?? ''),
-        post,
-        unlockedAt: unlockedAt ?? existing?.unlockedAt,
+    try {
+      await db.transaction('rw', LockModel.table, async () => {
+        const existing = await LockModel.findById(lockId);
+        await LockModel.upsert({
+          ...existing,
+          id: lockId,
+          creator: withPubkyPrefix(existing?.descriptor?.creator ?? creator ?? existing?.creator ?? ''),
+          post,
+          unlockedAt: unlockedAt ?? existing?.unlockedAt,
+        });
       });
-    });
+    } catch (error) {
+      throw this.toWriteError(error, 'upsertPost', lockId);
+    }
   }
 
   static async getUnlockedList(): Promise<TUnlockedListItem[]> {
@@ -51,5 +63,16 @@ export class LocalLocksService {
     return rows
       .filter((row) => row.post !== undefined)
       .map((row) => ({ lockId: row.id, post: row.post!, unlockedAt: row.unlockedAt! }));
+  }
+
+  /** The model calls already throw `Err.database`; only a transaction-level abort arrives raw. */
+  private static toWriteError(error: unknown, operation: string, lockId: string): unknown {
+    if (isAppError(error)) return error;
+    return Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to cache lock content', {
+      service: ErrorService.Local,
+      operation,
+      context: { lockId },
+      cause: error,
+    });
   }
 }

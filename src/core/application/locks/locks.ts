@@ -4,6 +4,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isNotFound, isValidationError, toAppError } from '@/libs/error/error.utils';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
+import type { LockModelSchema } from '@/models/locks/locks.schema';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
@@ -441,6 +442,8 @@ export class LocksApplication {
     const replicatedPost = await this.readReplicatedMarker(readerPubky, lockId, 'fetchReplicatedContent');
     if (!replicatedPost) return null;
 
+    // Read without the creator's lock.json on purpose: once replicated, the reader's copy must stay
+    // readable when the creator's homeserver is down or the lock was deleted.
     const { post } = replicatedPost;
     const refs = post.attachments ?? [];
     const attachments = await this.fetchReplicatedAttachments({ post });
@@ -654,9 +657,25 @@ export class LocksApplication {
     return descriptor;
   }
 
-  static async getLockFile({ lockUrl }: TFetchLockFileParams): Promise<LockFile | null> {
+  private static async getCachedRecord(lockUrl: string): Promise<LockModelSchema | null> {
+    if (!LockContentParser.isValidLockUrl(lockUrl)) return null;
     const lockId = LockContentParser.lockIdFromUrl(lockUrl);
-    return lockId ? ((await LocalLocksService.get(lockId))?.descriptor ?? null) : null;
+    return lockId ? LocalLocksService.get(lockId) : null;
+  }
+
+  /**
+   * The SDK rejects a lock.json whose `creator` is not the URL host; a cache hit skips that read, so
+   * the row's creator is compared with the host here. A row written from a replica marker alone has
+   * no creator yet and passes.
+   */
+  private static async getCreatorRecord(lockUrl: string): Promise<LockModelSchema | null> {
+    const record = await this.getCachedRecord(lockUrl);
+    if (!record?.creator) return record;
+    return stripPubkyPrefix(record.creator) === LockContentParser.creatorFromUrl(lockUrl) ? record : null;
+  }
+
+  static async getLockFile({ lockUrl }: TFetchLockFileParams): Promise<LockFile | null> {
+    return (await this.getCreatorRecord(lockUrl))?.descriptor ?? null;
   }
 
   static async getOrFetchLockFile(params: TFetchLockFileParams): Promise<LockFile | null> {
@@ -665,17 +684,16 @@ export class LocksApplication {
     return cached ?? this.fetchLockFile(params);
   }
 
+  /** No creator check: the reader's copy is theirs, and the network read serves it by lock id as well. */
   static async getUnlockedPost({ lockUrl }: TFetchLockFileParams): Promise<ReplicatedPost | null> {
-    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
-    const record = lockId ? await LocalLocksService.get(lockId) : null;
+    const record = await this.getCachedRecord(lockUrl);
     // A creator's cached original has no unlock marker. Exposing it on the reader path would let
     // someone link my public lock.json under their teaser and render my private post there.
     return record?.unlockedAt !== undefined ? (record.post ?? null) : null;
   }
 
   static async getOwnPost({ lockUrl }: TFetchLockFileParams): Promise<ReplicatedPost | null> {
-    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
-    return lockId ? ((await LocalLocksService.get(lockId))?.post ?? null) : null;
+    return (await this.getCreatorRecord(lockUrl))?.post ?? null;
   }
 
   static async getUnlockedList(): Promise<TUnlockedListItem[]> {

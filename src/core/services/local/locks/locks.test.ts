@@ -1,6 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { clearDatabase } from '@/database/franky/franky.helpers';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { isAppError } from '@/libs/error/error.utils';
 import { LocalLocksService } from '@/services/local/locks/locks';
 import type { ReplicatedPost } from '@/services/locks/locks.types';
 import { mockLockFile } from '@/test-utils/locks';
@@ -47,6 +51,25 @@ describe('LocalLocksService', () => {
     await LocalLocksService.upsertDescriptor({ lockId: 'descriptor-only', descriptor: mockLockFile() });
 
     expect((await LocalLocksService.getUnlockedList()).map((item) => item.lockId)).toEqual(['latest', 'new', 'old']);
+  });
+
+  it('maps a transaction-level failure to Err.database and passes an AppError through', async () => {
+    const spy = vi.spyOn(db, 'transaction').mockRejectedValueOnce(new Error('aborted'));
+    try {
+      const raw = await LocalLocksService.upsertPost({ lockId: 'x', post }).catch((error: unknown) => error);
+      expect(isAppError(raw) && raw.code).toBe(DatabaseErrorCode.WRITE_FAILED);
+
+      const modelError = Err.database(DatabaseErrorCode.QUERY_FAILED, 'model', {
+        service: ErrorService.Local,
+        operation: 'findById',
+      });
+      spy.mockRejectedValueOnce(modelError);
+      await expect(LocalLocksService.upsertDescriptor({ lockId: 'x', descriptor: mockLockFile() })).rejects.toBe(
+        modelError,
+      );
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('is cleared with the other per-user tables on logout', async () => {
