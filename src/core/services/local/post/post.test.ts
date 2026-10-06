@@ -1119,14 +1119,17 @@ describe('LocalPostService', () => {
       await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 2 } });
       const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
 
-      await Promise.all([
-        LocalPostService.delete({ compositePostId: collectionId }),
-        LocalPostService.delete({ compositePostId: collectionId }),
-      ]);
+      try {
+        await Promise.all([
+          LocalPostService.delete({ compositePostId: collectionId }),
+          LocalPostService.delete({ compositePostId: collectionId }),
+        ]);
 
-      expect(await collectionsCount(itemA)).toBe(1);
-      expect(userCountsSpy).toHaveBeenCalledTimes(1);
-      userCountsSpy.mockRestore();
+        expect(await collectionsCount(itemA)).toBe(1);
+        expect(userCountsSpy).toHaveBeenCalledTimes(1);
+      } finally {
+        userCountsSpy.mockRestore();
+      }
     });
 
     it('rethrows a model AppError from the linked delete unchanged', async () => {

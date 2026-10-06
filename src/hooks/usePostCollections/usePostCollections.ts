@@ -20,9 +20,9 @@ type UsePostCollectionsResult = {
   /** Whether the first page is in flight. */
   isLoading: boolean;
   /**
-   * Whether a further page may hold more collections. Only true once the first
-   * page has settled: the paginator reports `hasMore: true` from the moment it
-   * is enabled until its first load, and that must not read as a page.
+   * Whether a further page may hold more collections, as the paginator reports
+   * it: true while the first page is still in flight too, so read it beside
+   * `isLoading` before offering a "Load more" control.
    */
   hasMore: boolean;
   isLoadingMore: boolean;
