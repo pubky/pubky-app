@@ -6,7 +6,12 @@ import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/
 import { PostPageShell } from './PostPageShell';
 
 vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => ({
-  usePostHeaderVisibility: vi.fn(() => ({ showRepostHeader: false, shouldShowPostHeader: true, originalPostId: null })),
+  usePostHeaderVisibility: vi.fn(() => ({
+    showRepostHeader: false,
+    shouldShowPostHeader: true,
+    originalPostId: null,
+    isContentlessRepost: false,
+  })),
 }));
 
 const VALID_COMPOSITE_POST_ID = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
@@ -77,6 +82,7 @@ describe('PostPageShell', () => {
       showRepostHeader: false,
       shouldShowPostHeader: true,
       originalPostId: null,
+      isContentlessRepost: false,
     });
     vi.mocked(usePostMissing).mockReturnValue({
       postMissing: false,
@@ -90,6 +96,7 @@ describe('PostPageShell', () => {
       showRepostHeader: true,
       shouldShowPostHeader: false,
       originalPostId: 'author:original',
+      isContentlessRepost: true,
     });
     render(
       <PostPageShell postId={VALID_COMPOSITE_POST_ID}>

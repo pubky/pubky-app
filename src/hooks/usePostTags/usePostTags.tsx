@@ -17,6 +17,32 @@ import type { UsePostTagsOptions, UsePostTagsResult } from './usePostTags.types'
 const EMPTY_TAGS: NexusTag[] = [];
 
 /**
+ * Union of two tag lists by label. Taggers are unioned without duplicates and `relationship` is
+ * the OR. A label on both sides counts `max(summed, tagger union)`, so a tagger present in both
+ * truncated lists is never counted twice beyond what the sources report.
+ */
+export function mergePostTagLists(primary: NexusTag[], secondary: NexusTag[]): NexusTag[] {
+  if (secondary.length === 0) return primary;
+  const merged = new Map<string, NexusTag>();
+  for (const tag of primary) merged.set(tag.label, tag);
+  for (const tag of secondary) {
+    const existing = merged.get(tag.label);
+    if (!existing) {
+      merged.set(tag.label, tag);
+      continue;
+    }
+    const taggers = Array.from(new Set([...existing.taggers, ...tag.taggers]));
+    merged.set(tag.label, {
+      label: tag.label,
+      taggers,
+      taggers_count: Math.max(existing.taggers_count + tag.taggers_count, taggers.length),
+      relationship: existing.relationship || tag.relationship,
+    });
+  }
+  return Array.from(merged.values());
+}
+
+/**
  * Hook for fetching and managing post tags with pagination.
  * Uses useLiveQuery with PostController for automatic reactivity.
  *
@@ -27,14 +53,23 @@ const EMPTY_TAGS: NexusTag[] = [];
  * writes are reverted back out of IndexedDB.
  */
 export function usePostTags(postId: string | null | undefined, options: UsePostTagsOptions = {}): UsePostTagsResult {
-  const { viewerId: customViewerId } = options;
+  const { viewerId: customViewerId, mergePostId } = options;
 
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (unauthenticated views should still render tags)
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
   const viewerId = customViewerId ?? currentUserId;
 
-  const { record, isLoading, isLoadingMore, loadMore: loadNextPage } = useTagCache('post', postId, viewerId);
+  const {
+    record,
+    isLoading: isPrimaryLoading,
+    isLoadingMore,
+    loadMore: loadNextPage,
+  } = useTagCache('post', postId, viewerId);
+  // Read-only second source; disabled (null id) unless it differs from the primary.
+  const secondaryPostId = mergePostId && mergePostId !== postId ? mergePostId : null;
+  const { record: mergeRecord, isLoading: isMergeLoading } = useTagCache('post', secondaryPostId, viewerId);
+  const isLoading = isPrimaryLoading || (secondaryPostId !== null && isMergeLoading);
 
   // Track zero-tagger tags with their original index for order preservation
   const [zeroTaggerTags, setZeroTaggerTags] = useState<Map<string, { tag: NexusTag; index: number }>>(new Map());
@@ -75,8 +110,10 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     undefined,
   );
 
-  const localTags = record?.tags ?? EMPTY_TAGS;
-  const hasMore = !!record && !record.cache?.exhausted && !!postCounts && localTags.length < postCounts.unique_tags;
+  const primaryTags = record?.tags ?? EMPTY_TAGS;
+  const mergeTags = secondaryPostId ? (mergeRecord?.tags ?? EMPTY_TAGS) : EMPTY_TAGS;
+  const localTags = useMemo(() => mergePostTagLists(primaryTags, mergeTags), [primaryTags, mergeTags]);
+  const hasMore = !!record && !record.cache?.exhausted && !!postCounts && primaryTags.length < postCounts.unique_tags;
 
   // Update tag order map when localTags change (only for new tags)
   useEffect(() => {

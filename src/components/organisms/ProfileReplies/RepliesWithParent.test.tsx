@@ -14,7 +14,12 @@ import { RepliesWithParent } from './RepliesWithParent';
 
 const mockNavigate = vi.hoisted(() => vi.fn());
 vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => ({
-  usePostHeaderVisibility: vi.fn(() => ({ showRepostHeader: false, shouldShowPostHeader: true, originalPostId: null })),
+  usePostHeaderVisibility: vi.fn(() => ({
+    showRepostHeader: false,
+    shouldShowPostHeader: true,
+    originalPostId: null,
+    isContentlessRepost: false,
+  })),
 }));
 
 // Mock dependencies
@@ -145,6 +150,7 @@ describe('RepliesWithParent', () => {
       showRepostHeader: false,
       shouldShowPostHeader: true,
       originalPostId: null,
+      isContentlessRepost: false,
     });
 
     // Mock auth store to provide viewerId
@@ -192,6 +198,7 @@ describe('RepliesWithParent', () => {
         showRepostHeader: true,
         shouldShowPostHeader: false,
         originalPostId: 'author:original',
+        isContentlessRepost: true,
       });
       render(<RepliesWithParent streamId={mockStreamId} />);
       const parent = await screen.findByTestId('post-me:repost');
