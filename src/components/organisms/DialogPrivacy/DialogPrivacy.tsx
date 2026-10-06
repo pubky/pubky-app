@@ -1,5 +1,6 @@
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/atoms/Dialog/Dialog';
+import { DialogInlineTrigger } from '@/atoms/DialogInlineTrigger/DialogInlineTrigger';
 import { Link } from '@/atoms/Link/Link';
 import { List } from '@/atoms/List/List';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -13,25 +14,7 @@ interface DialogPrivacyProps {
 export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
   const baseCSS = 'text-muted-foreground text-base font-normal';
 
-  const handleTriggerKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      event.currentTarget.click();
-    }
-  };
-
-  const defaultTrigger = (
-    <Typography
-      as="span"
-      size="sm"
-      role="button"
-      tabIndex={0}
-      onKeyDown={handleTriggerKeyDown}
-      className="cursor-pointer font-medium text-brand"
-    >
-      Privacy Policy
-    </Typography>
-  );
+  const defaultTrigger = <DialogInlineTrigger>Privacy Policy</DialogInlineTrigger>;
 
   return (
     <Dialog>

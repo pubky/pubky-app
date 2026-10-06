@@ -73,7 +73,7 @@ exports[`LandingFinalSection - Snapshots > matches snapshot with default props 1
       width="151"
     />
     <p
-      class="leading-light text-sm font-medium text-muted-foreground max-w-xl text-center"
+      class="leading-light text-sm font-medium text-muted-foreground [&_a]:underline max-w-xl text-center"
       data-testid="typography"
     >
       By creating a 
@@ -128,7 +128,7 @@ exports[`LandingFinalSection - Snapshots > matches snapshot with default props 1
        
       Pubky is powered by 
       <a
-        class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm underline"
+        class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
         href="https://pubky.org"
         rel="noopener noreferrer"
         target="_blank"

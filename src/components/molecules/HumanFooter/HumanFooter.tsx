@@ -19,7 +19,7 @@ export const HumanFooter = () => {
       </FooterLinks>
       <FooterLinks>
         {'Pubky is powered by '}
-        <Link href={getPubkyCoreLink()} target="_blank" className="underline">
+        <Link href={getPubkyCoreLink()} target="_blank">
           {'Pubky Core'}
         </Link>
         {' and was built by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.'}

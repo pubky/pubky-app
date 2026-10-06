@@ -288,7 +288,7 @@ export const SignInFooter = () => {
   return (
     <FooterLinks className="py-6">
       {'Not able to sign in with '}
-      <Link href="https://pubkyring.app/" target="_blank" rel="noopener noreferrer" className="underline">
+      <Link href="https://pubkyring.app/" target="_blank" rel="noopener noreferrer">
         {'Pubky Ring'}
       </Link>
       {'? Use the recovery phrase or encrypted file to restore your account.'}

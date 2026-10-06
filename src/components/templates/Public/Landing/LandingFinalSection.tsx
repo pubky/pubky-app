@@ -47,7 +47,7 @@ export function LandingFinalSection() {
           {' account, you agree to the'} <DialogTerms />, <DialogPrivacy />
           {', and confirm you are'} <DialogAge />{' '}
           {'Pubky is powered by '}
-          <Link href={getPubkyCoreLink()} target="_blank" className="underline">
+          <Link href={getPubkyCoreLink()} target="_blank">
             {'Pubky Protocol'}
           </Link>
           {' and was built by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.'}

@@ -2,7 +2,7 @@
 
 exports[`Homeserver Components - Snapshots > HomeserverFooter - Snapshots > matches snapshot for default HomeserverFooter 1`] = `
 <p
-  class="leading-light text-sm font-medium text-muted-foreground"
+  class="leading-light text-sm font-medium text-muted-foreground [&_a]:underline"
   data-testid="typography"
 >
   By creating an account on the Pubky homeserver, you agree to the 

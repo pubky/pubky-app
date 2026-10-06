@@ -51,11 +51,11 @@ export const InstallFooter = () => {
   return (
     <FooterLinks className="py-6">
       {'Use '}
-      <Link href={getPubkyRingLink()} target="_blank" className="underline">
+      <Link href={getPubkyRingLink()} target="_blank">
         {'Pubky Ring'}
       </Link>
       {' or any other '}
-      <Link href={getPubkyCoreLink()} target="_blank" className="underline">
+      <Link href={getPubkyCoreLink()} target="_blank">
         {'Pubky Core'}
       </Link>
       {'–powered keychain, or create your keys in the browser (less secure).'}

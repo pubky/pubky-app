@@ -96,16 +96,16 @@ describe('InstallNavigation', () => {
 });
 
 describe('InstallFooter', () => {
-  it('underlines the keychain links so they are not distinguished by colour alone', () => {
+  it('renders the keychain links inside the footer line that underlines its links', () => {
     render(<InstallFooter />);
 
     const ringLink = screen.getByRole('link', { name: 'Pubky Ring' });
     const coreLink = screen.getByRole('link', { name: 'Pubky Core' });
 
     expect(ringLink).toHaveAttribute('target', '_blank');
-    expect(ringLink).toHaveClass('underline');
     expect(coreLink).toHaveAttribute('target', '_blank');
-    expect(coreLink).toHaveClass('underline');
+    expect(ringLink.closest('p')).toHaveClass('[&_a]:underline');
+    expect(coreLink.closest('p')).toBe(ringLink.closest('p'));
   });
 });
 

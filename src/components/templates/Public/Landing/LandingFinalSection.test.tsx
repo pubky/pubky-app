@@ -31,10 +31,11 @@ describe('LandingFinalSection', () => {
     expect(mockPush).toHaveBeenCalledWith('/onboarding/human');
   });
 
-  it('underlines the Pubky Protocol link so it is not distinguished by colour alone', () => {
+  it('renders the Pubky Protocol link inside the legal line that underlines its links', () => {
     render(<LandingFinalSection />);
 
-    expect(screen.getByRole('link', { name: 'Pubky Protocol' })).toHaveClass('underline');
+    const link = screen.getByRole('link', { name: 'Pubky Protocol' });
+    expect(link.closest('p')).toHaveClass('[&_a]:underline');
   });
 
   it.each(LEGAL_DIALOGS)('opens the "$title" dialog when "$trigger" is clicked', async ({ trigger, title }) => {

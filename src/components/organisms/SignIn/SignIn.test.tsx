@@ -245,15 +245,13 @@ vi.mock('@/atoms/Link/Link', () => {
       href,
       target,
       rel,
-      className,
     }: {
       children: React.ReactNode;
       href: string;
       target?: string;
       rel?: string;
-      className?: string;
     }) => (
-      <a data-testid="link" href={href} target={target} rel={rel} className={className}>
+      <a data-testid="link" href={href} target={target} rel={rel}>
         {children}
       </a>
     ),
@@ -825,7 +823,6 @@ describe('SignInFooter', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(link).toHaveTextContent('Pubky Ring');
-    expect(link).toHaveClass('underline');
   });
 
   it('does not render in progress view', () => {

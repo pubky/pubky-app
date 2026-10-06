@@ -122,12 +122,12 @@ exports[`InstallCard - Snapshots > matches snapshot 1`] = `
 
 exports[`InstallFooter - Snapshots > matches snapshot for default InstallFooter 1`] = `
 <p
-  class="leading-light text-sm font-medium text-muted-foreground py-6"
+  class="leading-light text-sm font-medium text-muted-foreground [&_a]:underline py-6"
   data-testid="typography"
 >
   Use 
   <a
-    class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm underline"
+    class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
     href="https://pubkyring.app/"
     rel="noopener noreferrer"
     target="_blank"
@@ -136,7 +136,7 @@ exports[`InstallFooter - Snapshots > matches snapshot for default InstallFooter 
   </a>
    or any other 
   <a
-    class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm underline"
+    class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
     href="https://pubky.org"
     rel="noopener noreferrer"
     target="_blank"

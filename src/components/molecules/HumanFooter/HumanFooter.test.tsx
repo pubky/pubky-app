@@ -50,18 +50,8 @@ vi.mock('@/atoms/FooterLinks/FooterLinks', () => {
 
 vi.mock('@/atoms/Link/Link', () => {
   return {
-    Link: ({
-      children,
-      href,
-      target,
-      className,
-    }: {
-      children: React.ReactNode;
-      href: string;
-      target?: string;
-      className?: string;
-    }) => (
-      <a data-testid="link" href={href} target={target} className={className}>
+    Link: ({ children, href, target }: { children: React.ReactNode; href: string; target?: string }) => (
+      <a data-testid="link" href={href} target={target}>
         {children}
       </a>
     ),
@@ -90,7 +80,6 @@ describe('HumanFooter', () => {
     const pubkyCoreLink = screen.getByText('Pubky Core');
     expect(pubkyCoreLink).toBeInTheDocument();
     expect(pubkyCoreLink.closest('a')).toHaveAttribute('target', '_blank');
-    expect(pubkyCoreLink.closest('a')).toHaveClass('underline');
   });
 
   it('renders the company information', () => {

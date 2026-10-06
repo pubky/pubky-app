@@ -90,7 +90,6 @@ exports[`Home - Snapshots > matches snapshot for HomeFooter with default props 1
      
     Pubky is powered by 
     <a
-      class="underline"
       data-testid="link"
       href="https://github.com/pubky/pubky-core"
       target="_blank"

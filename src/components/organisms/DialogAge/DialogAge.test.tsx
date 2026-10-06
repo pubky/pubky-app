@@ -1,26 +1,43 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogAge } from './DialogAge';
 
-vi.mock('@/atoms/Dialog/Dialog', () => {
+// The Dialog mock predates the keyboard-operable trigger; `dialogMode.real` lets the
+// "with the real Dialog" tests render the actual Radix dialog instead.
+const dialogMode = vi.hoisted(() => ({ real: false }));
+
+vi.mock('@/atoms/Dialog/Dialog', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/atoms/Dialog/Dialog')>();
   return {
-    Dialog: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog">{children}</div>,
-    DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="dialog-content" className={className}>
-        {children}
-      </div>
-    ),
-    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="dialog-header" className={className}>
-        {children}
-      </div>
-    ),
-    DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-    DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-      <div data-testid="dialog-trigger" data-as-child={asChild}>
-        {children}
-      </div>
-    ),
+    Dialog: (props: React.ComponentProps<typeof actual.Dialog>) =>
+      dialogMode.real ? <actual.Dialog {...props} /> : <div data-testid="dialog">{props.children}</div>,
+    DialogContent: (props: React.ComponentProps<typeof actual.DialogContent>) =>
+      dialogMode.real ? (
+        <actual.DialogContent {...props} />
+      ) : (
+        <div data-testid="dialog-content" className={props.className}>
+          {props.children}
+        </div>
+      ),
+    DialogHeader: (props: React.ComponentProps<typeof actual.DialogHeader>) =>
+      dialogMode.real ? (
+        <actual.DialogHeader {...props} />
+      ) : (
+        <div data-testid="dialog-header" className={props.className}>
+          {props.children}
+        </div>
+      ),
+    DialogTitle: (props: React.ComponentProps<typeof actual.DialogTitle>) =>
+      dialogMode.real ? <actual.DialogTitle {...props} /> : <h2 data-testid="dialog-title">{props.children}</h2>,
+    DialogTrigger: (props: React.ComponentProps<typeof actual.DialogTrigger>) =>
+      dialogMode.real ? (
+        <actual.DialogTrigger {...props} />
+      ) : (
+        <div data-testid="dialog-trigger" data-as-child={props.asChild}>
+          {props.children}
+        </div>
+      ),
   };
 });
 
@@ -97,27 +114,28 @@ describe('DialogAge', () => {
     const trigger = screen.getByRole('button', { name: 'over 18 years old.' });
     expect(trigger).toHaveAttribute('tabindex', '0');
   });
+});
 
-  it.each(['Enter', ' '])('activates the default trigger on the "%s" key', (key) => {
-    render(<DialogAge />);
-
-    const trigger = screen.getByRole('button', { name: 'over 18 years old.' });
-    const handleClick = vi.fn();
-    trigger.addEventListener('click', handleClick);
-    fireEvent.keyDown(trigger, { key });
-
-    expect(handleClick).toHaveBeenCalledTimes(1);
+describe('DialogAge with the real Dialog', () => {
+  beforeEach(() => {
+    dialogMode.real = true;
   });
 
-  it('ignores other keys on the default trigger', () => {
+  afterEach(() => {
+    dialogMode.real = false;
+  });
+
+  it('opens the dialog when the default trigger is activated with Enter', async () => {
+    const user = userEvent.setup();
     render(<DialogAge />);
 
     const trigger = screen.getByRole('button', { name: 'over 18 years old.' });
-    const handleClick = vi.fn();
-    trigger.addEventListener('click', handleClick);
-    fireEvent.keyDown(trigger, { key: 'a' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
-    expect(handleClick).not.toHaveBeenCalled();
+    trigger.focus();
+    await user.keyboard('{Enter}');
+
+    expect(screen.getByRole('dialog', { name: 'Age minimum: 18' })).toBeInTheDocument();
   });
 });
 
