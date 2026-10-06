@@ -17,8 +17,9 @@ import type { UsePostTagsOptions, UsePostTagsResult } from './usePostTags.types'
 const EMPTY_TAGS: NexusTag[] = [];
 
 /**
- * Union of two tag lists by label. Taggers are unioned without duplicates and `relationship` is
- * the OR. When both sides report their complete tagger list the union is the exact count; when
+ * Union of two tag lists by label. Taggers are unioned without duplicates. `relationship` comes
+ * from the primary only, because writes target the primary id: a label the viewer holds only on
+ * the secondary is not theirs to toggle here, so it merges as `relationship: false`. When both sides report their complete tagger list the union is the exact count; when
  * either list is truncated by Nexus the same tagger may be on both ids, so the summed per-id
  * totals are the best available upper bound.
  */
@@ -29,7 +30,7 @@ export function mergePostTagLists(primary: NexusTag[], secondary: NexusTag[]): N
   for (const tag of secondary) {
     const existing = merged.get(tag.label);
     if (!existing) {
-      merged.set(tag.label, tag);
+      merged.set(tag.label, { ...tag, relationship: false });
       continue;
     }
     const taggers = Array.from(new Set([...existing.taggers, ...tag.taggers]));
@@ -40,7 +41,7 @@ export function mergePostTagLists(primary: NexusTag[], secondary: NexusTag[]): N
       taggers_count: bothComplete
         ? taggers.length
         : Math.max(existing.taggers_count + tag.taggers_count, taggers.length),
-      relationship: existing.relationship || tag.relationship,
+      relationship: existing.relationship,
     });
   }
   return Array.from(merged.values());
@@ -67,12 +68,17 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   const {
     record,
     isLoading: isPrimaryLoading,
-    isLoadingMore,
-    loadMore: loadNextPage,
+    isLoadingMore: isPrimaryLoadingMore,
+    loadMore: loadNextPrimaryPage,
   } = useTagCache('post', postId, viewerId);
   // Read-only second source; disabled (null id) unless it differs from the primary.
   const secondaryPostId = mergePostId && mergePostId !== postId ? mergePostId : null;
-  const { record: mergeRecord, isLoading: isMergeLoading } = useTagCache('post', secondaryPostId, viewerId);
+  const {
+    record: mergeRecord,
+    isLoading: isMergeLoading,
+    isLoadingMore: isMergeLoadingMore,
+    loadMore: loadNextMergePage,
+  } = useTagCache('post', secondaryPostId, viewerId);
   const isLoading = isPrimaryLoading || (secondaryPostId !== null && isMergeLoading);
 
   // Track zero-tagger tags with their original index for order preservation
@@ -100,24 +106,31 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
 
   // Fetch post counts to derive hasMore from unique_tags count.
   // This avoids defaulting hasMore to true and triggering unnecessary loadMore calls.
-  const postCounts = useLiveQuery(
-    async () => {
-      if (!postId) return null;
-      try {
-        return await PostController.getCounts({ compositeId: postId });
-      } catch (error) {
-        if (!isAppError(error)) Logger.warn('Could not read local post counts', { error });
-        return null;
-      }
-    },
-    [postId],
-    undefined,
-  );
+  const readCounts = async (id: string | null | undefined) => {
+    if (!id) return null;
+    try {
+      return await PostController.getCounts({ compositeId: id });
+    } catch (error) {
+      if (!isAppError(error)) Logger.warn('Could not read local post counts', { error });
+      return null;
+    }
+  };
+  const postCounts = useLiveQuery(() => readCounts(postId), [postId], undefined);
+  const mergeCounts = useLiveQuery(() => readCounts(secondaryPostId), [secondaryPostId], undefined);
 
   const primaryTags = record?.tags ?? EMPTY_TAGS;
   const mergeTags = secondaryPostId ? (mergeRecord?.tags ?? EMPTY_TAGS) : EMPTY_TAGS;
-  const localTags = useMemo(() => mergePostTagLists(primaryTags, mergeTags), [primaryTags, mergeTags]);
-  const hasMore = !!record && !record.cache?.exhausted && !!postCounts && primaryTags.length < postCounts.unique_tags;
+  const localTags = mergePostTagLists(primaryTags, mergeTags);
+  const primaryHasMore =
+    !!record && !record.cache?.exhausted && !!postCounts && primaryTags.length < postCounts.unique_tags;
+  const mergeHasMore =
+    !!secondaryPostId &&
+    !!mergeRecord &&
+    !mergeRecord.cache?.exhausted &&
+    !!mergeCounts &&
+    mergeTags.length < mergeCounts.unique_tags;
+  const hasMore = primaryHasMore || mergeHasMore;
+  const isLoadingMore = isPrimaryLoadingMore || (!!secondaryPostId && isMergeLoadingMore);
 
   // Update tag order map when localTags change (only for new tags)
   useEffect(() => {
@@ -182,8 +195,10 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   // Transform tags with avatar data and relationship status
   const tagsWithAvatars = useMemo(() => transformTagsForViewer(allTags, viewerId), [allTags, viewerId]);
 
+  // Pages the primary first, then the merge source, so each side's labels eventually all show.
   async function loadMore() {
-    if (hasMore) await loadNextPage();
+    if (primaryHasMore) await loadNextPrimaryPage();
+    else if (mergeHasMore) await loadNextMergePage();
   }
 
   const handleTagAdd = useCallback(

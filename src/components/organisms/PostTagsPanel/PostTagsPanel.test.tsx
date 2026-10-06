@@ -261,6 +261,24 @@ describe('PostTagsPanel', () => {
     });
   });
 
+  it('passes the merge source to the tagger list so repost-only taggers expand', () => {
+    mockUsePostTags.mockReturnValue({
+      tags: mockTags,
+      isLoading: false,
+      handleTagAdd: mockHandleTagAdd,
+      handleTagToggle: mockHandleTagToggle,
+      hasMore: false,
+      isLoadingMore: false,
+      loadMore: mockLoadMore,
+    });
+
+    render(<PostTagsPanel postId="author:original" mergePostId="author:repost" widthMode="fit" />);
+
+    expect(mockTaggedList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ taggedId: 'author:original', mergeTaggedId: 'author:repost' }),
+    );
+  });
+
   describe('className prop', () => {
     it('should apply custom className', () => {
       mockUsePostTags.mockReturnValue({

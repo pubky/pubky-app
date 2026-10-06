@@ -108,6 +108,7 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
             <TaggedList
               tags={visibleTags}
               taggedId={postId}
+              mergeTaggedId={mergePostId}
               taggedKind={TagKind.POST}
               hasMore={isCollapsedPreview ? false : hasMore}
               isLoadingMore={isCollapsedPreview ? false : isLoadingMore}

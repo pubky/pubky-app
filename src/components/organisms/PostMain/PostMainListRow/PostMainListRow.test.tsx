@@ -203,13 +203,15 @@ const { mockPanelFocus, mockPanelReveal } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../PostTagsPanel/PostTagsPanel', () => {
-  const PostTagsPanel = React.forwardRef<unknown, { postId: string }>(({ postId }, ref) => {
-    React.useImperativeHandle(ref, () => ({
-      focus: () => mockPanelFocus(),
-      reveal: () => mockPanelReveal(),
-    }));
-    return <div data-testid="post-tags-panel" data-post-id={postId} />;
-  });
+  const PostTagsPanel = React.forwardRef<unknown, { postId: string; mergePostId?: string }>(
+    ({ postId, mergePostId }, ref) => {
+      React.useImperativeHandle(ref, () => ({
+        focus: () => mockPanelFocus(),
+        reveal: () => mockPanelReveal(),
+      }));
+      return <div data-testid="post-tags-panel" data-post-id={postId} data-merge-post-id={mergePostId} />;
+    },
+  );
   PostTagsPanel.displayName = 'PostTagsPanel';
   return { PostTagsPanel };
 });
@@ -777,5 +779,45 @@ describe('PostMainListRow', () => {
     expect(screen.queryByText('Original Author')).not.toBeInTheDocument();
     expect(screen.getByTestId('post-actions-bar')).toHaveAttribute('data-post-id', 'author:post');
     expect(screen.getByTestId('post-list-media-thumbnail')).toHaveAttribute('data-post-id', 'author:post');
+  });
+
+  it('targets the original for tags, replies and reposts of a full-content contentless repost row', () => {
+    mockPostDetails('');
+    vi.mocked(useRepostInfo).mockReturnValue({
+      isRepost: true,
+      repostAuthorId: 'author',
+      isReply: false,
+      isCurrentUserRepost: false,
+      originalPostId: 'original-author:original-post',
+      isLoading: false,
+      hasError: false,
+    });
+    vi.mocked(usePostDetails).mockImplementation((postId) => ({
+      postDetails: createPostDetails(postId ?? '', postId === 'author:post' ? '' : 'Original'),
+      isLoading: false,
+    }));
+    const onReplyClick = vi.fn();
+    const onRepostClick = vi.fn();
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={true}
+        shouldShowPostHeader={true}
+        onReplyClick={onReplyClick}
+        onRepostClick={onRepostClick}
+      />,
+    );
+
+    // The row still renders the repost card; only the interaction target moves.
+    expect(screen.getByTestId('post-content')).toHaveAttribute('data-post-id', 'author:post');
+    expect(screen.getByTestId('post-actions-bar')).toHaveAttribute('data-post-id', 'original-author:original-post');
+    fireEvent.click(screen.getByTestId('reply-button'));
+    fireEvent.click(screen.getByTestId('repost-button'));
+    fireEvent.click(screen.getByTestId('tag-button'));
+    expect(onReplyClick).toHaveBeenCalledWith('original-author:original-post');
+    expect(onRepostClick).toHaveBeenCalledWith('original-author:original-post');
+    const panel = screen.getByTestId('post-tags-panel');
+    expect(panel).toHaveAttribute('data-post-id', 'original-author:original-post');
+    expect(panel).toHaveAttribute('data-merge-post-id', 'author:post');
   });
 });

@@ -10,6 +10,8 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { getInteractionPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
@@ -115,6 +117,12 @@ export function PostMainListRow({
   const previewPostId = shouldPreviewOriginal ? originalPostId : postId;
   const previewPostDetails = shouldPreviewOriginal ? originalPostDetails : postDetails;
   const displayPostId = shouldUseOriginalPost ? originalPostId : postId;
+  // Tags, replies and reposts of a contentless repost target the original whichever card renders;
+  // tags already stored on the repost id are merged into the panel. A missing original (settled
+  // `null`) leaves the row on the repost it falls back to.
+  const headerVisibility = usePostHeaderVisibility(postId);
+  const interactionPostId = originalPostDetails === null ? postId : getInteractionPostId(postId, headerVisibility);
+  const tagsMergePostId = interactionPostId !== postId ? postId : undefined;
   const displayUserId = displayPostId.split(':')[0];
   const { userDetails } = useUserDetails(displayUserId);
   const avatarUrl = useAvatarUrl(userDetails);
@@ -231,7 +239,7 @@ export function PostMainListRow({
         >
           {!tagsExpanded ? (
             <ClickableTagsList
-              taggedId={displayPostId}
+              taggedId={interactionPostId}
               taggedKind={TagKind.POST}
               maxTags={1}
               showCount={true}
@@ -242,11 +250,11 @@ export function PostMainListRow({
             />
           ) : null}
           <PostActionsBar
-            postId={displayPostId}
+            postId={interactionPostId}
             savePostId={savePostId}
             onTagClick={handleTagClick}
-            onReplyClick={() => onReplyClick(displayPostId)}
-            onRepostClick={() => onRepostClick(displayPostId)}
+            onReplyClick={() => onReplyClick(interactionPostId)}
+            onRepostClick={() => onRepostClick(interactionPostId)}
             className="shrink-0"
           />
         </Container>
@@ -264,7 +272,8 @@ export function PostMainListRow({
         <Container overrideDefaults onClick={stopCardPropagation} onAuxClick={stopCardPropagation}>
           <PostTagsPanel
             ref={tagsPanelRef}
-            postId={displayPostId}
+            postId={interactionPostId}
+            mergePostId={tagsMergePostId}
             widthMode="fit"
             autoFocusInput={!isMobile}
             enableLoadingSkeleton={false}
