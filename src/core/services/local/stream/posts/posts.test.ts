@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -19,6 +19,19 @@ import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type { NexusPost, NexusPostDetails, NexusTag } from '@/services/nexus/nexus.types';
 import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
+
+// `persistPosts` reads the time the query layer recorded for a response to guard the
+// `collections` count on non-TTL paths; the service tests never go through `queryNexus`,
+// so the stamp is supplied here.
+const nexusUtilsMocks = vi.hoisted(() => ({ responseStartedAt: undefined as number | undefined }));
+vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();
+  return {
+    ...actual,
+    getNexusResponseStartedAt: (response: object) =>
+      nexusUtilsMocks.responseStartedAt ?? actual.getNexusResponseStartedAt(response),
+  };
+});
 
 describe('LocalStreamPostsService', () => {
   const streamId: PostStreamId = PostStreamTypes.TIMELINE_ALL_ALL;
@@ -665,6 +678,47 @@ describe('LocalStreamPostsService', () => {
       });
 
       expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
+    });
+
+    describe('without refreshGuard (forced notification hydration, cache-miss fills)', () => {
+      const localCounts = { id: compositeId, tags: 0, unique_tags: 0, replies: 1, reposts: 0, collections: 3 };
+
+      afterEach(() => {
+        nexusUtilsMocks.responseStartedAt = undefined;
+      });
+
+      it('keeps a collections count written since the response request started', async () => {
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt });
+        await PostCountsModel.table.put(localCounts);
+        nexusUtilsMocks.responseStartedAt = fetchStartedAt;
+
+        await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
+
+        const counts = (await PostCountsModel.findById(compositeId))!;
+        expect(counts.collections).toBe(3);
+        expect(counts.replies).toBe(7);
+        // Only the count is guarded here: details still follow the response.
+        expect((await PostDetailsModel.findById(compositeId))!.content).toBe('nexus copy');
+      });
+
+      it('refreshes the collections count when the local write predates the request', async () => {
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+        await PostCountsModel.table.put(localCounts);
+        nexusUtilsMocks.responseStartedAt = fetchStartedAt;
+
+        await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
+
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
+      });
+
+      it('accepts the response count when the query layer recorded no request start', async () => {
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt });
+        await PostCountsModel.table.put(localCounts);
+
+        await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
+
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
+      });
     });
   });
 

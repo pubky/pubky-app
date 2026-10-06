@@ -415,10 +415,17 @@ export class LocalStreamPostsService {
     // is not indexed after the local one (Nexus has not caught up yet).
     // Counts, tags, relationships and the TTL still refresh for those rows,
     // except `collections`: the viewer's own collection writes bump it locally
-    // and stamp the TTL, so a response that started before such a write keeps
-    // the local value (the response would otherwise undo the bump and renew
-    // the TTL, hiding it until the next refresh).
+    // and stamp the TTL, so a response whose request started before such a
+    // write keeps the local value (the response would otherwise undo the bump
+    // and renew the TTL, hiding it until the next refresh). That one guard is
+    // not TTL-only, see `collectionsGuardAt` below.
     const detailIds = postDetails.map((d) => d.id);
+    // The `collections` guard applies on every path that persists a post response, not only
+    // the TTL refresh: notification hydration re-fetches cached posts with `force` and would
+    // otherwise accept a count from before a save that landed while its request was in flight.
+    // Its fetch boundary is the TTL path's explicit stamp, else the time the query layer
+    // recorded for this response; a response it did not time accepts the Nexus count.
+    const collectionsGuardAt = refreshGuard?.fetchStartedAt ?? getNexusResponseStartedAt(posts);
     await db.transaction(
       'rw',
       [
@@ -432,9 +439,9 @@ export class LocalStreamPostsService {
       ],
       async () => {
         const existingDetails = await PostDetailsModel.findByIdsPreserveOrder(detailIds);
-        const existingTtl = refreshGuard ? await PostTtlModel.findByIds(detailIds) : [];
+        const existingTtl = collectionsGuardAt !== undefined ? await PostTtlModel.findByIds(detailIds) : [];
         const ttlById = new Map(existingTtl.map((record) => [record.id, record.lastUpdatedAt]));
-        const existingCounts = refreshGuard ? await PostCountsModel.findByIds(detailIds) : [];
+        const existingCounts = collectionsGuardAt !== undefined ? await PostCountsModel.findByIds(detailIds) : [];
         const localCollectionsById = new Map(existingCounts.map((record) => [record.id, record.collections]));
 
         const tombstonedIds = new Set<string>();
@@ -446,10 +453,14 @@ export class LocalStreamPostsService {
             tombstonedIds.add(incoming.id);
             return;
           }
-          if (!refreshGuard || !existing) return;
-          const writtenSinceFetch = (ttlById.get(incoming.id) ?? 0) >= refreshGuard.fetchStartedAt;
+          if (!existing) return;
+          const ttlWrittenAt = ttlById.get(incoming.id) ?? 0;
+          if (collectionsGuardAt !== undefined && ttlWrittenAt >= collectionsGuardAt) {
+            writtenSinceFetchIds.add(incoming.id);
+          }
+          if (!refreshGuard) return;
+          const writtenSinceFetch = ttlWrittenAt >= refreshGuard.fetchStartedAt;
           const notIndexedAfterLocal = incoming.indexed_at <= existing.indexed_at;
-          if (writtenSinceFetch) writtenSinceFetchIds.add(incoming.id);
           if (writtenSinceFetch || notIndexedAfterLocal) locallyNewerIds.add(incoming.id);
         });
         if (locallyNewerIds.size > 0) {

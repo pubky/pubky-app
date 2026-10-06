@@ -59,10 +59,11 @@ export interface TPersistPostsParams {
    * Set by the TTL refresh path. A post's details are kept (counts, tags,
    * relationships and TTL still refresh) when the local row is newer than the
    * Nexus copy: its TTL row was written at or after `fetchStartedAt`, or the
-   * Nexus copy is not indexed after the local one. A row whose TTL was written
-   * at or after `fetchStartedAt` also keeps its local `collections` count, which
-   * the viewer's own collection writes bump ahead of Nexus. The check and the
-   * writes run in one transaction so a local-first edit cannot slip in between.
+   * Nexus copy is not indexed after the local one. The check and the writes run
+   * in one transaction so a local-first edit cannot slip in between. The local
+   * `collections` count is kept on every persistence path, guard or not, for
+   * rows whose TTL was written since the response's request started (see
+   * `persistPosts`).
    */
   refreshGuard?: { fetchStartedAt: number };
 }

@@ -105,7 +105,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
     <div
       aria-labelledby="radix-normalized"
       aria-orientation="vertical"
-      class="z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-background p-4 shadow-xl data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 w-70"
+      class="z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-background p-4 shadow-xl data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-h-[var(--radix-dropdown-menu-content-available-height)] w-70 overflow-y-auto"
       data-align="end"
       data-orientation="vertical"
       data-radix-menu-content=""
@@ -465,7 +465,7 @@ exports[`PostSavePicker > matches desktop picker snapshot with other collections
     <div
       aria-labelledby="radix-normalized"
       aria-orientation="vertical"
-      class="z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-background p-4 shadow-xl data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 w-70"
+      class="z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-background p-4 shadow-xl data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-h-[var(--radix-dropdown-menu-content-available-height)] w-70 overflow-y-auto"
       data-align="end"
       data-orientation="vertical"
       data-radix-menu-content=""
@@ -1017,7 +1017,7 @@ exports[`PostSavePicker - Mobile Snapshots > matches snapshot on mobile viewport
   />
   <div
     aria-labelledby="radix-normalized"
-    class="fixed z-50 gap-4 p-6 shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500 inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom rounded-t-xl border-border bg-popover"
+    class="fixed z-50 p-6 shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500 inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom flex max-h-dvh flex-col gap-0 rounded-t-xl border-border bg-popover"
     data-state="open"
     id="radix-normalized"
     role="dialog"
@@ -1035,198 +1035,31 @@ exports[`PostSavePicker - Mobile Snapshots > matches snapshot on mobile viewport
       </h2>
     </div>
     <div
-      class="flex w-full flex-col gap-4"
+      class="min-h-0 flex-1 overflow-y-auto"
       data-testid="container"
     >
-      <label
-        class="flex items-center gap-2 font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs tracking-widest text-muted-foreground uppercase"
-        data-slot="label"
-      >
-        Add to collection
-      </label>
       <div
-        class="flex max-h-[50dvh] flex-col overflow-y-auto gap-4"
-        data-testid="container"
-      >
-        <button
-          class="flex w-full cursor-pointer items-center gap-2 rounded-sm p-0 text-base font-medium text-muted-foreground disabled:opacity-50"
-          data-cy="post-save-bookmarks-option"
-          data-slot="button"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-bookmark size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
-            />
-          </svg>
-          <span
-            class="min-w-0 flex-1 truncate text-left"
-            data-testid="typography"
-          >
-            Bookmarks
-          </span>
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-check size-4 text-brand"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M20 6 9 17l-5-5"
-            />
-          </svg>
-        </button>
-        <button
-          class="flex w-full cursor-pointer items-center gap-2 rounded-sm p-0 text-base font-medium text-muted-foreground disabled:opacity-50"
-          data-cy="post-save-collection-option"
-          data-slot="button"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-library size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="m16 6 4 14"
-            />
-            <path
-              d="M12 6v14"
-            />
-            <path
-              d="M8 8v12"
-            />
-            <path
-              d="M4 4v16"
-            />
-          </svg>
-          <span
-            class="min-w-0 flex-1 truncate text-left"
-            data-testid="typography"
-          >
-            Proof of Work
-          </span>
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-check size-4 text-brand"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M20 6 9 17l-5-5"
-            />
-          </svg>
-        </button>
-        <button
-          class="flex w-full cursor-pointer items-center gap-2 rounded-sm p-0 text-base font-medium text-muted-foreground disabled:opacity-50"
-          data-cy="post-save-collection-option"
-          data-slot="button"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-library size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="m16 6 4 14"
-            />
-            <path
-              d="M12 6v14"
-            />
-            <path
-              d="M8 8v12"
-            />
-            <path
-              d="M4 4v16"
-            />
-          </svg>
-          <span
-            class="min-w-0 flex-1 truncate text-left"
-            data-testid="typography"
-          >
-            AI Papers
-          </span>
-        </button>
-      </div>
-      <div
-        class="h-px bg-muted"
-        data-testid="container"
-      />
-      <div
-        class="flex flex-col gap-2"
+        class="flex w-full flex-col gap-4"
         data-testid="container"
       >
         <label
           class="flex items-center gap-2 font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs tracking-widest text-muted-foreground uppercase"
           data-slot="label"
         >
-          New Collection
+          Add to collection
         </label>
         <div
-          class="flex items-center gap-2 rounded-md border border-dashed border-input px-4 py-3"
+          class="flex max-h-[50dvh] flex-col overflow-y-auto gap-4"
           data-testid="container"
         >
-          <input
-            class="flex w-full min-w-0 rounded-md border border-input bg-transparent text-base transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto border-none p-0 shadow-none"
-            data-cy="post-save-new-collection-input"
-            data-testid="input"
-            maxlength="100"
-            placeholder="Collection name"
-            value=""
-          />
           <button
-            aria-label="Create collection"
-            class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-6"
-            data-cy="post-save-new-collection-create-btn"
-            data-size="icon"
+            class="flex w-full cursor-pointer items-center gap-2 rounded-sm p-0 text-base font-medium text-muted-foreground disabled:opacity-50"
+            data-cy="post-save-bookmarks-option"
             data-slot="button"
-            data-variant="secondary"
-            disabled=""
-            type="button"
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-plus"
+              class="lucide lucide-bookmark size-4"
               fill="none"
               height="24"
               stroke="currentColor"
@@ -1238,13 +1071,185 @@ exports[`PostSavePicker - Mobile Snapshots > matches snapshot on mobile viewport
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                d="M5 12h14"
+                d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
               />
+            </svg>
+            <span
+              class="min-w-0 flex-1 truncate text-left"
+              data-testid="typography"
+            >
+              Bookmarks
+            </span>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-4 text-brand"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <path
-                d="M12 5v14"
+                d="M20 6 9 17l-5-5"
               />
             </svg>
           </button>
+          <button
+            class="flex w-full cursor-pointer items-center gap-2 rounded-sm p-0 text-base font-medium text-muted-foreground disabled:opacity-50"
+            data-cy="post-save-collection-option"
+            data-slot="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-library size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m16 6 4 14"
+              />
+              <path
+                d="M12 6v14"
+              />
+              <path
+                d="M8 8v12"
+              />
+              <path
+                d="M4 4v16"
+              />
+            </svg>
+            <span
+              class="min-w-0 flex-1 truncate text-left"
+              data-testid="typography"
+            >
+              Proof of Work
+            </span>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-4 text-brand"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 6 9 17l-5-5"
+              />
+            </svg>
+          </button>
+          <button
+            class="flex w-full cursor-pointer items-center gap-2 rounded-sm p-0 text-base font-medium text-muted-foreground disabled:opacity-50"
+            data-cy="post-save-collection-option"
+            data-slot="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-library size-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m16 6 4 14"
+              />
+              <path
+                d="M12 6v14"
+              />
+              <path
+                d="M8 8v12"
+              />
+              <path
+                d="M4 4v16"
+              />
+            </svg>
+            <span
+              class="min-w-0 flex-1 truncate text-left"
+              data-testid="typography"
+            >
+              AI Papers
+            </span>
+          </button>
+        </div>
+        <div
+          class="h-px bg-muted"
+          data-testid="container"
+        />
+        <div
+          class="flex flex-col gap-2"
+          data-testid="container"
+        >
+          <label
+            class="flex items-center gap-2 font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs tracking-widest text-muted-foreground uppercase"
+            data-slot="label"
+          >
+            New Collection
+          </label>
+          <div
+            class="flex items-center gap-2 rounded-md border border-dashed border-input px-4 py-3"
+            data-testid="container"
+          >
+            <input
+              class="flex w-full min-w-0 rounded-md border border-input bg-transparent text-base transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto border-none p-0 shadow-none"
+              data-cy="post-save-new-collection-input"
+              data-testid="input"
+              maxlength="100"
+              placeholder="Collection name"
+              value=""
+            />
+            <button
+              aria-label="Create collection"
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-6"
+              data-cy="post-save-new-collection-create-btn"
+              data-size="icon"
+              data-slot="button"
+              data-variant="secondary"
+              disabled=""
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-plus"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5 12h14"
+                />
+                <path
+                  d="M12 5v14"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>

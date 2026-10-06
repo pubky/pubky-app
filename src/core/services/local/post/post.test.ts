@@ -1,6 +1,9 @@
 import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { getTtlPostMs } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
@@ -1064,6 +1067,54 @@ describe('LocalPostService', () => {
       expect(await collectionsCount(itemA)).toBe(0);
       // The tombstone is a local write: its TTL is stamped like every other write.
       expect((await getPostTtl(collectionId))!.lastUpdatedAt).toBeGreaterThanOrEqual(before);
+    });
+
+    it('decrements each curated post once when the same linked collection is deleted concurrently', async () => {
+      // Two tabs confirm the same delete: both pass the pre-transaction guard, the
+      // transactions then serialize and the second must find the tombstone and skip.
+      await setupExistingPost(collectionId, collectionEnvelope([itemA]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: collectionId, countChanges: { replies: 1 } });
+      // Another live collection also curates the item.
+      await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 2 } });
+
+      await Promise.all([
+        LocalPostService.delete({ compositePostId: collectionId }),
+        LocalPostService.delete({ compositePostId: collectionId }),
+      ]);
+
+      expect(await collectionsCount(itemA)).toBe(1);
+    });
+
+    it('decrements each curated post once when the same collection is hard deleted concurrently', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 2 } });
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+
+      await Promise.all([
+        LocalPostService.delete({ compositePostId: collectionId }),
+        LocalPostService.delete({ compositePostId: collectionId }),
+      ]);
+
+      expect(await collectionsCount(itemA)).toBe(1);
+      expect(userCountsSpy).toHaveBeenCalledTimes(1);
+      userCountsSpy.mockRestore();
+    });
+
+    it('rethrows a model AppError from the linked delete unchanged', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: collectionId, countChanges: { replies: 1 } });
+      const modelError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to update post details', {
+        service: ErrorService.Local,
+        operation: 'update',
+        context: { table: 'post_details', id: collectionId },
+      });
+      const spy = vi.spyOn(PostDetailsModel, 'update').mockRejectedValueOnce(modelError);
+
+      try {
+        await expect(LocalPostService.delete({ compositePostId: collectionId })).rejects.toBe(modelError);
+      } finally {
+        spy.mockRestore();
+      }
     });
 
     it('stamps the tombstone TTL on a hard delete too', async () => {

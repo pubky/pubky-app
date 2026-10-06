@@ -560,11 +560,20 @@ export function PostSavePicker({
     return (
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetTrigger asChild>{trigger}</SheetTrigger>
-        <SheetContent side="bottom" aria-describedby={undefined} className="rounded-t-xl border-border bg-popover">
+        <SheetContent
+          side="bottom"
+          aria-describedby={undefined}
+          // Never taller than the viewport: the header (and its Close) stays put and the
+          // body scrolls, so Bookmarks and the creator stay reachable however many
+          // collections the two lists hold.
+          className="flex max-h-dvh flex-col gap-0 rounded-t-xl border-border bg-popover"
+        >
           <SheetHeader>
             <SheetTitle>{'Save post'}</SheetTitle>
           </SheetHeader>
-          <SavePickerContent layout="sheet" {...contentProps} />
+          <Container overrideDefaults className="min-h-0 flex-1 overflow-y-auto">
+            <SavePickerContent layout="sheet" {...contentProps} />
+          </Container>
         </SheetContent>
       </Sheet>
     );
@@ -573,7 +582,11 @@ export function PostSavePicker({
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-70">
+      {/* Capped at the space Radix reports below/above the trigger, scrolling past it. */}
+      <DropdownMenuContent
+        align="end"
+        className="max-h-[var(--radix-dropdown-menu-content-available-height)] w-70 overflow-y-auto"
+      >
         <SavePickerContent layout="dropdown" {...contentProps} />
       </DropdownMenuContent>
     </DropdownMenu>

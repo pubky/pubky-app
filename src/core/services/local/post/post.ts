@@ -4,6 +4,7 @@ import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
@@ -444,15 +445,24 @@ export class LocalPostService {
     if (postCounts && this.isPostLinked(postCounts)) {
       try {
         await db.transaction('rw', [PostDetailsModel.table, PostCountsModel.table, PostTtlModel.table], async () => {
+          // Re-read inside the transaction: the guard above ran outside it, so a
+          // concurrent delete (a second tab) may have tombstoned the row and
+          // released its curated memberships already. Diffing from that stale
+          // `existing` would take the items' `collections` count below the truth.
+          const current = await PostDetailsModel.findById(compositePostId);
+          if (!current || isPostDeleted(current)) return;
           await PostDetailsModel.update(compositePostId, { content: DELETED, deleted: true });
           await Promise.all([
             // The tombstone is a local write like any other: stamp its TTL.
             PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }),
             // A tombstoned collection curates nothing any more (Nexus drops its COLLECTED edges too).
-            ...this.updateCuratedPostCounts(this.curatedItemIds(existing?.kind, existing?.content), new Set()),
+            ...this.updateCuratedPostCounts(this.curatedItemIds(current.kind, current.content), new Set()),
           ]);
         });
       } catch (error) {
+        // A model failure is already an AppError with its own code and context:
+        // rethrow it unchanged (docs/error-handling.md); wrap only raw failures.
+        if (isAppError(error)) throw error;
         throw Err.database(DatabaseErrorCode.DELETE_FAILED, 'Failed to delete post', {
           service: ErrorService.Local,
           operation: 'delete',
@@ -464,14 +474,7 @@ export class LocalPostService {
     }
 
     // Hard delete - proceed even if postCounts missing (treat as not linked)
-    const postRelationships = await PostRelationshipsModel.findById(compositePostId);
-
-    const parentUri = postRelationships?.replied ?? undefined;
-    const repostedUri = postRelationships?.reposted ?? undefined;
-
-    // Fetch post details and relationships to get metadata
-    const postDetails = await PostDetailsModel.findById(compositePostId);
-    const kind = postDetails?.kind ?? 'short';
+    let alreadyDeleted = false;
 
     try {
       await db.transaction(
@@ -487,6 +490,18 @@ export class LocalPostService {
           PostTtlModel.table,
         ],
         async () => {
+          // Re-read inside the transaction (see the soft-delete branch): a concurrent
+          // delete that tombstoned the row first already ran every decrement below.
+          const postDetails = await PostDetailsModel.findById(compositePostId);
+          if (isPostDeleted(postDetails)) {
+            alreadyDeleted = true;
+            return;
+          }
+          const postRelationships = await PostRelationshipsModel.findById(compositePostId);
+          const parentUri = postRelationships?.replied ?? undefined;
+          const repostedUri = postRelationships?.reposted ?? undefined;
+          const kind = postDetails?.kind ?? 'short';
+
           await Promise.all([
             // Tombstone, not delete. The hard-delete branch used to drop
             // `PostDetails` entirely, but that left `useLocalFirstQuery`
@@ -560,6 +575,9 @@ export class LocalPostService {
         },
       );
 
+      if (alreadyDeleted) {
+        Logger.warn('[LocalPostService.delete] post tombstoned by a concurrent delete, skipping', { compositePostId });
+      }
       return false;
     } catch (error) {
       throw Err.database(DatabaseErrorCode.DELETE_FAILED, 'Failed to delete post', {
