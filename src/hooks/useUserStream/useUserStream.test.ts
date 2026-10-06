@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Logger } from '@/libs/logger/logger';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { useUserStream } from './useUserStream';
 import { DEFAULT_USER_STREAM_BUFFER_SIZE, DEFAULT_USER_STREAM_LIMIT } from './useUserStream.constants';
@@ -616,6 +617,7 @@ describe('useUserStream', () => {
 
     it('does not ask Nexus again when the read after a cache hit fails', async () => {
       const ids = ['user-1', 'user-2', 'user-3'];
+      const loggerErrorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
       mockGetOrFetchStreamSlice
         .mockResolvedValueOnce({ nextPageIds: ids, skip: undefined, isExhausted: false })
         // Fails only after the loading render, as a real transport error does
@@ -637,10 +639,11 @@ describe('useUserStream', () => {
         }),
       );
 
+      // Wait for the failure itself, then let the refill effect run once more
       await waitFor(() => {
-        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+        expect(loggerErrorSpy).toHaveBeenCalledWith('[useUserStream] Failed to fetch users:', expect.any(Error));
       });
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await act(async () => {});
 
       expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
     });
@@ -672,6 +675,64 @@ describe('useUserStream', () => {
 
       expect(mockGetOrFetchStreamSlice).not.toHaveBeenCalled();
       expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
+    });
+
+    it('keeps the settled list on screen while a refill hydrates, without showing followed users early', async () => {
+      const ids = ['user-1', 'user-2', 'user-3'];
+      const appended = ['user-4', 'user-5'];
+      const allIds = [...ids, ...appended];
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce({ nextPageIds: ids, skip: undefined, isExhausted: false })
+        .mockResolvedValueOnce({ nextPageIds: appended, skip: undefined, isExhausted: false });
+      const initialRelationships = new Map(
+        ids.map((id) => [id, { id, following: id === 'user-1', followed_by: false }] as const),
+      );
+      const allRelationships = new Map([
+        ...initialRelationships,
+        ['user-4', { id: 'user-4', following: true, followed_by: false }],
+        ['user-5', { id: 'user-5', following: false, followed_by: false }],
+      ]);
+      // Details already cover the appended ids while the relationships live query still holds the
+      // snapshot it computed for the initial ids, as between two Dexie updates: user-4 (followed)
+      // has no relationship row yet and must not show as unfollowed.
+      let relationshipsLag = true;
+      let callCount = 0;
+      mockUseLiveQuery.mockImplementation((_querier: unknown, deps: unknown[]) => {
+        const index = callCount % 3;
+        callCount += 1;
+        if (index === 0) return createDetailsMap(allIds);
+        if (index === 1) return new Map();
+        return relationshipsLag
+          ? { forIds: ids, map: initialRelationships }
+          : { forIds: deps[0], map: allRelationships };
+      });
+
+      const { result, rerender } = renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          bufferSize: 3,
+          refillThreshold: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+      });
+      await act(async () => {});
+
+      // The append landed but relationships lag: the settled two stay, nothing new, no skeletons
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.userIds).toEqual(allIds);
+      expect(result.current.users.map((user) => user.id)).toEqual(['user-2', 'user-3']);
+
+      relationshipsLag = false;
+      rerender();
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.users.map((user) => user.id)).toEqual(['user-2', 'user-3', 'user-5']);
     });
   });
 });

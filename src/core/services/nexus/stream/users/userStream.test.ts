@@ -6,7 +6,7 @@ import type { Pubky } from '@/models/models.types';
 import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
 import { type UserStreamId, UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import { getNexusResponseStartedAt, markNexusResponseStartedAt, queryNexus } from '@/services/nexus/nexus.utils';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { NexusUserStreamService } from './userStream';
 import { buildUserStreamBodyUrl, userStreamApi } from './userStream.api';
@@ -564,16 +564,32 @@ describe('NexusUserStreamService.fetchByIds', () => {
     expect(result).toEqual(mockUsers);
   });
 
+  it('returns the response queryNexus stamped when one request is enough', async () => {
+    const mockUsers = [{ details: { id: 'user1' } } as never];
+    markNexusResponseStartedAt(mockUsers, 1_000);
+    vi.mocked(queryNexus).mockResolvedValue(mockUsers);
+
+    const result = await NexusUserStreamService.fetchByIds({ user_ids: ['user1'] as Pubky[] });
+
+    expect(result).toBe(mockUsers);
+    expect(getNexusResponseStartedAt(result)).toBe(1_000);
+  });
+
   it('splits more ids than one request takes into sequential sorted slices', async () => {
     const userIds = Array.from({ length: NEXUS_USERS_BY_IDS_MAX_IDS * 2 + 50 }, (_, i) =>
       String(i).padStart(3, '0'),
     ).reverse() as Pubky[];
     const sortedIds = [...userIds].sort();
-    const queryNexusSpy = vi
-      .mocked(queryNexus)
-      .mockImplementation(async ({ body }) =>
-        (JSON.parse(body as string) as { user_ids: string[] }).user_ids.map((id) => ({ details: { id } }) as never),
+    // A slice served from the query cache can carry an older start than the one before it; the
+    // merged response must carry the earliest
+    const sliceStartedAt = [5_000, 3_000, 4_000];
+    const queryNexusSpy = vi.mocked(queryNexus).mockImplementation(async ({ body }) => {
+      const page = (JSON.parse(body as string) as { user_ids: string[] }).user_ids.map(
+        (id) => ({ details: { id } }) as never,
       );
+      markNexusResponseStartedAt(page, sliceStartedAt[queryNexusSpy.mock.calls.length - 1]);
+      return page;
+    });
 
     const result = await NexusUserStreamService.fetchByIds({ user_ids: userIds, viewer_id: 'viewer' as Pubky });
 
@@ -589,6 +605,23 @@ describe('NexusUserStreamService.fetchByIds', () => {
       true,
     );
     expect(result.map((user) => user.details.id)).toEqual(sortedIds);
+    expect(getNexusResponseStartedAt(result)).toBe(3_000);
+  });
+
+  it('leaves a merged response unstamped when a slice carries no start time', async () => {
+    const userIds = Array.from({ length: NEXUS_USERS_BY_IDS_MAX_IDS + 1 }, (_, i) => `user-${i}`) as Pubky[];
+    vi.mocked(queryNexus).mockImplementation(async ({ body }) => {
+      const page = (JSON.parse(body as string) as { user_ids: string[] }).user_ids.map(
+        (id) => ({ details: { id } }) as never,
+      );
+      if (page.length === NEXUS_USERS_BY_IDS_MAX_IDS) markNexusResponseStartedAt(page, 1_000);
+      return page;
+    });
+
+    const result = await NexusUserStreamService.fetchByIds({ user_ids: userIds });
+
+    expect(result).toHaveLength(userIds.length);
+    expect(getNexusResponseStartedAt(result)).toBeUndefined();
   });
 
   it('keeps viewer_id alongside the sorted user_ids', async () => {

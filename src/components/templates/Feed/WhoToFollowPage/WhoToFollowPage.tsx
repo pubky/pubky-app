@@ -15,7 +15,7 @@ import { WhoToFollow } from '@/organisms/WhoToFollow/WhoToFollow';
  *
  * Layout:
  * - Left sidebar: Sort options (disabled placeholders for now)
- * - Main content: One list of recommended users, as many as Nexus serves in one page
+ * - Main content: One list of every recommended user the cached stream holds, topped up once from Nexus
  * - Right sidebar: ActiveUsers and FeedbackCard
  */
 export function WhoToFollowPage() {

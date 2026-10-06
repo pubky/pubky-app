@@ -84,6 +84,9 @@ export function useUserStream({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isExhausted, setIsExhausted] = useState(false);
+  // Whether the live queries have settled once since the initial read; only that first wait
+  // shows skeletons, a refill keeps the settled list on screen while its ids hydrate
+  const [hasHydratedOnce, setHasHydratedOnce] = useState(false);
 
   // Track how far into the stream the reads have gone
   const skipRef = useRef(0);
@@ -163,10 +166,16 @@ export function useUserStream({
 
   const eligible: UserStreamUser[] = [];
   const preservedFollowedUsers = new Set(preserveFollowedUserIds);
+  // With `excludeFollowing`, an id counts only once the relationships live query covers it, so a
+  // user the viewer follows never shows for the tick between the details and relationships
+  // updates after a refill appends ids (the initial read is gated by `isHydrating` instead)
+  const relationshipsCoveredIds =
+    excludeFollowing && includeRelationships ? new Set(userRelationshipsSnapshot?.forIds ?? []) : null;
 
   for (const id of userIds) {
     const details = userDetailsMap.get(id);
     if (!details) continue;
+    if (relationshipsCoveredIds && !relationshipsCoveredIds.has(id)) continue;
 
     const counts = userCountsMap.get(id);
     const relationship = userRelationshipsMap.get(id);
@@ -222,6 +231,7 @@ export function useUserStream({
         skipRef.current = 0;
         refillStepRef.current = 0;
         setIsExhausted(false);
+        setHasHydratedOnce(false);
       } else {
         setIsLoadingMore(true);
       }
@@ -272,7 +282,8 @@ export function useUserStream({
           setUserIds((prev) => {
             const existingIds = new Set(prev);
             const newIds = nextPageIds.filter((id) => !existingIds.has(id));
-            return [...prev, ...newIds];
+            // A page of known ids keeps the array, so the live queries do not run again for nothing
+            return newIds.length === 0 ? prev : [...prev, ...newIds];
           });
           skipRef.current = nextSkip ?? skipRef.current + nextPageIds.length;
         }
@@ -339,10 +350,17 @@ export function useUserStream({
     userIds.length,
   ]);
 
+  const hydrated = detailsHydrated && relationshipsHydrated;
+  useEffect(() => {
+    if (hydrated && userIds.length > 0) setHasHydratedOnce(true);
+  }, [hydrated, userIds.length]);
+
   // When `excludeFollowing` is on, the visible users depend on the relationships live query.
-  // Keep skeletons up until BOTH details and relationships are hydrated, otherwise the consumer
-  // briefly sees an unfiltered slice of the buffer that gets reshuffled once relationships arrive.
-  const isHydrating = excludeFollowing && userIds.length > 0 && !(detailsHydrated && relationshipsHydrated);
+  // Keep skeletons up until BOTH details and relationships are hydrated after the initial read,
+  // otherwise the consumer briefly sees an unfiltered slice of the buffer that gets reshuffled
+  // once relationships arrive. A refill append keeps the settled list instead (see
+  // `relationshipsCoveredIds`), so the list never drops to skeletons once shown.
+  const isHydrating = excludeFollowing && userIds.length > 0 && !hasHydratedOnce && !hydrated;
 
   return {
     users,

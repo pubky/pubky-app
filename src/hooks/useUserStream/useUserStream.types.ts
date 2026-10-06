@@ -44,9 +44,17 @@ export interface UseUserStreamParams {
   showAll?: boolean;
   /** Followed users to keep visible even when excludeFollowing is enabled. */
   preserveFollowedUserIds?: Pubky[];
-  /** Minimum candidate IDs to request/cache per stream fetch. Defaults to the visible limit. */
+  /**
+   * Candidate IDs to read per slice. Defaults to `limit`, or DEFAULT_USER_STREAM_BUFFER_SIZE with
+   * `excludeFollowing`. A cache slice serves up to this many (`showAll` reads the whole row); a
+   * Nexus request is capped at NEXUS_USER_STREAM_MAX_LIMIT.
+   */
   bufferSize?: number;
-  /** Refill once when the local candidate buffer drops below this size. */
+  /**
+   * Refill when fewer eligible candidates than this (or than `limit`) remain: one read of the next
+   * slice, from the cache when it holds one, else from Nexus; then one Nexus read only when that
+   * slice came from the cache and the list is still short.
+   */
   refillThreshold?: number;
 }
 
