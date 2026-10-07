@@ -1,0 +1,400 @@
+import { describe, expect, it } from 'vitest';
+import type { GuardedPost } from '@/services/locks/locks.types';
+import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
+import { GuardedContentParser, LockContentParser, LockFileParser, LockProofBundler } from './locks.parser';
+
+const MOCK_LOCK_FILE = mockLockFile();
+
+describe('LockContentParser', () => {
+  describe('parse', () => {
+    it('parses valid teaser content', () => {
+      const content = JSON.stringify({
+        lock_title: 'Private Key Management',
+        teaser_description: 'Something, something, not your cheese.',
+      });
+
+      expect(LockContentParser.parse(content)).toEqual({
+        lock_title: 'Private Key Management',
+        teaser_description: 'Something, something, not your cheese.',
+      });
+    });
+
+    it('returns null for empty content', () => {
+      expect(LockContentParser.parse('')).toBeNull();
+    });
+
+    it('returns null for invalid or non-object JSON', () => {
+      expect(LockContentParser.parse('not json')).toBeNull();
+      expect(LockContentParser.parse('42')).toBeNull();
+      expect(LockContentParser.parse('"hi"')).toBeNull();
+    });
+
+    // Any JSON object would otherwise parse into a blank teaser, which reads as a lock elsewhere.
+    it('returns null for an object carrying neither envelope field', () => {
+      expect(LockContentParser.parse(JSON.stringify({}))).toBeNull();
+      expect(LockContentParser.parse(JSON.stringify({ title: 'My Article', body: 'Body' }))).toBeNull();
+    });
+
+    it('defaults the other field to an empty string once one is present', () => {
+      expect(LockContentParser.parse(JSON.stringify({ lock_title: 'X' }))).toEqual({
+        lock_title: 'X',
+        teaser_description: '',
+      });
+    });
+  });
+
+  describe('isValidLockUrl', () => {
+    it('accepts a pubky:// url with a valid pubky host', () => {
+      expect(LockContentParser.isValidLockUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks/lock.json`)).toBe(true);
+    });
+
+    it('rejects non-pubky or malformed urls', () => {
+      expect(LockContentParser.isValidLockUrl('https://example.com/lock.json')).toBe(false);
+      expect(LockContentParser.isValidLockUrl('pubky://short/lock.json')).toBe(false);
+      expect(LockContentParser.isValidLockUrl('')).toBe(false);
+    });
+
+    it('rejects a valid pubky url that does not point at a .json file', () => {
+      expect(LockContentParser.isValidLockUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks/lock.txt`)).toBe(false);
+      expect(LockContentParser.isValidLockUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks/`)).toBe(false);
+    });
+  });
+
+  describe('lockIdFromUrl', () => {
+    it('takes the lock id from the .json filename', () => {
+      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/LOCK1.json`)).toBe(
+        'LOCK1',
+      );
+    });
+
+    it('returns null when there is no .json filename to read', () => {
+      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/`)).toBeNull();
+      expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/.json`)).toBeNull();
+    });
+  });
+});
+
+describe('LockFileParser', () => {
+  describe('resolvePriceSats', () => {
+    const paymentLock = (params: Record<string, unknown>) => ({
+      ...MOCK_LOCK_FILE,
+      criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params }],
+    });
+
+    it('reads the amount of a payment lock', () => {
+      expect(LockFileParser.resolvePriceSats(paymentLock({ amount: '1000' }))).toBe('1000');
+    });
+
+    it('returns null for a lock that is not a payment lock', () => {
+      expect(LockFileParser.resolvePriceSats(null)).toBeNull();
+      expect(
+        LockFileParser.resolvePriceSats({
+          ...MOCK_LOCK_FILE,
+          criteria: [{ criterion_id: 'criterion-1', verifier_type: 'unsupported', params: {} }],
+        }),
+      ).toBeNull();
+    });
+
+    // Amount shapes are `isPositiveIntegerString`'s own table; here only that the parser defers to it.
+    it.each([
+      ['missing', {}],
+      ['a number rather than the wire string', { amount: 1000 }],
+      ['not a positive integer string', { amount: '007' }],
+    ])('returns null when the amount is %s', (_label, params) => {
+      expect(LockFileParser.resolvePriceSats(paymentLock(params))).toBeNull();
+    });
+  });
+});
+
+describe('LockProofBundler', () => {
+  const LOCK_URL = `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/lock1.json`;
+
+  describe('buildPayment', () => {
+    it('builds one empty-payload proof with the reader pubky at the top level', () => {
+      const paymentLock = {
+        ...MOCK_LOCK_FILE,
+        criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
+      };
+      expect(LockProofBundler.buildPayment(paymentLock, LOCK_URL, 'bundle-1', 'reader123')).toEqual({
+        version: 1,
+        bundle_id: 'bundle-1',
+        pubky_lock_resource: `${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/lock1.json`,
+        reader_public_key: 'pubkyreader123',
+        proofs: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', payload: {} }],
+      });
+    });
+
+    it('throws when the lock file has no criterion', () => {
+      const empty = { ...MOCK_LOCK_FILE, criteria: [] };
+      expect(() => LockProofBundler.buildPayment(empty, LOCK_URL, 'b', 'r')).toThrow();
+    });
+  });
+});
+
+describe('GuardedContentParser', () => {
+  describe('purchase bundle id file', () => {
+    it('builds the purchase URL beside the replica, not inside it', () => {
+      expect(GuardedContentParser.purchaseUrl('reader123', 'lock1')).toBe(
+        'pubky://reader123/priv/social/purchases/lock1.json',
+      );
+    });
+
+    it('lists the purchased lock ids from the purchases root', () => {
+      expect(
+        GuardedContentParser.purchasedLockIds([
+          'pubky://reader1/priv/social/purchases/lock1.json',
+          'pubky://reader1/priv/social/purchases/lock2.json',
+        ]),
+      ).toEqual(['lock1', 'lock2']);
+    });
+
+    it.each([
+      ['a file outside the purchases root', 'pubky://reader1/priv/social/unlocked/lock1/post.json'],
+      ['a nested path', 'pubky://reader1/priv/social/purchases/lock1/extra.json'],
+      ['a non-json entry', 'pubky://reader1/priv/social/purchases/lock1'],
+      ['an empty id', 'pubky://reader1/priv/social/purchases/.json'],
+    ])('ignores %s', (_label, url) => {
+      expect(GuardedContentParser.purchasedLockIds([url])).toEqual([]);
+    });
+
+    it('round-trips a bundle id through build + parse', () => {
+      const bytes = new TextEncoder().encode(GuardedContentParser.buildPurchaseFile('bundle-1'));
+      expect(GuardedContentParser.parsePurchaseFile(bytes)).toBe('bundle-1');
+    });
+
+    it.each([
+      ['not JSON', 'garbage'],
+      ['not an object', '"bundle-1"'],
+      ['missing the field', '{}'],
+      ['an empty id', '{"bundle_id":""}'],
+      ['a non-string id', '{"bundle_id":7}'],
+    ])('parses %s to null', (_label, raw) => {
+      expect(GuardedContentParser.parsePurchaseFile(new TextEncoder().encode(raw))).toBeNull();
+    });
+  });
+
+  describe('toReadPath', () => {
+    it('strips the guarded content prefix to the relative read path', () => {
+      expect(GuardedContentParser.toReadPath('/priv/app.locks/content/nested/a.txt')).toBe('nested/a.txt');
+    });
+
+    it('returns null for a path outside the guarded namespace', () => {
+      expect(GuardedContentParser.toReadPath('/pub/pubky.app/posts/x')).toBeNull();
+    });
+  });
+
+  describe('attachmentUriToPath', () => {
+    it('strips the pubky scheme and host to the private path', () => {
+      expect(GuardedContentParser.attachmentUriToPath('pubky://ownerb/priv/app.locks/content/img1')).toBe(
+        '/priv/app.locks/content/img1',
+      );
+    });
+  });
+
+  describe('unlockedUrl', () => {
+    it('builds the reader-owned copy path for one unlocked file', () => {
+      expect(GuardedContentParser.unlockedUrl('readerpubky', 'LOCK1', 'img1')).toBe(
+        'pubky://readerpubky/priv/social/unlocked/LOCK1/img1',
+      );
+    });
+  });
+
+  describe('unlockedPostUrl', () => {
+    it('builds the reader-owned post.json marker path', () => {
+      expect(GuardedContentParser.unlockedPostUrl('readerpubky', 'LOCK1')).toBe(
+        'pubky://readerpubky/priv/social/unlocked/LOCK1/post.json',
+      );
+    });
+  });
+
+  describe('unlockedRootUrl', () => {
+    it('builds the directory the unlocked list enumerates', () => {
+      expect(GuardedContentParser.unlockedRootUrl('readerpubky')).toBe('pubky://readerpubky/priv/social/unlocked/');
+    });
+  });
+
+  describe('completedLockIds', () => {
+    const url = (tail: string) => `pubky://readerpubky/priv/social/unlocked/${tail}`;
+
+    it('counts a lock once, from its post.json, ignoring the attachments beside it', () => {
+      const files = [url('LOCK1/img1'), url('LOCK1/post.json'), url('LOCK1/img2')];
+
+      expect(GuardedContentParser.completedLockIds(files)).toEqual(['LOCK1']);
+    });
+
+    it('drops a lock whose replication stopped before the marker landed', () => {
+      const files = [url('DONE/post.json'), url('PARTIAL/img1')];
+
+      expect(GuardedContentParser.completedLockIds(files)).toEqual(['DONE']);
+    });
+
+    it('ignores a post.json nested deeper than the lock folder', () => {
+      expect(GuardedContentParser.completedLockIds([url('LOCK1/nested/post.json')])).toEqual([]);
+    });
+
+    it('ignores a post.json sitting directly in the root, which belongs to no lock', () => {
+      expect(GuardedContentParser.completedLockIds([url('post.json')])).toEqual([]);
+    });
+
+    it('skips urls outside the unlocked root', () => {
+      const files = ['pubky://readerpubky/pub/pubky.app/posts/post.json', url('LOCK1/post.json')];
+
+      expect(GuardedContentParser.completedLockIds(files)).toEqual(['LOCK1']);
+    });
+
+    it('returns nothing for an empty listing, which is what a 404 root becomes', () => {
+      expect(GuardedContentParser.completedLockIds([])).toEqual([]);
+    });
+  });
+
+  describe('buildUnlockedPost', () => {
+    const ANNOUNCEMENT_URI = 'pubky://author1/pub/pubky.app/posts/POST1';
+    const post: GuardedPost = {
+      content: 'secret',
+      kind: 'image',
+      attachments: ['pubky://b/priv/app.locks/content/img1'],
+    };
+
+    it('repoints attachments at the reader copy with inline content types', () => {
+      const json = GuardedContentParser.buildUnlockedPost(
+        post,
+        'readerpubky',
+        'LOCK1',
+        [{ id: 'img1', contentType: 'image/png', slot: 0 }],
+        ANNOUNCEMENT_URI,
+      );
+      expect(JSON.parse(json)).toEqual({
+        content: 'secret',
+        kind: 'image',
+        attachments: [
+          { url: 'pubky://readerpubky/priv/social/unlocked/LOCK1/img1', content_type: 'image/png', slot: 0 },
+        ],
+        announcement: ANNOUNCEMENT_URI,
+      });
+    });
+
+    it('records the slot of each attachment, so a dropped one leaves a gap an article body can see', () => {
+      const json = GuardedContentParser.buildUnlockedPost(
+        post,
+        'readerpubky',
+        'LOCK1',
+        [
+          { id: 'cover', contentType: 'image/png', slot: 0 },
+          { id: 'second-image', contentType: 'image/png', slot: 2 },
+        ],
+        ANNOUNCEMENT_URI,
+      );
+
+      expect(JSON.parse(json).attachments.map((attachment: { slot: number }) => attachment.slot)).toEqual([0, 2]);
+    });
+
+    it('keeps attachments null when the post has none', () => {
+      const json = GuardedContentParser.buildUnlockedPost(
+        { ...post, attachments: null },
+        'readerpubky',
+        'LOCK1',
+        [],
+        ANNOUNCEMENT_URI,
+      );
+      expect(JSON.parse(json).attachments).toBeNull();
+    });
+  });
+
+  describe('parseReplicatedPost', () => {
+    const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+
+    it('reads the slot of each attachment', () => {
+      const bytes = encode({
+        content: 'body',
+        kind: 'long',
+        attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png', slot: 2 }],
+      });
+
+      expect(GuardedContentParser.parseReplicatedPost(bytes)?.attachments?.[0].slot).toBe(2);
+    });
+
+    it('keeps the post when a slot is unreadable: the attachment falls back to its position', () => {
+      const bytes = encode({
+        content: 'body',
+        kind: 'long',
+        attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png', slot: 'first' }],
+      });
+
+      const parsed = GuardedContentParser.parseReplicatedPost(bytes);
+
+      expect(parsed?.content).toBe('body');
+      expect(parsed?.attachments?.[0].slot).toBeUndefined();
+    });
+
+    it('parses the reader post.json with inline attachment content types', () => {
+      const bytes = encode({
+        content: 'body',
+        kind: 'image',
+        attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png' }],
+      });
+      expect(GuardedContentParser.parseReplicatedPost(bytes)).toEqual({
+        content: 'body',
+        kind: 'image',
+        attachments: [{ url: 'pubky://r/priv/social/unlocked/L/a', content_type: 'image/png' }],
+      });
+    });
+
+    it('parses a marker written before the announcement was recorded', () => {
+      const bytes = encode({ content: 'body', kind: 'short', attachments: null });
+
+      // Assert the parse succeeded too: a rejected marker would also read as an absent announcement.
+      expect(GuardedContentParser.parseReplicatedPost(bytes)).toEqual({
+        content: 'body',
+        kind: 'short',
+        attachments: null,
+      });
+    });
+
+    it('drops a non-pubky announcement instead of rejecting the whole marker', () => {
+      const bytes = encode({ content: 'body', kind: 'short', attachments: null, announcement: 'https://evil/posts/x' });
+
+      const parsed = GuardedContentParser.parseReplicatedPost(bytes);
+
+      expect(parsed?.content).toBe('body');
+      expect(parsed?.announcement).toBeUndefined();
+    });
+
+    it('returns null for non-JSON bytes', () => {
+      expect(GuardedContentParser.parseReplicatedPost(new TextEncoder().encode('nope'))).toBeNull();
+    });
+  });
+
+  describe('parsePost', () => {
+    const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+
+    it('parses guarded PubkyAppPost bytes into the reader post shape', () => {
+      const bytes = encode({
+        content: 'secret body',
+        kind: 'short',
+        attachments: ['pubky://b/priv/app.locks/content/a'],
+      });
+      expect(GuardedContentParser.parsePost(bytes)).toEqual({
+        content: 'secret body',
+        kind: 'short',
+        attachments: ['pubky://b/priv/app.locks/content/a'],
+      });
+    });
+
+    it('defaults missing fields (attachments → null)', () => {
+      expect(GuardedContentParser.parsePost(encode({ content: 'x', kind: 'long' }))).toEqual({
+        content: 'x',
+        kind: 'long',
+        attachments: null,
+      });
+    });
+
+    it('returns null for non-JSON bytes', () => {
+      expect(GuardedContentParser.parsePost(new TextEncoder().encode('not json'))).toBeNull();
+    });
+
+    it('returns null when kind is missing or invalid', () => {
+      expect(GuardedContentParser.parsePost(encode({ content: 'x' }))).toBeNull();
+      expect(GuardedContentParser.parsePost(encode({ content: 'x', kind: 'bogus' }))).toBeNull();
+    });
+  });
+});

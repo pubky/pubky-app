@@ -130,10 +130,11 @@ vi.mock('@/stores/home/home.store', async () => {
 
 vi.mock('@/stores/auth/auth.store', async () => {
   const f = await fixtures;
+  const { mockRingSession } = await import('@/test-utils/pubky');
   return {
     useAuthStore: createZustandLikeHook({
       currentUserPubky: f.viewerPubky,
-      session: { pubky: f.viewerPubky },
+      session: mockRingSession(['/:rw'], f.viewerPubky),
       sessionExport: null,
       hasProfile: true,
       hasHydrated: true,
@@ -445,6 +446,18 @@ vi.mock('@/hooks/usePostParticipants/usePostParticipants', async () => {
     error: null,
   };
   return { usePostParticipants: () => result };
+});
+
+vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', async () => {
+  const f = await fixtures;
+  return {
+    useAttachmentsMetadata: ({ fileUris }: { fileUris: readonly string[] }) => ({
+      files: fileUris.flatMap((uri) => {
+        const metadata = f.articleCoverByUri.get(uri);
+        return metadata ? [metadata] : [];
+      }),
+    }),
+  };
 });
 
 vi.mock('@/controllers/file/file', async () => {

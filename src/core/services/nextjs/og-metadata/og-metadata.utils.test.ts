@@ -139,6 +139,33 @@ describe('extractMetadata', () => {
     expect(result.title).toBe('Real Title');
   });
 
+  it('should pick a later real og:title over the <title> fallback when the first og:title is a placeholder', async () => {
+    const html =
+      '<html><head><meta property="og:title" content="undefined" /><meta property="og:title" content="Real OG Title" /><title>Fallback</title></head></html>';
+    const result = await extractMetadata('https://music.youtube.com/playlist?list=OLAK5uy_x', html);
+    expect(result.title).toBe('Real OG Title');
+  });
+
+  it('should normalize a later real og:image when the first og:image is a placeholder', async () => {
+    mockNormalizeImageUrl.mockResolvedValue('https://cdn.example.com/a.jpg');
+    const html =
+      '<html><head><meta property="og:image" content="undefined" /><meta property="og:image" content="https://cdn.example.com/a.jpg" /></head></html>';
+    const result = await extractMetadata('https://music.youtube.com/playlist?list=OLAK5uy_x', html);
+    expect(mockNormalizeImageUrl).toHaveBeenCalledTimes(1);
+    expect(mockNormalizeImageUrl).toHaveBeenCalledWith(
+      'https://cdn.example.com/a.jpg',
+      'https://music.youtube.com/playlist?list=OLAK5uy_x',
+    );
+    expect(result.image).toBe('https://cdn.example.com/a.jpg');
+  });
+
+  it('should not use an SVG <title> from the body when the document title is a placeholder', async () => {
+    const html =
+      '<html><head><meta property="og:title" content="undefined" /><title>undefined</title></head><body><svg><title>Close menu</title></svg></body></html>';
+    const result = await extractMetadata('https://music.youtube.com/playlist?list=OLAK5uy_x', html);
+    expect(result.title).toBeNull();
+  });
+
   it('should not resolve a placeholder og:image against the page URL', async () => {
     const html =
       '<html><head><meta property="og:title" content="Real Title" /><meta property="og:image" content="undefined" /></head></html>';
@@ -251,6 +278,12 @@ describe('hasOgMetadata', () => {
     const html =
       '<html><head><meta property="og:title" content="undefined" /><meta property="og:image" content="null" /><title>undefined</title></head></html>';
     expect(hasOgMetadata(html)).toBe(false);
+  });
+
+  it('should return true when the only usable tag is a later occurrence', () => {
+    const html =
+      '<html><head><meta property="og:title" content="undefined" /><meta property="og:title" content="Real Title" /></head></html>';
+    expect(hasOgMetadata(html)).toBe(true);
   });
 });
 

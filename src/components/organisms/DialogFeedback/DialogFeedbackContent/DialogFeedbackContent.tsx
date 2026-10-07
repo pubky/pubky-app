@@ -33,7 +33,7 @@ export function DialogFeedbackContent({
         <DialogDescription className="sr-only">{'Feedback dialog'}</DialogDescription>
       </DialogHeader>
       <Container className="gap-3">
-        <Container overrideDefaults className="rounded-md border border-dashed border-input p-6">
+        <Container overrideDefaults className="rounded-md border border-dashed border-input bg-background/20 p-6">
           <Container className="gap-4 contain-inline-size" overrideDefaults>
             <PostHeader
               postId={currentUserPubky}

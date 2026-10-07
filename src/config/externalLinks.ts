@@ -6,6 +6,7 @@ import {
   getPlayStoreUrl,
   getPubkyCoreUrl,
   getPubkyRingUrl,
+  getShopUrl,
   getTelegramUrl,
   getTwitterGetpubkyUrl,
   getTwitterUrl,
@@ -19,12 +20,19 @@ import { APP_VERSION } from './app';
  * URLs can be overridden using environment variables for different environments.
  */
 
-// App release URL (version injected from package.json via next.config.ts)
-export const APP_RELEASE_URL = `https://github.com/pubky/pubky-app/releases/tag/${APP_VERSION}`;
+// App release URL (version injected from package.json via next.config.ts).
+// GitHub release tags are `vX.Y.Z`; APP_VERSION is the bare package version.
+export function buildAppReleaseUrl(version: string): string {
+  const tag = version.startsWith('v') ? version : `v${version}`;
+  return `https://github.com/pubky/pubky-app/releases/tag/${tag}`;
+}
+
+export const APP_RELEASE_URL = buildAppReleaseUrl(APP_VERSION);
 
 // Pubky ecosystem links
 export const getPubkyRingLink = getPubkyRingUrl;
 export const getPubkyCoreLink = getPubkyCoreUrl;
+export const getShopLink = getShopUrl;
 
 // Public, read-only Cypher gateway to the Pubky social graph — surfaced to AI agents via
 // StructuredData in the root layout so they know where to query it.
@@ -42,3 +50,8 @@ export const getEmailLink = (): string => `mailto:${getEmail()}`;
 // App store links
 export const getAppStoreLink = getAppStoreUrl;
 export const getPlayStoreLink = getPlayStoreUrl;
+
+// Bitkit store links — the wallet a creator connects for payouts.
+export const BITKIT_WEBSITE_URL = 'https://bitkit.to/';
+export const BITKIT_APP_STORE_URL = 'https://get.bitkit.to/iOS';
+export const BITKIT_PLAY_STORE_URL = 'https://get.bitkit.to/PlayStore';

@@ -37,6 +37,7 @@ import type { PostRelationshipsModelSchema } from '@/models/post/relationships/p
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import {
+  inferAnnouncementKind,
   inferPostKindForCreate,
   inferPostKindForEdit,
   resolveTagTargetCompositeIdForPostCreate,
@@ -173,6 +174,7 @@ export class PostController {
     attachmentUris,
     parentPostId,
     originalPostId,
+    lock,
   }: TCreatePostParams): Promise<string> {
     const isCurrent = captureViewerSession();
     let parentUri: string | undefined = undefined;
@@ -202,7 +204,11 @@ export class PostController {
       );
     }
 
-    const postKind = inferPostKindForCreate({ content, attachments, isArticle });
+    // A `lock` marks this post as the public announcement of locked content, which may never be a
+    // `long` or `collection` post — the locked content behind it still may.
+    const postKind = lock
+      ? inferAnnouncementKind({ content, attachments, isArticle })
+      : inferPostKindForCreate({ content, attachments, isArticle });
 
     // TODO: In the future, we could decouple that action and do it asyncronously in the moment that we add a file to the post
     const fileAttachments = attachments ? await this.normalizeFileAttachments({ attachments, pubky: authorId }) : [];
@@ -214,6 +220,7 @@ export class PostController {
         parentUri,
         embed: repostedUri,
         attachments: fileAttachments,
+        lock,
         attachmentUris,
       },
       authorId,
@@ -358,11 +365,12 @@ export class PostController {
 
     const collection = await PostApplication.getDetails({ compositeId: compositeCollectionId });
 
-    // Tombstoned collections (`content === '[DELETED]'`) are treated as
-    // not-found here. Pre-tombstone refactor `!collection` caught hard-deleted
-    // rows; now they stick around as tombstones, and falling through would
-    // surface a misleading "Collection content is invalid" error.
-    if (!collection || isPostDeleted(collection.content)) {
+    // Tombstoned collections (the Nexus `deleted` flag, or the legacy
+    // `[DELETED]` content) are treated as not-found here. Pre-tombstone
+    // refactor `!collection` caught hard-deleted rows; now they stick around
+    // as tombstones, and falling through would surface a misleading
+    // "Collection content is invalid" error.
+    if (!collection || isPostDeleted(collection)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
         operation: 'commitEditCollection',
@@ -461,7 +469,7 @@ export class PostController {
 
     // Tombstoned collections are not-found. See `commitEditCollection` above
     // for the rationale.
-    if (!collection || isPostDeleted(collection.content)) {
+    if (!collection || isPostDeleted(collection)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
         operation: 'commitUpdateCollectionItem',
@@ -505,7 +513,7 @@ export class PostController {
 
     // Tombstoned collections are not-found. See `commitEditCollection` above
     // for the rationale.
-    if (!collection || isPostDeleted(collection.content)) {
+    if (!collection || isPostDeleted(collection)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
         operation: 'commitReorderCollectionItems',
@@ -592,7 +600,7 @@ export class PostController {
     }
 
     const current = await PostApplication.getDetails({ compositeId: compositePostId });
-    if (!current || isPostDeleted(current.content)) {
+    if (!current || isPostDeleted(current)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
         service: ErrorService.Local,
         operation: 'commitEdit',

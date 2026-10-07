@@ -10,6 +10,7 @@ exports[`ProfilePageContainer > matches snapshot 1`] = `
   data-profile="{\\"name\\":\\"Test User\\",\\"bio\\":\\"Test bio\\",\\"publicKey\\":\\"68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y\\",\\"emoji\\":\\"🌴\\",\\"status\\":\\"Available\\",\\"avatarUrl\\":\\"https://example.com/avatar.jpg\\",\\"link\\":\\"https://example.com/profile/68rkfi1d78baobycj6w4b7dga43o8qtnuhubban5at6qywrieb5y\\"}"
   data-stats="{\\"notifications\\":5,\\"posts\\":10,\\"replies\\":3,\\"followers\\":100,\\"following\\":50,\\"friends\\":25,\\"tagged\\":7}"
   data-testid="profile-page-layout"
+  data-unlocked-count="0"
 >
   <div>
     Test Content

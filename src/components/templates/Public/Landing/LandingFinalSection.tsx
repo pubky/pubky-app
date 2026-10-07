@@ -48,7 +48,7 @@ export function LandingFinalSection() {
           {', and confirm you are'} <DialogAge />{' '}
           {'Pubky is powered by '}
           <Link href={getPubkyCoreLink()} target="_blank">
-            {'Pubky Core'}
+            {'Pubky Protocol'}
           </Link>
           {' and was built by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.'}
         </FooterLinks>

@@ -21,6 +21,7 @@ const VALID_ENV_INPUT = {
   pkarrRelays: '["https://pkarr.example.com"]',
   testnet: 'true',
   deployEnv: 'production',
+  shopUrl: 'https://shop.example.com/marketplace',
 };
 
 const SENTRY_ENV_INPUT = {
@@ -48,6 +49,22 @@ const APP_ENV_INPUT = {
 };
 
 describe('runtimeEnvInputSchema', () => {
+  it.each([undefined, '', '   ', 'not-a-url', '/marketplace', 'javascript:alert(1)', 'ftp://shop.example.com'])(
+    'rejects a missing or invalid required Shop URL: %s',
+    (shopUrl) => {
+      expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, shopUrl })).toThrow();
+      expect(() => runtimeConfigValueSchema.parse({ ...NETWORK_RUNTIME_DEFAULTS, shopUrl })).toThrow();
+    },
+  );
+
+  it.each(['https://shop.example.com/marketplace', 'http://localhost:3000/marketplace'])(
+    'uses the configured Shop destination: %s',
+    (shopUrl) => {
+      expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, shopUrl }).shopUrl).toBe(shopUrl);
+      expect(runtimeEnvInputSchemaWithDefaults.parse({ shopUrl }).shopUrl).toBe(shopUrl);
+    },
+  );
+
   it('parses string PKARR_RELAYS and TESTNET into parsed shapes', () => {
     const parsed = runtimeEnvInputSchema.parse(VALID_ENV_INPUT);
 
@@ -163,6 +180,11 @@ describe('runtimeEnvInputSchema', () => {
     expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderatedTags: '   ' }).moderatedTags).toEqual(
       APP_RUNTIME_DEFAULTS.moderatedTags,
     );
+  });
+
+  it('treats an empty Paykit Server URL as unset, and throws on a malformed one', () => {
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, paykitServerUrl: '  ' }).paykitServerUrl).toBeUndefined();
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, paykitServerUrl: 'not-a-url' })).toThrow();
   });
 
   it('throws on invalid optional boolean values', () => {

@@ -169,7 +169,7 @@ async function waitForDynamicIconsReady(root: Element) {
   }
 }
 
-async function waitForImagesReady(root: Element) {
+export async function waitForImagesReady(root: Element) {
   const images = Array.from(root.querySelectorAll('img'));
   await Promise.all(images.map((img) => waitForHtmlImage(img)));
   await new Promise<void>((resolve) => {

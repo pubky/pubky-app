@@ -13,7 +13,7 @@ exports[`ControlledTextareaField - Snapshots > matches snapshot for default stat
     Test Label
   </label>
   <div
-    class="mx-auto flex w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium !bg-alpha-90/10 border-dashed"
+    class="mx-auto flex w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 font-medium border-dashed"
     data-testid="container"
   >
     <textarea

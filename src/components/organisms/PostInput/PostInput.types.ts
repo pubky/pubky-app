@@ -9,6 +9,11 @@ export type PostInputVariant =
   | typeof POST_INPUT_VARIANT.REPOST
   | typeof POST_INPUT_VARIANT.EDIT;
 
+export type EditLock = {
+  lockUrl: string;
+  title: string;
+};
+
 interface PostInputBaseProps {
   /** Callback after successful post, receives the created post ID */
   onSuccess?: (createdPostId: string) => void;
@@ -44,6 +49,8 @@ interface PostInputBaseProps {
   ) => void;
   /** Callback when article mode changes */
   onArticleModeChange?: (isArticle: boolean) => void;
+  /** Fires when the lock switch flips, so the compose dialog can retitle itself. */
+  onLockModeChange?: (isLockEnabled: boolean) => void;
   /** Data Cy for the post input */
   dataCy?: string;
   /** ID to access the post input */
@@ -83,6 +90,7 @@ export type PostInputProps =
       editContent?: never;
       editIsArticle?: never;
       editAttachments?: never;
+      editLock?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: repost */
@@ -94,6 +102,7 @@ export type PostInputProps =
       editContent?: never;
       editIsArticle?: never;
       editAttachments?: never;
+      editLock?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: new root post */
@@ -104,6 +113,7 @@ export type PostInputProps =
       editContent?: never;
       editIsArticle?: never;
       editAttachments?: never;
+      editLock?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: edit post */
@@ -123,4 +133,6 @@ export type PostInputProps =
        * attachments, so the type forces every edit surface to provide it.
        */
       editAttachments: string[];
+      /** Existing lock announcement metadata. Omitted for normal post edits. */
+      editLock?: EditLock;
     });

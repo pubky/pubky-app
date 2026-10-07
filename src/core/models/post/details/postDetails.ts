@@ -1,6 +1,6 @@
 import { Table } from 'dexie';
 import { db } from '@/database/franky/franky';
-import { DELETED } from '@/models/post/details/postDetails.constants';
+import { isPostDeleted } from '@/libs/utils/utils';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
 
@@ -15,6 +15,8 @@ export class PostDetailsModel
   kind: string;
   uri: string;
   attachments: string[] | null;
+  lock?: string | null;
+  deleted?: boolean;
 
   constructor(postDetails: PostDetailsModelSchema) {
     super(postDetails);
@@ -23,6 +25,8 @@ export class PostDetailsModel
     this.kind = postDetails.kind;
     this.uri = postDetails.uri;
     this.attachments = postDetails.attachments;
+    this.lock = postDetails.lock ?? null;
+    this.deleted = postDetails.deleted;
   }
 
   /**
@@ -37,7 +41,7 @@ export class PostDetailsModel
       return postIds.filter((postId, index) => {
         const details = detailsById[index];
         // Keep posts that don't have details (fail-open) or aren't deleted
-        return !details || details.content !== DELETED;
+        return !details || !isPostDeleted(details);
       });
     } catch {
       // Fail-open: keep posts we can't read

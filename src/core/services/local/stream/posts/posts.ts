@@ -7,6 +7,7 @@ import type {
 } from '@/controllers/stream/posts/posts.types';
 import { db } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
 import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
 import { CompositeIdDomain } from '@/models/models.types';
@@ -15,7 +16,6 @@ import { ModerationModel } from '@/models/moderation/moderation';
 import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
-import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import { PostTagsModel } from '@/models/post/tags/postTags';
@@ -28,6 +28,7 @@ import {
 } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
 import type {
   TAddReplyToStreamParams,
   TAlignPageParams,
@@ -235,6 +236,44 @@ export class LocalStreamPostsService {
   }
 
   /**
+   * Merge and acknowledge the unread row from its first id whose details are cached and not a
+   * tombstone, downward in polled order, ids without details below it included: each of those
+   * is fetched by its card's local-first read when it renders, and a late-served one keeps its
+   * position whatever `indexed_at` its edit carries. The ids above that head are held back when
+   * they have no details, since as the main head one of them would resolve no timestamp and
+   * polling would stop (#2608); they stay unread for the poll-time hydration to retry. A
+   * tombstone among them is acknowledged, and one below the head is acknowledged and dropped
+   * from the merge by `mergeUnreadStreamWithPostStream`. The classification runs inside the
+   * transaction, so an id hydrated meanwhile is merged rather than left behind. Without a main
+   * row, or with an empty one, nothing is merged and the unread row is dropped, so the first
+   * page comes from Nexus with a real cursor instead of a cursor-less row seeded from unread
+   * ids. See docs/local-first.md, _Stream Pagination Cursors_.
+   */
+  static async markUnreadPostsAsReadFromResolvableHead({ streamId }: TStreamIdParams): Promise<void> {
+    await db.transaction(
+      'rw',
+      [PostStreamModel.table, UnreadPostStreamModel.table, PostDetailsModel.table],
+      async () => {
+        const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
+        if (!unreadPostStream) return;
+        const postStream = await PostStreamModel.findById(streamId);
+        if (!postStream || postStream.stream.length === 0) {
+          await this.clearUnreadStream({ streamId });
+          return;
+        }
+        const details = await PostDetailsModel.findByIdsPreserveOrder(unreadPostStream.stream);
+        const headIndex = details.findIndex((postDetails) => postDetails !== undefined && !isPostDeleted(postDetails));
+        await this.markUnreadPostsAsRead({
+          streamId,
+          postIds: unreadPostStream.stream.filter(
+            (_postId, index) => details[index] !== undefined || (headIndex !== -1 && index > headIndex),
+          ),
+        });
+      },
+    );
+  }
+
+  /**
    * Acknowledge selected unread IDs, or clear the entire stream when omitted.
    * The transaction preserves other IDs that arrived while the UI was loading.
    * @param streamId - The stream ID to clear the unread stream for
@@ -356,13 +395,16 @@ export class LocalStreamPostsService {
     // land between the check and the bulk save.
     //
     // Tombstone guard. Defense-in-depth against a Nexus refetch racing a
-    // local delete: if a row already has `content === DELETED`, do NOT
-    // overwrite it with whatever Nexus is returning right now (the by-ids
-    // endpoint can be stale relative to the delete index, see
-    // `LocalPostService.delete`'s hard-delete branch). Tombstoned ids are
-    // dropped from every per-table batch below so we don't leave behind
-    // orphan counts / tags / relationships / bookmarks pointing at a
-    // deleted post.
+    // local delete: if a row already reads as deleted (the Nexus `deleted`
+    // flag, or the legacy `[DELETED]` content), do NOT overwrite it with
+    // whatever Nexus is returning right now (the by-ids endpoint can be stale
+    // relative to the delete index, see `LocalPostService.delete`'s
+    // hard-delete branch). Tombstoned ids are dropped from every per-table
+    // batch below so we don't leave behind orphan counts / tags /
+    // relationships / bookmarks pointing at a deleted post. The freshness
+    // record is the exception: a tombstone still advances its TTL (see
+    // `liveTtl`), so a visible deleted placeholder is not force-refetched on
+    // every refresh tick.
     //
     // Refresh guard (TTL path only). A local-first edit is newer than
     // anything Nexus can return until Nexus has re-indexed it, and the owner's
@@ -393,7 +435,7 @@ export class LocalStreamPostsService {
         const locallyNewerIds = new Set<string>();
         existingDetails.forEach((existing, index) => {
           const incoming = postDetails[index];
-          if (existing?.content === DELETED) {
+          if (isPostDeleted(existing)) {
             tombstonedIds.add(incoming.id);
             return;
           }
@@ -413,8 +455,17 @@ export class LocalStreamPostsService {
         const liveCounts = postCounts.filter(([id]) => !tombstonedIds.has(id));
         const liveRelationships = postRelationships.filter(([id]) => !tombstonedIds.has(id));
         const liveTags = postTags.filter(([id]) => !tombstonedIds.has(id));
-        const liveTtl = postTtl.filter(([id]) => !tombstonedIds.has(id));
-        const liveBookmarks = postBookmarks.filter((b) => !tombstonedIds.has(b.id));
+        // The freshness record is the one row a tombstone still refreshes:
+        // `TtlApplication.findStalePostsByIds` returns every id whose TTL is
+        // missing or expired, and `deferOmittedIds` cannot hold back an id
+        // Nexus returned, so a tombstone left without one is force-refetched
+        // on every refresh tick. Content and auxiliary rows stay protected.
+        const liveTtl = postTtl;
+        // A bookmark the viewer removed locally while Nexus was still indexing
+        // the removal must not come back (see `recentUnbookmarks`).
+        const liveBookmarks = postBookmarks.filter(
+          (b) => !tombstonedIds.has(b.id) && !recentUnbookmarks.isProtected(tagGuard.viewerId, b.id),
+        );
         const liveModerations = postModerations.filter((m) => !tombstonedIds.has(m.id));
 
         if (tagGuard.isCurrent && !tagGuard.isCurrent()) return;
