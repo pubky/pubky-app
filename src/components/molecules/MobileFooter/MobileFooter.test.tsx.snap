@@ -145,6 +145,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with custom className 1`] =
       aria-label="Shop"
       class="shrink-0 rounded-full p-2 transition-all sm:p-3 border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="https://shop.staging.pubky.app/marketplace"
+      rel="noopener noreferrer"
     >
       <svg
         aria-hidden="true"
@@ -347,6 +348,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with default props 1`] = `
       aria-label="Shop"
       class="shrink-0 rounded-full p-2 transition-all sm:p-3 border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="https://shop.staging.pubky.app/marketplace"
+      rel="noopener noreferrer"
     >
       <svg
         aria-hidden="true"
@@ -549,6 +551,7 @@ exports[`MobileFooter - Snapshots > matches snapshot with different active path 
       aria-label="Shop"
       class="shrink-0 rounded-full p-2 transition-all sm:p-3 border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10"
       href="https://shop.staging.pubky.app/marketplace"
+      rel="noopener noreferrer"
     >
       <svg
         aria-hidden="true"

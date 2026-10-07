@@ -174,9 +174,16 @@ describe('runtime-config resolver', () => {
       (shopUrl) => {
         simulateDeployedEnv();
         setAllRuntimeEnv();
+        expect(readServerConfig().shopUrl).toBe(RUNTIME_ENV_VALUES.shopUrl);
         if (shopUrl === undefined) delete process.env[PUBKY_RUNTIME_ENV_NAMES.shopUrl];
         else process.env[PUBKY_RUNTIME_ENV_NAMES.shopUrl] = shopUrl;
-        expect(() => readServerConfig()).toThrow(/PUBKY_RUNTIME_SHOP_URL/);
+        expect(() => readServerConfig()).toThrow(
+          expect.objectContaining({
+            cause: expect.objectContaining({
+              issues: [expect.objectContaining({ path: ['shopUrl'] })],
+            }),
+          }),
+        );
       },
     );
 

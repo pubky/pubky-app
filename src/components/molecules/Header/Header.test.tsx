@@ -154,6 +154,7 @@ vi.mock('@/app/routes', async (importOriginal) => {
 });
 
 describe('Header Components', () => {
+  let mockCurrentUserPubky: string | null = 'test-pubky';
   const mockPush = vi.fn();
   const mockSetShowSignInDialog = vi.fn();
   const mockRouter = {
@@ -166,35 +167,15 @@ describe('Header Components', () => {
     bfcacheId: '',
   };
 
-  it('links to the staging Shop in the same tab', () => {
-    render(<HeaderNavigationButtons />);
-    const link = screen.getByRole('button', { name: 'Shop' }).closest('a');
-    expect(link).toHaveAttribute('href', 'https://shop.staging.pubky.app/marketplace');
-    expect(link?.getAttribute('target')).not.toBe('_blank');
-  });
-
-  it.each([
-    { name: 'signed-in', Component: HeaderNavigationButtons },
-    { name: 'guest', Component: HeaderExploreNavigationButtons },
-  ])('uses the injected Shop destination in $name navigation', ({ Component }) => {
-    window[RUNTIME_CONFIG_WINDOW_KEY] = {
-      ...readServerConfig(),
-      shopUrl: 'https://shop.example.com/marketplace',
-    };
-    render(<Component />);
-    const link = screen.getByRole('button', { name: 'Shop' }).closest('a');
-    expect(link).toHaveAttribute('href', 'https://shop.example.com/marketplace');
-    expect(link).toHaveAttribute('target', '_self');
-  });
-
   beforeEach(() => {
+    mockCurrentUserPubky = 'test-pubky';
     resetRuntimeConfigForTests();
     delete window[RUNTIME_CONFIG_WINDOW_KEY];
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
     vi.mocked(usePathname).mockReturnValue('/home');
     vi.mocked(useAuthStore).mockImplementation((selector) => {
       const state = {
-        currentUserPubky: 'test-pubky',
+        currentUserPubky: mockCurrentUserPubky,
         setShowSignInDialog: mockSetShowSignInDialog,
       };
       return selector(state as never);
@@ -210,6 +191,25 @@ describe('Header Components', () => {
     vi.clearAllMocks();
     delete window[RUNTIME_CONFIG_WINDOW_KEY];
     resetRuntimeConfigForTests();
+  });
+
+  it.each([
+    { name: 'signed-in', Component: HeaderNavigationButtons },
+    { name: 'guest', Component: HeaderExploreNavigationButtons },
+  ])('uses the injected Shop destination in $name navigation', ({ name, Component }) => {
+    mockCurrentUserPubky = name === 'guest' ? null : 'test-pubky';
+    window[RUNTIME_CONFIG_WINDOW_KEY] = {
+      ...readServerConfig(),
+      shopUrl: 'https://shop.example.com/marketplace',
+    };
+    render(<Component />);
+    const link = screen.getByRole('button', { name: 'Shop' }).closest('a');
+    expect(link).toHaveAttribute('href', 'https://shop.example.com/marketplace');
+    expect(link).toHaveAttribute('target', '_self');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    fireEvent.click(link!);
+    expect(mockSetShowSignInDialog).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   describe('HeaderContainer', () => {
@@ -449,6 +449,7 @@ describe('Header Components', () => {
       // lucide uses 'house' for the home icon
       expect(document.querySelector('.lucide-house')).toBeInTheDocument();
       expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-store')).toBeInTheDocument();
       expect(document.querySelector('.lucide-library')).toBeInTheDocument();
       expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
     });
@@ -564,6 +565,7 @@ describe('Header Components', () => {
       // All five nav icons are shown.
       expect(document.querySelector('.lucide-house')).toBeInTheDocument();
       expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-store')).toBeInTheDocument();
       expect(document.querySelector('.lucide-library')).toBeInTheDocument();
       expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
 

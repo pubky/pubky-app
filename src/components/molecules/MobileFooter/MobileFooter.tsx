@@ -65,7 +65,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
       icon: Flame,
       label: 'Hot',
     },
-    { href: getShopLink(), icon: Store, label: 'Shop' },
+    { href: getShopLink(), icon: Store, label: 'Shop', rel: 'noopener noreferrer' },
     {
       href: APP_ROUTES.COLLECTIONS,
       activePrefix: APP_ROUTES.COLLECTIONS,
@@ -105,6 +105,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
             <Link
               key={item.href}
               href={item.href}
+              rel={item.rel}
               // Search prefetch can loop even after leaving a query search (#2755).
               // Active feed links only scroll, so they also skip prefetch.
               prefetch={item.href === APP_ROUTES.SEARCH || (item.isFeedRoute && itemIsActive) ? false : undefined}

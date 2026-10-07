@@ -112,7 +112,7 @@ const getNavigationItems = (): NavigationItemConfig[] => [
     label: 'Hot',
     dataCy: 'header-hot-btn',
   },
-  { href: getShopLink(), icon: Store, label: 'Shop', dataCy: 'header-marketplace-btn', external: true },
+  { href: getShopLink(), icon: Store, label: 'Shop', dataCy: 'header-shop-btn', external: true },
   {
     href: APP_ROUTES.COLLECTIONS,
     icon: Library,
@@ -167,6 +167,7 @@ const NavigationButton = ({
     <Link
       href={href}
       target={external ? '_self' : undefined}
+      rel={external ? 'noopener noreferrer' : undefined}
       data-cy={dataCy}
       onClick={
         isFeedRoute ? (event) => handleFeedNavClick(event, { isActive, smoothScrollWhenActive: true }) : undefined

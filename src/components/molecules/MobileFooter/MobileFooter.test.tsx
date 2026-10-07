@@ -152,26 +152,6 @@ vi.mock('@/stores/notification/notification.store', () => ({
 }));
 
 describe('MobileFooter', () => {
-  it('links to the staging Shop in the same tab', () => {
-    render(<MobileFooter />);
-    const link = screen.getByRole('link', { name: 'Shop' });
-    expect(link).toHaveAttribute('href', 'https://shop.staging.pubky.app/marketplace');
-    expect(link.getAttribute('target')).not.toBe('_blank');
-  });
-
-  it.each([true, false])('uses the injected Shop destination (authenticated: %s)', (authenticated) => {
-    mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
-    mockIsCoreExploreRoute = true;
-    window[RUNTIME_CONFIG_WINDOW_KEY] = {
-      ...readServerConfig(),
-      shopUrl: 'https://shop.example.com/marketplace',
-    };
-    render(<MobileFooter />);
-    const link = screen.getByRole('link', { name: 'Shop' });
-    expect(link).toHaveAttribute('href', 'https://shop.example.com/marketplace');
-    expect(link.getAttribute('target')).not.toBe('_blank');
-  });
-
   beforeEach(async () => {
     resetRuntimeConfigForTests();
     delete window[RUNTIME_CONFIG_WINDOW_KEY];
@@ -193,6 +173,22 @@ describe('MobileFooter', () => {
   afterEach(() => {
     delete window[RUNTIME_CONFIG_WINDOW_KEY];
     resetRuntimeConfigForTests();
+  });
+
+  it.each([true, false])('uses the injected Shop destination (authenticated: %s)', (authenticated) => {
+    mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
+    mockIsCoreExploreRoute = true;
+    window[RUNTIME_CONFIG_WINDOW_KEY] = {
+      ...readServerConfig(),
+      shopUrl: 'https://shop.example.com/marketplace',
+    };
+    render(<MobileFooter />);
+    const link = screen.getByRole('link', { name: 'Shop' });
+    expect(link).toHaveAttribute('href', 'https://shop.example.com/marketplace');
+    expect(link.getAttribute('target')).not.toBe('_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    fireEvent.click(link);
+    expect(collectionsDiscoveryMock.setShowSignInDialog).not.toHaveBeenCalled();
   });
 
   it('renders with default props', () => {
