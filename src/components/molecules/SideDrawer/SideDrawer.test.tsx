@@ -238,6 +238,20 @@ describe('SideDrawer - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
+  it('matches snapshot with feed drawer sizing overrides', () => {
+    const { container } = render(
+      <SideDrawer
+        open={true}
+        onOpenChangeAction={mockOnOpenChangeAction}
+        position="right"
+        className="w-64 p-6 sm:w-64 sm:p-6"
+      >
+        <div>Feed content</div>
+      </SideDrawer>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
   it('matches snapshot with complex children', () => {
     const { container } = render(
       <SideDrawer open={true} onOpenChangeAction={mockOnOpenChangeAction}>

@@ -2,12 +2,19 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import { PublicKey } from '@/templates/Onboarding/PublicKey/PublicKey';
+
+const { copyToClipboard } = vi.hoisted(() => ({ copyToClipboard: vi.fn() }));
+
+vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
+  useCopyToClipboard: () => ({ copyToClipboard }),
+}));
 
 // The real app mounts <Header /> from the root layout above every page; on
 // /onboarding/* it renders the "Create account" step bar (1–5). Render it here
@@ -89,5 +96,25 @@ describe('PublicKey (onboarding) — visual regression', () => {
   it('renders the public-key page at mobile viewport', async () => {
     await renderForVRT(<PublicKeyWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await matchVrtFrameScreenshot('onboarding-pubky-mobile');
+  });
+});
+
+describe('PublicKey padded click target', () => {
+  it.each([390, 1440])('copies the key from both padded edges at %ipx', async (width) => {
+    const screen = await renderForVRT(<PublicKeyWithHeader />, { viewport: { width, height: 844 } });
+    const input = screen.getByRole('textbox');
+    const field = input.element().parentElement;
+    expect(field).not.toBeNull();
+    if (!field) return;
+    const bounds = field.getBoundingClientRect();
+    const x = input.element().getBoundingClientRect().left - bounds.left + 40;
+
+    for (const y of [10, bounds.height - 10]) {
+      copyToClipboard.mockClear();
+      await page.elementLocator(field).click({ position: { x, y } });
+      expect(copyToClipboard).toHaveBeenCalledExactlyOnceWith(
+        'pubkyvrt000000000000000000000000000000000000000000alice01',
+      );
+    }
   });
 });

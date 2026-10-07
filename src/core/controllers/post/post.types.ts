@@ -19,6 +19,11 @@ export interface TCreatePostParams {
   attachmentUris?: string[];
   parentPostId?: string;
   originalPostId?: string;
+  /**
+   * `pubky://` URL of a Locks lock file. Set only when this post is the public announcement of locked
+   * content; the locked content itself never goes through this controller.
+   */
+  lock?: string;
 }
 
 export interface TCreateCollectionParams {

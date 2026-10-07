@@ -78,7 +78,7 @@ exports[`DialogBackupEncrypted - Snapshots > matches snapshot for default Dialog
             <input
               aria-describedby="password-help"
               autocomplete="new-password"
-              class="bg-opacity-90 h-14 rounded-md border border-dashed px-5 py-4 shadow-sm"
+              class="h-14 rounded-md border border-dashed bg-background/20 px-5 py-4 shadow-sm"
               data-testid="input"
               id="password"
               placeholder="Enter a strong password"
@@ -132,7 +132,7 @@ exports[`DialogBackupEncrypted - Snapshots > matches snapshot for default Dialog
           <input
             aria-invalid="false"
             autocomplete="new-password"
-            class="bg-opacity-90 h-14 rounded-md border border-dashed px-5 py-4 shadow-sm "
+            class="h-14 rounded-md border border-dashed bg-background/20 px-5 py-4 shadow-sm "
             data-testid="input"
             id="confirmPassword"
             placeholder="Repeat your password"

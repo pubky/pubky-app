@@ -6,5 +6,3 @@ paths:
 # Skeleton Architecture Rules
 
 Read and follow `docs/skeleton-architecture.md` before editing these files.
-
-@../../docs/skeleton-architecture.md

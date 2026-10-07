@@ -8,6 +8,17 @@ describe('FooterLinks', () => {
     const footerLinks = screen.getByText('Footer text');
     expect(footerLinks).toBeInTheDocument();
   });
+
+  it('renders muted text at full opacity and underlines nested links', () => {
+    render(
+      <FooterLinks>
+        Footer text <a href="/privacy">Privacy</a>
+      </FooterLinks>,
+    );
+    const footerLinks = screen.getByRole('link', { name: 'Privacy' }).closest('p');
+    expect(footerLinks).toHaveClass('text-muted-foreground', '[&_a]:underline');
+    expect(footerLinks).not.toHaveClass('opacity-80');
+  });
 });
 
 describe('FooterLinks - Snapshots', () => {

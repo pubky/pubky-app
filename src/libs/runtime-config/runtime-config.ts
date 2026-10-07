@@ -168,6 +168,12 @@ export const getPkarrRelays = (): string[] => getRuntimeConfig().pkarrRelays;
 export const getTestnet = (): boolean => getRuntimeConfig().testnet;
 export const getDeployEnv = (): DeployEnv => getRuntimeConfig().deployEnv;
 
+// Optional Lock Server pubky the composer's lock flow signs into (undefined = Locks disabled).
+export const getLockServer = (): string | undefined => getRuntimeConfig().lockServer;
+
+// Optional Paykit Server address for the creator's payout setup (undefined = Locks disabled).
+export const getPaykitServerUrl = (): string | undefined => getRuntimeConfig().paykitServerUrl;
+
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
 export const getPulseClientKey = (): string | undefined => getRuntimeConfig().pulseClientKey;
 export const getPulseEndpoint = (): string | undefined => getRuntimeConfig().pulseEndpoint;
@@ -191,6 +197,8 @@ export const getTtlBatchIntervalMs = (): number => getRuntimeConfig().ttlBatchIn
 export const getTtlPostMaxBatchSize = (): number => getRuntimeConfig().ttlPostMaxBatchSize;
 export const getTtlUserMaxBatchSize = (): number => getRuntimeConfig().ttlUserMaxBatchSize;
 export const getTtlRetryDelayMs = (): number => getRuntimeConfig().ttlRetryDelayMs;
+/** Indexing protection after a local profile write, independent of the normal refresh TTL. */
+export const getProfileLocalEditTtlMs = (): number => getRuntimeConfig().profileLocalEditTtlMs;
 export const getModerationId = (): string | undefined => getRuntimeConfig().moderationId;
 export const getModeratedTags = (): string[] => getRuntimeConfig().moderatedTags;
 export const getExchangeRateApi = (): string => getRuntimeConfig().exchangeRateApi;

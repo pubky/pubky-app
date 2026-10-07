@@ -39,9 +39,7 @@ describe('ActiveUsers', () => {
         userIds: [],
         isLoading: true,
         isLoadingMore: false,
-        hasMore: false,
         error: null,
-        loadMore: vi.fn(),
         refetch: vi.fn(),
       });
 
@@ -85,9 +83,7 @@ describe('ActiveUsers', () => {
         userIds: ['user-1', 'user-2', 'user-3'],
         isLoading: false,
         isLoadingMore: false,
-        hasMore: false,
         error: null,
-        loadMore: vi.fn(),
         refetch: vi.fn(),
       });
 
@@ -104,9 +100,7 @@ describe('ActiveUsers', () => {
         userIds: [],
         isLoading: false,
         isLoadingMore: false,
-        hasMore: false,
         error: null,
-        loadMore: vi.fn(),
         refetch: vi.fn(),
       });
 
@@ -121,9 +115,7 @@ describe('ActiveUsers', () => {
         userIds: ['missing-user-1', 'missing-user-2'],
         isLoading: false,
         isLoadingMore: false,
-        hasMore: false,
         error: null,
-        loadMore: vi.fn(),
         refetch: vi.fn(),
       });
 
@@ -143,9 +135,7 @@ describe('ActiveUsers', () => {
       userIds: ['user-1', 'user-2'],
       isLoading: false,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 
@@ -170,9 +160,7 @@ describe('ActiveUsers - Snapshots', () => {
       userIds: [],
       isLoading: true,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 
@@ -189,9 +177,7 @@ describe('ActiveUsers - Snapshots', () => {
       userIds: ['user-1', 'user-2'],
       isLoading: false,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 
@@ -205,9 +191,7 @@ describe('ActiveUsers - Snapshots', () => {
       userIds: [],
       isLoading: false,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 

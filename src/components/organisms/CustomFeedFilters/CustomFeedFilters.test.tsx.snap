@@ -51,6 +51,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for drawer variant wit
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab="columns"
+    data-show-cards="true"
     data-testid="filter-layout"
   >
     FilterLayout
@@ -92,6 +93,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for drawer variant wit
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab=""
+    data-show-cards="true"
     data-testid="filter-layout"
   >
     FilterLayout
@@ -162,6 +164,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant wi
       data-default-selected-tab=""
       data-disabled="true"
       data-selected-tab="wide"
+      data-show-cards="true"
       data-testid="filter-layout"
     >
       FilterLayout
@@ -233,6 +236,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant wi
       data-default-selected-tab=""
       data-disabled="true"
       data-selected-tab="columns"
+      data-show-cards="true"
       data-testid="filter-layout"
     >
       FilterLayout
@@ -279,6 +283,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant wi
       data-default-selected-tab=""
       data-disabled="true"
       data-selected-tab=""
+      data-show-cards="true"
       data-testid="filter-layout"
     >
       FilterLayout

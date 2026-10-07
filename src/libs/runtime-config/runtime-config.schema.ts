@@ -171,6 +171,8 @@ export const APP_RUNTIME_DEFAULTS = {
   ttlPostMaxBatchSize: 20,
   ttlUserMaxBatchSize: 20,
   ttlRetryDelayMs: 60_000,
+  // Bounded indexing grace period, matching the existing tag-mutation default, not an SLA.
+  profileLocalEditTtlMs: 300_000,
   moderationId: 'nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy',
   moderatedTags: ['nudity'],
   exchangeRateApi: 'https://api1.blocktank.to/api/fx/rates/btc',
@@ -258,6 +260,7 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   ttlPostMaxBatchSize: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlPostMaxBatchSize),
   ttlUserMaxBatchSize: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlUserMaxBatchSize),
   ttlRetryDelayMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlRetryDelayMs),
+  profileLocalEditTtlMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.profileLocalEditTtlMs),
   moderationId: pubkyValue.optional(),
   moderatedTags: z.array(nonEmptyStringValue).default([...APP_RUNTIME_DEFAULTS.moderatedTags]),
   exchangeRateApi: urlValue.default(APP_RUNTIME_DEFAULTS.exchangeRateApi),
@@ -285,6 +288,10 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   email: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.email),
   appStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.appStoreUrl),
   playStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.playStoreUrl),
+  /** Lock Server pubky the composer's lock flow signs into. Absent = Locks disabled. */
+  lockServer: nonEmptyStringValue.optional(),
+  /** Paykit Server address, where a creator connects the account that receives payments. Absent = Locks disabled. */
+  paykitServerUrl: urlValue.optional(),
 });
 
 const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
@@ -312,6 +319,8 @@ export const runtimeEnvInputSchema = z
     pkarrRelays: pkarrRelaysFromString,
     testnet: testnetFromString,
     deployEnv: deployEnvValue,
+    lockServer: optionalTrimmedString,
+    paykitServerUrl: optionalUrlFromString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -334,6 +343,7 @@ export const runtimeEnvInputSchema = z
     ttlPostMaxBatchSize: optionalPositiveIntFromString,
     ttlUserMaxBatchSize: optionalPositiveIntFromString,
     ttlRetryDelayMs: optionalPositiveIntFromString,
+    profileLocalEditTtlMs: optionalPositiveIntFromString,
     moderationId: optionalTrimmedString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
@@ -393,6 +403,8 @@ export const runtimeEnvInputSchemaWithDefaults = z
     pkarrRelays: z.string().default(JSON.stringify(NETWORK_RUNTIME_DEFAULTS.pkarrRelays)).pipe(pkarrRelaysFromString),
     testnet: z.string().default(String(NETWORK_RUNTIME_DEFAULTS.testnet)).pipe(testnetFromString),
     deployEnv: deployEnvValue.default(NETWORK_RUNTIME_DEFAULTS.deployEnv),
+    lockServer: optionalTrimmedString,
+    paykitServerUrl: optionalUrlFromString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -415,6 +427,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     ttlPostMaxBatchSize: optionalPositiveIntFromString,
     ttlUserMaxBatchSize: optionalPositiveIntFromString,
     ttlRetryDelayMs: optionalPositiveIntFromString,
+    profileLocalEditTtlMs: optionalPositiveIntFromString,
     moderationId: optionalTrimmedString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
@@ -471,6 +484,8 @@ const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
 
 export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ...NETWORK_RUNTIME_ENV_NAMES,
+  lockServer: 'PUBKY_RUNTIME_LOCK_SERVER',
+  paykitServerUrl: 'PUBKY_RUNTIME_PAYKIT_SERVER_URL',
   pulseClientKey: 'PUBKY_RUNTIME_PULSE_CLIENT_KEY',
   pulseEndpoint: 'PUBKY_RUNTIME_PULSE_ENDPOINT',
   sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',
@@ -493,6 +508,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ttlPostMaxBatchSize: 'PUBKY_RUNTIME_TTL_POST_MAX_BATCH_SIZE',
   ttlUserMaxBatchSize: 'PUBKY_RUNTIME_TTL_USER_MAX_BATCH_SIZE',
   ttlRetryDelayMs: 'PUBKY_RUNTIME_TTL_RETRY_DELAY_MS',
+  profileLocalEditTtlMs: 'PUBKY_RUNTIME_PROFILE_LOCAL_EDIT_TTL_MS',
   moderationId: 'PUBKY_RUNTIME_MODERATION_ID',
   moderatedTags: 'PUBKY_RUNTIME_MODERATED_TAGS',
   exchangeRateApi: 'PUBKY_RUNTIME_EXCHANGE_RATE_API',

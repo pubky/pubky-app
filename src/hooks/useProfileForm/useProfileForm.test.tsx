@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES, PROFILE_ROUTES } from '@/app/routes';
+import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
 import { toast } from '@/molecules/Toaster/toast';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
@@ -112,6 +113,40 @@ describe('useProfileForm profile link safety', () => {
   });
 });
 
+describe('useProfileForm reserved name', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('refuses the [DELETED] label, which belongs to a tombstoned profile', async () => {
+    const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+
+    act(() => {
+      result.current.handlers.setName('[DELETED]');
+    });
+
+    expect(result.current.errors.nameError).toBe('This name is reserved');
+    expect(result.current.isSubmitDisabled).toBe(true);
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(ProfileController.commitCreate).not.toHaveBeenCalled();
+  });
+
+  it('still accepts a live name', async () => {
+    const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+
+    act(() => {
+      result.current.handlers.setName('Alice');
+    });
+
+    expect(result.current.errors.nameError).toBeNull();
+    expect(result.current.isSubmitDisabled).toBe(false);
+  });
+});
+
 describe('useProfileForm post-save navigation', () => {
   const userDetails: NexusUserDetails = {
     id: pubky,
@@ -193,5 +228,184 @@ describe('useProfileForm post-save navigation', () => {
 
     expect(ProfileController.commitUpdate).toHaveBeenCalled();
     expect(routerPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS);
+  });
+});
+
+describe('useProfileForm edit sends only the fields the user changed', () => {
+  // The cached profile may be stale, so nothing is taken from it unless the user edits it.
+  const userDetails: NexusUserDetails = {
+    id: pubky,
+    name: 'Valid User',
+    bio: 'Cached bio',
+    links: [{ title: 'WEBSITE', url: 'https://example.com/' }],
+    status: 'working',
+    image: 'pubky://test-pubky/pub/pubky.app/files/OLD',
+    indexed_at: 1,
+  };
+
+  const renderEditForm = async () => {
+    const hook = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails }));
+    await waitFor(() => expect(hook.result.current.state.isLoading).toBe(false));
+    return hook.result;
+  };
+
+  const submit = async (result: Awaited<ReturnType<typeof renderEditForm>>) => {
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('sends no image when the avatar is untouched', async () => {
+    const result = await renderEditForm();
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: {} });
+  });
+
+  it('sends only the edited bio', async () => {
+    const result = await renderEditForm();
+    act(() => {
+      result.current.handlers.setBio('New bio');
+    });
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: { bio: 'New bio' } });
+  });
+
+  it('ignores a whitespace-only name edit', async () => {
+    const result = await renderEditForm();
+    act(() => {
+      result.current.handlers.setName('Valid User  ');
+    });
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: {} });
+  });
+
+  it('sends image: null when the avatar is removed', async () => {
+    const result = await renderEditForm();
+    act(() => {
+      result.current.handlers.handleDeleteAvatar();
+    });
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: { image: null } });
+  });
+
+  it('sends the uploaded avatar when a new one is chosen', async () => {
+    const uploaded = 'pubky://test-pubky/pub/pubky.app/files/NEW';
+    vi.mocked(FileController.commitCreate).mockResolvedValue(uploaded);
+    const result = await renderEditForm();
+    act(() => {
+      result.current.handlers.handleCropComplete(new File(['a'], 'avatar.jpg', { type: 'image/jpeg' }), 'blob:preview');
+    });
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: { image: uploaded } });
+  });
+
+  it('sends an empty link list when every link is removed', async () => {
+    const result = await renderEditForm();
+    act(() => {
+      result.current.handlers.handleDeleteLink(0);
+    });
+
+    await submit(result);
+
+    expect(ProfileController.commitUpdate).toHaveBeenCalledWith({ pubky, changes: { links: [] } });
+  });
+});
+
+describe('useProfileForm effective link changes', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it.each([
+    { label: 'removing an empty placeholder', original: [], edited: [{ label: 'WEBSITE', url: '' }], expected: {} },
+    {
+      label: 'whitespace in an empty placeholder',
+      original: [],
+      edited: [{ label: 'WEBSITE', url: '  ' }],
+      expected: {},
+    },
+    {
+      label: 'whitespace around a real URL',
+      original: [{ title: 'Website', url: 'https://example.com/' }],
+      edited: [{ label: 'WEBSITE', url: ' https://example.com/ ' }],
+      expected: {},
+    },
+    {
+      label: 'equivalent X handle',
+      original: [{ title: 'X (TWITTER)', url: 'https://x.com/alice' }],
+      edited: [{ label: 'X (TWITTER)', url: '@alice' }],
+      expected: {},
+    },
+    {
+      label: 'repairing a stored bare X handle',
+      original: [{ title: 'X (TWITTER)', url: '@alice' }],
+      edited: [{ label: 'X (TWITTER)', url: 'https://x.com/alice' }],
+      expected: { links: [{ label: 'X (TWITTER)', url: 'https://x.com/alice' }] },
+    },
+    {
+      label: 'removing an unsafe legacy link',
+      original: [{ title: 'Website', url: 'javascript:alert(1)' }],
+      edited: [],
+      expected: { links: [] },
+    },
+    {
+      label: 'removing a stored blank link',
+      original: [{ title: 'Website', url: ' ' }],
+      edited: [],
+      expected: { links: [] },
+    },
+    {
+      label: 'leaving a stored blank link untouched',
+      original: [{ title: 'Website', url: ' ' }],
+      edited: [{ label: 'WEBSITE', url: ' ' }],
+      expected: {},
+    },
+    {
+      label: 'editing a real URL',
+      original: [{ title: 'Website', url: 'https://example.com/' }],
+      edited: [{ label: 'WEBSITE', url: 'https://example.com/new' }],
+      expected: { links: [{ label: 'WEBSITE', url: 'https://example.com/new' }] },
+    },
+    {
+      label: 'editing a label',
+      original: [{ title: 'Website', url: 'https://example.com/' }],
+      edited: [{ label: 'BLOG', url: 'https://example.com/' }],
+      expected: { links: [{ label: 'BLOG', url: 'https://example.com/' }] },
+    },
+  ])('handles $label without republishing unrelated cached links', async ({ original, edited, expected }) => {
+    const userDetails: NexusUserDetails = {
+      id: pubky,
+      name: 'Valid User',
+      bio: '',
+      links: original,
+      image: null,
+      status: null,
+      indexed_at: 1,
+    };
+    const { result } = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails }));
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+    act(() => {
+      result.current.handlers.setLinks(edited);
+      result.current.handlers.setBio('New bio');
+    });
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+    expect(ProfileController.commitUpdate).toHaveBeenCalledExactlyOnceWith({
+      pubky,
+      changes: { bio: 'New bio', ...expected },
+    });
   });
 });

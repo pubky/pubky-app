@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { baseUriBuilder } from 'pubky-app-specs';
+import { baseUriBuilder, userUriBuilder } from 'pubky-app-specs';
 import type {
   TApplicationCommitUpdateDetailsParams,
   TCreateProfileInput,
@@ -9,24 +9,26 @@ import type {
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { hasHttpStatus } from '@/libs/error/error.utils';
+import { hasHttpStatus, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
-import { UserDetailsModel } from '@/models/user/details/userDetails';
+import type { ProfileChanges } from '@/pipes/pipes.types';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalProfileService } from '@/services/local/profile/profile';
-import { LocalUserService } from '@/services/local/user/user';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 const DELETE_FILE_MAX_ATTEMPTS = 3;
 const DELETE_FILE_RETRY_DELAY_MS = 500;
+const PROFILE_LOCK_PREFIX = 'pubky-app:profile:';
 
 export class ProfileApplication {
   private constructor() {} // Prevent instantiation
+
+  private static pendingWrites = new Map<Pubky, Promise<void>>();
 
   /**
    * Commits the set details operation to the homeserver and local database.
@@ -64,75 +66,104 @@ export class ProfileApplication {
   }
 
   /**
-   * Updates full user profile in both homeserver and local database.
-   * Follows local-first pattern: updates homeserver first, then local DB.
+   * Publishes the fields the user edited in the profile form.
    *
-   * @param params - Parameters containing user's public key and profile data
+   * @param params - The user's public key and the changed fields
    */
-  static async commitUpdate({ pubky, name, bio, image, links }: TApplicationCommitUpdateDetailsParams) {
-    const userDetails = await LocalUserService.readDetails({ userId: pubky });
-    if (!userDetails) {
-      throw Err.client(ClientErrorCode.NOT_FOUND, 'User profile not found', {
-        service: ErrorService.Local,
-        operation: 'commitUpdate',
-        context: { pubky },
-      });
-    }
-
-    // Build complete user object with updated fields
-    const { user, meta } = UserNormalizer.to(
-      {
-        name,
-        bio: bio ?? '',
-        image,
-        links,
-        status: userDetails.status ?? '',
-      },
+  static async commitUpdate({ pubky, changes }: TApplicationCommitUpdateDetailsParams) {
+    await this.commitChanges({
       pubky,
-    );
-
-    // Update homeserver with complete profile
-    await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: user.toJson() });
-    // Update local database after successful homeserver sync
-    await LocalProfileService.updateDetails(user, pubky);
+      changes,
+      operation: 'commitUpdate',
+      deletedMessage: 'Cannot update a deleted profile',
+    });
   }
 
   /**
-   * Updates user status in both homeserver and local database.
+   * Publishes a new status, leaving every other profile field as published.
    */
   static async commitUpdateStatus({ pubky, status }: { pubky: Pubky; status: string }) {
-    // Get current user details from local DB
-    const currentUser = await UserDetailsModel.findById(pubky);
-    if (!currentUser) {
-      throw Err.client(ClientErrorCode.NOT_FOUND, 'User profile not found', {
-        service: ErrorService.Local,
-        operation: 'commitUpdateStatus',
-        context: { pubky },
-      });
+    await this.commitChanges({
+      pubky,
+      changes: { status },
+      operation: 'commitUpdateStatus',
+      deletedMessage: 'Cannot update the status of a deleted profile',
+    });
+  }
+
+  /**
+   * Applies `changes` onto the profile currently on the homeserver, PUTs it, then stores
+   * exactly what was published locally. The PUT replaces the whole `profile.json`, so every
+   * field the user didn't change comes from a fresh homeserver read, never from the local
+   * cache, which can be older than the last save. A failed read aborts before the PUT, and a
+   * missing profile (a deleted account) is refused so it isn't recreated. The whole write
+   * holds the user's profile lock (see `withProfileLock`).
+   */
+  private static async commitChanges({
+    pubky,
+    changes,
+    operation,
+    deletedMessage,
+  }: {
+    pubky: Pubky;
+    changes: ProfileChanges;
+    operation: string;
+    deletedMessage: string;
+  }) {
+    await this.withProfileLock(pubky, async () => {
+      let publishedJson: unknown;
+      try {
+        publishedJson = await HomeserverService.getFreshJson(userUriBuilder(pubky));
+      } catch (error) {
+        if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
+          throw Err.client(ClientErrorCode.GONE, deletedMessage, {
+            service: ErrorService.Homeserver,
+            operation,
+            context: { pubky },
+            cause: error,
+          });
+        }
+        throw error;
+      }
+
+      const published = UserNormalizer.fromPublished(publishedJson);
+      const { user, meta } = UserNormalizer.to(UserNormalizer.merge(published, changes), pubky);
+      await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: user.toJson() });
+      await LocalProfileService.updateDetails(user, pubky);
+    });
+  }
+
+  /**
+   * Runs one user's profile writes and account deletion one at a time. Each write reads the
+   * published profile before its PUT, so an overlapping write would read the copy an earlier one
+   * is about to replace, and a write that read `profile.json` before a deletion could PUT it back
+   * after. Web Locks share the lock with every tab of the app, so a deletion also waits for a
+   * write already in flight in another tab. Without them (an insecure origin), a queue covers
+   * this tab only.
+   */
+  private static async withProfileLock(pubky: Pubky, task: () => Promise<void>): Promise<void> {
+    if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+      try {
+        await navigator.locks.request(`${PROFILE_LOCK_PREFIX}${pubky}`, task);
+      } catch (error) {
+        // `request` itself can reject with a DOMException that no Err factory has reported.
+        throw toAppError(error, ErrorService.Local, 'withProfileLock');
+      }
+      return;
     }
 
-    // Build complete user object with updated status
-    // According to spec, we must send the full profile, not just the status field
-    const { user, meta } = UserNormalizer.to(
-      {
-        name: currentUser.name,
-        bio: currentUser.bio,
-        image: currentUser.image,
-        links: (currentUser.links ?? []).map((link) => ({ title: link.title, url: link.url })),
-        status: status || '',
-      },
-      pubky,
-    );
+    const previousTask = this.pendingWrites.get(pubky) ?? Promise.resolve();
+    const pendingTask = previousTask.catch(() => {}).then(task);
 
-    // Update homeserver with complete profile
-    await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: user.toJson() });
+    this.pendingWrites.set(pubky, pendingTask);
 
-    // Update local database after successful homeserver sync
-    await UserDetailsModel.upsert({
-      ...currentUser,
-      status: status || null,
-      deleted: false,
-    });
+    try {
+      await pendingTask;
+    } finally {
+      if (this.pendingWrites.get(pubky) === pendingTask) {
+        this.pendingWrites.delete(pubky);
+      }
+    }
   }
 
   /**
@@ -163,46 +194,50 @@ export class ProfileApplication {
   }
 
   /**
-   * Commits the delete profile operation to the homeserver and local database.
+   * Commits the delete profile operation to the homeserver and local database. Holds the
+   * user's profile lock throughout, so a profile write can't PUT `profile.json` back after it
+   * is deleted.
    * @param pubky - The public key of the user
    * @param setProgress - The function to set the progress
    */
   static async commitDelete({ pubky, setProgress }: TDeleteAccountParams) {
-    // Clear local IndexedDB data first
-    await LocalProfileService.deleteAll();
+    await this.withProfileLock(pubky, async () => {
+      // Clear local IndexedDB data first
+      await LocalProfileService.deleteAll();
 
-    const baseDirectory = baseUriBuilder(pubky);
-    // Enumerate the full directory before deleting (single list calls are page-limited),
-    // so nothing is missed and progress reporting stays accurate.
-    const dataList = await HomeserverService.listAll({ baseDirectory });
+      const baseDirectory = baseUriBuilder(pubky);
+      // Enumerate the full directory before deleting (single list calls are page-limited),
+      // so nothing is missed and progress reporting stays accurate.
+      const dataList = await HomeserverService.listAll({ baseDirectory });
 
-    // Separate profile.json and other files
-    const profileUrl = `${baseDirectory}profile.json`;
-    const filesToDelete = dataList.filter((file) => file !== profileUrl);
+      // Separate profile.json and other files
+      const profileUrl = `${baseDirectory}profile.json`;
+      const filesToDelete = dataList.filter((file) => file !== profileUrl);
 
-    // Sort remaining files alphanumerically and reverse
-    filesToDelete.sort().reverse();
+      // Sort remaining files alphanumerically and reverse
+      filesToDelete.sort().reverse();
 
-    // Total files including profile.json for progress calculation
-    const totalFiles = filesToDelete.length + 1;
+      // Total files including profile.json for progress calculation
+      const totalFiles = filesToDelete.length + 1;
 
-    // Delete each file (excluding profile.json) and update progress
-    for (let index = 0; index < filesToDelete.length; index++) {
-      await this.deleteFile(filesToDelete[index]);
+      // Delete each file (excluding profile.json) and update progress
+      for (let index = 0; index < filesToDelete.length; index++) {
+        await this.deleteFile(filesToDelete[index]);
 
-      if (!setProgress) {
-        continue;
+        if (!setProgress) {
+          continue;
+        }
+
+        setProgress(Math.round(((index + 1) / totalFiles) * 100));
       }
 
-      setProgress(Math.round(((index + 1) / totalFiles) * 100));
-    }
+      // Finally, delete profile.json and update progress to 100%
+      await this.deleteFile(profileUrl);
 
-    // Finally, delete profile.json and update progress to 100%
-    await this.deleteFile(profileUrl);
-
-    if (setProgress) {
-      setProgress(100);
-    }
+      if (setProgress) {
+        setProgress(100);
+      }
+    });
   }
 
   /**

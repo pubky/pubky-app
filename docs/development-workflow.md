@@ -131,7 +131,7 @@ These apply to every diff and are what a reviewer (human or Greptile) checks fir
 - Putting IO (fetch, Dexie) in a component, hook or pipe; calling a service from a controller; calling application from a coordinator.
 - Creating a new store, a second data-fetching mechanism, or a parallel error type instead of using Zustand / TanStack / `Err.*`.
 - Writing a new button/dialog/input/empty-state/skeleton instead of reusing or extending the atom, molecule or Shadcn primitive that already exists.
-- Hardcoded colours, arbitrary Tailwind values, off-scale z-index, new shadow/radius tokens.
+- Hardcoded colours, fixed-length arbitrary Tailwind values (`p-[13px]`), off-scale z-index, new shadow/radius tokens.
 - Adding `useMemo` / `useCallback` (the compiler handles it) or a `useEffect` where `useLocalFirstQuery` belongs.
 - Interpolating user text into toast copy; styling toasts by `className`.
 - Editing generated files, `package-lock.json`, or CI workflows outside a CI task.

@@ -245,6 +245,14 @@ describe('AvatarWithFallback', () => {
     expect(screen.getByTestId('avatar-fallback-initial')).toHaveTextContent('S');
   });
 
+  it('renders a generic user icon instead of a `[` initial for a deleted user', () => {
+    render(<AvatarWithFallback name="[DELETED]" />);
+
+    expect(screen.getByTestId('avatar-deleted-placeholder')).toBeInTheDocument();
+    expect(screen.queryByTestId('facehash')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('avatar-fallback-initial')).not.toBeInTheDocument();
+  });
+
   it('renders with both className and fallbackClassName', () => {
     render(
       <AvatarWithFallback
