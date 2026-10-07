@@ -283,7 +283,7 @@ export function PostInput({
     onNormalSubmit: handleSubmitWithAuth,
   });
 
-  const { priceSats: editLockPriceSats } = useLockFile(editLock?.lockUrl);
+  const { price: editLockPrice } = useLockFile(editLock?.lockUrl);
   const isLockMode = isLockEnabled || editLock != null;
   const activeLockTitle = editLock ? editLockTitle : lockTitle;
 
@@ -648,7 +648,7 @@ export function PostInput({
                       lockCard={
                         isLockConfigured || editLock ? (
                           <LockedPostCard
-                            priceSats={editLock ? editLockPriceSats : lockConfig?.amountSats}
+                            price={editLock ? editLockPrice : lockConfig}
                             editableTitle={{
                               value: activeLockTitle,
                               onChange: editLock ? setEditLockTitle : setLockTitle,
@@ -670,6 +670,8 @@ export function PostInput({
       {isPostVariant && lockServerPubky && (
         <>
           <DialogLocksAuth
+            key={lockConfig?.asset ?? 'BTC'}
+            asset={lockConfig?.asset ?? 'BTC'}
             open={isAuthDialogOpen}
             onOpenChange={(open) => {
               if (!open) closeAuthDialog();

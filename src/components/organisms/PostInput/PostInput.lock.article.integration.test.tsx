@@ -18,6 +18,7 @@ const BODY = `Intro\n\n![shot](${IMAGE_URI})\n\nOutro`;
 
 const mocks = vi.hoisted(() => ({
   createLockContent: vi.fn(),
+  fetchPaykitSetupStatus: vi.fn(),
   commitCreatePost: vi.fn(),
   commitCreateFile: vi.fn(),
   commitDeleteFile: vi.fn(),
@@ -32,7 +33,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/controllers/locks/locks', () => ({
-  LocksController: { createLockContent: mocks.createLockContent, clearSession: vi.fn() },
+  LocksController: {
+    fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    createLockContent: mocks.createLockContent,
+    clearSession: vi.fn(),
+  },
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: { commitCreate: mocks.commitCreatePost, getDetails: vi.fn() },
@@ -64,7 +69,7 @@ vi.mock('@/config/network', () => ({
   getPaykitServerUrl: () => 'https://paykit.server',
 }));
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => mocks.toast(...args) }));
-vi.mock('@/hooks/useLockFile/useLockFile', () => ({ useLockFile: () => ({ lockFile: null, priceSats: null }) }));
+vi.mock('@/hooks/useLockFile/useLockFile', () => ({ useLockFile: () => ({ lockFile: null, price: null }) }));
 vi.mock('@/hooks/useMentionAutocomplete/useMentionAutocomplete', () => ({
   useMentionAutocomplete: () => ({
     users: [],
@@ -172,7 +177,9 @@ vi.mock('../PostInputExpandableSection/PostInputExpandableSection', () => ({
 }));
 vi.mock('@/molecules/DialogLockContent/DialogLockContent', () => ({
   DialogLockContent: (props: { open: boolean; onApplied: (config: TLockConfig) => void }) =>
-    props.open ? <button data-testid="apply-lock" onClick={() => props.onApplied({ amountSats: '1234' })} /> : null,
+    props.open ? (
+      <button data-testid="apply-lock" onClick={() => props.onApplied({ amount: '1234', asset: 'BTC' as const })} />
+    ) : null,
 }));
 vi.mock('@/organisms/DialogLocksAuth/DialogLocksAuth', () => ({ DialogLocksAuth: () => null }));
 vi.mock('@/molecules/LockedPostCard/LockedPostCard', () => ({ LockedPostCard: () => null }));
@@ -237,6 +244,7 @@ const lockedPost = () => {
 describe('PostInput - locking an article with body images (integration)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
     vi.useFakeTimers({ shouldAdvanceTime: true });
     global.URL.createObjectURL = vi.fn(() => 'blob:preview');
     global.URL.revokeObjectURL = vi.fn();

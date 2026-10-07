@@ -5,15 +5,16 @@ import { Check, LockOpen, Pencil, StickyNote, Wallet } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
-import { formatSats } from '@/libs/utils/formatSats';
+import { formatLockPrice } from '@/libs/utils/lockPrice';
 import { cn } from '@/libs/utils/utils';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import type { TLockPrice } from '@/services/locks/locks.types';
 
 interface LockedPostCardProps {
   /** Creator-typed lock title for the reader/preview view. Ignored when `editableTitle` is set. */
   title?: string;
   /** The lock price shown beside Unlock. Nullish until known → the masked dots. */
-  priceSats?: string | null;
+  price?: TLockPrice | null;
   onUnlock?: () => void;
   /** Whether the unlock modal is open. Keeps the slid-over button parked until the modal closes. */
   unlockOpen?: boolean;
@@ -43,7 +44,7 @@ export const SLIDE_MS = 200;
 /** The shared lock card. */
 export function LockedPostCard({
   title,
-  priceSats,
+  price,
   onUnlock,
   unlockOpen,
   slideOnUnlock = true,
@@ -52,7 +53,7 @@ export function LockedPostCard({
   className,
 }: LockedPostCardProps) {
   const isDisabled = disabled ?? !onUnlock;
-  const priceLabel = priceSats ? formatSats(priceSats) : HIDDEN_REQUIREMENT_MASK;
+  const priceLabel = price ? formatLockPrice(price) : HIDDEN_REQUIREMENT_MASK;
 
   const isNested = useIsNestedPostPreview();
   const buttonRef = useRef<HTMLButtonElement>(null);

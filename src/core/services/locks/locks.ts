@@ -24,6 +24,7 @@ import type {
   TGenerateConnectUrlParams,
   TGeneratePaykitSetupUrlParams,
   TGuardedResource,
+  TLockPriceAsset,
   TLocksSessionResult,
   TPaykitConnectionState,
   TPaykitSetupStatus,
@@ -327,12 +328,12 @@ export class LocksService {
 
   /**
    * Whether the creator's Paykit payout account is set up (`GET /creator/paykit/setup-status`). The Lock
-   * Server asks Paykit server-to-server about the creator of this session; the browser sends nothing else.
+   * Server derives the creator from the session; the browser supplies only the price denomination.
    */
-  static async lookupPaykitSetupStatus(): Promise<TPaykitSetupStatus> {
+  static async lookupPaykitSetupStatus(asset: TLockPriceAsset): Promise<TPaykitSetupStatus> {
     const session = getLockSession();
     try {
-      const response = paykitSetupStatusResponseSchema.safeParse(await session.creator.paykitSetupStatus());
+      const response = paykitSetupStatusResponseSchema.safeParse(await session.creator.paykitSetupStatus(asset));
       if (!response.success) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'paykit setup status response is invalid', {
           service: ErrorService.Locks,

@@ -100,7 +100,7 @@ const setup = (isEnabled = true, canEnable = true, draftOverride: TLockDraft | n
 /** Switch on, sign-in skipped (already authenticated), lock price applied. */
 const configureLock = (result: { current: ReturnType<typeof usePostInputLock> }) => {
   act(() => result.current.lockSwitch?.onCheckedChange(true));
-  act(() => result.current.handleLockApplied({ amountSats: '1000' }));
+  act(() => result.current.handleLockApplied({ amount: '1000', asset: 'BTC' as const }));
 };
 
 /** Locks fully set up: signed into the Lock Server with a connected Bitkit payout account. */
@@ -210,7 +210,7 @@ describe('usePostInputLock', () => {
       expect(clearComposer).not.toHaveBeenCalled();
       expect(result.current.isLockDialogOpen).toBe(true);
 
-      act(() => result.current.handleLockApplied({ amountSats: '1000' }));
+      act(() => result.current.handleLockApplied({ amount: '1000', asset: 'BTC' as const }));
 
       // Applying the lock swaps the draft for the empty announcement composer.
       expect(clearComposer).toHaveBeenCalledTimes(1);
@@ -369,10 +369,10 @@ describe('usePostInputLock', () => {
       const { result } = setup();
 
       act(() => result.current.lockSwitch?.onCheckedChange(true));
-      act(() => result.current.handleLockApplied({ amountSats: '1234' }));
+      act(() => result.current.handleLockApplied({ amount: '1234', asset: 'BTC' as const }));
 
-      expect(mocks.lockContentOptions?.lockConfig).toEqual({ amountSats: '1234' });
-      expect(result.current.lockConfig).toEqual({ amountSats: '1234' }); // and to the card
+      expect(mocks.lockContentOptions?.lockConfig).toEqual({ amount: '1234', asset: 'BTC' as const });
+      expect(result.current.lockConfig).toEqual({ amount: '1234', asset: 'BTC' as const }); // and to the card
     });
 
     it('discards the price when the lock is abandoned', () => {
@@ -455,7 +455,7 @@ describe('usePostInputLock', () => {
       expect(result.current.isAuthDialogOpen).toBe(false);
       // Re-auth, not a fresh lock: the price step must not come back and the captured draft must stand.
       expect(result.current.isLockDialogOpen).toBe(false);
-      expect(result.current.lockConfig).toEqual({ amountSats: '1000' });
+      expect(result.current.lockConfig).toEqual({ amount: '1000', asset: 'BTC' as const });
       expect(mocks.lockContentOptions?.lockedPost.content).toBe(JSON.stringify({ title: 'Essay', body: 'my secret' }));
 
       await act(async () => result.current.submitOrPublish());

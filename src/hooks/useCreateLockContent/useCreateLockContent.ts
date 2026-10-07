@@ -5,13 +5,13 @@ import { PubkyAppPost } from 'pubky-app-specs';
 import { LocksController } from '@/controllers/locks/locks';
 import { PostController } from '@/controllers/post/post';
 import type { AppError } from '@/libs/error/error';
-import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { buildLockTeaserContent, isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
-import { isPositiveIntegerString, stripPubkyPrefix } from '@/libs/utils/utils';
-import type { TGuardedResource } from '@/services/locks/locks.types';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
+import { lockPriceSchema, type TGuardedResource } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type {
   TPublishResult,
@@ -59,8 +59,8 @@ export function useCreateLockContent({
         });
 
       // The price and teaser checks run before the lock is created, so a rejected input cannot orphan one.
-      if (!isPositiveIntegerString(lockConfig.amountSats)) {
-        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Lock price is not a positive whole number of sats', {
+      if (!lockPriceSchema.safeParse(lockConfig).success) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Lock price is invalid', {
           service: ErrorService.Local,
           operation: 'useCreateLockContent.publish',
         });
@@ -69,6 +69,15 @@ export function useCreateLockContent({
       if (!isLockTeaserWithinLimit(announcement.teaser)) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Lock announcement exceeds the post length limit', {
           service: ErrorService.Local,
+          operation: 'useCreateLockContent.publish',
+        });
+      }
+
+      const setup = await LocksController.fetchPaykitSetupStatus(lockConfig.asset);
+      if (setup === 'setup_required') return { status: 'setup-required' };
+      if (setup !== 'ready') {
+        throw Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'Payments are unavailable right now', {
+          service: ErrorService.Locks,
           operation: 'useCreateLockContent.publish',
         });
       }

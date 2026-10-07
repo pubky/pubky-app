@@ -52,7 +52,7 @@ const file = (contentType = 'application/json') => ({ contentType, bytes: new Ui
 const descriptor = (path: string) => ({ path, hash: 'HASH', content_type: 'application/json', size: 1 });
 /** Default builder: ignores the attachment paths and returns a fixed post JSON. */
 const buildPost = () => file();
-const paymentConfig = { amountSats: '1000' };
+const paymentConfig = { amount: '1000', asset: 'BTC' as const };
 
 describe('LocksApplication (content)', () => {
   beforeEach(() => {
@@ -121,8 +121,8 @@ describe('LocksApplication (content)', () => {
     expect(mocks.createContentLock).toHaveBeenCalledWith(expect.objectContaining({ secondaryResources: [] }));
   });
 
-  it('sends the paykit-payment criterion, paying the account the post landed on', async () => {
-    await LocksApplication.createLockContent({ buildPost, lockConfig: { amountSats: '1234' } });
+  it.each(['BTC', 'USD'] as const)('sends a %s payment criterion for the lock owner', async (asset) => {
+    await LocksApplication.createLockContent({ buildPost, lockConfig: { amount: '1234', asset } });
 
     const [params] = mocks.createContentLock.mock.calls[0];
     expect(params.criteria).toEqual([
@@ -130,7 +130,7 @@ describe('LocksApplication (content)', () => {
         criterion_id: 'criterion-1',
         verifier_type: 'paykit-payment',
         // The recipient comes from the upload response, not the pubky.app account.
-        params: { recipient_pubky: 'pubkybob', amount: '1234', asset: 'BTC' },
+        params: { recipient_pubky: 'pubkybob', amount: '1234', asset },
       },
     ]);
     // v1 wants that single criterion referenced exactly once.
@@ -161,7 +161,7 @@ const lockFile: LockFile = {
   creator: 'pubkybob',
   primary_resource: { path: '/priv/app.locks/content/x', hash: 'h', content_type: 'application/octet-stream', size: 1 },
   secondary_resources: {},
-  criteria: [{ criterion_id: 'c1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
+  criteria: [{ criterion_id: 'c1', verifier_type: 'paykit-payment', params: { amount: '1000', asset: 'BTC' } }],
   lock_logic: { type: 'all', criteria: ['c1'] },
   access_policy: { requested_credential_ttl_seconds: 900 },
   lock_server: { override: 'pubkyserver' },
@@ -188,7 +188,9 @@ describe('LocksApplication.fetchLockFile', () => {
 describe('LocksApplication (payment unlock)', () => {
   const lockFile = asOpaque<LockFile>({
     creator: 'pubkybob',
-    criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
+    criteria: [
+      { criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000', asset: 'BTC' } },
+    ],
   });
   const lockUrl = 'pubky://pubkybob/pub/app.locks/LOCK1.json';
   const purchaseUrl = 'pubky://reader1/priv/social/purchases/LOCK1.json';

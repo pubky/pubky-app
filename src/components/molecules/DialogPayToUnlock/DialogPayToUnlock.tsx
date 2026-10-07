@@ -12,7 +12,7 @@ import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL } from '@/config/externalLi
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { generateBitkitContactDeeplink } from '@/libs/deeplink/deeplink';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
-import { formatSats } from '@/libs/utils/formatSats';
+import { formatLockPrice } from '@/libs/utils/lockPrice';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 import { AppDownload } from '@/molecules/AppDownload/AppDownload';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
@@ -45,7 +45,7 @@ export function DialogPayToUnlock({
   onOpenChange,
   lockTitle,
   authorId,
-  priceSats,
+  price,
   stage,
   isStalled,
   handshakePubky,
@@ -117,11 +117,9 @@ export function DialogPayToUnlock({
         >
           <Container overrideDefaults className="flex min-w-0 flex-1 flex-col gap-3">
             <Container overrideDefaults className="flex flex-col gap-1">
-              <Typography className={cn(FIELD_LABEL_CLASS, isPaid && 'text-brand')}>
-                {isPaid ? 'PAYMENT RECEIVED' : 'COST TO UNLOCK'}
-              </Typography>
+              <Typography className={cn(FIELD_LABEL_CLASS, isPaid && 'text-brand')}>{'COST TO UNLOCK'}</Typography>
               <Typography className="text-2xl font-bold text-foreground">
-                {formatSats(priceSats, { space: true })}
+                {formatLockPrice(price, { space: true })}
               </Typography>
             </Container>
 

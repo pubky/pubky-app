@@ -50,6 +50,7 @@ import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessio
 import { cn } from '@/libs/utils/utils';
 import { AppDownload } from '@/molecules/AppDownload/AppDownload';
 import { SessionUpgradeDescription, SessionUpgradePanel } from '@/organisms/SessionUpgradePanel/SessionUpgradePanel';
+import type { TLockPriceAsset } from '@/services/locks/locks.types';
 import { isLocksAuthenticated as isLocksAuthenticatedState } from '@/stores/locksAuth/locksAuth.selectors';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import {
@@ -59,6 +60,7 @@ import {
 } from './DialogLocksAuth.constants';
 
 type DialogLocksAuthProps = {
+  asset?: TLockPriceAsset;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
@@ -73,7 +75,7 @@ function StepImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
-export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAuthProps) {
+export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }: DialogLocksAuthProps) {
   const {
     status: locksStatus,
     connectUrl,
@@ -90,7 +92,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
     iframeRef: paykitIframeRef,
     check: checkPaykit,
     reset: resetPaykit,
-  } = usePaykitSetupFlow();
+  } = usePaykitSetupFlow(asset);
   const isLocksAuthenticated = isLocksAuthenticatedState(useLocksAuthStore((state) => state.session));
   const isPaykitConnected = useLocksAuthStore((state) => state.paykitConnected);
   const needsSessionUpgrade = useSessionNeedsUpgrade();
@@ -111,21 +113,26 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
   }
 
   // Probe the Lock Server's readiness when the modal opens; reset when it closes. "Continue" only
-  // starts the auth flow once the probe says the server is ready. Read the store here rather than
-  // depending on `step`, so opening straight at a later step skips the probe entirely.
+  // starts the auth flow once the probe says the server is ready. Authentication changes reset the
+  // wallet step so a renewed session cannot reuse an old approval.
   useEffect(() => {
     if (!open) {
       resetLocks();
       resetPaykit();
       return;
     }
-    if (!isLocksAuthenticatedState(useLocksAuthStore.getState().session)) prepare();
-  }, [open, prepare, resetLocks, resetPaykit]);
+    if (!isLocksAuthenticated) {
+      resetPaykit();
+      prepare();
+    }
+  }, [open, isLocksAuthenticated, prepare, resetLocks, resetPaykit]);
 
   // The Paykit page is the whole step, so it opens on arrival rather than behind another "Continue",
   // once the setup-status check says it is required.
   useEffect(() => {
-    if (open && step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.IDLE) checkPaykit();
+    if (open && step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.IDLE) {
+      void checkPaykit();
+    }
   }, [open, step, paykitStatus, checkPaykit]);
 
   const close = () => onOpenChange(false);
@@ -329,7 +336,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
             <Button variant={ButtonVariant.OUTLINE} size="lg" className="flex-1" onClick={close}>
               {'Cancel'}
             </Button>
-            {/* A failed Paykit setup retries through the check too, so the setup opens only on `setup_required`. */}
+            {/* A failed setup retries through the server check before opening another approval. */}
             <Button
               variant={ButtonVariant.DEFAULT}
               size="lg"

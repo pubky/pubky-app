@@ -22,6 +22,7 @@ import { POST_INPUT_VARIANT } from './PostInput.constants';
 
 const mocks = vi.hoisted(() => ({
   createLockContent: vi.fn(),
+  fetchPaykitSetupStatus: vi.fn(),
   commitCreate: vi.fn(),
   clearSession: vi.fn(),
   handleSubmit: vi.fn(), // the normal (non-lock) publish path
@@ -42,7 +43,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/controllers/locks/locks', () => ({
-  LocksController: { createLockContent: mocks.createLockContent, clearSession: mocks.clearSession },
+  LocksController: {
+    fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    createLockContent: mocks.createLockContent,
+    clearSession: mocks.clearSession,
+  },
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: { commitCreate: mocks.commitCreate },
@@ -239,6 +244,7 @@ const configureLock = (body = 'secret body', files: File[] = []) => {
 describe('PostInput lock flow (integration)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
     mocks.locksAuthed = false;
     mocks.paykitConnected = false;
     mocks.lockServer = 'lockpubky';

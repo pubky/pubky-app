@@ -214,7 +214,7 @@ export function usePostInputLock({
     if (!isLockConfigured) return; // switch on, price never applied — publish nothing
 
     const result = await publish();
-    if (result.status === 'auth-expired') {
+    if (result.status === 'auth-expired' || result.status === 'setup-required') {
       handleAuthExpired(); // recoverable: reopen sign-in, keep the configured lock
       return;
     }
