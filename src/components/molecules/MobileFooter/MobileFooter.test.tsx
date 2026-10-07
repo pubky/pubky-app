@@ -1,5 +1,7 @@
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
 import { FileController } from '@/controllers/file/file';
@@ -22,6 +24,14 @@ const createSessionStorageMock = () => ({
   clear: vi.fn(),
   key: vi.fn(),
   length: 0,
+});
+
+// Observe the Next.js prefetch boundary while retaining real link rendering and click behavior.
+vi.mock('next/link', async (importOriginal) => {
+  const { default: NextLink } = await importOriginal<typeof import('next/link')>();
+  return {
+    default: vi.fn((props: ComponentProps<typeof NextLink>) => <NextLink {...props} />),
+  };
 });
 
 // Mock Next.js router
@@ -195,6 +205,65 @@ describe('MobileFooter', () => {
     const profileLink = screen.getByTestId('avatar-with-fallback').closest('a');
     expect(profileLink).toHaveAttribute('href', '/profile');
     expect(profileLink).toHaveAttribute('aria-label', 'Profile');
+  });
+
+  it.each([
+    { pathname: '/home', label: 'Home', authenticated: true },
+    { pathname: '/search', label: 'Search', authenticated: true },
+    { pathname: '/home', label: 'Home', authenticated: false },
+    { pathname: '/search', label: 'Search', authenticated: false },
+  ])('disables prefetch for active $label (authenticated: $authenticated)', ({ pathname, authenticated }) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+    mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
+    mockIsCoreExploreRoute = true;
+
+    render(<MobileFooter />);
+
+    const linkPrefetches = vi.mocked(Link).mock.calls.map(([{ href, prefetch }]) => ({ href, prefetch }));
+    expect(linkPrefetches).toContainEqual({ href: pathname, prefetch: false });
+    expect(linkPrefetches).toContainEqual({ href: '/search', prefetch: false });
+    for (const href of ['/home', '/search', '/hot', '/collections', '/settings/account'].filter(
+      (href) => href !== pathname && href !== '/search',
+    )) {
+      expect(linkPrefetches).toContainEqual({ href, prefetch: undefined });
+    }
+  });
+
+  it.each([
+    { pathname: '/home', authenticated: true },
+    { pathname: '/home', authenticated: false },
+    { pathname: '/post/test-author/test-post', authenticated: true },
+    { pathname: '/post/test-author/test-post', authenticated: false },
+  ])(
+    'keeps Search prefetch disabled after navigating to $pathname (authenticated: $authenticated)',
+    ({ pathname, authenticated }) => {
+      vi.mocked(usePathname).mockReturnValue('/search');
+      mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
+      mockIsCoreExploreRoute = true;
+      const { rerender } = render(<MobileFooter />);
+
+      vi.mocked(Link).mockClear();
+      vi.mocked(usePathname).mockReturnValue(pathname);
+      mockIsCoreExploreRoute = pathname === '/home';
+      mockIsPublicRoute = pathname.startsWith('/post/');
+      rerender(<MobileFooter />);
+
+      const linkPrefetches = vi.mocked(Link).mock.calls.map(([{ href, prefetch }]) => ({ href, prefetch }));
+      expect(linkPrefetches).toContainEqual({ href: '/search', prefetch: false });
+      expect(linkPrefetches).toContainEqual({ href: '/home', prefetch: pathname === '/home' ? false : undefined });
+    },
+  );
+
+  it.each([
+    { pathname: '/settings/notifications', href: '/settings/account' },
+    { pathname: '/collections/bookmarks', href: '/collections' },
+  ])('keeps prefetch for the parent destination on $pathname', ({ pathname, href }) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+
+    render(<MobileFooter />);
+
+    const linkPrefetches = vi.mocked(Link).mock.calls.map(([{ href, prefetch }]) => ({ href, prefetch }));
+    expect(linkPrefetches).toContainEqual({ href, prefetch: undefined });
   });
 
   it('contains correct icons', () => {
@@ -409,6 +478,24 @@ describe('MobileFooter', () => {
     fireEvent.click(homeLink!);
     expect(window.scrollTo).not.toHaveBeenCalled();
     expect(setItemSpy).toHaveBeenCalledWith(FORCE_FEED_SCROLL_TOP_KEY, '1');
+  });
+
+  it.each(['?tags=podcast', '?q=usdt'])('keeps the search query when scrolling to top from /search%s', (query) => {
+    const originalUrl = window.location.href;
+    window.history.replaceState(null, '', `/search${query}`);
+    vi.mocked(usePathname).mockReturnValue('/search');
+    Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
+
+    try {
+      render(<MobileFooter />);
+
+      expect(fireEvent.click(screen.getByRole('link', { name: 'Search' }))).toBe(false);
+      expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+      expect(window.location.search).toBe(query);
+      expect(window.sessionStorage.setItem).not.toHaveBeenCalled();
+    } finally {
+      window.history.replaceState(null, '', originalUrl);
+    }
   });
 
   it('hides navigation while the keyboard is open and restores it when dismissed', () => {

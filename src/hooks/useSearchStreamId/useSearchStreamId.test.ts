@@ -86,6 +86,12 @@ describe('useSearchStreamId', () => {
       rerender();
       expect(result.current).toBe('content_search:q~privacy%20tools:collection');
     });
+
+    it('should lowercase the query so differently-cased searches hit the same stream cache', () => {
+      mockQueryParam.value = 'Bitcoin Wallets';
+      const { result } = renderHook(() => useSearchStreamId());
+      expect(result.current).toBe('content_search:q~bitcoin%20wallets:all');
+    });
   });
 
   describe('when tags are provided in URL', () => {

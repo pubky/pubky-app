@@ -42,9 +42,7 @@ function mockStream(users: UserStreamUser[], overrides: Partial<ReturnType<typeo
     userIds: users.map((u) => u.id),
     isLoading: false,
     isLoadingMore: false,
-    hasMore: false,
     error: null,
-    loadMore: vi.fn(),
     refetch: vi.fn(),
     ...overrides,
   });
