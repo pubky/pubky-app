@@ -7,6 +7,11 @@ import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
 import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisible';
+import {
+  readServerConfig,
+  resetRuntimeConfigForTests,
+  RUNTIME_CONFIG_WINDOW_KEY,
+} from '@/libs/runtime-config/runtime-config';
 import { MobileFooter } from './MobileFooter';
 
 const collectionsDiscoveryMock = vi.hoisted(() => ({
@@ -148,6 +153,8 @@ vi.mock('@/stores/notification/notification.store', () => ({
 
 describe('MobileFooter', () => {
   beforeEach(async () => {
+    resetRuntimeConfigForTests();
+    delete window[RUNTIME_CONFIG_WINDOW_KEY];
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
@@ -161,6 +168,27 @@ describe('MobileFooter', () => {
 
     // Reset keyboard visibility mock
     vi.mocked(useKeyboardVisible).mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    delete window[RUNTIME_CONFIG_WINDOW_KEY];
+    resetRuntimeConfigForTests();
+  });
+
+  it.each([true, false])('uses the injected Shop destination (authenticated: %s)', (authenticated) => {
+    mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
+    mockIsCoreExploreRoute = true;
+    window[RUNTIME_CONFIG_WINDOW_KEY] = {
+      ...readServerConfig(),
+      shopUrl: 'https://shop.example.com/marketplace',
+    };
+    render(<MobileFooter />);
+    const link = screen.getByRole('link', { name: 'Shop' });
+    expect(link).toHaveAttribute('href', 'https://shop.example.com/marketplace');
+    expect(link.getAttribute('target')).not.toBe('_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    fireEvent.click(link);
+    expect(collectionsDiscoveryMock.setShowSignInDialog).not.toHaveBeenCalled();
   });
 
   it('renders with default props', () => {
@@ -522,6 +550,7 @@ describe('MobileFooter', () => {
       '/home',
       '/search',
       '/hot',
+      'https://shop.staging.pubky.app/marketplace',
       '/collections',
       '/settings/account',
     ]);
