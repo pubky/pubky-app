@@ -1,0 +1,112 @@
+import type {
+  LockFile,
+  ReplicatedPost,
+  TGuardedResource,
+  TUnlockedContent,
+  TVerificationStatus,
+} from '@/services/locks/locks.types';
+
+/** Params to read or write the bundle id the reader saved for one lock (`/priv/social/purchases/<lockId>.json`). */
+export type TPurchaseBundleIdParams = {
+  lockUrl: string;
+  readerPubky: string;
+};
+
+/** A payment lock as seen by one reader: the lock file, its public URL, and the reader. */
+export type TPaymentLockParams = TPurchaseBundleIdParams & {
+  lockFile: LockFile;
+};
+
+/**
+ * Params to start a payment. `rejectBundleId` is a saved id known to have ended `failed`/`expired`;
+ * it is never reused, a fresh one is minted instead.
+ */
+export type TStartPaymentParams = TPaymentLockParams & {
+  rejectBundleId: string | null;
+};
+
+/** The bundle id and lifecycle status returned by proof submission. */
+export type TStartPaymentResult = {
+  bundleId: string;
+  status: TVerificationStatus;
+};
+
+/** A submitted payment: the lock file and the bundle id the proof was submitted with. */
+export type TPaymentBundleParams = {
+  lockFile: LockFile;
+  bundleId: string;
+};
+
+/** Params for reading the guarded content after unlock, authorized by `credential`. */
+export type TFetchUnlockedContentParams = {
+  lockFile: LockFile;
+  credential: string;
+};
+
+/** Params to copy unlocked content into the reader's own `/priv` (the only write of the three). */
+export type TReplicateUnlockedContentParams = {
+  lockUrl: string;
+  readerPubky: string;
+  content: TUnlockedContent;
+  /**
+   * `pubky://…/posts/<id>` of the announcement. Written into the reader's own replica marker, never
+   * into `lock.json` — the Lock Server contract is untouched by this.
+   */
+  announcementUri: string;
+};
+
+export type TFetchReplicatedContentParams = {
+  lockUrl: string;
+  readerPubky: string;
+};
+
+export type TFetchUnlockedListParams = {
+  readerPubky: string;
+};
+
+export type TFetchReplicatedAttachmentsParams = {
+  post: ReplicatedPost;
+};
+
+export type TFetchOwnContentParams = {
+  lockFile: LockFile;
+};
+
+/**
+ * The creator's payment lock configuration. `amountSats` stays a string end to end — the Lock
+ * Server wants the amount as a positive integer string, not a number.
+ * Keep this object boundary so future lock options can grow without changing every workflow signature.
+ */
+export type TLockConfig = { amountSats: string };
+
+/**
+ * One file to guard. The storage path is minted per upload, so the original filename is not part of
+ * it — carry that name as metadata inside the post JSON, like a normal post's `PubkyAppFile.name`.
+ */
+export type TLockContentFile = {
+  contentType: string;
+  bytes: Uint8Array;
+};
+
+/**
+ * Params to publish one content lock, in pubky-app terms: a post and its attachments. The
+ * application maps them onto the Lock Server's primary/secondary resource vocabulary.
+ *
+ * The Lock Server is not passed in — it is read off the session, which is the only server holding the
+ * uploaded bytes. The post is not passed either: an attachment's path only exists once its bytes are
+ * uploaded, and the post has to reference them, so the caller supplies a builder that runs after the
+ * attachments land.
+ */
+export type TCreateLockContentParams = {
+  /** Attachments (images, video, …). Uploaded first, so `buildPost` can reference their paths. */
+  attachments?: TLockContentFile[];
+  /**
+   * Builds the JSON file holding the `PubkyAppPost` object from the uploaded attachment descriptors.
+   * Called with an empty array when there are no attachments. `ownerPubky` is the account the guarded
+   * bytes landed on (from the upload response); the post references its attachments by that host.
+   * It is undefined only when there are no attachments (and so no URIs to build).
+   */
+  buildPost: (attachmentResources: TGuardedResource[], ownerPubky?: string) => TLockContentFile;
+  /** How the content is gated. The criterion is assembled from it at publish time. */
+  lockConfig: TLockConfig;
+};

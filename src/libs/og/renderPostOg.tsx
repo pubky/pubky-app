@@ -35,8 +35,13 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     if (post.kind === 'collection') return await renderCollectionOg({ userId, postId });
 
     const name = prepareOgText(resolveDisplayName(user));
-    const isDeleted = isPostDeleted(post.content);
-    const preview = deriveTextPreview({ content: post.content, kind: post.kind });
+    const isDeleted = isPostDeleted(post);
+    const preview = deriveTextPreview({
+      content: post.content,
+      kind: post.kind,
+      lock: post.lock ?? null,
+      deleted: post.deleted ?? false,
+    });
 
     // Article variant: newspaper icon + title over a plain-text body excerpt.
     // Deleted posts skip this (their content isn't JSON) and fall through to the

@@ -86,10 +86,11 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
 
       // Decide whether to restore the optimistic removal. After the
       // `LocalPostService.delete` tombstone refactor, a successful local-first
-      // write leaves a row with `content === '[DELETED]'` rather than removing
-      // the row, so an existence check alone can no longer distinguish
-      // "local-first succeeded, homeserver sync failed" from "local-first
-      // never committed." We have to look at the content too:
+      // write leaves a tombstoned row (the `deleted` flag, or the legacy
+      // `content === '[DELETED]'`) rather than removing the row, so an
+      // existence check alone can no longer distinguish "local-first
+      // succeeded, homeserver sync failed" from "local-first never
+      // committed." We have to look at the row's deleted state too:
       //   - row gone (null)           → local hard-delete committed (legacy)  → don't restore
       //   - row exists, tombstoned    → local soft-delete committed           → don't restore
       //   - row exists, live content  → local-first never committed           → restore
@@ -103,7 +104,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
         Logger.debug('[useDeletePost] Post existence check completed', {
           postId,
           exists: postStillExists !== null,
-          tombstoned: postStillExists !== null && isPostDeleted(postStillExists.content),
+          tombstoned: postStillExists !== null && isPostDeleted(postStillExists),
         });
       } catch (detailsError) {
         Logger.warn('[useDeletePost] Failed to verify post existence after delete failure', {
@@ -115,7 +116,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
       }
 
       const localWriteCommitted =
-        postStillExists === null || (postStillExists !== 'unknown' && isPostDeleted(postStillExists.content));
+        postStillExists === null || (postStillExists !== 'unknown' && isPostDeleted(postStillExists));
 
       if (localWriteCommitted) {
         // Local-first write succeeded (row gone or tombstoned). Keep the removal —

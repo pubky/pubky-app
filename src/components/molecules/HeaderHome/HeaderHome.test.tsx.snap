@@ -5,7 +5,7 @@ exports[`HeaderHome - Snapshots > matches snapshot for default HeaderHome 1`] = 
   class="flex-1 flex-row items-center justify-end gap-3"
 >
   <button
-    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
+    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
     data-slot="button"
     data-testid="header-learn-btn"
     data-variant="outline"
@@ -34,7 +34,7 @@ exports[`HeaderHome - Snapshots > matches snapshot for default HeaderHome 1`] = 
     Learn
   </button>
   <button
-    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
+    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
     data-slot="button"
     data-testid="header-explore-btn"
     data-variant="outline"
@@ -77,7 +77,7 @@ exports[`HeaderHome - Snapshots > matches snapshot on the logout page 1`] = `
   class="flex-1 flex-row items-center justify-end gap-3"
 >
   <button
-    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
+    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
     data-slot="button"
     data-testid="header-learn-btn"
     data-variant="outline"
@@ -106,7 +106,7 @@ exports[`HeaderHome - Snapshots > matches snapshot on the logout page 1`] = `
     Learn
   </button>
   <button
-    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
+    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
     data-slot="button"
     data-testid="header-explore-btn"
     data-variant="outline"
@@ -149,7 +149,7 @@ exports[`HeaderHome - Snapshots > matches snapshot with custom className 1`] = `
   class="custom-class"
 >
   <button
-    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
+    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
     data-slot="button"
     data-testid="header-learn-btn"
     data-variant="outline"
@@ -178,7 +178,7 @@ exports[`HeaderHome - Snapshots > matches snapshot with custom className 1`] = `
     Learn
   </button>
   <button
-    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
+    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-border hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
     data-slot="button"
     data-testid="header-explore-btn"
     data-variant="outline"

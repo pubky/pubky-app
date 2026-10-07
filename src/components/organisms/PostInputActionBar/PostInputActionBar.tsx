@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { Image, Loader2, Newspaper, Send, Smile } from 'lucide-react';
+import { Image, Loader2, Lock, LockOpen, Newspaper, Send, Smile } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { Switch } from '@/atoms/Switch/Switch';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { cn } from '@/libs/utils/utils';
@@ -33,6 +34,7 @@ export function PostInputActionBar({
   postButtonIcon,
   hideArticleButton,
   isArticle,
+  lockSwitch,
 }: PostInputActionBarProps) {
   const isMobile = useIsMobile();
   const getButtonDataCy = (ariaLabel: string) => `post-input-action-bar-${ariaLabel.toLowerCase().replace(' ', '-')}`;
@@ -41,7 +43,10 @@ export function PostInputActionBar({
   const postButtonText = isSubmitting ? 'Posting...' : postButtonLabel;
   const postButtonIconClassName = isSubmitting ? 'animate-spin' : undefined;
   return (
-    <Container className="flex w-full flex-row items-center justify-between gap-4" overrideDefaults>
+    <Container
+      className="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
+      overrideDefaults
+    >
       <Container className="flex items-center gap-2" overrideDefaults>
         {!isArticle ? (
           <Button
@@ -76,8 +81,21 @@ export function PostInputActionBar({
             <ActionButtonContent Icon={Newspaper} />
           </Button>
         ) : null}
+        {lockSwitch ? (
+          <Container className="flex h-8 items-center gap-2 rounded-full bg-secondary px-3 shadow-xs" overrideDefaults>
+            <ActionButtonContent Icon={lockSwitch.checked ? Lock : LockOpen} />
+            <Switch
+              data-cy="post-input-action-bar-lock-switch"
+              checked={lockSwitch.checked}
+              onCheckedChange={lockSwitch.onCheckedChange}
+              disabled={isSubmitting || lockSwitch.disabled}
+              aria-label="Lock content"
+              className="data-[state=unchecked]:bg-accent"
+            />
+          </Container>
+        ) : null}
       </Container>
-      <Container className="flex shrink-0 items-center justify-end gap-2" overrideDefaults>
+      <Container className="flex shrink-0 items-center justify-end gap-2 max-md:w-full" overrideDefaults>
         <Button
           data-cy={getButtonDataCy(postButtonAriaText)}
           {...COMMON_BUTTON_PROPS}
@@ -86,6 +104,7 @@ export function PostInputActionBar({
           aria-label={postButtonAriaText}
           variant={'default'}
           size={isMobile ? 'default' : 'sm'}
+          className="max-md:w-full"
         >
           <Container className="flex items-center gap-2" overrideDefaults>
             <PostButtonIconComponent className={cn('size-4 text-brand', postButtonIconClassName)} strokeWidth={2} />

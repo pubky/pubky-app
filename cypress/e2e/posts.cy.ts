@@ -549,11 +549,11 @@ describe('posts', () => {
     cy.get('[data-cy="collection-bookmark-card"]').click();
     cy.location('pathname').should('eq', '/collections/bookmarks');
 
-    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', postContent1);
-    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', postContent2);
+    cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', postContent1);
+    cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', postContent2);
 
     // unbookmark both posts
-    cy.get('[data-cy="timeline-posts-grid"]')
+    cy.get('[data-cy="timeline-posts-cards"]')
       .find('[data-cy="post-card"]')
       .should('have.length', 2)
       .then(($posts) => {

@@ -7,6 +7,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { getTtlPostMs } from '@/libs/runtime-config/runtime-config';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -181,7 +182,11 @@ export class LocalPostService {
     kind?: string;
   }) {
     try {
-      const changes: Partial<PostDetailsModelSchema> = { content };
+      // `deleted: false` clears the tombstone flag on any write that restores
+      // live content: `commitEdit` (and its rollback after a failed PUT) reuse
+      // this method, and a row left flagged deleted would keep rendering as a
+      // tombstone even though its content is back.
+      const changes: Partial<PostDetailsModelSchema> = { content, deleted: false };
       if (attachments !== undefined) {
         changes.attachments = attachments;
       }
@@ -265,7 +270,7 @@ export class LocalPostService {
    * @throws {DatabaseError} When database operations fail
    */
   static async create({ compositePostId, post }: TLocalSavePostParams) {
-    const { content, kind, parent: parentUri, attachments, embed } = post;
+    const { content, kind, parent: parentUri, attachments, embed, lock } = post;
 
     const repostedUri = embed?.uri ?? null;
     const normalizedKind = PostNormalizer.postKindToLowerCase(kind);
@@ -280,6 +285,7 @@ export class LocalPostService {
         kind: normalizedKind,
         uri: postUriBuilder(authorId, postId),
         attachments: attachments ?? null,
+        lock: lock ?? null,
       };
 
       const postRelationships: PostRelationshipsModelSchema = {
@@ -403,24 +409,24 @@ export class LocalPostService {
   static async delete({ compositePostId }: TDeletePostParams): Promise<boolean> {
     const { pubky: authorId } = parseCompositeId(compositePostId);
 
-    // Idempotency guard: if the post is already tombstoned (`content ===
-    // DELETED`), short-circuit. Otherwise a stray re-delete would re-run the
-    // hard-delete transaction's `UserCountsModel.updateCounts({ posts: -1 })`
-    // and drift the author's post count. In normal UX this is unreachable —
-    // every render path for a tombstoned post shows the deleted-state
-    // component with no delete button — but the guard keeps the function
-    // idempotent against races and stale clients.
+    // Idempotency guard: if the post is already tombstoned (the `deleted` flag,
+    // or the legacy `content === DELETED` sentinel), short-circuit. Otherwise a
+    // stray re-delete would re-run the hard-delete transaction's
+    // `UserCountsModel.updateCounts({ posts: -1 })` and drift the author's post
+    // count. In normal UX this is unreachable — every render path for a
+    // tombstoned post shows the deleted-state component with no delete button —
+    // but the guard keeps the function idempotent against races and stale clients.
     const existing = await PostDetailsModel.findById(compositePostId);
-    if (existing?.content === DELETED) {
+    if (isPostDeleted(existing)) {
       Logger.warn('[LocalPostService.delete] post already tombstoned, skipping', { compositePostId });
       return false;
     }
 
     // TODO: There is an edge case where the post counts are not found, but the post is linked. This should be handled.
     const postCounts = await PostCountsModel.findById(compositePostId);
-    // If counts exist and post is linked → soft delete (mark as DELETED, keep records)
+    // If counts exist and post is linked → soft delete (tombstone, keep records)
     if (postCounts && this.isPostLinked(postCounts)) {
-      await PostDetailsModel.update(compositePostId, { content: DELETED });
+      await PostDetailsModel.update(compositePostId, { content: DELETED, deleted: true });
       return true;
     }
 
@@ -461,7 +467,7 @@ export class LocalPostService {
             // stays deleted. Auxiliary records (relationships, counts,
             // tags) still get fully removed below — only the details row
             // sticks around as a tombstone.
-            PostDetailsModel.update(compositePostId, { content: DELETED }),
+            PostDetailsModel.update(compositePostId, { content: DELETED, deleted: true }),
             PostRelationshipsModel.deleteById(compositePostId),
             PostCountsModel.deleteById(compositePostId),
             PostTagsModel.deleteById(compositePostId),

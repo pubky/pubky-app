@@ -1,0 +1,482 @@
+import { useState } from 'react';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { usePostInputLock } from './usePostInputLock';
+import type { TLockDraft } from './usePostInputLock.types';
+
+const mocks = vi.hoisted(() => ({
+  isAuthed: false,
+  isPaykitConnected: false,
+  lockServer: 'lockpubky' as string | undefined,
+  paykitServerUrl: 'https://paykit.server' as string | undefined,
+  publish: vi.fn(),
+  toast: vi.fn(),
+  prependPosts: vi.fn(),
+  setPostAttachments: vi.fn(),
+  // Last options handed to useCreateLockContent — the locked post the hook would publish.
+  lockContentOptions: null as {
+    lockedPost: { content: string; kind: unknown; attachments: File[] };
+    lockConfig: unknown;
+  } | null,
+}));
+
+vi.mock('@/config/network', () => ({
+  getLockServer: () => mocks.lockServer,
+  getPaykitServerUrl: () => mocks.paykitServerUrl,
+}));
+const sessionNeedsUpgrade = vi.hoisted(() => ({ value: false }));
+vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
+  useSessionNeedsUpgrade: () => sessionNeedsUpgrade.value,
+}));
+afterEach(() => {
+  sessionNeedsUpgrade.value = false;
+});
+vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
+  useLocksAuthStore: {
+    getState: () => ({
+      selectIsLocksAuthenticated: () => mocks.isAuthed,
+      selectIsPaykitConnected: () => mocks.isPaykitConnected,
+    }),
+  },
+}));
+vi.mock('@/hooks/useCreateLockContent/useCreateLockContent', () => ({
+  useCreateLockContent: (options: {
+    lockedPost: { content: string; kind: unknown; attachments: File[] };
+    lockConfig: unknown;
+  }) => {
+    mocks.lockContentOptions = options;
+    return { publish: mocks.publish, isPublishing: false };
+  },
+}));
+vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => mocks.toast(...args) }));
+// The announcement's optimistic commit: no timeline provider in the hook test, so prepend is a no-op
+// path (`streamId` undefined). We only assert the local-blob registration here.
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
+  useTimelineFeedContext: () => ({ streamId: undefined, prependPosts: mocks.prependPosts }),
+}));
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: { getState: () => ({ setPostAttachments: mocks.setPostAttachments }) },
+}));
+vi.mock('@/controllers/post/post', () => ({ PostController: { getDetails: vi.fn() } }));
+
+const file = new File(['x'], 'secret.png', { type: 'image/png' });
+const draft: TLockDraft = {
+  content: 'my secret',
+  attachments: [file],
+  isArticle: true,
+  articleTitle: 'Essay',
+  serializedArticle: { body: 'my secret', inlineFiles: [] },
+};
+
+const setup = (isEnabled = true, canEnable = true, draftOverride: TLockDraft | null = draft) => {
+  const captureComposer = vi.fn(() => draftOverride);
+  const restoreComposer = vi.fn();
+  const clearComposer = vi.fn();
+  const clearTags = vi.fn();
+  const onPublished = vi.fn();
+  const onNormalSubmit = vi.fn();
+  const view = renderHook(() => {
+    // The composer owns the draft; the hook only reads and sets it.
+    const [lockDraft, setLockDraft] = useState<TLockDraft | null>(null);
+    return usePostInputLock({
+      isEnabled,
+      canEnable,
+      lockDraft,
+      setLockDraft,
+      captureComposer,
+      restoreComposer,
+      clearComposer,
+      announcementContent: 'teaser',
+      announcementAttachments: [file],
+      announcementTags: ['tag'],
+      clearTags,
+      onPublished,
+      onNormalSubmit,
+    });
+  });
+  return { ...view, captureComposer, restoreComposer, clearComposer, clearTags, onPublished, onNormalSubmit };
+};
+
+/** Switch on, sign-in skipped (already authenticated), lock price applied. */
+const configureLock = (result: { current: ReturnType<typeof usePostInputLock> }) => {
+  act(() => result.current.lockSwitch?.onCheckedChange(true));
+  act(() => result.current.handleLockApplied({ amountSats: '1000' }));
+};
+
+/** Locks fully set up: signed into the Lock Server with a connected Bitkit payout account. */
+const setUpLocks = () => {
+  mocks.isAuthed = true;
+  mocks.isPaykitConnected = true;
+};
+
+describe('usePostInputLock', () => {
+  beforeEach(() => {
+    mocks.isAuthed = false;
+    mocks.isPaykitConnected = false;
+    mocks.lockServer = 'lockpubky';
+    mocks.paykitServerUrl = 'https://paykit.server';
+    mocks.publish.mockReset();
+    mocks.toast.mockReset();
+    mocks.prependPosts.mockReset();
+    mocks.setPostAttachments.mockReset();
+    mocks.lockContentOptions = null;
+  });
+
+  describe('locked post content', () => {
+    it('serializes an article draft as title + body JSON, like a normal article publish', () => {
+      mocks.isAuthed = true;
+      const { result } = setup();
+
+      configureLock(result);
+
+      expect(mocks.lockContentOptions?.lockedPost.content).toBe(JSON.stringify({ title: 'Essay', body: 'my secret' }));
+    });
+
+    it('passes a plain draft body through untouched', () => {
+      mocks.isAuthed = true;
+      const { result } = setup(true, true, { ...draft, isArticle: false, articleTitle: '' });
+
+      configureLock(result);
+
+      expect(mocks.lockContentOptions?.lockedPost.content).toBe('my secret');
+    });
+
+    it('locks the serialized article body, with its images after the cover', () => {
+      mocks.isAuthed = true;
+      const inline = new File(['y'], 'shot.jpg', { type: 'image/jpeg' });
+      const { result } = setup(true, true, {
+        ...draft,
+        content: 'intro ![shot](pubky://author/pub/pubky.app/files/FILE1)',
+        serializedArticle: { body: 'intro ![shot](attachment:1)', inlineFiles: [inline] },
+      });
+
+      configureLock(result);
+
+      expect(mocks.lockContentOptions?.lockedPost.content).toBe(
+        JSON.stringify({ title: 'Essay', body: 'intro ![shot](attachment:1)' }),
+      );
+      expect(mocks.lockContentOptions?.lockedPost.attachments).toEqual([file, inline]);
+    });
+  });
+
+  it('exposes no lock switch when no Lock Server is configured', () => {
+    mocks.lockServer = undefined;
+    expect(setup().result.current.lockSwitch).toBeUndefined();
+  });
+
+  it('exposes no lock switch when no Paykit Server is configured', () => {
+    mocks.paykitServerUrl = undefined;
+    expect(setup().result.current.lockSwitch).toBeUndefined();
+  });
+
+  it('exposes no lock switch when disabled', () => {
+    const { result } = setup(false);
+    expect(result.current.lockSwitch).toBeUndefined();
+    expect(result.current.isLockDialogOpen).toBe(false);
+    expect(result.current.isAuthDialogOpen).toBe(false);
+  });
+
+  it('exposes the configured Lock Server for the auth modal', () => {
+    expect(setup().result.current.lockServerPubky).toBe('lockpubky');
+  });
+
+  it('disables the switch while the composer is empty', () => {
+    expect(setup(true, false).result.current.lockSwitch?.disabled).toBe(true);
+  });
+
+  it('does not turn on when the composer is empty', () => {
+    const { result, captureComposer } = setup(true, false);
+
+    act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+    expect(result.current.isLockEnabled).toBe(false);
+    expect(captureComposer).not.toHaveBeenCalled();
+    expect(result.current.isAuthDialogOpen).toBe(false);
+  });
+
+  it('enables the switch once the composer has content', () => {
+    expect(setup(true, true).result.current.lockSwitch?.disabled).toBe(false);
+  });
+
+  describe('switching on', () => {
+    it('captures the composer to lock, and only empties it once the lock is applied', () => {
+      setUpLocks();
+      const { result, captureComposer, clearComposer } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      // Draft snapshotted, but the locked content stays on screen behind the lock dialog.
+      expect(captureComposer).toHaveBeenCalledTimes(1);
+      expect(clearComposer).not.toHaveBeenCalled();
+      expect(result.current.isLockDialogOpen).toBe(true);
+
+      act(() => result.current.handleLockApplied({ amountSats: '1000' }));
+
+      // Applying the lock swaps the draft for the empty announcement composer.
+      expect(clearComposer).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays off when the composer refuses the capture', () => {
+      setUpLocks();
+      const { result } = setup(true, true, null);
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      expect(result.current.isLockEnabled).toBe(false);
+      expect(result.current.isLockDialogOpen).toBe(false);
+      expect(result.current.isAuthDialogOpen).toBe(false);
+    });
+
+    it('opens the sign-in modal first when there is no Locks session', () => {
+      const { result } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      expect(result.current.isAuthDialogOpen).toBe(true);
+      expect(result.current.isLockDialogOpen).toBe(false);
+      expect(result.current.lockSwitch?.checked).toBe(true);
+    });
+
+    it('opens the modal when Bitkit is not connected, even with a Locks session', () => {
+      mocks.isAuthed = true;
+      const { result } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      expect(result.current.isAuthDialogOpen).toBe(true);
+      expect(result.current.isLockDialogOpen).toBe(false);
+    });
+
+    it('goes straight to the lock dialog once Bitkit is connected', () => {
+      mocks.isAuthed = true;
+      mocks.isPaykitConnected = true;
+      const { result } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      expect(result.current.isLockDialogOpen).toBe(true);
+      expect(result.current.isAuthDialogOpen).toBe(false);
+    });
+
+    it('opens the auth modal for the session step when the homeserver session predates /priv', () => {
+      mocks.isAuthed = true;
+      mocks.isPaykitConnected = true;
+      sessionNeedsUpgrade.value = true;
+      const { result } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      expect(result.current.isAuthDialogOpen).toBe(true);
+      expect(result.current.isLockDialogOpen).toBe(false);
+    });
+
+    it('advances from sign-in to the lock dialog, keeping the switch on', () => {
+      const { result, restoreComposer } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+      act(() => result.current.handleAuthSuccess());
+      act(() => result.current.closeAuthDialog());
+
+      expect(result.current.isLockDialogOpen).toBe(true);
+      expect(result.current.lockSwitch?.checked).toBe(true);
+      expect(restoreComposer).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('abandoning the lock restores the composer', () => {
+    it.each([
+      ['the switch is turned off', (r: ReturnType<typeof usePostInputLock>) => r.lockSwitch?.onCheckedChange(false)],
+      ['the lock dialog is dismissed', (r: ReturnType<typeof usePostInputLock>) => r.closeLockDialog()],
+    ])('when %s', (_name, abandon) => {
+      setUpLocks();
+      const { result, restoreComposer } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+      act(() => abandon(result.current));
+
+      expect(restoreComposer).toHaveBeenCalledWith(draft);
+      expect(result.current.lockSwitch?.checked).toBe(false);
+    });
+
+    it('with the body as the editor holds it, not the serialized one', () => {
+      setUpLocks();
+      const articleDraft: TLockDraft = {
+        ...draft,
+        content: 'intro ![shot](pubky://author/pub/pubky.app/files/FILE1)',
+        serializedArticle: { body: 'intro ![shot](attachment:1)', inlineFiles: [file] },
+      };
+      const { result, restoreComposer } = setup(true, true, articleDraft);
+
+      configureLock(result);
+      act(() => result.current.lockSwitch?.onCheckedChange(false));
+
+      expect(restoreComposer).toHaveBeenCalledWith(
+        expect.objectContaining({ content: 'intro ![shot](pubky://author/pub/pubky.app/files/FILE1)' }),
+      );
+    });
+
+    it('when the sign-in modal is cancelled', () => {
+      const { result, restoreComposer } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+      act(() => result.current.closeAuthDialog());
+
+      expect(restoreComposer).toHaveBeenCalledWith(draft);
+      expect(result.current.lockSwitch?.checked).toBe(false);
+    });
+
+    it('keeps the Locks session, so switching on again skips sign-in', () => {
+      const { result } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+      expect(result.current.isAuthDialogOpen).toBe(true);
+
+      act(() => result.current.handleAuthSuccess());
+      act(() => result.current.closeAuthDialog());
+      setUpLocks();
+
+      act(() => result.current.closeLockDialog());
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      expect(result.current.isAuthDialogOpen).toBe(false);
+      expect(result.current.isLockDialogOpen).toBe(true);
+    });
+  });
+
+  it('reports the switch state independently of whether the lock was configured', () => {
+    setUpLocks();
+    const { result } = setup();
+
+    expect(result.current.isLockEnabled).toBe(false);
+    act(() => result.current.lockSwitch?.onCheckedChange(true));
+    expect(result.current.isLockEnabled).toBe(true);
+  });
+
+  it('tracks the lock title shown on the composer card', () => {
+    setUpLocks();
+    const { result } = setup();
+
+    act(() => result.current.lockSwitch?.onCheckedChange(true));
+    expect(result.current.lockTitle).toBe('Locked content'); // seeded default
+
+    act(() => result.current.setLockTitle('My most famous quote'));
+    expect(result.current.lockTitle).toBe('My most famous quote');
+  });
+
+  describe('lock config', () => {
+    it('hands the applied price to the publish hook', () => {
+      setUpLocks();
+      const { result } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+      act(() => result.current.handleLockApplied({ amountSats: '1234' }));
+
+      expect(mocks.lockContentOptions?.lockConfig).toEqual({ amountSats: '1234' });
+      expect(result.current.lockConfig).toEqual({ amountSats: '1234' }); // and to the card
+    });
+
+    it('discards the price when the lock is abandoned', () => {
+      setUpLocks();
+      const { result } = setup();
+
+      configureLock(result);
+      act(() => result.current.lockSwitch?.onCheckedChange(false));
+
+      expect(mocks.lockContentOptions?.lockConfig).toBeNull();
+      expect(result.current.lockConfig).toBeNull();
+      expect(result.current.isLockConfigured).toBe(false);
+    });
+  });
+
+  describe('submitOrPublish', () => {
+    it('runs the normal submit when the switch is off', async () => {
+      const { result, onNormalSubmit } = setup();
+
+      await act(async () => result.current.submitOrPublish());
+
+      expect(onNormalSubmit).toHaveBeenCalledTimes(1);
+      expect(mocks.publish).not.toHaveBeenCalled();
+    });
+
+    it('publishes nothing while the switch is on but the price is not applied', async () => {
+      setUpLocks();
+      const { result, onNormalSubmit } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+      await act(async () => result.current.submitOrPublish());
+
+      expect(mocks.publish).not.toHaveBeenCalled();
+      expect(onNormalSubmit).not.toHaveBeenCalled(); // never leaks the to-be-locked body
+    });
+
+    it('publishes, commits optimistically, clears, and reports the new post on success', async () => {
+      setUpLocks();
+      mocks.publish.mockResolvedValue({ status: 'published', postId: 'alice:POST1' });
+      const { result, clearComposer, clearTags, onPublished } = setup();
+
+      configureLock(result);
+      await act(async () => result.current.submitOrPublish());
+
+      expect(mocks.publish).toHaveBeenCalledTimes(1);
+      // Optimistic: the announcement's media is registered locally so it shows before Nexus indexes it.
+      expect(mocks.setPostAttachments).toHaveBeenCalledWith('alice:POST1', expect.any(Array));
+      expect(mocks.prependPosts).toHaveBeenCalledWith('alice:POST1'); // prepended to the timeline
+      expect(clearComposer).toHaveBeenCalled();
+      expect(clearTags).toHaveBeenCalled();
+      expect(onPublished).toHaveBeenCalledWith('alice:POST1');
+      expect(result.current.lockSwitch?.checked).toBe(false); // lock state reset
+    });
+
+    it('reopens sign-in and keeps the lock when the session expired mid-publish', async () => {
+      setUpLocks();
+      mocks.publish.mockResolvedValue({ status: 'auth-expired' });
+      const { result, onPublished } = setup();
+
+      configureLock(result);
+      await act(async () => result.current.submitOrPublish());
+
+      expect(result.current.isAuthDialogOpen).toBe(true);
+      expect(mocks.setPostAttachments).not.toHaveBeenCalled();
+      expect(onPublished).not.toHaveBeenCalled();
+      expect(result.current.lockSwitch?.checked).toBe(true); // lock kept
+    });
+
+    it('publishes the same draft and price once the creator signs in again', async () => {
+      setUpLocks();
+      mocks.publish.mockResolvedValueOnce({ status: 'auth-expired' });
+      const { result, onPublished } = setup();
+
+      configureLock(result);
+      await act(async () => result.current.submitOrPublish());
+
+      mocks.publish.mockResolvedValueOnce({ status: 'published', postId: 'alice:POST1' });
+      act(() => result.current.handleAuthSuccess());
+
+      expect(result.current.isAuthDialogOpen).toBe(false);
+      // Re-auth, not a fresh lock: the price step must not come back and the captured draft must stand.
+      expect(result.current.isLockDialogOpen).toBe(false);
+      expect(result.current.lockConfig).toEqual({ amountSats: '1000' });
+      expect(mocks.lockContentOptions?.lockedPost.content).toBe(JSON.stringify({ title: 'Essay', body: 'my secret' }));
+
+      await act(async () => result.current.submitOrPublish());
+
+      expect(onPublished).toHaveBeenCalledWith('alice:POST1');
+      expect(result.current.lockSwitch?.checked).toBe(false);
+    });
+
+    it('toasts and keeps the composer on a failed publish', async () => {
+      setUpLocks();
+      mocks.publish.mockResolvedValue({ status: 'failed' });
+      const { result, clearComposer, onPublished } = setup();
+
+      configureLock(result);
+      clearComposer.mockClear(); // applying the lock already cleared the composer once; only watch the publish step
+      await act(async () => result.current.submitOrPublish());
+
+      expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+      expect(mocks.setPostAttachments).not.toHaveBeenCalled();
+      expect(clearComposer).not.toHaveBeenCalled();
+      expect(onPublished).not.toHaveBeenCalled();
+    });
+  });
+});

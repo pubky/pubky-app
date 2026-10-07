@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isArticleContent, parseArticleContent } from './articleContent';
+import { buildArticleContent, isArticleContent, parseArticleContent } from './articleContent';
 
 describe('parseArticleContent', () => {
   it('returns null for nullish and empty input', () => {
@@ -38,5 +38,14 @@ describe('isArticleContent', () => {
   it('returns false for malformed article content', () => {
     expect(isArticleContent('not valid json')).toBe(false);
     expect(isArticleContent(JSON.stringify({ title: 'Title' }))).toBe(false);
+  });
+});
+
+describe('buildArticleContent', () => {
+  it('round-trips through parseArticleContent, trimming both fields', () => {
+    expect(parseArticleContent(buildArticleContent('  Title  ', '  Body  '))).toEqual({
+      title: 'Title',
+      body: 'Body',
+    });
   });
 });

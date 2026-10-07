@@ -12,6 +12,8 @@ import { Header } from '@/organisms/Header/Header';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
 import { Search } from '@/templates/Feed/Search/Search';
+import { page } from 'vitest/browser';
+import { useSearchStore } from '@/stores/search/search.store';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
@@ -211,13 +213,18 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 // stable fixture slice.
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
   const f = await fixtures;
-  const cache = new Map<string, unknown>();
+  const cache = new Map<string | undefined, unknown>();
   return {
-    useStreamPagination: ({ streamId }: { streamId: string }) => {
+    useStreamPagination: ({ streamId }: { streamId: string | undefined }) => {
       const cached = cache.get(streamId);
       if (cached) return cached;
       const result = {
-        postIds: streamId.includes(':collection:') ? f.searchCollectionIds : f.taggedSearchCompositeIds,
+        postIds:
+          !streamId || streamId.includes('q~unmatched')
+            ? []
+            : streamId.includes(':collection:')
+              ? f.searchCollectionIds
+              : f.taggedSearchCompositeIds,
         loading: false,
         loadingMore: false,
         error: null,
@@ -637,8 +644,36 @@ function resetSearchInputUi() {
 }
 
 beforeEach(() => {
+  useSearchStore.getState().reset();
   setSearchTags([]);
   resetSearchInputUi();
+});
+
+describe('Search reach — visual regression', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders empty scoped results on %s', async (name, viewport) => {
+    setContentSearchQuery('unmatched query');
+    useSearchStore.getState().setReach('friends');
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport });
+    await expect.element(screen.getByRole('button', { name: 'Search in All' })).toBeVisible();
+    await matchVrtFrameScreenshot(`search-reach-empty-${name}`);
+  });
+
+  it.each([
+    ['mobile', VRT_VIEWPORT_MOBILE],
+    ['tablet', { width: 768, height: 1024 }],
+  ] as const)('renders the reach control in the %s drawer', async (name, viewport) => {
+    setContentSearchQuery('bitcoin design');
+    useSearchStore.getState().setReach('network');
+    await renderForVRT(<SearchWithLayout />, { viewport });
+    await page
+      .elementLocator(document.querySelector<HTMLButtonElement>('button:has(.lucide-sliders-horizontal)')!)
+      .click();
+    await expect.element(page.getByRole('radio', { name: 'My network' })).toHaveAttribute('aria-checked', 'true');
+    await matchVrtFrameScreenshot(`search-reach-drawer-${name}`);
+  });
 });
 
 describe('Search (empty state) — visual regression', () => {
@@ -733,5 +768,47 @@ describe('Search (profile results) — visual regression', () => {
     await expect.element(screen.getByRole('button', { name: 'Clear and close search' })).toBeVisible();
     await expect.element(screen.getByRole('button', { name: 'Show all results' })).toBeVisible();
     await matchVrtFrameScreenshot('search-profiles-mobile');
+  });
+});
+
+describe('Cards layout — search', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders Cards on %s', async (name, viewport) => {
+    const { useHomeStore } = await import('@/stores/home/home.store');
+    const state = useHomeStore.getState();
+    const previousLayout = state.layout;
+    state.layout = 'cards';
+    setContentSearchQuery('bitcoin design');
+    try {
+      await renderForVRT(<SearchWithLayout />, { viewport });
+      await expect.poll(() => document.querySelector('[data-cy="timeline-posts-cards"]')).not.toBeNull();
+      await expect
+        .poll(() => {
+          const feed = document.querySelector<HTMLElement>('[data-cy="timeline-posts-cards"]')!;
+          const cards = Array.from(feed.children).map((card) => card.getBoundingClientRect());
+          expect(cards.length).toBeGreaterThan(1);
+          expect(feed.getBoundingClientRect().bottom).toBeGreaterThanOrEqual(
+            Math.max(...cards.map((card) => card.bottom)) - 1,
+          );
+          for (const [index, card] of cards.entries()) {
+            expect(card.right).toBeLessThanOrEqual(feed.getBoundingClientRect().right + 1);
+            for (const other of cards.slice(index + 1)) {
+              expect(
+                card.left < other.right - 1 &&
+                  card.right > other.left + 1 &&
+                  card.top < other.bottom - 1 &&
+                  card.bottom > other.top + 1,
+              ).toBe(false);
+            }
+          }
+          return true;
+        })
+        .toBe(true);
+      await matchVrtFrameScreenshot(`search-cards-${name}`);
+    } finally {
+      state.layout = previousLayout;
+    }
   });
 });

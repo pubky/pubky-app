@@ -71,7 +71,8 @@ export const FollowBestMatchesForm = () => {
     // The Interests feed is the tags step's side effect, created here rather than on Tags
     // Continue because Back from this screen can still change the selection. A failed write
     // (reported by the hook's toast) keeps the user on this step with Finish re-enabled: the
-    // selection is still in the store, and the config-derived feed ID makes the retry an upsert.
+    // selection is still in the store, and the failed local row is rolled back, so the retry
+    // creates the feed afresh.
     if (interestTags.length > 0) {
       const created = await createInterestsFeed(interestTags);
       if (!created) return;
