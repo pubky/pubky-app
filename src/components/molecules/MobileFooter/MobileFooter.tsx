@@ -8,7 +8,7 @@ import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { SHOP_URL } from '@/config/externalLinks';
+import { getShopLink } from '@/config/externalLinks';
 import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisible';
@@ -65,7 +65,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
       icon: Flame,
       label: 'Hot',
     },
-    { href: SHOP_URL, icon: Store, label: 'Shop' },
+    { href: getShopLink(), icon: Store, label: 'Shop' },
     {
       href: APP_ROUTES.COLLECTIONS,
       activePrefix: APP_ROUTES.COLLECTIONS,

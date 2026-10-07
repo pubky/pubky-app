@@ -48,6 +48,8 @@ spec:
             # sign-in guard must be active (see isStagingHomeserverDeploy).
             - name: PUBKY_RUNTIME_ENV
               value: "staging"
+            - name: PUBKY_RUNTIME_SHOP_URL
+              value: "https://shop.staging.pubky.app/marketplace"
             - name: PUBKY_RUNTIME_TESTNET
               value: "false"
             - name: PUBKY_RUNTIME_HOMESERVER

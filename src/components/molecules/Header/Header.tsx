@@ -10,7 +10,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink, SHOP_URL } from '@/config/externalLinks';
+import { getGithubLink, getShopLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
 import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Github2, Telegram, XTwitter } from '@/icons';
@@ -98,7 +98,7 @@ type HeaderNavigationButtonsProps = {
   avatarSeed?: string;
   className?: string;
 };
-const NAVIGATION_ITEMS: NavigationItemConfig[] = [
+const getNavigationItems = (): NavigationItemConfig[] => [
   {
     href: APP_ROUTES.HOME,
     icon: Home,
@@ -112,7 +112,7 @@ const NAVIGATION_ITEMS: NavigationItemConfig[] = [
     label: 'Hot',
     dataCy: 'header-hot-btn',
   },
-  { href: SHOP_URL, icon: Store, label: 'Shop', dataCy: 'header-marketplace-btn', external: true },
+  { href: getShopLink(), icon: Store, label: 'Shop', dataCy: 'header-marketplace-btn', external: true },
   {
     href: APP_ROUTES.COLLECTIONS,
     icon: Library,
@@ -189,7 +189,7 @@ export function HeaderNavigationButtons({
   const counterString = counter > 21 ? '21+' : counter.toString();
   return (
     <Container className={cn('hidden w-auto flex-row items-center justify-start gap-3 lg:flex', className)}>
-      {NAVIGATION_ITEMS.map((item) => (
+      {getNavigationItems().map((item) => (
         <NavigationButton
           key={item.href}
           href={item.href}
@@ -244,7 +244,7 @@ export function HeaderExploreNavigationButtons({
   return (
     <Container className={cn('hidden min-w-0 flex-1 flex-row items-center justify-end gap-3 lg:flex', className)}>
       {showSearch && <SearchInput />}
-      {NAVIGATION_ITEMS.map((item) => {
+      {getNavigationItems().map((item) => {
         // Core explore routes navigate freely; Settings requires an account.
         const requiresAuth = !item.external && !isCoreExploreRoute(item.href);
         return (

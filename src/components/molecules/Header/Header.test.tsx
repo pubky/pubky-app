@@ -2,6 +2,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { describe, expect, it, vi } from 'vitest';
+import {
+  readServerConfig,
+  resetRuntimeConfigForTests,
+  RUNTIME_CONFIG_WINDOW_KEY,
+} from '@/libs/runtime-config/runtime-config';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
@@ -168,7 +173,23 @@ describe('Header Components', () => {
     expect(link?.getAttribute('target')).not.toBe('_blank');
   });
 
+  it.each([
+    { name: 'signed-in', Component: HeaderNavigationButtons },
+    { name: 'guest', Component: HeaderExploreNavigationButtons },
+  ])('uses the injected Shop destination in $name navigation', ({ Component }) => {
+    window[RUNTIME_CONFIG_WINDOW_KEY] = {
+      ...readServerConfig(),
+      shopUrl: 'https://shop.example.com/marketplace',
+    };
+    render(<Component />);
+    const link = screen.getByRole('button', { name: 'Shop' }).closest('a');
+    expect(link).toHaveAttribute('href', 'https://shop.example.com/marketplace');
+    expect(link).toHaveAttribute('target', '_self');
+  });
+
   beforeEach(() => {
+    resetRuntimeConfigForTests();
+    delete window[RUNTIME_CONFIG_WINDOW_KEY];
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
     vi.mocked(usePathname).mockReturnValue('/home');
     vi.mocked(useAuthStore).mockImplementation((selector) => {
@@ -187,6 +208,8 @@ describe('Header Components', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    delete window[RUNTIME_CONFIG_WINDOW_KEY];
+    resetRuntimeConfigForTests();
   });
 
   describe('HeaderContainer', () => {

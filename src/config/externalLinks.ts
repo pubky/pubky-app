@@ -6,6 +6,7 @@ import {
   getPlayStoreUrl,
   getPubkyCoreUrl,
   getPubkyRingUrl,
+  getShopUrl,
   getTelegramUrl,
   getTwitterGetpubkyUrl,
   getTwitterUrl,
@@ -31,6 +32,7 @@ export const APP_RELEASE_URL = buildAppReleaseUrl(APP_VERSION);
 // Pubky ecosystem links
 export const getPubkyRingLink = getPubkyRingUrl;
 export const getPubkyCoreLink = getPubkyCoreUrl;
+export const getShopLink = getShopUrl;
 
 // Public, read-only Cypher gateway to the Pubky social graph — surfaced to AI agents via
 // StructuredData in the root layout so they know where to query it.
@@ -53,6 +55,3 @@ export const getPlayStoreLink = getPlayStoreUrl;
 export const BITKIT_WEBSITE_URL = 'https://bitkit.to/';
 export const BITKIT_APP_STORE_URL = 'https://get.bitkit.to/iOS';
 export const BITKIT_PLAY_STORE_URL = 'https://get.bitkit.to/PlayStore';
-
-// Temporary staging Shop destination while the two frontends are deployed separately.
-export const SHOP_URL = 'https://shop.staging.pubky.app/marketplace';
