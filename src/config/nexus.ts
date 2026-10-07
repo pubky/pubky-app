@@ -6,7 +6,9 @@ export { getCdnUrl, getNexusUrl, getStreamCacheMaxAgeMs };
 
 export const NEXUS_NOTIFICATIONS_LIMIT = 30;
 export const NEXUS_POSTS_PER_PAGE = 10; // Number of posts to fetch per page in streams
-export const NEXUS_STREAM_MAX_LIMIT = 50; // Hard cap Nexus enforces on a single stream `limit`; requests above this are rejected
+export const NEXUS_STREAM_MAX_LIMIT = 50; // Hard cap Nexus enforces on a single post stream `limit`; requests above this are rejected
+export const NEXUS_USER_STREAM_MAX_LIMIT = 20; // Hard cap Nexus enforces on a single `/v0/stream/users/ids` `limit`; requests above this are rejected
+export const NEXUS_USERS_BY_IDS_MAX_IDS = 100; // Hard cap Nexus enforces on the user_ids in one `/v0/stream/users/by_ids` request (OpenAPI `UserIds` max=100); requests with more are rejected
 export const NEXUS_USERS_PER_PAGE = 10; // Number of users to fetch per page in streams
 
 /**

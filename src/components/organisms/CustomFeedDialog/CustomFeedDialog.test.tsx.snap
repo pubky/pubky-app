@@ -37,7 +37,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
         Feed Title
       </label>
       <input
-        class="h-14 border-dashed"
+        class="h-14 border-dashed bg-background/20"
         data-testid="feed-name-input"
         placeholder="Name your feed"
         required=""
@@ -1088,7 +1088,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
         Feed Title
       </label>
       <input
-        class="h-14 border-dashed"
+        class="h-14 border-dashed bg-background/20"
         data-testid="feed-name-input"
         placeholder="Name your feed"
         required=""
@@ -2137,7 +2137,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
         Feed Title
       </label>
       <input
-        class="h-14 border-dashed"
+        class="h-14 border-dashed bg-background/20"
         data-testid="feed-name-input"
         placeholder="Name your feed"
         required=""
@@ -3260,7 +3260,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
         Feed Title
       </label>
       <input
-        class="h-14 border-dashed"
+        class="h-14 border-dashed bg-background/20"
         data-testid="feed-name-input"
         placeholder="Name your feed"
         required=""

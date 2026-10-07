@@ -87,8 +87,6 @@ vi.mock('../UserListItem/UserListItem', () => ({
 const baseStreamResult = {
   userIds: [] as string[],
   isLoadingMore: false,
-  hasMore: false,
-  loadMore: vi.fn(),
   refetch: vi.fn(),
 };
 
