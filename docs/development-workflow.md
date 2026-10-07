@@ -76,7 +76,7 @@ npm run lint           # eslint
 npm run typecheck      # tsc --noEmit (includes tests)
 npm test               # vitest --project unit (jsdom); ~13k tests, several minutes
 npm test -- src/components/atoms/Button/Button.test.tsx   # one file
-npm test -- -t "renders"                                  # one name pattern
+npm test -- -t "handles click events"                     # one name pattern
 npm run test:vrt                       # vitest --project vrt (chromium+firefox+webkit; needs npm run test:vrt:setup once)
 npm run test:vrt:check-baselines       # every __screenshots__ folder has a sibling test
 npm run build                          # next build --webpack (CI also smoke-tests `next start`)
@@ -93,7 +93,7 @@ Right-sized verification:
 - Run the full `npm test` before handing off a cross-cutting change; `npm run build` when the change is route- or config-wide.
 - Cypress e2e needs the full pubky-stack (private `pubky/pubky-stack`) and runs on push to `master`/`dev` in CI. Do not attempt it from a bare checkout, and do not report an e2e result you did not obtain.
 
-Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; assert props, variants, and interactions in unit tests; visual appearance via VRT (`visual-regression-testing.md`). For mobile layout branches driven by `useIsMobile`, use `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are ESLint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
+Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; assert props, variants, and interactions in unit tests; visual appearance via VRT (`visual-regression-testing.md`); no snapshot tests. For mobile layout branches driven by `useIsMobile`, use `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are ESLint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
 
 Manual checks for UI work: desktop and narrow viewport, loading/empty/error states, hover/focus/disabled states, dark-on-brand contrast, and the mobile path where a Sheet replaces a Popover.
 

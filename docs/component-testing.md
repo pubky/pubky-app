@@ -1,6 +1,8 @@
 # Component Testing
 
-Rules and patterns for unit tests for UI components. Visual appearance is covered by VRT — see `docs/visual-regression-testing.md`.
+Rules and patterns for unit tests of UI components. Unit tests assert behaviour and prop contracts; visual appearance is covered by VRT — see `docs/visual-regression-testing.md`.
+
+Snapshot tests (`toMatchSnapshot`, `toMatchInlineSnapshot`, `.snap` files) were removed in favour of VRT and must not come back. They pinned markup rather than behaviour, broke on every unrelated class change, and duplicated what VRT already captures.
 
 ## File Naming
 
@@ -41,18 +43,21 @@ it('handles hover states correctly', () => {
 });
 ```
 
-### Variant and prop mapping
+### Variant and Prop Mapping
 
-For atoms and other primitives where props map to elements or classes, assert the mapping directly (for example `as="h2"` renders an `h2`, or `variant="destructive"` sets `data-variant`). Do not rely on visual regression alone for those contracts.
+For atoms and other primitives where props map to elements or classes, assert the mapping directly: `as="h2"` renders an `h2`, `variant="destructive"` sets `data-variant`, `size="lg"` applies its size class. Prefer `data-*` attributes and roles over class names where the component exposes them; assert a class only when it is the contract (a CVA variant, a passthrough `className`). Cover the default variant as well as the named ones. Do not rely on VRT alone for these contracts — a variant that only appears off-screen is never captured.
 
-### Mobile layout branches
+### Mobile Layout Branches
 
-When an organism or template uses `useIsMobile` (or `useFeedLayoutResolution`) and the test needs the mobile branch, use `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport` in `beforeEach` / `afterEach`. If the file mocks `useIsMobile`, also set the mock to return `true` in the mobile `beforeEach` — resizing the window alone has no effect on a stubbed hook.
+When an organism or template switches markup on `useIsMobile` (for example a `Sheet` instead of a `Popover`) and the test needs the mobile branch, use `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport` in `beforeEach` / `afterEach`. If the file mocks `useIsMobile`, also set the mock to return `true` in the mobile `beforeEach` — resizing the window alone has no effect on a stubbed hook. If the file mocks `useFeedLayoutResolution`, set `isPhoneViewport: true` alongside `setMobileViewport()`.
+
+Responsive behaviour that is CSS-only (`lg:hidden`, `sm:flex-row`) produces identical markup at both widths; leave it to VRT.
 
 ## Test Optimization
 
 - Unit tests should focus on functional behaviour, prop contracts, and logic
 - Visual appearance (layout, spacing, colours) belongs in VRT, not unit tests
+- A test must be able to fail: avoid `toBeDefined()` on imports, `not.toThrow()` around a render, or a `querySelector` with a catch-all selector
 
 ## Mocking Rules
 
@@ -181,7 +186,7 @@ npm run test:vrt                     # Visual regression tests
 
 1. Run tests after creating new test files
 2. Assert critical props, variants, and interactions in unit tests
-3. Add or update VRT coverage when a visual surface changes — see `docs/visual-regression-testing.md`
+3. Add or update VRT coverage when a visual surface changes — see `docs/visual-regression-testing.md`; baselines are CI-owned, never commit local captures
 4. Verify all tests pass before committing
 
 ## Complete Example

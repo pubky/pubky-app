@@ -364,7 +364,7 @@ When migrating/creating a component:
 - [ ] Component imports point at concrete files (e.g. `@/atoms/Button/Button`), not aggregate folder indexes or re-export-only paths
 - [ ] All Figma variants implemented
 - [ ] CVA used for variant management
-- [ ] Tests created (unit) — see `docs/component-testing.md`
+- [ ] Unit tests created — see `docs/component-testing.md`; VRT updated when a visual surface changed
 - [ ] Build passes (`npm run build`)
 - [ ] Visual verification in browser
 
@@ -377,6 +377,6 @@ When creating/modifying components:
 - [ ] Using concrete `@/atoms/*`, `@/molecules/*`, `@/organisms/*`, or `@/templates/*` imports?
 - [ ] Design tokens (not hardcoded colors)?
 - [ ] Figma sizing/spacing matched?
-- [ ] Tests created (unit)?
+- [ ] Unit tests created, and VRT updated if a visual surface changed?
 - [ ] No re-export-only `index.ts` / `index.tsx` added under `src/components`?
 - [ ] Build passes?

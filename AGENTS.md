@@ -77,7 +77,8 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - Observability: throw via `Err.*`; they capture to Sentry and, in a consenting browser, Pulse. No other direct
   `captureException` except `app/error.tsx` / `app/global-error.tsx`, for non-`AppError` values; no raw user data. `docs/sentry.md`
 - Tests: colocated `*.test.tsx`; assert props, variants, and interactions in unit tests; visual appearance via VRT; no
-  `as any` or `as unknown as T` (use the `src/test-utils` helpers). `docs/component-testing.md`
+  snapshot tests (removed for VRT, must not return); no `as any` or `as unknown as T` (use the `src/test-utils`
+  helpers). `docs/component-testing.md`
 
 ## Before you edit, read
 
