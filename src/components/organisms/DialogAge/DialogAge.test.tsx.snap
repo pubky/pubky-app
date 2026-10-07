@@ -11,6 +11,8 @@ exports[`DialogAge - Snapshots > matches snapshot for default DialogAge 1`] = `
     <span
       class="cursor-pointer font-medium text-brand"
       data-testid="typography"
+      role="button"
+      tabindex="0"
     >
       over 18 years old.
     </span>
