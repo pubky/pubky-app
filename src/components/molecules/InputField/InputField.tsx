@@ -75,9 +75,9 @@ export function InputField({
     error: 'border-red-500 text-red-500',
   };
   const sizeClasses = {
-    sm: 'h-10 text-sm',
-    md: 'h-12 text-base',
-    lg: 'h-14 text-lg',
+    sm: 'min-h-10 text-sm',
+    md: 'min-h-12 text-base',
+    lg: 'min-h-14 text-lg',
   } as const;
   const messageClasses = {
     default: 'text-muted-foreground',
@@ -118,7 +118,7 @@ export function InputField({
     <>
       <Container
         className={cn(
-          '!bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent',
+          'mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 py-4',
           icon && iconPosition === 'left' ? 'pl-4.5' : 'pl-2',
           containerClasses,
           statusClasses[status],
@@ -139,7 +139,7 @@ export function InputField({
           id={id}
           name={name}
           type="text"
-          className={cn('w-full border-none !bg-transparent', inputClassName)}
+          className={cn('h-auto w-full border-none !bg-transparent py-0', inputClassName)}
           value={loading ? resolvedLoadingText : value}
           placeholder={placeholder}
           disabled={disabled || loading}

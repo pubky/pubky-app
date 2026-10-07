@@ -214,6 +214,7 @@ function ImageDialogForm({
               </Label>
               <Input
                 id="image-dialog-src"
+                className="bg-background/20"
                 type="text"
                 inputMode="url"
                 placeholder={'https://…'}
@@ -228,6 +229,7 @@ function ImageDialogForm({
               <Label htmlFor="image-dialog-alt">{'Alt text'}</Label>
               <Input
                 id="image-dialog-alt"
+                className="bg-background/20"
                 type="text"
                 placeholder={'Describe the image'}
                 value={altText}
