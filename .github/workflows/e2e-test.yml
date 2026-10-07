@@ -196,6 +196,7 @@ jobs:
         working-directory: pubky-stack/docker
         run: |
           cp .env-sample .env
+          printf '\nPUBKY_RUNTIME_SHOP_URL=%s\n' 'https://shop.staging.pubky.app/marketplace' >> .env
 
       - name: Run pubky-stack
         working-directory: pubky-stack/docker
