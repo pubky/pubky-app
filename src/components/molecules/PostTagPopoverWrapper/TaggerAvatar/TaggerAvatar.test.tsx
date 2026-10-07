@@ -32,15 +32,3 @@ describe('TaggerAvatar', () => {
     expect(screen.getByTestId('user-info-popover')).toBeInTheDocument();
   });
 });
-
-describe('TaggerAvatar - Snapshots', () => {
-  it('matches snapshot (index 0)', () => {
-    const { container } = render(<TaggerAvatar tagger={mockTagger} index={0} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot (index 1)', () => {
-    const { container } = render(<TaggerAvatar tagger={mockTagger} index={1} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

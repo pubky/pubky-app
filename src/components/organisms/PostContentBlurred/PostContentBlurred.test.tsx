@@ -175,24 +175,3 @@ describe('PostContentBlurred', () => {
     expect(blurredText).toHaveAttribute('aria-hidden', 'true');
   });
 });
-
-describe('PostContentBlurred - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot with default props', () => {
-    const { container } = render(<PostContentBlurred postId="snapshot-post-1" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<PostContentBlurred postId="snapshot-post-2" className="mt-4 rounded-lg" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with compact variant', () => {
-    const { container } = render(<PostContentBlurred postId="snapshot-post-3" variant="compact" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

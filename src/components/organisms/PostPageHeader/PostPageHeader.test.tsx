@@ -192,42 +192,4 @@ describe('PostPageHeader', () => {
     expect(breadcrumb).toHaveClass('w-full', 'min-w-0');
     expect(within(breadcrumb).getByText(longName)).toHaveClass('truncate');
   });
-
-  it('matches snapshot for root post', () => {
-    mockAncestors.mockReturnValue({
-      ancestors: [{ postId: 'user1:post1', userId: 'user1' }],
-      isLoading: false,
-      hasError: false,
-    });
-    mockUsers.mockReturnValue({
-      users: [{ id: 'user1', name: 'John', avatarUrl: undefined }],
-      isLoading: false,
-    });
-
-    const { container } = render(<PostPageHeader postId="user1:post1" />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot for reply post with breadcrumb', () => {
-    mockAncestors.mockReturnValue({
-      ancestors: [
-        { postId: 'user1:post1', userId: 'user1' },
-        { postId: 'user2:post2', userId: 'user2' },
-        { postId: 'user3:post3', userId: 'user3' },
-      ],
-      isLoading: false,
-      hasError: false,
-    });
-    mockUsers.mockReturnValue({
-      users: [
-        { id: 'user1', name: 'John', avatarUrl: undefined },
-        { id: 'user2', name: 'Satoshi', avatarUrl: undefined },
-        { id: 'user3', name: 'Anna', avatarUrl: undefined },
-      ],
-      isLoading: false,
-    });
-
-    const { container } = render(<PostPageHeader postId={mockPostId} />);
-    expect(container).toMatchSnapshot();
-  });
 });

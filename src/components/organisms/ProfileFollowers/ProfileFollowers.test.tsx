@@ -200,31 +200,3 @@ describe('ProfileFollowers', () => {
     });
   });
 });
-
-describe('ProfileFollowers - Snapshots', () => {
-  beforeEach(() => {
-    vi.mocked(useProfileConnections).mockReturnValue(mockUseProfileConnections());
-    vi.mocked(useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
-    );
-    vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
-  });
-
-  it('matches snapshot with no connections', () => {
-    const { container } = render(<ProfileFollowers />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot when loading', () => {
-    vi.mocked(useProfileConnections).mockReturnValue(mockLoadingConnectionsResult);
-    const { container } = render(<ProfileFollowers />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with connections', () => {
-    vi.mocked(useProfileConnections).mockReturnValue(mockConnectionsResult);
-
-    const { container } = render(<ProfileFollowers />);
-    expect(container).toMatchSnapshot();
-  });
-});

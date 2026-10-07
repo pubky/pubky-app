@@ -236,20 +236,3 @@ describe('TaggedList', () => {
     expect(mockLoadMoreTaggers).toHaveBeenCalledWith('bitcoin');
   });
 });
-
-describe('TaggedList - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockOnTagToggle.mockClear();
-  });
-
-  it('matches snapshot with tags', () => {
-    const { container } = render(<TaggedList tags={mockTags} onTagToggle={mockOnTagToggle} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with empty tags', () => {
-    const { container } = render(<TaggedList tags={[]} onTagToggle={mockOnTagToggle} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

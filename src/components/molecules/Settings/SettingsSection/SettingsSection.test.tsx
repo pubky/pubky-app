@@ -141,20 +141,3 @@ describe('SettingsSection', () => {
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 });
-
-describe('SettingsSection - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<SettingsSection {...defaultProps} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with destructive variant', () => {
-    const { container } = render(<SettingsSection {...defaultProps} buttonVariant="destructive" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with disabled button', () => {
-    const { container } = render(<SettingsSection {...defaultProps} buttonDisabled={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

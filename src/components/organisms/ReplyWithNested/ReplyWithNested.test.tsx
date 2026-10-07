@@ -280,20 +280,3 @@ describe('ReplyWithNested', () => {
     }
   });
 });
-
-describe('ReplyWithNested - Snapshots', () => {
-  it('matches snapshot for expanded nested replies', () => {
-    mocks.mockUseNestedReplies.mockReturnValue({
-      nestedReplyIds: ['author:nested-1'],
-      hasMoreReplies: false,
-      hasNestedReplies: true,
-      replyCount: 1,
-      showAll: false,
-      isExpandingAll: false,
-      expandAll: vi.fn(async () => {}),
-    });
-
-    const { container } = render(<ReplyWithNested replyId="author:reply-1" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

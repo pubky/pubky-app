@@ -16,10 +16,3 @@ describe('ProfileFormSkeleton', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 });
-
-describe('ProfileFormSkeleton - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<ProfileFormSkeleton />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

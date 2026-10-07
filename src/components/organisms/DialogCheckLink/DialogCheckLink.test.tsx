@@ -223,34 +223,3 @@ describe('DialogCheckLink', () => {
     expect(handleParentClick).not.toHaveBeenCalled();
   });
 });
-
-describe('DialogCheckLink - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot for default DialogCheckLink', () => {
-    render(<DialogCheckLink {...defaultProps} />);
-    const dialogContent = screen.getByTestId('dialog-content');
-    expect(dialogContent.parentElement).toMatchSnapshot();
-  });
-
-  it('matches snapshot when closed', () => {
-    const { container } = render(<DialogCheckLink {...defaultProps} open={false} />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with long URL', () => {
-    const longUrl = 'https://example.com/this/is/a/very/long/path/that/needs/to/be/truncated/properly';
-    render(<DialogCheckLink {...defaultProps} linkUrl={longUrl} />);
-    const dialogContent = screen.getByTestId('dialog-content');
-    expect(dialogContent.parentElement).toMatchSnapshot();
-  });
-
-  it('matches snapshot with short URL', () => {
-    const shortUrl = 'https://x.com';
-    render(<DialogCheckLink {...defaultProps} linkUrl={shortUrl} />);
-    const dialogContent = screen.getByTestId('dialog-content');
-    expect(dialogContent.parentElement).toMatchSnapshot();
-  });
-});

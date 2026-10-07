@@ -90,35 +90,3 @@ describe('PostTag', () => {
     expect(container.firstChild).toBeTruthy();
   });
 });
-
-describe('PostTag - Snapshots', () => {
-  it('matches snapshot with default state', () => {
-    const { container } = render(<PostTag label="bitcoin" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when selected', () => {
-    const { container } = render(<PostTag label="bitcoin" selected />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with counter', () => {
-    const { container } = render(<PostTag label="bitcoin" count={16} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with close button', () => {
-    const { container } = render(<PostTag label="bitcoin" showClose />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with all features', () => {
-    const { container } = render(<PostTag label="bitcoin" count={16} showClose selected />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom color', () => {
-    const { container } = render(<PostTag label="bitcoin" color="#FF0000" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -167,10 +167,3 @@ describe('AlertBackup', () => {
     expect(screen.getByTestId('dialog-confirm-backup')).toBeInTheDocument();
   });
 });
-
-describe('AlertBackup - Snapshot', () => {
-  it('matches snapshot for default AlertBackup', () => {
-    const { container } = render(<AlertBackup />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

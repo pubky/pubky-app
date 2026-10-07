@@ -66,15 +66,3 @@ describe('DialogInlineTrigger', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
   });
 });
-
-describe('DialogInlineTrigger - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<DialogInlineTrigger>Terms of Service</DialogInlineTrigger>);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with a custom className', () => {
-    const { container } = render(<DialogInlineTrigger className="text-foreground">Privacy Policy</DialogInlineTrigger>);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

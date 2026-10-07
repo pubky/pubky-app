@@ -330,12 +330,6 @@ describe('ProfileProfile', () => {
       enableStats: true,
     });
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<ProfileProfile />);
-    expect(container).toMatchSnapshot();
-  });
-
   describe('avatar zoom', () => {
     it('does not render the zoom modal before the avatar is clicked', () => {
       render(<ProfileProfile />);

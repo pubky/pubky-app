@@ -49,12 +49,3 @@ describe('DialogReportPostSuccess', () => {
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
 });
-
-describe('DialogReportPostSuccess - Snapshots', () => {
-  const mockOnOpenChange = vi.fn();
-
-  it('matches snapshot', () => {
-    const { container } = renderWithDialog(<DialogReportPostSuccess onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

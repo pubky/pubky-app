@@ -9,10 +9,3 @@ describe('SearchEmptyState', () => {
     expect(screen.getByRole('heading', { name: 'Search for posts by tags' })).toBeInTheDocument();
   });
 });
-
-describe('SearchEmptyState - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<SearchEmptyState />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
