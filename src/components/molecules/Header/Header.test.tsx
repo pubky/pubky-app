@@ -234,6 +234,7 @@ describe('Header Components', () => {
         'py-6',
         'px-4',
         'lg:px-6',
+        'xl:px-0',
       );
       expect(inner).not.toHaveClass('p-6', 'px-6');
     });

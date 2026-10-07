@@ -785,17 +785,6 @@ describe('Header', () => {
       expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
     });
 
-    it('uses app-shell gutter alignment when unauthenticated on a core explore route', () => {
-      mockCurrentUserPubky = null;
-      mockIsPublicRoute.mockReturnValue(false);
-      mockIsCoreExploreRoute.mockReturnValue(true);
-      mockUsePathname.mockReturnValue(HOME_ROUTES.HOME);
-
-      render(<Header />);
-
-      expect(screen.getByTestId('header-container')).toHaveAttribute('data-class-name-nav', ' xl:px-0');
-    });
-
     it('renders HeaderSignIn when authenticated regardless of public route', () => {
       mockCurrentUserPubky = 'test-pubky-123';
       mockIsPublicRoute.mockReturnValue(true);
