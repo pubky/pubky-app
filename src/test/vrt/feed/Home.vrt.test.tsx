@@ -18,6 +18,7 @@ import { Fab } from '@/molecules/Fab/Fab';
 import { PostMain } from '@/organisms/PostMain/PostMain';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { APP_ROUTES } from '@/app/routes';
+import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { useState } from 'react';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
@@ -26,31 +27,57 @@ import { useState } from 'react';
 // data so the per-factory cost is negligible.
 //
 // Default Home screenshots keep `VRT_FEED_POSTS` only. Article-in-feed tests
-// prepend `VRT_ARTICLE` via this flag so existing baselines stay put.
+// prepend `VRT_ARTICLE`, collection-in-feed tests prepend a followed
+// collection, and the Visual layout swaps in `VRT_IMAGE_ONLY_POSTS` via this
+// flag so existing baselines stay put.
 const feedState = vi.hoisted(() => ({
-  mode: 'default' as 'default' | 'article',
+  mode: 'default' as 'default' | 'article' | 'collection' | 'imageOnly',
   keyboardVisible: false,
   populatedHotTags: false,
 }));
 const mockRouterPush = vi.hoisted(() => vi.fn());
 
 const fixtures = vi.hoisted(async () => {
-  const [postsModule, articleModule, profilesModule, whoToFollowModule, navModule, mockApp, repostsModule] =
-    await Promise.all([
-      import('@/test/fixtures/feed/posts'),
-      import('@/test/fixtures/post/article'),
-      import('@/test/fixtures/feed/profiles'),
-      import('@/test/fixtures/feed/whoToFollow'),
-      import('@/test/fixtures/feed/feedNavigation'),
-      import('@/test/mocks/feedApplication'),
-      import('@/test/fixtures/feed/reposts'),
-    ]);
+  const [
+    postsModule,
+    articleModule,
+    profilesModule,
+    whoToFollowModule,
+    navModule,
+    mockApp,
+    repostsModule,
+    imagePostsModule,
+    collectionsModule,
+  ] = await Promise.all([
+    import('@/test/fixtures/feed/posts'),
+    import('@/test/fixtures/post/article'),
+    import('@/test/fixtures/feed/profiles'),
+    import('@/test/fixtures/feed/whoToFollow'),
+    import('@/test/fixtures/feed/feedNavigation'),
+    import('@/test/mocks/feedApplication'),
+    import('@/test/fixtures/feed/reposts'),
+    import('@/test/fixtures/feed/imagePosts'),
+    import('@/test/fixtures/feed/collections'),
+  ]);
   const postsByCompositeId = new Map(postsModule.VRT_FEED_POSTS.map((post) => [post.compositeId, post]));
   postsByCompositeId.set(articleModule.VRT_ARTICLE.compositeId, articleModule.VRT_ARTICLE);
   postsByCompositeId.set(repostsModule.VRT_PLAIN_REPOST.compositeId, repostsModule.VRT_PLAIN_REPOST);
   postsByCompositeId.set(repostsModule.VRT_QUOTE_REPOST.compositeId, repostsModule.VRT_QUOTE_REPOST);
+  for (const post of imagePostsModule.VRT_IMAGE_ONLY_POSTS) {
+    postsByCompositeId.set(post.compositeId, post);
+  }
+  // A collection the viewer follows, rendered as a standalone `CollectionCard`
+  // in the feed. Collection fixtures carry no relationships; give it the
+  // root-post shape the repost/reply mocks below read.
+  const feedCollection = collectionsModule.VRT_FOLLOWED_COLLECTIONS[0];
+  postsByCompositeId.set(feedCollection.compositeId, {
+    ...feedCollection,
+    relationships: { replied: null, reposted: null, mentioned: [] },
+  });
   const orderedCompositeIds = postsModule.VRT_FEED_POSTS.map((post) => post.compositeId);
   const articleFeedPostIds = [articleModule.VRT_ARTICLE.compositeId, ...orderedCompositeIds];
+  const collectionFeedPostIds = [feedCollection.compositeId, ...orderedCompositeIds];
+  const feedCollectionContent = JSON.parse(feedCollection.details.content) as { name: string };
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
   return {
     postsByCompositeId,
@@ -59,11 +86,26 @@ const fixtures = vi.hoisted(async () => {
     repostOriginal: postsModule.VRT_SINGLE_POST,
     orderedCompositeIds,
     articleFeedPostIds,
+    collectionFeedPostIds,
+    feedCollectionName: feedCollectionContent.name,
+    imageOnlyPostIds: imagePostsModule.VRT_IMAGE_ONLY_POST_IDS,
+    imageOnlyImageUrls: imagePostsModule.VRT_IMAGE_ONLY_IMAGE_URLS,
+    imageOnlyVisualRows: imagePostsModule.VRT_IMAGE_ONLY_VISUAL_ROWS,
     articleTitle: articleModule.VRT_ARTICLE_TITLE,
     articleCoverUrl: articleModule.VRT_ARTICLE_COVER_URL,
     articleCoverName: articleModule.VRT_ARTICLE_COVER_NAME,
-    articleCoverByUri: new Map([[articleModule.VRT_ARTICLE_COVER_URI, articleModule.VRT_ARTICLE_COVER_METADATA]]),
-    articleCoverUrls: { [articleModule.VRT_ARTICLE_COVER_FILE_ID]: articleModule.VRT_ARTICLE_COVER_URL },
+    // Attachment URI → file metadata and file id → asset URL, shared by the
+    // article cover, the image-only posts and the collection cover.
+    fileMetadataByUri: new Map<string, { id: string; name: string; content_type: string; uri: string }>([
+      [articleModule.VRT_ARTICLE_COVER_URI, articleModule.VRT_ARTICLE_COVER_METADATA],
+      ...imagePostsModule.VRT_IMAGE_ONLY_FILE_METADATA_BY_URI,
+    ]),
+    fileUrls: {
+      [articleModule.VRT_ARTICLE_COVER_FILE_ID]: articleModule.VRT_ARTICLE_COVER_URL,
+      ...imagePostsModule.VRT_IMAGE_ONLY_FILE_URLS,
+      ...collectionsModule.VRT_COLLECTION_COVER_URLS,
+    },
+    collectionCoverUrls: Object.values(collectionsModule.VRT_COLLECTION_COVER_URLS),
     profiles: profilesModule.VRT_AUTHOR_PROFILES,
     viewerPubky,
     whoToFollow: whoToFollowModule.VRT_WHO_TO_FOLLOW,
@@ -165,6 +207,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: createZustandLikeHook({
     profile: null,
     posts: {} as Record<string, never>,
+    collections: {} as Record<string, never>,
   }),
 }));
 
@@ -188,10 +231,16 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
     prependPosts: async () => {},
     removePosts: () => {},
   };
-  const defaultResult = { ...shared, postIds: f.orderedCompositeIds };
-  const articleResult = { ...shared, postIds: f.articleFeedPostIds };
+  // One stable object per mode; a fresh `postIds` identity on every call would
+  // cascade into effect deps and re-render loops.
+  const results = {
+    default: { ...shared, postIds: f.orderedCompositeIds },
+    article: { ...shared, postIds: f.articleFeedPostIds },
+    collection: { ...shared, postIds: f.collectionFeedPostIds },
+    imageOnly: { ...shared, postIds: f.imageOnlyPostIds },
+  };
   return {
-    useStreamPagination: () => (feedState.mode === 'article' ? articleResult : defaultResult),
+    useStreamPagination: () => results[feedState.mode],
   };
 });
 
@@ -494,9 +543,10 @@ vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', async () => {
   return {
     useAttachmentsMetadata: ({ fileUris }: { fileUris: readonly string[] }) => ({
       files: fileUris.flatMap((uri) => {
-        const metadata = f.articleCoverByUri.get(uri);
+        const metadata = f.fileMetadataByUri.get(uri);
         return metadata ? [metadata] : [];
       }),
+      isLoading: false,
     }),
   };
 });
@@ -506,15 +556,62 @@ vi.mock('@/controllers/file/file', async () => {
   return {
     FileController: {
       getAvatarUrl: (userDetails: { image: string | null } | null | undefined) => userDetails?.image ?? null,
-      getFileUrl: ({ fileId }: { fileId: string }) => f.articleCoverUrls[fileId] ?? null,
+      getFileUrl: ({ fileId }: { fileId: string }) => f.fileUrls[fileId] ?? null,
       getMetadata: async ({ fileAttachments }: { fileAttachments: string[] }) =>
         fileAttachments.flatMap((uri) => {
-          const meta = f.articleCoverByUri.get(uri);
+          const meta = f.fileMetadataByUri.get(uri);
           return meta ? [meta] : [];
         }),
       fetchFiles: async () => [],
     },
   };
+});
+
+// `CollectionCard` (collection-in-feed) reads the owner through this hook.
+vi.mock('@/hooks/useUserProfile/useUserProfile', async () => {
+  const f = await fixtures;
+  const cache = new Map<string, { profile: unknown; isLoading: false }>();
+  return {
+    useUserProfile: (userId: string) => {
+      const cached = cache.get(userId);
+      if (cached) return cached;
+      const details = f.profiles[userId];
+      const result = {
+        profile: details
+          ? {
+              name: details.name ?? '',
+              bio: details.bio ?? '',
+              publicKey: `pk:${userId}`,
+              emoji: '🌴',
+              status: details.status ?? '',
+              avatarUrl: undefined,
+              link: `/profile/${userId}`,
+              links: details.links,
+            }
+          : null,
+        isLoading: false as const,
+      };
+      cache.set(userId, result);
+      return result;
+    },
+  };
+});
+
+// Pre-composed image-only rows keep the Visual mosaic free of media
+// metadata/probe timing (same approach as the Collections VRT).
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/useVisualFeedTiles', async () => {
+  const f = await fixtures;
+  const result = {
+    rows: f.imageOnlyVisualRows,
+    tail: [] as never[],
+    tiles: f.imageOnlyVisualRows.flatMap((row) => row.cells.flatMap((cell) => (cell.tile ? [cell.tile] : []))),
+    hasPendingSnapshot: false,
+    hasPendingTiles: false,
+    hasPendingFiles: false,
+    hasPendingPostDetails: false,
+    hiddenPostCount: 0,
+  };
+  return { useVisualFeedTiles: () => result };
 });
 
 vi.mock('@/controllers/search/search', () => ({
@@ -853,17 +950,29 @@ describe('Mobile keyboard navigation visibility', () => {
   });
 });
 
+// The home store mock is a shared snapshot, so a layout swap must be undone
+// after the screenshot or it leaks into every later Home test in this file.
+async function withHomeLayout(layout: LayoutType, run: () => Promise<void>) {
+  const { useHomeStore } = await import('@/stores/home/home.store');
+  const state = useHomeStore.getState();
+  const previousLayout = state.layout;
+  state.layout = layout;
+  try {
+    await run();
+  } finally {
+    state.layout = previousLayout;
+  }
+}
+
+const LAYOUT_VIEWPORTS = [
+  ['desktop', VRT_VIEWPORT_DESKTOP],
+  ['mobile', VRT_VIEWPORT_MOBILE],
+] as const;
+
 describe('Cards layout — home', () => {
-  it.each([
-    ['desktop', VRT_VIEWPORT_DESKTOP],
-    ['mobile', VRT_VIEWPORT_MOBILE],
-  ] as const)('renders Cards on %s', async (name, viewport) => {
-    const { useHomeStore } = await import('@/stores/home/home.store');
-    const state = useHomeStore.getState();
-    const previousLayout = state.layout;
-    state.layout = 'cards';
+  it.each(LAYOUT_VIEWPORTS)('renders Cards on %s', async (name, viewport) => {
     feedState.mode = 'default';
-    try {
+    await withHomeLayout(LAYOUT.CARDS, async () => {
       await renderForVRT(<HomeWithLayout />, { viewport });
       await expect.poll(() => document.querySelector('[data-cy="timeline-posts-cards"]')).not.toBeNull();
       await expect
@@ -889,8 +998,81 @@ describe('Cards layout — home', () => {
         })
         .toBe(true);
       await matchVrtFrameScreenshot(`home-cards-${name}`);
-    } finally {
-      state.layout = previousLayout;
-    }
+    });
+  });
+});
+
+describe('Wide layout — home', () => {
+  it.each(LAYOUT_VIEWPORTS)('renders Wide on %s', async (name, viewport) => {
+    feedState.mode = 'default';
+    await withHomeLayout(LAYOUT.WIDE, async () => {
+      await renderForVRT(<HomeWithLayout />, { viewport });
+      await expect.element(page.getByRole('feed')).toBeVisible();
+      await expect.poll(() => document.querySelectorAll('[data-cy="post-card"]').length).toBeGreaterThan(1);
+      await matchVrtFrameScreenshot(`home-wide-${name}`);
+    });
+  });
+});
+
+describe('List layout — home', () => {
+  it.each(LAYOUT_VIEWPORTS)('renders List on %s', async (name, viewport) => {
+    feedState.mode = 'default';
+    await withHomeLayout(LAYOUT.LIST, async () => {
+      await renderForVRT(<HomeWithLayout />, { viewport });
+      await expect.element(page.getByRole('feed')).toBeVisible();
+      await expect.poll(() => document.querySelectorAll('[data-cy="post-card"]').length).toBeGreaterThan(1);
+      await matchVrtFrameScreenshot(`home-list-${name}`);
+    });
+  });
+});
+
+describe('Visual layout — home', () => {
+  // Image-only posts: the mosaic is media-first, so the fixture carries no
+  // text content at all. Phones fall back to Columns (`resolveFeedLayout`),
+  // where the same posts render as full-width image cards.
+  it.each(LAYOUT_VIEWPORTS)('renders Visual on %s', async (name, viewport) => {
+    const f = await fixtures;
+    feedState.mode = 'imageOnly';
+    await withHomeLayout(LAYOUT.VISUAL, async () => {
+      await preloadImages(f.imageOnlyImageUrls);
+      await renderForVRT(<HomeWithLayout />, { viewport });
+      if (viewport.width >= 768) {
+        await expect.element(page.getByRole('button', { name: `Open post ${f.imageOnlyPostIds[0]}` })).toBeVisible();
+        expect(document.querySelector('[data-cy="visual-feed-container"]')).not.toBeNull();
+        expect(document.querySelectorAll('[data-cy="visual-feed-tile"]').length).toBe(f.imageOnlyPostIds.length);
+      } else {
+        await expect.element(page.getByRole('feed')).toBeVisible();
+        expect(document.querySelector('[data-cy="visual-feed-container"]')).toBeNull();
+        await expect.poll(() => document.querySelectorAll('[data-cy="post-card"] img').length).toBeGreaterThan(0);
+      }
+      await matchVrtFrameScreenshot(`home-visual-${name}`);
+    });
+  });
+});
+
+describe('Home — collection in feed — visual regression', () => {
+  beforeEach(() => {
+    feedState.mode = 'collection';
+  });
+
+  async function renderHomeWithCollection(viewport: { width: number; height: number }) {
+    const f = await fixtures;
+    // The collection cover is a CSS `background-image`; `renderForVRT` only awaits `<img>`.
+    await preloadImages(f.collectionCoverUrls);
+    await renderForVRT(<HomeWithLayout />, { viewport });
+    const card = page.getByRole('link', { name: f.feedCollectionName, exact: true });
+    await expect.element(card).toBeVisible();
+    expect(card.element().getAttribute('data-cy')).toBe('collection-card');
+    expect(card.element().getAttribute('data-presentation')).toBe('landing');
+  }
+
+  it('renders a collection card at desktop viewport', async () => {
+    await renderHomeWithCollection(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('home-feed-collection-desktop');
+  });
+
+  it('renders a collection card at mobile viewport', async () => {
+    await renderHomeWithCollection(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('home-feed-collection-mobile');
   });
 });
