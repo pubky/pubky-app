@@ -83,7 +83,7 @@ export function Header() {
   };
 
   return (
-    <HeaderContainer className={cn(isLandingPage && 'p-0 sm:py-6', shouldHideHeaderOnMobile && 'hidden lg:block')}>
+    <HeaderContainer className={cn(shouldHideHeaderOnMobile && 'hidden lg:block')}>
       <Logo noLink={isPostAuthOnboardingStep} onClick={handleLandingLogoClick} />
       {shouldShowTitle && <HeaderTitle currentTitle={currentTitle} />}
       {renderHeaderContent()}

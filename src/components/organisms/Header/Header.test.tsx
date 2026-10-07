@@ -119,16 +119,8 @@ vi.mock('@/database/franky/franky', () => ({
 // Mock molecules
 vi.mock('@/molecules/Header/Header', () => {
   return {
-    HeaderContainer: ({
-      children,
-      className,
-      classNameNav,
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      classNameNav?: string;
-    }) => (
-      <div data-testid="header-container" data-class-name={className} data-class-name-nav={classNameNav}>
+    HeaderContainer: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="header-container" data-class-name={className}>
         {children}
       </div>
     ),

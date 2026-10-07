@@ -34,7 +34,7 @@ jobs:
 
     steps:
       - name: Checkout pubky-stack
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: pubky/pubky-stack
           ref: ${{ env.pubky_stack_ref }}
@@ -137,7 +137,7 @@ jobs:
           fi
 
       - name: Checkout pubky-stack
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: pubky/pubky-stack
           ref: ${{ env.pubky_stack_ref }}
@@ -149,7 +149,7 @@ jobs:
           # see https://github.com/actions/checkout/issues/183
 
       - name: Checkout this repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: pubky-app
 
@@ -161,7 +161,7 @@ jobs:
           cache-dependency-path: 'pubky-app/package-lock.json'
 
       - name: Cache node modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             pubky-app/node_modules
@@ -196,6 +196,7 @@ jobs:
         working-directory: pubky-stack/docker
         run: |
           cp .env-sample .env
+          printf '\nPUBKY_RUNTIME_SHOP_URL=%s\n' 'https://shop.staging.pubky.app/marketplace' >> .env
 
       - name: Run pubky-stack
         working-directory: pubky-stack/docker
