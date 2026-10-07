@@ -5,8 +5,9 @@ teaser advertising it. This doc starts with the mental model — what is differe
 rest of the app — and gets more detailed the further down you read. If you know pubky-app
 but not locks, read top to bottom.
 
-Phase 2 (epic **#2364**) makes locks **payable**: a creator sets a price in sats and the
-reader pays it from Bitkit.
+Creators price payable locks in BTC or USD. Readers pay from Bitkit using the
+receiving methods enabled by the server and creator. Setup is Bitcoin-only while
+Paykit Server's optional USDT configuration is absent.
 
 ## Table of contents
 
@@ -404,9 +405,25 @@ profile/(own)/layout.tsx → ProfilePageContainer
 ## Marker tracking
 
 Locks use one `paykit-payment` criterion holding the recipient (always the lock's creator),
-the amount in sats as a string, and `BTC` as the asset. A reader unlocks it by paying from
-Bitkit (see [Reading a lock post](#reading-a-lock-post)). Creator-configurable credential
-TTLs and IndexedDB caching still come later.
+an atomic amount as a string, and its denomination: `BTC` (sats) or `USD` (cents). The price
+dialog uses exact decimal conversion and clears the amount when the currency changes. Cards and checkout retain the denomination from the lock file.
+
+Paykit Server creates the immutable request and fixed conversion quote from the creator's
+enabled receiving methods. BTC prices need no conversion for Bitcoin; USD prices include a
+BTC quote. If the server explicitly enables USDT receiving, it can additionally offer USDT
+at the quoted rate. Bitkit shows the exact payment and fee before approval; Pubky App does
+not calculate settlement rates.
+
+Before publishing, the app asks the Lock Server whether the authenticated creator can accept
+the selected denomination. Setup is Bitcoin-only when Paykit Server's optional `[usdt]`
+configuration is absent. USD pricing by itself does not request a USDT address. An approval
+callback is checked against the server before setup is marked ready.
+
+Locks unlocks after Paykit Server verifies a full, on-time payment on one accepted method.
+USDT requires successful Arbitrum block inclusion. Pubky App does not query Arbitrum or verify
+transaction hashes. Retry, stored purchase IDs, and content recovery use the same flow for
+both price currencies (see [Reading a lock post](#reading-a-lock-post)).
+Creator-configurable credential TTLs and IndexedDB caching still come later.
 
 Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.
@@ -490,3 +507,9 @@ Never commit either.
 - Creator side: [ADR 0022](adr/0022-locks-creator-publishing.md)
 - Issues: #2297 (bundle-id persistence), #2368 (reader payment), #2369 (payment-only locks),
   #2468 (multi-tab read-back), #1998 (Phase 1 epic).
+
+## SDK and server integration
+
+This branch pins the built Locks SDK to [Git commit `245253a6d7c9`](https://github.com/pubky/locks/commit/245253a6d7c9559fbcbdffc33250dacf28108d69), generated from [Locks source `c692fb70522c`](https://github.com/pubky/locks/commit/c692fb70522cf75025b86ad72a3b98fa7ef84e72). A normal `npm ci` installs the JS/WASM files; no SDK release or local build overlay is required. The artifact README records its source and checksums.
+
+Deploy with [Locks #75](https://github.com/pubky/locks/pull/75) and Paykit Server's merged [#47](https://github.com/pubky/paykit-server/pull/47). The SDK's denomination-aware setup check requires the matching Locks server. Keep Paykit Server's `[usdt]` section absent for Bitcoin-only Bitkit clients, including [iOS #887](https://github.com/synonymdev/bitkit-ios/pull/887) and [Android #1437](https://github.com/synonymdev/bitkit-android/pull/1437).

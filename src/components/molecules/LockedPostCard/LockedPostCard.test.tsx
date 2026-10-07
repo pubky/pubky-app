@@ -7,7 +7,7 @@ describe('LockedPostCard', () => {
   it('steps down a shade inside a post preview, where the surround is already bg-muted', () => {
     render(
       <PostPreviewNestingProvider>
-        <LockedPostCard title="Secret" priceSats="1234" />
+        <LockedPostCard title="Secret" price={{ amount: '1234', asset: 'BTC' }} />
       </PostPreviewNestingProvider>,
     );
 
@@ -17,7 +17,7 @@ describe('LockedPostCard', () => {
   });
 
   it('keeps bg-muted outside a post preview', () => {
-    render(<LockedPostCard title="Secret" priceSats="1234" />);
+    render(<LockedPostCard title="Secret" price={{ amount: '1234', asset: 'BTC' }} />);
 
     expect(screen.getByTestId('locked-post-card')).toHaveClass('bg-muted');
   });
@@ -37,8 +37,13 @@ describe('LockedPostCard', () => {
     expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('My most famous quote');
   });
 
+  it('shows the USD price beside Unlock', () => {
+    render(<LockedPostCard price={{ amount: '1234', asset: 'USD' }} />);
+    expect(screen.getByText('$12.34')).toBeInTheDocument();
+  });
+
   it('shows the grouped price beside Unlock', () => {
-    render(<LockedPostCard title="" priceSats="1000" />);
+    render(<LockedPostCard title="" price={{ amount: '1000', asset: 'BTC' }} />);
     expect(screen.getByText('₿1,000')).toBeInTheDocument();
     expect(screen.queryByText('••••••')).not.toBeInTheDocument();
   });

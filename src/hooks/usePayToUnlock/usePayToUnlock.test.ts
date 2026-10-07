@@ -29,7 +29,9 @@ vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => toa
 
 const lockFile = asOpaque<LockFile>({
   creator: 'pubkybob',
-  criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
+  criteria: [
+    { criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000', asset: 'BTC' } },
+  ],
 });
 const LOCK_URL = 'pubky://pubkybob/pub/app.locks/LOCK1.json';
 

@@ -4,15 +4,17 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { parseLockTeaserContent } from '@/libs/post/lockTeaser';
-import { isPositiveIntegerString, isPubkyIdentifier, withPubkyPrefix } from '@/libs/utils/utils';
+import { isPubkyIdentifier, withPubkyPrefix } from '@/libs/utils/utils';
 import {
   type GuardedPost,
   guardedPostSchema,
   type LockFile,
   type LockPostContent,
+  lockPriceSchema,
   purchaseFileSchema,
   type ReplicatedPost,
   replicatedPostSchema,
+  type TLockPrice,
   type TSubmittedProofBundle,
   VerifierType,
 } from '@/services/locks/locks.types';
@@ -62,15 +64,11 @@ export class LockContentParser {
 export class LockFileParser {
   private constructor() {}
 
-  /**
-   * A payment lock's price in sats, or null for any other lock. `params` is untyped and the file is
-   * creator-published, so the value is only accepted in the shape the Lock Server's payment verifier
-   * requires — a positive integer string.
-   */
-  static resolvePriceSats(lockFile: LockFile | null): string | null {
+  /** Validated price from the creator-published payment criterion. */
+  static resolvePrice(lockFile: LockFile | null): TLockPrice | null {
     if (lockFile?.criteria?.[0]?.verifier_type !== VerifierType.PAYMENT) return null;
-    const amount = lockFile?.criteria?.[0]?.params?.amount;
-    return typeof amount === 'string' && isPositiveIntegerString(amount) ? amount : null;
+    const price = lockPriceSchema.safeParse(lockFile.criteria[0].params);
+    return price.success ? price.data : null;
   }
 }
 

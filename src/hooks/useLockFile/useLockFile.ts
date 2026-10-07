@@ -46,5 +46,5 @@ export function useLockFile(lockUrl: string | null | undefined): UseLockFileResu
     };
   }, [lockUrl]);
 
-  return { lockFile: result?.lockFile ?? null, priceSats: result?.priceSats ?? null, hasError };
+  return { lockFile: result?.lockFile ?? null, price: result?.price ?? null, hasError };
 }

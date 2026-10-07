@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import type { TLockPrice } from '@/services/locks/locks.types';
 import type { LockFile, LockPostContent } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LockedPostContent } from './LockedPostContent';
@@ -75,18 +76,18 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
 vi.mock('@/molecules/DialogPayToUnlock/DialogPayToUnlock', () => ({
   DialogPayToUnlock: ({
     open,
-    priceSats,
+    price,
     handshakePubky,
     onViewContent,
   }: {
     open: boolean;
-    priceSats: string;
+    price: TLockPrice;
     handshakePubky: string | null;
     onViewContent: () => void;
   }) =>
     open ? (
       <div data-testid="pay-dialog" data-handshake-pubky={handshakePubky}>
-        {priceSats}
+        {price.amount}
         <button onClick={onViewContent}>{'Mock view content'}</button>
       </div>
     ) : null,
@@ -133,16 +134,16 @@ vi.mock('../PostBody/PostBody', () => ({
 const mockLockData = ({
   lockContent = { lock_title: 'Secret', teaser_description: 'A teaser' },
   lockFile = null,
-  priceSats = null,
+  price = null,
   hasError = false,
 }: {
   lockContent?: LockPostContent | null;
   lockFile?: LockFile | null;
-  priceSats?: string | null;
+  price?: TLockPrice | null;
   hasError?: boolean;
 }) => {
   vi.mocked(LocksController.getLockContent).mockReturnValue(lockContent);
-  vi.mocked(useLockFile).mockReturnValue({ lockFile, priceSats, hasError });
+  vi.mocked(useLockFile).mockReturnValue({ lockFile, price, hasError });
 };
 
 const LOCK_URL = 'pubky://hs/pub/app.locks/lock1.json';
@@ -187,7 +188,10 @@ describe('LockedPostContent', () => {
   });
 
   it('shows the price on the card for a payment lock', () => {
-    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }), priceSats: '1000' });
+    mockLockData({
+      lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
+      price: { amount: '1000', asset: 'BTC' as const },
+    });
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(screen.getByText('₿1,000')).toBeInTheDocument();
   });
@@ -201,14 +205,17 @@ describe('LockedPostContent', () => {
 
   // The price only becomes known with the lock file, so until then the card keeps it masked.
   it('shows the mask while the lock file is still loading', () => {
-    mockLockData({ lockFile: null, priceSats: null });
+    mockLockData({ lockFile: null, price: null });
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(screen.getByText('••••••')).toBeInTheDocument();
   });
 
   describe('payment lock', () => {
     const paymentData = () =>
-      mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }), priceSats: '1000' });
+      mockLockData({
+        lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
+        price: { amount: '1000', asset: 'BTC' as const },
+      });
 
     it('opens the pay dialog behind the auth gate', async () => {
       paymentData();
@@ -338,7 +345,10 @@ describe('LockedPostContent', () => {
   });
 
   it('enables Unlock when the lock file resolved', () => {
-    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }), priceSats: '1000' });
+    mockLockData({
+      lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
+      price: { amount: '1000', asset: 'BTC' as const },
+    });
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
   });
@@ -436,7 +446,7 @@ describe('LockedPostContent', () => {
 
   it('asks for the missing permission and parks the lock card when the session predates /priv', async () => {
     sessionNeedsUpgrade.value = true;
-    mockLockData({ priceSats: '1000' });
+    mockLockData({ price: { amount: '1000', asset: 'BTC' as const } });
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
     expect(await screen.findByTestId('locks-permission-notice')).toBeInTheDocument();
@@ -463,7 +473,7 @@ describe('LockedPostContent', () => {
   it('reads the creator own content directly when the lock owner is the signed-in user (a == b)', async () => {
     // stripPubkyPrefix('pubkypubkyreader') === 'pubkyreader' === currentUserPubky → own lock.
     const lockFile = asOpaque<LockFile>({ creator: 'pubkypubkyreader' });
-    mockLockData({ lockFile, priceSats: '1000' });
+    mockLockData({ lockFile, price: { amount: '1000', asset: 'BTC' as const } });
     vi.mocked(LocksController.fetchOwnContent).mockResolvedValue({
       post: { content: 'my own locked content', kind: 'short', attachments: null },
       attachments: [],

@@ -6,10 +6,12 @@ import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
-import { formatSats } from '@/libs/utils/formatSats';
-import { cn, isPositiveIntegerString } from '@/libs/utils/utils';
+import { parseLockPrice } from '@/libs/utils/lockPrice';
+import { cn } from '@/libs/utils/utils';
+import type { TLockPriceAsset } from '@/services/locks/locks.types';
 import type { DialogLockContentProps } from './DialogLockContent.types';
 
 const FIELD_LABEL_CLASS = 'text-xs font-medium tracking-widest text-muted-foreground uppercase';
@@ -26,17 +28,26 @@ const toSats = (value: string) =>
     .replace(/^0+(?=\d)/, '');
 
 export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockContentProps) {
-  // Bare digits — sats are whole units, and the value travels to the Lock Server as a string.
   const [amount, setAmount] = useState('');
+  const [asset, setAsset] = useState<TLockPriceAsset>('BTC');
   // The rate is only for pricing a lock, but every post composer mounts this dialog — fetching
   // before it opens would cost a `/api/btc-rate` call on the home feed, Locks users or not.
-  const { rate: btcRate, status: rateStatus } = useBtcRate(open);
+  const { rate: btcRate, status: rateStatus } = useBtcRate(open && asset === 'BTC');
 
-  const amountSats = Number(amount);
-  const isValidAmount = isPositiveIntegerString(amount);
-  const usdValue = btcRate && isValidAmount ? amountSats * btcRate.satUsd : null;
+  const price = parseLockPrice(amount, asset);
+  const isValidAmount = price !== null;
+  const usdValue = asset === 'BTC' && btcRate && price ? Number(price.amount) * btcRate.satUsd : null;
 
-  const resetFields = () => setAmount('');
+  const resetFields = () => {
+    setAmount('');
+    setAsset('BTC');
+  };
+
+  const changeAsset = (value: string) => {
+    if (value !== 'BTC' && value !== 'USD') return;
+    setAsset(value);
+    setAmount('');
+  };
 
   const handleOpenChange = (next: boolean) => {
     if (!next) resetFields();
@@ -46,8 +57,8 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
   // Applying a lock only records the price. Publishing — guarded resources, the content lock
   // and the announcement — belongs to the composer's Post button, so never add a network call here.
   const handleApply = () => {
-    if (!isValidAmount) return;
-    onApplied({ amountSats: amount });
+    if (!price) return;
+    onApplied(price);
     resetFields();
   };
 
@@ -67,8 +78,23 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
           </Typography>
 
           <Container overrideDefaults className="flex flex-col gap-2">
+            <Label htmlFor="lock-currency" className={FIELD_LABEL_CLASS}>
+              {'Price currency'}
+            </Label>
+            <Select value={asset} onValueChange={changeAsset}>
+              <SelectTrigger id="lock-currency">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BTC">{'Bitcoin'}</SelectItem>
+                <SelectItem value="USD">{'USD'}</SelectItem>
+              </SelectContent>
+            </Select>
+          </Container>
+
+          <Container overrideDefaults className="flex flex-col gap-2">
             <Label htmlFor="lock-amount" className={FIELD_LABEL_CLASS}>
-              {'Bitcoin Amount'}
+              {asset === 'BTC' ? 'Bitcoin Amount' : `${asset} Amount`}
             </Label>
             <Container
               overrideDefaults
@@ -78,13 +104,14 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
               )}
             >
               <span aria-hidden className="shrink-0 text-base text-foreground">
-                {'₿'}
+                {asset === 'BTC' ? '₿' : '$'}
               </span>
               <Input
                 id="lock-amount"
-                inputMode="numeric"
-                value={amount ? (formatSats(amountSats, { symbol: false }) ?? '') : ''}
-                onChange={(event) => setAmount(toSats(event.target.value))}
+                inputMode={asset === 'BTC' ? 'numeric' : 'decimal'}
+                value={asset === 'BTC' && amount ? new Intl.NumberFormat('en-US').format(BigInt(amount)) : amount}
+                onChange={(event) => setAmount(asset === 'BTC' ? toSats(event.target.value) : event.target.value)}
+                maxLength={27}
                 placeholder="0"
                 className="h-auto flex-1 border-0 bg-transparent p-0 text-base shadow-none"
                 autoComplete="off"
@@ -96,9 +123,9 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
               )}
             </Container>
 
-            {rateStatus === 'failed' && (
+            {asset === 'BTC' && rateStatus === 'failed' && (
               <Typography className="pt-1 text-xs text-destructive">
-                {"The dollar value can't be shown right now. Your price in sats is unaffected."}
+                {"The dollar value can't be shown right now. Your Bitcoin price is unaffected."}
               </Typography>
             )}
           </Container>

@@ -64,7 +64,7 @@ export function LockedPostContent({
   const isFocusedPostPage =
     routeParams?.userId === authorId && routeParams?.postId === rawPostId && !isNestedPostPreview;
   const lockContent = LocksController.getLockContent(content);
-  const { lockFile, priceSats } = useLockFile(lock);
+  const { lockFile, price } = useLockFile(lock);
   const { unlockedPost, applyUnlockedContent, media, isOwnLock, isResolvingReplica } = useUnlockedContent({
     lock,
     lockFile,
@@ -91,7 +91,7 @@ export function LockedPostContent({
 
   // Paid but never received: the payment completed while the reader was away, so nothing on screen
   // would otherwise say so. Resolves itself, without the reader pressing anything.
-  const { hasPurchase, markPurchased } = usePurchasedLocks({ enabled: priceSats !== null });
+  const { hasPurchase, markPurchased } = usePurchasedLocks({ enabled: price !== null });
   const lockId = lock ? LockContentParser.lockIdFromUrl(lock) : null;
   usePurchaseResume({
     lock,
@@ -117,7 +117,7 @@ export function LockedPostContent({
 
   // Paying needs the reader's pubky (it is the payment-request delivery address), so a signed-out
   // reader gets the sign-in dialog instead. Unsupported legacy locks have no unlock handler.
-  const handleUnlock = priceSats && !showPermissionNotice ? () => requireAuth(() => setIsPayOpen(true)) : undefined;
+  const handleUnlock = price && !showPermissionNotice ? () => requireAuth(() => setIsPayOpen(true)) : undefined;
 
   return (
     <Container className={cn('min-w-0 gap-4', className)}>
@@ -130,7 +130,7 @@ export function LockedPostContent({
       {unlockedPost ? (
         <>
           {/* Own lock: keep the (now inert) lock card above the content so the price/terms stay visible. */}
-          {isOwnLock && <LockedPostCard title={lockContent.lock_title} priceSats={priceSats} />}
+          {isOwnLock && <LockedPostCard title={lockContent.lock_title} price={price} />}
           <div className="flex w-full flex-col gap-4">
             <div className="border-t border-border" />
             {/* Access indicator: the creator's own content vs. a lock the reader unlocked. */}
@@ -166,7 +166,7 @@ export function LockedPostContent({
           {showPermissionNotice && <LocksPermissionNotice />}
           <LockedPostCard
             title={lockContent.lock_title}
-            priceSats={priceSats}
+            price={price}
             unlockOpen={isPayOpen}
             onUnlock={handleUnlock}
             // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal
@@ -175,13 +175,13 @@ export function LockedPostContent({
           />
         </>
       )}
-      {priceSats && (
+      {price && (
         <DialogPayToUnlock
           open={isPayOpen}
           onOpenChange={setIsPayOpen}
           lockTitle={lockContent.lock_title}
           authorId={authorId}
-          priceSats={priceSats}
+          price={price}
           stage={stage}
           isStalled={isStalled}
           handshakePubky={handshakePubky}
