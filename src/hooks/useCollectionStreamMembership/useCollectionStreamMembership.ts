@@ -112,7 +112,7 @@ async function getCachedCardIds(postIds: string[]) {
     const originalId = originalIds[index];
     return (
       details[index] !== undefined &&
-      (isPostDeleted(details[index].content) ||
+      (isPostDeleted(details[index]) ||
         (relationships[index] !== undefined &&
           authors.has(parseCompositeId(id).pubky) &&
           (originalId === null ||
