@@ -742,7 +742,7 @@ describe('posts', () => {
     // Title field is interactable, so the article composer is in front of the post modal
     cy.get('[data-cy="new-post-input"]').within(() => {
       cy.get('input[placeholder="Article Title"]').should('be.visible').click();
-      cy.get('[data-cy="post-input-action-bar-publish"]').should('be.visible');
+      cy.get('[data-cy="post-input-action-bar-publish-article"]').should('be.visible');
     });
 
     cy.get('[data-cy="new-post-btn"]').should(($fab) => {

@@ -132,9 +132,12 @@ export const createPostFromDialog = (postContent: string, expectedPostLength?: n
 const ARTICLE_TITLE_INPUT = 'input[placeholder="Article Title"]';
 const ARTICLE_MARKDOWN_TEXTAREA = '[data-testid="markdown-textarea"]';
 const ARTICLE_MARKDOWN_MODE_BUTTON = 'button[aria-label="Markdown"]';
-const ARTICLE_PUBLISH_BUTTON = '[data-cy="post-input-action-bar-publish"]';
-const ARTICLE_EDIT_BUTTON = '[data-cy="post-input-action-bar-edit"]';
+// Create and edit both label this control "Publish Article". The action bar
+// builds data-cy from that full label: post-input-action-bar-publish-article.
+const ARTICLE_SUBMIT_BUTTON = '[data-cy="post-input-action-bar-publish-article"]';
 const ARTICLE_ADD_BUTTON = '[data-cy="post-input-action-bar-add-article"]';
+// Cover picker only. The markdown editor has its own file input for inline images.
+const ARTICLE_COVER_FILE_INPUT = 'input[type="file"]:not([data-testid="markdown-image-input"])';
 const ARTICLE_FIELD_DEBOUNCE_MS = 600;
 
 const switchToArticleMode = () => {
@@ -147,6 +150,11 @@ const setArticleBody = (body: string) => {
   cy.get(ARTICLE_MARKDOWN_MODE_BUTTON).should('be.visible').click();
   cy.get(ARTICLE_MARKDOWN_TEXTAREA).filter(':visible').should('be.visible').clear().type(body, { delay: 0 });
   cy.get(ARTICLE_MARKDOWN_TEXTAREA).filter(':visible').should('have.value', body);
+};
+
+const addArticleCover = (fileName = 'mustache-you.png') => {
+  const imagePath = Cypress.config('fixturesFolder') + `/${fileName}`;
+  cy.get(ARTICLE_COVER_FILE_INPUT).selectFile(imagePath, { force: true });
 };
 
 const fillArticleFields = ({
@@ -174,7 +182,7 @@ const fillArticleFields = ({
   }
 
   if (imageAction?.action === 'add') {
-    addImage();
+    addArticleCover();
     cy.get('img[alt="Image preview"]').should('be.visible');
   }
 
@@ -182,7 +190,7 @@ const fillArticleFields = ({
     cy.get('[data-cy="post-input-attachment-remove"]').should('be.visible').click();
     cy.get('img[alt="Image preview"]').should('not.exist');
     if (imageAction.action === 'replace') {
-      addImage('mustache-edit.png');
+      addArticleCover('mustache-edit.png');
       cy.get('img[alt="Image preview"]').should('be.visible');
     }
   }
@@ -196,7 +204,7 @@ export const createQuickArticle = (title: string, body: string, withImage = fals
       switchToArticleMode();
       fillArticleFields({ title, body, imageAction: withImage ? { action: 'add' } : undefined });
       cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('articleCreated');
-      cy.get(ARTICLE_PUBLISH_BUTTON).should('not.be.disabled').click();
+      cy.get(ARTICLE_SUBMIT_BUTTON).should('not.be.disabled').click();
       cy.wait('@articleCreated').its('response.statusCode').should('eq', 201);
     });
 };
@@ -210,7 +218,7 @@ export const createArticleFromDialog = (title: string, body: string) => {
     switchToArticleMode();
     fillArticleFields({ title, body });
     cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('articleCreated');
-    cy.get(ARTICLE_PUBLISH_BUTTON).should('not.be.disabled').click();
+    cy.get(ARTICLE_SUBMIT_BUTTON).should('not.be.disabled').click();
     cy.wait('@articleCreated').its('response.statusCode').should('eq', 201);
   });
 
@@ -262,7 +270,7 @@ export const editArticle = ({
         cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('articleEdited');
       }
 
-      cy.get(ARTICLE_EDIT_BUTTON).should('not.be.disabled').click();
+      cy.get(ARTICLE_SUBMIT_BUTTON).should('not.be.disabled').click();
     });
 
   if (imageAction) {
