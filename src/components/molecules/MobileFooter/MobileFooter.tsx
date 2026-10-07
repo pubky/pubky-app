@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Flame, Home, Library, Search, Settings, UserRoundPlus } from 'lucide-react';
+import { Flame, Home, Library, Search, Settings, Store, UserRoundPlus } from 'lucide-react';
 import { APP_ROUTES, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { SHOP_URL } from '@/config/externalLinks';
 import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisible';
@@ -64,6 +65,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
       icon: Flame,
       label: 'Hot',
     },
+    { href: SHOP_URL, icon: Store, label: 'Shop' },
     {
       href: APP_ROUTES.COLLECTIONS,
       activePrefix: APP_ROUTES.COLLECTIONS,
@@ -117,7 +119,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
                 handleFeedNavClick(event, { isActive: itemIsActive, smoothScrollWhenActive: true });
               }}
               className={cn(
-                'rounded-full p-3 transition-all',
+                'shrink-0 rounded-full p-2 transition-all sm:p-3',
                 itemIsActive ? 'bg-secondary' : 'border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10',
               )}
             >
@@ -137,7 +139,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
               name={avatarName}
               fallbackSeed={currentUserPubky || avatarName}
               size="lg"
-              className="cursor-pointer"
+              className="h-10 w-10 cursor-pointer sm:h-12 sm:w-12"
               alt={'Profile'}
             />
             {unreadNotifications > 0 && (
@@ -160,7 +162,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
           <Button
             variant="secondary"
             size="icon"
-            className="size-12 items-center justify-center border bg-white/5"
+            className="size-10 items-center justify-center border bg-white/5 sm:size-12"
             aria-label="Join Pubky"
             onClick={() => setShowSignInDialog(true)}
           >

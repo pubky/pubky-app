@@ -161,6 +161,13 @@ describe('Header Components', () => {
     bfcacheId: '',
   };
 
+  it('links to the staging Shop in the same tab', () => {
+    render(<HeaderNavigationButtons />);
+    const link = screen.getByRole('button', { name: 'Shop' }).closest('a');
+    expect(link).toHaveAttribute('href', 'https://shop.staging.pubky.app/marketplace');
+    expect(link?.getAttribute('target')).not.toBe('_blank');
+  });
+
   beforeEach(() => {
     vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
     vi.mocked(usePathname).mockReturnValue('/home');
@@ -506,10 +513,16 @@ describe('Header Components', () => {
 
       // Home, Hot, and Collections are public explore routes → real navigation links.
       const links = screen.getAllByRole('link');
-      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot', '/collections']);
+      expect(links.map((link) => link.getAttribute('href'))).toEqual([
+        '/home',
+        '/hot',
+        'https://shop.staging.pubky.app/marketplace',
+        '/collections',
+      ]);
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
 
-      // All four nav icons are shown.
+      expect(screen.getByRole('button', { name: 'Shop' }).closest('a')).toHaveAttribute('target', '_self');
+      // All five nav icons are shown.
       expect(document.querySelector('.lucide-house')).toBeInTheDocument();
       expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
       expect(document.querySelector('.lucide-library')).toBeInTheDocument();

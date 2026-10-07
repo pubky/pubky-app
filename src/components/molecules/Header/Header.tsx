@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Flame, Home, Library, Settings, UserRoundPlus } from 'lucide-react';
+import { Flame, Home, Library, Settings, Store, UserRoundPlus } from 'lucide-react';
 import { APP_ROUTES, isCoreExploreRoute, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
@@ -10,7 +10,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
+import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink, SHOP_URL } from '@/config/externalLinks';
 import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Github2, Telegram, XTwitter } from '@/icons';
@@ -89,6 +89,7 @@ type NavigationItemConfig = {
   dataCy?: string;
   activePrefix?: string;
   isFeedRoute?: boolean;
+  external?: boolean;
 };
 type HeaderNavigationButtonsProps = {
   counter?: number;
@@ -111,6 +112,7 @@ const NAVIGATION_ITEMS: NavigationItemConfig[] = [
     label: 'Hot',
     dataCy: 'header-hot-btn',
   },
+  { href: SHOP_URL, icon: Store, label: 'Shop', dataCy: 'header-marketplace-btn', external: true },
   {
     href: APP_ROUTES.COLLECTIONS,
     icon: Library,
@@ -137,6 +139,7 @@ type NavigationButtonProps = {
   isActive: boolean;
   dataCy?: string;
   isFeedRoute?: boolean;
+  external?: boolean;
 };
 const NavigationButton = ({
   href,
@@ -146,6 +149,7 @@ const NavigationButton = ({
   isActive,
   dataCy,
   isFeedRoute,
+  external,
 }: NavigationButtonProps) => {
   const button = (
     <Button
@@ -162,6 +166,7 @@ const NavigationButton = ({
   return href ? (
     <Link
       href={href}
+      target={external ? '_self' : undefined}
       data-cy={dataCy}
       onClick={
         isFeedRoute ? (event) => handleFeedNavClick(event, { isActive, smoothScrollWhenActive: true }) : undefined
@@ -190,7 +195,8 @@ export function HeaderNavigationButtons({
           href={item.href}
           icon={item.icon}
           label={item.label}
-          isActive={isNavItemActive(pathname, item)}
+          isActive={!item.external && isNavItemActive(pathname, item)}
+          external={item.external}
           dataCy={item.dataCy}
           isFeedRoute={item.isFeedRoute}
         />
@@ -240,7 +246,7 @@ export function HeaderExploreNavigationButtons({
       {showSearch && <SearchInput />}
       {NAVIGATION_ITEMS.map((item) => {
         // Core explore routes navigate freely; Settings requires an account.
-        const requiresAuth = !isCoreExploreRoute(item.href);
+        const requiresAuth = !item.external && !isCoreExploreRoute(item.href);
         return (
           <NavigationButton
             key={item.href}
@@ -248,7 +254,8 @@ export function HeaderExploreNavigationButtons({
             onClick={requiresAuth ? () => requireAuth(() => router.push(item.href)) : undefined}
             icon={item.icon}
             label={item.label}
-            isActive={isNavItemActive(pathname, item)}
+            isActive={!item.external && isNavItemActive(pathname, item)}
+            external={item.external}
             dataCy={item.dataCy}
           />
         );

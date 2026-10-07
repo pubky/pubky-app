@@ -147,6 +147,13 @@ vi.mock('@/stores/notification/notification.store', () => ({
 }));
 
 describe('MobileFooter', () => {
+  it('links to the staging Shop in the same tab', () => {
+    render(<MobileFooter />);
+    const link = screen.getByRole('link', { name: 'Shop' });
+    expect(link).toHaveAttribute('href', 'https://shop.staging.pubky.app/marketplace');
+    expect(link.getAttribute('target')).not.toBe('_blank');
+  });
+
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
@@ -522,6 +529,7 @@ describe('MobileFooter', () => {
       '/home',
       '/search',
       '/hot',
+      'https://shop.staging.pubky.app/marketplace',
       '/collections',
       '/settings/account',
     ]);

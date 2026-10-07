@@ -53,3 +53,6 @@ export const getPlayStoreLink = getPlayStoreUrl;
 export const BITKIT_WEBSITE_URL = 'https://bitkit.to/';
 export const BITKIT_APP_STORE_URL = 'https://get.bitkit.to/iOS';
 export const BITKIT_PLAY_STORE_URL = 'https://get.bitkit.to/PlayStore';
+
+// Temporary staging Shop destination while the two frontends are deployed separately.
+export const SHOP_URL = 'https://shop.staging.pubky.app/marketplace';
