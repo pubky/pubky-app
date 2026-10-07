@@ -235,6 +235,13 @@ export type NexusPostDetails = {
   kind: string;
   uri: string;
   attachments: string[] | null;
+  /** URL of the post's public `lock.json`. Present = lock teaser; the sole lock-detection signal. */
+  lock?: string | null;
+  /**
+   * `true` when the post is a tombstone (content cleared). Absent on Nexus builds that predate
+   * the flag, which marked tombstones with the `[DELETED]` content instead.
+   */
+  deleted?: boolean;
 };
 
 /** Aggregate counts for post engagement */

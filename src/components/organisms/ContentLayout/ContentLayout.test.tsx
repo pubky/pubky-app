@@ -1,11 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ContentLayout } from './ContentLayout';
 
 const mockUseCustomFeed = vi.fn();
 const mockResolveFeedLayout = vi.fn();
-const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
+const mockUseIsMobile = vi.hoisted(() => vi.fn((_options?: { breakpoint?: string }) => false));
 let mockHomeLayout = 'columns';
 
 // Mock the home store
@@ -20,14 +20,6 @@ vi.mock('@/stores/home/home.store', () => ({
     content: 'all',
     setContent: vi.fn(),
   }),
-}));
-vi.mock('@/stores/home/home.types', () => ({
-  LAYOUT: {
-    COLUMNS: 'columns',
-    WIDE: 'wide',
-    LIST: 'list',
-    VISUAL: 'visual',
-  },
 }));
 vi.mock('@/utils/pubky-app-spec-feed-mappers', () => ({
   pubkyLayoutToHomeLayout: vi.fn((layout: string) => layout),
@@ -130,13 +122,15 @@ vi.mock('@/molecules/SideDrawer/SideDrawer', () => {
       onOpenChangeAction,
       children,
       position,
+      className,
     }: {
       open: boolean;
       onOpenChangeAction: (open: boolean) => void;
       children: React.ReactNode;
       position?: 'left' | 'right';
+      className?: string;
     }) => (
-      <div data-testid={`side-drawer-${position}`} data-open={open}>
+      <div data-testid={`side-drawer-${position}`} data-open={open} className={className}>
         <button onClick={() => onOpenChangeAction(false)}>Close</button>
         {children}
       </div>
@@ -312,6 +306,29 @@ describe('ContentLayout', () => {
     render(
       <ContentLayout
         feedVariant="home"
+        showLeftSidebar={true}
+        leftSidebarContent={<div>Left Sidebar</div>}
+        leftDrawerContent={<div>Left Drawer</div>}
+        showRightSidebar={true}
+        rightSidebarContent={<div>Right Sidebar</div>}
+        rightDrawerContent={<div>Right Drawer</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(screen.queryByText('Left Sidebar')).not.toBeInTheDocument();
+    expect(screen.queryByText('Right Sidebar')).not.toBeInTheDocument();
+    expect(screen.getByTestId('button-filters-left')).toBeInTheDocument();
+    expect(screen.getByTestId('button-filters-right')).toBeInTheDocument();
+  });
+
+  it.each(['home', 'search'] as const)('uses the wide shell for Cards on %s', (feedVariant) => {
+    mockHomeLayout = 'cards';
+
+    render(
+      <ContentLayout
+        feedVariant={feedVariant}
         showLeftSidebar={true}
         leftSidebarContent={<div>Left Sidebar</div>}
         leftDrawerContent={<div>Left Drawer</div>}
@@ -558,7 +575,109 @@ describe('ContentLayout - Custom Feed Layout Override', () => {
 const drawerSnapshotProps = {
   leftDrawerContent: <div data-testid="left-drawer-desktop">Desktop drawer</div>,
   leftDrawerContentMobile: <div data-testid="left-drawer-mobile">Mobile drawer</div>,
+  rightDrawerContent: <div>Tablet right drawer</div>,
+  rightDrawerContentMobile: <div>Phone right drawer</div>,
+  classNameRightDrawer: 'w-64 p-6 sm:w-64 sm:p-6',
 };
+
+describe('ContentLayout - right drawer', () => {
+  beforeEach(() => {
+    mockUseCustomFeed.mockReturnValue(undefined);
+    mockHomeLayout = 'columns';
+  });
+
+  afterEach(() => {
+    mockUseIsMobile.mockReturnValue(false);
+  });
+
+  it.each([390, 700, 768, 1024])('uses phone content only below md at %i px', (width) => {
+    mockUseIsMobile.mockImplementation((options) => width < (options?.breakpoint === 'md' ? 768 : 1024));
+    render(<ContentLayout {...drawerSnapshotProps}>Feed</ContentLayout>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    const drawer = screen.getByTestId('side-drawer-right');
+    expect(drawer).toHaveAttribute('data-open', 'true');
+    expect(within(drawer).getByText(width < 768 ? 'Phone right drawer' : 'Tablet right drawer')).toBeInTheDocument();
+    expect(
+      within(drawer).queryByText(width < 768 ? 'Tablet right drawer' : 'Phone right drawer'),
+    ).not.toBeInTheDocument();
+    expect(drawer).toHaveClass('w-64', 'p-6');
+    expect(screen.getByTestId('side-drawer-left')).not.toHaveClass('w-64', 'p-6');
+
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
+    expect(drawer).toHaveAttribute('data-open', 'false');
+  });
+
+  it('keeps the default content on phones when no override is supplied', () => {
+    mockUseIsMobile.mockReturnValue(true);
+    render(<ContentLayout rightDrawerContent={<div>Default drawer</div>}>Feed</ContentLayout>);
+
+    expect(within(screen.getByTestId('side-drawer-right')).getByText('Default drawer')).toBeInTheDocument();
+  });
+
+  it.each([390, 768])('closes the right drawer when its mobile button disappears at %i px', (width) => {
+    mockUseIsMobile.mockImplementation((options) => width < (options?.breakpoint === 'md' ? 768 : 1024));
+    const { rerender } = render(<ContentLayout {...drawerSnapshotProps}>Home</ContentLayout>);
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    const drawer = screen.getByTestId('side-drawer-right');
+    expect(drawer).toHaveAttribute('data-open', 'true');
+
+    rerender(
+      <ContentLayout {...drawerSnapshotProps} rightDrawerContentMobile={undefined} showRightMobileButton={false}>
+        Search
+      </ContentLayout>,
+    );
+    expect(drawer).toHaveAttribute('data-open', 'false');
+
+    rerender(<ContentLayout {...drawerSnapshotProps}>Home</ContentLayout>);
+    expect(drawer).toHaveAttribute('data-open', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Right' }));
+    expect(drawer).toHaveAttribute('data-open', 'true');
+  });
+
+  it('preserves the left drawer when the right mobile button disappears', () => {
+    mockUseIsMobile.mockReturnValue(true);
+    const { rerender } = render(<ContentLayout {...drawerSnapshotProps}>Home</ContentLayout>);
+    fireEvent.click(screen.getByRole('button', { name: 'Left' }));
+
+    rerender(
+      <ContentLayout {...drawerSnapshotProps} showRightMobileButton={false}>
+        Search
+      </ContentLayout>,
+    );
+    expect(screen.getByTestId('side-drawer-left')).toHaveAttribute('data-open', 'true');
+  });
+
+  it('preserves desktop drawer access but closes it when resizing to a hidden mobile button', () => {
+    mockUseIsMobile.mockReturnValue(false);
+    const { rerender } = render(
+      <ContentLayout {...drawerSnapshotProps} layoutOverride="wide">
+        Home
+      </ContentLayout>,
+    );
+    fireEvent.click(screen.getByTestId('button-filters-right'));
+    const drawer = screen.getByTestId('side-drawer-right');
+
+    const search = (
+      <ContentLayout {...drawerSnapshotProps} layoutOverride="wide" showRightMobileButton={false}>
+        Search
+      </ContentLayout>
+    );
+    rerender(search);
+    expect(drawer).toHaveAttribute('data-open', 'true');
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByTestId('button-filters-right'));
+    expect(drawer).toHaveAttribute('data-open', 'true');
+
+    mockUseIsMobile.mockReturnValue(true);
+    rerender(
+      <ContentLayout {...drawerSnapshotProps} layoutOverride="wide" showRightMobileButton={false}>
+        Search on mobile
+      </ContentLayout>,
+    );
+    expect(drawer).toHaveAttribute('data-open', 'false');
+  });
+});
 
 describe('ContentLayout - Snapshots', () => {
   beforeEach(() => {

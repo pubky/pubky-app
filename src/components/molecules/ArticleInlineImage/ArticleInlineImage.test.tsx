@@ -104,3 +104,29 @@ describe('ArticleInlineImage', () => {
     expect(screen.getByTestId('article-inline-image-fallback')).toBeInTheDocument();
   });
 });
+
+describe('ArticleInlineImage - unlocked content', () => {
+  const localAttachments = [
+    { type: 'image/png', name: 'attachment-0', urls: { main: 'blob:cover' }, slot: 0 },
+    { type: 'image/png', name: 'attachment-1', urls: { main: 'blob:second-image' }, slot: 2 },
+  ];
+
+  beforeEach(() => {
+    useLocalFilesStore.setState({ posts: {} });
+  });
+
+  it("renders an attachment reference from the reader's local copy", () => {
+    render(<ArticleInlineImage src="attachment:2" alt="Second" localAttachments={localAttachments} />);
+
+    const img = screen.getByTestId('article-inline-image');
+    expect(img).toHaveAttribute('src', 'blob:second-image');
+    expect(img).toHaveAttribute('alt', 'Second');
+  });
+
+  it('renders the placeholder for a slot whose file was lost', () => {
+    render(<ArticleInlineImage src="attachment:1" alt="Lost" localAttachments={localAttachments} />);
+
+    expect(screen.getByTestId('article-inline-image-fallback')).toHaveTextContent('Lost');
+    expect(screen.queryByTestId('article-inline-image')).not.toBeInTheDocument();
+  });
+});

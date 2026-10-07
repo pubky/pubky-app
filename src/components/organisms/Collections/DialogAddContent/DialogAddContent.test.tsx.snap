@@ -539,7 +539,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
               data-slot="card-footer"
             >
               <div
-                class="flex mx-0 w-full cursor-pointer flex-row items-center rounded-md border bg-transparent border-dashed text-base mb-0 h-auto gap-3 border-input bg-background/10! px-6 py-4 font-medium shadow-xs has-[input[aria-invalid=true]]:border-red-500"
+                class="flex mx-0 w-full cursor-pointer flex-row items-center rounded-md border !bg-background/20 border-dashed min-h-12 text-base mb-0 h-auto gap-3 border-input px-6 py-4 font-medium shadow-xs has-[input[aria-invalid=true]]:border-red-500"
                 data-testid="container"
               >
                 <input

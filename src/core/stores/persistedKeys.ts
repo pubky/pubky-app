@@ -6,6 +6,7 @@ export const HOME_PERSIST_KEY = 'home-store';
 export const HOT_PERSIST_KEY = 'hot-store';
 export const SETTINGS_PERSIST_KEY = 'settings-storage';
 export const MIGRATION_STORE_KEY = 'migration-store';
+export const LOCKS_AUTH_PERSIST_KEY = 'locks-auth-store';
 
 // List of all persisted store keys (Local storage keys)
 // EX: MIGRATION_STORE_KEY won't be included in this list because it's not a persisted store key.
@@ -17,4 +18,5 @@ export const PERSISTED_STORE_KEYS = [
   HOME_PERSIST_KEY,
   HOT_PERSIST_KEY,
   SETTINGS_PERSIST_KEY,
+  LOCKS_AUTH_PERSIST_KEY,
 ] as const;

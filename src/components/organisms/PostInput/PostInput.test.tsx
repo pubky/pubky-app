@@ -20,6 +20,7 @@ import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutConte
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { PostInputActionBar } from '../PostInputActionBar/PostInputActionBar';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
@@ -58,6 +59,16 @@ vi.mock('@/atoms/Button/Button', () => {
         {children}
       </button>
     )),
+    // Consumed by DialogLockContent, which renders inside PostInput.
+    ButtonVariant: {
+      DEFAULT: 'default',
+      DESTRUCTIVE: 'destructive',
+      OUTLINE: 'outline',
+      SECONDARY: 'secondary',
+      GHOST: 'ghost',
+      BRAND: 'brand',
+      LINK: 'link',
+    },
   };
 });
 
@@ -453,6 +464,7 @@ const mockUsePostReturn = {
   isSubmitting: false,
   isArticle: false,
   articleTitle: '',
+  lockTitle: '',
   isExpanded: true,
 };
 
@@ -476,6 +488,8 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handleArticleClick: vi.fn(),
     articleTitle: mockUsePostReturn.articleTitle,
     setArticleTitle: mockSetArticleTitle,
+    lockTitle: mockUsePostReturn.lockTitle,
+    setLockTitle: vi.fn(),
     handleArticleTitleChange: vi.fn(),
     handleArticleBodyChange: vi.fn(),
     isDragging: mockUsePostReturn.isDragging,
@@ -516,6 +530,8 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handlePaste: vi.fn(),
     inlineImages: { upload: vi.fn(), getPreviewUrl: vi.fn(() => null) },
     uploadingCount: 0,
+    serializeArticleForLock: vi.fn(() => null),
+    getLatestArticle: vi.fn(() => ({ title: '', body: '' })),
     mentionUsers: [],
     mentionIsOpen: false,
     mentionSelectedIndex: 0,
@@ -614,6 +630,18 @@ describe('PostInput', () => {
     expect(getStatePostHeader()).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText("What's on your mind?")).toBeInTheDocument();
+  });
+
+  it('uses the same submit handler for Ctrl/Cmd+Enter and the Post button', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    // The handler given to useEnterSubmit (keyboard submit) must be the exact same reference passed
+    // to the action bar's Post button, so toggling the lock switch gates both entry points.
+    const actionBarProps = vi.mocked(PostInputActionBar).mock.calls.at(-1)?.[0];
+    const enterSubmitHandlerArg = mockUseEnterSubmit.mock.calls.at(-1)?.[1];
+
+    expect(enterSubmitHandlerArg).toBeDefined();
+    expect(enterSubmitHandlerArg).toBe(actionBarProps?.onPostClick);
   });
 
   it('shows full user info and passes the character count to the header when expanded', () => {

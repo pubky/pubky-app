@@ -5,7 +5,7 @@ import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { customFeedFormDefaults } from '@/hooks/useCustomFeedForm/useCustomFeedForm.types';
 import { CustomFeedDialog } from '@/organisms/CustomFeedDialog/CustomFeedDialog';
 import { renderForVRT } from '@/test-utils/vrt';
-import { VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
+import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => '/home' }));
 vi.mock('@/hooks/useCustomFeedForm/useCustomFeedForm', () => ({
@@ -19,6 +19,27 @@ vi.mock('@/hooks/useCustomFeedForm/useCustomFeedForm', () => ({
 vi.mock('@/hooks/useTagSuggestions/useTagSuggestions', () => ({
   useTagSuggestions: () => ({ suggestions: [] }),
 }));
+
+it.each([
+  { name: 'desktop', viewport: VRT_VIEWPORT_DESKTOP },
+  { name: 'mobile', viewport: VRT_VIEWPORT_MOBILE },
+])('selects Cards in the real custom feed picker on $name', async ({ viewport }) => {
+  await renderForVRT(
+    <TooltipProvider delayDuration={0}>
+      <CustomFeedDialog mode="create" open />
+    </TooltipProvider>,
+    { viewport },
+  );
+  const layoutPicker = page.getByTestId('layout-filter-section').getByRole('combobox');
+  await layoutPicker.click();
+  await page.getByRole('option', { name: 'Cards', exact: true }).click();
+  await expect.element(layoutPicker).toHaveTextContent('Cards');
+
+  await page.getByTestId('content-filter-section').getByRole('combobox').click();
+  for (const name of ['All', 'Posts', 'Articles', 'Collections', 'Images', 'Videos', 'Links', 'Files']) {
+    await expect.element(page.getByRole('option', { name, exact: true })).toBeVisible();
+  }
+});
 
 it.each([true, false])('keeps the mobile hint readable after a touch sequence (click: %s)', async (synthesizeClick) => {
   await renderForVRT(

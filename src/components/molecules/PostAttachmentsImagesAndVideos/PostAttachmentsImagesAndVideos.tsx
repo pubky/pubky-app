@@ -39,6 +39,7 @@ type PostAttachmentsImagesAndVideosProps = {
   variant?: 'default' | 'list';
   renderTrigger?: (props: {
     imagesAndVideos: AttachmentConstructed[];
+    isPreviewOpen: boolean;
     openPreview: (index: number, event?: MouseEvent) => void;
   }) => ReactNode;
 };
@@ -53,8 +54,10 @@ export const PostAttachmentsImagesAndVideos = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const [previewTrigger, setPreviewTrigger] = useState<HTMLElement | null>(null);
   const openPreview = (index: number, event?: MouseEvent) => {
     event?.stopPropagation();
+    if (event?.currentTarget instanceof HTMLElement) setPreviewTrigger(event.currentTarget);
     setCurrentIndex(index);
     setOpen(true);
   };
@@ -132,7 +135,7 @@ export const PostAttachmentsImagesAndVideos = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {renderTrigger ? (
-        renderTrigger({ imagesAndVideos, openPreview })
+        renderTrigger({ imagesAndVideos, openPreview, isPreviewOpen: open })
       ) : (
         /* Grid layout */
         <Container
@@ -207,6 +210,14 @@ export const PostAttachmentsImagesAndVideos = ({
         showCloseButton={false}
         overrideDefaults
         centered
+        onCloseAutoFocus={
+          renderTrigger
+            ? (event) => {
+                event.preventDefault();
+                previewTrigger?.focus();
+              }
+            : undefined
+        }
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           carouselRef.current?.focus();

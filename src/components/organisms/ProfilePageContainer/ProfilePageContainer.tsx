@@ -5,9 +5,11 @@ import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation/useProfileNavigation';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useUnlockedList } from '@/hooks/useUnlockedList/useUnlockedList';
 import { isPubkyIdentifier } from '@/libs/utils/utils';
 import { ProfileUserNotFoundDiscoveryView } from '@/organisms/ProfileUserNotFoundDiscoveryView/ProfileUserNotFoundDiscoveryView';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { UnlockedListProvider } from '@/providers/UnlockedListProvider/UnlockedListProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { ProfilePageLayout } from '../ProfilePageLayout/ProfilePageLayout';
 
@@ -60,6 +62,10 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
     enabled: pubky !== null && isPubkyIdentifier(pubky),
   });
 
+  // Read here, not in the sidebar: this layout survives profile tab navigation, so the enumeration
+  // runs once per visit and the Unlocked screen reuses it through `UnlockedListProvider`.
+  const unlocked = useUnlockedList({ enabled: isOwnProfile });
+
   // Business logic: Handle navigation state
   const { activePage, filterBarActivePage, navigateToPage } = useProfileNavigation();
 
@@ -87,25 +93,32 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
     (pubky !== null && pubky !== '' && !isPubkyIdentifier(pubky)) ||
     (userNotFound && !isOwnProfile && !isLoggingOut && !isProfileContextLoading);
 
+  // `null` on error, not `undefined`: the read has finished, so a spinner would be wrong, and `0`
+  // would claim nothing is unlocked.
+  const unlockedCount = unlocked.isError ? null : unlocked.isLoading ? undefined : unlocked.count;
+
   if (showUserNotFoundDiscovery) {
     return <ProfileUserNotFoundDiscoveryView />;
   }
 
   // Delegate presentation to layout organism
   return (
-    <ProfilePageLayout
-      profile={profile}
-      stats={stats}
-      actions={mergedActions}
-      activePage={activePage}
-      filterBarActivePage={filterBarActivePage}
-      navigateToPage={navigateToPage}
-      isLoading={isLoading}
-      isHeaderLoading={isProfileLoading}
-      isOwnProfile={isOwnProfile}
-      userId={pubky ?? ''}
-    >
-      {children}
-    </ProfilePageLayout>
+    <UnlockedListProvider value={unlocked}>
+      <ProfilePageLayout
+        profile={profile}
+        stats={stats}
+        unlockedCount={unlockedCount}
+        actions={mergedActions}
+        activePage={activePage}
+        filterBarActivePage={filterBarActivePage}
+        navigateToPage={navigateToPage}
+        isLoading={isLoading}
+        isHeaderLoading={isProfileLoading}
+        isOwnProfile={isOwnProfile}
+        userId={pubky ?? ''}
+      >
+        {children}
+      </ProfilePageLayout>
+    </UnlockedListProvider>
   );
 }

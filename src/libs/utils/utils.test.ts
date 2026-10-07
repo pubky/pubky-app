@@ -26,8 +26,10 @@ import {
   getValidAuthorPubkyFromPostCompositeId,
   hexToRgba,
   hoursAgo,
+  isPositiveIntegerString,
   isPostDeleted,
   isPubkyIdentifier,
+  isReservedUserName,
   isSameDomain,
   isStarterPackReservedTag,
   isUserDeleted,
@@ -37,6 +39,7 @@ import {
   radixIdSerializer,
   readFromClipboard,
   resolveDisplayName,
+  resolveUserDisplayName,
   sanitizeTagInput,
   shouldBypassLinkConfirmation,
   stripPubkyPrefix,
@@ -246,6 +249,49 @@ describe('Utils', () => {
 
     it('returns [DELETED] instead of the public key fallback for a deleted user', () => {
       expect(resolveDisplayName({ name: '', id: PUBKY, deleted: true })).toBe('[DELETED]');
+    });
+  });
+
+  describe('isPositiveIntegerString', () => {
+    it.each(['1', '12', '1000', '9007199254740991'])('accepts the bare integer %s', (value) => {
+      expect(isPositiveIntegerString(value)).toBe(true);
+    });
+
+    it.each([
+      ['zero', '0'],
+      ['leading zeros', '007'],
+      ['signed', '-1'],
+      ['explicitly signed', '+1'],
+      ['decimal', '1.5'],
+      ['grouped', '1,000'],
+      ['exponent notation', '1e3'],
+      ['untrimmed', ' 12 '],
+      ['empty', ''],
+      // Number() would round these and the caller would report a value nobody set.
+      ['one past the safe-integer range', '9007199254740992'],
+      ['far past the safe-integer range', '99999999999999999999'],
+    ])('rejects %s', (_label, value) => {
+      expect(isPositiveIntegerString(value)).toBe(false);
+    });
+  });
+
+  describe('resolveUserDisplayName', () => {
+    it('returns the name when present', () => {
+      expect(resolveUserDisplayName({ name: 'Alice' })).toBe('Alice');
+    });
+
+    it('returns an empty string when a live user has no name, so the caller keeps its fallback', () => {
+      expect(resolveUserDisplayName({ name: '' })).toBe('');
+      expect(resolveUserDisplayName({ name: null })).toBe('');
+      expect(resolveUserDisplayName(undefined)).toBe('');
+    });
+
+    it('returns [DELETED] for a flagged tombstone, never the empty fallback', () => {
+      expect(resolveUserDisplayName({ name: '', deleted: true })).toBe('[DELETED]');
+    });
+
+    it('returns [DELETED] for the legacy sentinel name', () => {
+      expect(resolveUserDisplayName({ name: '[DELETED]' })).toBe('[DELETED]');
     });
   });
 
@@ -545,10 +591,51 @@ describe('Utils', () => {
       expect(generateRandomColor('BiTcOiN')).toBe('#FF9900');
     });
 
-    it('should generate consistent colors for the same input', () => {
-      const color1 = generateRandomColor('test');
-      const color2 = generateRandomColor('test');
+    it.each(['test', 'ai', 'lol'])('should generate consistent colors for %s', (tag) => {
+      const color1 = generateRandomColor(tag);
+      const color2 = generateRandomColor(tag);
       expect(color1).toBe(color2);
+    });
+
+    it.each(['ai', 'AI', 'Ai'])('uses the fixed cyan background for %s', (tag) => {
+      expect(generateRandomColor(tag)).toBe('#00C8FF');
+      expect(hexToRgba(generateRandomColor(tag), 0.3)).toBe('rgba(0, 200, 255, 0.3)');
+    });
+
+    it('remaps deep blue and blue-violet to distinct cyan and teal colors', () => {
+      expect(generateRandomColor('topic-101')).toBe('#00FFc0');
+      expect(generateRandomColor('lol')).toBe('#00c8FF');
+    });
+
+    it.each([
+      ['topic-839', '#00FFff'], // Pure blue (240 degrees).
+      ['topic-101', '#00FFc0'], // Just inside the lower hue boundary.
+      ['topic-223', '#00bfFF'], // At the upper hue boundary (260 degrees).
+    ])('remaps %s at the edges of the excluded range', (tag, color) => {
+      expect(generateRandomColor(tag)).toBe(color);
+    });
+
+    it('excludes the blue-heavy range across generated tag colors', () => {
+      for (let index = 0; index < 2048; index++) {
+        const color = generateRandomColor(`topic-${index}`);
+        const red = parseInt(color.slice(1, 3), 16);
+        const green = parseInt(color.slice(3, 5), 16);
+        const blue = parseInt(color.slice(5, 7), 16);
+        // At full blue, both other channels <= 85 cover the excluded 220–260° range.
+        expect(blue === 255 && red <= 85 && green <= 85, color).toBe(false);
+      }
+    });
+
+    it.each([
+      ['music', '#00FF25'],
+      ['this', '#9eFF00'],
+      ['nice', '#FF5d00'],
+      ['welcome', '#FF0062'],
+      ['pubky-feedback', '#00FFe7'],
+      ['topic-224', '#0056FF'], // Just below 220 degrees.
+      ['topic-346', '#5700FF'], // Just above 260 degrees.
+    ])('preserves the existing color of %s outside the excluded range', (tag, color) => {
+      expect(generateRandomColor(tag)).toBe(color);
     });
 
     it('should generate different colors for different inputs', () => {
@@ -865,32 +952,42 @@ describe('Utils', () => {
   });
 
   describe('isPostDeleted', () => {
-    it('should return true for "[DELETED]" content', () => {
-      expect(isPostDeleted('[DELETED]')).toBe(true);
+    it('returns true for the legacy [DELETED] content sentinel', () => {
+      expect(isPostDeleted({ content: '[DELETED]' })).toBe(true);
+    });
+
+    it('returns true when Nexus flags the post as deleted', () => {
+      expect(isPostDeleted({ content: '', deleted: true })).toBe(true);
+    });
+
+    it('returns true for a flagged tombstone that still carries the sentinel', () => {
+      expect(isPostDeleted({ content: '[DELETED]', deleted: true })).toBe(true);
     });
 
     it('should return false for regular content', () => {
-      expect(isPostDeleted('Hello world')).toBe(false);
+      expect(isPostDeleted({ content: 'Hello world' })).toBe(false);
     });
 
-    it('should return false for empty string', () => {
-      expect(isPostDeleted('')).toBe(false);
+    it('should return false for empty content without the flag', () => {
+      expect(isPostDeleted({ content: '' })).toBe(false);
+      expect(isPostDeleted({ content: '', deleted: false })).toBe(false);
     });
 
-    it('should return false for undefined', () => {
+    it('should return false for undefined or null details', () => {
       expect(isPostDeleted(undefined)).toBe(false);
+      expect(isPostDeleted(null)).toBe(false);
     });
 
     it('should return false for similar but not exact match', () => {
-      expect(isPostDeleted('[deleted]')).toBe(false);
-      expect(isPostDeleted('DELETED')).toBe(false);
-      expect(isPostDeleted('[DELETED] ')).toBe(false);
-      expect(isPostDeleted(' [DELETED]')).toBe(false);
+      expect(isPostDeleted({ content: '[deleted]' })).toBe(false);
+      expect(isPostDeleted({ content: 'DELETED' })).toBe(false);
+      expect(isPostDeleted({ content: '[DELETED] ' })).toBe(false);
+      expect(isPostDeleted({ content: ' [DELETED]' })).toBe(false);
     });
 
     it('should return false for content containing "[DELETED]"', () => {
-      expect(isPostDeleted('This post is [DELETED]')).toBe(false);
-      expect(isPostDeleted('[DELETED] post')).toBe(false);
+      expect(isPostDeleted({ content: 'This post is [DELETED]' })).toBe(false);
+      expect(isPostDeleted({ content: '[DELETED] post' })).toBe(false);
     });
   });
 
@@ -920,6 +1017,19 @@ describe('Utils', () => {
     it('requires an exact sentinel match', () => {
       expect(isUserDeleted({ name: '[deleted]' })).toBe(false);
       expect(isUserDeleted({ name: 'Alice [DELETED]' })).toBe(false);
+    });
+  });
+
+  describe('isReservedUserName', () => {
+    it('reserves the tombstone label, with or without surrounding whitespace', () => {
+      expect(isReservedUserName('[DELETED]')).toBe(true);
+      expect(isReservedUserName('  [DELETED]  ')).toBe(true);
+    });
+
+    it('leaves a live name alone', () => {
+      expect(isReservedUserName('Alice')).toBe(false);
+      expect(isReservedUserName('[deleted]')).toBe(false);
+      expect(isReservedUserName('Alice [DELETED]')).toBe(false);
     });
   });
 

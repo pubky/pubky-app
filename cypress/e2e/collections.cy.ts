@@ -118,12 +118,12 @@ describe('collections', () => {
     openCollectionFromMyCollections(editedName);
     // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
     cy.reload();
-    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', curator.postText1);
+    cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', curator.postText1);
     collectionCounterEq(1);
 
     // * add post 2 of 3 by pasting its URL in the Add Post dialog
     cy.get('@post2Url').then((url) => addPostToCollectionByUrl(String(url)));
-    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', curator.postText2);
+    cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', curator.postText2);
     collectionCounterEq(2);
 
     // * an invalid URL is rejected with a validation error
@@ -135,12 +135,12 @@ describe('collections', () => {
       addPostToCollectionByUrlExpectingError(String(url), ADD_CONTENT_URL_DUPLICATE_ERROR);
     });
     collectionCounterEq(2);
-    cy.get('[data-cy="timeline-posts-grid"]').find('[data-cy="post-card"]').should('have.length', 2);
+    cy.get('[data-cy="timeline-posts-cards"]').find('[data-cy="post-card"]').should('have.length', 2);
 
     // * add post 3 of 3 by creating a brand new post from the Add Post dialog
     createPostInCollection(createdPostContent);
-    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', createdPostContent);
-    cy.get('[data-cy="timeline-posts-grid"]').find('[data-cy="post-card"]').should('have.length', 3);
+    cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', createdPostContent);
+    cy.get('[data-cy="timeline-posts-cards"]').find('[data-cy="post-card"]').should('have.length', 3);
     collectionCounterEq(3);
 
     // * the collection is not shown in the global feed (only its posts are)
@@ -160,8 +160,8 @@ describe('collections', () => {
     openCollectionFromMyCollections(editedName);
     // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
     cy.reload();
-    cy.get('[data-cy="timeline-posts-grid"]').should('not.contain.text', curator.postText1);
-    cy.get('[data-cy="timeline-posts-grid"]').find('[data-cy="post-card"]').should('have.length', 2);
+    cy.get('[data-cy="timeline-posts-cards"]').should('not.contain.text', curator.postText1);
+    cy.get('[data-cy="timeline-posts-cards"]').find('[data-cy="post-card"]').should('have.length', 2);
     collectionCounterEq(2);
 
     // * delete the whole collection via the hero bin icon
@@ -205,7 +205,7 @@ describe('collections', () => {
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
     // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
     cy.reload();
-    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', curator.postText3);
+    cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', curator.postText3);
     cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Unfollow');
 
     // * the collection is listed on the curator's profile Collections tab
@@ -230,8 +230,6 @@ describe('collections', () => {
     cy.wait('@unfollowCollection').its('response.statusCode').should('eq', 204);
     goToCollectionsPage();
     sectionDoesNotContainCollection(FOLLOWED_SECTION, collectionName);
-    // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2237
-    cy.reload();
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible');
 
     cy.signOut(HasBackedUp.Yes);
@@ -277,15 +275,15 @@ describe('collections', () => {
     goToHomePage();
     cy.get('[data-cy="columns-layout-toggle"]').filter(':visible').click();
 
-    // * creator List default is persisted; owner has no temporary layout menu
+    // * creator List default is persisted; the layout menu is a temporary override for the owner too
     goToCollectionsPage();
     createCollection(collectionName, 'List by default.', { layout: 'list' });
     createPostInCollection(postContent);
     replyToPost({ replyContent, filterText: postContent });
 
     cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent);
-    cy.get('[data-cy="timeline-posts-grid"]').should('not.exist');
-    cy.get('[data-cy="collection-layout-menu"]').should('not.exist');
+    cy.get('[data-cy="timeline-posts-cards"]').should('not.exist');
+    cy.get('[data-cy="collection-layout-menu"]').should('be.visible');
 
     // * List collection feeds hide inline replies (full thread lives on the post page)
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', replyContent);
@@ -317,12 +315,12 @@ describe('collections', () => {
     goToCollectionsPage();
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible').click();
     selectCollectionViewerLayout('grid');
-    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', postContent);
+    cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', postContent);
 
     // * reload drops the in-memory override and restores the creator List default
     cy.reload();
     cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent);
-    cy.get('[data-cy="timeline-posts-grid"]').should('not.exist');
+    cy.get('[data-cy="timeline-posts-cards"]').should('not.exist');
 
     // clean up so the collection does not linger in other users' Discover section
     cy.signOut(HasBackedUp.Yes);
@@ -343,7 +341,7 @@ describe('collections', () => {
     goToCollectionsPage();
     findCollectionCardInSection(MY_SECTION, collectionName).should('be.visible').click();
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
-    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', postContent);
+    cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', postContent);
     collectionCounterEq(1);
 
     // clean up so the collection does not linger in other users' Discover section
