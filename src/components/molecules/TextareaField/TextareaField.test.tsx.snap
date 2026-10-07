@@ -3,7 +3,7 @@
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with custom rows and maxLength 1`] = `
 <div>
   <div
-    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 font-medium"
     data-testid="container"
   >
     <textarea
@@ -23,7 +23,7 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with cus
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with dashed variant 1`] = `
 <div>
   <div
-    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium !bg-alpha-90/10 border-dashed"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 font-medium border-dashed"
     data-testid="container"
   >
     <textarea
@@ -42,7 +42,7 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with das
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with error status 1`] = `
 <div>
   <div
-    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium border-red-500 text-red-500"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border !bg-background/20 font-medium border-red-500 text-red-500"
     data-testid="container"
   >
     <textarea
@@ -67,7 +67,7 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with err
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with placeholder 1`] = `
 <div>
   <div
-    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 font-medium"
     data-testid="container"
   >
     <textarea
@@ -85,7 +85,7 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with pla
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with provided message 1`] = `
 <div>
   <div
-    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 font-medium"
     data-testid="container"
   >
     <textarea
@@ -108,7 +108,7 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with pro
 exports[`TextareaField - Snapshots > matches snapshot for TextareaField with success status 1`] = `
 <div>
   <div
-    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium border-brand text-brand"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border !bg-background/20 font-medium border-brand text-brand"
     data-testid="container"
   >
     <textarea
@@ -133,7 +133,7 @@ exports[`TextareaField - Snapshots > matches snapshot for TextareaField with suc
 exports[`TextareaField - Snapshots > matches snapshot for default TextareaField 1`] = `
 <div>
   <div
-    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 font-medium"
     data-testid="container"
   >
     <textarea
@@ -152,7 +152,7 @@ exports[`TextareaField - Snapshots > matches snapshot for default TextareaField 
 exports[`TextareaField - Snapshots > matches snapshot for disabled TextareaField 1`] = `
 <div>
   <div
-    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 font-medium"
     data-testid="container"
   >
     <textarea
@@ -172,7 +172,7 @@ exports[`TextareaField - Snapshots > matches snapshot for disabled TextareaField
 exports[`TextareaField - Snapshots > matches snapshot for readOnly TextareaField 1`] = `
 <div>
   <div
-    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium"
+    class="w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 font-medium"
     data-testid="container"
   >
     <textarea
