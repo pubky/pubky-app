@@ -70,6 +70,7 @@ export function LockedPostContent({
     applyUnlockedContent,
     media,
     pendingAttachments,
+    hasCompleteContent,
     isOwnLock,
     isResolvingOwn,
     isResolvingReplica,
@@ -97,7 +98,8 @@ export function LockedPostContent({
     // The open modal owns status polling and completion. In particular, markPurchased must not
     // start a competing background finish immediately after a new payment is submitted.
     isPurchased: !isPayOpen && hasPurchase(lockId),
-    hasContent: Boolean(unlockedPost),
+    // Cached text alone is not "received": with its bytes unreadable, recovery re-downloads the post.
+    hasContent: hasCompleteContent,
     isResolvingContent: isResolvingReplica,
     onResumed: showUnlockedContent,
   });

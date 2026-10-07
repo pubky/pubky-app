@@ -19,6 +19,11 @@ export interface UseUnlockedContentResult {
   media: AttachmentConstructed[];
   /** `unlockedPost` is on screen while these attachments' bytes still download; empty once they are in `media`. */
   pendingAttachments: PendingAttachment[];
+  /**
+   * Text and bytes are both on screen. False while a cached post's bytes are pending or could not be
+   * read: that post is not "received", so a paid reader's purchase recovery may still run.
+   */
+  hasCompleteContent: boolean;
   /** Whether the signed-in user is the lock's creator (owns the guarded storage). */
   isOwnLock: boolean;
   /** The own-lock read has not settled: render the own layout with a text skeleton, never the unlock card. */

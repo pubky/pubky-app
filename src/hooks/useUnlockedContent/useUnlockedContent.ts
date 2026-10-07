@@ -25,6 +25,8 @@ function toPendingAttachments(post: ReplicatedPost): PendingAttachment[] {
  * A cached post's text lands before its bytes, with the pending list holding the media's place; the
  * homeserver read (no cache row, or its bytes unreadable) lands text and bytes together. Nothing is
  * written after `isCancelled()`, and a cached post's pending list is always cleared by the end.
+ * `setHasCompleteContent(true)` only once text and bytes are both on screen: cached text alone must
+ * not count as content, or a paid reader's recovery would never repair an unreadable replica.
  */
 async function readContent({
   getCached,
@@ -33,6 +35,7 @@ async function readContent({
   setUnlockedPost,
   setMedia,
   setPendingAttachments,
+  setHasCompleteContent,
 }: {
   getCached: () => Promise<ReplicatedPost | null>;
   fetchRemote: () => Promise<TUnlockedContent | null>;
@@ -40,6 +43,7 @@ async function readContent({
   setUnlockedPost: Dispatch<SetStateAction<GuardedPost | null>>;
   setMedia: Dispatch<SetStateAction<AttachmentConstructed[]>>;
   setPendingAttachments: Dispatch<SetStateAction<PendingAttachment[]>>;
+  setHasCompleteContent: Dispatch<SetStateAction<boolean>>;
 }): Promise<void> {
   const cached = await getCached().catch(() => null);
   if (cached) {
@@ -53,6 +57,7 @@ async function readContent({
     if (attachments) {
       setMedia(toUnlockedMedia(attachments));
       setPendingAttachments(clearIfFilled);
+      setHasCompleteContent(true);
       return;
     }
   }
@@ -63,6 +68,7 @@ async function readContent({
     if (remote) {
       setMedia(toUnlockedMedia(remote.attachments));
       setUnlockedPost(remote.post);
+      setHasCompleteContent(true);
     }
   } finally {
     // Also on failure: the cached text may be on screen, and nothing else will end its skeletons.
@@ -91,6 +97,7 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
   const [media, setMedia] = useState<AttachmentConstructed[]>([]);
   // Set with a cached post's text and cleared once its bytes arrive (or cannot).
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [hasCompleteContent, setHasCompleteContent] = useState(false);
   // Until the replica read settles, "no content" means "not known yet". Callers that would act on
   // its absence — re-downloading a purchase, say — have to be able to tell the two apart.
   const [isResolvingReplica, setIsResolvingReplica] = useState(true);
@@ -120,6 +127,7 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
       setUnlockedPost(null);
       setMedia(clearIfFilled);
       setPendingAttachments(clearIfFilled);
+      setHasCompleteContent(false);
     };
   }, [lock, authorId, currentUserPubky, session]);
 
@@ -151,6 +159,7 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
       setUnlockedPost,
       setMedia,
       setPendingAttachments,
+      setHasCompleteContent,
     })
       .catch(() => undefined) // already reported by the Err factory; fall back to the lock card
       .finally(() => {
@@ -188,6 +197,7 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
       setUnlockedPost,
       setMedia,
       setPendingAttachments,
+      setHasCompleteContent,
     })
       .catch(() => undefined) // already reported by the Err factory; fall back to the (inert) lock card
       .finally(() => {
@@ -213,6 +223,7 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
     setMedia(toUnlockedMedia(content.attachments));
     setPendingAttachments(clearIfFilled);
     setUnlockedPost(content.post);
+    setHasCompleteContent(true);
     // A dropped attachment is a permanent data error already reported to Sentry. Warn the reader who
     // just paid, once, but keep rendering the rest of the post.
     if (content.attachments.length < (content.post.attachments?.length ?? 0)) {
@@ -233,6 +244,7 @@ export function useUnlockedContent({ lock, lockFile, postId }: UseUnlockedConten
     applyUnlockedContent,
     media,
     pendingAttachments,
+    hasCompleteContent,
     isOwnLock,
     isResolvingOwn,
     isResolvingReplica,

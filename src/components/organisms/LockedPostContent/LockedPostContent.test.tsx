@@ -585,6 +585,24 @@ describe('LockedPostContent', () => {
     });
   });
 
+  // The replica's text is cached but its files cannot be read: that is not the content the reader paid
+  // for, so the recovery hook must still be allowed to re-download it.
+  it('tells the recovery hook there is no content while cached text waits for bytes that never come', async () => {
+    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }), priceSats: '1000' });
+    vi.mocked(LocksController.getUnlockedPost).mockResolvedValue({
+      content: 'cached replica',
+      kind: 'short',
+      attachments: [{ url: 'pubky://a', content_type: 'image/png' }],
+    });
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockRejectedValue(new Error('unreadable'));
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue(null);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+    const body = await screen.findByText('cached replica');
+    await waitFor(() => expect(body).toHaveAttribute('data-pending', '0'));
+    expect(resumeMocks.params?.hasContent).toBe(false);
+  });
+
   // A reader who unlocked before gets the same two steps from their replicated copy.
   it('shows the cached replica text under the Unlocked label before its bytes arrive', async () => {
     mockLockData();

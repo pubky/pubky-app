@@ -306,6 +306,7 @@ describe('useUnlockedContent', () => {
     act(() => result.current.applyUnlockedContent(content));
 
     expect(result.current.unlockedPost).toEqual(content.post);
+    expect(result.current.hasCompleteContent).toBe(true);
     expect(toastMock).not.toHaveBeenCalled();
     expect(LocksController.replicateUnlockedContent).toHaveBeenCalledWith({
       lockUrl: LOCK_URL,
@@ -376,10 +377,12 @@ describe('useUnlockedContent (text before bytes)', () => {
     await waitFor(() => expect(result.current.unlockedPost?.content).toBe('cached'));
     expect(result.current.pendingAttachments).toEqual([{ slot: 0, type: 'image/png' }]);
     expect(result.current.media).toEqual([]);
+    expect(result.current.hasCompleteContent).toBe(false);
 
     await act(async () => settle(bytes));
     expect(result.current.pendingAttachments).toEqual([]);
     expect(result.current.media).toHaveLength(1);
+    expect(result.current.hasCompleteContent).toBe(true);
   });
 
   // Reported to Sentry by the Err factories; no toast, since this read runs on every card showing the post.
@@ -396,6 +399,8 @@ describe('useUnlockedContent (text before bytes)', () => {
     expect(result.current.unlockedPost?.content).toBe('cached');
     expect(result.current.media).toEqual([]);
     expect(toastMock).not.toHaveBeenCalled();
+    // The text alone is not the content the reader paid for; a purchase recovery may still run.
+    expect(result.current.hasCompleteContent).toBe(false);
   });
 
   // The read was cancelled (signed out, say) with the text on screen; nothing will deliver its bytes.
