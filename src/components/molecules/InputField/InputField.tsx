@@ -118,7 +118,7 @@ export function InputField({
     <>
       <Container
         className={cn(
-          'mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 py-4',
+          'mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20',
           icon && iconPosition === 'left' ? 'pl-4.5' : 'pl-2',
           containerClasses,
           statusClasses[status],
@@ -139,7 +139,7 @@ export function InputField({
           id={id}
           name={name}
           type="text"
-          className={cn('h-auto w-full border-none !bg-transparent py-0', inputClassName)}
+          className={cn('h-auto w-full border-none !bg-transparent py-4', inputClassName)}
           value={loading ? resolvedLoadingText : value}
           placeholder={placeholder}
           disabled={disabled || loading}
