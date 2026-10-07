@@ -118,6 +118,31 @@ exports[`PostAttachments - Snapshots > matches snapshot with mixed local attachm
 
 exports[`PostAttachments - Snapshots > matches snapshot with null attachments 1`] = `null`;
 
+exports[`PostAttachments - Snapshots > matches snapshot with pending attachments 1`] = `
+<div
+  class="gap-3"
+  data-testid="container"
+>
+  <div
+    class="gap-3 sm:grid-cols-2"
+    data-testid="container"
+  >
+    <div
+      class="animate-pulse bg-muted h-52 w-full rounded-md sm:last:odd:col-span-2"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse bg-muted h-52 w-full rounded-md sm:last:odd:col-span-2"
+      data-slot="skeleton"
+    />
+  </div>
+  <div
+    class="animate-pulse bg-muted h-14 w-full rounded-md"
+    data-slot="skeleton"
+  />
+</div>
+`;
+
 exports[`PostAttachments - Snapshots > matches snapshot with videos only 1`] = `
 <div
   class="gap-3"

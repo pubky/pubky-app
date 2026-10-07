@@ -20,13 +20,13 @@ import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { DialogPayToUnlock } from '@/molecules/DialogPayToUnlock/DialogPayToUnlock';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
-import { toast } from '@/molecules/Toaster/toast';
 import { LocksPermissionNotice } from '@/organisms/LocksPermissionNotice/LocksPermissionNotice';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { LockContentParser } from '@/pipes/locks/locks.parser';
 import type { TUnlockedContent } from '@/services/locks/locks.types';
 import { PostArticle } from '../PostArticle/PostArticle';
 import { PostBody } from '../PostBody/PostBody';
+import { PostContentBaseSkeleton } from '../PostContentBase/PostContentBase.skeleton';
 
 interface LockedPostContentProps {
   content: string;
@@ -65,11 +65,15 @@ export function LockedPostContent({
     routeParams?.userId === authorId && routeParams?.postId === rawPostId && !isNestedPostPreview;
   const lockContent = LocksController.getLockContent(content);
   const { lockFile, priceSats } = useLockFile(lock);
-  const { unlockedPost, applyUnlockedContent, media, isOwnLock, isResolvingReplica } = useUnlockedContent({
-    lock,
-    lockFile,
-    postId,
-  });
+  const {
+    unlockedPost,
+    applyUnlockedContent,
+    media,
+    pendingAttachments,
+    isOwnLock,
+    isResolvingOwn,
+    isResolvingReplica,
+  } = useUnlockedContent({ lock, lockFile, postId });
   const { requireAuth, isAuthenticated } = useRequireAuth();
   // A session from before the app asked for `/priv` cannot read whether this reader already
   // unlocked, so ask for the permission first and keep the card inert: a second unlock would
@@ -77,16 +81,10 @@ export function LockedPostContent({
   // live to inert once that read fails.
   const showPermissionNotice = useSessionNeedsUpgrade();
 
-  /** Renders unlocked content, closes whichever dialog produced it, and reports dropped media. */
+  /** Renders unlocked content and closes whichever dialog produced it. */
   const showUnlockedContent = (unlocked: TUnlockedContent) => {
     setIsPayOpen(false);
-
     applyUnlockedContent(unlocked); // renders + replicates into the reader's /priv
-    // A dropped attachment is a permanent data error already reported to Sentry. Warn the reader
-    // with a toast, but keep rendering the rest of the post — don't block the unlocked view.
-    if (unlocked.attachments.length < (unlocked.post.attachments?.length ?? 0)) {
-      toast({ variant: 'error', description: 'Could not load attachments' });
-    }
   };
 
   // Paid but never received: the payment completed while the reader was away, so nothing on screen
@@ -116,8 +114,10 @@ export function LockedPostContent({
   if (!lockContent) return null;
 
   // Paying needs the reader's pubky (it is the payment-request delivery address), so a signed-out
-  // reader gets the sign-in dialog instead. Unsupported legacy locks have no unlock handler.
-  const handleUnlock = priceSats && !showPermissionNotice ? () => requireAuth(() => setIsPayOpen(true)) : undefined;
+  // reader gets the sign-in dialog instead. Unsupported legacy locks have no unlock handler, and
+  // neither does the creator's own lock: it stays inert even if reading the original failed.
+  const handleUnlock =
+    priceSats && !showPermissionNotice && !isOwnLock ? () => requireAuth(() => setIsPayOpen(true)) : undefined;
 
   return (
     <Container className={cn('min-w-0 gap-4', className)}>
@@ -127,7 +127,9 @@ export function LockedPostContent({
         localAttachments={localAttachments}
         textClassName={textClassName}
       />
-      {unlockedPost ? (
+      {/* An own lock shows its layout as soon as lock.json proves it mine, with the content behind a
+          skeleton: a large attachment must never leave an Unlock button on the creator's own post. */}
+      {unlockedPost || isResolvingOwn ? (
         <>
           {/* Own lock: keep the (now inert) lock card above the content so the price/terms stay visible. */}
           {isOwnLock && <LockedPostCard title={lockContent.lock_title} priceSats={priceSats} />}
@@ -144,12 +146,15 @@ export function LockedPostContent({
                 {isOwnLock ? 'My locked content' : 'Unlocked'}
               </span>
             </div>
-            {unlockedPost.kind === 'long' && isArticleContent(unlockedPost.content) ? (
+            {!unlockedPost ? (
+              <PostContentBaseSkeleton />
+            ) : unlockedPost.kind === 'long' && isArticleContent(unlockedPost.content) ? (
               <PostArticle
                 content={unlockedPost.content}
                 attachments={null}
                 localAttachments={media}
                 variant={isFocusedPostPage ? 'full' : 'preview'}
+                pendingAttachments={pendingAttachments}
               />
             ) : (
               <PostBody
@@ -157,6 +162,7 @@ export function LockedPostContent({
                 attachments={null}
                 localAttachments={media}
                 textClassName={textClassName}
+                pendingAttachments={pendingAttachments}
               />
             )}
           </div>
