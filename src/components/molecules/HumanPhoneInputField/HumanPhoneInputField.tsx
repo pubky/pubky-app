@@ -54,7 +54,7 @@ export const HumanPhoneInputField = ({
       <div className="flex w-full max-w-128 flex-col gap-2">
         <div
           data-testid="human-phone-input-wrapper"
-          className="flex w-full flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
+          className="flex w-full flex-row items-center rounded-md border border-dashed border-input bg-background/20 px-5 py-2 shadow-xs"
         >
           <Input
             data-testid="human-phone-input"

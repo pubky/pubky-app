@@ -591,10 +591,51 @@ describe('Utils', () => {
       expect(generateRandomColor('BiTcOiN')).toBe('#FF9900');
     });
 
-    it('should generate consistent colors for the same input', () => {
-      const color1 = generateRandomColor('test');
-      const color2 = generateRandomColor('test');
+    it.each(['test', 'ai', 'lol'])('should generate consistent colors for %s', (tag) => {
+      const color1 = generateRandomColor(tag);
+      const color2 = generateRandomColor(tag);
       expect(color1).toBe(color2);
+    });
+
+    it.each(['ai', 'AI', 'Ai'])('uses the fixed cyan background for %s', (tag) => {
+      expect(generateRandomColor(tag)).toBe('#00C8FF');
+      expect(hexToRgba(generateRandomColor(tag), 0.3)).toBe('rgba(0, 200, 255, 0.3)');
+    });
+
+    it('remaps deep blue and blue-violet to distinct cyan and teal colors', () => {
+      expect(generateRandomColor('topic-101')).toBe('#00FFc0');
+      expect(generateRandomColor('lol')).toBe('#00c8FF');
+    });
+
+    it.each([
+      ['topic-839', '#00FFff'], // Pure blue (240 degrees).
+      ['topic-101', '#00FFc0'], // Just inside the lower hue boundary.
+      ['topic-223', '#00bfFF'], // At the upper hue boundary (260 degrees).
+    ])('remaps %s at the edges of the excluded range', (tag, color) => {
+      expect(generateRandomColor(tag)).toBe(color);
+    });
+
+    it('excludes the blue-heavy range across generated tag colors', () => {
+      for (let index = 0; index < 2048; index++) {
+        const color = generateRandomColor(`topic-${index}`);
+        const red = parseInt(color.slice(1, 3), 16);
+        const green = parseInt(color.slice(3, 5), 16);
+        const blue = parseInt(color.slice(5, 7), 16);
+        // At full blue, both other channels <= 85 cover the excluded 220–260° range.
+        expect(blue === 255 && red <= 85 && green <= 85, color).toBe(false);
+      }
+    });
+
+    it.each([
+      ['music', '#00FF25'],
+      ['this', '#9eFF00'],
+      ['nice', '#FF5d00'],
+      ['welcome', '#FF0062'],
+      ['pubky-feedback', '#00FFe7'],
+      ['topic-224', '#0056FF'], // Just below 220 degrees.
+      ['topic-346', '#5700FF'], // Just above 260 degrees.
+    ])('preserves the existing color of %s outside the excluded range', (tag, color) => {
+      expect(generateRandomColor(tag)).toBe(color);
     });
 
     it('should generate different colors for different inputs', () => {
@@ -911,32 +952,42 @@ describe('Utils', () => {
   });
 
   describe('isPostDeleted', () => {
-    it('should return true for "[DELETED]" content', () => {
-      expect(isPostDeleted('[DELETED]')).toBe(true);
+    it('returns true for the legacy [DELETED] content sentinel', () => {
+      expect(isPostDeleted({ content: '[DELETED]' })).toBe(true);
+    });
+
+    it('returns true when Nexus flags the post as deleted', () => {
+      expect(isPostDeleted({ content: '', deleted: true })).toBe(true);
+    });
+
+    it('returns true for a flagged tombstone that still carries the sentinel', () => {
+      expect(isPostDeleted({ content: '[DELETED]', deleted: true })).toBe(true);
     });
 
     it('should return false for regular content', () => {
-      expect(isPostDeleted('Hello world')).toBe(false);
+      expect(isPostDeleted({ content: 'Hello world' })).toBe(false);
     });
 
-    it('should return false for empty string', () => {
-      expect(isPostDeleted('')).toBe(false);
+    it('should return false for empty content without the flag', () => {
+      expect(isPostDeleted({ content: '' })).toBe(false);
+      expect(isPostDeleted({ content: '', deleted: false })).toBe(false);
     });
 
-    it('should return false for undefined', () => {
+    it('should return false for undefined or null details', () => {
       expect(isPostDeleted(undefined)).toBe(false);
+      expect(isPostDeleted(null)).toBe(false);
     });
 
     it('should return false for similar but not exact match', () => {
-      expect(isPostDeleted('[deleted]')).toBe(false);
-      expect(isPostDeleted('DELETED')).toBe(false);
-      expect(isPostDeleted('[DELETED] ')).toBe(false);
-      expect(isPostDeleted(' [DELETED]')).toBe(false);
+      expect(isPostDeleted({ content: '[deleted]' })).toBe(false);
+      expect(isPostDeleted({ content: 'DELETED' })).toBe(false);
+      expect(isPostDeleted({ content: '[DELETED] ' })).toBe(false);
+      expect(isPostDeleted({ content: ' [DELETED]' })).toBe(false);
     });
 
     it('should return false for content containing "[DELETED]"', () => {
-      expect(isPostDeleted('This post is [DELETED]')).toBe(false);
-      expect(isPostDeleted('[DELETED] post')).toBe(false);
+      expect(isPostDeleted({ content: 'This post is [DELETED]' })).toBe(false);
+      expect(isPostDeleted({ content: '[DELETED] post' })).toBe(false);
     });
   });
 

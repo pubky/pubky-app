@@ -358,6 +358,7 @@ function MediaDialogForm({
               <Label htmlFor={`${testId}-src`}>{upload ? copy.urlWithUpload : copy.urlOnly}</Label>
               <Input
                 id={`${testId}-src`}
+                className="bg-background/20"
                 type="text"
                 inputMode="url"
                 placeholder={'https://…'}
@@ -372,6 +373,7 @@ function MediaDialogForm({
               <Label htmlFor={`${testId}-alt`}>{copy.alt}</Label>
               <Input
                 id={`${testId}-alt`}
+                className="bg-background/20"
                 type="text"
                 placeholder={copy.altPlaceholder}
                 value={altText}

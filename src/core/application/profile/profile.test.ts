@@ -1,6 +1,8 @@
-import type { PubkyAppUser, UserResult } from 'pubky-app-specs';
+import type { PubkyAppUser } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { HttpMethod } from '@/libs/http/http.types';
+import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorService } from '@/libs/error/error.types';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
@@ -14,6 +16,11 @@ vi.mock('pubky-app-specs', () => ({
     createUser(name: string, bio?: string, image?: string | null, links?: unknown, status?: string) {
       return {
         user: {
+          name,
+          bio,
+          image,
+          links,
+          status,
           toJson: () => ({ name, bio, image, links, status }),
         },
         meta: {
@@ -22,6 +29,8 @@ vi.mock('pubky-app-specs', () => ({
       };
     }
   },
+  baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
+  userUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/profile.json`,
   getValidMimeTypes: () => ['image/jpeg', 'image/png'],
 }));
 
@@ -30,6 +39,9 @@ vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     putBlob: vi.fn(),
     request: vi.fn(),
+    getFreshJson: vi.fn(),
+    listAll: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
@@ -49,7 +61,6 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 let ProfileApplication: typeof import('./profile').ProfileApplication;
-let UserNormalizer: typeof import('@/pipes/user/user.normalizer').UserNormalizer;
 let NexusBootstrapService: typeof import('@/services/nexus/bootstrap/bootstrap').NexusBootstrapService;
 
 beforeEach(async () => {
@@ -62,7 +73,6 @@ beforeEach(async () => {
   };
 
   // Re-import after resetModules
-  ({ UserNormalizer } = await import('@/pipes/user/user.normalizer'));
   ({ ProfileApplication } = await import('./profile'));
   ({ NexusBootstrapService } = await import('@/services/nexus/bootstrap/bootstrap'));
 
@@ -134,231 +144,333 @@ describe('ProfileApplication', () => {
     });
   });
 
-  describe('commitUpdateStatus', () => {
+  describe('writes on top of the published profile', () => {
     const testPubky = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
+    const profileUrl = `pubky://${testPubky}/pub/pubky.app/profile.json`;
+    const published = {
+      name: 'Test User',
+      bio: 'Test bio',
+      image: `pubky://${testPubky}/pub/pubky.app/files/NEW`,
+      links: [{ title: 'WEBSITE', url: 'https://example.com/' }],
+      status: 'working',
+    };
+    // A cached row that predates the last avatar change
+    const staleRow = {
+      id: testPubky,
+      ...published,
+      image: `pubky://${testPubky}/pub/pubky.app/files/OLD`,
+      status: 'available',
+      indexed_at: 1_000,
+      nexusIndexedAt: 1_000,
+    };
+
+    const putCalls = () => vi.mocked(HomeserverService.request).mock.calls;
+
+    const notFound = async () => {
+      // Built via dynamic import so the AppError comes from the same module graph as the
+      // re-imported ProfileApplication (`vi.resetModules()` would otherwise break `instanceof`).
+      const { Err } = await import('@/libs/error/error.factories');
+      return Err.client(ClientErrorCode.NOT_FOUND, 'Not found', {
+        service: ErrorService.Homeserver,
+        operation: 'getFreshJson',
+        context: { statusCode: HttpStatusCode.NOT_FOUND },
+      });
+    };
 
     beforeEach(async () => {
       await UserDetailsModel.table.clear();
+      await UserTtlModel.table.clear();
+      vi.mocked(HomeserverService.getFreshJson).mockResolvedValue(published);
+      vi.mocked(HomeserverService.request).mockResolvedValue(undefined);
     });
 
-    it('updates status in both homeserver and local database', async () => {
-      // Setup: Create existing user in local DB
-      const existingUser = {
-        id: testPubky,
-        name: 'Test User',
-        bio: 'Test bio',
-        image: 'https://example.com/avatar.jpg',
-        status: 'available',
-        links: [{ title: 'Website', url: 'https://example.com' }],
-        indexed_at: Date.now(),
-      };
-      await UserDetailsModel.create(existingUser);
+    describe('commitUpdateStatus', () => {
+      it('publishes the homeserver profile with only the new status, even when the cached row is stale', async () => {
+        await UserDetailsModel.create(staleRow);
 
-      // Mock UserNormalizer
-      const mockUserResult = {
-        user: {
-          toJson: vi.fn(() => ({
-            name: 'Test User',
-            bio: 'Test bio',
-            image: 'https://example.com/avatar.jpg',
-            links: [{ title: 'Website', url: 'https://example.com' }],
-            status: 'vacationing',
-          })),
-        },
-        meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
-      };
-      const normalizerSpy = vi.spyOn(UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
+        await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '🪚building' });
 
-      // Mock HomeserverService
-      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
-
-      // Execute
-      await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'vacationing' });
-
-      // Verify UserNormalizer called with complete profile data
-      expect(normalizerSpy).toHaveBeenCalledWith(
-        {
-          name: 'Test User',
-          bio: 'Test bio',
-          image: 'https://example.com/avatar.jpg',
-          links: [{ title: 'Website', url: 'https://example.com' }],
-          status: 'vacationing',
-        },
-        testPubky,
-      );
-
-      // Verify homeserver PUT request
-      expect(requestSpy).toHaveBeenCalledWith({
-        method: HttpMethod.PUT,
-        url: `pubky://${testPubky}/pub/pubky.app/profile.json`,
-        bodyJson: mockUserResult.user.toJson(),
+        expect(HomeserverService.getFreshJson).toHaveBeenCalledWith(profileUrl);
+        expect(putCalls()).toEqual([
+          [
+            {
+              method: HttpMethod.PUT,
+              url: 'pubky://test-pubky/pub/pubky.app/profile.json',
+              bodyJson: { ...published, status: '🪚building' },
+            },
+          ],
+        ]);
       });
 
-      // Verify local database update
-      const updatedUser = await UserDetailsModel.findById(testPubky);
-      expect(updatedUser).not.toBeNull();
-      expect(updatedUser!.status).toBe('vacationing');
-    });
+      it('stores exactly the published profile as a pending local edit', async () => {
+        await UserDetailsModel.create(staleRow);
 
-    it('handles empty status string', async () => {
-      const existingUser = {
-        id: testPubky,
-        name: 'Test User',
-        bio: '',
-        image: null,
-        status: 'available',
-        links: null,
-        indexed_at: Date.now(),
-      };
-      await UserDetailsModel.create(existingUser);
+        await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '🪚building' });
 
-      const mockUserResult = {
-        user: { toJson: vi.fn(() => ({ name: 'Test User', bio: '', image: '', links: [], status: '' })) },
-        meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
-      };
-      vi.spyOn(UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
-      vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
-
-      await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '' });
-
-      const updatedUser = await UserDetailsModel.findById(testPubky);
-      expect(updatedUser!.status).toBeNull();
-    });
-
-    it('clears a cached tombstone after the status is written', async () => {
-      await UserDetailsModel.create({
-        id: testPubky,
-        name: 'Test User',
-        bio: '',
-        image: null,
-        status: null,
-        links: null,
-        indexed_at: Date.now(),
-        deleted: true,
+        const row = await UserDetailsModel.findById(testPubky);
+        expect(row).toMatchObject({ ...published, status: '🪚building', nexusIndexedAt: 1_000, deleted: false });
+        expect(row?.localUpdatedAt).toEqual(expect.any(Number));
+        expect(await UserTtlModel.findById(testPubky)).toMatchObject({ lastUpdatedAt: row?.localUpdatedAt });
       });
 
-      const mockUserResult = {
-        user: { toJson: vi.fn(() => ({ name: 'Test User', bio: '', image: '', links: [], status: 'back' })) },
-        meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
-      };
-      vi.spyOn(UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
-      vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+      it('creates the local row when it is missing', async () => {
+        await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '🪚building' });
 
-      await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
-
-      const updatedUser = await UserDetailsModel.findById(testPubky);
-      expect(updatedUser!.status).toBe('back');
-      expect(updatedUser!.deleted).toBe(false);
-    });
-
-    it('refuses to republish a tombstoned row, so the cleared name never reaches the homeserver', async () => {
-      await UserDetailsModel.create({
-        id: testPubky,
-        name: '',
-        bio: '',
-        image: null,
-        status: null,
-        links: null,
-        indexed_at: Date.now(),
-        deleted: true,
+        const row = await UserDetailsModel.findById(testPubky);
+        expect(row).toMatchObject({ id: testPubky, ...published, status: '🪚building' });
+        expect(row?.localUpdatedAt).toEqual(expect.any(Number));
+        expect(await UserTtlModel.findById(testPubky)).toMatchObject({ lastUpdatedAt: row?.localUpdatedAt });
       });
-      const normalizerSpy = vi.spyOn(UserNormalizer, 'to');
-      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
 
-      await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toThrow(
-        'Cannot update the status of a deleted profile',
-      );
+      it('clears the status', async () => {
+        await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '' });
 
-      expect(normalizerSpy).not.toHaveBeenCalled();
-      expect(requestSpy).not.toHaveBeenCalled();
-      const unchanged = await UserDetailsModel.findById(testPubky);
-      expect(unchanged!.status).toBeNull();
-    });
-
-    it('refuses when the cached row still carries the legacy [DELETED] name', async () => {
-      await UserDetailsModel.create({
-        id: testPubky,
-        name: '[DELETED]',
-        bio: '',
-        image: null,
-        status: null,
-        links: null,
-        indexed_at: Date.now(),
+        expect(putCalls()[0]?.[0].bodyJson).toEqual({ ...published, status: undefined });
+        expect((await UserDetailsModel.findById(testPubky))?.status).toBeNull();
       });
-      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
 
-      await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toThrow(
-        'Cannot update the status of a deleted profile',
-      );
-      expect(requestSpy).not.toHaveBeenCalled();
+      it('clears a cached tombstone after the status is written', async () => {
+        await UserDetailsModel.create({ ...staleRow, deleted: true });
+
+        await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+
+        expect((await UserDetailsModel.findById(testPubky))?.deleted).toBe(false);
+      });
+
+      it('refuses a deleted profile without writing anything', async () => {
+        await UserDetailsModel.create(staleRow);
+        vi.mocked(HomeserverService.getFreshJson).mockRejectedValue(await notFound());
+
+        await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toMatchObject(
+          {
+            code: ClientErrorCode.GONE,
+            message: 'Cannot update the status of a deleted profile',
+          },
+        );
+
+        expect(putCalls()).toHaveLength(0);
+        expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ status: 'available' });
+      });
+
+      it('writes nothing when the homeserver read fails', async () => {
+        await UserDetailsModel.create(staleRow);
+        vi.mocked(HomeserverService.getFreshJson).mockRejectedValue(new Error('Network error'));
+
+        await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toThrow(
+          'Network error',
+        );
+
+        expect(putCalls()).toHaveLength(0);
+        expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ status: 'available' });
+      });
+
+      it('writes nothing when the published profile is unreadable', async () => {
+        vi.mocked(HomeserverService.getFreshJson).mockResolvedValue(undefined);
+
+        await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toMatchObject(
+          {
+            code: ValidationErrorCode.INVALID_INPUT,
+          },
+        );
+
+        expect(putCalls()).toHaveLength(0);
+      });
+
+      it('keeps the local row when the homeserver write fails', async () => {
+        await UserDetailsModel.create(staleRow);
+        vi.mocked(HomeserverService.request).mockRejectedValue(new Error('Network error'));
+
+        await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' })).rejects.toThrow(
+          'Network error',
+        );
+
+        expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ status: 'available' });
+      });
+
+      it('runs overlapping writes one at a time, so the later action lands last', async () => {
+        let releaseFirstRead!: () => void;
+        vi.mocked(HomeserverService.getFreshJson).mockReturnValueOnce(
+          new Promise((resolve) => {
+            releaseFirstRead = () => resolve(published);
+          }),
+        );
+
+        const first = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'away' });
+        const second = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '🪚building' });
+        await vi.waitFor(() => expect(HomeserverService.getFreshJson).toHaveBeenCalledTimes(1));
+        await Promise.resolve();
+        // The second write waits for the first one instead of reading the same copy
+        expect(HomeserverService.getFreshJson).toHaveBeenCalledTimes(1);
+
+        releaseFirstRead();
+        await Promise.all([first, second]);
+
+        expect(putCalls().map(([params]) => params.bodyJson?.status)).toEqual(['away', '🪚building']);
+        expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ status: '🪚building' });
+      });
+
+      it('still runs the next write after an earlier one fails', async () => {
+        vi.mocked(HomeserverService.getFreshJson).mockRejectedValueOnce(new Error('Network error'));
+
+        const first = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'away' });
+        const second = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: '🪚building' });
+
+        await expect(first).rejects.toThrow('Network error');
+        await second;
+        expect(putCalls().map(([params]) => params.bodyJson?.status)).toEqual(['🪚building']);
+      });
     });
 
-    it('throws error when user not found', async () => {
-      await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'available' })).rejects.toThrow(
-        'User profile not found',
-      );
+    describe('commitUpdate', () => {
+      it('keeps every field the user did not change as published', async () => {
+        await UserDetailsModel.create(staleRow);
+
+        await ProfileApplication.commitUpdate({ pubky: testPubky, changes: { bio: 'New bio' } });
+
+        expect(putCalls()[0]?.[0].bodyJson).toEqual({ ...published, bio: 'New bio' });
+        expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ ...published, bio: 'New bio' });
+      });
+
+      it('applies deliberate clears', async () => {
+        await ProfileApplication.commitUpdate({ pubky: testPubky, changes: { image: null, bio: '', links: [] } });
+
+        expect(putCalls()[0]?.[0].bodyJson).toEqual({ ...published, image: null, bio: '', links: [] });
+      });
+
+      it('refuses a deleted profile without writing anything', async () => {
+        vi.mocked(HomeserverService.getFreshJson).mockRejectedValue(await notFound());
+
+        await expect(
+          ProfileApplication.commitUpdate({ pubky: testPubky, changes: { bio: 'New bio' } }),
+        ).rejects.toMatchObject({ code: ClientErrorCode.GONE, message: 'Cannot update a deleted profile' });
+
+        expect(putCalls()).toHaveLength(0);
+      });
     });
 
-    it('rollback: does not update local DB if homeserver request fails', async () => {
-      const existingUser = {
-        id: testPubky,
-        name: 'Test User',
-        bio: 'Test bio',
-        image: null,
-        status: 'available',
-        links: null,
-        indexed_at: Date.now(),
-      };
-      await UserDetailsModel.create(existingUser);
+    describe('with account deletion', () => {
+      const otherFile = `pubky://${testPubky}/pub/pubky.app/posts/0001`;
+      const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+      let profileExists: boolean;
 
-      const mockUserResult = {
-        user: { toJson: vi.fn(() => ({ name: 'Test User', status: 'vacationing' })) },
-        meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
-      };
-      vi.spyOn(UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
-      vi.spyOn(HomeserverService, 'request').mockRejectedValue(new Error('Network error'));
+      beforeEach(async () => {
+        // A homeserver that serves profile.json until the deletion removes it; a PUT recreates it
+        const notFoundError = await notFound();
+        profileExists = true;
+        vi.mocked(HomeserverService.getFreshJson).mockImplementation(async () => {
+          if (!profileExists) throw notFoundError;
+          return published;
+        });
+        vi.mocked(HomeserverService.request).mockImplementation(async () => {
+          profileExists = true;
+        });
+        vi.mocked(HomeserverService.listAll).mockResolvedValue([otherFile, profileUrl]);
+        vi.mocked(HomeserverService.delete).mockImplementation(async (url) => {
+          if (url === profileUrl) profileExists = false;
+        });
+      });
 
-      await expect(ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'vacationing' })).rejects.toThrow(
-        'Network error',
-      );
+      it('refuses a write requested during the deletion instead of recreating profile.json', async () => {
+        let finishDeletingFile!: () => void;
+        vi.mocked(HomeserverService.delete).mockImplementationOnce(
+          () =>
+            new Promise<void>((resolve) => {
+              finishDeletingFile = resolve;
+            }),
+        );
 
-      // Verify local DB was NOT updated
-      const unchangedUser = await UserDetailsModel.findById(testPubky);
-      expect(unchangedUser!.status).toBe('available'); // Still the old status
-    });
+        const deletion = ProfileApplication.commitDelete({ pubky: testPubky });
+        await vi.waitFor(() => expect(HomeserverService.delete).toHaveBeenCalledWith(otherFile));
+        const write = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+        await settle();
+        // The write waits for the deletion instead of reading profile.json while it still exists
+        expect(HomeserverService.getFreshJson).not.toHaveBeenCalled();
 
-    it('handles null links and image correctly', async () => {
-      const existingUser = {
-        id: testPubky,
-        name: 'Minimal User',
-        bio: '',
-        image: null,
-        status: null,
-        links: null,
-        indexed_at: Date.now(),
-      };
-      await UserDetailsModel.create(existingUser);
+        finishDeletingFile();
+        await deletion;
 
-      const mockUserResult = {
-        user: { toJson: vi.fn(() => ({ name: 'Minimal User', bio: '', image: null, links: [], status: 'busy' })) },
-        meta: { url: `pubky://${testPubky}/pub/pubky.app/profile.json` },
-      };
-      const normalizerSpy = vi.spyOn(UserNormalizer, 'to').mockReturnValue(asOpaque<UserResult>(mockUserResult));
-      vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+        await expect(write).rejects.toMatchObject({ code: ClientErrorCode.GONE });
+        expect(putCalls()).toHaveLength(0);
+        expect(profileExists).toBe(false);
+      });
 
-      await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'busy' });
+      it('waits for a write already in flight before deleting anything', async () => {
+        const { LocalProfileService } = await import('@/services/local/profile/profile');
+        const deleteAll = vi.spyOn(LocalProfileService, 'deleteAll');
+        let finishPut!: () => void;
+        vi.mocked(HomeserverService.request).mockImplementationOnce(
+          () =>
+            new Promise<undefined>((resolve) => {
+              finishPut = () => {
+                profileExists = true;
+                resolve(undefined);
+              };
+            }),
+        );
 
-      // Verify normalizer receives values as-is (normalizer handles null → '' conversion)
-      expect(normalizerSpy).toHaveBeenCalledWith(
-        {
-          name: 'Minimal User',
-          bio: '',
-          image: null,
-          links: [],
-          status: 'busy',
-        },
-        testPubky,
-      );
+        const write = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+        await vi.waitFor(() => expect(putCalls()).toHaveLength(1));
+        const deletion = ProfileApplication.commitDelete({ pubky: testPubky });
+        await settle();
+        // Deleting now would let the pending PUT recreate profile.json afterwards
+        expect(deleteAll).not.toHaveBeenCalled();
+        expect(HomeserverService.listAll).not.toHaveBeenCalled();
+
+        finishPut();
+        await Promise.all([write, deletion]);
+
+        expect(profileExists).toBe(false);
+        // The deletion also cleared the row the write stored
+        expect(await UserDetailsModel.findById(testPubky)).toBeNull();
+      });
+
+      it('takes the same Web Lock for profile writes and deletion', async () => {
+        const request = vi.fn((_name: string, task: () => Promise<void>) => task());
+        Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
+
+        try {
+          await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+          await ProfileApplication.commitDelete({ pubky: testPubky });
+        } finally {
+          Reflect.deleteProperty(navigator, 'locks');
+        }
+
+        expect(request.mock.calls.map(([name]) => name)).toEqual([
+          `pubky-app:profile:${testPubky}`,
+          `pubky-app:profile:${testPubky}`,
+        ]);
+      });
+
+      it('passes a write error through the Web Lock unchanged', async () => {
+        const request = vi.fn((_name: string, task: () => Promise<void>) => task());
+        Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
+        profileExists = false;
+
+        try {
+          await expect(
+            ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' }),
+          ).rejects.toMatchObject({ code: ClientErrorCode.GONE });
+        } finally {
+          Reflect.deleteProperty(navigator, 'locks');
+        }
+      });
+
+      it('turns a Web Lock request that fails on its own into an AppError', async () => {
+        const lockError = new DOMException('The document is not fully active.', 'InvalidStateError');
+        const request = vi.fn(() => Promise.reject(lockError));
+        Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
+
+        try {
+          await expect(
+            ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' }),
+          ).rejects.toMatchObject({ service: ErrorService.Local, operation: 'withProfileLock', cause: lockError });
+        } finally {
+          Reflect.deleteProperty(navigator, 'locks');
+        }
+
+        expect(HomeserverService.getFreshJson).not.toHaveBeenCalled();
+        expect(putCalls()).toHaveLength(0);
+      });
     });
   });
 });

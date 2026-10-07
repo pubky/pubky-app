@@ -1,6 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { HomeFeedRightDrawer, HomeFeedRightSidebar, HotFeedRightDrawer, HotFeedRightSidebar } from './FeedRightSidebar';
+import {
+  HomeFeedRightDrawer,
+  HomeFeedRightDrawerMobile,
+  HomeFeedRightSidebar,
+  HotFeedRightDrawer,
+  HotFeedRightSidebar,
+} from './FeedRightSidebar';
 
 // Mock Molecules
 // Mock Organisms
@@ -71,6 +77,24 @@ describe('HotFeedRightSidebar', () => {
   it('matches snapshot', () => {
     const { container } = render(<HotFeedRightSidebar />);
     expect(container).toMatchSnapshot();
+  });
+});
+
+describe('HomeFeedRightDrawerMobile', () => {
+  it('renders recommendations, tags and feedback in order without active users', () => {
+    render(<HomeFeedRightDrawerMobile />);
+
+    expect(screen.queryByTestId('active-users')).not.toBeInTheDocument();
+    expect(
+      screen.getAllByTestId(/who-to-follow|hot-tags|feedback-card/).map((section) => section.dataset.testid),
+    ).toEqual(['who-to-follow', 'hot-tags', 'feedback-card']);
+  });
+});
+
+describe('HomeFeedRightDrawerMobile - Snapshots', () => {
+  it('matches snapshot with the phone sidebar content', () => {
+    const { container } = render(<HomeFeedRightDrawerMobile />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });
 

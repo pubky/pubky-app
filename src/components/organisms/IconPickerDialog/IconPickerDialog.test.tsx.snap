@@ -66,7 +66,7 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the empty state 1`]
       >
         <input
           aria-label="Search for icon"
-          class="flex w-full min-w-0 bg-transparent py-1 transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-14 rounded-md border border-dashed border-input px-6 pr-12 text-lg shadow-none [&::-webkit-search-cancel-button]:appearance-none"
+          class="flex w-full min-w-0 py-1 transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-14 rounded-md border border-dashed border-input bg-background/20 px-6 pr-12 text-lg shadow-none [&::-webkit-search-cancel-button]:appearance-none"
           data-testid="icon-picker-search"
           id="icon-picker-search"
           placeholder="Search for icon"
@@ -202,7 +202,7 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the icon grid 1`] =
       >
         <input
           aria-label="Search for icon"
-          class="flex w-full min-w-0 bg-transparent py-1 transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-14 rounded-md border border-dashed border-input px-6 pr-12 text-lg shadow-none [&::-webkit-search-cancel-button]:appearance-none"
+          class="flex w-full min-w-0 py-1 transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-14 rounded-md border border-dashed border-input bg-background/20 px-6 pr-12 text-lg shadow-none [&::-webkit-search-cancel-button]:appearance-none"
           data-testid="icon-picker-search"
           id="icon-picker-search"
           placeholder="Search for icon"

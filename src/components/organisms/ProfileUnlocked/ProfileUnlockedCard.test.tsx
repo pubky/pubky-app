@@ -125,6 +125,33 @@ describe('ProfileUnlockedCard', () => {
     expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
   });
 
+  it('reads a full article in place when there is no post page to open', async () => {
+    const tail = 'y'.repeat(400);
+    const body = ['Intro paragraph', '![one](attachment:1)', tail].join('\n\n');
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([
+      { id: 'one', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 1 },
+    ]);
+    const attachments = [{ url: 'pubky://me/priv/social/unlocked/LOCK1/one', content_type: 'image/png' }];
+    const user = userEvent.setup();
+
+    render(
+      <ProfileUnlockedCard
+        post={{ content: JSON.stringify({ title: 'My Title', body }), kind: 'long', attachments }}
+      />,
+    );
+
+    // Collapsed: the card previews the article, so the rest of the body and its images are not read yet.
+    expect(screen.getByText('Intro paragraph')).toBeInTheDocument();
+    expect(screen.queryByText(tail)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('article-inline-image')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Read full article' }));
+
+    expect(screen.getByText(tail)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('article-inline-image')).toHaveAttribute('src', 'blob:media'));
+    expect(screen.queryByRole('button', { name: 'Read full article' })).not.toBeInTheDocument();
+  });
+
   it('renders the surviving media when the replica lost some attachments', async () => {
     // The application drops the 404s; the card must still show the text and whatever came back.
     const refs = Array.from({ length: 5 }, (_, index) => ({

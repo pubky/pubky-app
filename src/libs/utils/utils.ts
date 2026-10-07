@@ -2,6 +2,7 @@ import type { SnapshotSerializer } from 'vitest';
 import { STARTER_PACK_RESERVED_TAGS } from '@/config/nexus';
 import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
 import { parseCompositeId } from '@/models/models.utils';
+import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import { getSafeExternalUrl } from './safeExternalUrl';
 import { DELETED_USER_NAME, RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
@@ -205,6 +206,7 @@ const customCases = [
   { name: 'pubky', color: '#C8FF00' },
   { name: 'blocktank', color: '#FFAE00' },
   { name: 'tether', color: '#26A17B' },
+  { name: 'ai', color: '#00C8FF' },
 ];
 
 /**
@@ -245,7 +247,14 @@ export function generateRandomColor(str: string): string {
   ];
 
   // Select pattern based on the hash
-  const pattern = patterns[positiveHash % patterns.length];
+  const patternIndex = positiveHash % patterns.length;
+  // The blue-heavy patterns span 220–260° when their variable channel is <= 85.
+  // Remap only that range to teal/cyan (165–195°), keeping the hash's variation.
+  if ((patternIndex === 3 || patternIndex === 4) && randomByte <= 85) {
+    const cyanHex = (255 - Math.round(randomByte * 0.75)).toString(16).padStart(2, '0');
+    return patternIndex === 3 ? `#00${cyanHex}FF` : `#00FF${cyanHex}`;
+  }
+  const pattern = patterns[patternIndex];
 
   return `#${pattern}`;
 }
@@ -477,7 +486,13 @@ export const convertHmsToSeconds = (
   return h * 3600 + m * 60 + s;
 };
 
-export const isPostDeleted = (content: string | undefined) => content === '[DELETED]';
+/**
+ * Whether a post is a Nexus tombstone. Current Nexus sets `deleted: true` and empties the
+ * content; rows cached from older builds still carry the legacy `[DELETED]` content instead.
+ * Takes the details rather than the content string, so a call site cannot silently drop the flag.
+ */
+export const isPostDeleted = (post: { content?: string | null; deleted?: boolean } | null | undefined) =>
+  post?.deleted === true || post?.content === DELETED;
 
 /**
  * Whether a user is a Nexus tombstone. Current Nexus sets `deleted: true` and empties the name;
@@ -488,9 +503,8 @@ export const isUserDeleted = (user: { name?: string | null; deleted?: boolean } 
 
 /**
  * Whether a profile name is reserved for the tombstone label. `[DELETED]` is what the app shows for
- * a deleted user, so a live profile must not be able to take it: it would render as deleted and
- * `commitUpdateStatus` refuses the status updates of a row carrying it. Reserved at input by
- * `UserValidator` and the profile form, both of which gate the name on this.
+ * a deleted user, so a live profile must not be able to take it: it would render as deleted.
+ * Reserved at input by `UserValidator` and the profile form, both of which gate the name on this.
  */
 export const isReservedUserName = (name: string) => name.trim() === DELETED_USER_NAME;
 

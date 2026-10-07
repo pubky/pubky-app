@@ -38,7 +38,7 @@ export function Collection({ postId }: CollectionProps) {
   // A deleted collection has no name/items to render; a non-collection post
   // (e.g. a regular post id at this route) doesn't parse into an envelope.
   // Both are treated as "not found" rather than rendering a broken hero/feed.
-  const isDeleted = postDetails != null && isPostDeleted(postDetails.content);
+  const isDeleted = postDetails != null && isPostDeleted(postDetails);
   const isNotCollection = postDetails != null && !isDeleted && parseCollectionContent(postDetails.content) === null;
   const collectionMissing = !compositeValid || (!isLoading && postDetails === null) || isDeleted || isNotCollection;
 
