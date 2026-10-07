@@ -1,9 +1,9 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { usePostCollections } from './usePostCollections';
 
-type PaginationParams = { streamId?: string; limit?: number };
+type PaginationParams = { streamId?: string; limit?: number; skipOverlap?: number };
 
 const mocks = vi.hoisted(() => ({
   paginationParams: null as PaginationParams | null,
@@ -14,20 +14,12 @@ const mocks = vi.hoisted(() => ({
     hasMore: false,
   },
   loadMore: vi.fn(),
-  commit: vi.fn(),
-  rollback: vi.fn(),
-  removePostsOptimistically: vi.fn(),
 }));
-mocks.removePostsOptimistically.mockImplementation(() => ({ commit: mocks.commit, rollback: mocks.rollback }));
 
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: (params: PaginationParams) => {
     mocks.paginationParams = params;
-    return {
-      ...mocks.paginationResult,
-      loadMore: mocks.loadMore,
-      removePostsOptimistically: mocks.removePostsOptimistically,
-    };
+    return { ...mocks.paginationResult, loadMore: mocks.loadMore };
   },
 }));
 
@@ -51,6 +43,7 @@ describe('usePostCollections', () => {
     expect(mocks.paginationParams).toEqual({
       streamId: 'post_collections:author:post1',
       limit: COLLECTIONS_SECTION_PAGE_SIZE,
+      skipOverlap: 0,
     });
     expect(result.current).toEqual({
       collectionIds: ['curator:collection1', 'curator:collection2'],
@@ -58,26 +51,35 @@ describe('usePostCollections', () => {
       hasMore: false,
       isLoadingMore: true,
       loadMore: mocks.loadMore,
-      removeCollection: expect.any(Function),
+      recordRemoval: expect.any(Function),
     });
   });
 
-  it('commits a paginator removal for a collection the post was removed from', () => {
-    // Committed, not optimistic: only the committed removal walks the skip offset back so
-    // the next page does not step over a collection once Nexus has indexed the removal.
-    const { result } = renderHook(() => usePostCollections('author:post1', { enabled: true }));
+  it('widens the paginator overlap by one for every own removal, across picker lifetimes', () => {
+    let enabled = true;
+    const { result, rerender } = renderHook(() => usePostCollections('author:post1', { enabled }));
 
-    result.current.removeCollection('current-user:collection1');
+    act(() => result.current.recordRemoval());
+    act(() => result.current.recordRemoval());
+    expect(mocks.paginationParams?.skipOverlap).toBe(2);
 
-    expect(mocks.removePostsOptimistically).toHaveBeenCalledWith('current-user:collection1');
-    expect(mocks.commit).toHaveBeenCalledTimes(1);
-    expect(mocks.rollback).not.toHaveBeenCalled();
+    // Closing and reopening the picker before Nexus indexed the removals pages the old
+    // list too, so the overlap outlives the enabled lifetime.
+    enabled = false;
+    rerender();
+    enabled = true;
+    rerender();
+    expect(mocks.paginationParams?.skipOverlap).toBe(2);
   });
 
   it('stays inert with no stream while disabled (the default)', () => {
     const { result } = renderHook(() => usePostCollections('author:post1'));
 
-    expect(mocks.paginationParams).toEqual({ streamId: undefined, limit: COLLECTIONS_SECTION_PAGE_SIZE });
+    expect(mocks.paginationParams).toEqual({
+      streamId: undefined,
+      limit: COLLECTIONS_SECTION_PAGE_SIZE,
+      skipOverlap: 0,
+    });
     expect(result.current.collectionIds).toEqual([]);
     expect(result.current.isLoading).toBe(false);
   });

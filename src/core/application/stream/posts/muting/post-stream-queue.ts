@@ -50,8 +50,14 @@ export class PostStreamQueue {
     const { limit, filter, fetch } = params;
     const maxIterations = params.maxIterations ?? MAX_FETCH_ITERATIONS;
 
-    // Load from queue and filter
-    const savedQueue = this.entries.get(streamId);
+    // Load from queue and filter. A skip-stream buffer continues the exact raw offset it was
+    // saved at: a caller resuming elsewhere (a committed removal walked its offset back, an
+    // overlap re-request) must not be served rows, and a cursor, from before that move.
+    let savedQueue = this.entries.get(streamId);
+    if (savedQueue && isSkipPaginatedStream(streamId) && savedQueue.cursor !== params.cursor) {
+      this.entries.delete(streamId);
+      savedQueue = undefined;
+    }
     const posts = savedQueue ? await filter(savedQueue.posts) : [];
     const seen = new Set(posts);
     let cursor = savedQueue?.cursor ?? params.cursor;

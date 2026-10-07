@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   postCollectionsEnabled: null as boolean | null,
   postCollectionIds: [] as string[],
   loadMoreOtherCollections: vi.fn(),
-  removePostCollection: vi.fn(),
+  recordCuratorRemoval: vi.fn(),
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
@@ -76,7 +76,7 @@ vi.mock('@/hooks/usePostCollections/usePostCollections', () => ({
       hasMore: true,
       isLoadingMore: false,
       loadMore: mocks.loadMoreOtherCollections,
-      removeCollection: mocks.removePostCollection,
+      recordRemoval: mocks.recordCuratorRemoval,
     };
   },
 }));
@@ -170,8 +170,8 @@ describe('usePostSaveTargets', () => {
       shouldAdd: false,
     });
     expect(mocks.toggleBookmark).not.toHaveBeenCalled();
-    // The curators list is told about the removal so its skip offset follows the shorter list.
-    expect(mocks.removePostCollection).toHaveBeenCalledWith('author:collection1');
+    // The curators list is told about the removal so its pages overlap the shifted list.
+    expect(mocks.recordCuratorRemoval).toHaveBeenCalledTimes(1);
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Post removed from collection.',
     });
@@ -190,7 +190,7 @@ describe('usePostSaveTargets', () => {
       shouldAdd: true,
     });
     // An addition lands at the top of the curators list; the offset needs no repair.
-    expect(mocks.removePostCollection).not.toHaveBeenCalled();
+    expect(mocks.recordCuratorRemoval).not.toHaveBeenCalled();
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Post added to collection.',
     });
@@ -204,7 +204,7 @@ describe('usePostSaveTargets', () => {
       await result.current.toggleCollection('author:collection1');
     });
 
-    expect(mocks.removePostCollection).not.toHaveBeenCalled();
+    expect(mocks.recordCuratorRemoval).not.toHaveBeenCalled();
   });
 
   it('forwards the backend error message when updating a collection fails', async () => {

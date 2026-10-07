@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { parseCompositeId } from '@/models/models.utils';
@@ -28,14 +29,15 @@ type UsePostCollectionsResult = {
   isLoadingMore: boolean;
   loadMore: () => Promise<void>;
   /**
-   * Drops a collection the viewer just removed the post from. The raw page holds the
-   * viewer's own collections too (consumers filter them out), and the stream is
-   * skip-paginated: once Nexus indexes the removal every later index shifts down, so the
-   * next page would step over one collection. The paginator's commit walks the offset
-   * back; if Nexus has not indexed the removal by then, the next page repeats one
-   * already-loaded row, which the paginator deduplicates.
+   * Records that the viewer removed the post from one of their own collections. The raw
+   * page holds the viewer's own collections too (consumers filter them out) and the stream
+   * is skip-paginated, so once Nexus indexes the removal, at a time this hook cannot see,
+   * every later index shifts down by one. Each recorded removal widens the paginator's
+   * `skipOverlap`: every page from then on re-requests that many rows before its offset and
+   * drops the repeats, so no curator is stepped over whenever the shift lands, including
+   * under a page already in flight. An addition lands at the top and needs nothing.
    */
-  removeCollection: (collectionId: string) => void;
+  recordRemoval: () => void;
 };
 
 /**
@@ -57,17 +59,17 @@ export function usePostCollections(
   { enabled = false }: UsePostCollectionsOptions = {},
 ): UsePostCollectionsResult {
   const { pubky: authorId, id } = parseCompositeId(postId);
+  // Own removals on this post for as long as the consumer stays mounted, not per enabled
+  // lifetime: a picker reopened before Nexus indexed the removal pages the old list too.
+  const [removals, setRemovals] = useState(0);
 
-  const { postIds, loading, loadingMore, hasMore, loadMore, removePostsOptimistically } = useStreamPagination({
+  const { postIds, loading, loadingMore, hasMore, loadMore } = useStreamPagination({
     streamId: enabled ? buildPostCollectionsStreamId(authorId, id) : undefined,
     limit: COLLECTIONS_SECTION_PAGE_SIZE,
+    skipOverlap: removals,
   });
 
-  // The membership change has already succeeded locally when this runs, so the removal is
-  // committed at once: only the committed form adjusts the skip offset.
-  const removeCollection = (collectionId: string) => {
-    removePostsOptimistically(collectionId).commit();
-  };
+  const recordRemoval = () => setRemovals((count) => count + 1);
 
   return {
     collectionIds: postIds,
@@ -75,6 +77,6 @@ export function usePostCollections(
     hasMore,
     isLoadingMore: loadingMore,
     loadMore,
-    removeCollection,
+    recordRemoval,
   };
 }

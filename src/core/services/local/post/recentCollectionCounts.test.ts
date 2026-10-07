@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_COUNT_PROTECTION_MS } from '@/config/collections';
+import { clearDatabase } from '@/database/franky/franky.helpers';
 import { RecentCollectionCounts } from './recentCollectionCounts';
 
 const postId = 'author:post';
@@ -49,7 +50,18 @@ describe('RecentCollectionCounts', () => {
     vi.advanceTimersByTime(COLLECTIONS_COUNT_PROTECTION_MS);
     registry.markWritten('author:other');
 
-    expect(registry['writtenAt'].size).toBe(1);
+    expect(registry['writes'].size).toBe(1);
+  });
+
+  it('stops protecting once the local cache was cleared', async () => {
+    // Sign-in and sign-out clear the rows a mark stood for; the first response of the next
+    // session is the only copy of the count and must land.
+    vi.useRealTimers();
+    registry.markWritten(postId);
+
+    await clearDatabase();
+
+    expect(registry.isProtected(postId)).toBe(false);
   });
 
   it('forgets everything on reset', () => {

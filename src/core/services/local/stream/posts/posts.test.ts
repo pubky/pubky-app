@@ -17,6 +17,7 @@ import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStr
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
+import { LocalPostService } from '@/services/local/post/post';
 import { recentCollectionCounts } from '@/services/local/post/recentCollectionCounts';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type { NexusPost, NexusPostDetails, NexusTag } from '@/services/nexus/nexus.types';
@@ -664,6 +665,32 @@ describe('LocalStreamPostsService', () => {
         expect(counts.replies).toBe(7);
         // Only the count is guarded here: details still follow the response.
         expect((await PostDetailsModel.findById(compositeId))!.content).toBe('nexus copy');
+      });
+
+      it('samples protection behind a local save already queued ahead of the response', async () => {
+        // The save's transaction has started but has not marked the post yet when the response
+        // arrives: persistence serializes behind it and must see the mark by then.
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+        await PostCountsModel.table.put({ ...localCounts, collections: 0 });
+        const curatorId = buildCompositeId({ pubky: 'author-1', id: 'curator' });
+        const envelope = (items: string[]) => JSON.stringify({ name: 'Curated', items });
+        await PostDetailsModel.table.put({
+          id: curatorId,
+          content: envelope([]),
+          indexed_at: BASE_TIMESTAMP,
+          kind: 'collection',
+          uri: 'pubky://author-1/pub/pubky.app/posts/curator',
+          attachments: null,
+        });
+
+        const save = LocalPostService.edit({
+          compositePostId: curatorId,
+          content: envelope(['pubky://author-1/pub/pubky.app/posts/edited']),
+        });
+        await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
+        await save;
+
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(1);
       });
 
       it('takes the response count from an overlapping response that only renewed the TTL', async () => {

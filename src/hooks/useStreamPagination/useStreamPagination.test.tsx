@@ -1045,6 +1045,92 @@ describe('useStreamPagination', () => {
       );
     });
 
+    it('re-requests skipOverlap rows before every resume offset and drops the repeats', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      let overlap = 0;
+      const { result, rerender } = renderHook(() =>
+        useStreamPagination({ streamId: collectionStreamId, skipOverlap: overlap }),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      // The consumer removed one of its own rows server-side; Nexus may index that any time.
+      overlap = 1;
+      rerender();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c3', 'c4', 'c5'],
+        nextCursor: 5,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId: collectionStreamId, streamTail: 2 }),
+      );
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c4', 'c5']);
+
+      // Every later page keeps the overlap: the shift can land between any two requests.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c5', 'c6'],
+        nextCursor: 6,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId: collectionStreamId, streamTail: 4 }),
+      );
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c4', 'c5', 'c6']);
+    });
+
+    it('keeps the offset of a page in flight when the overlap grows, so the next request re-covers it', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      let overlap = 0;
+      const { result, rerender } = renderHook(() =>
+        useStreamPagination({ streamId: collectionStreamId, skipOverlap: overlap }),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      // The page at offset 3 is in flight when the consumer's row removal lands: the server
+      // may have shifted the list before reading it, in which case c4 was stepped over.
+      const pendingPage = Promise.withResolvers<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValueOnce(pendingPage.promise);
+      let pendingLoad: Promise<void> | undefined;
+      act(() => {
+        pendingLoad = result.current.loadMore();
+      });
+      overlap = 1;
+      rerender();
+      await act(async () => {
+        pendingPage.resolve({ nextPageIds: ['c5', 'c6', 'c7'], nextCursor: 6 });
+        await pendingLoad;
+      });
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c5', 'c6', 'c7']);
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5', 'c6'],
+        nextCursor: 5,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      // Resumed from the in-flight page's own offset (3) minus the overlap, not from 6.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId: collectionStreamId, streamTail: 2 }),
+      );
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c5', 'c6', 'c7', 'c4']);
+    });
+
     it('does not count optimistic membership posts in collection offset pagination', async () => {
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({

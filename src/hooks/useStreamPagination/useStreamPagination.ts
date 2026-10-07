@@ -70,6 +70,7 @@ export function useStreamPagination({
   limit = NEXUS_POSTS_PER_PAGE,
   resetOnStreamChange = true,
   preserveCachedStream = false,
+  skipOverlap = 0,
   onError,
 }: UseStreamPaginationOptions): UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);
@@ -103,6 +104,11 @@ export function useStreamPagination({
   useEffect(() => {
     activeStreamIdRef.current = streamId;
   }, [streamId]);
+  // Read after a response lands, to tell whether the overlap grew while the page was in flight.
+  const skipOverlapRef = useRef(skipOverlap);
+  useEffect(() => {
+    skipOverlapRef.current = skipOverlap;
+  }, [skipOverlap]);
 
   /**
    * Sets the appropriate loading state based on load type
@@ -168,10 +174,13 @@ export function useStreamPagination({
         let rawScanned = 0;
         for (;;) {
           const committedRemovalsAtRequest = committedRemovalsRef.current;
+          const overlapAtRequest = skipOverlapRef.current;
+          // `skipOverlap` re-covers rows before the offset; score cursors are positions, not counts.
+          const requestTail = isSkipPaginatedStream(streamId) ? Math.max(0, cursor - overlapAtRequest) : cursor;
           const result: TReadPostStreamChunkResponse = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId: anchor,
-            streamTail: cursor,
+            streamTail: requestTail,
             // Lets the cache walk re-anchor if `anchor` was removed from the cached row
             // (its post deleted or un-bookmarked) instead of skipping to the row tail.
             visiblePostIds: anchor === undefined ? undefined : postIdsRef.current,
@@ -200,7 +209,11 @@ export function useStreamPagination({
             const removalsDuringFlight = isSkipPaginatedStream(streamId)
               ? Math.max(0, committedRemovalsRef.current - committedRemovalsAtRequest)
               : 0;
-            nextCursor = Math.max(0, result.nextCursor - removalsDuringFlight);
+            // The overlap grew while this page was in flight: the server list may already have
+            // been the shorter one when it served the page, so keep the offset this page started
+            // from and let the next request re-cover it under the wider overlap.
+            const overlapGrew = isSkipPaginatedStream(streamId) && skipOverlapRef.current > overlapAtRequest;
+            nextCursor = overlapGrew ? cursor : Math.max(0, result.nextCursor - removalsDuringFlight);
           }
           // Never overwrite a defined anchor with undefined.
           const nextAnchor = resolveResumeAnchor(result) ?? anchor;

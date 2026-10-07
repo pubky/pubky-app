@@ -422,7 +422,6 @@ export class LocalStreamPostsService {
     // but before indexing, carries the old total and would undo the bump; the TTL cannot tell
     // such a write from an ordinary persist, which renews the TTL too, so the registry is the
     // only signal. Rows the viewer did not touch recently take the Nexus count.
-    const protectedCountIds = detailIds.filter((id) => recentCollectionCounts.isProtected(id));
     await db.transaction(
       'rw',
       [
@@ -436,6 +435,11 @@ export class LocalStreamPostsService {
       ],
       async () => {
         const existingDetails = await PostDetailsModel.findByIdsPreserveOrder(detailIds);
+        // Sampled only now, behind that first read: the transaction is active, so every local
+        // collection write queued ahead of it has committed, and each marked its posts before
+        // doing so. A sample taken before the transaction could miss the mark of an edit still
+        // in flight, and this response would then overwrite the increment that edit committed.
+        const protectedCountIds = detailIds.filter((id) => recentCollectionCounts.isProtected(id));
         const existingTtl = refreshGuard ? await PostTtlModel.findByIds(detailIds) : [];
         const ttlById = new Map(existingTtl.map((record) => [record.id, record.lastUpdatedAt]));
         const protectedCounts = protectedCountIds.length > 0 ? await PostCountsModel.findByIds(protectedCountIds) : [];

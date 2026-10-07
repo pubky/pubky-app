@@ -33,6 +33,18 @@ export interface UseStreamPaginationOptions {
    */
   preserveCachedStream?: boolean;
   /**
+   * Skip-paginated streams only: raw rows to re-request before the resume offset on every
+   * page, for a consumer whose own local mutations shrink the server list at a time it
+   * cannot observe (Nexus indexes the homeserver write later). Each page then overlaps the
+   * previous one by this many rows, which the dedupe drops, so an index shift of up to this
+   * many rows can never step over a row. Raising it while a page is in flight discards that
+   * page's cursor advance: the page may already have been served from the shorter list, so
+   * the next request re-covers it from the same offset under the wider overlap.
+   *
+   * Defaults to 0.
+   */
+  skipOverlap?: number;
+  /**
    * Optional callback invoked when a stream slice fetch fails. Fires after
    * the internal `error` state is set but before the `loading` / `loadingMore`
    * flags clear. Intended for surface-level UX (e.g. firing a toast in the
