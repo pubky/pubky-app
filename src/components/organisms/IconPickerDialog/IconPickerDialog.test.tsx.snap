@@ -66,7 +66,7 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the empty state 1`]
       >
         <input
           aria-label="Search for icon"
-          class="flex w-full min-w-0 bg-transparent py-1 transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-14 rounded-md border border-dashed border-input px-6 pr-12 text-lg shadow-none [&::-webkit-search-cancel-button]:appearance-none"
+          class="flex w-full min-w-0 py-1 transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-14 rounded-md border border-dashed border-input bg-background/20 px-6 pr-12 text-lg shadow-none [&::-webkit-search-cancel-button]:appearance-none"
           data-testid="icon-picker-search"
           id="icon-picker-search"
           placeholder="Search for icon"
@@ -202,7 +202,7 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the icon grid 1`] =
       >
         <input
           aria-label="Search for icon"
-          class="flex w-full min-w-0 bg-transparent py-1 transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-14 rounded-md border border-dashed border-input px-6 pr-12 text-lg shadow-none [&::-webkit-search-cancel-button]:appearance-none"
+          class="flex w-full min-w-0 py-1 transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-14 rounded-md border border-dashed border-input bg-background/20 px-6 pr-12 text-lg shadow-none [&::-webkit-search-cancel-button]:appearance-none"
           data-testid="icon-picker-search"
           id="icon-picker-search"
           placeholder="Search for icon"
@@ -412,6 +412,48 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the icon grid 1`] =
             </svg>
           </button>
           <button
+            aria-label="ad"
+            aria-pressed="false"
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:bg-accent/50 border-none size-9 rounded-md p-0 shadow-none text-foreground hover:text-foreground"
+            data-size="icon"
+            data-slot="button"
+            data-testid="icon-picker-option-ad"
+            data-variant="ghost"
+            title="ad"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-ad size-6"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M10 13H6"
+              />
+              <path
+                d="M10 15v-4a2 2 0 0 0-4 0v4"
+              />
+              <path
+                d="M14 14.5a.5.5 0 0 0 .5.5h1a2.5 2.5 0 0 0 2.5-2.5v-1A2.5 2.5 0 0 0 15.5 9h-1a.5.5 0 0 0-.5.5z"
+              />
+              <rect
+                height="14"
+                rx="2"
+                width="20"
+                x="2"
+                y="5"
+              />
+            </svg>
+          </button>
+          <button
             aria-label="air vent"
             aria-pressed="false"
             class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:bg-accent/50 border-none size-9 rounded-md p-0 shadow-none text-foreground hover:text-foreground"
@@ -478,52 +520,6 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the icon grid 1`] =
               />
               <path
                 d="m12 15 5 6H7Z"
-              />
-            </svg>
-          </button>
-          <button
-            aria-label="alarm clock check"
-            aria-pressed="false"
-            class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:bg-accent/50 border-none size-9 rounded-md p-0 shadow-none text-foreground hover:text-foreground"
-            data-size="icon"
-            data-slot="button"
-            data-testid="icon-picker-option-alarm-clock-check"
-            data-variant="ghost"
-            title="alarm clock check"
-            type="button"
-          >
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-alarm-clock-check size-6"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle
-                cx="12"
-                cy="13"
-                r="8"
-              />
-              <path
-                d="M5 3 2 6"
-              />
-              <path
-                d="m22 6-3-3"
-              />
-              <path
-                d="M6.38 18.7 4 21"
-              />
-              <path
-                d="M17.64 18.67 20 21"
-              />
-              <path
-                d="m9 13 2 2 4-4"
               />
             </svg>
           </button>

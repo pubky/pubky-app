@@ -76,14 +76,7 @@ vi.mock('@/organisms/DialogFeedback/DialogFeedback', () => {
 });
 
 // Mock Molecules
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: vi.fn(() => ({
-      toast: mockToast,
-    })),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock Atoms
 vi.mock('@/atoms/Button/Button', () => {
@@ -330,12 +323,13 @@ describe('FeedbackCard', () => {
         id: mockPubky,
         name: 'Miguel',
         image: 'avatar.jpg',
+        indexed_at: 1704067200000,
       } as never);
 
       render(<FeedbackCard />);
 
       await waitFor(() => {
-        expect(mockGetAvatarUrl).toHaveBeenCalledWith(mockPubky);
+        expect(mockGetAvatarUrl).toHaveBeenCalledWith(mockPubky, 1704067200000);
       });
     });
 

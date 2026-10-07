@@ -6,6 +6,13 @@ import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUser
 export interface UseMentionAutocompleteParams {
   /** Current content of the textarea */
   content: string;
+  /**
+   * Caret position in `content`
+   *
+   * Detection is anchored here, so a mention completes wherever the caret is
+   * instead of only at the end of the value (#1959)
+   */
+  caret: number;
   /** Callback when a user is selected (via Enter key or click) */
   onSelect?: (userId: string) => void;
 }

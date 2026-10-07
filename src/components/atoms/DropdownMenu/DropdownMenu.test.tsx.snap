@@ -29,6 +29,8 @@ exports[`DropdownMenu - Snapshots > matches snapshot for dropdown menu in open s
   aria-controls="radix-normalized"
   aria-expanded="true"
   aria-haspopup="menu"
+  data-radix-popper-align="center"
+  data-radix-popper-side="bottom"
   data-state="open"
   id="radix-normalized"
   type="button"

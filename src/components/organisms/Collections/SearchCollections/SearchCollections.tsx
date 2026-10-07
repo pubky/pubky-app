@@ -10,28 +10,31 @@ import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { CONTENT } from '@/stores/home/home.types';
 
 /**
  * SearchCollections
  *
  * "Collections" section on `/search` — collections matching the searched tags
- * via the tagged collection stream (`<sort>:all:collection:<tags>`). Collapsed
- * to a preview of `SEARCH_COLLECTIONS_PREVIEW_COUNT` cards; "See all" expands
- * in place to the paginated grid. Renders nothing without tags or matches.
+ * within the Search reach, via the tagged collection stream
+ * (`<sort>:<reach source>:collection:<tags>`). Collapsed to a preview of
+ * `SEARCH_COLLECTIONS_PREVIEW_COUNT` cards; "See all" expands in place to the
+ * paginated grid. Renders nothing without tags or matches.
  */
 export function SearchCollections() {
   const streamId = useSearchStreamId(CONTENT.COLLECTIONS);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   if (!streamId) {
     return null;
   }
 
-  // Remount on any tag/sort change so the expansion state resets with the query.
-  return <SearchCollectionsStream key={streamId} streamId={streamId} />;
+  // Remount on any viewer or stream change so the expansion resets with the scope.
+  return <SearchCollectionsStream key={`${currentUserPubky ?? 'public'}:${streamId}`} streamId={streamId} />;
 }
 
 /**
@@ -39,7 +42,6 @@ export function SearchCollections() {
  * `useStreamPagination` always receives a real `PostStreamId`.
  */
 function SearchCollectionsStream({ streamId }: { streamId: PostStreamId }) {
-  const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const { postIds, hasMore, loadMore, loading, loadingMore } = useStreamPagination({

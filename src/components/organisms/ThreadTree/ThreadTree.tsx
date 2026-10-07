@@ -24,6 +24,12 @@ interface ThreadTreeProps {
  * Each reply independently manages its own expand/collapse state.
  *
  * Shared between the feed timeline and the single post page.
+ *
+ * The tree keeps one shape whether or not replies exist. The composer below holds the
+ * draft in its own state, so rendering it from a second, structurally different branch
+ * remounts it. The first reply of a thread — the optimistic local write, and its
+ * rollback when the homeserver write fails — flips the reply list, which used to
+ * remount the composer and discard what the user had typed.
  */
 export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
   const { replyIds, hasMore, totalCount, isExpandingAll, expandAll } = useThreadReplies(postId);
@@ -35,26 +41,29 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
     cardSelector: '[data-post-list-card="true"]',
   });
 
-  if (replyIds.length === 0 && !hasMore) {
-    // No replies — only show quick reply if enabled
-    return showQuickReply ? (
-      <Container overrideDefaults>
-        <PostThreadSpacer />
-        <QuickReply parentPostId={postId} />
-      </Container>
-    ) : null;
-  }
+  const hasReplies = replyIds.length > 0 || hasMore;
+
+  // No replies and no composer to offer: nothing to render
+  if (!showQuickReply && !hasReplies) return null;
 
   const remaining = Math.max(0, totalCount - replyIds.length);
   const ariaSetSize = totalCount > 0 ? totalCount : replyIds.length;
 
   return (
-    <Container overrideDefaults role="feed" onKeyDown={onListKeyDown}>
+    <Container
+      overrideDefaults
+      // The feed role and its j/k navigation apply only once reply cards exist
+      role={hasReplies ? 'feed' : undefined}
+      onKeyDown={hasReplies ? onListKeyDown : undefined}
+    >
       {/* Quick reply directly below the parent post */}
       {showQuickReply && (
         <>
           <PostThreadSpacer />
-          <QuickReply parentPostId={postId} connectorVariant={POST_THREAD_CONNECTOR_VARIANTS.REGULAR} />
+          <QuickReply
+            parentPostId={postId}
+            connectorVariant={hasReplies ? POST_THREAD_CONNECTOR_VARIANTS.REGULAR : POST_THREAD_CONNECTOR_VARIANTS.LAST}
+          />
         </>
       )}
 

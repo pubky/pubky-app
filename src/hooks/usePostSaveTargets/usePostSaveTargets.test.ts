@@ -4,13 +4,15 @@ import { COLLECTION_LAYOUT } from '@/config/collections';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { usePostSaveTargets } from './usePostSaveTargets';
 
 const mocks = vi.hoisted(() => ({
   commitUpdateCollectionItem: vi.fn(),
   commitCreateCollection: vi.fn(),
   toggleBookmark: vi.fn(),
-  toast: vi.fn(),
+  loadMoreCollections: vi.fn(),
+  paginationEnabled: null as boolean | null,
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
@@ -29,6 +31,15 @@ vi.mock('@/hooks/useBookmark/useBookmark', () => ({
 }));
 
 vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
+  useAuthoredCollectionsPagination: ({ enabled }: { enabled?: boolean }) => {
+    mocks.paginationEnabled = enabled ?? null;
+    return {
+      hasMore: true,
+      isLoading: false,
+      isLoadingMore: false,
+      loadMore: mocks.loadMoreCollections,
+    };
+  },
   useAuthoredCollections: () => ({
     collections: [
       {
@@ -52,9 +63,7 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
   }),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
@@ -63,6 +72,23 @@ vi.mock('@/stores/auth/auth.store', () => ({
 describe('usePostSaveTargets', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.paginationEnabled = null;
+  });
+
+  it('paginates authored collections only while the picker is open', async () => {
+    const open = renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: true }));
+
+    expect(mocks.paginationEnabled).toBe(true);
+    expect(open.result.current.hasMoreCollections).toBe(true);
+    expect(open.result.current.isCollectionsLoadingMore).toBe(false);
+
+    await act(async () => {
+      await open.result.current.loadMoreCollections();
+    });
+    expect(mocks.loadMoreCollections).toHaveBeenCalledTimes(1);
+
+    renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: false }));
+    expect(mocks.paginationEnabled).toBe(false);
   });
 
   it('combines bookmark state and collection membership', () => {
@@ -88,7 +114,7 @@ describe('usePostSaveTargets', () => {
       shouldAdd: false,
     });
     expect(mocks.toggleBookmark).not.toHaveBeenCalled();
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Post removed from collection.',
     });
   });
@@ -105,7 +131,7 @@ describe('usePostSaveTargets', () => {
       postId: 'author:post1',
       shouldAdd: true,
     });
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Post added to collection.',
     });
   });
@@ -126,7 +152,7 @@ describe('usePostSaveTargets', () => {
       await result.current.toggleCollection('author:collection2');
     });
 
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Collection has too many items',
     });
@@ -143,7 +169,7 @@ describe('usePostSaveTargets', () => {
       authorId: 'current-user',
       name: 'New collection',
       items: ['pubky://author/pub/pubky.app/posts/post1'],
-      layout: COLLECTION_LAYOUT.GRID,
+      layout: COLLECTION_LAYOUT.CARDS,
     });
   });
 });

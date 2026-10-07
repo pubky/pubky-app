@@ -18,7 +18,7 @@ exports[`IllustratedEmptyState - Snapshots > matches snapshot with ReactNode sub
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-frown size-12 text-brand"
+      class="lucide lucide-face-slightly-frowning size-12 text-brand"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -29,25 +29,19 @@ exports[`IllustratedEmptyState - Snapshots > matches snapshot with ReactNode sub
       width="24"
       xmlns="http://www.w3.org/2000/svg"
     >
+      <path
+        d="M15 10V9"
+      />
+      <path
+        d="M9 10V9"
+      />
+      <path
+        d="M9 16a5 5 0 016 0"
+      />
       <circle
         cx="12"
         cy="12"
         r="10"
-      />
-      <path
-        d="M16 16s-1.5-2-4-2-4 2-4 2"
-      />
-      <line
-        x1="9"
-        x2="9.01"
-        y1="9"
-        y2="9"
-      />
-      <line
-        x1="15"
-        x2="15.01"
-        y1="9"
-        y2="9"
       />
     </svg>
   </div>
@@ -91,7 +85,7 @@ exports[`IllustratedEmptyState - Snapshots > matches snapshot with children 1`] 
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-frown size-12 text-brand"
+      class="lucide lucide-face-slightly-frowning size-12 text-brand"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -102,25 +96,19 @@ exports[`IllustratedEmptyState - Snapshots > matches snapshot with children 1`] 
       width="24"
       xmlns="http://www.w3.org/2000/svg"
     >
+      <path
+        d="M15 10V9"
+      />
+      <path
+        d="M9 10V9"
+      />
+      <path
+        d="M9 16a5 5 0 016 0"
+      />
       <circle
         cx="12"
         cy="12"
         r="10"
-      />
-      <path
-        d="M16 16s-1.5-2-4-2-4 2-4 2"
-      />
-      <line
-        x1="9"
-        x2="9.01"
-        y1="9"
-        y2="9"
-      />
-      <line
-        x1="15"
-        x2="15.01"
-        y1="9"
-        y2="9"
       />
     </svg>
   </div>
@@ -171,7 +159,7 @@ exports[`IllustratedEmptyState - Snapshots > matches snapshot with default props
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-frown size-12 text-brand"
+      class="lucide lucide-face-slightly-frowning size-12 text-brand"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -182,25 +170,19 @@ exports[`IllustratedEmptyState - Snapshots > matches snapshot with default props
       width="24"
       xmlns="http://www.w3.org/2000/svg"
     >
+      <path
+        d="M15 10V9"
+      />
+      <path
+        d="M9 10V9"
+      />
+      <path
+        d="M9 16a5 5 0 016 0"
+      />
       <circle
         cx="12"
         cy="12"
         r="10"
-      />
-      <path
-        d="M16 16s-1.5-2-4-2-4 2-4 2"
-      />
-      <line
-        x1="9"
-        x2="9.01"
-        y1="9"
-        y2="9"
-      />
-      <line
-        x1="15"
-        x2="15.01"
-        y1="9"
-        y2="9"
       />
     </svg>
   </div>

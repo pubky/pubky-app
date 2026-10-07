@@ -199,6 +199,18 @@ describe('TimelineStateWrapper', () => {
       expect(screen.queryByTestId('mock-children')).not.toBeInTheDocument();
     });
 
+    it('renders only the children when auto-loading is stalled (the manual Load more lives there)', () => {
+      render(
+        <TimelineStateWrapper loading={false} error={null} hasItems={false} hasMore={true} stalled={true}>
+          {mockChildren}
+        </TimelineStateWrapper>,
+      );
+
+      expect(screen.queryByTestId('default-loading')).not.toBeInTheDocument();
+      expect(screen.getByTestId('mock-children')).toBeInTheDocument();
+      expect(screen.queryByText('No posts found')).not.toBeInTheDocument();
+    });
+
     it('renders children alone (no loading component) once items exist', () => {
       render(
         <TimelineStateWrapper loading={false} error={null} hasItems={true} hasMore={true}>

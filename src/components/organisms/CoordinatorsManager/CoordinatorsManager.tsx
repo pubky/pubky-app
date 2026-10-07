@@ -20,7 +20,6 @@ function applyRouteToCoordinators(pathname: string): void {
   const coordinators = getAppCoordinators();
   void coordinators.notification.setRoute(pathname);
   void coordinators.stream.setRoute(pathname);
-  coordinators.ttl.setRoute(pathname);
   coordinators.muteListSync.setRoute(pathname);
 }
 

@@ -43,13 +43,17 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
-  usePostTaggers: () => ({
-    taggersByLabel: new Map(),
-    taggerStates: new Map(),
-    fetchAllTaggers: vi.fn(),
-  }),
-}));
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useEntityTaggers/useEntityTaggers')>();
+  return {
+    ...actual,
+    useEntityTaggers: () => ({
+      taggerStates: new Map(),
+      loadTaggers: vi.fn(),
+      loadMoreTaggers: vi.fn(),
+    }),
+  };
+});
 
 vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
   AvatarWithFallback: ({ name }: { name: string }) => <div data-testid={`avatar-${name}`}>Avatar</div>,
@@ -165,6 +169,17 @@ describe('PostTagsExpandableRow', () => {
     expect(panel).toHaveAttribute('data-auto-focus-input', 'true');
     expect(panel).toHaveAttribute('data-enable-loading-skeleton', 'false');
     expect(screen.getByLabelText('Tag post (3)')).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('does not autofocus the tag input when the tag button reveals it on mobile (issue #1650)', () => {
+    mockUseIsMobile.mockReturnValue(true);
+
+    render(<PostTagsExpandableRow postId={POST_ID} />);
+
+    fireEvent.click(screen.getByLabelText('Tag post (3)'));
+
+    // Mobile: the reveal must not focus the input; the `[+]` control keeps its own autofocus.
+    expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-auto-focus-input', 'false');
   });
 
   it('uses panelWidthMode full when expanded', () => {

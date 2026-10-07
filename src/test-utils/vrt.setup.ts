@@ -99,19 +99,23 @@ vi.mock('next/image', () => ({
   // Forward only the props a plain <img> understands; next-specific props
   // (priority, quality, loader, placeholder, sizes, unoptimized, …) are
   // intentionally dropped so React doesn't warn about unknown DOM attributes.
-  default: ({ src, alt, width, height, fill, className, style }: Record<string, unknown>) => {
+  default: ({ src, alt, width, height, fill, className, style, onLoad, onError }: Record<string, unknown>) => {
     // Static imports resolve to `{ src, width, height }`; string srcs pass through.
     const resolvedSrc = typeof src === 'object' && src !== null ? (src as { src: string }).src : src;
-    // `fill` makes next/image absolutely cover its positioned parent.
-    const fillStyle = fill
-      ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }
-      : undefined;
+    // `fill` makes next/image absolutely cover its positioned parent. Like the
+    // real component, set only position/size here: object-fit stays with the
+    // component's className (`object-contain` / `object-cover`) so VRT renders
+    // what the app renders.
+    const fillStyle = fill ? { position: 'absolute', inset: 0, width: '100%', height: '100%' } : undefined;
     return createElement('img', {
       src: resolvedSrc,
       alt: alt ?? '',
       width: fill ? undefined : width,
       height: fill ? undefined : height,
       className,
+      // Media layouts rely on natural dimensions and error fallbacks.
+      onLoad,
+      onError,
       style: { ...(fillStyle ?? {}), ...((style as object) ?? {}) },
     });
   },

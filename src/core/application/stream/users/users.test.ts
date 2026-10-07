@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserStreamApplication } from '@/application/stream/users/users';
+import { NEXUS_USER_STREAM_MAX_LIMIT } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
-import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
+import { buildStarterPackStreamId, buildUserCompositeId } from '@/models/stream/user/userStream.helper';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
@@ -81,7 +82,12 @@ describe('UserStreamApplication', () => {
 
       // Setup: Create cache
       await LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
-      await createUserDetails(cachedUserIds);
+      await LocalStreamUsersService.persistUsers(
+        cachedUserIds.map((id) => createMockNexusUser(id)),
+        {
+          viewerId: DEFAULT_VIEWER_ID,
+        },
+      );
 
       // Test
       const result = await UserStreamApplication.getOrFetchStreamSlice({
@@ -95,6 +101,27 @@ describe('UserStreamApplication', () => {
       expect(result.nextPageIds).toEqual(['follower-1', 'follower-2']);
       expect(result.cacheMissUserIds).toEqual([]);
       expect(result.skip).toBeUndefined(); // Cache hit returns undefined skip
+    });
+
+    it('should treat a stream cache hit as a user miss when details exist without a viewer relationship (#1803)', async () => {
+      const streamId = buildUserCompositeId({ userId: 'user-guest-cache' as Pubky, reach: 'followers' });
+      const cachedUserIds: Pubky[] = ['guest-follower-1', 'guest-follower-2', 'guest-follower-3'];
+
+      await LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
+      await LocalStreamUsersService.persistUsers(cachedUserIds.map((id) => createMockNexusUser(id)));
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch');
+
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        skip: 0,
+        limit: 2,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      expect(result.nextPageIds).toEqual(['guest-follower-1', 'guest-follower-2']);
+      expect(result.cacheMissUserIds).toEqual(['guest-follower-1', 'guest-follower-2']);
+      expect(result.skip).toBeUndefined();
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
 
     it('should fetch from Nexus when cache is empty', async () => {
@@ -289,6 +316,40 @@ describe('UserStreamApplication', () => {
       expect(result.nextPageIds).toEqual(['influencer-1', 'influencer-2', 'influencer-3']);
     });
 
+    describe('starter pack caching', () => {
+      it('should persist reversed tag orders as distinct Dexie rows', async () => {
+        const forwardId = buildStarterPackStreamId(['travel', 'music']);
+        const reversedId = buildStarterPackStreamId(['music', 'travel']);
+        const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch').mockImplementation(async ({ streamId }) => {
+          return streamId === forwardId ? ['user-a'] : ['user-b'];
+        });
+
+        await UserStreamApplication.getOrFetchStreamSlice({
+          streamId: forwardId,
+          skip: 0,
+          limit: 1,
+          viewerId: DEFAULT_VIEWER_ID,
+        });
+        await UserStreamApplication.getOrFetchStreamSlice({
+          streamId: reversedId,
+          skip: 0,
+          limit: 1,
+          viewerId: DEFAULT_VIEWER_ID,
+        });
+
+        expect(fetchSpy).toHaveBeenNthCalledWith(1, {
+          streamId: forwardId,
+          params: { skip: 0, limit: 1, viewer_id: DEFAULT_VIEWER_ID },
+        });
+        expect(fetchSpy).toHaveBeenNthCalledWith(2, {
+          streamId: reversedId,
+          params: { skip: 0, limit: 1, viewer_id: DEFAULT_VIEWER_ID },
+        });
+        expect((await LocalStreamUsersService.findById(forwardId))?.stream).toEqual(['user-a']);
+        expect((await LocalStreamUsersService.findById(reversedId))?.stream).toEqual(['user-b']);
+      });
+    });
+
     it('should pass viewerId to Nexus API for relationship data', async () => {
       const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
       const mockUserIds: Pubky[] = ['follower-1', 'follower-2'];
@@ -389,6 +450,45 @@ describe('UserStreamApplication', () => {
       expect(cachedStream?.stream).toEqual(['user-1', 'user-2', 'user-3']);
     });
 
+    it('should clamp the Nexus page to the user stream limit and judge exhaustion by it', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+      const page = Array.from({ length: NEXUS_USER_STREAM_MAX_LIMIT }, (_, i) => `user-${i}` as Pubky);
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(page);
+
+      const result = await UserStreamApplication.refreshStreamSlice({
+        streamId,
+        skip: 0,
+        limit: NEXUS_USER_STREAM_MAX_LIMIT + 10,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      expect(fetchSpy).toHaveBeenCalledWith({
+        streamId,
+        params: { skip: 0, limit: NEXUS_USER_STREAM_MAX_LIMIT, viewer_id: DEFAULT_VIEWER_ID },
+      });
+      expect(result.nextPageIds).toEqual(page);
+      expect(result.isExhausted).toBe(false);
+      expect(result.skip).toBe(NEXUS_USER_STREAM_MAX_LIMIT);
+    });
+
+    it('should serve a cache hit above the user stream limit without asking Nexus', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+      const cached = Array.from({ length: NEXUS_USER_STREAM_MAX_LIMIT + 10 }, (_, i) => `user-${i}` as Pubky);
+      await LocalStreamUsersService.upsert({ streamId, stream: cached });
+      await createUserDetails(cached);
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch');
+
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        skip: 0,
+        limit: cached.length,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(result.nextPageIds).toEqual(cached);
+    });
+
     it('should mark short Nexus pages as exhausted', async () => {
       const streamId = UserStreamTypes.RECOMMENDED;
       vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(['user-1'] as Pubky[]);
@@ -431,7 +531,10 @@ describe('UserStreamApplication', () => {
         user_ids: cacheMissUserIds,
         viewer_id: DEFAULT_VIEWER_ID,
       });
-      expect(persistSpy).toHaveBeenCalledWith(mockUsers);
+      expect(persistSpy).toHaveBeenCalledWith(
+        mockUsers,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId: DEFAULT_VIEWER_ID }),
+      );
     });
 
     it('should not fetch when cacheMissUserIds is empty', async () => {
@@ -540,7 +643,10 @@ describe('UserStreamApplication', () => {
         user_ids: cacheMissUserIds,
         viewer_id: DEFAULT_VIEWER_ID,
       });
-      expect(persistSpy).toHaveBeenCalledWith(mockUsers);
+      expect(persistSpy).toHaveBeenCalledWith(
+        mockUsers,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId: DEFAULT_VIEWER_ID }),
+      );
     });
 
     it('should pass viewerId through to fetchMissingUsersFromNexus', async () => {
@@ -560,6 +666,28 @@ describe('UserStreamApplication', () => {
         user_ids: cacheMissUserIds,
         viewer_id: undefined,
       });
+    });
+  });
+
+  describe('getStreamUserIds', () => {
+    it('returns the cached ids of a stream without touching Nexus', async () => {
+      const streamId = buildUserCompositeId({ userId: DEFAULT_VIEWER_ID, reach: 'following' });
+      const cachedUserIds: Pubky[] = ['user-1', 'user-2'];
+      await LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch');
+
+      const result = await UserStreamApplication.getStreamUserIds(streamId);
+
+      expect(result).toEqual(cachedUserIds);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty list when the stream was never cached', async () => {
+      const streamId = buildUserCompositeId({ userId: 'never-cached' as Pubky, reach: 'following' });
+
+      const result = await UserStreamApplication.getStreamUserIds(streamId);
+
+      expect(result).toEqual([]);
     });
   });
 });

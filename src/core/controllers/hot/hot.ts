@@ -1,4 +1,5 @@
 import { HotApplication } from '@/application/hot/hot';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import type { NexusHotTag } from '@/services/nexus/nexus.types';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -18,13 +19,14 @@ export class HotController {
    * @returns Array of hot tags with metadata
    */
   static async getOrFetch(params: TTagHotParams): Promise<NexusHotTag[]> {
-    // API requires user_id and reach to be provided together
-    if (params.reach && !params.user_id) {
-      const currentUserPubky = useAuthStore.getState().currentUserPubky;
-      if (currentUserPubky) {
-        return await HotApplication.getOrFetch({ ...params, user_id: currentUserPubky });
-      }
+    const viewerId = useAuthStore.getState().currentUserPubky;
+    const isCurrent = captureViewerSession();
+
+    // API requires user_id and reach to be provided together; the viewer is always forwarded
+    // separately so tagger profiles are persisted with viewer-relative follow state (#1803).
+    if (params.reach && !params.user_id && viewerId) {
+      return await HotApplication.getOrFetch({ ...params, user_id: viewerId, viewerId }, isCurrent);
     }
-    return await HotApplication.getOrFetch(params);
+    return await HotApplication.getOrFetch({ ...params, viewerId }, isCurrent);
   }
 }

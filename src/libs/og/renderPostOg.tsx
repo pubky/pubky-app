@@ -1,16 +1,17 @@
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { markdownToText } from '@/libs/post/markdownToText';
-import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
-import { deriveTextPreview } from '@/libs/post/postPreview';
-import { truncateByGraphemes } from '@/libs/utils/truncate';
+import { resolvePostAttachmentUrl } from '@/libs/post/postAttachmentUrl';
+import { fetchUserAndPostForMetadata, resolveMentionSegmentsForMetadata } from '@/libs/post/postMetadata';
+import { deriveTextPreview, isMentionResolvablePreview } from '@/libs/post/postPreview';
 import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
 import { FileVariant } from '@/services/nexus/file/file.types';
-import { OgFrame, OgHeader } from './OgComponents';
+import { OgFrame, OgHeader, OgText } from './OgComponents';
 import { OG_TOKENS, OG_TRUNCATE } from './ogConstants';
-import { buildAvatarUrl, fetchImageAsDataUri, resolvePostAttachmentUrl } from './ogData';
+import { buildAvatarUrl, fetchImageAsDataUri } from './ogData';
 import { NewspaperIcon } from './OgIcons';
 import { ogImageResponse } from './ogImageResponse';
+import { prepareOgText, prepareOgTextSegments } from './ogText';
 import { renderCollectionOg } from './renderCollectionOg';
 import { renderFallbackOg } from './renderFallbackOg';
 
@@ -28,23 +29,50 @@ import { renderFallbackOg } from './renderFallbackOg';
 export async function renderPostOg({ userId, postId }: { userId: string; postId: string }): Promise<Response> {
   try {
     const result = await fetchUserAndPostForMetadata(userId, postId);
-    if (!result) return renderFallbackOg();
+    if (!result) return await renderFallbackOg();
 
     const { user, post } = result;
-    if (post.kind === 'collection') return renderCollectionOg({ userId, postId });
+    if (post.kind === 'collection') return await renderCollectionOg({ userId, postId });
 
-    const avatarSrc = await fetchImageAsDataUri(buildAvatarUrl(user));
-    const name = resolveDisplayName(user);
-    const isDeleted = isPostDeleted(post.content);
-    const preview = deriveTextPreview({ content: post.content, kind: post.kind });
+    const name = prepareOgText(resolveDisplayName(user));
+    const isDeleted = isPostDeleted(post);
+    const preview = deriveTextPreview({
+      content: post.content,
+      kind: post.kind,
+      lock: post.lock ?? null,
+      deleted: post.deleted ?? false,
+    });
 
     // Article variant: newspaper icon + title over a plain-text body excerpt.
     // Deleted posts skip this (their content isn't JSON) and fall through to the
     // text variant, which renders the "deleted" notice.
     const article = !isDeleted && post.kind === 'long' ? parseArticleContent(post.content) : null;
+
+    // Feed variant is sufficient — the image only ever renders in this small
+    // preview card, so the full-res MAIN variant would be wasted bytes. Fetched
+    // alongside the avatar and the mention lookups: all are independent Nexus /
+    // CDN round-trips (plus a sharp transcode per image) and would otherwise
+    // serialize on the cold path.
+    const imageUrl =
+      !isDeleted && post.kind === 'image' ? resolvePostAttachmentUrl(post.attachments?.[0], FileVariant.FEED) : null;
+    // The card's body copy: an article's body excerpt, otherwise the preview.
+    // Raw `pk:` / `pubky` mentions in it resolve to display names drawn in the
+    // brand colour by `OgText`, as the app renders them (`PostMentions`), on the
+    // previews the app links mentions in (article bodies, post copy; titles stay
+    // verbatim). Looked up only as far as the widest variant can show.
+    const cardText = article ? markdownToText(article.body) : preview;
+    const resolveMentions = article !== null || isMentionResolvablePreview(post);
+    const [avatarSrc, imageSrc, text] = await Promise.all([
+      fetchImageAsDataUri(buildAvatarUrl(user)),
+      fetchImageAsDataUri(imageUrl),
+      resolveMentions
+        ? resolveMentionSegmentsForMetadata(cardText, OG_TRUNCATE.postText)
+        : [{ text: cardText, isMention: false as const }],
+    ]);
+
     if (article) {
-      const body = truncateByGraphemes(markdownToText(article.body), OG_TRUNCATE.articleBody);
-      return ogImageResponse(
+      const body = prepareOgTextSegments(text, OG_TRUNCATE.articleBody);
+      return await ogImageResponse(
         <OgFrame style={{ gap: 48 }}>
           <OgHeader avatarUrl={avatarSrc} name={name} />
           <div
@@ -74,15 +102,13 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
                   textOverflow: 'ellipsis',
                 }}
               >
-                {article.title}
+                {prepareOgText(article.title)}
               </div>
             </div>
-            {body ? (
-              <div
+            {body.length > 0 ? (
+              <OgText
+                segments={body}
                 style={{
-                  display: '-webkit-box',
-                  WebkitBoxOrient: 'vertical',
-                  WebkitLineClamp: 2,
                   overflow: 'hidden',
                   // Hard cap at two 60px lines so an unclamped 3rd line can't
                   // bleed into the footer (satori's line-clamp is not reliable).
@@ -93,27 +119,29 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
                   lineHeight: '60px',
                   wordBreak: 'break-word',
                 }}
-              >
-                {body}
-              </div>
+              />
             ) : null}
           </div>
-          <div style={{ display: 'flex', paddingLeft: 64, paddingRight: 64, paddingTop: 32, paddingBottom: 64 }}>
+          {/* Brand URL anchored bottom-right per the Figma frames. */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              paddingLeft: 64,
+              paddingRight: 64,
+              paddingTop: 32,
+              paddingBottom: 64,
+            }}
+          >
             <div style={{ display: 'flex', fontSize: 36, fontWeight: 700, color: OG_TOKENS.brand }}>pubky.app</div>
           </div>
         </OgFrame>,
       );
     }
 
-    // Feed variant is sufficient — the image only ever renders in this small
-    // preview card, so the full-res MAIN variant would be wasted bytes.
-    const imageUrl =
-      !isDeleted && post.kind === 'image' ? resolvePostAttachmentUrl(post.attachments?.[0], FileVariant.FEED) : null;
-    const imageSrc = imageUrl ? await fetchImageAsDataUri(imageUrl) : null;
-
     if (imageSrc) {
-      const text = truncateByGraphemes(preview, OG_TRUNCATE.postImageText);
-      return ogImageResponse(
+      const imageText = prepareOgTextSegments(text, OG_TRUNCATE.postImageText);
+      return await ogImageResponse(
         <OgFrame style={{ gap: 48 }}>
           <OgHeader avatarUrl={avatarSrc} name={name} />
           <div
@@ -127,9 +155,9 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
               width: '100%',
             }}
           >
-            <div
+            <OgText
+              segments={imageText}
               style={{
-                display: 'flex',
                 fontSize: 48,
                 fontWeight: 500,
                 color: OG_TOKENS.secondaryForeground,
@@ -140,9 +168,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
                 maxHeight: 120,
                 overflow: 'hidden',
               }}
-            >
-              {text}
-            </div>
+            />
             <div style={{ display: 'flex', flex: 1, width: '100%', borderRadius: 24, overflow: 'hidden' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imageSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -152,8 +178,8 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
       );
     }
 
-    const text = truncateByGraphemes(preview, OG_TRUNCATE.postText);
-    return ogImageResponse(
+    const postText = prepareOgTextSegments(text, OG_TRUNCATE.postText);
+    return await ogImageResponse(
       <OgFrame style={{ gap: 48 }}>
         <OgHeader avatarUrl={avatarSrc} name={name} />
         <div
@@ -167,9 +193,9 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
             overflow: 'hidden',
           }}
         >
-          <div
+          <OgText
+            segments={postText}
             style={{
-              display: 'flex',
               fontSize: 60,
               fontWeight: 500,
               color: OG_TOKENS.secondaryForeground,
@@ -181,17 +207,25 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
               maxHeight: 216,
               overflow: 'hidden',
             }}
-          >
-            {text}
-          </div>
+          />
         </div>
-        <div style={{ display: 'flex', paddingLeft: 64, paddingRight: 64, paddingTop: 32, paddingBottom: 64 }}>
+        {/* Brand URL anchored bottom-right per the Figma frames. */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            paddingLeft: 64,
+            paddingRight: 64,
+            paddingTop: 32,
+            paddingBottom: 64,
+          }}
+        >
           <div style={{ display: 'flex', fontSize: 36, fontWeight: 700, color: OG_TOKENS.brand }}>pubky.app</div>
         </div>
       </OgFrame>,
     );
   } catch (error) {
     Logger.warn('[renderPostOg] Failed to render post OG image', { userId, postId, error });
-    return renderFallbackOg();
+    return await renderFallbackOg();
   }
 }

@@ -9,14 +9,12 @@ const hooksMocks = vi.hoisted(() => ({
 }));
 
 const mockUseMutedUsers = vi.hoisted(() =>
-  vi.fn(
-    (): UseMutedUsersResult => ({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: (_userId: Pubky) => false,
-      isLoading: false,
-    }),
-  ),
+  vi.fn((): UseMutedUsersResult => ({
+    mutedUserIds: [],
+    mutedUserIdSet: new Set(),
+    isMuted: (_userId: Pubky) => false,
+    isLoading: false,
+  })),
 );
 
 vi.mock('next/navigation', () => ({
@@ -65,7 +63,9 @@ vi.mock('@/atoms/Container/Container', () => ({
 }));
 
 vi.mock('@/atoms/Heading/Heading', () => ({
-  Heading: ({ children }: { children: React.ReactNode }) => <h5>{children}</h5>,
+  Heading: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <h5 className={className}>{children}</h5>
+  ),
 }));
 
 vi.mock('@/atoms/Typography/Typography', () => ({
@@ -87,8 +87,6 @@ vi.mock('../UserListItem/UserListItem', () => ({
 const baseStreamResult = {
   userIds: [] as string[],
   isLoadingMore: false,
-  hasMore: false,
-  loadMore: vi.fn(),
   refetch: vi.fn(),
 };
 
@@ -96,25 +94,21 @@ describe('HotActiveUsers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hooksMocks.useUserStream.mockReset();
-    mockUseMutedUsers.mockImplementation(
-      (): UseMutedUsersResult => ({
-        mutedUserIds: [],
-        mutedUserIdSet: new Set(),
-        isMuted: (_userId: Pubky) => false,
-        isLoading: false,
-      }),
-    );
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: [],
+      mutedUserIdSet: new Set(),
+      isMuted: (_userId: Pubky) => false,
+      isLoading: false,
+    }));
   });
 
   it('hides muted users from the active users list', () => {
-    mockUseMutedUsers.mockImplementation(
-      (): UseMutedUsersResult => ({
-        mutedUserIds: ['muted-user'],
-        mutedUserIdSet: new Set(['muted-user']),
-        isMuted: (id: Pubky) => id === 'muted-user',
-        isLoading: false,
-      }),
-    );
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: ['muted-user'],
+      mutedUserIdSet: new Set(['muted-user']),
+      isMuted: (id: Pubky) => id === 'muted-user',
+      isLoading: false,
+    }));
 
     hooksMocks.useUserStream.mockReturnValue({
       ...baseStreamResult,
@@ -133,14 +127,12 @@ describe('HotActiveUsers', () => {
   });
 
   it('shows empty state when every influencer is muted', () => {
-    mockUseMutedUsers.mockImplementation(
-      (): UseMutedUsersResult => ({
-        mutedUserIds: ['only-user'],
-        mutedUserIdSet: new Set(['only-user']),
-        isMuted: (_userId: Pubky) => true,
-        isLoading: false,
-      }),
-    );
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: ['only-user'],
+      mutedUserIdSet: new Set(['only-user']),
+      isMuted: (_userId: Pubky) => true,
+      isLoading: false,
+    }));
 
     hooksMocks.useUserStream.mockReturnValue({
       ...baseStreamResult,
@@ -153,5 +145,72 @@ describe('HotActiveUsers', () => {
 
     expect(screen.queryByTestId('hot-active-user-only-user')).not.toBeInTheDocument();
     expect(screen.getByText('No users to show')).toBeInTheDocument();
+  });
+
+  it('keeps the heading visible on every viewport by default', () => {
+    hooksMocks.useUserStream.mockReturnValue({
+      ...baseStreamResult,
+      users: [{ id: 'visible-user', name: 'Visible Person', image: null, avatarUrl: null, isFollowing: false }],
+      isLoading: false,
+      error: null,
+    });
+
+    render(<HotActiveUsers />);
+
+    expect(screen.getByText('Active users')).not.toHaveClass('sr-only');
+    expect(screen.getByText('Active users')).not.toHaveClass('lg:not-sr-only');
+  });
+
+  it('visually hides the heading below the lg breakpoint when hideHeadingOnMobile is set', () => {
+    hooksMocks.useUserStream.mockReturnValue({
+      ...baseStreamResult,
+      users: [{ id: 'visible-user', name: 'Visible Person', image: null, avatarUrl: null, isFollowing: false }],
+      isLoading: false,
+      error: null,
+    });
+
+    render(<HotActiveUsers hideHeadingOnMobile />);
+
+    expect(screen.getByText('Active users')).toHaveClass('sr-only', 'lg:not-sr-only');
+  });
+});
+
+describe('HotActiveUsers - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    hooksMocks.useUserStream.mockReset();
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: [],
+      mutedUserIdSet: new Set(),
+      isMuted: (_userId: Pubky) => false,
+      isLoading: false,
+    }));
+  });
+
+  it('matches snapshot with active users', () => {
+    hooksMocks.useUserStream.mockReturnValue({
+      ...baseStreamResult,
+      users: [
+        { id: 'user-1', name: 'Alice', image: null, avatarUrl: null, isFollowing: false },
+        { id: 'user-2', name: 'Bob', image: null, avatarUrl: null, isFollowing: true },
+      ],
+      isLoading: false,
+      error: null,
+    });
+
+    const { container } = render(<HotActiveUsers />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with the heading visually hidden on mobile', () => {
+    hooksMocks.useUserStream.mockReturnValue({
+      ...baseStreamResult,
+      users: [{ id: 'user-1', name: 'Alice', image: null, avatarUrl: null, isFollowing: false }],
+      isLoading: false,
+      error: null,
+    });
+
+    const { container } = render(<HotActiveUsers hideHeadingOnMobile />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

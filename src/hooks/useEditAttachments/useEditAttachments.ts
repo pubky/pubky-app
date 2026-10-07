@@ -15,17 +15,20 @@ const PLACEHOLDER_TYPE = 'application/octet-stream';
 
 const placeholderName = (uri: string): string => uri.split('/').pop() ?? 'file';
 
-const toResolvedAttachment = (uri: string, metadata: FileMetadata): ExistingAttachment => ({
-  uri,
-  type: metadata.content_type,
-  name: metadata.name,
-  urls: {
-    main: FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.MAIN }),
-    feed: metadata.content_type.startsWith('image')
-      ? FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.FEED })
-      : undefined,
-  },
-});
+const toResolvedAttachment = (uri: string, metadata: FileMetadata): ExistingAttachment => {
+  const isImage = metadata.content_type.startsWith('image');
+  return {
+    uri,
+    type: metadata.content_type,
+    name: metadata.name,
+    urls: {
+      main: FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.MAIN }),
+      feed: isImage ? FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.FEED }) : undefined,
+      // A kept article cover is seeded from here, and the desktop hero renders `large`.
+      large: isImage ? FileController.getFileUrl({ fileId: metadata.id, variant: FileVariant.LARGE }) : undefined,
+    },
+  };
+};
 
 /**
  * Seeds and resolves the composer's existing-attachment list for the EDIT variant.
@@ -43,6 +46,7 @@ export function useEditAttachments({
   enabled,
   postId,
   uris,
+  displayUris,
   existingAttachments,
   setExistingAttachments,
 }: UseEditAttachmentsOptions): UseEditAttachmentsReturn {
@@ -60,22 +64,25 @@ export function useEditAttachments({
     seededRef.current = true;
     setSeededUris(uris);
 
-    if (uris.length === 0) return;
+    const stripUris = displayUris ?? uris;
+    if (stripUris.length === 0) return;
 
     // The create flow writes the store entry in attachment order, so zipping by
     // index is safe; on a length mismatch the store entry is ignored entirely.
+    // `displayUris` is always a leading slice of `uris` (the article cover), so
+    // indexing by strip position stays aligned with the store entry.
     const storeAttachments = useLocalFilesStore.getState().posts[postId];
     const storeByIndex = storeAttachments?.length === uris.length ? storeAttachments : undefined;
 
     setExistingAttachments(
-      uris.map((uri, index) => {
+      stripUris.map((uri, index) => {
         const stored = storeByIndex?.[index];
         return stored
           ? { uri, type: stored.type, name: stored.name, urls: stored.urls }
           : { uri, type: PLACEHOLDER_TYPE, name: placeholderName(uri), urls: null };
       }),
     );
-  }, [enabled, postId, uris, setExistingAttachments]);
+  }, [enabled, postId, uris, displayUris, setExistingAttachments]);
 
   // Resolve metadata for entries seeded as placeholders.
   useEffect(() => {

@@ -1,13 +1,20 @@
 import { permanentRedirect } from 'next/navigation';
 import type { Metadata as NextMetadata } from 'next';
 import { getCollectionRoute, POST_ROUTES } from '@/app/routes';
-import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
-import { deriveTextPreview } from '@/libs/post/postPreview';
+import { normalizePostIds } from '@/libs/og/routeIds';
+import type { PostCoverPreloadUrls } from '@/libs/post/postCoverPreload';
+import { resolvePostCoverPreloadUrls } from '@/libs/post/postCoverPreload';
+import { POST_COVER_DESKTOP_MEDIA, POST_COVER_MOBILE_MEDIA } from '@/libs/post/postCoverVariant';
+import { fetchUserAndPostForMetadata, resolveMentionsForMetadata } from '@/libs/post/postMetadata';
+import { deriveTextPreview, isMentionResolvablePreview } from '@/libs/post/postPreview';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { resolveDisplayName } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { Metadata } from '@/molecules/Metadata/Metadata';
 import { SinglePostPage } from '@/templates/Post/SinglePost/SinglePostPage';
+
+/** Grapheme cap for the `<meta>` description. */
+const DESCRIPTION_MAX_GRAPHEMES = 200;
 
 export interface PostPageProps {
   params: Promise<{
@@ -20,7 +27,13 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
   try {
     const { userId, postId } = await params;
 
-    const result = await fetchUserAndPostForMetadata(userId, postId);
+    // Crawl-mangled ids (trailing dots, brackets, bad percent-encoding) are
+    // rejected at the boundary: null falls back to empty metadata without a
+    // Nexus round-trip or a Sentry event (PUBKY-APP-1E/9Z/A0/BQ).
+    const ids = normalizePostIds(userId, postId);
+    if (!ids) return {};
+
+    const result = await fetchUserAndPostForMetadata(ids.userId, ids.postId);
     if (!result) return {};
 
     const { user, post } = result;
@@ -28,11 +41,23 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     // Collection-kind posts canonicalize to /collections (the page also redirects
     // there) so crawlers/search engines consolidate onto the canonical URL.
     if (post.kind === 'collection') {
-      return { alternates: { canonical: getCollectionRoute(userId, postId) } };
+      return { alternates: { canonical: getCollectionRoute(ids.userId, ids.postId) } };
     }
 
     const username = resolveDisplayName(user);
-    const description = truncateByGraphemes(deriveTextPreview({ content: post.content, kind: post.kind }), 200);
+    const preview = deriveTextPreview({
+      content: post.content,
+      kind: post.kind,
+      lock: post.lock ?? null,
+      deleted: post.deleted ?? false,
+    });
+    // Raw `pk:` / `pubky` mentions become display names, as the app renders them
+    // (`PostMentions`), so a shared link never captions the post with a
+    // 52-character key. Article titles stay verbatim, as in the app.
+    const description = truncateByGraphemes(
+      isMentionResolvablePreview(post) ? await resolveMentionsForMetadata(preview, DESCRIPTION_MAX_GRAPHEMES) : preview,
+      DESCRIPTION_MAX_GRAPHEMES,
+    );
     const title = `${username} on Pubky`;
 
     // Static OG/Twitter images are omitted so the dynamic `opengraph-image` /
@@ -42,7 +67,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     const { openGraph, twitter, alternates } = Metadata({
       title,
       description,
-      url: `${POST_ROUTES.POST}/${userId}/${postId}`,
+      url: `${POST_ROUTES.POST}/${ids.userId}/${ids.postId}`,
       omitImages: true,
     });
 
@@ -74,18 +99,51 @@ export default async function PostPage({ params }: PostPageProps) {
   // Next 16 router does not act on the streamed NEXT_REDIRECT during soft
   // navigation. SinglePostPage has a client-side guard that handles those
   // paths — keep both in sync.
+  const ids = normalizePostIds(userId, postId);
   let isCollection = false;
-  try {
-    const result = await fetchUserAndPostForMetadata(userId, postId);
-    isCollection = result?.post.kind === 'collection';
-  } catch {
-    // Ignore — render the post normally when the kind lookup fails.
+  let coverPreload: PostCoverPreloadUrls | null = null;
+  if (ids) {
+    try {
+      const result = await fetchUserAndPostForMetadata(ids.userId, ids.postId);
+      isCollection = result?.post.kind === 'collection';
+      // The cover is the page's largest contentful paint, and the client only learns
+      // its URL after hydration + a file-metadata lookup. Preload both variants here,
+      // from the post this render already fetched: the browser honours the one whose
+      // media query matches, so the download starts before the app JS runs.
+      coverPreload = result ? resolvePostCoverPreloadUrls(result.post) : null;
+    } catch {
+      // Ignore — render the post normally when the kind lookup fails.
+    }
   }
-  if (isCollection) {
-    permanentRedirect(getCollectionRoute(userId, postId));
+  if (isCollection && ids) {
+    permanentRedirect(getCollectionRoute(ids.userId, ids.postId));
   }
 
+  // Malformed ids never reach Nexus; render with them as-is so the client-side
+  // guard in SinglePostPage handles the not-found state as before.
   const compositeId = buildCompositeId({ pubky: userId, id: postId });
 
-  return <SinglePostPage postId={compositeId} />;
+  return (
+    <>
+      {coverPreload && (
+        <>
+          <link
+            rel="preload"
+            as="image"
+            href={coverPreload.mobile}
+            media={POST_COVER_MOBILE_MEDIA}
+            fetchPriority="high"
+          />
+          <link
+            rel="preload"
+            as="image"
+            href={coverPreload.desktop}
+            media={POST_COVER_DESKTOP_MEDIA}
+            fetchPriority="high"
+          />
+        </>
+      )}
+      <SinglePostPage postId={compositeId} />
+    </>
+  );
 }

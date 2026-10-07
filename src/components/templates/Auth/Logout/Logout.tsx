@@ -7,8 +7,10 @@ import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Spinner } from '@/atoms/Spinner/Spinner';
+import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { AuthController } from '@/controllers/auth/auth';
 import { Logger } from '@/libs/logger/logger';
+import { cn } from '@/libs/utils/utils';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '@/molecules/Content/Content';
 import { LogoutContent, LogoutNavigation } from '@/molecules/Logout/Logout';
@@ -17,6 +19,11 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 type LogoutViewState = 'idle' | 'loading' | 'success' | 'error';
+
+// The `.onboarding-nav` wrapper already supplies the bottom inset on mobile (1.5rem, or the
+// safe-area inset when larger), and drops to 0 at `lg`. The nav itself therefore only needs its
+// own bottom padding from `lg` up, otherwise the two insets stack and push the page into scroll.
+const LOGOUT_NAV_CLASSNAME = 'pb-0 lg:pb-6';
 
 async function handleRouteLogout(setViewState: Dispatch<SetStateAction<LogoutViewState>>) {
   setViewState('loading');
@@ -70,7 +77,7 @@ export function Logout() {
   };
 
   const renderLoadingState = () => (
-    <Container size="container" className="mb-6">
+    <Container size="container">
       <PageHeader>
         <PageTitle size="large">{'Signing you out...'}</PageTitle>
         <PageSubtitle>{"We're ending your session securely."}</PageSubtitle>
@@ -85,7 +92,7 @@ export function Logout() {
 
   const renderErrorState = () => (
     <>
-      <Container size="container" className="mb-6">
+      <Container size="container">
         <PageHeader>
           <PageTitle size="large">{"We couldn't sign you out yet"}</PageTitle>
           <PageSubtitle>{'Please try again to finish signing out securely.'}</PageSubtitle>
@@ -94,6 +101,7 @@ export function Logout() {
       <div className="onboarding-nav mt-auto w-full lg:mt-0">
         <ButtonsNavigation
           id="logout-error-navigation"
+          className={LOGOUT_NAV_CLASSNAME}
           backText={'Homepage'}
           continueText={'Retry'}
           onHandleBackButton={onHandleHome}
@@ -107,7 +115,7 @@ export function Logout() {
     <>
       <LogoutContent />
       <div className="onboarding-nav mt-auto w-full lg:mt-0">
-        <LogoutNavigation />
+        <LogoutNavigation className={LOGOUT_NAV_CLASSNAME} />
       </div>
     </>
   );
@@ -121,7 +129,7 @@ export function Logout() {
       : renderSuccessState();
 
   return (
-    <Container size="container" className="h-screen-without-page-header-auth-pages gap-0 px-6">
+    <Container size="container" className={cn('h-screen-without-page-header-auth-pages gap-0', CONTENT_GUTTER_CLASS)}>
       {content}
     </Container>
   );

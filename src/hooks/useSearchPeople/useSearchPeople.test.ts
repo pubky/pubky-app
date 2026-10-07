@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+import type { NexusSearchReach } from '@/services/nexus/search/search.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { useSearchPeople } from './useSearchPeople';
 
@@ -23,9 +26,9 @@ vi.mock('@/controllers/stream/users/users', () => ({
 
 vi.mock('@/controllers/user/user', () => ({
   UserController: {
-    getManyDetails: vi.fn(),
-    getManyCounts: vi.fn(),
-    getManyRelationships: vi.fn(),
+    getManyDetails: ({ userIds }: { userIds: Pubky[] }) => mockHydrationRead(mockUserDetailsMap, userIds),
+    getManyCounts: ({ userIds }: { userIds: Pubky[] }) => mockHydrationRead(mockUserCountsMap, userIds),
+    getManyRelationships: ({ userIds }: { userIds: Pubky[] }) => mockHydrationRead(mockUserRelationshipsMap, userIds),
   },
 }));
 
@@ -48,21 +51,53 @@ vi.mock('@/config/search', async (importOriginal) => {
   return { ...actual, SEARCH_PEOPLE_PAGE_SIZE: 3 };
 });
 
-// Dispatch each useLiveQuery call to the matching prebuilt map by sniffing the
-// query function body — same pattern as useProfileConnections.test.tsx.
+// Seeded lookup tables the hook's live query reads back through UserController.
 let mockUserDetailsMap = new Map<Pubky, NexusUserDetails>();
 let mockUserCountsMap = new Map<Pubky, NexusUserCounts>();
 let mockUserRelationshipsMap = new Map<Pubky, UserRelationshipsModelSchema>();
+// When set, the read-back never resolves — models the gap between fetch settle
+// and the Dexie live-query emission for a freshly committed id list.
+let mockHydrationBlocked = false;
 
-vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: <T>(queryFn: () => Promise<T> | T, _deps: unknown[], defaultValue: T): T => {
-    const queryFnString = queryFn.toString();
-    if (queryFnString.includes('getManyDetails')) return mockUserDetailsMap as T;
-    if (queryFnString.includes('getManyCounts')) return mockUserCountsMap as T;
-    if (queryFnString.includes('getManyRelationships')) return mockUserRelationshipsMap as T;
-    return defaultValue;
-  },
-}));
+function mockHydrationRead<T>(source: Map<Pubky, T>, userIds: Pubky[]): Promise<Map<Pubky, T>> {
+  if (mockHydrationBlocked) {
+    return new Promise(() => {});
+  }
+  const picked = new Map<Pubky, T>();
+  for (const id of userIds) {
+    const value = source.get(id);
+    if (value !== undefined) {
+      picked.set(id, value);
+    }
+  }
+  return Promise.resolve(picked);
+}
+
+// Faithful fake of the useLiveQuery contract, so the tests exercise the real
+// emission sequence: the default is returned synchronously, each deps change
+// re-runs the querier, the result lands asynchronously, and the PREVIOUS
+// emission is retained until then — the property the hook's hydration gate is
+// built around. (The factory is hoisted, so React must be imported inside it.)
+vi.mock('dexie-react-hooks', async () => {
+  const { useEffect, useState } = await import('react');
+  return {
+    useLiveQuery: <T>(queryFn: () => Promise<T> | T, deps: unknown[], defaultValue: T): T => {
+      const [emission, setEmission] = useState<T>(defaultValue);
+      /* eslint-disable react-hooks/exhaustive-deps -- the fake forwards the caller's deps array verbatim, like the real useLiveQuery */
+      useEffect(() => {
+        let cancelled = false;
+        void Promise.resolve(queryFn()).then((result) => {
+          if (!cancelled) setEmission(result);
+        });
+        return () => {
+          cancelled = true;
+        };
+      }, deps);
+      /* eslint-enable react-hooks/exhaustive-deps */
+      return emission;
+    },
+  };
+});
 
 const USER_A = asOpaque<Pubky>('usera8ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy');
 const USER_B = asOpaque<Pubky>('userb8ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy');
@@ -85,24 +120,146 @@ function scored(ids: Pubky[]): { user_id: Pubky; score: number }[] {
   return ids.map((user_id, index) => ({ user_id, score: 100 - index }));
 }
 
-function seedUser(id: Pubky, name: string, { following = false, image = null as string | null } = {}) {
-  mockUserDetailsMap.set(id, detailsFixture(name, image));
+function seedUser(id: Pubky, name: string, { following = false, image = null as string | null, deleted = false } = {}) {
+  mockUserDetailsMap.set(id, asOpaque<NexusUserDetails>({ ...detailsFixture(name, image), deleted }));
   mockUserCountsMap.set(id, countsFixture(5, 10));
   mockUserRelationshipsMap.set(id, relationshipFixture(following));
 }
 
 beforeEach(() => {
+  useAuthStore.setState({ currentUserPubky: 'viewer', session: null });
   vi.clearAllMocks();
   mutedIds.clear();
   mockUserDetailsMap = new Map();
   mockUserCountsMap = new Map();
   mockUserRelationshipsMap = new Map();
+  mockHydrationBlocked = false;
   mockFetchUsersByTags.mockResolvedValue([]);
   mockGetOrFetchUsers.mockResolvedValue([]);
   mockGetAvatarUrl.mockReturnValue('avatar-url');
 });
 
 describe('useSearchPeople', () => {
+  it('restarts after a reach change during Show more and discards the old page', async () => {
+    [USER_A, USER_B, USER_C, USER_D].forEach((id) => seedUser(id, id));
+    mockFetchUsersByTags.mockResolvedValueOnce(scored([USER_A, USER_B, USER_C]));
+    const { result, rerender } = renderHook<ReturnType<typeof useSearchPeople>, { reach?: NexusSearchReach }>(
+      ({ reach }) => useSearchPeople(['pubky'], { reach }),
+      {
+        initialProps: { reach: undefined },
+      },
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const oldPage = Promise.withResolvers<ReturnType<typeof scored>>();
+    mockFetchUsersByTags.mockReturnValueOnce(oldPage.promise);
+    let pending: Promise<void>;
+    act(() => {
+      pending = result.current.loadMore();
+    });
+    expect(result.current.loadingMore).toBe(true);
+    mockFetchUsersByTags.mockResolvedValueOnce(scored([USER_D]));
+    rerender({ reach: 'friends' });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.loadingMore).toBe(false);
+    expect(mockFetchUsersByTags).toHaveBeenLastCalledWith({ tags: 'pubky', reach: 'friends', skip: 0, limit: 3 });
+    await act(async () => {
+      oldPage.resolve(scored([USER_A]));
+      await pending;
+    });
+    expect(result.current.users.map((user) => user.id)).toEqual([USER_D]);
+    expect(result.current.hasMore).toBe(false);
+  });
+
+  it('drops a late failure after All → Following → All', async () => {
+    const first = Promise.withResolvers<ReturnType<typeof scored>>();
+    const second = Promise.withResolvers<ReturnType<typeof scored>>();
+    const onError = vi.fn();
+    mockFetchUsersByTags
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+      .mockResolvedValueOnce(scored([USER_D]));
+    seedUser(USER_D, 'Dion');
+    const { result, rerender } = renderHook<ReturnType<typeof useSearchPeople>, { reach?: NexusSearchReach }>(
+      ({ reach }) => useSearchPeople(['pubky'], { reach, onError }),
+      {
+        initialProps: { reach: undefined },
+      },
+    );
+    rerender({ reach: 'following' });
+    rerender({ reach: undefined });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      first.resolve(scored([USER_A]));
+      second.reject(new Error('old request'));
+    });
+    expect(result.current.users.map((user) => user.id)).toEqual([USER_D]);
+    expect(onError).not.toHaveBeenCalled();
+    expect(mockGetOrFetchUsers).toHaveBeenCalledTimes(1);
+  });
+
+  it('restarts the same reach when the viewer changes', async () => {
+    mockFetchUsersByTags.mockResolvedValueOnce(scored([USER_A]));
+    seedUser(USER_A, 'Alice');
+    const { result } = renderHook(() => useSearchPeople(['pubky'], { reach: 'wot' }));
+    await waitFor(() => expect(result.current.users).toHaveLength(1));
+    act(() => useAuthStore.setState({ currentUserPubky: 'other-viewer' }));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.users).toEqual([]);
+    expect(mockFetchUsersByTags).toHaveBeenLastCalledWith({ tags: 'pubky', reach: 'wot', skip: 0, limit: 3 });
+  });
+
+  it('keeps loaded pages when the same viewer swaps sessions (Locks upgrade)', async () => {
+    [USER_A, USER_B, USER_C, USER_D].forEach((id) => seedUser(id, id));
+    mockFetchUsersByTags
+      .mockResolvedValueOnce(scored([USER_A, USER_B, USER_C]))
+      .mockResolvedValueOnce(scored([USER_D]));
+    const { result } = renderHook(() => useSearchPeople(['pubky'], { reach: 'friends' }));
+    await waitFor(() => expect(result.current.users).toHaveLength(3));
+    await act(async () => result.current.loadMore());
+    await waitFor(() => expect(result.current.users).toHaveLength(4));
+
+    act(() => useAuthStore.setState({ session: mockSession() }));
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.users.map((user) => user.id)).toEqual([USER_A, USER_B, USER_C, USER_D]);
+    expect(mockFetchUsersByTags).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-hydrates once when the same viewer swaps sessions mid-hydration', async () => {
+    seedUser(USER_A, 'Alice');
+    const hydration = Promise.withResolvers<void>();
+    mockFetchUsersByTags.mockResolvedValueOnce(scored([USER_A]));
+    mockGetOrFetchUsers.mockReturnValueOnce(hydration.promise);
+    const { result } = renderHook(() => useSearchPeople(['pubky'], { reach: 'friends' }));
+    await waitFor(() => expect(mockGetOrFetchUsers).toHaveBeenCalledTimes(1));
+
+    act(() => useAuthStore.setState({ session: mockSession() }));
+    await act(async () => hydration.resolve());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(mockGetOrFetchUsers).toHaveBeenCalledTimes(2);
+    expect(mockGetOrFetchUsers).toHaveBeenLastCalledWith({ userIds: [USER_A] });
+    expect(mockFetchUsersByTags).toHaveBeenCalledTimes(1);
+    expect(result.current.users.map((user) => user.id)).toEqual([USER_A]);
+  });
+
+  it('leaves a viewer change mid-hydration to the restarted search', async () => {
+    seedUser(USER_A, 'Alice');
+    const hydration = Promise.withResolvers<void>();
+    mockFetchUsersByTags.mockResolvedValueOnce(scored([USER_A]));
+    mockGetOrFetchUsers.mockReturnValueOnce(hydration.promise);
+    const { result } = renderHook(() => useSearchPeople(['pubky'], { reach: 'friends' }));
+    await waitFor(() => expect(mockGetOrFetchUsers).toHaveBeenCalledTimes(1));
+
+    act(() => useAuthStore.setState({ currentUserPubky: 'other-viewer', session: mockSession() }));
+    await act(async () => hydration.resolve());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(mockGetOrFetchUsers).toHaveBeenCalledTimes(1);
+    expect(mockFetchUsersByTags).toHaveBeenCalledTimes(2);
+    expect(result.current.users).toEqual([]);
+  });
+
   it('fetches the first page with joined tags and hydrates the returned ids', async () => {
     mockFetchUsersByTags.mockResolvedValue(scored([USER_A, USER_B]));
     seedUser(USER_A, 'Alice');
@@ -117,6 +274,17 @@ describe('useSearchPeople', () => {
     expect(result.current.users.map((user) => user.name)).toEqual(['Alice', 'Bob']);
   });
 
+  it('labels a tombstoned user as [DELETED]', async () => {
+    mockFetchUsersByTags.mockResolvedValue(scored([USER_A]));
+    seedUser(USER_A, '', { deleted: true });
+
+    const { result } = renderHook(() => useSearchPeople(['synonym']));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.users.map((user) => user.name)).toEqual(['[DELETED]']);
+  });
+
   it('clamps the request to the endpoint tag ceiling', async () => {
     mockFetchUsersByTags.mockResolvedValue([]);
 
@@ -127,10 +295,15 @@ describe('useSearchPeople', () => {
     expect(mockFetchUsersByTags).toHaveBeenCalledWith({ tags: 'a,b,c,d,e', skip: 0, limit: 3 });
   });
 
-  it('keeps loading until the details read-back emits for the fetched ids', async () => {
+  it('keeps loading until the hydration read-back emits for the fetched list', async () => {
     mockFetchUsersByTags.mockResolvedValue(scored([USER_A]));
-    // No seeded details — simulates the gap between fetch settle and the
-    // Dexie live-query emission.
+    seedUser(USER_A, 'Alice');
+    // Hold the read-back: the fetch settles and commits the id list, but the
+    // live-query emission for it never lands. The retained emission ran for the
+    // emptied in-flight list and carries the PREVIOUS epoch, so the gate must
+    // keep the section loading instead of flashing settled-empty (would regress
+    // if the epoch were bumped at fetch start again).
+    mockHydrationBlocked = true;
 
     const { result } = renderHook(() => useSearchPeople(['synonym']));
 
@@ -138,6 +311,18 @@ describe('useSearchPeople', () => {
     await act(async () => {});
 
     expect(result.current.loading).toBe(true);
+    expect(result.current.users).toEqual([]);
+  });
+
+  it('settles as loaded-empty when the read-back emits without hydrating anything', async () => {
+    mockFetchUsersByTags.mockResolvedValue(scored([USER_A]));
+    // Nothing seeded: a stale search index, or a swallowed `by_ids` failure,
+    // leaves every id unhydrated. The section must settle instead of pinning
+    // itself on skeletons forever (#2355 review).
+
+    const { result } = renderHook(() => useSearchPeople(['synonym']));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.users).toEqual([]);
   });
 
@@ -185,6 +370,7 @@ describe('useSearchPeople', () => {
         isFollowing: true,
       },
     ]);
+    expect(mockGetAvatarUrl).toHaveBeenCalledWith(USER_A, 1);
   });
 
   it('does not compute an avatar url for users without an image', async () => {
@@ -247,6 +433,28 @@ describe('useSearchPeople', () => {
     expect(mockGetOrFetchUsers).toHaveBeenLastCalledWith({ userIds: [USER_D] });
     expect(result.current.users.map((user) => user.name)).toEqual(['Alice', 'Bob', 'Cleo', 'Dion']);
     expect(result.current.hasMore).toBe(false);
+  });
+
+  it('stays settled while an appended page hydrates — loadMore must never flip loading back', async () => {
+    mockFetchUsersByTags.mockResolvedValueOnce(scored([USER_A, USER_B, USER_C]));
+    seedUser(USER_A, 'Alice');
+    seedUser(USER_B, 'Bob');
+    seedUser(USER_C, 'Cleo');
+
+    const { result } = renderHook(() => useSearchPeople(['synonym']));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // USER_D is deliberately NOT seeded: its hydration emission has not landed
+    // yet. Appending must not re-enter loading (the "Show more" button would
+    // leave the DOM under the pointer) — the existing cards stay settled and
+    // the new one pops in when its emission arrives.
+    mockFetchUsersByTags.mockResolvedValueOnce(scored([USER_D]));
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.users.map((user) => user.name)).toEqual(['Alice', 'Bob', 'Cleo']);
   });
 
   it('stops paginating when a page comes back empty', async () => {

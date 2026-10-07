@@ -8,6 +8,7 @@ import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMainListRow } from './PostMainListRow';
 
 const { mockAuthStoreSelector } = vi.hoisted(() => ({
@@ -196,16 +197,31 @@ vi.mock('../../PostContentBlurred/PostContentBlurred', () => ({
   ),
 }));
 
+const { mockPanelFocus, mockPanelReveal } = vi.hoisted(() => ({
+  mockPanelFocus: vi.fn(),
+  mockPanelReveal: vi.fn(),
+}));
+
 vi.mock('../../PostTagsPanel/PostTagsPanel', () => {
-  const PostTagsPanel = React.forwardRef<HTMLDivElement, { postId: string }>(({ postId }, ref) => (
-    <div ref={ref} data-testid="post-tags-panel" data-post-id={postId} />
-  ));
+  const PostTagsPanel = React.forwardRef<unknown, { postId: string }>(({ postId }, ref) => {
+    React.useImperativeHandle(ref, () => ({
+      focus: () => mockPanelFocus(),
+      reveal: () => mockPanelReveal(),
+    }));
+    return <div data-testid="post-tags-panel" data-post-id={postId} />;
+  });
   PostTagsPanel.displayName = 'PostTagsPanel';
   return { PostTagsPanel };
 });
 
 describe('PostMainListRow', () => {
-  const createPostDetails = (postId: string, content: string, indexedAt = Date.now(), kind = 'short') => ({
+  const createPostDetails = (
+    postId: string,
+    content: string,
+    indexedAt = Date.now(),
+    kind = 'short',
+    lock: string | null = null,
+  ) => ({
     id: postId,
     indexed_at: indexedAt,
     kind,
@@ -214,15 +230,17 @@ describe('PostMainListRow', () => {
     attachments: [],
     is_moderated: false,
     is_blurred: false,
+    lock,
   });
 
-  const mockPostDetails = (content: string, kind = 'short') => {
+  const mockPostDetails = (content: string, kind = 'short', lock: string | null = null) => {
     vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(null));
     vi.mocked(useAvatarUrl).mockReturnValue('https://example.com/avatar.png');
     vi.mocked(useRelativeTime).mockReturnValue({ formatRelativeTime: () => '1m' });
     vi.mocked(useRepostInfo).mockReturnValue({
       isRepost: false,
       repostAuthorId: null,
+      isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
       isLoading: false,
@@ -241,10 +259,52 @@ describe('PostMainListRow', () => {
       isLoading: false,
     });
     vi.mocked(usePostDetails).mockImplementation((postId) => ({
-      postDetails: postId === 'author:post' ? createPostDetails('author:post', content, Date.now(), kind) : undefined,
+      postDetails:
+        postId === 'author:post' ? createPostDetails('author:post', content, Date.now(), kind, lock) : undefined,
       isLoading: false,
     }));
   };
+
+  it('scrolls the expanded tags panel into view without focusing it on mobile (issue #1650)', () => {
+    mockPostDetails('Some post content');
+    setMobileViewport();
+
+    try {
+      render(
+        <PostMainListRow
+          postId="author:post"
+          showFullContent={false}
+          shouldShowPostHeader={false}
+          onReplyClick={vi.fn()}
+          onRepostClick={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('tag-button'));
+
+      expect(mockPanelReveal).toHaveBeenCalled();
+      expect(mockPanelFocus).not.toHaveBeenCalled();
+    } finally {
+      resetViewport();
+    }
+  });
+
+  it('focuses the expanded tags panel from the tag button on desktop (issue #1650)', () => {
+    mockPostDetails('Some post content');
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={false}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('tag-button'));
+
+    expect(mockPanelReveal).not.toHaveBeenCalled();
+  });
 
   it('uses secondary foreground color for the post content snippet', () => {
     mockPostDetails('Some post content');
@@ -287,6 +347,36 @@ describe('PostMainListRow', () => {
     expect(screen.getByText('Author').closest('a')).toHaveAttribute('href', '/profile');
   });
 
+  it('renders [DELETED] as the author name when Nexus flags the author as deleted', () => {
+    mockPostDetails('Some post content');
+    vi.mocked(useUserDetails).mockReturnValue({
+      userDetails: {
+        id: 'author',
+        name: '',
+        bio: '',
+        links: null,
+        status: null,
+        image: null,
+        indexed_at: Date.now(),
+        deleted: true,
+      },
+      isLoading: false,
+    });
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('[DELETED]')).toBeInTheDocument();
+    expect(screen.getByTestId('user-info-popover')).toHaveAttribute('data-user-name', '[DELETED]');
+  });
+
   it('renders full post content below the header row when full content is enabled', () => {
     const longContent =
       'We did it! Pubky Hackathon Champions in Lugano! This is the main post text that should remain visible in full on the single post page list layout.';
@@ -310,6 +400,26 @@ describe('PostMainListRow', () => {
     );
     expect(screen.getByTestId('post-content')).toHaveAttribute('data-media-variant', 'list');
     expect(screen.queryByTestId('post-list-media-thumbnail')).not.toBeInTheDocument();
+  });
+
+  it('labels a lock announcement with its lock title instead of the teaser envelope', () => {
+    mockPostDetails(
+      JSON.stringify({ lock_title: 'BBC', teaser_description: 'A peek' }),
+      'short',
+      'pubky://hs/pub/app.locks/lock1.json',
+    );
+
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('BBC')).toBeInTheDocument();
   });
 
   it('keeps compact list row content truncated', () => {
@@ -421,6 +531,7 @@ describe('PostMainListRow', () => {
     vi.mocked(useRepostInfo).mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:original-post',
       isLoading: false,
@@ -481,12 +592,62 @@ describe('PostMainListRow', () => {
     expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-post-id', 'original-author:original-post');
   });
 
+  it.each([false, true])('keeps compact embedded replies in their own thread (blurred embed: %s)', (isBlurred) => {
+    mockPostDetails('');
+    vi.mocked(useRepostInfo).mockReturnValue({
+      isRepost: true,
+      isReply: true,
+      repostAuthorId: 'author',
+      isCurrentUserRepost: true,
+      originalPostId: 'original-author:original-post',
+      isLoading: false,
+      hasError: false,
+    });
+    vi.mocked(usePostDetails).mockImplementation((postId) => ({
+      postDetails: {
+        ...createPostDetails(postId ?? '', postId === 'author:post' ? '' : 'Embedded original'),
+        is_blurred: postId === 'original-author:original-post' && isBlurred,
+      },
+      isLoading: false,
+    }));
+    const onReplyClick = vi.fn();
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={onReplyClick}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('post-actions-bar')).toHaveAttribute('data-post-id', 'author:post');
+    fireEvent.click(screen.getByTestId('reply-button'));
+    expect(onReplyClick).toHaveBeenCalledWith('author:post');
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-tagged-id', 'author:post');
+    if (isBlurred) {
+      expect(screen.queryByText('Embedded original')).not.toBeInTheDocument();
+      expect(screen.getByTestId('post-content-blurred')).toHaveAttribute(
+        'data-post-id',
+        'original-author:original-post',
+      );
+      expect(screen.queryByTestId('post-list-media-thumbnail')).not.toBeInTheDocument();
+    } else {
+      expect(screen.getByText('Embedded original')).toBeInTheDocument();
+      expect(screen.getByTestId('post-list-media-thumbnail')).toHaveAttribute(
+        'data-post-id',
+        'original-author:original-post',
+      );
+    }
+  });
+
   it('uses the original post moderation state for compact simple repost rows', () => {
     vi.mocked(useAvatarUrl).mockReturnValue('https://example.com/original-avatar.png');
     vi.mocked(useRelativeTime).mockReturnValue({ formatRelativeTime: () => '1m' });
     vi.mocked(useRepostInfo).mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:original-post',
       isLoading: false,
@@ -535,6 +696,7 @@ describe('PostMainListRow', () => {
     vi.mocked(useRepostInfo).mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:original-post',
       isLoading: false,
@@ -578,6 +740,7 @@ describe('PostMainListRow', () => {
     vi.mocked(useRepostInfo).mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:missing-post',
       isLoading: false,

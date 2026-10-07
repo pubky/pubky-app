@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2025-01-12  
+Accepted — 2026-01-12  
 Updated — 2026-05-06 (homeserver event-stream cross-session mute sync; Nexus mute APIs removed from client)
 
 ## Context
@@ -236,7 +236,7 @@ const mutedUsers = useSettingsStore((state) => state.muted);
 - Queue types: `src/core/application/stream/posts/muting/post-stream-queue.types.ts` (`FilterFn` async support)
 - Relationships model: `src/core/models/user/relationships/userRelationships.ts`
 - Settings store: `src/core/stores/settings/settings.store.ts`
-- UI component: `src/components/organisms/MutedUsersList/MutedUsersList.tsx`
+- UI component: `src/components/organisms/Settings/MutedUsersList/MutedUsersList.tsx`
 - Settings route: `/settings/muted-users`
 
 ## Related Decisions

@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
@@ -8,16 +8,33 @@ import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConne
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
-import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import {
+  ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
+  LOCK_ATTACHMENT_MAX_FILES,
+  LOCK_ATTACHMENT_MAX_SIZE,
+  LOCK_TEASER_MAX_CHARACTER_LENGTH,
+  LOCK_TITLE_MAX_CHARACTER_LENGTH,
+  POST_MAX_CHARACTER_LENGTH,
+} from '@/config/posts';
+import { useCharacterLimitWarning } from '@/hooks/useCharacterLimitWarning/useCharacterLimitWarning';
 import { useComposerHeightAnimation } from '@/hooks/useComposerHeightAnimation/useComposerHeightAnimation';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
+import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
+import type { TLockDraft } from '@/hooks/usePostInputLock/usePostInputLock.types';
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
+import { deserializeArticleBody } from '@/libs/post/articleInlineImages';
+import { areLockAttachmentsWithinLimit, hasSvgAttachment } from '@/libs/post/lockAttachments';
+import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
+import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
+import { DialogLockContent } from '@/molecules/DialogLockContent/DialogLockContent';
+import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
 import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
@@ -28,7 +45,8 @@ import {
 } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo.utils';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
+import { DialogLocksAuth } from '@/organisms/DialogLocksAuth/DialogLocksAuth';
 import { POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainLayoutRules';
 import { BODY_TEXT_CLASS_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainTypography';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
@@ -36,6 +54,10 @@ import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import type { PostInputProps } from './PostInput.types';
+
+// In MiB like the app's other size labels, rounded down so a file under the label is never refused.
+const LOCK_ATTACHMENT_MAX_SIZE_LABEL = `${Math.floor((LOCK_ATTACHMENT_MAX_SIZE / (1024 * 1024)) * 10) / 10}MB`;
+const LOCK_LIMITS_MESSAGE = `Locked content supports up to ${LOCK_ATTACHMENT_MAX_FILES} files of ${LOCK_ATTACHMENT_MAX_SIZE_LABEL} each.`;
 
 export function PostInput({
   dataCy,
@@ -49,18 +71,23 @@ export function PostInput({
   submitLabel,
   submitIcon,
   successToastTitle,
+  isCollectionShare,
   showThreadConnector = false,
   expanded = false,
   onContentChange,
   onArticleModeChange,
+  onLockModeChange,
   editContent,
   editIsArticle,
   editAttachments,
+  editLock,
   autoFocusTextarea = false,
   initialContent,
   initialAttachments,
   layoutOverride,
 }: PostInputProps) {
+  const [lockDraft, setLockDraft] = useState<TLockDraft | null>(null);
+
   const {
     textareaRef,
     markdownEditorRef,
@@ -79,6 +106,8 @@ export function PostInput({
     handleArticleClick,
     articleTitle,
     setArticleTitle,
+    lockTitle: editLockTitle,
+    setLockTitle: setEditLockTitle,
     handleArticleTitleChange,
     handleArticleBodyChange,
     isDragging,
@@ -100,6 +129,10 @@ export function PostInput({
     handleDragOver,
     handleDrop,
     handlePaste,
+    inlineImages,
+    uploadingCount,
+    serializeArticleForLock,
+    getLatestArticle,
     // Mention autocomplete
     mentionUsers,
     mentionIsOpen,
@@ -107,18 +140,27 @@ export function PostInput({
     setMentionSelectedIndex,
     handleMentionSelect,
     handleMentionKeyDown,
+    handleSelectionChange,
   } = usePostInput({
     variant,
     postId,
     originalPostId,
     editPostId,
+    editLock,
     editAttachmentUris: editAttachments,
+    editContent,
+    editIsArticle,
     onSuccess,
     placeholder,
     successToastTitle,
+    isCollectionShare,
     expanded,
     onContentChange,
     onArticleModeChange,
+    hasExternalContent: () => isLockEnabled,
+    // TODO:[Locks] #2684 — once this goes false the public copies are deleted best-effort; a failed
+    // deletion leaves paid images public and nobody is told.
+    keepInlineImages: lockDraft?.isArticle === true,
   });
 
   const {
@@ -154,18 +196,120 @@ export function PostInput({
     removeExistingAttachment,
   });
 
+  const isPostVariant = variant === POST_INPUT_VARIANT.POST;
+
+  // Lock flow only — normal posts clear themselves inside `usePost`. Empties the composer body but
+  // keeps the tags (they belong to the announcement). Used by the switch-on capture and the
+  // lock-publish cleanup.
+  const clearComposerForLock = () => {
+    setContent('');
+    setAttachments([]);
+    setIsArticle(false);
+    setArticleTitle('');
+  };
+
+  const refuseFilesForLock = (files: File[]) => {
+    // TODO:[Locks] #2683 — temporary, until a locked SVG renders after an unlock.
+    if (hasSvgAttachment(files)) {
+      toast({ variant: 'error', description: 'Locked content cannot include SVG images yet.' });
+      return true;
+    }
+    // The Lock Server refuses an oversized lock only after its files were uploaded, which orphans them.
+    if (!areLockAttachmentsWithinLimit(files)) {
+      toast({ variant: 'error', description: LOCK_LIMITS_MESSAGE });
+      return true;
+    }
+    return false;
+  };
+
+  const {
+    lockSwitch,
+    isLockEnabled,
+    isLockConfigured,
+    lockConfig,
+    lockServerPubky,
+    isAuthDialogOpen,
+    closeAuthDialog,
+    handleAuthSuccess,
+    isLockDialogOpen,
+    closeLockDialog,
+    handleLockApplied,
+    lockTitle,
+    setLockTitle,
+    submitOrPublish,
+    isPublishing: isPublishingLock,
+  } = usePostInputLock({
+    isEnabled: isPostVariant,
+    // Something to lock: any body text or at least one attachment. An article needs a title and a
+    // body, as it does to be published.
+    canEnable:
+      (isArticle
+        ? articleTitle.trim().length > 0 && content.trim().length > 0
+        : content.trim().length > 0 || attachments.length > 0) && uploadingCount === 0,
+    lockDraft,
+    setLockDraft,
+    captureComposer: () => {
+      if (!isArticle) {
+        if (refuseFilesForLock(attachments)) return null;
+        return { content, attachments, isArticle: false, articleTitle };
+      }
+
+      // `articleTitle` and `content` trail the inputs by the debounce: a capture from them would
+      // leave out an image inserted since, and its upload is deleted after publishing.
+      const { title, body } = getLatestArticle();
+      if (!title.trim() || !body.trim()) {
+        toast({ variant: 'error', description: 'Add a title and a body to lock this article.' });
+        return null;
+      }
+      const serializedArticle = serializeArticleForLock(body);
+      if (!serializedArticle) return null;
+      if (refuseFilesForLock([...attachments, ...serializedArticle.inlineFiles])) return null;
+
+      return { content: body, attachments, isArticle: true, articleTitle: title, serializedArticle };
+    },
+    restoreComposer: (draft) => {
+      setContent(draft.content);
+      setAttachments(draft.attachments);
+      setIsArticle(draft.isArticle);
+      setArticleTitle(draft.articleTitle);
+    },
+    clearComposer: clearComposerForLock,
+    // Announcement (public teaser) = the current composer state once the switch is on.
+    announcementContent: content,
+    announcementAttachments: attachments,
+    announcementTags: tags,
+    clearTags: () => setTags([]),
+    onPublished: onSuccess,
+    onNormalSubmit: handleSubmitWithAuth,
+  });
+
+  const { priceSats: editLockPriceSats } = useLockFile(editLock?.lockUrl);
+  const isLockMode = isLockEnabled || editLock != null;
+  const activeLockTitle = editLock ? editLockTitle : lockTitle;
+
   const isValid = () => {
-    return canSubmitPost(
-      variant,
-      content,
-      [...existingAttachments, ...attachments],
-      isSubmitting,
-      isArticle,
-      articleTitle,
+    // `isPublishingLock` counts as submitting: the action-bar button only disables through this check,
+    // so leaving it out lets a second click publish a duplicate lock while the first is in flight.
+    return (
+      canSubmitPost(
+        variant,
+        content,
+        [...existingAttachments, ...attachments],
+        isSubmitting || isPublishingLock,
+        isArticle,
+        articleTitle,
+        uploadingCount > 0,
+      ) &&
+      // Validate the serialized announcement envelope before publish or edit reaches its write. The
+      // title is required like an article's: the card only shows a placeholder when it is blank, so an
+      // empty one reads as set and would be written as an empty string.
+      (!isLockMode ||
+        (activeLockTitle.trim().length > 0 &&
+          isLockTeaserWithinLimit({ lock_title: activeLockTitle, teaser_description: content })))
     );
   };
 
-  const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitWithAuth, {
+  const enterSubmitHandler = useEnterSubmit(isValid, submitOrPublish, {
     requireModifier: true,
   });
 
@@ -174,7 +318,6 @@ export function PostInput({
 
   const isEdit = variant === POST_INPUT_VARIANT.EDIT;
 
-  const { toast } = useToast();
   const shouldReduceMotion = useReducedMotion();
   const { ref: stateContentMeasureRef, height: stateContentHeight } = useElementHeight();
   // Forced-expanded dialog composers must not use Framer height at all — even
@@ -189,7 +332,7 @@ export function PostInput({
   });
   const dissolveVariants = getComposerDissolveVariants(shouldReduceMotion);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isEdit) {
       if (editIsArticle) {
         setIsArticle(true);
@@ -197,7 +340,31 @@ export function PostInput({
         const parsed = parseArticleContent(editContent);
         if (parsed) {
           setArticleTitle(parsed.title);
-          setContent(parsed.body);
+          // Resolve published attachment:{n} image references back to their
+          // homeserver file URIs so the composer edits real destinations.
+          // Unresolvable references are removed (never a hard failure — the
+          // article must stay editable so the user can repair it).
+          let articleAuthorPubky = '';
+          try {
+            articleAuthorPubky = editPostId ? parseCompositeId(editPostId).pubky : '';
+          } catch {
+            // Malformed composite id — no reference can resolve to an author-owned file
+          }
+          const deserialized = deserializeArticleBody({
+            body: parsed.body,
+            attachments: editAttachments ?? [],
+            authorPubky: articleAuthorPubky,
+          });
+          setContent(deserialized.body);
+          if (deserialized.warnings.length > 0) {
+            toast({
+              variant: 'warning',
+              description:
+                deserialized.warnings.length === 1
+                  ? 'An image with a broken attachment reference was removed from the article.'
+                  : `${deserialized.warnings.length} images with broken attachment references were removed from the article.`,
+            });
+          }
         } else {
           toast({
             variant: 'error',
@@ -207,12 +374,15 @@ export function PostInput({
       } else {
         setContent(editContent);
       }
+      // Seeded with the body: a failed save rolls the stored row back, and reverting only one of the
+      // two would let the next save write the new title over the old body.
+      setEditLockTitle(editLock?.title ?? '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
-  }, [variant, editContent, editIsArticle]);
+  }, [variant, editContent, editIsArticle, editLock?.title]);
 
   // Pre-fill content from share target or other external sources
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialContent && !isEdit) {
       setContent(initialContent);
     }
@@ -220,15 +390,22 @@ export function PostInput({
   }, []);
 
   // Pre-fill attachments from share target or other external sources
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialAttachments && initialAttachments.length > 0 && !isEdit) {
       handleFilesAdded(initialAttachments);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 
+  // With the lock on the body is the teaser, sharing the post budget with the title in one envelope.
+  const composerMaxLength = isLockMode ? LOCK_TEASER_MAX_CHARACTER_LENGTH : POST_MAX_CHARACTER_LENGTH;
   const characterLimit =
-    isExpanded && !isArticle ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
+    isExpanded && !isArticle ? { count: getEnforcedCharacterCount(content), max: composerMaxLength } : undefined;
+  useCharacterLimitWarning(characterLimit);
+
+  useEffect(() => {
+    onLockModeChange?.(isLockEnabled);
+  }, [isLockEnabled, onLockModeChange]);
 
   const inheritedTagsLayout = useEffectiveTagsLayout();
   const tagsLayout = layoutOverride ?? inheritedTagsLayout;
@@ -254,10 +431,12 @@ export function PostInput({
       onDragOver={(event) => handleDragEventWithAuth(event, handleDragOver)}
       onDrop={(event) => handleDragEventWithAuth(event, handleDrop)}
     >
-      {/* Drag overlay */}
+      {/* Drag overlay — visual only: it must not intercept the drop, or the
+          article body editors underneath never receive their inline-image
+          drops (the container's bubbled handler would treat them as covers) */}
       {isDragging && (
         <Container
-          className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
+          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
           overrideDefaults
         >
           <Typography className="text-brand">{'Drop files here'}</Typography>
@@ -370,7 +549,9 @@ export function PostInput({
                       <Textarea
                         name="post-input-textarea"
                         ref={textareaRef}
-                        placeholder={displayPlaceholder}
+                        placeholder={
+                          isLockMode ? 'Write a short announcement to tease your content.' : displayPlaceholder
+                        }
                         variant="inline"
                         className={cn(
                           'field-sizing-fixed w-full rounded-none',
@@ -380,8 +561,10 @@ export function PostInput({
                         onChange={handleChangeWithAuth}
                         onFocus={handleExpandWithAuth}
                         onKeyDown={handleKeyDown}
+                        onKeyUp={handleSelectionChange}
+                        onSelect={handleSelectionChange}
                         onPaste={handlePasteWithAuth}
-                        maxLength={POST_MAX_CHARACTER_LENGTH}
+                        maxLength={composerMaxLength}
                         rows={1}
                         disabled={isSubmitting}
                         readOnly={!isAuthenticated}
@@ -425,6 +608,7 @@ export function PostInput({
                   markdown={sanitizeCodeBlockLanguages(content)}
                   onChange={handleArticleBodyChangeWithAuth}
                   readOnly={isSubmitting || !isAuthenticated}
+                  inlineImages={{ ...inlineImages, uploadingCount }}
                 />
               )}
 
@@ -446,11 +630,11 @@ export function PostInput({
                     <PostInputExpandableSection
                       content={content}
                       tags={tags}
-                      isSubmitting={isSubmitting}
+                      isSubmitting={isSubmitting || isPublishingLock}
                       isArticle={isArticle}
                       isDisabled={!isAuthenticated}
                       setTags={setTagsWithAuth}
-                      onSubmit={handleSubmitWithAuth}
+                      onSubmit={submitOrPublish}
                       showEmojiPicker={showEmojiPicker}
                       setShowEmojiPicker={setShowEmojiPicker}
                       onEmojiSelect={handleEmojiSelectWithAuth}
@@ -460,6 +644,20 @@ export function PostInput({
                       submitMode={variant}
                       submitLabel={submitLabel}
                       submitIcon={submitIcon}
+                      lockSwitch={lockSwitch}
+                      lockCard={
+                        isLockConfigured || editLock ? (
+                          <LockedPostCard
+                            priceSats={editLock ? editLockPriceSats : lockConfig?.amountSats}
+                            editableTitle={{
+                              value: activeLockTitle,
+                              onChange: editLock ? setEditLockTitle : setLockTitle,
+                              disabled: editLock ? isSubmitting : isPublishingLock,
+                              maxLength: LOCK_TITLE_MAX_CHARACTER_LENGTH,
+                            }}
+                          />
+                        ) : undefined
+                      }
                     />
                   </motion.div>
                 )}
@@ -468,6 +666,19 @@ export function PostInput({
           </div>
         </motion.div>
       </Container>
+
+      {isPostVariant && lockServerPubky && (
+        <>
+          <DialogLocksAuth
+            open={isAuthDialogOpen}
+            onOpenChange={(open) => {
+              if (!open) closeAuthDialog();
+            }}
+            onSuccess={handleAuthSuccess}
+          />
+          <DialogLockContent open={isLockDialogOpen} onOpenChange={closeLockDialog} onApplied={handleLockApplied} />
+        </>
+      )}
     </Container>
   );
 }

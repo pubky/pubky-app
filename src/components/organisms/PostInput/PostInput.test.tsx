@@ -4,21 +4,26 @@ import { useReducedMotion } from 'motion/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import {
+  MAX_CHARACTERS_TOAST_DESCRIPTION,
+  MAX_CHARACTERS_TOAST_TITLE,
+} from '@/hooks/useCharacterLimitWarning/useCharacterLimitWarning';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import type { UsePostInputOptions, UsePostInputReturn } from '@/hooks/usePostInput/usePostInput.types';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
+import { toast } from '@/molecules/Toaster/toast';
 import { PostHeader } from '@/organisms/PostHeader/PostHeader';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { PostInputActionBar } from '../PostInputActionBar/PostInputActionBar';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
-const mockToast = vi.fn();
 const mockEnterSubmitHandler = vi.fn();
 const mockHandleMentionKeyDown = vi.fn(() => false);
 const mockHandleFilesAdded = vi.fn();
@@ -26,6 +31,7 @@ const mockSetIsArticle = vi.fn();
 const mockSetArticleTitle = vi.fn();
 const mockSetMentionSelectedIndex = vi.fn();
 const mockHandleMentionSelect = vi.fn();
+const mockHandleSelectionChange = vi.fn();
 const mockCurrentUserDetails = {
   id: 'test-user-id:pubkey',
   name: 'Current User',
@@ -53,6 +59,16 @@ vi.mock('@/atoms/Button/Button', () => {
         {children}
       </button>
     )),
+    // Consumed by DialogLockContent, which renders inside PostInput.
+    ButtonVariant: {
+      DEFAULT: 'default',
+      DESTRUCTIVE: 'destructive',
+      OUTLINE: 'outline',
+      SECONDARY: 'secondary',
+      GHOST: 'ghost',
+      BRAND: 'brand',
+      LINK: 'link',
+    },
   };
 });
 
@@ -139,6 +155,8 @@ vi.mock('@/atoms/Textarea/Textarea', () => {
         ref,
         onFocus,
         onKeyDown,
+        onKeyUp,
+        onSelect,
         onPaste,
         autoFocus,
         className,
@@ -151,6 +169,8 @@ vi.mock('@/atoms/Textarea/Textarea', () => {
           onChange={onChange}
           onFocus={onFocus}
           onKeyDown={onKeyDown}
+          onKeyUp={onKeyUp}
+          onSelect={onSelect}
           onPaste={onPaste}
           placeholder={placeholder}
           disabled={disabled}
@@ -422,11 +442,7 @@ vi.mock('@/molecules/TagInput/TagInput', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: vi.fn(() => ({ toast: mockToast })),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Shared refs so React populates them when mock components render
 const mockTextareaRef = createRef<HTMLTextAreaElement>();
@@ -448,6 +464,7 @@ const mockUsePostReturn = {
   isSubmitting: false,
   isArticle: false,
   articleTitle: '',
+  lockTitle: '',
   isExpanded: true,
 };
 
@@ -471,6 +488,8 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handleArticleClick: vi.fn(),
     articleTitle: mockUsePostReturn.articleTitle,
     setArticleTitle: mockSetArticleTitle,
+    lockTitle: mockUsePostReturn.lockTitle,
+    setLockTitle: vi.fn(),
     handleArticleTitleChange: vi.fn(),
     handleArticleBodyChange: vi.fn(),
     isDragging: mockUsePostReturn.isDragging,
@@ -509,11 +528,16 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handleDragOver: vi.fn(),
     handleDrop: vi.fn(),
     handlePaste: vi.fn(),
+    inlineImages: { upload: vi.fn(), getPreviewUrl: vi.fn(() => null) },
+    uploadingCount: 0,
+    serializeArticleForLock: vi.fn(() => null),
+    getLatestArticle: vi.fn(() => ({ title: '', body: '' })),
     mentionUsers: [],
     mentionIsOpen: false,
     mentionSelectedIndex: 0,
     setMentionSelectedIndex: mockSetMentionSelectedIndex,
     handleMentionSelect: mockHandleMentionSelect,
+    handleSelectionChange: mockHandleSelectionChange,
     handleMentionKeyDown: mockHandleMentionKeyDown,
     ...overrides,
   } as UsePostInputReturn;
@@ -585,7 +609,7 @@ describe('PostInput', () => {
     mockUsePostReturn.reply = mockReply;
     mockUsePostReturn.post = mockPost;
 
-    mockToast.mockReset();
+    vi.mocked(toast).mockReset();
     mockEnterSubmitHandler.mockReset();
     mockHandleMentionKeyDown.mockReset();
     mockHandleMentionKeyDown.mockReturnValue(false);
@@ -594,6 +618,7 @@ describe('PostInput', () => {
     mockSetArticleTitle.mockReset();
     mockSetMentionSelectedIndex.mockReset();
     mockHandleMentionSelect.mockReset();
+    mockHandleSelectionChange.mockReset();
 
     mockUseEnterSubmit.mockImplementation(() => mockEnterSubmitHandler);
     mockUsePostInput.mockImplementation((options: UsePostInputOptions) => createUsePostInputReturn(options));
@@ -607,6 +632,18 @@ describe('PostInput', () => {
     expect(screen.getByPlaceholderText("What's on your mind?")).toBeInTheDocument();
   });
 
+  it('uses the same submit handler for Ctrl/Cmd+Enter and the Post button', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    // The handler given to useEnterSubmit (keyboard submit) must be the exact same reference passed
+    // to the action bar's Post button, so toggling the lock switch gates both entry points.
+    const actionBarProps = vi.mocked(PostInputActionBar).mock.calls.at(-1)?.[0];
+    const enterSubmitHandlerArg = mockUseEnterSubmit.mock.calls.at(-1)?.[1];
+
+    expect(enterSubmitHandlerArg).toBeDefined();
+    expect(enterSubmitHandlerArg).toBe(actionBarProps?.onPostClick);
+  });
+
   it('shows full user info and passes the character count to the header when expanded', () => {
     mockUsePostReturn.content = 'Hello world';
     mockUsePostReturn.isExpanded = true;
@@ -617,6 +654,32 @@ describe('PostInput', () => {
     expect(postHeader).toHaveAttribute('data-count', '11');
     expect(postHeader).toHaveAttribute('data-max', POST_MAX_CHARACTER_LENGTH.toString());
     expect(postHeader).toHaveAttribute('data-character-limit-placement', 'name-row');
+  });
+
+  it('warns at the enforced limit for an emoji draft a code-point count reports as short (issue #1761)', () => {
+    // One emoji plus ASCII letters fills the 2,000 UTF-16 units the composer enforces; the old
+    // code-point count read 1,999 and stayed silent.
+    mockUsePostReturn.content = `😀${'a'.repeat(POST_MAX_CHARACTER_LENGTH - 2)}`;
+    mockUsePostReturn.isExpanded = true;
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const postHeader = getStatePostHeader();
+    expect(postHeader).toHaveAttribute('data-count', POST_MAX_CHARACTER_LENGTH.toString());
+    expect(postHeader).toHaveAttribute('data-max', POST_MAX_CHARACTER_LENGTH.toString());
+    expect(toast).toHaveBeenCalledWith({
+      variant: 'warning',
+      title: MAX_CHARACTERS_TOAST_TITLE,
+      description: MAX_CHARACTERS_TOAST_DESCRIPTION,
+    });
+  });
+
+  it('stays silent one unit below the enforced limit for an emoji draft (issue #1761)', () => {
+    mockUsePostReturn.content = `😀${'a'.repeat(POST_MAX_CHARACTER_LENGTH - 3)}`;
+    mockUsePostReturn.isExpanded = true;
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    expect(getStatePostHeader()).toHaveAttribute('data-count', (POST_MAX_CHARACTER_LENGTH - 1).toString());
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it('does not show character count when collapsed', () => {
@@ -918,6 +981,19 @@ describe('PostInput', () => {
     expect(mockSetContent).toHaveBeenCalledWith('Test content');
   });
 
+  it('tracks the composer caret from the textarea selection events', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const textarea = screen.getByTestId('textarea');
+    // The caret moves without a change event: a click/drag selection, then an arrow key
+    fireEvent.select(textarea);
+    expect(mockHandleSelectionChange).toHaveBeenCalled();
+
+    mockHandleSelectionChange.mockClear();
+    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
+    expect(mockHandleSelectionChange).toHaveBeenCalled();
+  });
+
   it('opens sign-in and does not mutate content when an anonymous user types', () => {
     mockIsAuthenticated = false;
     mockRequireAuth.mockReturnValue(undefined);
@@ -1066,8 +1142,8 @@ describe('PostInput', () => {
       />,
     );
 
-    expect(mockToast).toHaveBeenCalledTimes(1);
-    expect(mockToast).toHaveBeenCalledWith(
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(
       expect.objectContaining({
         variant: 'error',
         description: 'Could not parse article content',

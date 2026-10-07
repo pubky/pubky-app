@@ -17,6 +17,7 @@ import {
   getHomeserverUrl,
   getPkarrRelays,
   getTestnet,
+  HOMESERVER_CAPABILITIES,
   isStagingHomeserverDeploy,
 } from '@/config/network';
 import { AppError } from '@/libs/error/error';
@@ -24,10 +25,11 @@ import { AuthErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/erro
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { hasHttpStatus } from '@/libs/error/error.utils';
+import { hasHttpStatus, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
+import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky as TPubkyModel } from '@/models/models.types';
 import type {
@@ -41,7 +43,9 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { extractStatusCode, handleError } from './error.utils';
 import type {
   PubPath,
+  TGeneratePassportAuthUrlParams,
   TGenerateSignupAuthUrlParams,
+  THomeserverBytesResult,
   THomeserverFetchParams,
   THomeserverListAllParams,
   THomeserverListParams,
@@ -61,8 +65,7 @@ import {
   resolveOwnedSessionPath,
 } from './homeserver.utils';
 
-const CAPABILITIES = '/pub/pubky.app/:rw';
-const PUB_PATH_PREFIX = '/pub/' as const;
+const STORAGE_PATH_PREFIXES = ['/pub/', '/priv/'] as const;
 const DELETE_IDEMPOTENT_MAX_ATTEMPTS = 3;
 const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
 /** Default limit for list operations */
@@ -94,7 +97,7 @@ export class HomeserverService {
 
   private static resolveOwnedSessionPath(url: string): TOwnedSessionPath | null {
     const session = useAuthStore.getState().selectSession();
-    return resolveOwnedSessionPath({ url, session, pubPathPrefix: PUB_PATH_PREFIX });
+    return resolveOwnedSessionPath({ url, session, allowedPrefixes: STORAGE_PATH_PREFIXES });
   }
 
   /**
@@ -110,7 +113,8 @@ export class HomeserverService {
   /**
    * Resolves the key's homeserver from its PKARR record.
    * @returns The homeserver public key, or `null` when the record is provably absent
-   * @throws When the lookup itself failed (relay/network error) — absence NOT proven
+   * @throws When the lookup itself failed (relay/network error) — absence NOT proven.
+   *   The SDK rejects with `PkarrError`, which is mapped to a retryable Network error.
    */
   private static async resolveHomeserverRecord({ publicKey }: THomeserverPublicKeyParams) {
     try {
@@ -120,7 +124,7 @@ export class HomeserverService {
     } catch (error) {
       return handleError({
         error,
-        additionalContext: { publicKey: publicKey?.z32?.() },
+        additionalContext: { publicKey: publicKey?.z32?.(), operation: 'resolveHomeserverRecord' },
       });
     }
   }
@@ -134,7 +138,8 @@ export class HomeserverService {
    * force-republish this guard exists to prevent (#2126). This also means a key
    * whose just-published record has not yet propagated to our relays is rejected
    * until it propagates. Only a lookup that itself failed (relay/network error)
-   * throws a retryable server error instead.
+   * throws a retryable error instead (Network for the SDK's `PkarrError`,
+   * Server for anything else).
    */
   static async assertUserHomeserverAllowed({ publicKey }: THomeserverPublicKeyParams): Promise<void> {
     if (!isStagingHomeserverDeploy()) {
@@ -175,7 +180,8 @@ export class HomeserverService {
     try {
       const homeserverPublicKey = PublicKey.from(getHomeserver());
       const signer = this.getSigner(keypair);
-      const session = await signer.signup(homeserverPublicKey, signupToken);
+      // Cookie-backed session on purpose: the grant-auth migration is tracked separately.
+      const session = await signer.signupCookie(homeserverPublicKey, signupToken);
 
       Logger.debug('Signup successful', { session });
 
@@ -183,7 +189,7 @@ export class HomeserverService {
     } catch (error) {
       return handleError({
         error,
-        additionalContext: { signupTokenProvided: Boolean(signupToken) },
+        additionalContext: { signupTokenProvided: Boolean(signupToken), operation: 'signUp' },
         statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
         alwaysUseHomeserverError: true,
       });
@@ -271,7 +277,8 @@ export class HomeserverService {
     }
 
     try {
-      const session = await signer.signin();
+      // Cookie-backed session on purpose: the grant-auth migration is tracked separately.
+      const session = await signer.signinCookie();
       return { session };
     } catch (signinError) {
       return await this.republishConfiguredHomeserver({ signer, keypair, originalError: signinError });
@@ -295,7 +302,11 @@ export class HomeserverService {
     } catch (republishError) {
       return handleError({
         error: republishError,
-        additionalContext: { pubky: Identity.pubkyFromKeypair(keypair), originalSigninError: String(originalError) },
+        additionalContext: {
+          pubky: Identity.pubkyFromKeypair(keypair),
+          originalSigninError: String(originalError),
+          operation: 'republishConfiguredHomeserver',
+        },
         statusCode: HttpStatusCode.UNAUTHORIZED,
       });
     }
@@ -307,11 +318,12 @@ export class HomeserverService {
    * @returns The authentication URL and approval promise
    */
   static async generateAuthUrl(caps?: Capabilities): Promise<TGenerateAuthUrlResult> {
-    const capabilities: Capabilities = caps || CAPABILITIES;
+    const capabilities: Capabilities = caps || HOMESERVER_CAPABILITIES;
 
     try {
       const pubkySdk = this.getPubkySdk();
-      const flow = pubkySdk.startAuthFlow(capabilities, AuthFlowKind.signin(), getDefaultHttpRelay());
+      // Cookie auth flow on purpose: the grant-auth migration is tracked separately.
+      const flow = pubkySdk.startCookieAuthFlow(capabilities, AuthFlowKind.signin(), getDefaultHttpRelay());
       const approval = createCancelableAuthApproval(flow);
 
       return {
@@ -321,6 +333,40 @@ export class HomeserverService {
       };
     } catch (error) {
       return handleError({ error, additionalContext: { capabilities, relay: getDefaultHttpRelay() } });
+    }
+  }
+
+  /**
+   * Generates the authentication URL handed to Pubky Passport.
+   *
+   * Same cookie sign-in flow as {@link generateAuthUrl}, plus x-callback-url metadata so Passport can
+   * label the request and navigate back to the app when the popup hand-off cannot complete. Kept
+   * separate so the Pubky Ring QR never carries the Passport callbacks.
+   * @param xCallback - Source label and same-origin HTTPS success/error/cancel destinations
+   * @param caps - The capabilities to use
+   * @returns The authentication URL and approval promise
+   */
+  static async generatePassportAuthUrl({
+    xCallback,
+    caps,
+  }: TGeneratePassportAuthUrlParams): Promise<TGenerateAuthUrlResult> {
+    const capabilities: Capabilities = caps || HOMESERVER_CAPABILITIES;
+
+    try {
+      const pubkySdk = this.getPubkySdk();
+      const flow = pubkySdk.startCookieAuthFlow(capabilities, AuthFlowKind.signin(), getDefaultHttpRelay(), xCallback);
+      const approval = createCancelableAuthApproval(flow);
+
+      return {
+        authorizationUrl: flow.authorizationUrl,
+        awaitApproval: approval.awaitApproval,
+        cancelAuthFlow: approval.cancel,
+      };
+    } catch (error) {
+      return handleError({
+        error,
+        additionalContext: { capabilities, relay: getDefaultHttpRelay(), xSource: xCallback.xSource },
+      });
     }
   }
 
@@ -377,6 +423,7 @@ export class HomeserverService {
       const response = await httpBridge.fetch(resolvedUrl, {
         method: options?.method,
         body: options?.body as BodyInit | undefined,
+        cache: options?.cache,
         credentials: 'include',
       });
 
@@ -427,7 +474,7 @@ export class HomeserverService {
     if (method !== HttpMethod.GET && !isHttpUrl(url)) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
-        `Authenticated writes must target an owned ${PUB_PATH_PREFIX}* path for the current session.`,
+        `Authenticated writes must target an owned ${STORAGE_PATH_PREFIXES.join('* / ')}* path for the current session.`,
         {
           service: ErrorService.Homeserver,
           operation: 'request',
@@ -475,7 +522,7 @@ export class HomeserverService {
     if (!isHttpUrl(url)) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
-        `Blob uploads must target an owned ${PUB_PATH_PREFIX}* path for the current session.`,
+        `Blob uploads must target an owned ${STORAGE_PATH_PREFIXES.join('* / ')}* path for the current session.`,
         {
           service: ErrorService.Homeserver,
           operation: 'putBlob',
@@ -613,6 +660,62 @@ export class HomeserverService {
     }
   }
 
+  /** Raw bytes of a resource (owned/public/http). Rejects (via `get`) on a missing or 4xx/5xx path. */
+  static async getBytes(url: string): Promise<Uint8Array> {
+    const response = await this.get(url);
+    return new Uint8Array(await response.arrayBuffer());
+  }
+
+  /**
+   * Bytes of an owned resource plus the server's `Last-Modified`, or null when it is absent (404) —
+   * WITHOUT logging. For existence checks (e.g. unlock detection) where "not there" is an expected
+   * outcome, not an error to report. Calls the SDK directly so a 404 bypasses `handleError`/Sentry,
+   * mirroring `list`'s 404 fallback.
+   *
+   * Only a 404 means "absent": every other failure (403, 5xx, network) rejects, since the resource
+   * may well exist and a null would let the caller record a missing file as a confirmed absence.
+   *
+   * `modifiedAt` is the homeserver's own write timestamp (`entry.modified_at`), so callers get an
+   * ordering key the client cannot forge. `null` if the header is missing or unparseable.
+   */
+  static async getBytesIfExists(url: string): Promise<THomeserverBytesResult | null> {
+    const owned = this.resolveOwnedSessionPath(url);
+    // Unreadable without a session — return null rather than fire an unauthenticated request.
+    if (!owned) return null;
+    try {
+      // `storage.get` resolves for any status, so the response has to be checked here.
+      const response = await owned.session.storage.get(owned.path);
+      if (response.status === HttpStatusCode.NOT_FOUND) return null;
+      await assertOk({ response, url, operation: 'getBytesIfExists' });
+      const lastModified = Date.parse(response.headers.get('last-modified') ?? '');
+      return {
+        bytes: new Uint8Array(await response.arrayBuffer()),
+        modifiedAt: Number.isNaN(lastModified) ? null : lastModified,
+      };
+    } catch (error) {
+      if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return null;
+      return handleError({ error, additionalContext: { url, method: HttpMethod.GET } });
+    }
+  }
+
+  /**
+   * Reads a JSON resource past the browser HTTP cache. The homeserver sends `Last-Modified`
+   * without `max-age`, so a plain GET can be answered from a heuristically fresh cached copy.
+   * Throws an `AppError` on a non-OK response or a failed read (a body that breaks off
+   * mid-read included); resolves `undefined` for an empty or invalid body.
+   *
+   * @param url - Pubky URL to read.
+   */
+  static async getFreshJson<T>(url: string): Promise<T | undefined> {
+    try {
+      const response = await this.fetch({ url, options: { method: HttpMethod.GET, cache: 'no-store' } });
+      await assertOk({ response, url, operation: 'getFreshJson' });
+      return await parseResponseOrUndefined<T>({ response, operation: 'getFreshJson', url });
+    } catch (error) {
+      throw toAppError(error, ErrorService.Homeserver, 'getFreshJson');
+    }
+  }
+
   /**
    * Checks whether a homeserver resource exists without treating an expected 404 as an error.
    * Storage SDK probes return a boolean; plain HTTP URLs retain explicit response handling.
@@ -650,7 +753,7 @@ export class HomeserverService {
     } catch (error) {
       return handleError({
         error,
-        additionalContext: { sessionExport: Boolean(sessionExport) },
+        additionalContext: { sessionExport: Boolean(sessionExport), operation: 'restoreSession' },
       });
     }
   }
@@ -719,9 +822,11 @@ export class HomeserverService {
 
       return this.normalizeUserEventStream(stream);
     } catch (error) {
+      // `operation` is matched by the `homeserver-event-stream-connect` Sentry drop rule:
+      // the mute-list coordinator reconnects on connect failures by design.
       return handleError({
         error,
-        additionalContext: { pathPrefix: params.pathPrefix },
+        additionalContext: { pathPrefix: params.pathPrefix, operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION },
       });
     }
   }

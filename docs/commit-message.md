@@ -94,6 +94,34 @@ BREAKING CHANGE: Post IDs now use author:postId format instead of
 simple postId. This affects all post-related APIs and database schemas.
 ```
 
+## Branch Naming
+
+Branches are cut from `dev` and named after the GitHub issue they resolve:
+
+```
+<type>/<issue-number>-<kebab-case-short-description>
+```
+
+Types: `feat`, `bug`, `bug-ui` (a UI-only bug fix), `refactor`, `docs`, `test`, `chore`, `style`. Keep the description to 5–6 words taken from the issue title.
+
+```
+feat/123-add-user-authentication
+bug/456-button-not-clickable
+bug-ui/678-default-avatar-background
+refactor/789-simplify-auth-flow
+docs/101-update-readme
+```
+
+Agents: ignore any tool-level branch-prefix setting and use this convention. Fetch the issue, take its number and title, and pick the type from its labels or content.
+
+## Pull Requests
+
+- Target `dev`; `master` only receives releases and hotfixes (see `release.md`, `hotfix.md`).
+- One change per PR. Open it as a draft unless a ready PR was asked for.
+- Say what was verified: which of `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:vrt`, `npm run build` ran.
+- Call out explicitly: a touched VRT surface (baseline regeneration needed, see `visual-regression-testing.md`), a new or changed ADR, a `DB_VERSION` bump, a changed `src/config/*` limit, and any Cypress spec the change invalidates.
+- Cypress e2e specs are owned by QA and need the full pubky-stack: flag an invalidated spec in the PR rather than editing it, and never report an e2e result you did not obtain.
+
 ## Tips
 
 1. Think of the commit message as completing: "If applied, this commit will [your message]"

@@ -4,6 +4,15 @@
 export const DEFAULT_CUSTOM_FEED_ICON = 'activity';
 
 /**
+ * The custom feed created for a new account from the interest tags chosen on
+ * the onboarding "Tags of interest" step. A regular custom feed (saved to the
+ * homeserver like any other) so the user can edit or delete it afterwards.
+ * Icon per Figma "Pubky / Navbar / Feeds" (Icon / Tags).
+ */
+export const INTERESTS_FEED_NAME = 'Interests';
+export const INTERESTS_FEED_ICON = 'tags';
+
+/**
  * A dynamic Lucide icon name: lowercase kebab-case. Shared by the UI resolver
  * and the persistence validator so a name that survives one cannot be rejected
  * by the other and silently render as the fallback glyph.
@@ -29,16 +38,6 @@ export const TIMELINE_FEED_VARIANT = {
 } as const;
 
 export type TimelineFeedVariant = (typeof TIMELINE_FEED_VARIANT)[keyof typeof TIMELINE_FEED_VARIANT];
-
-/**
- * Feed variants that render their posts in a fixed card grid rather than the
- * default vertical timeline (decision D5).
- *
- * Grid is intrinsic to these variants rather than user-selectable. Collection
- * feeds are intentionally excluded because their creator default/viewer
- * override chooses between Grid and List.
- */
-export const GRID_LAYOUT_VARIANTS = new Set<TimelineFeedVariant>([TIMELINE_FEED_VARIANT.BOOKMARKS]);
 
 /**
  * Feed variants where a repost may be optimistically prepended via the active
@@ -67,17 +66,19 @@ export function isProfileTagReachSupported(reach: string): reach is ProfileTagSu
 }
 
 /**
- * Responsive column classes for the shared card grid (`TimelineGridPosts`).
+ * Responsive column classes for the Cards and reorder grids.
  * One column on phones, two at `md`, three at `xl` — mirrors the 3-up Figma grid.
- * Breakpoints may be retuned in the Phase C spike once the real cell width is measured.
  */
 export const GRID_FEED_COLUMNS_CLASS = 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
 
 /**
- * Gap between cards in the shared card grid (`TimelineGridPosts`). Matches the
+ * Gap between cards in the Cards and reorder grids. Matches the
  * Figma grid spacing; shared by the renderer and its skeleton to avoid drift.
  */
 export const GRID_FEED_GAP_CLASS = 'gap-3 lg:gap-6';
+
+/** Initial card placeholders for Cards. */
+export const GRID_FEED_SKELETON_COUNT = 6;
 
 /**
  * Session-storage flag set by feed-cluster nav entry points (Pubky logo,
@@ -89,3 +90,25 @@ export const GRID_FEED_GAP_CLASS = 'gap-3 lg:gap-6';
  * scroll restoration. Centralized here so all call sites cannot drift.
  */
 export const FORCE_FEED_SCROLL_TOP_KEY = 'pubky:force-feed-scroll-top';
+
+/**
+ * Raw posts one `useStreamPagination` load keeps scanning through pages that surface
+ * nothing new before it yields with `hasMore` still true. Filtering is client-side
+ * (muted authors, deleted posts, collections), and the stream layer bounds a single round
+ * at about 200 raw posts when the region is already cached but at one page when it still
+ * has to be hydrated first, so the load budgets by raw posts rather than rounds. The
+ * loading block stays mounted for the whole scan, so a filtered region no longer pulses
+ * the feed's height once per round (#2523).
+ */
+export const STREAM_LOAD_MAX_RAW_SCAN = 600;
+
+/**
+ * Consecutive automatic infinite-scroll loads a timeline tolerates without a single new
+ * post reaching the list before it stops auto-loading and offers a manual "Load more"
+ * (`useInfiniteScroll`'s unproductive-load budget). Each load already scans up to
+ * `STREAM_LOAD_MAX_RAW_SCAN` raw posts, so this only trips after several hundred
+ * consecutive filtered posts (a muted author's run, deleted posts, collections) and never
+ * on an ordinary feed. The region can be arbitrarily long, so past that point the next
+ * scan is handed to the user instead of chaining to the end of the stream (#2523).
+ */
+export const TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS = 3;

@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted — 2025-10-26
+Superseded by [ADR-0019](./0019-dexie-recreate-on-version-mismatch.md) — 2026-09-15
+
+> The migration chain described below was never implemented. The database layer declares a single
+> `this.version(DB_VERSION).stores({...})` and recreates the database on a version mismatch; see
+> [ADR-0019](./0019-dexie-recreate-on-version-mismatch.md) for the decision that is in force.
 
 ## Context
 

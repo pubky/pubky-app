@@ -124,6 +124,11 @@ export type NexusUserDetails = {
   status: string | null;
   image: string | null;
   indexed_at: Timestamp;
+  /**
+   * `true` when the user is a tombstone (profile cleared, `name` empty). Absent on Nexus builds
+   * that predate the flag, which marked tombstones with the `[DELETED]` name instead.
+   */
+  deleted?: boolean;
 };
 
 /** Aggregate counts for a user's activity and social connections */
@@ -148,6 +153,21 @@ export type NexusUserRelationship = {
   following: boolean;
   followed_by: boolean;
 };
+
+/**
+ * How established an account is in the follow graph, computed by Nexus from its
+ * seeded trust ranking. Nexus picks the tier and never exposes the raw score.
+ *
+ * Describes position in the graph, not character: it is not an endorsement.
+ */
+export enum NexusSocialGraphStatus {
+  /** Little or no network presence (unreachable from the seed set, or brand new) */
+  NEW = 'new',
+  /** Part of the broader network (reachable from the seed set) */
+  NETWORKED = 'networked',
+  /** Central to the network (top slice of the ranking) */
+  ESTABLISHED = 'established',
+}
 
 // =============================================================================
 // Response Types - Tags
@@ -186,6 +206,12 @@ export type NexusUser = {
   counts: NexusUserCounts;
   tags: NexusTag[];
   relationship: NexusUserRelationship;
+  /**
+   * Social graph badge tier. `null` when Nexus has no ranking available, which
+   * hides the badge and is distinct from `new`. Absent on Nexus builds that
+   * predate the field.
+   */
+  social_graph_status?: NexusSocialGraphStatus | null;
 };
 
 /** Stream response containing only user identifiers */
@@ -209,6 +235,13 @@ export type NexusPostDetails = {
   kind: string;
   uri: string;
   attachments: string[] | null;
+  /** URL of the post's public `lock.json`. Present = lock teaser; the sole lock-detection signal. */
+  lock?: string | null;
+  /**
+   * `true` when the post is a tombstone (content cleared). Absent on Nexus builds that predate
+   * the flag, which marked tombstones with the `[DELETED]` content instead.
+   */
+  deleted?: boolean;
 };
 
 /** Aggregate counts for post engagement */

@@ -13,6 +13,52 @@ import { Err } from './error.factories';
 import { ErrorService } from './error.types';
 
 /**
+ * How long one 429 report covers its `service:operation`.
+ *
+ * A throttled client keeps issuing queries, and the query client retries a 429 once
+ * after the 429 backoff, so a single server-side throttling window used to produce one
+ * Sentry event per request and per attempt — ~8.7k events for a handful of windows
+ * (PUBKY-APP-B3 on /hot, PUBKY-APP-9X on /home). Reporting the first 429 per minute per
+ * operation keeps throttling visible without the multiplication.
+ */
+const RATE_LIMIT_REPORT_WINDOW_MS = 60_000;
+
+/**
+ * Cap on remembered `service:operation` keys. Services are enum-shaped and operations are
+ * literal call-site strings, so this only guards a pathologically long-lived client.
+ */
+const RATE_LIMIT_REPORT_KEYS_MAX = 100;
+
+/** Last reported 429 per `service:operation`, in epoch ms. */
+const lastRateLimitReportAt = new Map<string, number>();
+
+/**
+ * Claims the 429 report slot for `service:operation`.
+ *
+ * @param service - Which service produced the 429
+ * @param operation - Which operation failed
+ * @param nowMs - Reference time in milliseconds (for testability)
+ * @returns `true` when this 429 is the first for its operation in the current window (report
+ * it), `false` when an earlier 429 already reported that operation (suppress the report)
+ */
+export function claimRateLimitReport(service: ErrorService, operation: string, nowMs: number = Date.now()): boolean {
+  const key = `${service}:${operation}`;
+  const lastReportedAt = lastRateLimitReportAt.get(key);
+
+  if (lastReportedAt !== undefined && nowMs - lastReportedAt < RATE_LIMIT_REPORT_WINDOW_MS) {
+    return false;
+  }
+
+  if (lastRateLimitReportAt.size >= RATE_LIMIT_REPORT_KEYS_MAX) {
+    const oldestKey = lastRateLimitReportAt.keys().next().value;
+    if (oldestKey !== undefined) lastRateLimitReportAt.delete(oldestKey);
+  }
+  lastRateLimitReportAt.set(key, nowMs);
+
+  return true;
+}
+
+/**
  * Creates appropriate AppError from HTTP status code.
  * Primary mapping function used by httpResponseToError and for cases
  * where you have a status code without a Response object.
@@ -56,9 +102,15 @@ export function httpStatusCodeToError(
 
   // 429 Rate Limited
   if (statusCode === HttpStatusCode.TOO_MANY_REQUESTS) {
+    // One throttling condition, not one failure per request: the first 429 for a
+    // service/operation reaches Sentry, the repeats are tagged so the
+    // `rate-limit-repeat-reports` drop rule suppresses them. The error itself is still
+    // built and thrown, so retry and UX behaviour are unchanged.
+    const reportSuppressed = !claimRateLimitReport(service, operation);
+
     return Err.rateLimit(RateLimitErrorCode.RATE_LIMITED, message, {
       ...baseParams,
-      context: { ...baseParams.context, retryAfter },
+      context: { ...baseParams.context, retryAfter, ...(reportSuppressed && { reportSuppressed: true }) },
     });
   }
 
@@ -217,12 +269,14 @@ export async function safeFetch(
     const appError = findAppError(error);
     if (appError) throw appError;
 
-    // Aborted requests (user cancellation or signal timeout)
+    // Aborted requests. `signalAborted` records whether the caller's own AbortSignal fired
+    // (deliberate cancellation) as opposed to a browser-driven abort with no signal; the
+    // `aborted-requests` Sentry drop rule keys on it.
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw Err.timeout(TimeoutErrorCode.REQUEST_ABORTED, 'Request was aborted', {
         service,
         operation,
-        context: { url },
+        context: { url, signalAborted: options.signal?.aborted === true },
         cause: error,
       });
     }

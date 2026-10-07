@@ -4,6 +4,8 @@ import type React from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import type { UsePostListKeyboardResult } from '@/hooks/usePostListKeyboard/usePostListKeyboard.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
@@ -36,7 +38,7 @@ interface TimelineFeedItemProps {
  * - any other kind — `PostMain`, plus `TimelinePostReplies` outside single
  *   collection feeds.
  */
-function TimelineFeedItemBody({ postId }: { postId: string }) {
+function TimelineFeedItemBody({ postId, displayedPostId }: { postId: string; displayedPostId: string }) {
   const { postDetails } = usePostDetails(postId);
   const timelineFeed = useTimelineFeedContext();
   const shouldShowReplies = timelineFeed?.variant !== TIMELINE_FEED_VARIANT.COLLECTION;
@@ -53,7 +55,7 @@ function TimelineFeedItemBody({ postId }: { postId: string }) {
   return (
     <>
       <PostMain postId={postId} isReply={false} />
-      {shouldShowReplies ? <TimelinePostReplies postId={postId} /> : null}
+      {shouldShowReplies ? <TimelinePostReplies postId={displayedPostId} /> : null}
     </>
   );
 }
@@ -67,6 +69,8 @@ function TimelineFeedItemBody({ postId }: { postId: string }) {
  * inline replies omitted when those regular posts are collection items.
  */
 export function TimelineFeedItem({ postId, index, totalCount, setCardRef, onPostKeyDown }: TimelineFeedItemProps) {
+  const visibility = usePostHeaderVisibility(postId);
+  const displayedPostId = getDisplayedPostId(postId, visibility);
   return (
     <Container
       data-cy="post-card"
@@ -75,10 +79,10 @@ export function TimelineFeedItem({ postId, index, totalCount, setCardRef, onPost
       aria-posinset={index + 1}
       aria-setsize={totalCount}
       tabIndex={0}
-      onKeyDown={(e) => onPostKeyDown(postId, e)}
+      onKeyDown={(e) => onPostKeyDown(displayedPostId, e)}
       className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <TimelineFeedItemBody postId={postId} />
+      <TimelineFeedItemBody postId={postId} displayedPostId={displayedPostId} />
     </Container>
   );
 }

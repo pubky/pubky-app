@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { APP_ROUTES, isLogoLandingRoute, ROOT_ROUTES } from '@/app/routes';
+import { APP_ROUTES, isCustomFeedRoute, isLogoLandingRoute, ROOT_ROUTES } from '@/app/routes';
 import { Link } from '@/atoms/Link/Link';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
@@ -42,7 +42,10 @@ export function Logo({
 }: LogoProps & React.HTMLAttributes<HTMLAnchorElement>) {
   const pathname = usePathname();
   const isLandingRoute = isLogoLandingRoute(pathname);
-  const isHome = pathname === APP_ROUTES.HOME;
+  // A custom feed lives at `/feed/<id>` in the same persistent feed cluster as
+  // `/home`. From there the logo is already on the user's feed, so it scrolls to
+  // the top instead of navigating away to the default feed.
+  const isFeedActive = pathname === APP_ROUTES.HOME || (pathname !== null && isCustomFeedRoute(pathname));
   const href = isLandingRoute ? ROOT_ROUTES : APP_ROUTES.HOME;
 
   return !noLink ? (
@@ -52,7 +55,7 @@ export function Logo({
       onClick={(event) => {
         onClick?.(event);
         if (isLandingRoute || event.defaultPrevented) return;
-        handleFeedNavClick(event, { isActive: isHome, smoothScrollWhenActive: true });
+        handleFeedNavClick(event, { isActive: isFeedActive, smoothScrollWhenActive: true });
       }}
       className={logoLinkClassName(width, height, className)}
       style={{ ...logoSizeStyle(width, height), ...style }}

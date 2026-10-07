@@ -23,7 +23,7 @@ import { AppError } from '@/libs/error/error';
 import { ErrorService } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { formatFileName } from '@/libs/utils/utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 
 export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => void }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -182,7 +182,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="bg-opacity-90 h-14 rounded-md border border-dashed p-4 shadow-sm"
+              className="h-14 rounded-md border border-dashed bg-background/20 p-4 shadow-sm"
               placeholder={'Enter your password'}
               autoComplete="current-password"
               disabled={isRestoring}

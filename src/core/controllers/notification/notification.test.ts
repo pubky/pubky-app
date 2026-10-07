@@ -69,6 +69,7 @@ describe('NotificationController', () => {
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
       expect(appSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         userId: mockUserId,
         lastPolledTimestamp: 500,
         lastRead: 1234,
@@ -145,6 +146,7 @@ describe('NotificationController', () => {
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
       expect(appSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         userId: mockUserId,
         lastPolledTimestamp: undefined,
         lastRead: 1000,
@@ -158,6 +160,7 @@ describe('NotificationController', () => {
       await NotificationController.fetchNotifications({ userId: mockUserId });
 
       expect(appSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         userId: mockUserId,
         lastPolledTimestamp: 3000,
         lastRead: 1000,
@@ -237,6 +240,7 @@ describe('NotificationController', () => {
         await NotificationController.getOrFetchNotifications(params);
 
         expect(spy).toHaveBeenCalledWith({
+          isCurrent: expect.any(Function),
           userId: mockUserId,
           olderThan: expectedOlderThan,
           limit: expectedLimit,

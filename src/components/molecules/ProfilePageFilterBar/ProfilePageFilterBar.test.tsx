@@ -68,7 +68,7 @@ describe('ProfilePageFilterBar', () => {
       />,
     );
     const filterItems = container.querySelectorAll('[data-slot="filter-item"]');
-    expect(filterItems.length).toBe(getDefaultItems(mockStats).length);
+    expect(filterItems.length).toBe(getDefaultItems({ stats: mockStats }).length);
   });
 
   it('renders with loading spinners when no stats provided', () => {
@@ -76,7 +76,7 @@ describe('ProfilePageFilterBar', () => {
     expect(screen.getByText('Notifications')).toBeInTheDocument();
     // Should show loading spinners when stats are undefined
     const spinners = screen.getAllByTestId('spinner');
-    expect(spinners.length).toBe(8); // One for each filter item with a count
+    expect(spinners.length).toBe(9); // One for each filter item with a count
   });
 
   it('renders with zero counts when stats are provided but individual values are zero', () => {
@@ -177,7 +177,7 @@ describe('ProfilePageFilterBar', () => {
 
     // Initially should show spinners
     let spinners = screen.getAllByTestId('spinner');
-    expect(spinners.length).toBe(8);
+    expect(spinners.length).toBe(9);
 
     // After stats are provided, should show counts
     rerender(
@@ -185,6 +185,7 @@ describe('ProfilePageFilterBar', () => {
         activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS}
         onPageChangeAction={() => {}}
         stats={mockStats}
+        unlockedCount={0}
       />,
     );
 
@@ -192,6 +193,64 @@ describe('ProfilePageFilterBar', () => {
     expect(spinners.length).toBe(0);
     expect(screen.getByText('2')).toBeInTheDocument(); // notifications count
     expect(screen.getByText('4')).toBeInTheDocument(); // posts count
+  });
+
+  describe('Unlocked tab', () => {
+    it('shows the count passed in, since it does not come from the Nexus stats', () => {
+      const { container } = render(
+        <ProfilePageFilterBar
+          activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS}
+          onPageChangeAction={() => {}}
+          stats={mockStats}
+          unlockedCount={3}
+        />,
+      );
+
+      expect(container.querySelector('[data-cy="profile-filter-item-unlocked-count"]')).toHaveTextContent('3');
+    });
+
+    it('renders a settled zero as 0, which is not the same as a failed read', () => {
+      const { container } = render(
+        <ProfilePageFilterBar
+          activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS}
+          onPageChangeAction={() => {}}
+          stats={mockStats}
+          unlockedCount={0}
+        />,
+      );
+
+      expect(container.querySelector('[data-cy="profile-filter-item-unlocked-count"]')).toHaveTextContent('0');
+    });
+
+    it('renders no count and no spinner when the count is null, because the read already failed', () => {
+      const { container } = render(
+        <ProfilePageFilterBar
+          activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS}
+          onPageChangeAction={() => {}}
+          stats={mockStats}
+          unlockedCount={null}
+        />,
+      );
+
+      const unlockedRow = container.querySelector('[data-cy="profile-filter-item-unlocked"]')!.parentElement!;
+      expect(screen.getByText('Unlocked')).toBeInTheDocument();
+      expect(container.querySelector('[data-cy="profile-filter-item-unlocked-count"]')).not.toBeInTheDocument();
+      expect(unlockedRow.querySelector('[data-testid="spinner"]')).not.toBeInTheDocument();
+    });
+
+    it("is hidden on another user's profile, whose /priv holds no unlocked content", () => {
+      render(
+        <ProfilePageFilterBar
+          activePage={PROFILE_PAGE_TYPES.POSTS}
+          onPageChangeAction={() => {}}
+          stats={mockStats}
+          unlockedCount={3}
+          isOwnProfile={false}
+        />,
+      );
+
+      expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+    });
   });
 });
 

@@ -1,0 +1,54 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FilterPostsBar - Snapshots > matches snapshot 1`] = `
+<div
+  class="flex min-w-0 shrink-0 flex-col gap-2"
+  data-testid="container"
+>
+  <div
+    class="flex h-12 min-w-0 shrink-0 items-center gap-3 rounded-full border border-border px-6 py-3"
+    data-cy="profile-filter-posts"
+    data-testid="filter-posts-bar"
+    style="background: linear-gradient(180deg, rgb(7, 4, 10) 0%, rgb(27, 24, 32) 100%); backdrop-filter: blur(20px);"
+  >
+    <input
+      aria-invalid="false"
+      aria-label="Filter posts"
+      class="flex w-full rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto min-w-20 flex-1 border-none bg-transparent pr-0 pl-0 text-base font-medium text-foreground md:text-base"
+      data-cy="profile-filter-posts-input"
+      data-testid="input"
+      maxlength="30"
+      placeholder="Filter posts"
+      type="text"
+      value=""
+    />
+    <span
+      aria-hidden="true"
+      class="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-search size-4 text-muted-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m21 21-4.34-4.34"
+        />
+        <circle
+          cx="11"
+          cy="11"
+          r="8"
+        />
+      </svg>
+    </span>
+  </div>
+</div>
+`;

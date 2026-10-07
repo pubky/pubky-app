@@ -232,6 +232,7 @@ describe('DialogRepost', () => {
           submitLabel: 'Share',
           submitIcon: ShareIcon,
           successToastTitle: "You've shared the My Collection collection",
+          isCollectionShare: true,
         }}
       />,
     );
@@ -243,6 +244,7 @@ describe('DialogRepost', () => {
         submitLabel: 'Share',
         submitIcon: ShareIcon,
         successToastTitle: "You've shared the My Collection collection",
+        isCollectionShare: true,
       }),
       undefined,
     );

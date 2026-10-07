@@ -1,6 +1,6 @@
 ---
 description: Local-first write patterns and controller naming conventions
-globs: src/core/**/*
+globs: src/core/**/*,src/hooks/**/*
 alwaysApply: false
 ---
 

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
 import { type SettingsJson, SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import {
   defaultNotificationPreferences,
@@ -236,6 +237,23 @@ describe('SettingsNormalizer', () => {
   });
 
   describe('round-trip conversion', () => {
+    it.each([
+      ['missing', undefined],
+      ['processed', TEST_PUBKY.USER_2],
+    ] as const)('should preserve %s moderation-bot state', (_state, moderationBot) => {
+      const privacy = { ...defaultPrivacyPreferences } as typeof defaultPrivacyPreferences & {
+        moderationBot?: Pubky;
+      };
+      if (moderationBot !== undefined) privacy.moderationBot = moderationBot;
+      const original = createMockSettingsState({ privacy });
+
+      const normalized = SettingsNormalizer.to(original, TEST_PUBKY.USER_1);
+      const restored = SettingsNormalizer.from(normalized.settings);
+
+      expect(restored.privacy.moderationBot).toBe(moderationBot);
+      expect(restored.version).toBe(1);
+    });
+
     it('should preserve data through to/from cycle (except muted which is not synced)', () => {
       const original = createMockSettingsState({
         notifications: { ...defaultNotificationPreferences, follow: false },

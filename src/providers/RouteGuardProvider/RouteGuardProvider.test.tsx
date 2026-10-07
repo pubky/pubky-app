@@ -5,6 +5,7 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
+import { toast } from '@/molecules/Toaster/toast';
 import { RouteGuardProvider } from './RouteGuardProvider';
 
 // Hoisted mocks
@@ -13,7 +14,6 @@ const mocks = vi.hoisted(() => {
   const mockRouterRefresh = vi.fn();
   const mockResync = vi.fn();
   const resetMigrationStore = vi.fn();
-  const mockToast = vi.fn();
   const restorePersistedSession = vi.fn().mockResolvedValue(true);
 
   return {
@@ -21,7 +21,6 @@ const mocks = vi.hoisted(() => {
     mockRouterRefresh,
     mockResync,
     resetMigrationStore,
-    mockToast,
     restorePersistedSession,
     // Auth store state defaults
     hasHydrated: true,
@@ -89,9 +88,7 @@ vi.mock('@/libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: mocks.mockToast,
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock auth store
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -139,7 +136,7 @@ describe('RouteGuardProvider — migration resync', () => {
     mocks.mockResync.mockReset();
     mocks.mockRouterRefresh.mockReset();
     mocks.resetMigrationStore.mockReset();
-    mocks.mockToast.mockReset();
+    vi.mocked(toast).mockReset();
     mocks.restorePersistedSession.mockReset();
     mocks.restorePersistedSession.mockResolvedValue(true);
   });
@@ -365,6 +362,32 @@ describe('RouteGuardProvider — migration resync', () => {
     expect(screen.getByText('Redirecting...')).toBeInTheDocument();
   });
 
+  // #2373: the upgrade swaps the stored session in place while the user stays signed in. The guard
+  // must not read that as an auth change and move them off the page they were on.
+  it('keeps the user in place when the session object is replaced', () => {
+    mocks.status = 'AUTHENTICATED';
+    mocks.isLoading = false;
+    mocks.currentUserPubky = 'test-pubky-z32';
+    mocks.pathname = '/feed';
+
+    const { rerender } = render(
+      <RouteGuardProvider>
+        <div>Page Content</div>
+      </RouteGuardProvider>,
+    );
+
+    mocks.session = { swapped: true };
+    rerender(
+      <RouteGuardProvider>
+        <div>Page Content</div>
+      </RouteGuardProvider>,
+    );
+
+    expect(screen.getByText('Page Content')).toBeInTheDocument();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+    expect(mocks.restorePersistedSession).not.toHaveBeenCalled();
+  });
+
   it('allows unauthenticated users to render core explore routes after auth loading resolves', () => {
     mocks.status = 'UNAUTHENTICATED';
     mocks.isLoading = false;
@@ -489,7 +512,7 @@ describe('RouteGuardProvider — session restore', () => {
     mocks.status = 'UNAUTHENTICATED';
     mocks.isLoading = false;
     mocks.pathname = '/home';
-    mocks.mockToast.mockReset();
+    vi.mocked(toast).mockReset();
     mocks.restorePersistedSession.mockReset();
     mocks.restorePersistedSession.mockResolvedValue(true);
   });
@@ -512,7 +535,7 @@ describe('RouteGuardProvider — session restore', () => {
       await Promise.resolve();
     });
 
-    expect(mocks.mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'This key is linked to a different homeserver. Use a staging account on this site.',
     });

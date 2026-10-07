@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/molecules/Toaster/toast';
 import { MutedUsersList } from './MutedUsersList';
 
 const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser } = vi.hoisted(() => ({
@@ -38,11 +39,7 @@ vi.mock('@/molecules/FacehashAvatar/FacehashAvatar', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: vi.fn(),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 describe('MutedUsersList', () => {
   beforeEach(() => {
@@ -85,8 +82,27 @@ describe('MutedUsersList', () => {
     expect(screen.getByText('Unmute')).toBeInTheDocument();
   });
 
-  it('calls toggleMute when clicking unmute', () => {
-    const toggleMute = vi.fn();
+  it('renders a deleted muted user as [DELETED] with the deleted-user glyph, never a seed letter', () => {
+    mockUseMutedUsers.mockReturnValue({
+      mutedUserIds: ['user-123'],
+      mutedUserIdSet: new Set(['user-123']),
+      isMuted: vi.fn((id: string) => id === 'user-123'),
+      isLoading: false,
+    });
+    mockUseBulkUserAvatars.mockReturnValue({
+      usersMap: new Map([['user-123', { id: 'user-123', name: '[DELETED]', avatarUrl: undefined }]]),
+      isLoading: false,
+    });
+
+    render(<MutedUsersList />);
+
+    expect(screen.getByText('[DELETED]')).toBeInTheDocument();
+    expect(screen.getByTestId('avatar-deleted-placeholder')).toBeInTheDocument();
+    expect(screen.queryByTestId('facehash-avatar')).not.toBeInTheDocument();
+  });
+
+  it('calls toggleMute when clicking unmute and confirms with a generic toast', async () => {
+    const toggleMute = vi.fn().mockResolvedValue(undefined);
     mockUseMutedUsers.mockReturnValue({
       mutedUserIds: ['user-123'],
       mutedUserIdSet: new Set(['user-123']),
@@ -105,6 +121,9 @@ describe('MutedUsersList', () => {
     fireEvent.click(unmuteButton);
 
     expect(toggleMute).toHaveBeenCalledWith('user-123', true);
+    await waitFor(() => {
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'User unmuted' });
+    });
   });
 
   it('calls toggleMute for each user when clicking unmute all', async () => {

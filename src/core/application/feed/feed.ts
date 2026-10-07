@@ -3,9 +3,10 @@ import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/appli
 import { DEFAULT_CUSTOM_FEED_ICON, isProfileTagReachSupported } from '@/config/feed';
 import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { DatabaseErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { FeedModel } from '@/models/feed/feed';
@@ -36,7 +37,7 @@ export class FeedApplication {
     return LocalFeedService.readAll();
   }
 
-  static async get(params: TFeedIdParam): Promise<FeedModelSchema> {
+  static async get(params: TFeedIdParam): Promise<FeedModelSchema | null> {
     return LocalFeedService.read(params);
   }
 
@@ -47,8 +48,9 @@ export class FeedApplication {
     const idChanged = existingId != null && existingId !== newId;
 
     const now = Date.now();
+    // Model errors are already logged; this ancillary lookup can fall back to a fresh timestamp.
     const createdAt = existingId
-      ? (await LocalFeedService.read({ feedId: existingId }).catch(() => ({ created_at: now }))).created_at
+      ? ((await LocalFeedService.read({ feedId: existingId }).catch(() => null)) ?? { created_at: now }).created_at
       : now;
 
     const { tags, domain_tags, reach, sort, content, layout } = feed.feed;
@@ -72,6 +74,7 @@ export class FeedApplication {
     // 1) create new homeserver resource, 2) atomically swap local feed records,
     // 3) best-effort delete old homeserver resource.
     if (idChanged) {
+      // Model errors are already logged; migration can proceed without the old stream cache.
       const oldFeed = await LocalFeedService.read({ feedId: existingId }).catch(() => null);
       const newFeedUrl = feedUriBuilder(userId, newId);
       const newFeedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
@@ -100,6 +103,7 @@ export class FeedApplication {
     const feedId = (params as TFeedPersistDeleteParams).feedId;
     const feedUrl = feedUriBuilder(userId, feedId);
 
+    // Model errors are already logged; cache cleanup must not block the delete itself.
     const feed = await LocalFeedService.read({ feedId }).catch(() => null);
     let streamId: ReturnType<typeof buildFeedStreamId> | null = null;
     if (feed) {
@@ -127,7 +131,18 @@ export class FeedApplication {
    * Presentation fields (`name` and `icon`) do not affect the ID.
    */
   static async prepareUpdateParams({ feedId, changes }: TFeedUpdateParams): Promise<TFeedCreateParams> {
+    // Update only runs on feeds the user is editing (they came from a list
+    // read), so a missing row means the feed was deleted mid-edit. Preserve
+    // the previous throw-after-read behavior in that case; the null return
+    // from read() is for the stale-id lookups elsewhere.
     const existing = await LocalFeedService.read({ feedId });
+    if (!existing) {
+      throw Err.database(DatabaseErrorCode.RECORD_NOT_FOUND, 'Feed not found', {
+        service: ErrorService.Local,
+        operation: 'prepareUpdateParams',
+        context: { table: 'feeds', id: feedId },
+      });
+    }
 
     return {
       name: changes.name ?? existing.name,
@@ -255,14 +270,36 @@ export class FeedApplication {
   /**
    * Persist feed locally and sync to homeserver
    * Extracted to avoid duplication between handlePut and handleUpdate
+   *
+   * Local-first with compensation: the row is written before the PUT, and a failed PUT
+   * rolls it back so a feed that never reached the homeserver leaves no tab behind. A
+   * create (no prior row for this ID) deletes the row; a same-ID update (name or icon
+   * only) restores the prior row so the local values match what the homeserver still has.
+   * The prior-row snapshot is taken inside the write transaction, and the rollback only
+   * undoes this commit's own write (matched by `updated_at`), never a newer one that landed
+   * while the PUT was in flight.
    */
   private static async commit({ userId, feedSchema, normalizedFeed }: PersistAndSyncParams): Promise<FeedModelSchema> {
-    const persistedFeed = await LocalFeedService.createOrUpdate(feedSchema);
+    const { persisted: persistedFeed, prior: priorFeed } = await LocalFeedService.createOrUpdate(feedSchema);
 
     const feedUrl = feedUriBuilder(userId, persistedFeed.id);
     const feedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
 
-    await HomeserverService.request({ method: HttpMethod.PUT, url: feedUrl, bodyJson: feedJson });
+    try {
+      await HomeserverService.request({ method: HttpMethod.PUT, url: feedUrl, bodyJson: feedJson });
+    } catch (error) {
+      try {
+        await LocalFeedService.rollback({
+          feedId: persistedFeed.id,
+          expectedUpdatedAt: feedSchema.updated_at,
+          priorFeed,
+        });
+      } catch (rollbackError) {
+        if (!isAppError(rollbackError))
+          Logger.error('Failed to rollback local feed write', { feedId: persistedFeed.id, rollbackError });
+      }
+      throw toAppError(error, ErrorService.Homeserver, 'commit');
+    }
 
     return persistedFeed;
   }

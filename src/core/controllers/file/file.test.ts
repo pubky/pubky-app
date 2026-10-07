@@ -6,6 +6,7 @@ import { FileVariant } from '@/services/nexus/file/file.types';
 const mockFileApplication = {
   toFileAttachment: vi.fn(),
   commitCreate: vi.fn(),
+  commitDelete: vi.fn(),
   fetchFiles: vi.fn(),
   getAvatarUrl: vi.fn(),
   getFileUrl: vi.fn(),
@@ -128,6 +129,25 @@ describe('FileController', () => {
       await expect(FileController.commitCreate({ file, pubky: testPubky })).rejects.toThrow('arrayBuffer failed');
       expect(mockFileApplication.toFileAttachment).toHaveBeenCalledWith({ file, pubky: testPubky });
       expect(mockFileApplication.commitCreate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('commitDelete', () => {
+    it('delegates to FileApplication.commitDelete', async () => {
+      const fileUris = ['pubky://user1/pub/pubky.app/files/file1', 'pubky://user2/pub/pubky.app/files/file2'];
+      mockFileApplication.commitDelete.mockResolvedValue(undefined);
+
+      await FileController.commitDelete({ fileUris });
+
+      expect(mockFileApplication.commitDelete).toHaveBeenCalledWith(fileUris);
+    });
+
+    it('propagates deletion errors to the caller', async () => {
+      mockFileApplication.commitDelete.mockRejectedValue(new Error('delete failed'));
+
+      await expect(
+        FileController.commitDelete({ fileUris: ['pubky://user1/pub/pubky.app/files/file1'] }),
+      ).rejects.toThrow('delete failed');
     });
   });
 

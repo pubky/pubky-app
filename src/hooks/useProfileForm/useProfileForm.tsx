@@ -1,21 +1,24 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
-import { HOME_ROUTES, PROFILE_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
+import { ONBOARDING_ROUTES, PROFILE_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { USER_BIO_MAX_LENGTH, USER_NAME_MAX_LENGTH, USER_NAME_MIN_LENGTH } from '@/config/user';
 import { AuthController } from '@/controllers/auth/auth';
 import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
+import type { TCommitUpdateDetailsParams } from '@/controllers/profile/profile.types';
 import { AppError } from '@/libs/error/error';
 import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
+import { normalizeProfileLinkUrl } from '@/libs/profile/profileLinks';
 import { safeExternalUrlSchema } from '@/libs/utils/safeExternalUrl';
-import { generateRandomUsername } from '@/libs/utils/utils';
-import { useToast } from '@/molecules/Toaster/use-toast';
-import { UserValidator } from '@/pipes/user/user.validator';
+import { generateRandomUsername, isReservedUserName } from '@/libs/utils/utils';
+import { toast } from '@/molecules/Toaster/toast';
+import { type UiUserSchema, UserValidator } from '@/pipes/user/user.validator';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import {
   PROFILE_SUBMIT_TEXT,
@@ -34,20 +37,66 @@ const nameSchema = z
   .string()
   .trim()
   .min(USER_NAME_MIN_LENGTH, `Name must be at least ${USER_NAME_MIN_LENGTH} characters`)
-  .max(USER_NAME_MAX_LENGTH, `Name must be no more than ${USER_NAME_MAX_LENGTH} characters`);
+  .max(USER_NAME_MAX_LENGTH, `Name must be no more than ${USER_NAME_MAX_LENGTH} characters`)
+  // `[DELETED]` is the label the app shows for a tombstoned user, so a live profile cannot take it.
+  // Mirrors `UserValidator` (the submit gate); both read the rule from `isReservedUserName`.
+  .refine((value) => !isReservedUserName(value), { message: 'This name is reserved' });
 const bioSchema = z
   .string()
   .trim()
   .max(USER_BIO_MAX_LENGTH, `Bio must be no more than ${USER_BIO_MAX_LENGTH} characters`);
 
+function getProfileFormLinks(userDetails: NexusUserDetails): ProfileLink[] {
+  const formattedLinks = (userDetails.links ?? []).map((link) => ({
+    label: link.title.toUpperCase(),
+    url: link.url,
+  }));
+  return formattedLinks.length > 0 ? formattedLinks : DEFAULT_LINKS;
+}
+
+function areProfileLinksEqual(left: ProfileLink[], right: ProfileLink[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((link, index) => link.label === right[index]?.label && link.url === right[index]?.url)
+  );
+}
+
+/**
+ * The fields the user changed against the profile the form was filled from. An edit sends only
+ * these, so a field the user never touched can't republish a stale cached value.
+ */
+function getProfileChanges(
+  user: z.infer<typeof UiUserSchema>,
+  links: ProfileLink[],
+  userDetails: NexusUserDetails | null | undefined,
+): TCommitUpdateDetailsParams['changes'] {
+  const changes: TCommitUpdateDetailsParams['changes'] = {};
+  if (user.name !== (userDetails?.name || '').trim()) changes.name = user.name;
+  if ((user.bio ?? '') !== (userDetails?.bio || '').trim()) changes.bio = user.bio ?? '';
+  // Compare what would be published, excluding UI-only placeholders and URL whitespace.
+  // Keep invalid stored URLs as-is (including bare X handles) so correcting or removing
+  // one is still an edit; only new form input gets the X-handle rewrite.
+  const originalLinks = (userDetails?.links ?? []).map((link) => ({
+    label: link.title.toUpperCase(),
+    url: link.url.trim(),
+  }));
+  const rowsChanged = !areProfileLinksEqual(links, userDetails ? getProfileFormLinks(userDetails) : DEFAULT_LINKS);
+  if (rowsChanged && !areProfileLinksEqual(user.links ?? [], originalLinks)) {
+    changes.links = user.links ?? [];
+  }
+  return changes;
+}
+
 export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn {
   const { mode, pubky } = props;
   // Extract userDetails for edit mode to avoid object reference issues in useEffect
   const userDetails = props.mode === 'edit' ? props.userDetails : undefined;
+  const editRedirectTo = props.mode === 'edit' ? props.redirectTo : undefined;
   const setShowWelcomeDialog = props.mode === 'create' ? props.setShowWelcomeDialog : undefined;
+  const idleSubmitText =
+    mode === 'create' || editRedirectTo ? PROFILE_SUBMIT_TEXT.continue : PROFILE_SUBMIT_TEXT.saveProfile;
 
   const router = useRouter();
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Generate a stable initial username for create mode (only generated once)
@@ -60,13 +109,14 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // The post-save redirect fetches its route on click (nothing prefetches it), so it runs as a
+  // transition: the submit button keeps its loading state until the next screen renders instead
+  // of dropping it the moment the save completes.
+  const [isNavigating, startNavigation] = useTransition();
   const [isLoading, setIsLoading] = useState(mode === 'edit');
-  const [submitText, setSubmitText] = useState<SubmitText>(
-    mode === 'create' ? PROFILE_SUBMIT_TEXT.finish : PROFILE_SUBMIT_TEXT.saveProfile,
-  );
+  const [submitText, setSubmitText] = useState<SubmitText>(idleSubmitText);
 
   // Edit mode specific state
-  const [originalAvatarUrl, setOriginalAvatarUrl] = useState<string | null>(null);
   const [avatarChanged, setAvatarChanged] = useState(false);
 
   // Crop dialog state
@@ -87,12 +137,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       setBio(userDetails.bio || '');
 
       // Convert links from NexusUserLink format to form format
-      const formattedLinks = (userDetails.links ?? []).map((link) => ({
-        label: link.title.toUpperCase(),
-        url: link.url,
-      }));
-
-      setLinks(formattedLinks.length > 0 ? formattedLinks : DEFAULT_LINKS);
+      setLinks(getProfileFormLinks(userDetails));
 
       // Set avatar if exists
       // Note: We intentionally don't use the local store's blob URL here because:
@@ -104,13 +149,21 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         // TODO: Has to be fixed with the ServiceWorker
         // Assign a random number (0-100000) as a query parameter to avatarUrl for cache busting
         avatarUrl = `${avatarUrl}${Math.floor(Math.random() * 100000)}`;
-        setOriginalAvatarUrl(avatarUrl);
         setAvatarPreview(avatarUrl);
       }
 
       setIsLoading(false);
     }
   }, [mode, userDetails, pubky]);
+
+  const isEditProfileDirty =
+    mode === 'edit' &&
+    userDetails !== undefined &&
+    userDetails !== null &&
+    (name !== (userDetails.name || '') ||
+      bio !== (userDetails.bio || '') ||
+      !areProfileLinksEqual(links, getProfileFormLinks(userDetails)) ||
+      avatarChanged);
 
   // Cleanup blob URLs on unmount
   useEffect(() => {
@@ -137,21 +190,27 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     }
   }, []);
 
-  const validateLinkUrl = useCallback((value: string, index: number) => {
-    if (value.trim().length === 0) {
-      setLinkUrlErrors((prev) => ({ ...prev, [index]: null }));
-    } else {
-      const res = safeExternalUrlSchema.safeParse(value);
-      setLinkUrlErrors((prev) => ({
-        ...prev,
-        [index]: res.success ? null : (res.error.issues[0]?.message ?? 'Invalid URL'),
-      }));
-    }
-  }, []);
+  const validateLinkUrl = useCallback(
+    (value: string, index: number) => {
+      if (value.trim().length === 0) {
+        setLinkUrlErrors((prev) => ({ ...prev, [index]: null }));
+      } else {
+        // Validate what we would store: a bare X handle is rewritten to its profile URL first.
+        const res = safeExternalUrlSchema.safeParse(normalizeProfileLinkUrl(links[index]?.label ?? '', value));
+        setLinkUrlErrors((prev) => ({
+          ...prev,
+          [index]: res.success ? null : (res.error.issues[0]?.message ?? 'Invalid URL'),
+        }));
+      }
+    },
+    [links],
+  );
 
   const validateUser = useCallback(() => {
     const avatarToValidate = mode === 'edit' && !avatarChanged ? null : avatarFile;
-    const { data, error } = UserValidator.check(name, bio, links, avatarToValidate);
+    // Validate and save the normalized links, so accepting a bare X handle is one behaviour.
+    const normalizedLinks = links.map((link) => ({ ...link, url: normalizeProfileLinkUrl(link.label, link.url) }));
+    const { data, error } = UserValidator.check(name, bio, normalizedLinks, avatarToValidate);
 
     if (error.length > 0) {
       for (const issue of error) {
@@ -276,18 +335,26 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
   const handleSubmit = useCallback(async () => {
     if (!pubky) return;
 
+    if (mode === 'edit' && editRedirectTo && !isEditProfileDirty) {
+      router.push(editRedirectTo);
+      return;
+    }
+
     setIsSaving(true);
     setSubmitText(PROFILE_SUBMIT_TEXT.saving);
 
     try {
       const user = validateUser();
       if (!user) {
-        setSubmitText(mode === 'create' ? PROFILE_SUBMIT_TEXT.finish : PROFILE_SUBMIT_TEXT.saveProfile);
+        setSubmitText(idleSubmitText);
         return;
       }
 
       // Handle avatar upload
       let image: string | null = null;
+      // Edit mode sends only what changed; everything else keeps its published value
+      const changes: TCommitUpdateDetailsParams['changes'] =
+        mode === 'edit' ? getProfileChanges(user, links, userDetails) : {};
 
       if (mode === 'create') {
         if (avatarFile) {
@@ -298,22 +365,17 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
             return;
           }
         }
-      } else {
-        // Edit mode
-        image = originalAvatarUrl ? (userDetails?.image ?? null) : null;
-
-        if (avatarChanged) {
-          if (avatarFile) {
-            setSubmitText(PROFILE_SUBMIT_TEXT.uploadingAvatar);
-            const uploadedImage = await FileController.commitCreate({ file: avatarFile, pubky });
-            if (!uploadedImage) {
-              setSubmitText(PROFILE_SUBMIT_TEXT.tryAgain);
-              return;
-            }
-            image = uploadedImage;
-          } else {
-            image = null;
+      } else if (avatarChanged) {
+        if (avatarFile) {
+          setSubmitText(PROFILE_SUBMIT_TEXT.uploadingAvatar);
+          const uploadedImage = await FileController.commitCreate({ file: avatarFile, pubky });
+          if (!uploadedImage) {
+            setSubmitText(PROFILE_SUBMIT_TEXT.tryAgain);
+            return;
           }
+          changes.image = uploadedImage;
+        } else {
+          changes.image = null;
         }
       }
 
@@ -329,15 +391,11 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         }
         await AuthController.bootstrapWithDelay();
         setShowWelcomeDialog?.(true);
-        router.push(HOME_ROUTES.HOME);
-      } else {
-        await ProfileController.commitUpdate({
-          name: user.name,
-          bio: user.bio,
-          links: user.links,
-          image,
-          pubky,
+        startNavigation(() => {
+          router.push(ONBOARDING_ROUTES.TAGS);
         });
+      } else {
+        await ProfileController.commitUpdate({ pubky, changes });
         // Update local avatar store: set NEW blob URL if new avatar, clear if deleted
         // We create a separate blob URL so the form's cleanup can safely revoke its own
         if (avatarChanged) {
@@ -352,7 +410,9 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         toast({
           title: 'Profile updated',
         });
-        router.push(PROFILE_ROUTES.PROFILE);
+        startNavigation(() => {
+          router.push(editRedirectTo ?? PROFILE_ROUTES.PROFILE);
+        });
       }
     } catch (error) {
       const sizeLimitMessage = getImageUploadSizeLimitToastMessage(error);
@@ -401,13 +461,15 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     pubky,
     mode,
     validateUser,
+    links,
     avatarFile,
     avatarChanged,
-    originalAvatarUrl,
     userDetails,
+    editRedirectTo,
+    idleSubmitText,
+    isEditProfileDirty,
     setShowWelcomeDialog,
     router,
-    toast,
   ]);
 
   const handleCancel = useCallback(() => {
@@ -428,7 +490,8 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     !!bioError ||
     Object.values(linkUrlErrors).some((m) => !!m) ||
     !!avatarError ||
-    isSaving;
+    isSaving ||
+    isNavigating;
 
   return {
     state: {
@@ -437,7 +500,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       links,
       avatarFile,
       avatarPreview,
-      isSaving,
+      isSaving: isSaving || isNavigating,
       isLoading,
       submitText,
     },

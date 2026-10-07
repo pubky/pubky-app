@@ -113,11 +113,7 @@ vi.mock('@/molecules/Page/Page', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: vi.fn(),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock copyToClipboard function - use vi.hoisted to ensure it's available before vi.mock runs
 const { mockCopyToClipboard } = vi.hoisted(() => ({
@@ -125,8 +121,10 @@ const { mockCopyToClipboard } = vi.hoisted(() => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', () => {
+vi.mock('@/atoms/Button/Button', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/atoms/Button/Button')>();
   return {
+    ...actual,
     Button: ({
       asChild,
       children,

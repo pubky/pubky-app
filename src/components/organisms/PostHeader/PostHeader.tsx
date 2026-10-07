@@ -6,7 +6,7 @@ import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import { isPostDeleted } from '@/libs/utils/utils';
+import { isPostDeleted, resolveUserDisplayName } from '@/libs/utils/utils';
 import { cn } from '@/libs/utils/utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
@@ -52,7 +52,7 @@ export function PostHeader({
   // from a separate usePostDetails instance that can resolve after this one.
   // Never commit author data for a deleted post — hold the skeleton until the
   // parent swaps it out, so a username can't flash and then vanish.
-  const isDeleted = !isReplyInput && isPostDeleted(postDetails?.content);
+  const isDeleted = !isReplyInput && isPostDeleted(postDetails);
 
   if (isLoading || isDeleted) {
     return <PostHeaderSkeleton showUserInfo={showUserInfo} visuallyHideAvatar={visuallyHideAvatar} size={size} />;
@@ -65,7 +65,7 @@ export function PostHeader({
   const userInfo = (
     <PostHeaderUserInfo
       userId={userId}
-      userName={userDetails?.name || ''}
+      userName={resolveUserDisplayName(userDetails)}
       status={userDetails?.status}
       avatarUrl={avatarUrl}
       showPopover={showPopover}

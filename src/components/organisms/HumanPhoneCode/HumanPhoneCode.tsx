@@ -12,13 +12,12 @@ import { cn } from '@/libs/utils/utils';
 import { HumanPhoneCodeInput } from '@/molecules/HumanPhoneCodeInput/HumanPhoneCodeInput';
 import { IllustratedCard } from '@/molecules/IllustratedCard/IllustratedCard';
 import { PageTitle } from '@/molecules/Page/Page';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import type { HumanPhoneCodeProps } from './HumanPhoneCode.types';
 
 export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCodeProps) => {
   const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
-  const { toast } = useToast();
   const [resendTimer, setResendTimer] = useState<number>(60);
   React.useEffect(() => {
     const intervalId = setInterval(() => {

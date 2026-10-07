@@ -12,7 +12,7 @@ export interface ProfileLink {
 /** Submit-button copy for each phase of the profile save flow. */
 export const PROFILE_SUBMIT_TEXT = {
   saveProfile: 'Save Profile',
-  finish: 'Finish',
+  continue: 'Continue',
   saving: 'Saving...',
   uploadingAvatar: 'Uploading avatar...',
   savingProfile: 'Saving profile...',
@@ -84,6 +84,8 @@ export interface UseProfileFormPropsCreate extends UseProfileFormPropsBase {
 export interface UseProfileFormPropsEdit extends UseProfileFormPropsBase {
   mode: 'edit';
   userDetails: NexusUserDetails | null | undefined;
+  /** Route to continue to after an onboarding edit (defaults to the own-profile page after save). */
+  redirectTo?: string;
 }
 
 export type UseProfileFormProps = UseProfileFormPropsCreate | UseProfileFormPropsEdit;

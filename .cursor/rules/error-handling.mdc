@@ -1,6 +1,6 @@
 ---
 description: Error handling conventions using AppError across all layers
-globs: src/core/**/*
+globs: src/core/**/*,src/hooks/**/*,src/libs/**/*
 alwaysApply: false
 ---
 

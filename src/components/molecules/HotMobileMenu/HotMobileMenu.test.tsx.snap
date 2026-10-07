@@ -2,12 +2,12 @@
 
 exports[`HotMobileMenu - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="mobile-menu-gradient-fade z-(--z-mobile-menu) bg-background lg:hidden sticky top-(--header-height-settings) -mx-6"
+  class="mobile-menu-gradient-fade z-(--z-mobile-menu) bg-background lg:hidden sticky top-(--header-height-settings) -mx-4 lg:mx-0"
   data-testid="hot-mobile-menu"
 >
   <div
-    class="flex w-full"
-    data-testid="container"
+    class="flex w-full overflow-x-auto"
+    data-testid="mobile-tab-bar-scroll-container"
   >
     <div
       class="flex flex-1 justify-center border-b px-0 py-1.5 border-foreground"

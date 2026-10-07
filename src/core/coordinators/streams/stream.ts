@@ -238,7 +238,8 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
    */
   private async resolveStreamHead(currentStreamId: PostStreamId): Promise<boolean> {
     try {
-      const streamHead = await StreamPostsController.getStreamHead({ streamId: currentStreamId });
+      const streamHead = await StreamPostsController.getOrFetchStreamHead({ streamId: currentStreamId });
+      if (this.streamState.currentStreamId !== currentStreamId) return false;
       if (streamHead === SKIP_FETCH_NEW_POSTS) {
         Logger.warn('Failed to resolve stream head or the newest cached postId not found', {
           streamId: currentStreamId,

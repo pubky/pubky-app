@@ -14,7 +14,7 @@ import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
 import { isAppError } from '@/libs/error/error.utils';
 import { cn, copyToClipboard } from '@/libs/utils/utils';
 import { PageTitle } from '@/molecules/Page/Page';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { PriceSkeleton, QRCodeSkeleton } from './HumanLightningPayment.skeleton';
 import type { HumanLightningPaymentProps } from './HumanLightningPayment.types';
 import { VerificationHandler } from './HumanLightningPayment.utils';
@@ -24,10 +24,9 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
   const verificationRef = React.useRef<VerificationHandler | null>(null);
   const initTimeoutRef = React.useRef<number | null>(null);
   const isMobile = useIsMobile();
-  const rate = useBtcRate();
+  const { rate } = useBtcRate();
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentExpired, setIsPaymentExpired] = useState(false);
-  const { toast } = useToast();
 
   /**
    * Request a new lightning invoice if the verification is expired or not set.
@@ -218,8 +217,8 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         <Button
           id="human-phone-back-btn"
           size="lg"
-          className="w-full flex-1 rounded-full lg:flex-0"
-          variant="secondary"
+          className="w-full flex-1 rounded-full bg-foreground/4 lg:flex-0"
+          variant="outline"
           onClick={onBack}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

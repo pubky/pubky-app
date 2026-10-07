@@ -39,6 +39,10 @@ const COVER_FILE_ID = 'vrt-article-cover-quay';
 
 export const VRT_ARTICLE_TITLE = 'Why timestamps belong in the corner';
 
+// The heading, the "loose" numbered list (blank lines between items) and the
+// soft-break paragraph exercise the article typography that issue #1762 covers:
+// block spacing on the published page, loose list markers staying on the same
+// line as their text, and single newlines rendering as line breaks.
 export const VRT_ARTICLE_BODY = [
   'A feed is a scanning surface, not a document.',
   '',
@@ -47,6 +51,16 @@ export const VRT_ARTICLE_BODY = [
   '- Timestamps belong in the corner',
   '- Names belong with the avatar',
   '- The take belongs in the body',
+  '',
+  '## Reading order',
+  '',
+  '1. Scan the corner for the timestamp',
+  '',
+  '2. Latch onto the avatar for the name',
+  '',
+  '3. Read the body for the take',
+  '',
+  'Metadata whispers.\nThe body speaks.',
 ].join('\n');
 
 export const VRT_ARTICLE_COVER_URL = articleCoverUrl;

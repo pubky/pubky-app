@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { clearAllQueryClients, createQueryClient } from './query-client.factory';
+import { AppError } from '@/libs/error/error';
+import { ClientErrorCode, RateLimitErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { clearAllQueryClients, createQueryClient, createRetryPolicy } from './query-client.factory';
 import type { QueryClientConfig } from './query-client.types';
 
 const createTestConfig = (): QueryClientConfig => ({
@@ -40,6 +43,46 @@ describe('clearAllQueryClients', () => {
     expect(() => clearAllQueryClients()).not.toThrow();
   });
 
+  describe('retryDelay for 429s', () => {
+    const create429Config = (): QueryClientConfig => ({
+      retry: {
+        nonRetryable: [],
+        limits: { default: 0 },
+        delays: { default: { initial: 100, max: 30_000 } },
+      },
+    });
+
+    const delayFor = (client: ReturnType<typeof createQueryClient>) =>
+      client.defaultQueryOptions({ queryKey: ['k'] }).retryDelay as (a: number, e: unknown) => number;
+
+    const rateLimitError = (context: Record<string, unknown>) =>
+      new AppError({
+        category: ErrorCategory.RateLimit,
+        code: RateLimitErrorCode.RATE_LIMITED,
+        message: 'Too Many Requests',
+        service: ErrorService.Nexus,
+        operation: 'fetchNexus',
+        context,
+      });
+
+    it('honors a server Retry-After hint above the 2s floor', () => {
+      const delay = delayFor(createQueryClient(create429Config()));
+      expect(delay(0, rateLimitError({ statusCode: 429, retryAfter: 7 }))).toBe(7_000);
+    });
+
+    it('clamps the Retry-After hint to the configured max', () => {
+      const delay = delayFor(createQueryClient(create429Config()));
+      expect(delay(0, rateLimitError({ statusCode: 429, retryAfter: 3600 }))).toBe(30_000);
+    });
+
+    it('falls back to hard 429 backoff when no Retry-After is present', () => {
+      const delay = delayFor(createQueryClient(create429Config()));
+      // Fallback: at least 2s, ignoring the configured initial delay (100ms).
+      expect(delay(0, rateLimitError({ statusCode: 429 }))).toBe(2_000);
+      expect(delay(1, rateLimitError({ statusCode: 429 }))).toBe(2_000);
+    });
+  });
+
   it('should clear cached data from all registered clients', () => {
     const client = createQueryClient(createTestConfig());
 
@@ -49,5 +92,48 @@ describe('clearAllQueryClients', () => {
     clearAllQueryClients();
 
     expect(client.getQueryData(['test-key'])).toBeUndefined();
+  });
+
+  describe('createRetryPolicy', () => {
+    const notFoundError = () =>
+      new AppError({
+        category: ErrorCategory.Client,
+        code: ClientErrorCode.NOT_FOUND,
+        message: 'Not Found',
+        service: ErrorService.Nexus,
+        operation: 'fetchNexus',
+        context: { statusCode: 404 },
+      });
+
+    it('applies a scoped not-found limit while keeping the other categories', () => {
+      const base: QueryClientConfig['retry'] = {
+        nonRetryable: [],
+        limits: { notFound: 5, serverError: 3, default: 3 },
+        delays: {
+          notFound: { initial: 500, max: 10_000 },
+          serverError: { initial: 1_000, max: 30_000 },
+          default: { initial: 1_000, max: 30_000 },
+        },
+      };
+      const scoped = createRetryPolicy({ ...base, limits: { ...base.limits, notFound: 2 } });
+
+      // Scoped 404: attempts allowed while failureCount < 2, then no more.
+      expect(scoped.shouldRetry(0, notFoundError())).toBe(true);
+      expect(scoped.shouldRetry(1, notFoundError())).toBe(true);
+      expect(scoped.shouldRetry(2, notFoundError())).toBe(false);
+      // The scoped 404 delay stays the shared one.
+      expect(scoped.retryDelay(0, notFoundError())).toBe(500);
+      // 5xx keeps its own limit.
+      const serverError = new AppError({
+        category: ErrorCategory.Server,
+        code: ServerErrorCode.SERVICE_UNAVAILABLE,
+        message: 'Unavailable',
+        service: ErrorService.Nexus,
+        operation: 'fetchNexus',
+        context: { statusCode: 503 },
+      });
+      expect(scoped.shouldRetry(2, serverError)).toBe(true);
+      expect(scoped.shouldRetry(3, serverError)).toBe(false);
+    });
   });
 });

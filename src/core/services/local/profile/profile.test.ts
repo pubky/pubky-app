@@ -1,9 +1,13 @@
+import type { PubkyAppUser } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getProfileLocalEditTtlMs } from '@/config/user';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalUserService } from '@/services/local/user/user';
-import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+import { NexusSocialGraphStatus, type NexusUserCounts, type NexusUserDetails } from '@/services/nexus/nexus.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { LocalProfileService } from './profile';
 
 describe('LocalProfileService', () => {
@@ -63,6 +67,166 @@ describe('LocalProfileService', () => {
       const result = await LocalUserService.readDetails({ userId });
       expect(result!.name).toBe('Updated Name');
       expect(result!.bio).toBe('Updated bio');
+    });
+
+    const baseDetails: NexusUserDetails = {
+      id: userId,
+      name: 'Test User',
+      bio: '',
+      image: null,
+      status: null,
+      links: null,
+      indexed_at: 1,
+    };
+
+    it('keeps a newer profile and its social graph tier when an older response arrives', async () => {
+      const newerDetails = {
+        ...baseDetails,
+        name: 'Newer name',
+        bio: 'Newer bio',
+        image: 'https://example.com/new-avatar.jpg',
+        status: 'Available',
+        links: [{ title: 'Website', url: 'https://example.com' }],
+        indexed_at: 2,
+        nexusIndexedAt: 2,
+        social_graph_status: NexusSocialGraphStatus.NETWORKED,
+      };
+      await UserDetailsModel.upsert(newerDetails);
+
+      await LocalProfileService.upsertDetails(baseDetails);
+
+      expect(await UserDetailsModel.findById(userId)).toMatchObject(newerDetails);
+    });
+
+    it.each([true, false])('keeps the newer concurrent write (older first: %s)', async (olderFirst) => {
+      const newerDetails = { ...baseDetails, name: 'Newer name', indexed_at: 2 };
+      const details = olderFirst ? [baseDetails, newerDetails] : [newerDetails, baseDetails];
+
+      await Promise.all(details.map((user) => LocalProfileService.upsertDetails(user)));
+
+      expect(await UserDetailsModel.findById(userId)).toMatchObject(newerDetails);
+    });
+
+    it('should keep a social graph tier persisted by a full user view', async () => {
+      await UserDetailsModel.upsert({ ...baseDetails, social_graph_status: NexusSocialGraphStatus.NETWORKED });
+
+      await LocalProfileService.upsertDetails({ ...baseDetails, name: 'Renamed' });
+
+      const result = await UserDetailsModel.findById(userId);
+      expect(result!.name).toBe('Renamed');
+      expect(result!.social_graph_status).toBe(NexusSocialGraphStatus.NETWORKED);
+    });
+
+    it('should keep a cached "no ranking" tier', async () => {
+      await UserDetailsModel.upsert({ ...baseDetails, social_graph_status: null });
+
+      await LocalProfileService.upsertDetails(baseDetails);
+
+      const result = await UserDetailsModel.findById(userId);
+      expect(result!.social_graph_status).toBeNull();
+    });
+
+    it('should leave the tier unknown for a user never persisted from a full view', async () => {
+      await LocalProfileService.upsertDetails(baseDetails);
+
+      const result = await UserDetailsModel.findById(userId);
+      expect(result!.social_graph_status).toBeUndefined();
+    });
+
+    describe('with a pending local edit', () => {
+      const localEdit = { ...baseDetails, name: 'Local edit', indexed_at: 1_000, nexusIndexedAt: 1 };
+      const serverChange = { ...baseDetails, name: 'Other change', indexed_at: 2 };
+
+      it('keeps the edit against a newer revision that does not include it', async () => {
+        await UserDetailsModel.upsert({ ...localEdit, localUpdatedAt: Date.now() });
+
+        await LocalProfileService.upsertDetails(serverChange);
+
+        expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Local edit', nexusIndexedAt: 1 });
+      });
+
+      it('accepts Nexus again once the protection window has passed', async () => {
+        await UserDetailsModel.upsert({ ...localEdit, localUpdatedAt: Date.now() - getProfileLocalEditTtlMs() });
+
+        await LocalProfileService.upsertDetails(serverChange);
+
+        const result = await UserDetailsModel.findById(userId);
+        expect(result).toMatchObject({ name: 'Other change', nexusIndexedAt: 2 });
+        expect(result!.localUpdatedAt).toBeUndefined();
+      });
+    });
+  });
+
+  describe('updateDetails', () => {
+    const userId = 'test-user-id' as Pubky;
+
+    it('should store the published profile with its status, filling in absent fields', async () => {
+      await LocalProfileService.updateDetails(
+        asOpaque<PubkyAppUser>({ name: 'Published', status: '🪚building' }),
+        userId,
+      );
+
+      expect(await UserDetailsModel.findById(userId)).toMatchObject({
+        name: 'Published',
+        bio: '',
+        image: null,
+        links: [],
+        status: '🪚building',
+      });
+    });
+
+    it('should create a missing row as a pending local edit with a fresh TTL', async () => {
+      await UserTtlModel.table.clear();
+
+      await LocalProfileService.updateDetails(asOpaque<PubkyAppUser>({ name: 'Published' }), userId);
+
+      const result = await UserDetailsModel.findById(userId);
+      expect(result!.localUpdatedAt).toEqual(expect.any(Number));
+      expect(await UserTtlModel.findById(userId)).toMatchObject({ lastUpdatedAt: result!.localUpdatedAt });
+    });
+
+    it('should keep the known Nexus revision and badge tier of an existing row', async () => {
+      await UserDetailsModel.upsert({
+        id: userId,
+        name: 'Cached',
+        bio: '',
+        image: null,
+        status: null,
+        links: null,
+        indexed_at: 5,
+        nexusIndexedAt: 5,
+        social_graph_status: NexusSocialGraphStatus.NETWORKED,
+      });
+
+      await LocalProfileService.updateDetails(asOpaque<PubkyAppUser>({ name: 'Published' }), userId);
+
+      expect(await UserDetailsModel.findById(userId)).toMatchObject({
+        name: 'Published',
+        nexusIndexedAt: 5,
+        social_graph_status: NexusSocialGraphStatus.NETWORKED,
+      });
+    });
+
+    it('should clear a cached tombstone when the profile is written', async () => {
+      await UserDetailsModel.upsert({
+        id: userId,
+        name: '',
+        bio: '',
+        image: null,
+        status: null,
+        links: null,
+        indexed_at: 1,
+        deleted: true,
+      });
+
+      await LocalProfileService.updateDetails(
+        asOpaque<PubkyAppUser>({ name: 'Revived', bio: 'Back again', image: null, links: [] }),
+        userId,
+      );
+
+      const result = await UserDetailsModel.findById(userId);
+      expect(result!.name).toBe('Revived');
+      expect(result!.deleted).toBe(false);
     });
   });
 

@@ -38,6 +38,7 @@ const postActionsCountVariants = cva('text-xs leading-4 font-bold', {
 });
 export function PostActionsBar({
   postId,
+  savePostId = postId,
   onTagClick,
   onReplyClick,
   onRepostClick,
@@ -113,7 +114,7 @@ export function PostActionsBar({
           </Button>
         ),
       )}
-      {!isCollection && <PostSavePicker postId={postId} buttonClassName={buttonClassName} />}
+      {!isCollection && <PostSavePicker postId={savePostId} buttonClassName={buttonClassName} />}
       <PostMenuActions postId={postId} trigger={moreButton} />
     </Container>
   );

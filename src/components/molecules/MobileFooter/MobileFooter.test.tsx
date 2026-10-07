@@ -1,16 +1,21 @@
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
 import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
-import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisible';
+import {
+  readServerConfig,
+  resetRuntimeConfigForTests,
+  RUNTIME_CONFIG_WINDOW_KEY,
+} from '@/libs/runtime-config/runtime-config';
 import { MobileFooter } from './MobileFooter';
 
 const collectionsDiscoveryMock = vi.hoisted(() => ({
-  markCollectionsNavSeen: vi.fn(),
   setShowSignInDialog: vi.fn(),
-  showCollectionsNew: false,
 }));
 
 let mockCurrentUserPubky: string | null = 'pk:test-user-pubky';
@@ -24,6 +29,14 @@ const createSessionStorageMock = () => ({
   clear: vi.fn(),
   key: vi.fn(),
   length: 0,
+});
+
+// Observe the Next.js prefetch boundary while retaining real link rendering and click behavior.
+vi.mock('next/link', async (importOriginal) => {
+  const { default: NextLink } = await importOriginal<typeof import('next/link')>();
+  return {
+    default: vi.fn((props: ComponentProps<typeof NextLink>) => <NextLink {...props} />),
+  };
 });
 
 // Mock Next.js router
@@ -107,14 +120,8 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   })),
 }));
 
-vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
-  useKeyboardOffset: vi.fn(() => ({ isKeyboardVisible: false, keyboardOffset: 0 })),
-}));
-vi.mock('@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery', () => ({
-  useCollectionsNavDiscovery: () => ({
-    showCollectionsNew: Boolean(mockCurrentUserPubky) && collectionsDiscoveryMock.showCollectionsNew,
-    markCollectionsNavSeen: collectionsDiscoveryMock.markCollectionsNavSeen,
-  }),
+vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
+  useKeyboardVisible: vi.fn(() => false),
 }));
 
 // Track notification store mock for per-test overrides
@@ -146,11 +153,12 @@ vi.mock('@/stores/notification/notification.store', () => ({
 
 describe('MobileFooter', () => {
   beforeEach(async () => {
+    resetRuntimeConfigForTests();
+    delete window[RUNTIME_CONFIG_WINDOW_KEY];
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
     mockCurrentUserPubky = 'pk:test-user-pubky';
-    collectionsDiscoveryMock.showCollectionsNew = false;
     mockIsPublicRoute = false;
     mockIsCoreExploreRoute = false;
     Object.defineProperty(window, 'sessionStorage', {
@@ -158,8 +166,29 @@ describe('MobileFooter', () => {
       value: createSessionStorageMock(),
     });
 
-    // Reset keyboard offset mock
-    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
+    // Reset keyboard visibility mock
+    vi.mocked(useKeyboardVisible).mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    delete window[RUNTIME_CONFIG_WINDOW_KEY];
+    resetRuntimeConfigForTests();
+  });
+
+  it.each([true, false])('uses the injected Shop destination (authenticated: %s)', (authenticated) => {
+    mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
+    mockIsCoreExploreRoute = true;
+    window[RUNTIME_CONFIG_WINDOW_KEY] = {
+      ...readServerConfig(),
+      shopUrl: 'https://shop.example.com/marketplace',
+    };
+    render(<MobileFooter />);
+    const link = screen.getByRole('link', { name: 'Shop' });
+    expect(link).toHaveAttribute('href', 'https://shop.example.com/marketplace');
+    expect(link.getAttribute('target')).not.toBe('_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    fireEvent.click(link);
+    expect(collectionsDiscoveryMock.setShowSignInDialog).not.toHaveBeenCalled();
   });
 
   it('renders with default props', () => {
@@ -204,6 +233,65 @@ describe('MobileFooter', () => {
     const profileLink = screen.getByTestId('avatar-with-fallback').closest('a');
     expect(profileLink).toHaveAttribute('href', '/profile');
     expect(profileLink).toHaveAttribute('aria-label', 'Profile');
+  });
+
+  it.each([
+    { pathname: '/home', label: 'Home', authenticated: true },
+    { pathname: '/search', label: 'Search', authenticated: true },
+    { pathname: '/home', label: 'Home', authenticated: false },
+    { pathname: '/search', label: 'Search', authenticated: false },
+  ])('disables prefetch for active $label (authenticated: $authenticated)', ({ pathname, authenticated }) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+    mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
+    mockIsCoreExploreRoute = true;
+
+    render(<MobileFooter />);
+
+    const linkPrefetches = vi.mocked(Link).mock.calls.map(([{ href, prefetch }]) => ({ href, prefetch }));
+    expect(linkPrefetches).toContainEqual({ href: pathname, prefetch: false });
+    expect(linkPrefetches).toContainEqual({ href: '/search', prefetch: false });
+    for (const href of ['/home', '/search', '/hot', '/collections', '/settings/account'].filter(
+      (href) => href !== pathname && href !== '/search',
+    )) {
+      expect(linkPrefetches).toContainEqual({ href, prefetch: undefined });
+    }
+  });
+
+  it.each([
+    { pathname: '/home', authenticated: true },
+    { pathname: '/home', authenticated: false },
+    { pathname: '/post/test-author/test-post', authenticated: true },
+    { pathname: '/post/test-author/test-post', authenticated: false },
+  ])(
+    'keeps Search prefetch disabled after navigating to $pathname (authenticated: $authenticated)',
+    ({ pathname, authenticated }) => {
+      vi.mocked(usePathname).mockReturnValue('/search');
+      mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
+      mockIsCoreExploreRoute = true;
+      const { rerender } = render(<MobileFooter />);
+
+      vi.mocked(Link).mockClear();
+      vi.mocked(usePathname).mockReturnValue(pathname);
+      mockIsCoreExploreRoute = pathname === '/home';
+      mockIsPublicRoute = pathname.startsWith('/post/');
+      rerender(<MobileFooter />);
+
+      const linkPrefetches = vi.mocked(Link).mock.calls.map(([{ href, prefetch }]) => ({ href, prefetch }));
+      expect(linkPrefetches).toContainEqual({ href: '/search', prefetch: false });
+      expect(linkPrefetches).toContainEqual({ href: '/home', prefetch: pathname === '/home' ? false : undefined });
+    },
+  );
+
+  it.each([
+    { pathname: '/settings/notifications', href: '/settings/account' },
+    { pathname: '/collections/bookmarks', href: '/collections' },
+  ])('keeps prefetch for the parent destination on $pathname', ({ pathname, href }) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+
+    render(<MobileFooter />);
+
+    const linkPrefetches = vi.mocked(Link).mock.calls.map(([{ href, prefetch }]) => ({ href, prefetch }));
+    expect(linkPrefetches).toContainEqual({ href, prefetch: undefined });
   });
 
   it('contains correct icons', () => {
@@ -308,52 +396,26 @@ describe('MobileFooter', () => {
     expect(collectionsLink).not.toHaveClass('border');
   });
 
-  it('shows the Collections NEW treatment before dismissal', () => {
-    collectionsDiscoveryMock.showCollectionsNew = true;
-
-    render(<MobileFooter />);
-
-    const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
-    expect(collectionsLink).toHaveClass('border-brand', 'text-brand');
-    expect(screen.getByRole('link', { name: 'Collections, New' })).toBeInTheDocument();
-    expect(screen.getByText('New')).toBeInTheDocument();
-  });
-
-  it('uses the discovery treatment instead of active background when Collections is active and new', () => {
-    vi.mocked(usePathname).mockReturnValue('/collections');
-    collectionsDiscoveryMock.showCollectionsNew = true;
-
-    render(<MobileFooter />);
-
-    const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
-    expect(collectionsLink).toHaveClass('border-brand', 'bg-white/5', 'text-brand');
-    expect(collectionsLink).not.toHaveClass('bg-secondary');
-  });
-
-  it('marks Collections discovery seen when clicking the authenticated Collections nav link', () => {
-    collectionsDiscoveryMock.showCollectionsNew = true;
+  it('renders the Collections nav item without a NEW treatment', () => {
     render(<MobileFooter />);
 
     const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
     expect(collectionsLink).toBeTruthy();
-    fireEvent.click(collectionsLink!);
-
-    expect(collectionsDiscoveryMock.markCollectionsNavSeen).toHaveBeenCalledTimes(1);
+    expect(collectionsLink).not.toHaveClass('border-brand');
+    expect(screen.getByRole('link', { name: 'Collections' })).toBeInTheDocument();
+    expect(screen.queryByText('New')).not.toBeInTheDocument();
   });
 
-  it('does not show or dismiss Collections discovery for guests', () => {
+  it('keeps Collections reachable for guests on public explore routes', () => {
     mockCurrentUserPubky = null;
     mockIsCoreExploreRoute = true;
-    collectionsDiscoveryMock.showCollectionsNew = true;
 
     render(<MobileFooter />);
 
-    expect(screen.queryByText('New')).not.toBeInTheDocument();
     const collectionsLink = document.querySelector('.lucide-library')?.closest('a');
     expect(collectionsLink).toBeTruthy();
     expect(collectionsLink).toHaveAttribute('href', '/collections');
     fireEvent.click(collectionsLink!);
-    expect(collectionsDiscoveryMock.markCollectionsNavSeen).not.toHaveBeenCalled();
     expect(collectionsDiscoveryMock.setShowSignInDialog).not.toHaveBeenCalled();
   });
 
@@ -446,38 +508,35 @@ describe('MobileFooter', () => {
     expect(setItemSpy).toHaveBeenCalledWith(FORCE_FEED_SCROLL_TOP_KEY, '1');
   });
 
-  it('applies transform when keyboard is visible', async () => {
-    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 300 });
+  it.each(['?tags=podcast', '?q=usdt'])('keeps the search query when scrolling to top from /search%s', (query) => {
+    const originalUrl = window.location.href;
+    window.history.replaceState(null, '', `/search${query}`);
+    vi.mocked(usePathname).mockReturnValue('/search');
+    Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
 
-    const { container } = render(<MobileFooter />);
-    const footerContainer = container.querySelector('.fixed');
+    try {
+      render(<MobileFooter />);
 
-    expect(footerContainer).toBeInTheDocument();
-    expect(footerContainer?.getAttribute('style')).toContain('translateY(-300px)');
+      expect(fireEvent.click(screen.getByRole('link', { name: 'Search' }))).toBe(false);
+      expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+      expect(window.location.search).toBe(query);
+      expect(window.sessionStorage.setItem).not.toHaveBeenCalled();
+    } finally {
+      window.history.replaceState(null, '', originalUrl);
+    }
   });
 
-  it('does not apply transform when keyboard is not visible', async () => {
-    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
+  it('hides navigation while the keyboard is open and restores it when dismissed', () => {
+    const { rerender } = render(<MobileFooter />);
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
 
-    const { container } = render(<MobileFooter />);
-    const footerContainer = container.querySelector('.fixed');
-
-    expect(footerContainer).toBeInTheDocument();
-    expect(footerContainer?.getAttribute('style')).toBeFalsy();
-  });
-
-  it('always applies transition classes for smooth keyboard animation', async () => {
-    // transition-transform and duration-75 are always present regardless of keyboard state
-    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
-    const { container, rerender } = render(<MobileFooter />);
-    let footerContainer = container.querySelector('.fixed');
-    expect(footerContainer).toHaveClass('transition-transform', 'duration-75');
-
-    // Still present when keyboard is visible
-    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 300 });
+    vi.mocked(useKeyboardVisible).mockReturnValue(true);
     rerender(<MobileFooter />);
-    footerContainer = container.querySelector('.fixed');
-    expect(footerContainer).toHaveClass('transition-transform', 'duration-75');
+    expect(screen.queryByRole('link', { name: 'Home' })).not.toBeInTheDocument();
+
+    vi.mocked(useKeyboardVisible).mockReturnValue(false);
+    rerender(<MobileFooter />);
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
   });
 
   it('renders public explore navigation with gated account actions when unauthenticated on a core explore route', () => {
@@ -491,6 +550,7 @@ describe('MobileFooter', () => {
       '/home',
       '/search',
       '/hot',
+      'https://shop.staging.pubky.app/marketplace',
       '/collections',
       '/settings/account',
     ]);
@@ -528,10 +588,9 @@ describe('MobileFooter - Snapshots', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
     mockCurrentUserPubky = 'pk:test-user-pubky';
-    collectionsDiscoveryMock.showCollectionsNew = false;
     mockIsPublicRoute = false;
     mockIsCoreExploreRoute = false;
-    vi.mocked(useKeyboardOffset).mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
+    vi.mocked(useKeyboardVisible).mockReturnValue(false);
   });
 
   it('matches snapshot with default props', () => {

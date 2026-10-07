@@ -1,4 +1,4 @@
-import { HasBackedUp, BackupType, CheckForNewPosts, PostType, WaitForNewPosts } from './enums';
+import { HasBackedUp, BackupType, CheckForNewPosts, OnboardingExperience, PostType, WaitForNewPosts } from './enums';
 
 declare global {
   namespace Cypress {
@@ -11,13 +11,16 @@ declare global {
         profileBio?: string,
         backup?: BackupType[],
         pubkyAlias?: string,
+        experience?: OnboardingExperience,
       ): Chainable<void>;
       onboardAsNewUser(
         profileName: string,
         profileBio?: string,
         backup?: BackupType[],
         pubkyAlias?: string,
+        experience?: OnboardingExperience,
       ): Chainable<void>;
+      finishFollowBestMatchesStep(): Chainable<void>;
       backupRecoveryFile(passcode?: string): Chainable<void>;
       deleteDownloadsFolder(): Chainable<void>;
       waitForFileExistsWithSuffix(folder: string, suffix: string): Chainable<void>;

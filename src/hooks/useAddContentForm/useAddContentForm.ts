@@ -7,7 +7,7 @@ import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted, readFromClipboard } from '@/libs/utils/utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { parsePostReference } from '@/pipes/post/post.reference';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -107,7 +107,7 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
           viewerId: currentUserPubky,
         });
 
-        if (!post || isPostDeleted(post.content)) {
+        if (!post || isPostDeleted(post)) {
           setFieldError('We could not find that post.');
           return false;
         }
@@ -229,7 +229,7 @@ async function isAlreadyAdded({
 
   const collection = await PostController.getDetails({ compositeId: target.collectionId });
   const currentContent =
-    collection && !isPostDeleted(collection.content) ? CollectionPostContent.parse(collection.content) : null;
+    collection && !isPostDeleted(collection) ? CollectionPostContent.parse(collection.content) : null;
 
   return Boolean(currentContent?.items?.includes(postUri));
 }

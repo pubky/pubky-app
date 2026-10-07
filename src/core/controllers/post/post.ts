@@ -4,13 +4,13 @@ import type { EnrichedPostDetails } from '@/application/moderation/moderation.ty
 import { PostApplication } from '@/application/post/post';
 import type { TGetDetailsByIdsParams, TGetOrFetchPostParams } from '@/application/post/post.types';
 import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
+import { POST_MAX_TAGS } from '@/config/posts';
 import type {
   TCreateCollectionParams,
   TCreatePostParams,
   TDeletePostParams,
   TEditCollectionParams,
   TEditPostParams,
-  TFetchMorePostTagsParams,
   TFetchPostTaggersParams,
   TFileAttachmentsParams,
   TNormalizeTagsParams,
@@ -18,22 +18,26 @@ import type {
   TUpdateCollectionItemParams,
 } from '@/controllers/post/post.types';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { toAppError } from '@/libs/error/error.utils';
+import { isAppError, requiresLogin, toAppError } from '@/libs/error/error.utils';
 import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { Logger } from '@/libs/logger/logger';
+import { parseArticleContent } from '@/libs/post/articleContent';
+import { isAuthorFileUri } from '@/libs/post/articleInlineImages';
+import { extractHashtagLabelsFromMarkdown, mergeTagLabels } from '@/libs/post/hashtags';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
-import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import {
+  inferAnnouncementKind,
   inferPostKindForCreate,
   inferPostKindForEdit,
   resolveTagTargetCompositeIdForPostCreate,
@@ -41,7 +45,7 @@ import {
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { PostValidators } from '@/pipes/post/post.validators';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
-import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
+import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import type { TCompositeId } from '@/services/nexus/post/post.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
@@ -81,16 +85,6 @@ export class PostController {
   }
 
   /**
-   * Read post tags for a specific post from local database
-   * @param params - Parameters object
-   * @param params.compositeId - Composite post ID in format "authorId:postId"
-   * @returns Post tags
-   */
-  static async getTags({ compositeId }: TCompositeId): Promise<TagCollectionModelSchema<string>[]> {
-    return await PostApplication.getTags({ compositeId });
-  }
-
-  /**
    * Read post relationships for a specific post
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"
@@ -115,11 +109,11 @@ export class PostController {
    * Persists details, counts, relationships, tags, and author.
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"
-   * @param params.viewerId - Optional viewer ID for relationship data
+   * @param params.viewerId - Viewer ID for relationship data; defaults to the signed-in user
    * @returns Post details or null if not found
    */
   static async getOrFetch(params: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
-    return await PostApplication.getOrFetch(params);
+    return await PostApplication.getOrFetch({ ...this.withViewer(params), isCurrent: captureViewerSession() });
   }
 
   /**
@@ -127,11 +121,19 @@ export class PostController {
    * Use instead of `getOrFetch` when the caller already knows the post is not cached.
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"
-   * @param params.viewerId - Optional viewer ID for relationship data
+   * @param params.viewerId - Viewer ID for relationship data; defaults to the signed-in user
    * @returns Post details or null if not found
    */
   static async fetch(params: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
-    return await PostApplication.fetch(params);
+    return await PostApplication.fetch({ ...this.withViewer(params), isCurrent: captureViewerSession() });
+  }
+
+  /**
+   * Fills in the signed-in viewer when the caller did not supply one, so the post author and
+   * post relationships are persisted relative to the current user (#1803).
+   */
+  private static withViewer(params: TGetOrFetchPostParams): TGetOrFetchPostParams {
+    return { ...params, viewerId: params.viewerId ?? useAuthStore.getState().currentUserPubky };
   }
 
   static async getAuthoredCollections(params: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
@@ -139,19 +141,7 @@ export class PostController {
   }
 
   static async fetchAuthoredCollections(params: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
-    return await PostApplication.fetchAuthoredCollections(params);
-  }
-
-  /**
-   * Fetch more post tags from Nexus with pagination
-   * @param params - Parameters object
-   * @param params.compositeId - Composite post ID in format "authorId:postId"
-   * @param params.skip - Number of tags to skip
-   * @param params.limit - Maximum number of tags to return
-   * @returns Array of tags from Nexus
-   */
-  static async fetchTags({ compositeId, skip, limit, viewerId }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
-    return await PostApplication.fetchTags({ compositeId, skip, limit, viewerId });
+    return await PostApplication.fetchAuthoredCollections({ ...params, isCurrent: captureViewerSession() });
   }
 
   /**
@@ -181,9 +171,12 @@ export class PostController {
     isArticle,
     tags,
     attachments,
+    attachmentUris,
     parentPostId,
     originalPostId,
+    lock,
   }: TCreatePostParams): Promise<string> {
+    const isCurrent = captureViewerSession();
     let parentUri: string | undefined = undefined;
     let repostedUri: string | undefined = undefined;
     let tagList: TCreateTagInput[] = [];
@@ -196,7 +189,26 @@ export class PostController {
       repostedUri = await PostValidators.validatePostId({ postId: originalPostId, message: 'Original post' });
     }
 
-    const postKind = inferPostKindForCreate({ content, attachments, isArticle });
+    // Ownership invariant: pre-uploaded attachment URIs must be homeserver
+    // files owned by the author. These URIs are not uploaded or rolled back
+    // here — the composer session that uploaded them owns their cleanup.
+    if (attachmentUris && !attachmentUris.every((uri) => isAuthorFileUri(uri, authorId))) {
+      throw Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
+        'Attachment URIs must be homeserver files owned by the author',
+        {
+          service: ErrorService.Local,
+          operation: 'commitCreate',
+          context: { authorId },
+        },
+      );
+    }
+
+    // A `lock` marks this post as the public announcement of locked content, which may never be a
+    // `long` or `collection` post — the locked content behind it still may.
+    const postKind = lock
+      ? inferAnnouncementKind({ content, attachments, isArticle })
+      : inferPostKindForCreate({ content, attachments, isArticle });
 
     // TODO: In the future, we could decouple that action and do it asyncronously in the moment that we add a file to the post
     const fileAttachments = attachments ? await this.normalizeFileAttachments({ attachments, pubky: authorId }) : [];
@@ -208,13 +220,23 @@ export class PostController {
         parentUri,
         embed: repostedUri,
         attachments: fileAttachments,
+        lock,
+        attachmentUris,
       },
       authorId,
     );
 
     const { id: postId } = meta;
 
-    if (tags) {
+    // Hashtags in the content become tags of the created post (#1882). Articles store
+    // their title (plain text, never rendered as a hashtag) and body (markdown) as JSON.
+    const hashtagLabels = extractHashtagLabelsFromMarkdown(
+      isArticle ? (parseArticleContent(content)?.body ?? '') : content,
+      isArticle,
+    );
+    const tagLabels = mergeTagLabels(tags ?? [], hashtagLabels, POST_MAX_TAGS);
+
+    if (tagLabels.length > 0) {
       const tagTargetCompositeId = resolveTagTargetCompositeIdForPostCreate({
         authorId,
         newPostId: postId,
@@ -222,7 +244,7 @@ export class PostController {
         content,
         attachments,
       });
-      const tagsMetadata = tags.map((tag) => {
+      const tagsMetadata = tagLabels.map((tag) => {
         return {
           taggerId: authorId,
           taggedId: tagTargetCompositeId,
@@ -241,6 +263,7 @@ export class PostController {
       postUrl: meta.url,
       fileAttachments,
       tags: tagList,
+      isCurrent,
     });
 
     return compositePostId;
@@ -264,6 +287,11 @@ export class PostController {
         await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
         coverImageUrl = fileAttachment.fileResult.meta.url;
       } catch (error) {
+        // Keep an expired-session failure classified instead of wrapping it as
+        // validation, so the caller can ask for a sign-in rather than reporting a
+        // retryable cover-upload failure (issue #2555).
+        if (isAppError(error) && requiresLogin(error)) throw error;
+
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
           service: ErrorService.Local,
           operation: 'commitCreateCollection',
@@ -337,11 +365,12 @@ export class PostController {
 
     const collection = await PostApplication.getDetails({ compositeId: compositeCollectionId });
 
-    // Tombstoned collections (`content === '[DELETED]'`) are treated as
-    // not-found here. Pre-tombstone refactor `!collection` caught hard-deleted
-    // rows; now they stick around as tombstones, and falling through would
-    // surface a misleading "Collection content is invalid" error.
-    if (!collection || isPostDeleted(collection.content)) {
+    // Tombstoned collections (the Nexus `deleted` flag, or the legacy
+    // `[DELETED]` content) are treated as not-found here. Pre-tombstone
+    // refactor `!collection` caught hard-deleted rows; now they stick around
+    // as tombstones, and falling through would surface a misleading
+    // "Collection content is invalid" error.
+    if (!collection || isPostDeleted(collection)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
         operation: 'commitEditCollection',
@@ -368,6 +397,10 @@ export class PostController {
         coverImageUrl = fileAttachment.fileResult.meta.url;
         uploadedCoverUri = coverImageUrl;
       } catch (error) {
+        // Same as `commitCreateCollection`: an expired session keeps its auth
+        // classification so the caller can prompt for sign-in (issue #2555).
+        if (isAppError(error) && requiresLogin(error)) throw error;
+
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
           service: ErrorService.Local,
           operation: 'commitEditCollection',
@@ -436,7 +469,7 @@ export class PostController {
 
     // Tombstoned collections are not-found. See `commitEditCollection` above
     // for the rationale.
-    if (!collection || isPostDeleted(collection.content)) {
+    if (!collection || isPostDeleted(collection)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
         operation: 'commitUpdateCollectionItem',
@@ -480,7 +513,7 @@ export class PostController {
 
     // Tombstoned collections are not-found. See `commitEditCollection` above
     // for the rationale.
-    if (!collection || isPostDeleted(collection.content)) {
+    if (!collection || isPostDeleted(collection)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
         operation: 'commitReorderCollectionItems',
@@ -567,7 +600,7 @@ export class PostController {
     }
 
     const current = await PostApplication.getDetails({ compositeId: compositePostId });
-    if (!current || isPostDeleted(current.content)) {
+    if (!current || isPostDeleted(current)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
         service: ErrorService.Local,
         operation: 'commitEdit',
@@ -575,7 +608,7 @@ export class PostController {
       });
     }
 
-    const { original, kept, added } = attachments;
+    const { original, kept, added, addedUris, nextOrder } = attachments;
     const keptSet = new Set(kept);
     if (keptSet.size !== kept.length || !kept.every((uri) => original.includes(uri))) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Kept attachments must be original post attachments', {
@@ -583,6 +616,62 @@ export class PostController {
         operation: 'commitEdit',
         context: { compositePostId },
       });
+    }
+
+    // Article inline-image path: every attachment is an already-uploaded URI
+    // and `nextOrder` is the exact slot-ordered list to persist.
+    if (nextOrder) {
+      if (added.length > 0) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'nextOrder edits must not include File uploads', {
+          service: ErrorService.Local,
+          operation: 'commitEdit',
+          context: { compositePostId },
+        });
+      }
+      if (addedUris && !addedUris.every((uri) => isAuthorFileUri(uri, authorId))) {
+        throw Err.validation(
+          ValidationErrorCode.INVALID_INPUT,
+          'Added attachment URIs must be homeserver files owned by the author',
+          {
+            service: ErrorService.Local,
+            operation: 'commitEdit',
+            context: { compositePostId },
+          },
+        );
+      }
+      const allowedUris = new Set([...kept, ...(addedUris ?? [])]);
+      if (!nextOrder.every((uri) => allowedUris.has(uri))) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'nextOrder entries must come from kept or addedUris', {
+          service: ErrorService.Local,
+          operation: 'commitEdit',
+          context: { compositePostId },
+        });
+      }
+
+      // Removals are diffed against the seeded snapshot (`original`), never
+      // the live row — only files the user actually saw and removed get
+      // deleted. Session uploads dropped before saving are not our concern
+      // here; the composer session cleans those up itself.
+      const nextOrderSet = new Set(nextOrder);
+      const orderRemovedUris = original.filter((uri) => !nextOrderSet.has(uri));
+
+      const kind = await this.inferKindForEdit({ content, currentKind: current.kind, kept, added: [] });
+
+      const { post, meta } = await PostNormalizer.toEdit({
+        compositePostId,
+        content,
+        currentUserPubky,
+        attachments: nextOrder.length > 0 ? nextOrder : null,
+        kind,
+      });
+
+      await PostApplication.commitEdit({
+        compositePostId,
+        post,
+        postUrl: meta.url,
+        removedUris: orderRemovedUris.length > 0 ? orderRemovedUris : undefined,
+      });
+      return;
     }
 
     // Removals are diffed against the seeded snapshot (`original`), never the

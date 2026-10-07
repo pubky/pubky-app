@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { CONTENT_AREA_STACK_CLASS, CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { resolveFeedLayout } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -56,6 +57,7 @@ export function ContentLayout({
   rightSidebarContent,
   leftDrawerContent,
   rightDrawerContent,
+  rightDrawerContentMobile,
   leftDrawerContentMobile,
   showLeftSidebar = true,
   showRightSidebar = true,
@@ -66,6 +68,7 @@ export function ContentLayout({
   className,
   classNameWrapperContent,
   classNameMobileHeader,
+  classNameRightDrawer,
   feedVariant,
   layoutOverride,
   disableWideShellLayout,
@@ -93,7 +96,7 @@ export function ContentLayout({
       };
   const usesWideShellLayout =
     ((effectiveLayout === LAYOUT.WIDE || effectiveLayout === LAYOUT.LIST) && !disableWideShellLayout) ||
-    (feedVariant !== undefined && effectiveLayout === LAYOUT.VISUAL);
+    (feedVariant !== undefined && (effectiveLayout === LAYOUT.VISUAL || effectiveLayout === LAYOUT.CARDS));
 
   // Close drawers when switching from wide-shell to inline sidebars on desktop
   // This prevents the drawer from staying open when sidebars become visible inline
@@ -103,6 +106,13 @@ export function ContentLayout({
       setDrawerRightOpen(false);
     }
   }, [isMobile, usesWideShellLayout]);
+
+  // The feed shell stays mounted on navigation; Search hides this mobile control.
+  useEffect(() => {
+    if (isMobile && !showRightMobileButton) {
+      setDrawerRightOpen(false);
+    }
+  }, [isMobile, showRightMobileButton]);
 
   return (
     <>
@@ -129,7 +139,7 @@ export function ContentLayout({
       {/* Main content grid with responsive max-widths */}
       <Container
         overrideDefaults
-        className={cn('container max-w-(--container-max-width)', 'm-auto w-full px-6 pb-12 xl:px-0', 'pt-0', className)}
+        className={cn('container m-auto w-full max-w-(--container-max-width) pb-12', CONTENT_GUTTER_CLASS, className)}
       >
         <Container overrideDefaults className="flex gap-6">
           {/* Left sidebar - hidden on mobile (< lg) and in wide-shell layout mode */}
@@ -138,9 +148,7 @@ export function ContentLayout({
           )}
 
           {/* Main content area - grows to fill space, min-w-0 prevents flex overflow */}
-          <Container className={cn('w-full min-w-0 flex-1 gap-6 lg:overflow-hidden', classNameWrapperContent)}>
-            {children}
-          </Container>
+          <Container className={cn('w-full', CONTENT_AREA_STACK_CLASS, classNameWrapperContent)}>{children}</Container>
 
           {/* Right sidebar - hidden on mobile (< lg) and in wide-shell layout mode */}
           {showRightSidebar && !usesWideShellLayout && rightSidebarContent && (
@@ -160,9 +168,14 @@ export function ContentLayout({
       )}
 
       {/* Drawer for right sidebar - slides in from right */}
-      {rightDrawerContent && (
-        <SideDrawer open={drawerRightOpen} onOpenChangeAction={setDrawerRightOpen} position="right">
-          {rightDrawerContent}
+      {(rightDrawerContent || rightDrawerContentMobile) && (
+        <SideDrawer
+          open={drawerRightOpen}
+          onOpenChangeAction={setDrawerRightOpen}
+          position="right"
+          className={classNameRightDrawer}
+        >
+          {isPhoneViewport && rightDrawerContentMobile ? rightDrawerContentMobile : rightDrawerContent}
         </SideDrawer>
       )}
     </>

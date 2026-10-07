@@ -1,16 +1,16 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTION_LAYOUT } from '@/config/collections';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { useCreateCollection } from './useCreateCollection';
 import { CREATE_COLLECTION_FORM_FIELDS } from './useCreateCollection.types';
 
 const mocks = vi.hoisted(() => ({
   commitCreateCollection: vi.fn(),
   setCollectionCover: vi.fn(),
-  toast: vi.fn(),
   currentUserPubky: 'current-user' as string | null,
   cover: {
     file: null as File | null,
@@ -34,9 +34,7 @@ vi.mock('@/hooks/useCoverImagePicker/useCoverImagePicker', () => ({
   useCoverImagePicker: () => mocks.cover,
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
@@ -62,7 +60,7 @@ describe('useCreateCollection', () => {
     expect(result.current.form.getValues()).toEqual({
       [CREATE_COLLECTION_FORM_FIELDS.NAME]: '',
       [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: '',
-      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.GRID,
+      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.CARDS,
     });
     expect(result.current.cover.file).toBeNull();
     expect(result.current.form.formState.isSubmitting).toBe(false);
@@ -113,7 +111,7 @@ describe('useCreateCollection', () => {
       coverImage: file,
       layout: COLLECTION_LAYOUT.LIST,
     });
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Collection created',
     });
   });
@@ -183,7 +181,7 @@ describe('useCreateCollection', () => {
     });
 
     expect(saved).toBeNull();
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to create collection.',
     });
@@ -210,9 +208,71 @@ describe('useCreateCollection', () => {
       await result.current.submit();
     });
 
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'This GIF exceeds the 5MB upload limit and cannot be compressed. Please use a smaller GIF.',
+    });
+  });
+
+  it('prompts sign-in and keeps the form and picked cover when the session expired (#2555)', async () => {
+    const pickedCover = new File(['x'], 'cover.png', { type: 'image/png' });
+    mocks.cover.file = pickedCover;
+    mocks.commitCreateCollection.mockRejectedValue(
+      Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreateCollection',
+      }),
+    );
+
+    const { result } = renderHook(() => useCreateCollection());
+    act(() => {
+      result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, 'Reading list');
+      result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION, 'Top picks');
+    });
+
+    let saved: string | null = 'not-called';
+    await act(async () => {
+      saved = await result.current.submit();
+    });
+
+    expect(saved).toBeNull();
+    expect(mocks.commitCreateCollection).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Reading list', description: 'Top picks', coverImage: pickedCover }),
+    );
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Session expired. Please sign in.',
+    });
+    expect(vi.mocked(toast)).not.toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Failed to create collection.',
+    });
+    // The dialog stays open with the user's input and the picked cover, ready to retry.
+    expect(result.current.form.getValues()[CREATE_COLLECTION_FORM_FIELDS.NAME]).toBe('Reading list');
+    expect(result.current.form.getValues()[CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]).toBe('Top picks');
+    expect(result.current.cover.file).toBe(pickedCover);
+    expect(mocks.setCollectionCover).not.toHaveBeenCalled();
+  });
+
+  it('keeps the generic copy when the failure is a FORBIDDEN auth error (#2555)', async () => {
+    mocks.commitCreateCollection.mockRejectedValue(
+      Err.auth(AuthErrorCode.FORBIDDEN, 'Forbidden', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreateCollection',
+      }),
+    );
+
+    const { result } = renderHook(() => useCreateCollection());
+    act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, 'Reading list'));
+
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({ variant: 'error', description: 'Forbidden' });
+    expect(vi.mocked(toast)).not.toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Session expired. Please sign in.',
     });
   });
 
@@ -244,7 +304,7 @@ describe('useCreateCollection', () => {
     expect(result.current.form.getValues()).toEqual({
       [CREATE_COLLECTION_FORM_FIELDS.NAME]: '',
       [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: '',
-      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.GRID,
+      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.CARDS,
     });
     expect(mocks.cover.reset).toHaveBeenCalledTimes(1);
   });

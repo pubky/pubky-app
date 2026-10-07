@@ -1,6 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createRef, forwardRef } from 'react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostTagsPanel } from './PostTagsPanel';
+import type { PostTagsPanelHandle } from './PostTagsPanel.types';
 
 // Mock hooks
 const mockUsePostTags = vi.fn();
@@ -40,29 +42,27 @@ vi.mock('@/molecules/TaggedList/TaggedList', () => {
 });
 
 vi.mock('@/molecules/TagInput/TagInput', () => {
-  return {
-    TagInput: () => <input data-testid="tag-input" />,
-  };
+  const TagInput = forwardRef<HTMLInputElement>((_props, ref) => <input ref={ref} data-testid="tag-input" />);
+  TagInput.displayName = 'TagInput';
+  return { TagInput };
 });
 
 // Mock atoms
 vi.mock('@/atoms/Container/Container', () => {
-  return {
-    Container: ({
-      children,
-      className,
-      overrideDefaults,
-      ...props
-    }: {
+  const Container = forwardRef<
+    HTMLDivElement,
+    {
       children: React.ReactNode;
       className?: string;
       overrideDefaults?: boolean;
-    }) => (
-      <div className={className} data-override-defaults={overrideDefaults} {...props}>
-        {children}
-      </div>
-    ),
-  };
+    }
+  >(({ children, className, overrideDefaults, ...props }, ref) => (
+    <div ref={ref} className={className} data-override-defaults={overrideDefaults} {...props}>
+      {children}
+    </div>
+  ));
+  Container.displayName = 'Container';
+  return { Container };
 });
 
 vi.mock('@/atoms/SidebarButton/SidebarButton', () => {
@@ -276,6 +276,48 @@ describe('PostTagsPanel', () => {
       const { container } = render(<PostTagsPanel postId="author:post123" className="custom-class" />);
 
       expect(container.firstChild).toHaveClass('custom-class');
+    });
+  });
+
+  describe('imperative handle', () => {
+    beforeEach(() => {
+      mockUsePostTags.mockReturnValue({
+        tags: [],
+        isLoading: false,
+        handleTagAdd: mockHandleTagAdd,
+        handleTagToggle: mockHandleTagToggle,
+        hasMore: false,
+        isLoadingMore: false,
+        loadMore: mockLoadMore,
+      });
+    });
+
+    afterEach(() => {
+      delete (Element.prototype as { scrollIntoView?: () => void }).scrollIntoView;
+    });
+
+    it('reveal scrolls the panel into view without focusing the input (issue #1650)', () => {
+      // jsdom has no scrollIntoView, so the reveal has to be observed through the call itself.
+      const scrollIntoView = vi.fn();
+      Element.prototype.scrollIntoView = scrollIntoView;
+      const ref = createRef<PostTagsPanelHandle>();
+
+      render(<PostTagsPanel ref={ref} postId="author:post123" />);
+
+      act(() => ref.current?.reveal());
+
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
+      expect(document.activeElement).not.toBe(screen.getByTestId('tag-input'));
+    });
+
+    it('focus still focuses the input', () => {
+      const ref = createRef<PostTagsPanelHandle>();
+
+      render(<PostTagsPanel ref={ref} postId="author:post123" />);
+
+      act(() => ref.current?.focus());
+
+      expect(document.activeElement).toBe(screen.getByTestId('tag-input'));
     });
   });
 });

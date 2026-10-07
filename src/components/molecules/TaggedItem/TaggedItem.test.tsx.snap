@@ -149,6 +149,11 @@ exports[`TaggedItem - Snapshots > matches snapshot when expanded 1`] = `
     Expanded List (
     3
      users)
+    <button
+      data-testid="who-tagged-load-more"
+    >
+      more
+    </button>
   </div>
 </div>
 `;

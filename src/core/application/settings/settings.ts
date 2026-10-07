@@ -13,15 +13,68 @@ import type { SettingsState } from '@/stores/settings/settings.types';
  * Settings are stored at: pubky://{pubky}/pub/pubky.app/settings.json
  */
 export class SettingsApplication {
+  private static pendingCommits = new Map<Pubky, Promise<void>>();
+
   private constructor() {}
 
   /**
    * Commits settings update to the homeserver.
    *
+   * Settings are replaced as one document, so a client whose local store predates
+   * `privacy.moderationBot` would erase it (and trigger a spurious re-follow on the next
+   * sign-in). When the local state lacks the field, the remote value is carried over first.
+   * This self-limits: once the store has learned the field, no extra read happens.
+   *
+   * A failed read rejects the write rather than pushing blind. Settings are local-first, so the
+   * change stays in the persisted store and the user keeps seeing it; it reaches the homeserver
+   * only if the user changes settings again, since sign-in resets the store and session restore
+   * does not sync settings. Dropping one toggle beats erasing the field and re-following the bot.
+   *
    * @param settings, The current settings state to persist
    * @param pubky, The user's public key
+   * @param signal, Optional cancellation signal checked when this queued write starts
    */
-  static async commitUpdate(settings: SettingsState, pubky: Pubky): Promise<void> {
+  static async commitUpdate(settings: SettingsState, pubky: Pubky, signal?: AbortSignal): Promise<void> {
+    await this.enqueueWrite(pubky, async () => {
+      if (signal?.aborted) return;
+
+      let resolved = settings;
+      if (settings.privacy.moderationBot === undefined) {
+        const remote = await this.fetchFromHomeserver(pubky);
+        if (signal?.aborted) return;
+        resolved = this.withRemoteModerationBot(settings, remote);
+      }
+
+      await this.push(resolved, pubky);
+    });
+  }
+
+  /** Returns local settings enriched with the remote processed-bot state when only the remote has it. */
+  private static withRemoteModerationBot(settings: SettingsState, remote: SettingsState | null): SettingsState {
+    const moderationBot = remote?.privacy.moderationBot;
+    if (settings.privacy.moderationBot !== undefined || moderationBot === undefined) return settings;
+
+    Logger.info('[Settings] Carrying remote moderation-bot state into local write');
+    return { ...settings, privacy: { ...settings.privacy, moderationBot } };
+  }
+
+  /** Serializes homeserver writes per account so concurrent full-document replaces cannot interleave. */
+  private static async enqueueWrite(pubky: Pubky, write: () => Promise<void>): Promise<void> {
+    const previousCommit = this.pendingCommits.get(pubky) ?? Promise.resolve();
+    const pendingCommit = previousCommit.catch(() => {}).then(write);
+
+    this.pendingCommits.set(pubky, pendingCommit);
+
+    try {
+      await pendingCommit;
+    } finally {
+      if (this.pendingCommits.get(pubky) === pendingCommit) {
+        this.pendingCommits.delete(pubky);
+      }
+    }
+  }
+
+  private static async push(settings: SettingsState, pubky: Pubky): Promise<void> {
     const { settings: settingsJson, meta } = SettingsNormalizer.to(settings, pubky);
 
     Logger.info('[Settings] Pushing to homeserver', { url: meta.url, settings: settingsJson });
@@ -74,7 +127,8 @@ export class SettingsApplication {
    * Uses version and timestamp for conflict resolution (newer wins).
    *
    * @param pubky, The user's public key
-   * @returns The remote settings if newer than local, or null if local is newer/equal
+   * @returns The settings the store should adopt: remote when newer, or local enriched with
+   *   remote-only moderation-bot state; null when the store is already current
    * @throws If fetch or sync operations fail, caller should handle errors
    */
   static async initializeSettings(pubky: Pubky, localSettings: SettingsState): Promise<SettingsState | null> {
@@ -85,7 +139,7 @@ export class SettingsApplication {
       Logger.info('[Settings] No remote settings, pushing local to homeserver');
       // Stamp a real timestamp if updatedAt is 0 (initial default), so homeserver has a valid timestamp for future conflict resolution
       const settingsWithTimestamp = { ...localSettings, updatedAt: localSettings.updatedAt || Date.now() };
-      await this.commitUpdate(settingsWithTimestamp, pubky);
+      await this.enqueueWrite(pubky, () => this.push(settingsWithTimestamp, pubky));
       return settingsWithTimestamp;
     }
 
@@ -106,7 +160,9 @@ export class SettingsApplication {
     }
 
     Logger.info('[Settings] Local settings newer, pushing to homeserver');
-    await this.commitUpdate(localSettings, pubky);
-    return null;
+    // The remote document was just read; reuse it instead of probing again inside commitUpdate.
+    const settingsToPush = this.withRemoteModerationBot(localSettings, remoteSettings);
+    await this.enqueueWrite(pubky, () => this.push(settingsToPush, pubky));
+    return settingsToPush === localSettings ? null : settingsToPush;
   }
 }

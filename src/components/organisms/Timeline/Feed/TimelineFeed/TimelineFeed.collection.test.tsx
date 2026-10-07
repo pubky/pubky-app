@@ -16,6 +16,13 @@ import { TimelineFeed } from './TimelineFeed';
 
 const mockUseParams = vi.hoisted(() => vi.fn());
 const mockUseFeedLayoutResolution = vi.hoisted(() => vi.fn());
+const mockAuthState = vi.hoisted(() => ({ currentUserPubky: null as string | null, session: null as object | null }));
+const mockUsePostDetails = vi.hoisted(() =>
+  vi.fn((): { postDetails: { content: string } | null | undefined; isLoading: boolean } => ({
+    postDetails: undefined,
+    isLoading: false,
+  })),
+);
 
 vi.mock('next/navigation', () => ({
   useParams: mockUseParams,
@@ -25,12 +32,21 @@ vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
   useFeedLayoutResolution: mockUseFeedLayoutResolution,
 }));
 
-const gridLayoutResolution = (): FeedLayoutResolution => ({
-  requestedLayout: LAYOUT.COLUMNS,
-  effectiveLayout: LAYOUT.COLUMNS,
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: mockUsePostDetails,
+}));
+
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector: (state: { currentUserPubky: string | null; session: object | null }) => unknown) =>
+    selector(mockAuthState),
+}));
+
+const cardsLayoutResolution = (): FeedLayoutResolution => ({
+  requestedLayout: LAYOUT.CARDS,
+  effectiveLayout: LAYOUT.CARDS,
+  isCardsActive: true,
   isVisualRequested: false,
   isVisualActive: false,
-  isGridActive: true,
   isPhoneViewport: false,
 });
 
@@ -41,6 +57,7 @@ interface CapturedStreamProps {
   layoutResolution?: FeedLayoutResolution;
   collectionId?: string;
   visualHiddenItemsNotice?: ReactNode;
+  membershipPostIds?: string[];
 }
 
 const capturedProps: CapturedStreamProps[] = [];
@@ -57,7 +74,10 @@ const lastProps = () => capturedProps[capturedProps.length - 1];
 describe('CollectionTimelineFeed (COLLECTION variant)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseFeedLayoutResolution.mockReturnValue(gridLayoutResolution());
+    mockUseFeedLayoutResolution.mockReturnValue(cardsLayoutResolution());
+    mockUsePostDetails.mockReturnValue({ postDetails: undefined, isLoading: false });
+    mockAuthState.currentUserPubky = null;
+    mockAuthState.session = null;
     capturedProps.length = 0;
   });
 
@@ -71,7 +91,8 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     expect(props.collectionId).toBe(buildCompositeId({ pubky: 'author-1', id: 'post-1' }));
     expect(props.variant).toBe(TIMELINE_FEED_VARIANT.COLLECTION);
     expect(props.tagsLayout).toBe('inline');
-    expect(props.layoutResolution?.isGridActive).toBe(true);
+    expect(props.layoutResolution?.isCardsActive).toBe(true);
+    expect(mockUseFeedLayoutResolution).toHaveBeenCalledWith(TIMELINE_FEED_VARIANT.COLLECTION, LAYOUT.CARDS);
   });
 
   it('leaves the stream id undefined until both params are present', () => {
@@ -93,28 +114,28 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
   it('forwards the collection-scoped List selection and uses List post styling', () => {
     mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
     mockUseFeedLayoutResolution.mockReturnValue({
-      ...gridLayoutResolution(),
+      ...cardsLayoutResolution(),
       requestedLayout: LAYOUT.LIST,
       effectiveLayout: LAYOUT.LIST,
-      isGridActive: false,
+      isCardsActive: false,
     });
 
     render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.LIST} />);
 
     expect(mockUseFeedLayoutResolution).toHaveBeenCalledWith(TIMELINE_FEED_VARIANT.COLLECTION, LAYOUT.LIST);
     expect(lastProps().tagsLayout).toBe('list');
-    expect(lastProps().layoutResolution?.isGridActive).toBe(false);
+    expect(lastProps().layoutResolution?.isCardsActive).toBe(false);
   });
 
   it('forwards the collection-scoped Visual selection and threads the hidden-items notice', () => {
     mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
     mockUseFeedLayoutResolution.mockReturnValue({
-      ...gridLayoutResolution(),
+      ...cardsLayoutResolution(),
       requestedLayout: LAYOUT.VISUAL,
       effectiveLayout: LAYOUT.VISUAL,
+      isCardsActive: false,
       isVisualRequested: true,
       isVisualActive: true,
-      isGridActive: false,
     });
     const notice = <div data-testid="hidden-items-notice" />;
 
@@ -130,5 +151,65 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     expect(lastProps().tagsLayout).toBe('inline');
     expect(lastProps().layoutResolution?.isVisualActive).toBe(true);
     expect(lastProps().visualHiddenItemsNotice).toBe(notice);
+  });
+
+  describe('membership sync', () => {
+    const envelope = (items: string[]) => ({
+      postDetails: { content: JSON.stringify({ name: 'Based Bitcoin', items }) },
+      isLoading: false,
+    });
+    const uriFor = (pubky: string, postId: string) => `pubky://${pubky}/pub/pubky.app/posts/${postId}`;
+
+    it('hands viewers the envelope membership as composite ids so the feed can mirror changes in place', () => {
+      mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+      mockAuthState.currentUserPubky = 'viewer-1';
+      mockAuthState.session = {};
+      mockUsePostDetails.mockReturnValue(envelope([uriFor('author-2', 'item-b'), uriFor('author-1', 'item-a')]));
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
+
+      expect(lastProps().membershipPostIds).toEqual(['author-2:item-b', 'author-1:item-a']);
+    });
+
+    it('leaves the membership undefined while the envelope is still resolving', () => {
+      mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
+
+      expect(lastProps().membershipPostIds).toBeUndefined();
+    });
+
+    it('does not hand the owner a membership (their own flows already update the feed)', () => {
+      mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+      mockAuthState.currentUserPubky = 'author-1';
+      mockAuthState.session = {};
+      mockUsePostDetails.mockReturnValue(envelope([uriFor('author-1', 'item-a')]));
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
+
+      expect(lastProps().membershipPostIds).toBeUndefined();
+    });
+
+    it('hands a signed-out viewer the membership too (the public TTL refreshes their envelope)', () => {
+      mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+      mockUsePostDetails.mockReturnValue(envelope([uriFor('author-1', 'item-a')]));
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
+
+      expect(lastProps().membershipPostIds).toEqual(['author-1:item-a']);
+    });
+
+    it('maps only well-formed item URIs, dropping duplicates', () => {
+      mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+      mockAuthState.currentUserPubky = 'viewer-1';
+      mockAuthState.session = {};
+      mockUsePostDetails.mockReturnValue(
+        envelope([uriFor('author-1', 'item-a'), 'https://example.com/not-a-post', uriFor('author-1', 'item-a')]),
+      );
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
+
+      expect(lastProps().membershipPostIds).toEqual(['author-1:item-a']);
+    });
   });
 });

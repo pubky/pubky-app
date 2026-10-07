@@ -46,10 +46,7 @@ function loadLucideCatalog(): Promise<LucideCatalog> {
 }
 
 type LucideIconState =
-  | { status: 'loading' }
-  | { status: 'loaded'; node: IconNode }
-  | { status: 'unknown' }
-  | { status: 'error' };
+  { status: 'loading' } | { status: 'loaded'; node: IconNode } | { status: 'unknown' } | { status: 'error' };
 
 const UNKNOWN_ICON_STATE: LucideIconState = { status: 'unknown' };
 

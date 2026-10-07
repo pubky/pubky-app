@@ -4,7 +4,13 @@
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
-import { matchVrtFrameScreenshot, preloadImages, renderForVRT, waitForMarkdownEditorReady } from '@/test-utils/vrt';
+import {
+  matchVrtFrameScreenshot,
+  preloadImages,
+  renderForVRT,
+  VRT_ROOT_TESTID,
+  waitForMarkdownEditorReady,
+} from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -124,10 +130,11 @@ vi.mock('@/stores/home/home.store', async () => {
 
 vi.mock('@/stores/auth/auth.store', async () => {
   const f = await fixtures;
+  const { mockRingSession } = await import('@/test-utils/pubky');
   return {
     useAuthStore: createZustandLikeHook({
       currentUserPubky: f.viewerPubky,
-      session: { pubky: f.viewerPubky },
+      session: mockRingSession(['/:rw'], f.viewerPubky),
       sessionExport: null,
       hasProfile: true,
       hasHydrated: true,
@@ -267,6 +274,7 @@ vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => {
   const result = {
     isRepost: false,
     repostAuthorId: null,
+    isReply: false,
     isCurrentUserRepost: false,
     originalPostId: null,
     isLoading: false,
@@ -440,6 +448,18 @@ vi.mock('@/hooks/usePostParticipants/usePostParticipants', async () => {
   return { usePostParticipants: () => result };
 });
 
+vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', async () => {
+  const f = await fixtures;
+  return {
+    useAttachmentsMetadata: ({ fileUris }: { fileUris: readonly string[] }) => ({
+      files: fileUris.flatMap((uri) => {
+        const metadata = f.articleCoverByUri.get(uri);
+        return metadata ? [metadata] : [];
+      }),
+    }),
+  };
+});
+
 vi.mock('@/controllers/file/file', async () => {
   const f = await fixtures;
   return {
@@ -493,15 +513,6 @@ function EditArticleWithChrome({ postId }: { postId: string }) {
   );
 }
 
-async function waitForVisibleCollectionsNew() {
-  await vi.waitFor(() => {
-    const collectionsNew = [...document.querySelectorAll('[aria-label="Collections, New"]')].find(
-      (el) => el instanceof HTMLElement && el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }),
-    );
-    expect(collectionsNew).toBeTruthy();
-  });
-}
-
 async function renderPublishedArticle(layout: 'columns' | 'wide', viewport: { width: number; height: number }) {
   const f = await fixtures;
   uiState.layout = layout;
@@ -533,7 +544,6 @@ async function renderPublishedArticle(layout: 'columns' | 'wide', viewport: { wi
     expect(visiblePanel?.textContent).toContain('hierarchy');
   }
 
-  await waitForVisibleCollectionsNew();
   return screen;
 }
 
@@ -550,7 +560,6 @@ async function renderEditArticle(viewport: { width: number; height: number }) {
   await expect.element(page.getByAltText('Image preview')).toBeVisible();
   const dialog = document.querySelector('[data-testid="dialog-content"]') ?? document;
   await waitForMarkdownEditorReady(dialog);
-  await waitForVisibleCollectionsNew();
 }
 
 describe('Article — editing — visual regression', () => {
@@ -562,6 +571,33 @@ describe('Article — editing — visual regression', () => {
   it('renders the edit article dialog at mobile viewport', async () => {
     await renderEditArticle(VRT_VIEWPORT_MOBILE);
     await matchVrtFrameScreenshot('article-editing-mobile');
+  });
+});
+
+// The default frame shows the article page from the top, where the body sits
+// below the fold. Scroll the clipped VRT root so the body typography (paragraph
+// spacing, loose numbered list, soft line breaks — issue #1762) is what the
+// frame captures.
+function scrollArticleBodyIntoView() {
+  const root = document.querySelector(`[data-testid="${VRT_ROOT_TESTID}"]`);
+  const body = document.querySelector('[data-cy="post-text"]');
+  if (!(root instanceof HTMLElement) || !(body instanceof HTMLElement)) {
+    throw new Error('VRT root or article body not found');
+  }
+  root.scrollTop += body.getBoundingClientRect().top - root.getBoundingClientRect().top - 24;
+}
+
+describe('Article — published page — body typography — visual regression', () => {
+  it('renders the article body at desktop viewport', async () => {
+    await renderPublishedArticle('columns', VRT_VIEWPORT_DESKTOP);
+    scrollArticleBodyIntoView();
+    await matchVrtFrameScreenshot('article-page-body-desktop');
+  });
+
+  it('renders the article body at mobile viewport', async () => {
+    await renderPublishedArticle('columns', VRT_VIEWPORT_MOBILE);
+    scrollArticleBodyIntoView();
+    await matchVrtFrameScreenshot('article-page-body-mobile');
   });
 });
 

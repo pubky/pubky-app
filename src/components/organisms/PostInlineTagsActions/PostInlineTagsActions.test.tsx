@@ -104,6 +104,14 @@ describe('PostInlineTagsActions', () => {
     onRepostClick: vi.fn(),
   };
 
+  it('omits the empty add-tag row in Cards while retaining the tag panel', () => {
+    render(<PostInlineTagsActions {...defaultProps} presentation="cards" />);
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-show-add-button', 'false');
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-show-count', 'true');
+    fireEvent.click(screen.getByTestId('tag-button'));
+    expect(screen.getByTestId('post-tags-panel')).toBeInTheDocument();
+  });
+
   it('renders the collapsed inline tags list by default', () => {
     render(<PostInlineTagsActions {...defaultProps} />);
 
@@ -121,6 +129,22 @@ describe('PostInlineTagsActions', () => {
     expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
     expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-width-mode', 'fit');
     expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-auto-focus-input', 'true');
+  });
+
+  it('reveals the tags without focusing the input on mobile (issue #1650)', () => {
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 390 });
+
+    try {
+      render(<PostInlineTagsActions {...defaultProps} />);
+
+      fireEvent.click(screen.getByTestId('tag-button'));
+
+      // Mobile: tapping the tag button must not focus the input and raise the soft keyboard.
+      expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-auto-focus-input', 'false');
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
+    }
   });
 
   it('passes reply and repost clicks through to callers', () => {

@@ -7,10 +7,11 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
+import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
 import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 import type { ProfileMenuActionItem, UseProfileMenuActionsResult } from './useProfileMenuActions.types';
 
@@ -33,7 +34,9 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
   const { copyToClipboard: copyPubky } = useCopyToClipboard({
     successTitle: 'Pubky copied to clipboard',
   });
-  const { copyToClipboard: copyLink } = useCopyToClipboard({
+  // Touch devices (an installed PWA has no address bar) get the native share sheet;
+  // everywhere else the link is copied, as the label promises.
+  const { shareUrl: copyLink } = useShareUrl({
     successTitle: 'Profile link copied to clipboard',
   });
   const isUserMuted = isMuted(userId);
@@ -50,7 +53,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     icon: isFollowing ? UserRoundMinus : UserRoundPlus,
     onClick: async () => {
       // useFollowUser handles all feedback (toast + state) and never throws.
-      await toggleFollow(userId, isFollowing, profile?.name);
+      await toggleFollow(userId, isFollowing);
     },
     disabled: isFollowLoading || isUserLoading(userId),
   });
@@ -61,14 +64,8 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     label: 'Copy user pubky',
     icon: Key,
     onClick: async () => {
-      try {
-        await copyPubky(withPubkyPrefix(userId));
-      } catch (error) {
-        toast({
-          variant: 'error',
-          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
-        });
-      }
+      // useCopyToClipboard reports its own success/failure toasts and never throws.
+      await copyPubky(withPubkyPrefix(userId));
     },
   });
 
@@ -78,14 +75,8 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     label: 'Copy profile link',
     icon: Link,
     onClick: async () => {
-      try {
-        await copyLink(profileUrl);
-      } catch (error) {
-        toast({
-          variant: 'error',
-          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
-        });
-      }
+      // useShareUrl reports its own success/failure toasts and never throws.
+      await copyLink(profileUrl);
     },
   });
 
@@ -98,7 +89,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       try {
         await toggleMute(userId, isUserMuted);
         toast({
-          title: isUserMuted ? `${username} unmuted` : `${username} muted`,
+          title: isUserMuted ? 'User unmuted' : 'User muted',
         });
       } catch (error) {
         toast({

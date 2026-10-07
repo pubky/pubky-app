@@ -4,7 +4,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
-import { formatPublicKey } from '@/libs/utils/utils';
+import { formatPublicKey, resolveUserDisplayName } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import type { SearchRecentUserItemProps } from './SearchRecentUserItem.types';
 
@@ -25,26 +25,27 @@ export function SearchRecentUserItem({ user, onClick }: SearchRecentUserItemProp
   return (
     <Container
       overrideDefaults
-      className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md transition-colors hover:bg-secondary"
+      // 32px avatar, no card padding/background hover (#1840): hover matches the right sidebar.
+      className="flex min-w-0 cursor-pointer items-center gap-2 transition-opacity hover:opacity-80"
       onClick={handleClick}
       data-testid={`recent-user-${user.id}`}
       role="button"
-      aria-label={`View profile for ${userDetails?.name || user.id}`}
+      aria-label={`View profile for ${resolveUserDisplayName(userDetails) || user.id}`}
     >
       <AvatarWithFallback
         avatarUrl={avatarUrl}
-        name={userDetails?.name || ''}
+        name={resolveUserDisplayName(userDetails)}
         fallbackSeed={user.id}
-        size="default"
+        size="md"
         className="shrink-0"
       />
-      <Container overrideDefaults className="min-w-0 flex-1 flex-col items-start">
+      <Container overrideDefaults className="flex min-w-0 flex-1 flex-col items-start">
         <Typography
           className="block max-w-full truncate text-sm font-bold text-foreground"
           overrideDefaults
           data-testid="user-name"
         >
-          {userDetails?.name || 'Unknown User'}
+          {resolveUserDisplayName(userDetails) || 'Unknown User'}
         </Typography>
         <Typography
           as="span"

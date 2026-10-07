@@ -371,6 +371,32 @@ describe('PostHeaderUserInfo', () => {
     expect(characterCount.parentElement).toHaveTextContent(formattedPublicKey);
   });
 
+  it('turns the character count destructive at the limit (issue #1761)', () => {
+    const { rerender } = render(
+      <PostHeaderUserInfo
+        userId="userpubkykey"
+        userName="Test User"
+        showPopover={false}
+        characterLimit={{ count: 1999, max: 2000 }}
+      />,
+    );
+
+    expect(screen.getByText('1999/2000')).toHaveClass('text-muted-foreground');
+
+    rerender(
+      <PostHeaderUserInfo
+        userId="userpubkykey"
+        userName="Test User"
+        showPopover={false}
+        characterLimit={{ count: 2000, max: 2000 }}
+      />,
+    );
+
+    const atLimitCount = screen.getByText('2000/2000');
+    expect(atLimitCount).toHaveClass('text-destructive');
+    expect(atLimitCount).not.toHaveClass('text-muted-foreground');
+  });
+
   it('renders the character count on the username row when requested', () => {
     const formattedPublicKey = formatPublicKey({ key: 'userpubkykey' });
 

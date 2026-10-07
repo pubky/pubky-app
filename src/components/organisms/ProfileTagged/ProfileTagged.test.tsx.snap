@@ -24,9 +24,14 @@ exports[`ProfileTagged - Snapshots > matches snapshot 1`] = `
 
 exports[`ProfileTagged - Snapshots > matches snapshot for empty state 1`] = `
 <div
-  data-testid="tagged-empty"
+  class=""
+  data-testid="container"
 >
-  TaggedEmpty
+  <div
+    data-testid="tagged-empty"
+  >
+    TaggedEmpty
+  </div>
 </div>
 `;
 

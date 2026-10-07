@@ -69,8 +69,8 @@ describe('Logo', () => {
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
   });
 
-  it('does not scroll to top when clicking logo on other pages', () => {
-    vi.mocked(usePathname).mockReturnValue('/hot');
+  it('scrolls to top when clicking logo on a custom feed', () => {
+    vi.mocked(usePathname).mockReturnValue('/feed/feed-abc123');
 
     Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
     const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem');
@@ -80,9 +80,27 @@ describe('Logo', () => {
     expect(link).toBeTruthy();
 
     fireEvent.click(link!);
-    expect(window.scrollTo).not.toHaveBeenCalled();
-    expect(setItemSpy).toHaveBeenCalledWith(FORCE_FEED_SCROLL_TOP_KEY, '1');
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    expect(setItemSpy).not.toHaveBeenCalled();
   });
+
+  it.each(['/hot', '/feed', '/feed/feed-abc123/extra', '/home/missing'])(
+    'navigates home instead of scrolling on %s',
+    (pathname) => {
+      vi.mocked(usePathname).mockReturnValue(pathname);
+
+      Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
+      const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem');
+
+      render(<Logo />);
+      const link = screen.getByTestId('logo-image').closest('a');
+      expect(link).toHaveAttribute('href', '/home');
+
+      fireEvent.click(link!);
+      expect(window.scrollTo).not.toHaveBeenCalled();
+      expect(setItemSpy).toHaveBeenCalledWith(FORCE_FEED_SCROLL_TOP_KEY, '1');
+    },
+  );
 
   it.each(LOGO_LANDING_ROUTES)('links to the landing page on %s', (pathname) => {
     vi.mocked(usePathname).mockReturnValue(pathname);

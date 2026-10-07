@@ -115,6 +115,7 @@ function createProps(overrides: Partial<QuickReplyContentComponentProps> = {}): 
     onChange: vi.fn(),
     onFocus: vi.fn(),
     onKeyDown: vi.fn(),
+    onSelect: vi.fn(),
     onPaste: vi.fn(),
     mentionIsOpen: false,
     mentionUsers: [],

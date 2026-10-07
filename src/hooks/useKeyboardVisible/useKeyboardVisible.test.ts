@@ -17,6 +17,7 @@ describe('useKeyboardVisible', () => {
     // Save original values
     originalVisualViewport = window.visualViewport;
     originalInnerHeight = window.innerHeight;
+    vi.spyOn(document.documentElement, 'clientHeight', 'get').mockReturnValue(800);
 
     // Mock window.innerHeight
     Object.defineProperty(window, 'innerHeight', {
@@ -34,6 +35,7 @@ describe('useKeyboardVisible', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     // Restore original values
     Object.defineProperty(window, 'visualViewport', {
       writable: true,

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { checkDnsSafety, normalizeImageUrl, readResponseBody } from './nextjs.utils';
 
@@ -201,36 +201,27 @@ describe('readResponseBody', () => {
 
     const result = await readResponseBody(response);
 
-    expect(result).toBe('hello world');
+    expect(result).toEqual({ ok: true, body: 'hello world' });
   });
 
-  it('should throw validation error when response has no body', async () => {
+  it('should return body_unreadable when response has no body', async () => {
     const response = new Response(null);
     // Override body to be undefined
     Object.defineProperty(response, 'body', { value: undefined });
 
-    await expect(readResponseBody(response)).rejects.toMatchObject({
-      category: ErrorCategory.Validation,
-      code: ValidationErrorCode.INVALID_INPUT,
-      service: ErrorService.NextJsServer,
-    });
+    await expect(readResponseBody(response)).resolves.toEqual({ ok: false, reason: 'body_unreadable' });
   });
 
-  it('should throw client error when response exceeds 5MB', async () => {
+  it('should return body_too_large when response exceeds 5MB', async () => {
     const bigChunk = new Uint8Array(6 * 1024 * 1024); // 6MB
     const response = new Response(createReadableStream([bigChunk]));
 
-    await expect(readResponseBody(response)).rejects.toMatchObject({
-      category: ErrorCategory.Client,
-      code: ClientErrorCode.PAYLOAD_TOO_LARGE,
-      service: ErrorService.NextJsServer,
-    });
+    await expect(readResponseBody(response)).resolves.toEqual({ ok: false, reason: 'body_too_large' });
   });
 
-  it('should wrap raw stream errors into server AppError with cause', async () => {
-    // Ensures that low-level stream errors thrown while reading the response body
-    // are not leaked directly, but are wrapped into a server AppError with
-    // UNKNOWN_ERROR code and the original error preserved as `cause`.
+  it('should return body_unreadable when the stream errors mid-body', async () => {
+    // A remote that dies mid-body is an expected enrichment failure: the reader reports it as
+    // data so the caller can serve fallback metadata without an Err.*/Sentry event.
     const streamError = new Error('network stream broken');
     let callCount = 0;
     const failingStream = new ReadableStream<Uint8Array>({
@@ -244,12 +235,22 @@ describe('readResponseBody', () => {
     });
     const response = new Response(failingStream);
 
-    await expect(readResponseBody(response)).rejects.toMatchObject({
-      category: ErrorCategory.Server,
-      code: ServerErrorCode.UNKNOWN_ERROR,
-      cause: streamError,
-      service: ErrorService.NextJsServer,
-    });
+    await expect(readResponseBody(response)).resolves.toEqual({ ok: false, reason: 'body_unreadable' });
+  });
+
+  it('should return body_timeout when the body stalls past the read deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      // A stream that never yields a chunk: only the read deadline ends the read.
+      const response = new Response(new ReadableStream<Uint8Array>({ pull: () => new Promise(() => {}) }));
+
+      const result = readResponseBody(response);
+      await vi.runAllTimersAsync();
+
+      await expect(result).resolves.toEqual({ ok: false, reason: 'body_timeout' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

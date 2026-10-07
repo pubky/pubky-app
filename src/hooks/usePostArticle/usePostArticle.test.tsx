@@ -1,22 +1,20 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
+import { POST_COVER_DESKTOP_VARIANT, POST_COVER_MOBILE_VARIANT } from '@/libs/post/postCoverVariant';
+import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { usePostArticle } from './usePostArticle';
 
-// Mock useToast
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({ toast: mockToast }),
-  };
-});
+// Mock toast
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock dependencies
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getMetadata: vi.fn(),
+    fetchFiles: vi.fn(),
     getFileUrl: vi.fn(),
   },
 }));
@@ -24,6 +22,7 @@ vi.mock('@/services/nexus/file/file.types', () => ({
   FileVariant: {
     MAIN: 'main',
     FEED: 'feed',
+    LARGE: 'large',
     SMALL: 'small',
   },
 }));
@@ -159,6 +158,7 @@ describe('usePostArticle', () => {
       const content = JSON.stringify({ title: 'Test', body: 'Content' });
       const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
       const mockMetadata = createMockImageMetadata('user123:file456', 'beautiful-cover.jpg');
+      mockMetadata.metadata = { width: '800', height: '1200' };
 
       mockGetMetadata.mockResolvedValue([mockMetadata]);
 
@@ -171,7 +171,7 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(result.current.coverImage).not.toBeNull();
+        expect(result.current.coverImage?.alt).toBe('beautiful-cover.jpg');
       });
 
       expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: attachments });
@@ -182,6 +182,8 @@ describe('usePostArticle', () => {
       expect(result.current.coverImage).toEqual({
         src: 'https://cdn.example.com/user123:file456/feed',
         alt: 'beautiful-cover.jpg',
+        width: 800,
+        height: 1200,
       });
     });
 
@@ -207,6 +209,66 @@ describe('usePostArticle', () => {
       expect(mockGetFileUrl).toHaveBeenCalledWith({
         fileId: 'user123:file456',
         variant: FileVariant.MAIN,
+      });
+    });
+
+    it('resolves the desktop source from the desktop variant of the same file', async () => {
+      const content = JSON.stringify({ title: 'Test', body: 'Content' });
+      const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
+      mockGetMetadata.mockResolvedValue([createMockImageMetadata('user123:file456', 'hero.png')]);
+
+      const { result } = renderHook(() =>
+        usePostArticle({
+          content,
+          attachments,
+          coverImageVariant: FileVariant.FEED,
+          coverImageDesktopVariant: FileVariant.LARGE,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.coverImage?.alt).toBe('hero.png');
+      });
+
+      expect(result.current.coverImage).toEqual({
+        src: 'https://cdn.example.com/user123:file456/feed',
+        desktopSrc: 'https://cdn.example.com/user123:file456/large',
+        alt: 'hero.png',
+      });
+    });
+
+    it('resolves the desktop fallback source next to the desktop variant', async () => {
+      const content = JSON.stringify({ title: 'Test', body: 'Content' });
+      const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
+      const mockMetadata = createMockImageMetadata('user123:file456', 'beautiful-cover.jpg');
+
+      mockGetMetadata.mockResolvedValue([mockMetadata]);
+
+      const { result } = renderHook(() =>
+        usePostArticle({
+          content,
+          attachments,
+          coverImageVariant: FileVariant.FEED,
+          coverImageDesktopVariant: FileVariant.LARGE,
+          coverImageDesktopFallbackVariant: FileVariant.MAIN,
+        }),
+      );
+
+      // Provisional (no row yet): no fallback, so a slot 0 that is not an image cannot pull its
+      // original upload through the `<img>`.
+      expect(result.current.coverImage?.desktopFallbackSrc).toBeUndefined();
+
+      await waitFor(() => {
+        expect(result.current.coverImage?.alt).toBe('beautiful-cover.jpg');
+      });
+
+      // The hero needs a desktop size it can degrade to when `large` is not served yet.
+      expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'user123:file456', variant: FileVariant.MAIN });
+      expect(result.current.coverImage).toEqual({
+        src: 'https://cdn.example.com/user123:file456/feed',
+        desktopSrc: 'https://cdn.example.com/user123:file456/large',
+        desktopFallbackSrc: 'https://cdn.example.com/user123:file456/main',
+        alt: 'beautiful-cover.jpg',
       });
     });
 
@@ -277,16 +339,16 @@ describe('usePostArticle', () => {
         }),
       );
 
-      // Wait for effect to complete
-      await waitFor(() => {
-        expect(mockGetMetadata).toHaveBeenCalled();
-      });
+      // The attachment uri names a cover, so it paints before the row lands; the row is the only
+      // thing that can say slot 0 is not an image, and the provisional cover drops once it does.
+      expect(result.current.coverImage).not.toBeNull();
 
-      expect(result.current.coverImage).toBeNull();
-      expect(mockGetFileUrl).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(result.current.coverImage).toBeNull();
+      });
     });
 
-    it('handles empty metadata response', async () => {
+    it('drops the provisional cover once the lookup settles with no file row', async () => {
       const content = JSON.stringify({ title: 'Test', body: 'Content' });
       const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
 
@@ -300,11 +362,15 @@ describe('usePostArticle', () => {
         }),
       );
 
-      await waitFor(() => {
-        expect(mockGetMetadata).toHaveBeenCalled();
-      });
+      // The uri names a cover, so it paints before the lookup answers.
+      expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
 
-      expect(result.current.coverImage).toBeNull();
+      // Nexus omits a file it no longer serves: a settled lookup with no row is authoritative, so
+      // the hero does not stay a broken image.
+      await waitFor(() => {
+        expect(result.current.coverImage).toBeNull();
+      });
+      expect(result.current.isCoverLoading).toBe(false);
     });
 
     it('uses first attachment when multiple attachments provided', async () => {
@@ -323,10 +389,8 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(result.current.coverImage).not.toBeNull();
+        expect(result.current.coverImage?.alt).toBe('first-image.jpg');
       });
-
-      expect(result.current.coverImage?.alt).toBe('first-image.jpg');
     });
   });
 
@@ -342,7 +406,7 @@ describe('usePostArticle', () => {
         }),
       );
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not parse article content',
       });
@@ -350,7 +414,7 @@ describe('usePostArticle', () => {
       expect(result.current.body).toBe('');
     });
 
-    it('shows toast on metadata fetch error', async () => {
+    it('drops the cover and reports it when the metadata lookup fails', async () => {
       const content = JSON.stringify({ title: 'Test', body: 'Content' });
       const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
 
@@ -365,17 +429,19 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalled();
+        expect(vi.mocked(toast)).toHaveBeenCalled();
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not load cover image',
       });
-      expect(result.current.coverImage).toBeNull();
+      await waitFor(() => {
+        expect(result.current.coverImage).toBeNull();
+      });
     });
 
-    it('clears a previously loaded cover image when a re-fetch fails', async () => {
+    it('never shows the previous cover for a replaced attachment whose lookup fails', async () => {
       const content = JSON.stringify({ title: 'Test', body: 'Content' });
       mockGetMetadata.mockResolvedValueOnce([createMockImageMetadata('user123:file456', 'old-cover.jpg')]);
 
@@ -393,15 +459,17 @@ describe('usePostArticle', () => {
         expect(result.current.coverImage?.alt).toBe('old-cover.jpg');
       });
 
-      // An edit replaced the attachments, but the metadata fetch fails —
-      // the stale cover must not linger
+      // An edit replaced the attachments. The new uri paints provisionally, without the old row's
+      // alt text, and the failed lookup then drops it: the stale cover never lingers.
       mockGetMetadata.mockRejectedValueOnce(new Error('Network error'));
       rerender({ attachments: ['pubky://user123/pub/pubky.app/files/file789'] });
 
+      expect(result.current.coverImage?.src).not.toBe('https://cdn.example.com/user123:file456/feed');
+      expect(result.current.coverImage?.alt).not.toBe('old-cover.jpg');
       await waitFor(() => {
         expect(result.current.coverImage).toBeNull();
       });
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not load cover image',
       });
@@ -477,5 +545,176 @@ describe('usePostArticle', () => {
         });
       });
     });
+  });
+});
+
+describe('cover first paint', () => {
+  const content = JSON.stringify({ title: 'Test', body: 'Content' });
+  const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
+  });
+
+  it('renders the cover from the attachment uri before any file metadata resolves', () => {
+    mockGetMetadata.mockResolvedValue([]);
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        coverImageVariant: FileVariant.FEED,
+        coverImageDesktopVariant: FileVariant.MAIN,
+      }),
+    );
+
+    // No metadata has resolved yet; the cover exists all the same, and its desktop source is the
+    // same pair of variants the server preload resolves.
+    expect(result.current.coverImage).toEqual({
+      src: 'https://cdn.example.com/user123:file456/feed',
+      desktopSrc: 'https://cdn.example.com/user123:file456/main',
+      alt: '',
+    });
+  });
+
+  it('fills the alt text from the file row once it lands, keeping the URL', async () => {
+    mockGetMetadata.mockResolvedValue([createMockImageMetadata('user123:file456', 'beautiful-cover.jpg')]);
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        coverImageVariant: FileVariant.FEED,
+      }),
+    );
+
+    expect(result.current.coverImage?.alt).toBe('');
+
+    await waitFor(() => {
+      expect(result.current.coverImage?.alt).toBe('beautiful-cover.jpg');
+    });
+    expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
+  });
+
+  it('builds the cover from the same variants the server preload uses', () => {
+    mockGetMetadata.mockResolvedValue([]);
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments,
+        coverImageVariant: POST_COVER_MOBILE_VARIANT,
+        coverImageDesktopVariant: POST_COVER_DESKTOP_VARIANT,
+      }),
+    );
+
+    // Pinned literals: `resolvePostCoverPreloadUrls` resolves slot 0 with these same constants, so
+    // the preloaded resource is the one the hero asks for and a viewport downloads it once.
+    expect(POST_COVER_MOBILE_VARIANT).toBe('feed');
+    expect(POST_COVER_DESKTOP_VARIANT).toBe('large');
+    expect(result.current.coverImage?.src).toBe('https://cdn.example.com/user123:file456/feed');
+    expect(result.current.coverImage?.desktopSrc).toBe('https://cdn.example.com/user123:file456/large');
+  });
+
+  it('keeps no cover when the attachment is not a homeserver file uri', () => {
+    mockGetMetadata.mockResolvedValue([]);
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content,
+        attachments: ['https://cdn.example.com/not-a-pubky-uri.jpg'],
+        coverImageVariant: FileVariant.FEED,
+      }),
+    );
+
+    expect(result.current.coverImage).toBeNull();
+  });
+});
+
+describe('slot-0 cover rule (inline images)', () => {
+  const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+  const attachments = [`pubky://${AUTHOR}/pub/pubky.app/files/slot0`, `pubky://${AUTHOR}/pub/pubky.app/files/slot1`];
+
+  const articleContent = (body: string) => JSON.stringify({ title: 'T', body });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('treats attachments[0] as the cover when the body does not reference attachment:0', async () => {
+    mockGetMetadata.mockResolvedValue([createMockImageMetadata(`${AUTHOR}:slot0`)]);
+    mockGetFileUrl.mockReturnValue('https://cdn.example/slot0/main');
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('Text with ![img](attachment:1)'),
+        attachments,
+        coverImageVariant: FileVariant.MAIN,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(true);
+    await waitFor(() => {
+      expect(result.current.coverImage).not.toBeNull();
+    });
+    // Only the cover slot is resolved, never the inline attachments
+    expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [attachments[0]] });
+  });
+
+  it('reports no cover when the body references attachment:0', async () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('![inline slot zero](attachment:0)'),
+        attachments,
+        coverImageVariant: FileVariant.MAIN,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(false);
+    await waitFor(() => {
+      expect(result.current.body).toContain('attachment:0');
+    });
+    expect(result.current.coverImage).toBeNull();
+    expect(mockGetMetadata).not.toHaveBeenCalled();
+  });
+
+  it('reports no cover when there are no attachments', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('Plain body'),
+        attachments: null,
+        coverImageVariant: FileVariant.MAIN,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(false);
+  });
+
+  it('reports a cover from local attachments alone, as unlocked content has no Nexus ones', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('Plain body'),
+        attachments: null,
+        coverImageVariant: FileVariant.MAIN,
+        localAttachmentCount: 1,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(true);
+    expect(result.current.coverImage).toBeNull(); // the URL is the caller's local blob, not a Nexus file
+  });
+
+  it('keeps the slot-0 rule for local attachments', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('![inline slot zero](attachment:0)'),
+        attachments: null,
+        coverImageVariant: FileVariant.MAIN,
+        localAttachmentCount: 1,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(false);
   });
 });

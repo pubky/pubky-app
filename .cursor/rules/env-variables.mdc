@@ -1,6 +1,6 @@
 ---
-description: Environment variables configuration and validation rules
-globs: src/libs/env/env.ts
+description: Build-time Env and runtime PUBKY_RUNTIME_* configuration rules
+globs: src/libs/env/**/*,src/libs/runtime-config/**/*,src/config/**/*,.env.example
 alwaysApply: false
 ---
 

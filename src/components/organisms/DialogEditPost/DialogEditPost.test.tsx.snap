@@ -7,7 +7,7 @@ exports[`DialogEditPost - Snapshots > matches snapshot for long post (Edit Artic
 >
   <div
     aria-label="Edit Article"
-    class="w-3xl"
+    class="w-4xl"
     data-testid="dialog-content"
   >
     <div

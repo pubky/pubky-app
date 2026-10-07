@@ -34,7 +34,9 @@ export function useSettingsActions(): UseSettingsActionsResult {
     } catch (err) {
       // No rethrow — callers fire-and-forget, so rethrowing would cause unhandled rejections.
       // No toast — local-first: settings are persisted locally (Zustand + localStorage) before
-      // homeserver sync, so the UI already reflects the change. Failed syncs retry on next bootstrap.
+      // homeserver sync, so the UI already reflects the change. A failed sync is not retried
+      // automatically (sign-in resets the store, session restore does not sync); the next
+      // successful settings change pushes the whole document.
       // Already logged upstream: SettingsController -> HomeserverService -> Err.* -> Logger.error
       setError(isAppError(err) ? err.message : 'Failed to update settings');
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getUserProfileUrl } from '@/app/routes';
 import { TagKind } from '@/application/tag/tag.types';
 import { CardContent } from '@/atoms/Card/Card';
@@ -8,12 +8,14 @@ import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
-import { cn, formatPublicKey, isPostDeleted } from '@/libs/utils/utils';
+import { DEFAULT_LOCK_TITLE, parseLockTeaserContent } from '@/libs/post/lockTeaser';
+import { cn, formatPublicKey, isPostDeleted, resolveUserDisplayName } from '@/libs/utils/utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostListMediaThumbnail } from '@/molecules/PostListMediaThumbnail/PostListMediaThumbnail';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
@@ -34,10 +36,19 @@ const LIST_SNIPPET_MAX_CHARS = 120;
 
 const stopCardPropagation = (event: React.MouseEvent) => event.stopPropagation();
 
-function getListPostSnippet(content: string, kind: string): string {
+function getListPostSnippet(content: string, kind: string, lock: string | null): string {
   const trimmed = content.trim();
   if (!trimmed) {
     return '';
+  }
+
+  // A lock announcement's `kind` is the teaser's own, so only the `lock` url identifies the
+  // envelope. Title only, as `LockedPostCard` labels it — the teaser body belongs to the card.
+  if (lock) {
+    const teaser = parseLockTeaserContent(trimmed);
+    if (teaser) {
+      return teaser.lock_title.trim() || DEFAULT_LOCK_TITLE;
+    }
   }
 
   if (kind === 'long') {
@@ -67,6 +78,7 @@ function getListPostSnippet(content: string, kind: string): string {
 
 interface PostMainListRowProps {
   postId: string;
+  savePostId?: string;
   showFullContent: boolean;
   shouldShowPostHeader: boolean;
   onReplyClick: (postId: string) => void;
@@ -75,6 +87,7 @@ interface PostMainListRowProps {
 
 export function PostMainListRow({
   postId,
+  savePostId = postId,
   showFullContent,
   shouldShowPostHeader,
   onReplyClick,
@@ -82,17 +95,25 @@ export function PostMainListRow({
 }: PostMainListRowProps) {
   const { postDetails } = usePostDetails(postId);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const { isRepost, originalPostId } = useRepostInfo(postId);
+  const { isRepost, isReply, originalPostId } = useRepostInfo(postId);
   const { postDetails: originalPostDetails } = usePostDetails(originalPostId);
-  const ownContentSnippet = getListPostSnippet(postDetails?.content ?? '', postDetails?.kind ?? '');
+  const ownContentSnippet = getListPostSnippet(
+    postDetails?.content ?? '',
+    postDetails?.kind ?? '',
+    postDetails?.lock ?? null,
+  );
   const hasOwnAttachments = (postDetails?.attachments?.length ?? 0) > 0;
-  const shouldUseOriginalPost =
+  const shouldPreviewOriginal =
     !showFullContent &&
     isRepost &&
     !ownContentSnippet &&
     !hasOwnAttachments &&
     !!originalPostId &&
     !!originalPostDetails;
+  // An embedded reply keeps its own author/actions while previewing the embed.
+  const shouldUseOriginalPost = shouldPreviewOriginal && !isReply;
+  const previewPostId = shouldPreviewOriginal ? originalPostId : postId;
+  const previewPostDetails = shouldPreviewOriginal ? originalPostDetails : postDetails;
   const displayPostId = shouldUseOriginalPost ? originalPostId : postId;
   const displayUserId = displayPostId.split(':')[0];
   const { userDetails } = useUserDetails(displayUserId);
@@ -100,14 +121,21 @@ export function PostMainListRow({
   const { formatRelativeTime } = useRelativeTime();
   const tagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const [tagsExpanded, setTagsExpanded] = useState(false);
+  const isMobile = useIsMobile();
+
+  // The panel mounts on expand. On mobile its reveal must not focus the input, so the scroll that
+  // `focus()` used to perform has to happen here, after the panel exists.
+  useEffect(() => {
+    if (isMobile && tagsExpanded) tagsPanelRef.current?.reveal();
+  }, [isMobile, tagsExpanded]);
 
   const displayPostDetails = shouldUseOriginalPost ? originalPostDetails : postDetails;
 
-  if (!postDetails || !displayPostDetails) {
+  if (!postDetails || !displayPostDetails || !previewPostDetails) {
     return <PostMainListRowSkeleton />;
   }
 
-  if (isPostDeleted(displayPostDetails.content)) {
+  if (isPostDeleted(displayPostDetails) || isPostDeleted(previewPostDetails)) {
     return <PostUnavailable message={'This post has been deleted by its author.'} />;
   }
 
@@ -118,15 +146,23 @@ export function PostMainListRow({
   const indexedAt = new Date(displayPostDetails.indexed_at);
   const timeAgo = formatRelativeTime(indexedAt);
   const formattedPublicKey = formatPublicKey({ key: displayUserId });
-  const contentSnippet = getListPostSnippet(displayPostDetails.content, displayPostDetails.kind);
+  const authorName = resolveUserDisplayName(userDetails);
+  const contentSnippet = getListPostSnippet(
+    previewPostDetails.content,
+    previewPostDetails.kind,
+    previewPostDetails.lock ?? null,
+  );
   const snippet = showFullContent ? '' : truncateAtWordBoundary(contentSnippet, LIST_SNIPPET_MAX_CHARS);
   const profileUrl = getUserProfileUrl(displayUserId, currentUserPubky);
   const shouldShowDisplayHeader = shouldShowPostHeader || shouldUseOriginalPost;
-  const shouldShowCompactBlur = !showFullContent && displayPostDetails.is_blurred;
+  const shouldShowCompactBlur = !showFullContent && (displayPostDetails.is_blurred || previewPostDetails.is_blurred);
 
   const handleTagClick = () => {
     setTagsExpanded((previousValue) => !previousValue);
-    tagsPanelRef.current?.focus();
+    // The tag button only reveals the tags. On mobile that reveal must not focus the input and pop
+    // the soft keyboard: the `[+]` add control owns autofocus. The reveal still scrolls the panel
+    // into view, from the effect below, once it has mounted.
+    if (!isMobile) tagsPanelRef.current?.focus();
   };
 
   return (
@@ -135,17 +171,12 @@ export function PostMainListRow({
         {shouldShowDisplayHeader ? (
           <UserInfoPopover
             userId={displayUserId}
-            userName={userDetails.name || ''}
+            userName={authorName}
             avatarUrl={avatarUrl}
             formattedPublicKey={formattedPublicKey}
           >
             <Link href={profileUrl} onClick={stopCardPropagation} className="shrink-0">
-              <AvatarWithFallback
-                avatarUrl={avatarUrl}
-                name={userDetails.name || ''}
-                fallbackSeed={displayUserId}
-                size="md"
-              />
+              <AvatarWithFallback avatarUrl={avatarUrl} name={authorName} fallbackSeed={displayUserId} size="md" />
             </Link>
           </UserInfoPopover>
         ) : null}
@@ -159,12 +190,16 @@ export function PostMainListRow({
                 className={cn(showFullContent ? 'max-w-full' : 'max-w-[40%]', 'shrink-0')}
               >
                 <Typography className="truncate text-base font-bold text-foreground" overrideDefaults>
-                  {userDetails.name}
+                  {authorName}
                 </Typography>
               </Link>
             ) : null}
             {shouldShowCompactBlur ? (
-              <PostContentBlurred postId={displayPostId} variant="compact" className="min-w-0 flex-1" />
+              <PostContentBlurred
+                postId={displayPostDetails.is_blurred ? displayPostId : previewPostId}
+                variant="compact"
+                className="min-w-0 flex-1"
+              />
             ) : snippet ? (
               <Typography
                 className={cn('min-w-0 flex-1 truncate text-secondary-foreground', LIST_POST_BODY_TEXT_CLASS)}
@@ -208,6 +243,7 @@ export function PostMainListRow({
           ) : null}
           <PostActionsBar
             postId={displayPostId}
+            savePostId={savePostId}
             onTagClick={handleTagClick}
             onReplyClick={() => onReplyClick(displayPostId)}
             onRepostClick={() => onRepostClick(displayPostId)}
@@ -215,7 +251,7 @@ export function PostMainListRow({
           />
         </Container>
 
-        {!showFullContent && !shouldShowCompactBlur ? <PostListMediaThumbnail postId={displayPostId} /> : null}
+        {!showFullContent && !shouldShowCompactBlur ? <PostListMediaThumbnail postId={previewPostId} /> : null}
       </Container>
 
       {showFullContent ? (
@@ -230,7 +266,7 @@ export function PostMainListRow({
             ref={tagsPanelRef}
             postId={displayPostId}
             widthMode="fit"
-            autoFocusInput
+            autoFocusInput={!isMobile}
             enableLoadingSkeleton={false}
           />
         </Container>

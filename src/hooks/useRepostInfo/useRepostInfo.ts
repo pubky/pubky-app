@@ -90,6 +90,7 @@ export function useRepostInfo(postId: string): UseRepostInfoResult {
 
   return {
     isRepost,
+    isReply: !!relationships?.replied,
     repostAuthorId,
     isCurrentUserRepost,
     originalPostId,

@@ -256,19 +256,33 @@ export class FileApplication {
       return;
     }
 
-    const filesWithCompositeIds = fileAttachments.map((file) => {
+    const filesWithCompositeIds = fileAttachments.flatMap((file) => {
       const compositeId = buildCompositeIdFromPubkyUri({
-        uri: file.uri,
+        uri: file?.uri,
         domain: CompositeIdDomain.FILES,
       });
-      return {
-        ...file,
-        urls: typeof file.urls === 'string' ? (JSON.parse(file.urls) as NexusFileUrls) : file.urls,
-        id: compositeId,
-      };
+      // A malformed remote record must not prevent valid peers from refreshing.
+      if (!compositeId) {
+        Logger.warn('Ignoring file metadata with an invalid URI');
+        return [];
+      }
+      let urls: NexusFileUrls;
+      try {
+        urls = typeof file.urls === 'string' ? (JSON.parse(file.urls) as NexusFileUrls) : file.urls;
+      } catch {
+        Logger.warn('Ignoring file metadata with malformed URL JSON', { fileId: compositeId });
+        return [];
+      }
+      return [
+        {
+          ...file,
+          urls,
+          id: compositeId,
+        },
+      ];
     });
 
-    await LocalFileService.createMany({ files: filesWithCompositeIds as NexusFileDetails[] });
+    if (filesWithCompositeIds.length) await LocalFileService.createMany({ files: filesWithCompositeIds });
   }
 
   /**

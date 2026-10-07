@@ -1,11 +1,11 @@
 'use client';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-import { TAGS_PER_PAGE } from '@/hooks/usePostTags/usePostTags.constants';
+import { POST_TAGS_PER_PAGE } from '@/config/tags';
 import { cn } from '@/libs/utils/utils';
 import type { PostTagsPanelProps } from './PostTagsPanel.types';
 
-type PostTagsPanelSkeletonProps = Omit<PostTagsPanelProps, 'postId'>;
+type PostTagsPanelSkeletonProps = Pick<PostTagsPanelProps, 'widthMode' | 'className'>;
 
 export function PostTagsPanelSkeleton({ widthMode = 'fit', className }: PostTagsPanelSkeletonProps) {
   return (
@@ -19,7 +19,7 @@ export function PostTagsPanelSkeleton({ widthMode = 'fit', className }: PostTags
 
         {/* Scrollable list of tag rows */}
         <Container overrideDefaults className="max-h-80 overflow-x-hidden overflow-y-auto pr-1">
-          {Array.from({ length: TAGS_PER_PAGE }).map((_, index) => (
+          {Array.from({ length: POST_TAGS_PER_PAGE }).map((_, index) => (
             <Container
               key={`post-tags-panel-skeleton-row-${index}`}
               overrideDefaults

@@ -65,7 +65,11 @@ const RESOLVED_1: ExistingAttachment = {
   uri: URI_1,
   type: 'image/png',
   name: 'photo.png',
-  urls: { main: 'https://cdn.example/author-pubky:FILE1/main', feed: 'https://cdn.example/author-pubky:FILE1/feed' },
+  urls: {
+    main: 'https://cdn.example/author-pubky:FILE1/main',
+    feed: 'https://cdn.example/author-pubky:FILE1/feed',
+    large: 'https://cdn.example/author-pubky:FILE1/large',
+  },
 };
 const RESOLVED_2: ExistingAttachment = {
   uri: URI_2,
@@ -121,11 +125,17 @@ describe('useEditAttachments', () => {
       expect(result.current.existingAttachments).toEqual([PLACEHOLDER_1, PLACEHOLDER_2]);
 
       // Metadata resolution runs for the placeholders; with nothing resolvable
-      // (empty metadata everywhere) they stay placeholders
+      // (empty metadata everywhere) they stay placeholders, marked terminal once
+      // the resolve pass finishes so the UI swaps the skeleton for the file card
       await waitFor(() => {
         expect(FileController.getMetadata).toHaveBeenCalledWith({ fileAttachments: [URI_1, URI_2] });
       });
-      expect(result.current.existingAttachments).toEqual([PLACEHOLDER_1, PLACEHOLDER_2]);
+      await waitFor(() => {
+        expect(result.current.existingAttachments).toEqual([
+          { ...PLACEHOLDER_1, resolutionFailed: true },
+          { ...PLACEHOLDER_2, resolutionFailed: true },
+        ]);
+      });
     });
 
     it('does not seed when disabled', () => {

@@ -1,3 +1,5 @@
+import type { Pubky } from '@/models/models.types';
+
 export interface NotificationPreferences {
   follow: boolean;
   newFriend: boolean;
@@ -19,6 +21,17 @@ export interface PrivacyPreferences {
   hideActiveFriends: boolean;
   hideSearch: boolean;
   neverShowPosts: boolean;
+  /**
+   * Pubky of the moderation bot whose default follow has been processed for this account.
+   * Missing means never processed. Once set, the follow is never touched again, so a later
+   * manual unfollow sticks. A configured bot that differs from the stored value is processed anew.
+   *
+   * Lives under `privacy` on purpose: `SettingsNormalizer.from` spreads nested objects, so
+   * clients that predate this field round-trip it untouched, whereas unknown top-level keys
+   * are dropped. Preserve this field when settings move to priv/app.pubky/v1/settings.json
+   * in the pubky-social-specs M3 migration.
+   */
+  moderationBot?: Pubky;
 }
 
 export interface SettingsState {
@@ -42,6 +55,7 @@ export interface SettingsActions {
   setHideActiveFriends: (hideActiveFriends: boolean) => void;
   setHideSearch: (hideSearch: boolean) => void;
   setNeverShowPosts: (neverShowPosts: boolean) => void;
+  setModerationBot: (moderationBot: Pubky) => void;
   // Muted users actions
   addMutedUser: (userId: string) => void;
   removeMutedUser: (userId: string) => void;
@@ -97,6 +111,7 @@ export enum SettingsActionTypes {
   SET_HIDE_ACTIVE_FRIENDS = 'SET_HIDE_ACTIVE_FRIENDS',
   SET_HIDE_SEARCH = 'SET_HIDE_SEARCH',
   SET_NEVER_SHOW_POSTS = 'SET_NEVER_SHOW_POSTS',
+  SET_MODERATION_BOT = 'SET_MODERATION_BOT',
   ADD_MUTED_USER = 'ADD_MUTED_USER',
   REMOVE_MUTED_USER = 'REMOVE_MUTED_USER',
   SET_MUTED_USERS = 'SET_MUTED_USERS',

@@ -1,17 +1,15 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_HOVER_CLOSE_DELAY } from '@/atoms/Popover/Popover.constants';
+import type { TaggersState, UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
 import { PostTagPopoverWrapper } from './PostTagPopoverWrapper';
 import { POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
 
 const mockRouterPush = vi.fn();
-const mockFetchAllTaggers = vi.fn();
-let mockTaggersByLabel = new Map<string, string[]>();
-let mockTaggerStates = new Map<
-  string,
-  { ids: string[]; skip: number; isLoading: boolean; hasMore: boolean; totalCount?: number }
->();
+const mockLoadTaggers = vi.fn();
+const mockLoadMoreTaggers = vi.fn();
+let mockTaggerStates = new Map<string, TaggersState>();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush }),
@@ -25,13 +23,25 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => false,
 }));
 
-vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
-  usePostTaggers: () => ({
-    taggersByLabel: mockTaggersByLabel,
-    taggerStates: mockTaggerStates,
-    fetchAllTaggers: mockFetchAllTaggers,
-  }),
-}));
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useEntityTaggers/useEntityTaggers')>();
+  return {
+    ...actual,
+    useEntityTaggers: (): UseEntityTaggersResult => ({
+      taggerStates: mockTaggerStates,
+      loadTaggers: mockLoadTaggers,
+      loadMoreTaggers: mockLoadMoreTaggers,
+    }),
+  };
+});
+
+vi.mock('@/stores/auth/auth.store', () => {
+  const state = { currentUserPubky: 'viewer', selectIsAuthenticated: () => true };
+  const useAuthStore = (selector?: (authState: typeof state) => unknown) => (selector ? selector(state) : state);
+  useAuthStore.subscribe = () => () => {};
+  useAuthStore.getState = () => state;
+  return { useAuthStore };
+});
 
 vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
@@ -55,7 +65,6 @@ describe('PostTagPopoverWrapper', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    mockTaggersByLabel = new Map();
     mockTaggerStates = new Map();
   });
 
@@ -145,7 +154,7 @@ describe('PostTagPopoverWrapper', () => {
       await Promise.resolve();
     });
 
-    expect(mockFetchAllTaggers).toHaveBeenCalledWith('bitcoin', ['user1', 'user2', 'user3'], 10);
+    expect(mockLoadTaggers).toHaveBeenCalledWith('bitcoin', 10);
   });
 });
 

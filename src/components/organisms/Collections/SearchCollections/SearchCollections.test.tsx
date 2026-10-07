@@ -1,9 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_SECTION_PAGE_SIZE, SEARCH_COLLECTIONS_PREVIEW_COUNT } from '@/config/collections';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { SearchCollections } from './SearchCollections';
 
@@ -19,10 +21,7 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({
   CollectionCard: ({ authorPubky, postId }: { authorPubky: string; postId: string }) => (
@@ -70,6 +69,7 @@ function setup({ pagination = {} }: { pagination?: Partial<typeof defaultPaginat
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useAuthStore.setState({ currentUserPubky: null });
   setup();
 });
 
@@ -204,21 +204,37 @@ describe('SearchCollections', () => {
     const { onError } = mockUseStreamPagination.mock.calls[0][0];
     onError?.(new Error('boom'));
 
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
 
-  it('collapses back to the preview when the stream id changes (new tags or sort)', () => {
+  it.each([OTHER_STREAM_ID, 'timeline:following:collection:pubky' as PostStreamId])(
+    'collapses the preview when the stream changes to %s',
+    (nextStreamId) => {
+      setup({ pagination: { postIds: buildCompositeIds(6) } });
+
+      const { rerender } = render(<SearchCollections />);
+      fireEvent.click(screen.getByRole('button', { name: 'See all' }));
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(6);
+
+      mockUseSearchStreamId.mockReturnValue(nextStreamId);
+      rerender(<SearchCollections />);
+
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(SEARCH_COLLECTIONS_PREVIEW_COUNT);
+      expect(screen.getByRole('button', { name: 'See all' })).toBeInTheDocument();
+    },
+  );
+
+  it('collapses the preview when the viewer changes on the same stream', () => {
+    useAuthStore.setState({ currentUserPubky: 'viewer' });
     setup({ pagination: { postIds: buildCompositeIds(6) } });
 
-    const { rerender } = render(<SearchCollections />);
+    render(<SearchCollections />);
     fireEvent.click(screen.getByRole('button', { name: 'See all' }));
     expect(screen.getAllByTestId('collection-card')).toHaveLength(6);
 
-    mockUseSearchStreamId.mockReturnValue(OTHER_STREAM_ID);
-    rerender(<SearchCollections />);
+    act(() => useAuthStore.setState({ currentUserPubky: 'other-viewer' }));
 
     expect(screen.getAllByTestId('collection-card')).toHaveLength(SEARCH_COLLECTIONS_PREVIEW_COUNT);
-    expect(screen.getByRole('button', { name: 'See all' })).toBeInTheDocument();
   });
 });
 

@@ -21,7 +21,7 @@ describe('Button', () => {
 
     rerender(<Button variant={ButtonVariant.OUTLINE}>Outline</Button>);
     button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-input/30');
+    expect(button).toHaveClass('bg-input/30', 'border-border');
 
     rerender(<Button variant={ButtonVariant.GHOST}>Ghost</Button>);
     button = screen.getByRole('button');
@@ -45,7 +45,7 @@ describe('Button', () => {
 
     rerender(<Button variant="dark">Dark</Button>);
     button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-neutral-900', 'text-white');
+    expect(button).toHaveClass('bg-card', 'text-foreground', 'hover:bg-muted', 'border-card');
 
     rerender(<Button variant="dark-outline">Dark Outline</Button>);
     button = screen.getByRole('button');

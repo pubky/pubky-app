@@ -16,6 +16,7 @@ Write an ADR when a decision:
 
 Each ADR includes:
 
+- **Status** — Proposed, Accepted, Amended or Superseded, with the date
 - **Context** — Situation leading to the decision
 - **Decision** — What was chosen and why
 - **Consequences** — Impact and trade-offs

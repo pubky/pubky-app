@@ -1,189 +1,194 @@
-import { renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { StreamPostsController } from '@/controllers/stream/posts/posts';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PostController } from '@/controllers/post/post';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import { buildCompositeId } from '@/models/models.utils';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { DELETED } from '@/models/post/details/postDetails.constants';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import {
+  buildCollectionItemsStreamId,
+  type PostStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
+import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { useUnreadPosts } from './useUnreadPosts';
 
-// Hoist mock data
-const { mockUnreadStream, setMockUnreadStream } = vi.hoisted(() => {
-  const stream = { current: null as { stream: string[] } | null };
+const streamId = PostStreamTypes.TIMELINE_ALL_ALL;
+
+function postDetails(id: string, overrides: Partial<PostDetailsModelSchema> = {}): PostDetailsModelSchema {
   return {
-    mockUnreadStream: stream,
-    setMockUnreadStream: (value: { stream: string[] } | null) => {
-      stream.current = value;
-    },
+    id: buildCompositeId({ pubky: 'author', id }),
+    content: 'New post',
+    kind: 'short',
+    indexed_at: 1_000,
+    uri: `pubky://author/pub/pubky.app/posts/${id}`,
+    attachments: null,
+    ...overrides,
   };
-});
+}
 
-// Mock dexie-react-hooks
-vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: vi.fn((queryFn: () => Promise<{ stream: string[] } | null>) => {
-    // Execute the query function to trigger it
-    queryFn();
-    // Return the resolved value directly (not a Promise)
-    return mockUnreadStream.current;
-  }),
-}));
-
-// Mock dependencies
-vi.mock('@/controllers/stream/posts/posts', () => ({
-  StreamPostsController: {
-    getUnreadStream: vi.fn(() => Promise.resolve(mockUnreadStream.current)),
-    filterStreamPosts: vi.fn(({ postIds }: { postIds: string[] }) => Promise.resolve(postIds)),
-  },
-}));
+function setUnreadStream(streamId: PostStreamId, postIds: string[]) {
+  return UnreadPostStreamModel.upsert(streamId, postIds);
+}
 
 describe('useUnreadPosts', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    setMockUnreadStream(null);
-    vi.mocked(StreamPostsController.filterStreamPosts).mockImplementation(({ postIds }) => Promise.resolve(postIds));
-  });
+  afterEach(() => vi.restoreAllMocks());
 
-  it('should return empty arrays when streamId is null', () => {
-    const { result } = renderHook(() => useUnreadPosts({ streamId: null }));
+  it('starts empty and reacts when an unread stream is created and cleared', async () => {
+    const ready = postDetails('ready');
+    await PostDetailsModel.create(ready);
+    const { result } = renderHook(() => useUnreadPosts({ streamId }));
+    expect(result.current).toEqual({ unreadPostIds: [], unreadCount: 0 });
 
-    expect(result.current.unreadPostIds).toEqual([]);
-    expect(result.current.unreadCount).toBe(0);
-  });
-
-  it('should return empty arrays when no unread stream exists', () => {
-    setMockUnreadStream(null);
-
-    const { result } = renderHook(() => useUnreadPosts({ streamId: 'timeline:all:all' as PostStreamId }));
-
-    expect(result.current.unreadPostIds).toEqual([]);
-    expect(result.current.unreadCount).toBe(0);
-  });
-
-  it('should return unread post IDs when stream exists', () => {
-    const mockPostIds = ['post-1', 'post-2', 'post-3'];
-    setMockUnreadStream({ stream: mockPostIds });
-
-    const { result } = renderHook(() => useUnreadPosts({ streamId: 'timeline:all:all' as PostStreamId }));
-
-    expect(result.current.unreadPostIds).toEqual(mockPostIds);
-    expect(result.current.unreadCount).toBe(3);
-  });
-
-  it('filters unread post IDs through the stream filter', async () => {
-    const mockPostIds = ['post-1', 'collection-1'];
-    const streamId = 'timeline:all:all' as PostStreamId;
-    setMockUnreadStream({ stream: mockPostIds });
-
-    renderHook(() => useUnreadPosts({ streamId }));
-
-    await waitFor(() => {
-      expect(StreamPostsController.filterStreamPosts).toHaveBeenCalledWith({ streamId, postIds: mockPostIds });
+    await act(async () => {
+      await setUnreadStream(streamId, [ready.id]);
     });
+    await waitFor(() => expect(result.current.unreadPostIds).toEqual([ready.id]));
+
+    await act(async () => {
+      await setUnreadStream(streamId, []);
+    });
+    await waitFor(() => expect(result.current).toEqual({ unreadPostIds: [], unreadCount: 0 }));
   });
 
-  it('should return correct count for single post', () => {
-    setMockUnreadStream({ stream: ['post-1'] });
+  it('counts eligible posts as their details arrive without another unread-stream write', async () => {
+    const ready = postDetails('ready');
+    const pending = postDetails('pending');
+    const missing = postDetails('missing');
+    await PostDetailsModel.create(ready);
+    await setUnreadStream(streamId, [missing.id, pending.id, ready.id]);
+    const { result } = renderHook(() => useUnreadPosts({ streamId }));
+    await waitFor(() => expect(result.current.unreadPostIds).toEqual([ready.id]));
 
-    const { result } = renderHook(() => useUnreadPosts({ streamId: 'timeline:all:all' as PostStreamId }));
-
-    expect(result.current.unreadCount).toBe(1);
-  });
-
-  it('should return correct count for many posts', () => {
-    const manyPosts = Array.from({ length: 100 }, (_, i) => `post-${i}`);
-    setMockUnreadStream({ stream: manyPosts });
-
-    const { result } = renderHook(() => useUnreadPosts({ streamId: 'timeline:all:all' as PostStreamId }));
-
-    expect(result.current.unreadCount).toBe(100);
-  });
-
-  it('should handle empty stream array', () => {
-    setMockUnreadStream({ stream: [] });
-
-    const { result } = renderHook(() => useUnreadPosts({ streamId: 'timeline:all:all' as PostStreamId }));
-
-    expect(result.current.unreadPostIds).toEqual([]);
-    expect(result.current.unreadCount).toBe(0);
-  });
-
-  it('should handle streamId change and update results', () => {
-    setMockUnreadStream({ stream: ['post-1', 'post-2'] });
-
-    const { result, rerender } = renderHook(
-      ({ streamId }: { streamId: PostStreamId | null }) => useUnreadPosts({ streamId }),
-      {
-        initialProps: { streamId: 'timeline:all:all' as PostStreamId },
-      },
-    );
-
-    expect(result.current.unreadPostIds).toEqual(['post-1', 'post-2']);
+    await act(async () => {
+      await PostDetailsModel.create(pending);
+    });
+    await waitFor(() => expect(result.current.unreadPostIds).toEqual([pending.id, ready.id]));
     expect(result.current.unreadCount).toBe(2);
-
-    // Change streamId to a different stream
-    setMockUnreadStream({ stream: ['post-3'] });
-    rerender({ streamId: 'timeline:following:all' as PostStreamId });
-
-    expect(result.current.unreadPostIds).toEqual(['post-3']);
-    expect(result.current.unreadCount).toBe(1);
   });
 
-  it('should handle streamId changing to null', () => {
-    setMockUnreadStream({ stream: ['post-1', 'post-2'] });
+  it('clears the previous count immediately when switching or disabling streams', async () => {
+    const short = postDetails('short');
+    const collection = postDetails('collection', { kind: 'collection', content: '{"name":"Collection"}' });
+    await PostDetailsModel.create(short);
+    await PostDetailsModel.create(collection);
+    await setUnreadStream(streamId, [short.id]);
+    await setUnreadStream(PostStreamTypes.TIMELINE_ALL_COLLECTION, [collection.id]);
 
-    type HookProps = { streamId: PostStreamId | null };
-    const { result, rerender } = renderHook((props: HookProps) => useUnreadPosts(props), {
-      initialProps: { streamId: 'timeline:all:all' as PostStreamId } as HookProps,
-    });
-
-    expect(result.current.unreadPostIds).toEqual(['post-1', 'post-2']);
-
-    // Change streamId to null
-    setMockUnreadStream(null);
-    rerender({ streamId: null });
-
-    expect(result.current.unreadPostIds).toEqual([]);
-    expect(result.current.unreadCount).toBe(0);
-  });
-
-  it('should handle streamId changing from null to valid stream', () => {
-    setMockUnreadStream(null);
-
+    const initialProps: { streamId: PostStreamId | null } = { streamId };
     const { result, rerender } = renderHook(
       ({ streamId }: { streamId: PostStreamId | null }) => useUnreadPosts({ streamId }),
-      {
-        initialProps: { streamId: null as PostStreamId | null },
-      },
+      { initialProps },
     );
+    await waitFor(() => expect(result.current.unreadPostIds).toEqual([short.id]));
 
-    expect(result.current.unreadPostIds).toEqual([]);
-    expect(result.current.unreadCount).toBe(0);
+    rerender({ streamId: PostStreamTypes.TIMELINE_ALL_COLLECTION });
+    expect(result.current).toEqual({ unreadPostIds: [], unreadCount: 0 });
+    await waitFor(() => expect(result.current.unreadPostIds).toEqual([collection.id]));
 
-    // Change streamId to valid stream
-    setMockUnreadStream({ stream: ['post-1'] });
-    rerender({ streamId: 'timeline:all:all' as PostStreamId });
+    rerender({ streamId: null });
+    expect(result.current).toEqual({ unreadPostIds: [], unreadCount: 0 });
+  });
 
-    expect(result.current.unreadPostIds).toEqual(['post-1']);
+  it.each<PostStreamId>([PostStreamTypes.TIMELINE_ALL_IMAGE, 'timeline:wot_domain:2:image:bitcoin'])(
+    'counts only the content kind selected by %s',
+    async (imageStreamId) => {
+      const image = postDetails('image', { kind: 'image' });
+      const short = postDetails('short');
+      await PostDetailsModel.create(image);
+      await PostDetailsModel.create(short);
+      await setUnreadStream(imageStreamId, [short.id, image.id]);
+
+      const { result } = renderHook(() => useUnreadPosts({ streamId: imageStreamId }));
+
+      await waitFor(() => expect(result.current.unreadPostIds).toEqual([image.id]));
+      expect(result.current.unreadCount).toBe(1);
+    },
+  );
+
+  it.each([
+    ['collection', { kind: 'collection', content: '{"name":"Collection"}' }],
+    ['tombstone', { kind: 'short', content: DELETED }],
+  ])('never counts a %s while its unread ID is waiting for details', async (_name, overrides) => {
+    const ready = postDetails('ready');
+    const filtered = postDetails('filtered', overrides);
+    await PostDetailsModel.create(ready);
+    await setUnreadStream(streamId, [filtered.id, ready.id]);
+
+    const counts: number[] = [];
+    const { result } = renderHook(() => {
+      const unread = useUnreadPosts({ streamId });
+      counts.push(unread.unreadCount);
+      return unread;
+    });
+
+    // A known post proves the live query settled; the initial empty render cannot pass this assertion.
+    await waitFor(() => expect(result.current.unreadPostIds).toEqual([ready.id]));
+    const rendersBeforeHydration = counts.length;
+
+    await act(async () => {
+      await PostDetailsModel.create(filtered);
+    });
+
+    await waitFor(() => expect(counts.length).toBeGreaterThan(rendersBeforeHydration));
+    expect(result.current.unreadPostIds).toEqual([ready.id]);
+    expect(counts).not.toContain(2);
+  });
+
+  it('counts a collection after hydration when the Collections filter is selected', async () => {
+    const first = postDetails('first', { kind: 'collection', content: '{"name":"First"}' });
+    const pending = postDetails('pending', { kind: 'collection', content: '{"name":"Pending"}' });
+    await PostDetailsModel.create(first);
+    await setUnreadStream(PostStreamTypes.TIMELINE_ALL_COLLECTION, [pending.id, first.id]);
+    const { result } = renderHook(() => useUnreadPosts({ streamId: PostStreamTypes.TIMELINE_ALL_COLLECTION }));
+    await waitFor(() => expect(result.current.unreadPostIds).toEqual([first.id]));
+
+    await act(async () => {
+      await PostDetailsModel.create(pending);
+    });
+    await waitFor(() => expect(result.current.unreadPostIds).toEqual([pending.id, first.id]));
+    expect(result.current.unreadCount).toBe(2);
+  });
+
+  it.each<PostStreamId>([
+    PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
+    buildCollectionItemsStreamId('owner', 'collection-post'),
+  ])('retains deleted posts on %s', async (retainingStreamId) => {
+    const deleted = postDetails('deleted', { content: DELETED });
+    await PostDetailsModel.create(deleted);
+    await setUnreadStream(retainingStreamId, [deleted.id]);
+    const { result } = renderHook(() => useUnreadPosts({ streamId: retainingStreamId }));
+
+    await waitFor(() => expect(result.current.unreadPostIds).toEqual([deleted.id]));
     expect(result.current.unreadCount).toBe(1);
   });
 
-  it('should handle very large stream arrays', () => {
-    const largeStream = Array.from({ length: 10000 }, (_, i) => `post-${i}`);
-    setMockUnreadStream({ stream: largeStream });
+  it('clears the count on a details-read failure and recovers on the next local update', async () => {
+    vi.spyOn(Logger, 'error').mockImplementation(() => {});
+    const ready = postDetails('ready');
+    await PostDetailsModel.create(ready);
+    await setUnreadStream(streamId, [ready.id]);
+    const { result } = renderHook(() => useUnreadPosts({ streamId }));
+    await waitFor(() => expect(result.current.unreadCount).toBe(1));
 
-    const { result } = renderHook(() => useUnreadPosts({ streamId: 'timeline:all:all' as PostStreamId }));
+    vi.spyOn(PostController, 'getDetailsByIds').mockRejectedValueOnce(
+      Err.database(DatabaseErrorCode.QUERY_FAILED, 'Could not read post details', {
+        service: ErrorService.Local,
+        operation: 'readDetailsByIds',
+      }),
+    );
+    await act(async () => {
+      await setUnreadStream(streamId, [ready.id]);
+    });
+    await waitFor(() => expect(result.current).toEqual({ unreadPostIds: [], unreadCount: 0 }));
 
-    expect(result.current.unreadPostIds).toHaveLength(10000);
-    expect(result.current.unreadCount).toBe(10000);
-    expect(result.current.unreadPostIds[0]).toBe('post-0');
-    expect(result.current.unreadPostIds[9999]).toBe('post-9999');
-  });
-
-  it('should handle stream with duplicate post IDs', () => {
-    // Note: This tests the hook's behavior, not the data model
-    // In practice, streams shouldn't have duplicates, but the hook should handle it gracefully
-    setMockUnreadStream({ stream: ['post-1', 'post-1', 'post-2'] });
-
-    const { result } = renderHook(() => useUnreadPosts({ streamId: 'timeline:all:all' as PostStreamId }));
-
-    expect(result.current.unreadPostIds).toEqual(['post-1', 'post-1', 'post-2']);
-    expect(result.current.unreadCount).toBe(3);
+    await act(async () => {
+      await setUnreadStream(streamId, [ready.id]);
+    });
+    await waitFor(() => expect(result.current.unreadPostIds).toEqual([ready.id]));
   });
 });

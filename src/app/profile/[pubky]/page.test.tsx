@@ -66,6 +66,19 @@ describe('generateMetadata', () => {
     expect(metadata.alternates?.canonical).toBe(`/profile/${PUBKY}`);
   });
 
+  it('preserves a key starting with pubky through normalization and profile fetching', async () => {
+    const rawKey = `pubky${'o'.repeat(47)}`;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    const metadata = await generateMetadata({ params: Promise.resolve({ pubky: rawKey }) });
+
+    expect(metadata.alternates?.canonical).toBe(`/profile/${rawKey}`);
+    expect(fetchSpy.mock.calls.map(([url]) => url)).toEqual([
+      `https://nexus.staging.pubky.app/v0/user/${rawKey}/details`,
+      `https://nexus.staging.pubky.app/v0/user/${rawKey}/counts`,
+    ]);
+  });
+
   it('builds rich title/description without static images when the profile resolves', async () => {
     // First fetch = user details, second = counts (unused by metadata → left as 404).
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
@@ -79,6 +92,22 @@ describe('generateMetadata', () => {
     expect(metadata.openGraph).not.toHaveProperty('images');
     expect(metadata.twitter).not.toHaveProperty('images');
     expect(metadata.alternates?.canonical).toBe(`/profile/${PUBKY}`);
+  });
+
+  it('swaps raw pubky mentions in the bio description for display names, like the app renders them', async () => {
+    const mentioned = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
+    // First fetch = user details, second = counts (left as 404), third = the mentioned profile.
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        jsonResponse({ name: 'Alice', bio: `Building with pk:${mentioned}`, id: PUBKY, indexed_at: 1 }),
+      )
+      .mockResolvedValueOnce(new Response('Not Found', { status: 404 }))
+      .mockResolvedValueOnce(jsonResponse({ id: mentioned, name: 'Bob' }));
+
+    const metadata = await generateMetadata({ params: Promise.resolve({ pubky: PUBKY }) });
+
+    expect(metadata.description).toBe('Building with @Bob');
+    expect(metadata.openGraph?.description).toBe('Building with @Bob');
   });
 
   it('uses a shortened public key in the title when the profile has no name', async () => {
@@ -95,5 +124,15 @@ describe('generateMetadata', () => {
     const metadata = await generateMetadata({ params: Promise.resolve({ pubky: PUBKY }) });
 
     expect(metadata).toEqual({ alternates: { canonical: `/profile/${PUBKY}` } });
+  });
+
+  it('emits no canonical and makes no Nexus request for a crawl-mangled id', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    for (const mangled of [`${PUBKY}.`, `${PUBKY})`, `${PUBKY}%2E`, 'abc%', '.']) {
+      const metadata = await generateMetadata({ params: Promise.resolve({ pubky: mangled }) });
+      expect(metadata).toEqual({});
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

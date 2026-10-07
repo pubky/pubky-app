@@ -5,6 +5,7 @@ import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { toast } from '@/molecules/Toaster/toast';
 import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -33,10 +34,7 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
   useTimelineFeedContext: vi.fn(),
 }));
 
-const { mockToast } = vi.hoisted(() => ({ mockToast: vi.fn() }));
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: mockToast,
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 describe('useRemoveDeletedPost', () => {
   const currentUserPubky = 'current-user' as Pubky;
@@ -112,7 +110,7 @@ describe('useRemoveDeletedPost', () => {
 
     expect(rollbackRemoval).not.toHaveBeenCalled();
     expect(commitRemoval).toHaveBeenCalledTimes(1);
-    expect(mockToast).toHaveBeenCalledWith({ title: 'Post removed from bookmarks' });
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Post removed from bookmarks' });
   });
 
   it('removes a deleted post from an owned collection', async () => {
@@ -132,7 +130,7 @@ describe('useRemoveDeletedPost', () => {
       postId,
       shouldAdd: false,
     });
-    expect(mockToast).toHaveBeenCalledWith({ title: 'Post removed from collection.' });
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Post removed from collection.' });
   });
 
   it('restores the bookmark card when persistence fails', async () => {
@@ -146,7 +144,7 @@ describe('useRemoveDeletedPost', () => {
 
     expect(removePostsOptimistically).toHaveBeenCalledWith(postId);
     expect(rollbackRemoval).toHaveBeenCalledTimes(1);
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Could not remove bookmark',
     });
@@ -167,7 +165,7 @@ describe('useRemoveDeletedPost', () => {
     expect(commitRemoval).toHaveBeenCalledTimes(1);
     // The card stays removed (local delete committed), so the toast must not
     // claim the removal failed outright — only that the sync did.
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'warning',
       description: 'Removed from bookmarks on this device, but syncing failed.',
     });
@@ -184,7 +182,7 @@ describe('useRemoveDeletedPost', () => {
     });
 
     expect(rollbackRemoval).toHaveBeenCalledWith();
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to update collection.',
     });
@@ -206,7 +204,7 @@ describe('useRemoveDeletedPost', () => {
     expect(PostController.getDetails).toHaveBeenCalledWith({ compositeId: collectionId });
     expect(rollbackRemoval).not.toHaveBeenCalled();
     expect(commitRemoval).toHaveBeenCalledTimes(1);
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'warning',
       description: 'Removed from the collection on this device, but syncing failed.',
     });
@@ -228,7 +226,7 @@ describe('useRemoveDeletedPost', () => {
 
     expect(rollbackRemoval).toHaveBeenCalledTimes(1);
     expect(commitRemoval).not.toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to update collection.',
     });
@@ -247,7 +245,7 @@ describe('useRemoveDeletedPost', () => {
 
     expect(rollbackRemoval).toHaveBeenCalledTimes(1);
     expect(commitRemoval).not.toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to update collection.',
     });

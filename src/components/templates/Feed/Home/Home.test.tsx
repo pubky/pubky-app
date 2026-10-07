@@ -9,6 +9,12 @@ vi.mock('@/organisms/AlertBackup/AlertBackup', () => {
   };
 });
 
+vi.mock('@/organisms/AlertInstall/AlertInstall', () => {
+  return {
+    AlertInstall: () => <div data-testid="alert-install">AlertInstall</div>,
+  };
+});
+
 vi.mock('@/organisms/DialogWelcome/DialogWelcome', () => {
   return {
     DialogWelcome: () => <div data-testid="dialog-welcome">DialogWelcome</div>,
@@ -98,11 +104,16 @@ describe('Home', () => {
     expect(screen.getByTestId('alert-backup')).toBeInTheDocument();
   });
 
-  it('renders FeedNavigation edge-to-edge on mobile in main content', () => {
+  it('renders AlertInstall between FeedNavigation and AlertBackup', () => {
     render(<Home />);
-    const feedNavs = screen.getAllByTestId('feed-navigation');
-    const mainFeedNav = feedNavs.find((el) => el.getAttribute('data-classname') === '-mx-6 w-auto lg:mx-0 lg:w-full');
-    expect(mainFeedNav).toBeInTheDocument();
+    const alertInstall = screen.getByTestId('alert-install');
+    expect(screen.getByTestId('feed-navigation').nextElementSibling).toBe(alertInstall);
+    expect(alertInstall.nextElementSibling).toBe(screen.getByTestId('alert-backup'));
+  });
+
+  it('renders FeedNavigation in main content', () => {
+    render(<Home />);
+    expect(screen.getByTestId('feed-navigation')).toBeInTheDocument();
   });
 
   it('renders TimelineFeed with HOME variant', () => {

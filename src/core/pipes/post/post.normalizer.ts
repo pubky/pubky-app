@@ -118,13 +118,22 @@ export class PostNormalizer {
         }
       }
 
-      let attachments: string[] | null = null;
+      // Final attachment order: uploaded files first (article cover), then
+      // pre-uploaded URIs (article inline images, already on the homeserver).
+      const attachmentList = [
+        ...(post.attachments ?? []).map((attachment) => attachment.fileResult.meta.url),
+        ...(post.attachmentUris ?? []),
+      ];
+      const attachments = attachmentList.length > 0 ? attachmentList : null;
 
-      if (post.attachments) {
-        attachments = post.attachments.map((attachment) => attachment.fileResult.meta.url);
-      }
-
-      return builder.createPost(post.content, post.kind, post.parentUri ?? null, embedObject, attachments);
+      return builder.createPost(
+        post.content,
+        post.kind,
+        post.parentUri ?? null,
+        embedObject,
+        attachments,
+        post.lock ?? null,
+      );
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -159,11 +168,12 @@ export class PostNormalizer {
     const builder = PubkySpecsSingleton.get(authorId);
 
     const postDetails = await PostDetailsModel.findById(compositePostId);
-    // Tombstoned posts (`content === '[DELETED]'`) are treated as not-found
-    // here. Pre-tombstone refactor `!postDetails` caught hard-deleted rows;
-    // now they stick around as tombstones and falling through would build a
-    // `PubkyAppPost` whose content is the `[DELETED]` sentinel.
-    if (!postDetails || isPostDeleted(postDetails.content)) {
+    // Tombstoned posts (the Nexus `deleted` flag, or the legacy `[DELETED]`
+    // content) are treated as not-found here. Pre-tombstone refactor
+    // `!postDetails` caught hard-deleted rows; now they stick around as
+    // tombstones and falling through would build a `PubkyAppPost` from the
+    // tombstone's content.
+    if (!postDetails || isPostDeleted(postDetails)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
         service: ErrorService.Local,
         operation: 'toEdit',
@@ -195,12 +205,16 @@ export class PostNormalizer {
     const nextAttachments =
       attachments === undefined ? postDetails.attachments : attachments && attachments.length > 0 ? attachments : null;
 
-    const originalPost = new PubkyAppPost(
+    // Everything but the content is carried over from this pre-edit post, so `lock` has to be on it —
+    // and `new_with_lock` is the only constructor that accepts one. Omit it and editing an
+    // announcement republishes it with no link to the paid content, unrecoverably.
+    const originalPost = PubkyAppPost.new_with_lock(
       postDetails.content,
       kind ?? this.mapKindToEnum(postDetails.kind),
       postRelationships?.replied ?? null,
       embedObject ?? null,
       nextAttachments,
+      postDetails.lock ?? null,
     );
 
     const result = builder.editPost(originalPost, postId, content);

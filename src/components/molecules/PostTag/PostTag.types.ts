@@ -1,6 +1,6 @@
-import type { HTMLAttributes, MouseEvent } from 'react';
+import type { ButtonHTMLAttributes, MouseEvent } from 'react';
 
-export interface PostTagProps extends Omit<HTMLAttributes<HTMLButtonElement>, 'onClick' | 'color'> {
+export interface PostTagProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'color'> {
   /** Tag label text */
   label: string;
   /** Number of posts with this tag (optional) */

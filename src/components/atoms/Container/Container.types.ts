@@ -1,17 +1,7 @@
 import type { ReactNode } from 'react';
 
 export type ContainerElement =
-  | 'div'
-  | 'section'
-  | 'article'
-  | 'main'
-  | 'header'
-  | 'footer'
-  | 'aside'
-  | 'nav'
-  | 'body'
-  | 'html'
-  | 'figure';
+  'div' | 'section' | 'article' | 'main' | 'header' | 'footer' | 'aside' | 'nav' | 'body' | 'html' | 'figure';
 export type ContainerSize = 'sm' | 'md' | 'lg' | 'xl' | 'container' | 'default';
 export type ContainerDisplay = 'flex' | 'grid' | 'block';
 

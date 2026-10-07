@@ -1,14 +1,17 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, SORT } from '@/stores/home/home.types';
-import { useSearchStreamId, useSearchTags } from './useSearchStreamId';
+import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
+import { useSearchStore } from '@/stores/search/search.store';
+import { useSearchStreamId } from './useSearchStreamId';
 
 // Mock next/navigation
 const mockGet = vi.fn();
+const mockQueryParam = vi.hoisted(() => ({ value: null as string | null }));
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
-    get: mockGet,
+    get: (key: string) => (key === 'q' ? mockQueryParam.value : mockGet(key)),
   }),
 }));
 
@@ -16,12 +19,35 @@ describe('useSearchStreamId', () => {
   beforeEach(() => {
     // Reset mocks and store to default state before each test
     mockGet.mockReset();
+    mockQueryParam.value = null;
+    useSearchStore.getState().reset();
+    useAuthStore.setState({ currentUserPubky: 'viewer' });
     act(() => {
       useHomeStore.setState({
         sort: SORT.TIMELINE,
         content: CONTENT.ALL,
       });
     });
+  });
+
+  it.each([
+    [REACH.ALL, 'all'],
+    [REACH.NETWORK, 'wot'],
+    [REACH.FOLLOWING, 'following'],
+    [REACH.FRIENDS, 'friends'],
+  ] as const)('applies %s to tag posts, collections and full-text independently of Home', (reach, source) => {
+    mockGet.mockReturnValue('bitcoin,pubky');
+    useSearchStore.getState().setReach(reach);
+    useHomeStore.setState({ reach: REACH.ME, taggedAsActive: true, profileTags: ['unrelated'] });
+    const posts = renderHook(() => useSearchStreamId());
+    const collections = renderHook(() => useSearchStreamId(CONTENT.COLLECTIONS));
+    expect(posts.result.current).toBe(`timeline:${source}:all:bitcoin,pubky`);
+    expect(collections.result.current).toBe(`timeline:${source}:collection:bitcoin,pubky`);
+    mockQueryParam.value = 'bitcoin wallets';
+    posts.rerender();
+    expect(posts.result.current).toBe(
+      `content_search:q~bitcoin%20wallets:all${reach === REACH.ALL ? '' : `:reach:${source}`}`,
+    );
   });
 
   describe('when no tags in URL', () => {
@@ -44,6 +70,30 @@ describe('useSearchStreamId', () => {
     });
   });
 
+  describe('when a content query is provided', () => {
+    it('takes precedence over tags and maps the content filter into the search stream', () => {
+      mockQueryParam.value = 'bitcoin wallets';
+      mockGet.mockReturnValue('tag-that-must-not-win');
+      act(() => {
+        useHomeStore.setState({ content: CONTENT.COLLECTIONS });
+      });
+
+      const { result, rerender } = renderHook(() => useSearchStreamId());
+
+      expect(result.current).toBe('content_search:q~bitcoin%20wallets:collection');
+
+      mockQueryParam.value = 'privacy tools';
+      rerender();
+      expect(result.current).toBe('content_search:q~privacy%20tools:collection');
+    });
+
+    it('should lowercase the query so differently-cased searches hit the same stream cache', () => {
+      mockQueryParam.value = 'Bitcoin Wallets';
+      const { result } = renderHook(() => useSearchStreamId());
+      expect(result.current).toBe('content_search:q~bitcoin%20wallets:all');
+    });
+  });
+
   describe('when tags are provided in URL', () => {
     it('should return stream ID with single tag', () => {
       mockGet.mockReturnValue('pubky');
@@ -61,6 +111,12 @@ describe('useSearchStreamId', () => {
       mockGet.mockReturnValue(' pubky , bitcoin , nostr ');
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('timeline:all:all:pubky,bitcoin,nostr');
+    });
+
+    it('should lowercase tags so shared uppercase URLs hit the same stream cache', () => {
+      mockGet.mockReturnValue('Bitcoin,NOSTR');
+      const { result } = renderHook(() => useSearchStreamId());
+      expect(result.current).toBe('timeline:all:all:bitcoin,nostr');
     });
 
     it('should filter out empty tags', () => {
@@ -174,53 +230,5 @@ describe('useSearchStreamId', () => {
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBe('total_engagement:all:image:pubky,bitcoin');
     });
-  });
-});
-
-describe('useSearchTags', () => {
-  beforeEach(() => {
-    mockGet.mockReset();
-  });
-
-  it('should return empty array when tags param is null', () => {
-    mockGet.mockReturnValue(null);
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual([]);
-  });
-
-  it('should return empty array when tags param is empty string', () => {
-    mockGet.mockReturnValue('');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual([]);
-  });
-
-  it('should return array with single tag', () => {
-    mockGet.mockReturnValue('pubky');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual(['pubky']);
-  });
-
-  it('should return array with multiple tags', () => {
-    mockGet.mockReturnValue('pubky,bitcoin,nostr');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual(['pubky', 'bitcoin', 'nostr']);
-  });
-
-  it('should trim whitespace from tags', () => {
-    mockGet.mockReturnValue(' pubky , bitcoin , nostr ');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual(['pubky', 'bitcoin', 'nostr']);
-  });
-
-  it('should filter out empty tags', () => {
-    mockGet.mockReturnValue('pubky,,bitcoin,,,nostr');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual(['pubky', 'bitcoin', 'nostr']);
-  });
-
-  it('should limit tags to MAX_STREAM_TAGS', () => {
-    mockGet.mockReturnValue('tag1,tag2,tag3,tag4,tag5,tag6,tag7');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual(['tag1', 'tag2', 'tag3', 'tag4', 'tag5']);
   });
 });

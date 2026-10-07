@@ -1,7 +1,22 @@
 import { permanentRedirect } from 'next/navigation';
+import { render } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
+import { POST_COVER_DESKTOP_MEDIA, POST_COVER_MOBILE_MEDIA } from '@/libs/post/postCoverVariant';
+import { SinglePostPage } from '@/templates/Post/SinglePost/SinglePostPage';
 import PostPage, { generateMetadata } from './page';
+
+/**
+ * The page returns `[preload link?, SinglePostPage]`, so the post element is the
+ * child that is not the image preload.
+ */
+const getPostElement = (element: ReactElement): ReactElement<{ postId: string }> => {
+  const children = (element.props as { children: ReactElement[] }).children;
+  const post = children.find((child) => child?.type === SinglePostPage);
+  if (!post) throw new Error('PostPage did not render SinglePostPage');
+  return post as ReactElement<{ postId: string }>;
+};
 
 vi.mock('@/templates/Post/SinglePost/SinglePost', () => ({
   SinglePost: ({ postId }: { postId: string }) => <div data-testid="single-post">{postId}</div>,
@@ -39,7 +54,10 @@ describe('generateMetadata', () => {
       .mockResolvedValueOnce(new Response('Not Found', { status: 404, statusText: 'Not Found' }));
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ userId: 'user-123', postId: 'missing-post' }),
+      params: Promise.resolve({
+        userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy',
+        postId: 'missing-post',
+      }),
     });
 
     expect(metadata).toEqual({});
@@ -49,6 +67,37 @@ describe('generateMetadata', () => {
   const jsonResponse = (body: unknown) =>
     new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
+  it.each(['0032PARTQP4G0]', '0032PARTQP4G0%5D', '0032PARTQP4G0!', '0032PARTQP4G0%21', '[0032PARTQP4G0'])(
+    'returns fallback metadata without fetching for malformed post id %s',
+    async (postId) => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId }),
+      });
+
+      expect(metadata).toEqual({});
+      expect(fetchSpy).not.toHaveBeenCalled();
+    },
+  );
+
+  it('fetches metadata for a raw author key starting with pubky', async () => {
+    const userId = `pubky${'o'.repeat(47)}`;
+    const postId = '0032PARTQP4G0';
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ id: userId, name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hello world' }));
+
+    const metadata = await generateMetadata({ params: Promise.resolve({ userId, postId }) });
+
+    expect(metadata.title).toBe('Alice on Pubky');
+    expect(metadata.alternates?.canonical).toBe(`/post/${userId}/${postId}`);
+    expect(fetchSpy.mock.calls.map(([url]) => url)).toEqual([
+      `https://nexus.staging.pubky.app/v0/user/${userId}/details`,
+      `https://nexus.staging.pubky.app/v0/post/${userId}/${postId}/details`,
+    ]);
+  });
+
   it('canonicalizes collection-kind posts to /collections', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     fetchMock
@@ -56,10 +105,12 @@ describe('generateMetadata', () => {
       .mockResolvedValueOnce(jsonResponse({ kind: 'collection', content: '{"name":"Art"}' }));
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ userId: 'user-1', postId: 'post-1' }),
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
     });
 
-    expect(metadata).toEqual({ alternates: { canonical: '/collections/user-1/post-1' } });
+    expect(metadata).toEqual({
+      alternates: { canonical: '/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/post-1' },
+    });
   });
 
   it('builds title/description and omits static images for a normal post', async () => {
@@ -69,7 +120,7 @@ describe('generateMetadata', () => {
       .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hello world' }));
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ userId: 'user-1', postId: 'post-1' }),
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
     });
 
     expect(metadata.title).toBe('Alice on Pubky');
@@ -79,6 +130,54 @@ describe('generateMetadata', () => {
     expect(metadata.twitter).not.toHaveProperty('images');
   });
 
+  it('swaps raw pubky mentions in the description for display names, like the app renders them', async () => {
+    const mentioned = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: `gm pk:${mentioned} and pubky${mentioned}` }))
+      .mockResolvedValueOnce(jsonResponse({ id: mentioned, name: 'Bob' }));
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+    });
+
+    expect(metadata.description).toBe('gm @Bob and @Bob');
+    expect(metadata.openGraph?.description).toBe('gm @Bob and @Bob');
+    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(`https://nexus.staging.pubky.app/v0/user/${mentioned}/details`);
+  });
+
+  it('keeps an article title verbatim without looking up mentions', async () => {
+    const mentioned = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(
+        jsonResponse({ kind: 'long', content: JSON.stringify({ title: `About pk:${mentioned}`, body: 'Body' }) }),
+      );
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+    });
+
+    expect(metadata.description).toBe(`About pk:${mentioned}`);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('resolves mentions in a long-kind post whose content is not an article, like the card does', async () => {
+    const mentioned = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'long', content: `gm pk:${mentioned} welcome` }))
+      .mockResolvedValueOnce(jsonResponse({ id: mentioned, name: 'Bob' }));
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+    });
+
+    expect(metadata.description).toBe('gm @Bob welcome');
+  });
+
   it('still emits title (no parent fallback) for a content-less post like a simple repost', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     fetchMock
@@ -86,7 +185,7 @@ describe('generateMetadata', () => {
       .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: '' }));
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ userId: 'user-1', postId: 'post-1' }),
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
     });
 
     // Title is present (not an empty {} that would fall back to parent metadata),
@@ -111,34 +210,105 @@ describe('PostPage (collection redirect)', () => {
     vi.restoreAllMocks();
   });
 
-  it('permanently redirects a collection-kind post to /collections', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
-      .mockResolvedValueOnce(jsonResponse({ kind: 'collection', content: '{"name":"Art"}' }));
+  it.each(['o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', `pubky${'o'.repeat(47)}`])(
+    'permanently redirects a collection-kind post by %s to /collections',
+    async (userId) => {
+      vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+        .mockResolvedValueOnce(jsonResponse({ kind: 'collection', content: '{"name":"Art"}' }));
 
-    await expect(PostPage({ params: Promise.resolve({ userId: 'user-1', postId: 'post-1' }) })).rejects.toThrow(
-      'NEXT_REDIRECT',
-    );
-    expect(permanentRedirect).toHaveBeenCalledWith('/collections/user-1/post-1');
-  });
+      await expect(
+        PostPage({
+          params: Promise.resolve({ userId, postId: 'post-1' }),
+        }),
+      ).rejects.toThrow('NEXT_REDIRECT');
+      expect(permanentRedirect).toHaveBeenCalledWith(`/collections/${userId}/post-1`);
+    },
+  );
 
   it('renders the post (no redirect) for a non-collection post', async () => {
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
       .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hi' }));
 
-    const element = await PostPage({ params: Promise.resolve({ userId: 'user-1', postId: 'post-1' }) });
+    const element = await PostPage({
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+    });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
-    expect(element.props.postId).toBe('user-1:post-1');
+    expect(getPostElement(element).props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
   });
 
   it('renders the post (no redirect) when the kind lookup fails', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('nexus down'));
 
-    const element = await PostPage({ params: Promise.resolve({ userId: 'user-1', postId: 'post-1' }) });
+    const element = await PostPage({
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+    });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
-    expect(element.props.postId).toBe('user-1:post-1');
+    expect(getPostElement(element).props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
+    expect(document.querySelector('link[rel="preload"]')).toBeNull();
+  });
+});
+
+describe('PostPage (cover preload)', () => {
+  const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+  const FILE_URI = `pubky://${AUTHOR}/pub/pubky.app/files/0035R8SA18DE0`;
+
+  const jsonResponse = (body: unknown) =>
+    new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const renderPost = async (post: Record<string, unknown>) => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse(post));
+
+    const element = await PostPage({ params: Promise.resolve({ userId: AUTHOR, postId: 'post-1' }) });
+    return render(element);
+  };
+
+  it('preloads both cover variants, one per media query, so the browser starts the one it renders', async () => {
+    await renderPost({
+      kind: 'long',
+      content: JSON.stringify({ title: 'How to Think About Names', body: 'My name is John Carvalho.' }),
+      attachments: [FILE_URI],
+    });
+
+    const preloads = Array.from(document.querySelectorAll('link[rel="preload"]'));
+    expect(preloads).toHaveLength(2);
+
+    const byMedia = new Map(preloads.map((link) => [link.getAttribute('media'), link]));
+    const cdn = `https://nexus.staging.pubky.app/static/files/${AUTHOR}/0035R8SA18DE0`;
+
+    // One URL per side of the breakpoint, both the variants the hero renders: `feed` is what a
+    // phone downloads, `large` what a wide screen gets instead of the original upload.
+    expect(byMedia.get(POST_COVER_MOBILE_MEDIA)).toHaveAttribute('href', `${cdn}/feed`);
+    expect(byMedia.get(POST_COVER_DESKTOP_MEDIA)).toHaveAttribute('href', `${cdn}/large`);
+
+    for (const preload of preloads) {
+      expect(preload).toHaveAttribute('as', 'image');
+      expect(preload).toHaveAttribute('fetchpriority', 'high');
+    }
+  });
+
+  it('emits no image preload when slot 0 is an inline image instead of the cover', async () => {
+    await renderPost({
+      kind: 'long',
+      content: JSON.stringify({ title: 'Article', body: 'Intro\n\n![diagram](attachment:0)' }),
+      attachments: [FILE_URI],
+    });
+
+    expect(document.querySelector('link[rel="preload"]')).toBeNull();
+  });
+
+  it('emits no image preload for a post that is not an article', async () => {
+    await renderPost({ kind: 'short', content: 'gm', attachments: [FILE_URI] });
+
+    expect(document.querySelector('link[rel="preload"]')).toBeNull();
   });
 });

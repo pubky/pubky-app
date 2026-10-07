@@ -2,10 +2,17 @@ import { PostStreamApplication } from '@/application/stream/posts/post';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type {
+  TClearUnreadStreamParams,
+  TMarkUnreadPostsAsReadParams,
   TReadPostStreamChunkParams,
   TReadPostStreamChunkResponse,
   TStreamIdParams,
 } from '@/controllers/stream/posts/posts.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { isAuthorScopedContentSearchStream } from '@/models/stream/post/postStream.types';
 import type { TStreamResult } from '@/services/local/stream/posts/post.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
@@ -56,36 +63,65 @@ export class StreamPostsController {
     streamHead = SKIP_FETCH_NEW_POSTS,
     streamTail = NOT_FOUND_CACHED_STREAM,
     lastPostId,
+    visiblePostIds,
     limit = NEXUS_POSTS_PER_PAGE,
     order,
   }: TReadPostStreamChunkParams): Promise<TReadPostStreamChunkResponse> {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile posts)
     const viewerId = useAuthStore.getState().currentUserPubky;
-    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd, lastRawPostId } =
+    const isCurrent = captureViewerSession();
+    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd, lastRawPostId, rawScannedCount } =
       await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit,
         streamHead,
         streamTail,
         lastPostId,
+        visiblePostIds,
         viewerId,
+        isCurrent,
         order,
       });
+    if (!isCurrent()) return { nextPageIds: [], nextCursor: undefined, reachedEnd: false };
     let visibleIds = nextPageIds;
+    const isAuthorScopedSearch = isAuthorScopedContentSearchStream(streamId);
     // Query nexus to get the cacheMissPostIds
     if (cacheMissPostIds.length > 0) {
       // TODO: When TTL is implemented, we can return to void
-      await PostStreamApplication.fetchMissingPostsFromNexus({
+      const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
+        isCurrent,
       });
-      // Second-pass: cache-miss details are now resolved,
-      // re-filter to catch posts that were fail-open in the first pass.
-      // Only the visible page shrinks here — the raw anchor passes through untouched.
-      visibleIds = await PostStreamApplication.filterStreamPosts({ streamId, postIds: nextPageIds });
+      // Author-scoped search must not degrade a hydration failure into a false
+      // "no results": on a cold cache every id is a miss, and the strict pass below
+      // would drop them all. Fail the page instead — the feed shows its error state
+      // and the cursor is not consumed, so a retry re-fetches this slice.
+      if (isAuthorScopedSearch && !hydrated) {
+        throw Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Could not load search results', {
+          service: ErrorService.Nexus,
+          operation: 'StreamPostsController.getOrFetchStreamSlice',
+          context: { streamId, cacheMissCount: cacheMissPostIds.length },
+        });
+      }
     }
-    return { nextPageIds: visibleIds, nextCursor, reachedEnd, lastRawPostId };
+    // Second-pass: cache-miss details are now resolved,
+    // re-filter to catch posts that were fail-open in the first pass.
+    // Only the visible page shrinks here — the raw anchor passes through untouched.
+    // Strict reply classification: after hydration, an author-scoped content-search
+    // result that still cannot be classified is hidden, never risked as a reply.
+    // For author-scoped search the pass runs even with zero cache misses: pages served
+    // from the overflow buffer report no misses, but may hold ids that were kept
+    // fail-open before their relationships rows had been hydrated.
+    if (cacheMissPostIds.length > 0 || (isAuthorScopedSearch && nextPageIds.length > 0)) {
+      visibleIds = await PostStreamApplication.filterStreamPosts({
+        streamId,
+        postIds: nextPageIds,
+        strictReplyClassification: true,
+      });
+    }
+    return { nextPageIds: visibleIds, nextCursor, reachedEnd, lastRawPostId, rawScannedCount };
   }
 
   /**
@@ -99,17 +135,19 @@ export class StreamPostsController {
     // Access currentUserPubky directly (not selectCurrentUserPubky) so
     // unauthenticated viewers get null instead of a thrown error.
     const viewerId = useAuthStore.getState().currentUserPubky;
-    await PostStreamApplication.fetchOriginalPostsByUris({ repostedUris: uris, viewerId });
+    const isCurrent = captureViewerSession();
+    await PostStreamApplication.fetchOriginalPostsByUris({ repostedUris: uris, viewerId, isCurrent });
   }
 
   /**
-   * Gets the timestamp of the last cached post in a stream.
-   *
-   * Extracts the indexed_at timestamp from the oldest post in the cached stream.
-   * Returns 0 if no cached stream exists or if the last post's details cannot be found.
+   * The Nexus position a fresh pagination session resumes from once the cached ids are
+   * exhausted: the row's persisted `tailCursor` (the `last_post_score` of the deepest page
+   * fetched into it) or, for a row without one (bootstrap-seeded or written before cursors
+   * were tracked), a one-time seed from the tail entry's timestamp (bookmark time for
+   * bookmark streams).
    *
    * @param streamId - The ID of the post stream to query
-   * @returns Promise resolving to the timestamp (number) or 0 if not found
+   * @returns The resume cursor, or `NOT_FOUND_CACHED_STREAM` (0) when there is no usable cache
    */
   static async getCachedLastPostTimestamp(params: TStreamIdParams): Promise<number> {
     return await PostStreamApplication.getCachedLastPostTimestamp(params);
@@ -126,6 +164,15 @@ export class StreamPostsController {
    */
   static async getStreamHead(params: TStreamIdParams): Promise<number> {
     return await PostStreamApplication.getStreamHead(params);
+  }
+
+  /** Resolve the poll cursor, retrying unread details left missing by an earlier poll. */
+  static async getOrFetchStreamHead(params: TStreamIdParams): Promise<number> {
+    return PostStreamApplication.getOrFetchStreamHead({
+      ...params,
+      viewerId: useAuthStore.getState().currentUserPubky,
+      isCurrent: captureViewerSession(),
+    });
   }
 
   /**
@@ -154,12 +201,17 @@ export class StreamPostsController {
     return await PostStreamApplication.mergeUnreadStreamWithPostStream(params);
   }
 
+  /** Merge and acknowledge exactly the posts the reader chose to open. */
+  static async markUnreadPostsAsRead(params: TMarkUnreadPostsAsReadParams): Promise<void> {
+    await PostStreamApplication.markUnreadPostsAsRead(params);
+  }
+
   /**
-   * Clear the unread stream and return the post IDs that were in it
+   * Clear the selected unread IDs, or the entire stream when no IDs are supplied.
    * @param params - The stream ID to clear the unread stream for
-   * @returns Array of post IDs that were in the unread stream
+   * @returns Array of unread IDs that were cleared
    */
-  static async clearUnreadStream(params: TStreamIdParams): Promise<string[]> {
+  static async clearUnreadStream(params: TClearUnreadStreamParams): Promise<string[]> {
     return await PostStreamApplication.clearUnreadStream(params);
   }
 
@@ -168,9 +220,15 @@ export class StreamPostsController {
    *
    * This method should be called before fetching the initial stream slice to ensure
    * the stream state is consistent. It performs the following operations:
-   * 1. Clears stale cache if the stream head is older than configured max age
-   * 2. Merges any existing unread posts into the main stream
-   * 3. Clears the unread stream
+   * 1. Clears the cache if the main head is older than the configured max age, or has no
+   *    details: such a head can be neither aged nor polled from (#2608)
+   * 2. Merges the unread posts into the main stream in polled order, from the first one whose
+   *    details are cached and not a tombstone; the ids above it without details stay unread,
+   *    since as the main head one of them would resolve no timestamp
+   *    (`LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead`)
+   * 3. Clears the merged posts and the tombstoned unread ids from the unread stream; with no
+   *    cached main row, or an empty one, nothing is merged and the whole unread row is
+   *    dropped, so the first page comes from Nexus
    *
    * This prevents race conditions where the StreamCoordinator might fetch posts
    * that are already in the main stream (due to stale unread stream head).

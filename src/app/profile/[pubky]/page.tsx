@@ -1,9 +1,14 @@
 import type { Metadata } from 'next';
 import { fetchProfileForMetadata } from '@/libs/og/ogData';
+import { normalizeProfileId } from '@/libs/og/routeIds';
+import { resolveMentionsForMetadata } from '@/libs/post/postMetadata';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
-import { resolveDisplayName, stripPubkyPrefix } from '@/libs/utils/utils';
+import { resolveDisplayName } from '@/libs/utils/utils';
 import { Metadata as buildMetadata } from '@/molecules/Metadata/Metadata';
 import { ProfilePostsPage } from '@/templates/Profile/Posts/ProfilePostsPage';
+
+/** Grapheme cap for the `<meta>` description. */
+const DESCRIPTION_MAX_GRAPHEMES = 200;
 
 interface DynamicProfilePageProps {
   params: Promise<{ pubky: string }>;
@@ -25,16 +30,28 @@ interface DynamicProfilePageProps {
  */
 export async function generateMetadata({ params }: DynamicProfilePageProps): Promise<Metadata> {
   const { pubky } = await params;
-  const normalizedPubky = stripPubkyPrefix(decodeURIComponent(pubky));
-  const canonical = `/profile/${normalizedPubky}`;
+
+  // Crawl-mangled ids (trailing dots, bad percent-encoding) are rejected at the
+  // boundary: null falls back to the parent metadata without a Nexus round-trip
+  // or a Sentry event (PUBKY-APP-1E/9Z/A0/BQ). No canonical is emitted for an
+  // invalid id — pointing crawlers at the mangled URL would consolidate onto junk.
+  const profileId = normalizeProfileId(pubky);
+  if (!profileId) return {};
+
+  const canonical = `/profile/${profileId}`;
 
   try {
-    const result = await fetchProfileForMetadata(pubky);
+    const result = await fetchProfileForMetadata(profileId);
     if (!result) return { alternates: { canonical } };
 
     const { user } = result;
     const title = `${resolveDisplayName(user)} on Pubky`;
-    const description = truncateByGraphemes(user.bio ?? '', 200);
+    // Raw `pk:` / `pubky` mentions in the bio become display names, as the app
+    // renders them (`ProfilePageHeader` → `PostText`).
+    const description = truncateByGraphemes(
+      await resolveMentionsForMetadata(user.bio ?? '', DESCRIPTION_MAX_GRAPHEMES),
+      DESCRIPTION_MAX_GRAPHEMES,
+    );
 
     const { openGraph, twitter } = buildMetadata({ title, description, url: canonical, omitImages: true });
 

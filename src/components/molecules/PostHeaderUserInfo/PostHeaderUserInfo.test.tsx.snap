@@ -570,7 +570,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with character count 
         snap...rKey
       </p>
       <p
-        class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums"
+        class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap tabular-nums text-muted-foreground"
         data-testid="typography"
       >
         21
@@ -627,7 +627,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with character count 
         </p>
       </a>
       <p
-        class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums"
+        class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap tabular-nums text-muted-foreground"
         data-testid="typography"
       >
         21

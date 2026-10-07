@@ -4,10 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { PostController } from '@/controllers/post/post';
 import { useCoverImagePicker, type UseCoverImagePickerResult } from '@/hooks/useCoverImagePicker/useCoverImagePicker';
-import { isAppError } from '@/libs/error/error.utils';
+import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import {
@@ -49,7 +49,6 @@ type UseCreateCollectionResult = {
  */
 export function useCreateCollection(): UseCreateCollectionResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const { toast } = useToast();
   const cover = useCoverImagePicker();
 
   const form = useForm<CreateCollectionFormData>({
@@ -91,6 +90,19 @@ export function useCreateCollection(): UseCreateCollectionResult {
         createdCollectionId = compositeId;
       } catch (error) {
         Logger.error('[useCreateCollection] Failed to create collection', { error });
+
+        // A write the homeserver rejected as unauthenticated cannot succeed by
+        // retrying, so ask for sign-in instead of showing retry copy (issue #2555).
+        // `submit()` still resolves null, so the dialog stays open with the user's
+        // title, description and picked cover.
+        if (isAppError(error) && requiresLogin(error)) {
+          toast({
+            variant: 'error',
+            description: 'Session expired. Please sign in.',
+          });
+          return;
+        }
+
         toast({
           variant: 'error',
           description:

@@ -46,20 +46,16 @@ export class ProfileController {
   }
 
   /**
-   * Commits the update profile operation to the homeserver and local database.
-   * @param name - The name to update
-   * @param bio - The bio to update
-   * @param links - The links to update
-   * @param image - The image to update
+   * Commits the fields the user changed in the profile form; every other field keeps its
+   * published value.
    * @param pubky - The public key of the user
+   * @param changes - The changed fields; an omitted field is left untouched
    */
-  static async commitUpdate({ name, bio, links, image, pubky }: TCommitUpdateDetailsParams) {
+  static async commitUpdate({ pubky, changes }: TCommitUpdateDetailsParams) {
+    const { links, ...fields } = changes;
     await ProfileApplication.commitUpdate({
       pubky,
-      name,
-      bio,
-      image,
-      links: UserNormalizer.linksFromUi(links),
+      changes: links === undefined ? fields : { ...fields, links: UserNormalizer.linksFromUi(links) },
     });
   }
 
@@ -89,6 +85,7 @@ export class ProfileController {
    */
   static async commitDelete({ pubky, setProgress }: TDeleteAccountInput) {
     await ProfileApplication.commitDelete({ pubky, setProgress });
+    useOnboardingStore.getState().clearExperienceCompleted(pubky);
   }
 
   /**

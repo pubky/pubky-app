@@ -68,10 +68,7 @@ vi.mock('next/navigation', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn(), dismiss: vi.fn(), toasts: [] }),
-  toast: vi.fn(),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/home/home.store', () => {
   return {
@@ -101,10 +98,11 @@ vi.mock('@/stores/home/home.store', () => {
 
 vi.mock('@/stores/auth/auth.store', async () => {
   const f = await fixtures;
+  const { mockRingSession } = await import('@/test-utils/pubky');
   return {
     useAuthStore: createZustandLikeHook({
       currentUserPubky: f.viewerPubky,
-      session: { pubky: f.viewerPubky },
+      session: mockRingSession(['/:rw'], f.viewerPubky),
       sessionExport: null,
       hasProfile: true,
       hasHydrated: true,
@@ -159,8 +157,8 @@ vi.mock('@/stores/settings/settings.store', async () => {
   };
 });
 
-vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
-  useKeyboardOffset: () => ({ isKeyboardVisible: false, keyboardOffset: 0 }),
+vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
+  useKeyboardVisible: () => false,
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
@@ -220,13 +218,6 @@ vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', () => {
   const result = { tags: [], users: [], isLoading: false, error: null };
   return { useSearchAutocomplete: () => result };
 });
-
-vi.mock('@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery', () => ({
-  useCollectionsNavDiscovery: () => ({
-    showCollectionsNew: false,
-    markCollectionsNavSeen: () => {},
-  }),
-}));
 
 vi.mock('@/hooks/useSignOut/useSignOut', () => ({
   useSignOut: () => ({ handleSignOut: async () => {}, isLoading: false }),

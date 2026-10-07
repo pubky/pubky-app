@@ -4,6 +4,7 @@ import { type MouseEvent, type ReactNode, useState } from 'react';
 import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { cn } from '@/libs/utils/utils';
 import { ClickableTagsList } from '@/organisms/ClickableTagsList/ClickableTagsList';
 import type { ClickableTagsListProps } from '@/organisms/ClickableTagsList/ClickableTagsList.types';
@@ -49,6 +50,9 @@ export function PostTagsExpandableRow({
   const tagsExpanded = expanded ?? internalExpanded;
   const hasExternalExpandedState = expanded !== undefined;
   const shouldRenderActions = showTagToggle || Boolean(children);
+  // The tag button only reveals the tags. On mobile that reveal must not focus the input and pop
+  // the soft keyboard: the `[+]` add control owns autofocus.
+  const isMobile = useIsMobile();
 
   const suppressParentInteraction = (event: MouseEvent) => {
     if (preventDefaultOnClick) event.preventDefault();
@@ -84,7 +88,12 @@ export function PostTagsExpandableRow({
             onAuxClick={preventDefaultOnClick ? suppressParentInteraction : undefined}
             className="w-fit max-w-full"
           >
-            <PostTagsPanel postId={postId} widthMode={panelWidthMode} autoFocusInput enableLoadingSkeleton={false} />
+            <PostTagsPanel
+              postId={postId}
+              widthMode={panelWidthMode}
+              autoFocusInput={!isMobile}
+              enableLoadingSkeleton={false}
+            />
           </Container>
         ) : (
           <ClickableTagsList

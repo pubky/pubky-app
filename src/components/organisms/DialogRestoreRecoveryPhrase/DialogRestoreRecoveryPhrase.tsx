@@ -17,7 +17,7 @@ import {
 import { AuthController } from '@/controllers/auth/auth';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { WordSlot } from '@/molecules/WordSlot/WordSlot';
 
 interface DialogRestoreRecoveryPhraseProps {
@@ -28,7 +28,6 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
   const [isRestoring, setIsRestoring] = useState(false);
   const [errors, setErrors] = useState<boolean[]>(Array(12).fill(false));
   const [touched, setTouched] = useState<boolean[]>(Array(12).fill(false));
-  const { toast } = useToast();
   const handleRestore = async () => {
     // Guard against double-submit race condition
     if (isRestoring) return;

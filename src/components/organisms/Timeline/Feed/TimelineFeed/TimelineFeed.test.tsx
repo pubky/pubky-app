@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -6,29 +6,33 @@ import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { PROFILE_POSTS_FILTER_DEBOUNCE_MS } from '@/hooks/useProfilePostsFilter/useProfilePostsFilter.constants';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import type { Pubky } from '@/models/models.types';
 import {
   buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
+  buildContentSearchStreamId,
   type PostStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
 import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, type ContentType, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
+import { useSearchStore } from '@/stores/search/search.store';
+import { mockSession } from '@/test-utils/pubky';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
-  vi.fn(
-    (): UsePullToRefreshResult => ({
-      state: 'idle',
-      pullDistance: 0,
-    }),
-  ),
+  vi.fn((): UsePullToRefreshResult => ({
+    state: 'idle',
+    pullDistance: 0,
+  })),
 );
 
 // Route params default to empty; the Collection variant tests override this to
@@ -84,9 +88,9 @@ vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
   useFeedLayoutResolution: vi.fn(() => ({
     requestedLayout: 'columns',
     effectiveLayout: 'columns',
+    isCardsActive: false,
     isVisualRequested: false,
     isVisualActive: false,
-    isGridActive: false,
     isPhoneViewport: false,
   })),
 }));
@@ -103,7 +107,6 @@ vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
 // Mock useSearchStreamId hook
 vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
   useSearchStreamId: vi.fn(() => 'tags:test' as PostStreamId),
-  useSearchTags: vi.fn(() => []),
 }));
 
 // Mock the new hooks used in TimelineFeed
@@ -147,6 +150,20 @@ vi.mock('@/molecules/Timeline/TimelineLoading', () => {
   };
 });
 
+// Both profile empty states pull in heavy trees (dialogs, auth); stubs keep the
+// Profile variant's conditional empty-state assertions focused on the switch.
+vi.mock('@/molecules/PostsEmpty/PostsEmpty', () => ({
+  PostsEmpty: () => <div data-testid="posts-empty" />,
+}));
+
+vi.mock('@/molecules/FilterPostsEmpty/FilterPostsEmpty', () => ({
+  FilterPostsEmpty: () => <div data-testid="filter-posts-empty" />,
+}));
+
+vi.mock('@/molecules/CollectionsEmpty/CollectionsEmpty', () => ({
+  CollectionsEmpty: () => <div data-testid="collections-empty" />,
+}));
+
 vi.mock('@/organisms/Timeline/Posts/Posts', () => {
   return {
     TimelinePosts: ({
@@ -155,12 +172,14 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
       loadingMore,
       error,
       hasMore,
+      emptyState,
     }: {
       postIds: string[];
       loading: boolean;
       loadingMore: boolean;
       error: string | null;
       hasMore: boolean;
+      emptyState?: React.ReactNode;
     }) => (
       <div data-feed-renderer="columns" data-testid="timeline-posts" data-post-ids={postIds.join(',')}>
         <span data-testid="post-count">{postIds.length}</span>
@@ -168,6 +187,7 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
         <span data-testid="loading-more">{loadingMore.toString()}</span>
         <span data-testid="error">{error || 'none'}</span>
         <span data-testid="has-more">{hasMore.toString()}</span>
+        {postIds.length === 0 && !loading && !hasMore ? emptyState : null}
       </div>
     ),
   };
@@ -224,27 +244,27 @@ const defaultPaginationResult = {
 const visualLayoutResolution = {
   requestedLayout: 'visual' as const,
   effectiveLayout: 'visual' as const,
+  isCardsActive: false,
   isVisualRequested: true,
   isVisualActive: true,
-  isGridActive: false,
   isPhoneViewport: false,
 };
 
 const phoneColumnsLayoutResolution = {
   requestedLayout: 'visual' as const,
   effectiveLayout: 'columns' as const,
+  isCardsActive: false,
   isVisualRequested: true,
   isVisualActive: false,
-  isGridActive: false,
   isPhoneViewport: true,
 };
 
 const columnsLayoutResolution = {
   requestedLayout: 'columns' as const,
   effectiveLayout: 'columns' as const,
+  isCardsActive: false,
   isVisualRequested: false,
   isVisualActive: false,
-  isGridActive: false,
   isPhoneViewport: false,
 };
 
@@ -307,9 +327,9 @@ describe('TimelineFeed', () => {
     mockUseFeedLayoutResolution.mockReturnValue({
       requestedLayout: 'columns',
       effectiveLayout: 'columns',
+      isCardsActive: false,
       isVisualRequested: false,
       isVisualActive: false,
-      isGridActive: false,
       isPhoneViewport: false,
     });
     // Reset pull-to-refresh mock to idle state
@@ -354,9 +374,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
-        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -370,9 +390,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'columns',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: false,
-        isGridActive: false,
         isPhoneViewport: true,
       });
 
@@ -390,9 +410,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
-        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -409,9 +429,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
-        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -426,9 +446,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
-        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -494,9 +514,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'columns',
         effectiveLayout: 'columns',
+        isCardsActive: true,
         isVisualRequested: false,
         isVisualActive: false,
-        isGridActive: true,
         isPhoneViewport: false,
       });
 
@@ -552,9 +572,9 @@ describe('TimelineFeed', () => {
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'visual',
         effectiveLayout: 'visual',
+        isCardsActive: false,
         isVisualRequested: true,
         isVisualActive: true,
-        isGridActive: false,
         isPhoneViewport: false,
       });
 
@@ -579,6 +599,43 @@ describe('TimelineFeed', () => {
   });
 
   describe('Search Variant', () => {
+    beforeEach(() => {
+      vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    });
+    afterEach(() => {
+      vi.mocked(window.scrollTo).mockRestore();
+      useAuthStore.setState({ currentUserPubky: null });
+      useSearchStore.getState().reset();
+    });
+    it('renders the scoped empty action and switches only Search to All', () => {
+      useAuthStore.setState({ currentUserPubky: 'viewer' });
+      useSearchStore.getState().setReach(REACH.FOLLOWING);
+      useHomeStore.setState({ reach: REACH.NETWORK });
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: [],
+        loading: false,
+        hasMore: false,
+      });
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />);
+      expect(screen.getByRole('heading', { name: 'No posts match your search' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Search in All' }));
+      expect(useSearchStore.getState().reach).toBe(REACH.ALL);
+      expect(useHomeStore.getState().reach).toBe(REACH.NETWORK);
+      expect(screen.queryByRole('button', { name: 'Search in All' })).not.toBeInTheDocument();
+    });
+    it('renders the no-results state without Search in All at All reach', () => {
+      useAuthStore.setState({ currentUserPubky: 'viewer' });
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: [],
+        loading: false,
+        hasMore: false,
+      });
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />);
+      expect(screen.getByText('Try different search terms or filters.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Search in All' })).not.toBeInTheDocument();
+    });
     it('should disable pull-to-refresh for search variant', () => {
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />);
 
@@ -648,6 +705,23 @@ describe('TimelineFeed', () => {
   });
 
   describe('Profile Variant', () => {
+    const profilePubky = 'profile-user-pubky';
+
+    const renderProfileFeed = () =>
+      render(
+        <ProfileProvider pubky={profilePubky}>
+          <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE} />
+        </ProfileProvider>,
+      );
+
+    /** Types into the filter bar and settles its debounce (requires fake timers). */
+    const applyFilterQuery = (value: string) => {
+      fireEvent.change(screen.getByRole('textbox', { name: 'Filter posts' }), { target: { value } });
+      act(() => {
+        vi.advanceTimersByTime(PROFILE_POSTS_FILTER_DEBOUNCE_MS);
+      });
+    };
+
     it('should show loading when profile context has no pubky', () => {
       render(
         <ProfileProvider>
@@ -659,6 +733,69 @@ describe('TimelineFeed', () => {
       // TimelineFeed shows loading state and doesn't call useStreamPagination
       expect(screen.getByTestId('timeline-loading')).toBeInTheDocument();
       expect(mockUseStreamPagination).not.toHaveBeenCalled();
+    });
+
+    it('paginates the author stream and renders the filter bar when idle', () => {
+      renderProfileFeed();
+
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({ streamId: `author:${profilePubky}` });
+      expect(screen.getByTestId('filter-posts-bar')).toBeInTheDocument();
+    });
+
+    describe('with a settled filter query', () => {
+      beforeEach(() => {
+        vi.useFakeTimers();
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('swaps to the author-scoped content-search stream once a valid query settles', () => {
+        renderProfileFeed();
+
+        applyFilterQuery('bitcoin');
+
+        expect(mockUseStreamPagination).toHaveBeenLastCalledWith({
+          streamId: buildContentSearchStreamId('bitcoin', 'all', { type: 'author', author: profilePubky }),
+        });
+        // The bar survives the stream swap (focus preservation contract).
+        expect(screen.getByRole('textbox', { name: 'Filter posts' })).toHaveValue('bitcoin');
+      });
+
+      it('returns to the author stream immediately when the input is cleared', () => {
+        renderProfileFeed();
+
+        applyFilterQuery('bitcoin');
+        fireEvent.change(screen.getByRole('textbox', { name: 'Filter posts' }), { target: { value: '' } });
+
+        // No debounce advance: the clear applies synchronously.
+        expect(mockUseStreamPagination).toHaveBeenLastCalledWith({ streamId: `author:${profilePubky}` });
+      });
+
+      it('keeps the author stream for a query below the minimum length', () => {
+        renderProfileFeed();
+
+        applyFilterQuery('a');
+
+        expect(mockUseStreamPagination).toHaveBeenLastCalledWith({ streamId: `author:${profilePubky}` });
+      });
+
+      it('shows the search no-results state while filtering and the regular one when idle', () => {
+        mockUseStreamPagination.mockReturnValue({
+          ...defaultPaginationResult,
+          postIds: [],
+          hasMore: false,
+        });
+
+        renderProfileFeed();
+        expect(screen.getByTestId('posts-empty')).toBeInTheDocument();
+        expect(screen.queryByTestId('filter-posts-empty')).not.toBeInTheDocument();
+
+        applyFilterQuery('bitcoin');
+        expect(screen.getByTestId('filter-posts-empty')).toBeInTheDocument();
+        expect(screen.queryByTestId('posts-empty')).not.toBeInTheDocument();
+      });
     });
   });
 
@@ -687,6 +824,22 @@ describe('TimelineFeed', () => {
         streamId: buildAuthorCollectionsStreamId(profilePubky),
       });
     });
+
+    it('renders the collections empty state when the author has no collections', () => {
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: [],
+        hasMore: false,
+      });
+
+      render(
+        <ProfileProvider pubky={profilePubky}>
+          <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS} />
+        </ProfileProvider>,
+      );
+
+      expect(screen.getByTestId('collections-empty')).toBeInTheDocument();
+    });
   });
 
   describe('Collection Variant', () => {
@@ -713,7 +866,7 @@ describe('TimelineFeed', () => {
       expect(mockUsePostDetails).toHaveBeenCalledWith(`${collectionAuthor}:${collectionPost}`);
     });
 
-    it('sorts the stream by the envelope items order, appending ids outside the envelope', () => {
+    const orderedEnvelope = () =>
       mockUsePostDetails.mockReturnValue({
         postDetails: {
           content: JSON.stringify({
@@ -723,6 +876,31 @@ describe('TimelineFeed', () => {
         },
         isLoading: false,
       });
+
+    it('renders signed-in viewers the envelope items in envelope order, hiding ids the envelope lacks', () => {
+      orderedEnvelope();
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['author_b:post_b', 'author_a:post_a', 'stranger:post_x'],
+      });
+      useAuthStore.getState().init({ session: mockSession(), currentUserPubky: 'viewer' as Pubky, hasProfile: true });
+
+      try {
+        render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
+
+        // A stream id the envelope lacks is either stale or not yet reflected in
+        // the envelope; hiding it keeps the grid in step with the count badge.
+        expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
+          'data-post-ids',
+          'author_a:post_a,author_b:post_b',
+        );
+      } finally {
+        useAuthStore.getState().reset();
+      }
+    });
+
+    it('mirrors the envelope for a signed-out viewer too, whose envelope the public TTL refreshes', () => {
+      orderedEnvelope();
       mockUseStreamPagination.mockReturnValue({
         ...defaultPaginationResult,
         postIds: ['author_b:post_b', 'author_a:post_a', 'stranger:post_x'],
@@ -730,10 +908,28 @@ describe('TimelineFeed', () => {
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
 
-      expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
-        'data-post-ids',
-        'author_a:post_a,author_b:post_b,stranger:post_x',
-      );
+      // The guest's count badge follows the refreshed envelope, so the grid must too.
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'author_a:post_a,author_b:post_b');
+    });
+
+    it('keeps ids outside the envelope for the owner, appended after the envelope order', () => {
+      orderedEnvelope();
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['author_b:post_b', 'author_a:post_a', 'stranger:post_x'],
+      });
+      useAuthStore.getState().setCurrentUserPubky(collectionAuthor as Pubky);
+
+      try {
+        render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
+
+        expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
+          'data-post-ids',
+          'author_a:post_a,author_b:post_b,stranger:post_x',
+        );
+      } finally {
+        useAuthStore.getState().reset();
+      }
     });
 
     it('leaves the stream order untouched while the envelope has not resolved', () => {

@@ -42,6 +42,17 @@ export type TFetchNexusParams = {
  * @see queryNexus in nexus.utils.ts
  */
 export type TQueryNexusParams = {
+  /** Revalidate even while the transport cache is fresh (TTL/notification refresh). */
+  force?: boolean;
+  /** Cache freshness in milliseconds; omit to use the shared default. */
+  staleTime?: number;
+  /**
+   * 404 attempts allowed after the first for this query, overriding the shared Nexus
+   * budget. Use it when a 404 is a verdict the user waits on (e.g. a profile lookup)
+   * rather than a page or stream read that can absorb the indexing window. Only the
+   * 404 budget changes; 5xx, 429 and non-retryable handling stay shared.
+   */
+  notFoundRetries?: number;
   /** Full API endpoint URL */
   url: string;
   /** HTTP method (defaults to GET) */

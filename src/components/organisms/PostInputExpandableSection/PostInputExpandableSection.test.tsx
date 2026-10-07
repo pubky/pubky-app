@@ -112,6 +112,7 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
       data-hide-article-button={hideArticleButton}
       data-is-article={isArticle}
       data-has-post-button-icon={!!postButtonIcon}
+      data-post-button-icon-name={postButtonIcon?.displayName ?? ''}
       data-post-button-label={postButtonLabel}
     >
       <button data-testid="action-bar-post" onClick={onPostClick} disabled={isPostDisabled}>
@@ -356,6 +357,29 @@ describe('PostInputExpandableSection', () => {
 
     const actionBar = screen.getByTestId('post-input-action-bar');
     expect(actionBar).toHaveAttribute('data-post-button-label', 'Share');
+  });
+
+  it('labels the submit button "Publish Article" when editing an article', () => {
+    render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.EDIT} isArticle={true} />);
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).toHaveAttribute('data-post-button-label', 'Publish Article');
+  });
+
+  it('passes the newspaper icon as the default submit icon for an article', () => {
+    render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.POST} isArticle={true} />);
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    // POST has no default icon, so any icon here comes from the article default. The name
+    // pins which one: lucide sets displayName on every icon component.
+    expect(actionBar).toHaveAttribute('data-post-button-icon-name', 'Newspaper');
+  });
+
+  it('keeps the submit button label "Edit" when editing a non-article post', () => {
+    render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.EDIT} isArticle={false} />);
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).toHaveAttribute('data-post-button-label', 'Edit');
   });
 
   it('overrides the submit button icon with submitIcon when provided', () => {

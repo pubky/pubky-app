@@ -38,8 +38,13 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
   const showDestructiveBorder = !isVerifying && (verificationOutcome === 'invalid' || verificationOutcome === 'used');
   const trimmedInviteCode = inviteCode.trim();
   const isInviteCodeEntered = trimmedInviteCode.length === 14;
+  // Latest `onVerify` for the verification effect below, written from an effect
+  // (not during render) so the React Compiler `refs` rule holds. Declared first,
+  // so it has already run when the verification effect reads the ref.
   const onVerifyRef = useRef(onVerify);
-  onVerifyRef.current = onVerify;
+  useEffect(() => {
+    onVerifyRef.current = onVerify;
+  }, [onVerify]);
 
   useEffect(() => {
     if (!isInviteCodeEntered) {
@@ -148,7 +153,7 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
           <Container
             data-testid="human-invite-code-input-field"
             className={cn(
-              'flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-6 py-4 shadow-xs',
+              'flex-row items-center gap-3 rounded-md border border-dashed bg-background/20 px-6 py-4 shadow-xs',
               isVerified && !isVerifying
                 ? 'border-brand'
                 : showDestructiveBorder
@@ -203,8 +208,8 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
         <Button
           id="human-invite-back-btn"
           size="lg"
-          className="w-full flex-1 rounded-full md:flex-0"
-          variant="secondary"
+          className="w-full flex-1 rounded-full bg-foreground/4 md:flex-0"
+          variant="outline"
           onClick={onBack}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

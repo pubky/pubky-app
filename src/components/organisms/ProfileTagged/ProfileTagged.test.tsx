@@ -4,7 +4,12 @@ import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentU
 import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
 import { useTagged } from '@/hooks/useTagged/useTagged';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import type { TaggedSectionProps } from '@/molecules/TaggedSection/TaggedSection.types';
 import { ProfileTagged } from './ProfileTagged';
+
+const { mockTaggedSection } = vi.hoisted(() => ({
+  mockTaggedSection: vi.fn(),
+}));
 
 // Mock providers
 vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
@@ -41,11 +46,14 @@ vi.mock('@/molecules/TaggedEmpty/TaggedEmpty', () => {
 
 vi.mock('@/molecules/TaggedSection/TaggedSection', () => {
   return {
-    TaggedSection: ({ tags }: { tags: Array<{ taggers: Array<{ name?: string }> }> }) => (
-      <div data-testid="tagged-section" data-tagger-name={tags[0]?.taggers[0]?.name ?? ''}>
-        TaggedSection
-      </div>
-    ),
+    TaggedSection: (props: TaggedSectionProps) => {
+      mockTaggedSection(props);
+      return (
+        <div data-testid="tagged-section" data-tagger-name={props.tags[0]?.taggers[0]?.name ?? ''}>
+          TaggedSection
+        </div>
+      );
+    },
   };
 });
 
@@ -141,6 +149,16 @@ describe('ProfileTagged', () => {
 
     expect(mockUseEnrichedTags).toHaveBeenCalledWith(mockTaggedOneTag.tags);
     expect(screen.getByTestId('tagged-section')).toHaveAttribute('data-tagger-name', 'Not Vlada');
+  });
+
+  it('passes the profile entity context to TaggedSection', () => {
+    render(<ProfileTagged />);
+
+    expect(mockTaggedSection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taggedId: 'test-user-pubky',
+      }),
+    );
   });
 });
 

@@ -15,3 +15,23 @@ export const MUTE_SYNC_CURSOR_STORAGE_PREFIX = 'pubky-app:mute-sync-cursor:';
 
 /** Wait before reconnecting the SDK event stream after a network/end error or disconnect. */
 export const MUTE_SYNC_RECONNECT_BACKOFF_MS = 1000;
+
+/**
+ * Cap for the reconnect delay while the event stream keeps failing.
+ * Delay doubles per consecutive failure from {@link MUTE_SYNC_RECONNECT_BACKOFF_MS} up to this value.
+ */
+export const MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS = 30_000;
+
+/**
+ * A stream connection that stayed open at least this long is considered healthy: a failure after it starts a
+ * new failure streak instead of extending the previous one. Needed because a healthy idle stream (no mute
+ * changes) never completes a `read()`, so completed reads alone cannot mark it healthy.
+ */
+export const MUTE_SYNC_STREAM_HEALTHY_AFTER_MS = 30_000;
+
+/**
+ * Consecutive stream failures (no healthy read or sustained connection in between) after which the coordinator
+ * reports the outage to Sentry once. Routine reconnects are dropped by the `homeserver-event-stream-connect`
+ * rule; with the doubling backoff this threshold corresponds to roughly one minute of continuous failure.
+ */
+export const MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD = 6;

@@ -2,6 +2,8 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import type { PassportAttemptSettledEvent } from '@/hooks/usePassportAuth/usePassportAuth.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { SignInContent, SignInFooter } from './SignIn';
 
@@ -103,6 +105,64 @@ const resetMobileAuthMock = () => {
   });
 };
 
+// Passport: eligibility defaults to disabled (legacy single-card layout); tests opt in per case.
+const passportMocks = vi.hoisted(() => ({
+  eligibility: 'disabled' as 'pending' | 'enabled' | 'disabled',
+  isPending: false,
+  startPassportAuth: vi.fn(),
+  lastOptions: null as {
+    onAttemptSettled?: (event: PassportAttemptSettledEvent) => void;
+  } | null,
+}));
+vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
+  usePassportEligibility: () => passportMocks.eligibility,
+}));
+vi.mock('@/hooks/usePassportAuth/usePassportAuth', () => ({
+  usePassportAuth: (options: typeof passportMocks.lastOptions) => {
+    passportMocks.lastOptions = options;
+    return { startPassportAuth: passportMocks.startPassportAuth, isPending: passportMocks.isPending };
+  },
+}));
+vi.mock('@/organisms/PassportMethodCard/PassportMethodCard', () => ({
+  PassportMethodCard: ({ onContinue, isPending }: { onContinue: () => void; isPending: boolean }) => (
+    <div data-testid="passport-method-card">
+      <button data-testid="continue-with-google" onClick={onContinue} disabled={isPending}>
+        {'Continue with Google'}
+      </button>
+    </div>
+  ),
+  PassportMethodSection: ({ onContinue, isPending }: { onContinue: () => void; isPending: boolean }) => (
+    <div data-testid="passport-method-section">
+      <button data-testid="continue-with-google" onClick={onContinue} disabled={isPending}>
+        {'Continue with Google'}
+      </button>
+    </div>
+  ),
+}));
+vi.mock('@/molecules/IllustratedCard/IllustratedCard', () => ({
+  IllustratedCard: ({
+    children,
+    visual,
+    'data-testid': testId,
+  }: {
+    children: React.ReactNode;
+    visual?: React.ReactNode;
+    'data-testid'?: string;
+  }) => (
+    <div data-testid={testId ?? 'illustrated-card'}>
+      {visual}
+      {children}
+    </div>
+  ),
+}));
+
+const resetPassportMocks = () => {
+  passportMocks.eligibility = 'disabled';
+  passportMocks.isPending = false;
+  passportMocks.lastOptions = null;
+  passportMocks.startPassportAuth.mockClear();
+};
+
 // Mock molecules used by SignInContent
 vi.mock('@/molecules/Content/Content', () => {
   return {
@@ -124,11 +184,7 @@ vi.mock('@/molecules/Page/Page', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: vi.fn(),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock copyToClipboard function - use vi.hoisted to ensure it's available before vi.mock runs
 const { mockCopyToClipboard } = vi.hoisted(() => ({
@@ -136,8 +192,10 @@ const { mockCopyToClipboard } = vi.hoisted(() => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', () => {
+vi.mock('@/atoms/Button/Button', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/atoms/Button/Button')>();
   return {
+    ...actual,
     Button: ({
       asChild,
       children,
@@ -263,6 +321,7 @@ describe('SignInContent', () => {
     mockCopyAuthUrl.mockClear();
     resetMockSignInState();
     resetMobileAuthMock();
+    resetPassportMocks();
   });
 
   afterAll(() => {
@@ -408,8 +467,6 @@ describe('SignInContent', () => {
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
-    const { toast } = await import('@/molecules/Toaster/use-toast');
-
     await act(async () => {
       render(<SignInContent />);
     });
@@ -421,7 +478,7 @@ describe('SignInContent', () => {
     });
 
     expect(mockCopyAuthUrl).toHaveBeenCalled();
-    expect(toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'info',
       title: 'Authentication link copied',
     });
@@ -439,8 +496,6 @@ describe('SignInContent', () => {
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
-    const { toast } = await import('@/molecules/Toaster/use-toast');
-
     await act(async () => {
       render(<SignInContent />);
     });
@@ -451,7 +506,7 @@ describe('SignInContent', () => {
     });
 
     expect(mockCopyAuthUrl).toHaveBeenCalled();
-    expect(toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Could not copy to clipboard',
     });
@@ -511,6 +566,131 @@ describe('SignInContent - Snapshots', () => {
     const { container } = render(<SignInContent />);
 
     expect(container).toMatchSnapshot();
+  });
+
+  it('does not render Passport while eligibility is pending or disabled', () => {
+    passportMocks.eligibility = 'pending';
+    const { unmount } = render(<SignInContent />);
+    expect(screen.queryByTestId('passport-method-card')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('passport-method-section')).not.toBeInTheDocument();
+    expect(screen.getByTestId('sign-in-qr-card')).toBeInTheDocument();
+    unmount();
+
+    passportMocks.eligibility = 'disabled';
+    render(<SignInContent />);
+    expect(screen.queryByTestId('passport-method-card')).not.toBeInTheDocument();
+  });
+});
+
+describe('SignInContent - Passport enabled', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetMockSignInState();
+    resetMobileAuthMock();
+    resetPassportMocks();
+    passportMocks.eligibility = 'enabled';
+  });
+
+  it('renders the two-card desktop layout and the sectioned mobile layout', () => {
+    const { container } = render(<SignInContent />);
+
+    // Desktop: sovereign card + Passport card; mobile: labelled sections (Container mock drops test ids).
+    expect(screen.getByTestId('sign-in-ring-card')).toBeInTheDocument();
+    expect(screen.getByTestId('passport-method-card')).toBeInTheDocument();
+    expect(screen.getByTestId('passport-method-section')).toBeInTheDocument();
+    expect(screen.queryByTestId('sign-in-qr-card')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Choose your preferred method to sign in.')).toHaveLength(2);
+    expect(screen.getAllByText('Sovereign & Secure')).toHaveLength(2);
+    expect(container).toMatchSnapshot();
+  });
+
+  it('starts Passport from the Google button', () => {
+    render(<SignInContent />);
+
+    fireEvent.click(screen.getAllByTestId('continue-with-google')[0]!);
+    expect(passportMocks.startPassportAuth).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables Ring actions while a Passport attempt is pending', () => {
+    passportMocks.isPending = true;
+    render(<SignInContent />);
+
+    expect(screen.getByRole('button', { name: 'Copy authentication link' })).toBeDisabled();
+    expect(screen.getByText('Authorize with Pubky Ring').closest('button')).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy authentication link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy authentication link' }));
+    expect(mockCopyAuthUrl).not.toHaveBeenCalled();
+    expect(mockFetchUrl).not.toHaveBeenCalled();
+  });
+
+  it('regenerates the Ring request exactly once when a Passport attempt fails', () => {
+    render(<SignInContent />);
+
+    act(() => {
+      passportMocks.lastOptions?.onAttemptSettled?.({ attemptId: 'attempt-1', result: 'failed' });
+      passportMocks.lastOptions?.onAttemptSettled?.({ attemptId: 'attempt-1', result: 'failed' });
+    });
+
+    expect(mockFetchUrl).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      passportMocks.lastOptions?.onAttemptSettled?.({ attemptId: 'attempt-2', result: 'failed' });
+    });
+    expect(mockFetchUrl).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not start a Ring flow when a Passport attempt is superseded by another sign-in', () => {
+    render(<SignInContent />);
+
+    act(() => {
+      // A recovery-phrase restore completed while the popup was open: that session is bootstrapping,
+      // and a Ring regeneration would run clearDatabase() underneath it.
+      passportMocks.lastOptions?.onAttemptSettled?.({ attemptId: 'attempt-1', result: 'superseded' });
+    });
+
+    expect(mockFetchUrl).not.toHaveBeenCalled();
+  });
+
+  it('does not start a Ring flow when the Passport popup was blocked', () => {
+    render(<SignInContent />);
+
+    act(() => {
+      passportMocks.lastOptions?.onAttemptSettled?.({ attemptId: 'attempt-1', result: 'popup-blocked' });
+    });
+
+    expect(mockFetchUrl).not.toHaveBeenCalled();
+  });
+
+  it('does not start a Ring flow when a Passport attempt ends with a session, even after the store reset', () => {
+    render(<SignInContent />);
+
+    act(() => {
+      // initializeAuthenticatedSession resets the sign-in store mid-flight; that must not be read as a failure.
+      resetMockSignInState();
+      passportMocks.lastOptions?.onAttemptSettled?.({ attemptId: 'attempt-1', result: 'session' });
+    });
+
+    expect(mockFetchUrl).not.toHaveBeenCalled();
+  });
+
+  it('does not stack a Ring refetch while one is already loading', () => {
+    vi.mocked(useMobileAuth).mockReturnValue({
+      url: '',
+      isLoading: true,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+    render(<SignInContent />);
+
+    act(() => {
+      passportMocks.lastOptions?.onAttemptSettled?.({ attemptId: 'attempt-1', result: 'failed' });
+    });
+
+    expect(mockFetchUrl).not.toHaveBeenCalled();
   });
 });
 

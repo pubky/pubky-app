@@ -56,7 +56,7 @@ describe('PostStreamQueue', () => {
       expect(queue.get(streamId)).toBeDefined();
 
       // Finalize with empty toSave should delete the entry
-      queue['finalize'](streamId, ['post1', 'post2'], 2, BASE_TIMESTAMP, [], undefined, false);
+      queue['finalize'](streamId, ['post1', 'post2'], 2, BASE_TIMESTAMP, [], undefined, false, 0);
       expect(queue.get(streamId)).toBeUndefined();
     });
   });
@@ -479,53 +479,79 @@ describe('PostStreamQueue', () => {
       expect(result.cacheMissIds).toHaveLength(4); // Deduplicated
     });
 
-    it('should return undefined timestamp when queue is empty and no posts found', async () => {
-      vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(null);
+    it('serves an empty request (limit 0) without a fetch and without inventing a cursor', async () => {
+      queue['save'](streamId, ['post-1'], BASE_TIMESTAMP);
+      const mockFetch = vi.fn();
 
-      queue['save'](streamId, [], BASE_TIMESTAMP);
+      const result = await queue.collect(streamId, {
+        limit: 0,
+        cursor: BASE_TIMESTAMP,
+        filter: (p) => p,
+        fetch: mockFetch,
+      });
 
-      const result = await queue['getLastPostCursor']([], 10);
-      expect(result).toBeUndefined();
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(result.posts).toEqual([]);
+      expect(result.nextCursor).toBeUndefined();
+      expect(queue.get(streamId)?.posts).toEqual(['post-1']);
     });
   });
 
   // ============================================================================
-  // Timestamp Calculation Tests
+  // No-progress guard
   // ============================================================================
 
-  describe('getLastPostCursor', () => {
-    it('should return timestamp of the last post being returned', async () => {
-      const mockPost = {
-        id: 'post-5',
-        indexed_at: BASE_TIMESTAMP + 5,
-        content: 'Test post',
-        kind: 'short' as const,
-        uri: 'pubky://author/post-5',
-        author: 'author1' as Pubky,
-        attachments: null,
-      };
+  describe('Empty page without progress', () => {
+    it('stops the round instead of re-issuing an identical request when an empty page moves nothing', async () => {
+      // e.g. the viewer session was replaced mid-flight: the fetch yields no ids, no cursor
+      // and no end. Repeating it up to the iteration cap would be 20 identical requests.
+      const mockFetch = vi.fn(async () => ({
+        nextPageIds: [],
+        cacheMissPostIds: [],
+        nextCursor: undefined,
+        reachedEnd: false,
+      }));
 
-      vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(mockPost);
+      const result = await queue.collect(streamId, {
+        limit: 10,
+        cursor: BASE_TIMESTAMP,
+        filter: (p) => p,
+        fetch: mockFetch,
+      });
 
-      const posts = ['post-1', 'post-2', 'post-3', 'post-4', 'post-5', 'post-6'];
-      const timestamp = await queue['getLastPostCursor'](posts, 5);
-
-      expect(timestamp).toBe(BASE_TIMESTAMP + 5);
-      expect(PostDetailsModel.findById).toHaveBeenCalledWith('post-5');
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(result.posts).toEqual([]);
+      expect(result.reachedEnd).toBe(false);
+      // The caller keeps its own cursor and retries from there on its next round.
+      expect(result.nextCursor).toBeUndefined();
     });
 
-    it('should return undefined when post details not found', async () => {
-      vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(null);
+    it('keeps scanning while empty pages still move the raw cursor (skip streams)', async () => {
+      const skipId = 'total_engagement:all:all' as PostStreamId;
+      let calls = 0;
+      const mockFetch = vi.fn(async (cursor: number) => {
+        calls += 1;
+        // Two fully-filtered pages, then real posts.
+        return {
+          nextPageIds: Array.from({ length: 10 }, (_, i) =>
+            calls <= 2 ? `muted:post-${cursor + i}` : `ok:post-${cursor + i}`,
+          ),
+          cacheMissPostIds: [],
+          nextCursor: undefined,
+          reachedEnd: false,
+        };
+      });
 
-      const posts = ['post-1', 'post-2'];
-      const timestamp = await queue['getLastPostCursor'](posts, 2);
+      const result = await queue.collect(skipId, {
+        limit: 10,
+        cursor: 0,
+        filter: (p) => p.filter((id) => !id.startsWith('muted:')),
+        fetch: mockFetch,
+      });
 
-      expect(timestamp).toBeUndefined();
-    });
-
-    it('should return undefined for empty posts array', async () => {
-      const timestamp = await queue['getLastPostCursor']([], 10);
-      expect(timestamp).toBeUndefined();
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(result.posts).toHaveLength(10);
+      expect(result.nextCursor).toBe(30);
     });
   });
 
@@ -639,10 +665,10 @@ describe('PostStreamQueue', () => {
   });
 
   // ============================================================================
-  // Overflow early-return cursor resolution (cursorForPost)
+  // Overflow early-return cursor resolution
   // ============================================================================
 
-  describe('Overflow early-return resolves score cursors via cursorForPost', () => {
+  describe('Overflow early-return resumes by the raw backend position', () => {
     // Seed an overflow buffer: one collect whose fetch over-delivers relative to its limit.
     const seedOverflow = async (id: PostStreamId, nextCursor: number | undefined) => {
       const mockFetch = vi.fn(async () => ({
@@ -658,45 +684,44 @@ describe('PostStreamQueue', () => {
       });
     };
 
-    it('uses the stream-aware resolver, not post indexed_at, when serving from the buffer', async () => {
-      // Bookmark streams paginate by bookmark time (#2100); the buffered path must ask the
-      // caller for the cursor instead of reading the post's own indexed_at.
+    it('score streams resume by the buffered raw score, never by a served post timestamp', async () => {
+      // Nexus keeps edited/deleted posts at their original score while bumping their
+      // indexed_at, so a cursor read from the served post's details is not a stream
+      // position (#2523). The buffer already sits past everything Nexus returned.
       const first = await seedOverflow(streamId, BASE_TIMESTAMP + 20);
       expect(first.posts).toHaveLength(5);
       expect(queue.get(streamId)?.posts).toHaveLength(15);
 
-      const cursorForPost = vi.fn(async () => BASE_TIMESTAMP + 9999);
+      const detailsSpy = vi.spyOn(PostDetailsModel, 'findById');
       const noFetch = vi.fn();
       const second = await queue.collect(streamId, {
         limit: 10,
         cursor: first.nextCursor!,
         filter: (p) => p,
         fetch: noFetch,
-        cursorForPost,
       });
 
       expect(noFetch).not.toHaveBeenCalled();
+      expect(detailsSpy).not.toHaveBeenCalled();
       expect(second.posts).toEqual(Array.from({ length: 10 }, (_, i) => `author:post-${i + 5}`));
-      // Resolved for the LAST post being returned, and its value is the resume cursor.
-      expect(cursorForPost).toHaveBeenCalledWith('author:post-14');
-      expect(second.nextCursor).toBe(BASE_TIMESTAMP + 9999);
+      expect(second.nextCursor).toBe(BASE_TIMESTAMP + 20);
+      // Served from the buffer without moving the cursor, yet raw posts were consumed: the
+      // hook must count the round as progress even if the strict pass hides all of them.
+      expect(second.rawScannedCount).toBe(10);
     });
 
-    it('skip streams keep resuming by the saved raw offset, ignoring cursorForPost', async () => {
+    it('skip streams keep resuming by the saved raw offset', async () => {
       const skipId = 'total_engagement:all:all' as PostStreamId;
       const first = await seedOverflow(skipId, undefined);
       expect(first.nextCursor).toBe(20); // raw ids consumed
 
-      const cursorForPost = vi.fn(async () => BASE_TIMESTAMP + 9999);
       const second = await queue.collect(skipId, {
         limit: 10,
         cursor: first.nextCursor!,
         filter: (p) => p,
         fetch: vi.fn(),
-        cursorForPost,
       });
 
-      expect(cursorForPost).not.toHaveBeenCalled();
       expect(second.nextCursor).toBe(20); // still the saved raw offset
     });
   });

@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.commit_sha || github.sha }}
 
@@ -108,7 +108,7 @@ jobs:
     runs-on: ['ubuntu-latest']
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.commit_sha || github.sha }}
 
@@ -122,6 +122,8 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
         with:
           image: 'pubky-app'
+          cache_from: type=gha
+          cache_to: type=gha,mode=max
           context: '.'
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}

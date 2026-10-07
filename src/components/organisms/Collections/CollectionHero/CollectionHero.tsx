@@ -2,16 +2,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Loader2, Minus, Move, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react';
-import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
+import { Check, Link, Loader2, Minus, Move, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react';
+import { APP_ROUTES, getCollectionRoute, getUserProfileUrl } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
+import { getDefaultUrl } from '@/config/metadata';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { resolveCollectionCoverImage } from '@/libs/post/collectionCoverImage';
@@ -43,8 +47,22 @@ import type { CollectionHeroContentProps, CollectionHeroProps } from './Collecti
  *
  * The Hero → feed → Sections structure is identical for both owner and
  * other-user views; only the action buttons differ:
- *   - owner   → Content / Share / Edit / Delete.
- *   - other   → real Follow / Unfollow (via `useBookmark`) + Share placeholder.
+ *   - owner   → Content / Share / Copy link / Edit / Delete.
+ *   - other   → real Follow / Unfollow (via `useBookmark`) + Share placeholder
+ *     + Copy link.
+ *
+ * `Share` reposts the collection and stays what it always was; `Copy link` is
+ * the one that hands the collection URL over, so the URL is reachable without
+ * an address bar. It copies to the clipboard by default, because that is what
+ * its label promises and the Web Share API is not mobile-only; the native sheet
+ * is used only on touch devices (see `useShareUrl`).
+ *
+ * Freshness: the hero subscribes the envelope to the viewport TTL coordinator.
+ * `usePostDetails` (in the `Collection` template) never re-fetches a cached
+ * row, so without this the title / description / cover / item count would stay
+ * frozen at whatever was cached until sign-out. The subscription refreshes the
+ * row (same path as `PostMain`) and the template's live query re-renders every
+ * consumer. See docs/data-patterns.md — "Viewport TTL subscriptions".
  */
 export function CollectionHero({
   authorPubky,
@@ -56,6 +74,7 @@ export function CollectionHero({
   className,
 }: CollectionHeroProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
+  const { ref: ttlRef } = useTtlSubscription({ type: 'post', id: compositeId });
 
   if (!postDetails) {
     return <CollectionHeroSkeleton className={className} />;
@@ -78,18 +97,21 @@ export function CollectionHero({
       onLayoutChange={onLayoutChange}
       reorder={reorder}
       className={className}
+      ttlRef={ttlRef}
     />
   );
 }
 
 function CollectionHeroContent({
   authorPubky,
+  postId,
   compositeId,
   postDetails,
   layout,
   onLayoutChange,
   reorder,
   className,
+  ttlRef,
 }: CollectionHeroContentProps) {
   const { profile: ownerProfile } = useUserProfile(authorPubky);
   // Gate the owner name on the resolved profile so the hero doesn't flash the
@@ -146,9 +168,19 @@ function CollectionHeroContent({
     submitLabel: 'Share',
     submitIcon: StickyNote,
     successToastTitle: "You've shared this collection",
+    isCollectionShare: true,
   });
   const handleShare = () => {
     requireAuth(openRepostDialog);
+  };
+
+  // Collection URL, built from the runtime default URL rather than
+  // `window.location.origin` so the copied link is the canonical one for the
+  // deployment (same source the profile links use) and stays SSR-safe.
+  const collectionUrl = `${getDefaultUrl()}${getCollectionRoute(authorPubky, postId)}`;
+  const { shareUrl } = useShareUrl({ title: title || 'Collection' });
+  const handleCopyLink = () => {
+    void shareUrl(collectionUrl);
   };
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -185,6 +217,7 @@ function CollectionHeroContent({
   const tagToggle = (
     <PostTagToggleButton
       postId={compositeId}
+      showCount={false}
       expanded={tagsExpanded}
       onToggle={() => setTagsExpanded((prev) => !prev)}
       disabled={isOwn && (isDeleting || isReorderActive)}
@@ -193,6 +226,7 @@ function CollectionHeroContent({
 
   return (
     <Card
+      ref={ttlRef}
       data-cy="collection-hero"
       className={cn(
         // `isolate` keeps the -z-10 cover inside this card's stacking context
@@ -237,7 +271,7 @@ function CollectionHeroContent({
             className="min-w-0 flex-1 gap-3 lg:flex-none"
             profileHref={ownerProfileHref}
           />
-          <CollectionCountBadge count={itemCount} showLabelOnMobile />
+          <CollectionCountBadge count={itemCount} tone={coverImage ? 'on-cover' : 'on-card'} />
         </Container>
 
         {/* Description */}
@@ -284,6 +318,25 @@ function CollectionHeroContent({
                   {'Share'}
                 </Typography>
               </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={handleCopyLink}
+                      disabled={isDeleting || isReorderActive}
+                      aria-label="Copy link"
+                      data-cy="collection-hero-copy-link-btn"
+                    >
+                      <Link className="size-4" />
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent variant="accent">Copy link</TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
               {reorder &&
                 (isReorderActive ? (
                   <>
@@ -317,49 +370,64 @@ function CollectionHeroContent({
                     </Button>
                   </>
                 ) : (
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={reorder.onEnter}
-                    disabled={isDeleting || itemCount < 2}
-                    aria-label={'Reorder'}
-                    data-cy="collection-hero-reorder-btn"
-                    className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
-                  >
-                    <Move className="size-4" />
-                    <Typography as="span" overrideDefaults className="hidden lg:inline">
-                      {'Reorder'}
-                    </Typography>
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex">
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          onClick={reorder.onEnter}
+                          disabled={isDeleting || itemCount < 2}
+                          aria-label={'Reorder'}
+                          data-cy="collection-hero-reorder-btn"
+                        >
+                          <Move className="size-4" />
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipPortal>
+                      <TooltipContent variant="accent">Reorder</TooltipContent>
+                    </TooltipPortal>
+                  </Tooltip>
                 ))}
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={handleEdit}
-                disabled={isDeleting || isReorderActive}
-                aria-label={'Edit'}
-                data-cy="collection-hero-edit-btn"
-                className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
-              >
-                <Pencil className="size-4" />
-                <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {'Edit'}
-                </Typography>
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={handleDelete}
-                disabled={isDeleting || isReorderActive}
-                aria-label={'Delete'}
-                data-cy="collection-hero-delete-btn"
-                className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
-              >
-                <Trash2 className="size-4" />
-                <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {'Delete'}
-                </Typography>
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={handleEdit}
+                      disabled={isDeleting || isReorderActive}
+                      aria-label={'Edit'}
+                      data-cy="collection-hero-edit-btn"
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent variant="accent">Edit</TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={handleDelete}
+                      disabled={isDeleting || isReorderActive}
+                      aria-label={'Delete'}
+                      data-cy="collection-hero-delete-btn"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent variant="accent">Delete</TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
             </>
           ) : (
             <>
@@ -388,9 +456,27 @@ function CollectionHeroContent({
                   {'Share'}
                 </Typography>
               </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={handleCopyLink}
+                      aria-label="Copy link"
+                      data-cy="collection-hero-copy-link-btn"
+                    >
+                      <Link className="size-4" />
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent variant="accent">Copy link</TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
             </>
           )}
-          {!isOwn && <CollectionLayoutPicker layout={layout} onLayoutChange={onLayoutChange} />}
+          {!isReorderActive && <CollectionLayoutPicker layout={layout} onLayoutChange={onLayoutChange} />}
           {tagToggle}
         </Container>
       </CardContent>

@@ -6,6 +6,8 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { getTtlPostMs } from '@/libs/runtime-config/runtime-config';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -18,7 +20,6 @@ import { PostRelationshipsModel } from '@/models/post/relationships/postRelation
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
-import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import {
   buildAuthorCollectionsStreamId,
   getPostStreamKind,
@@ -129,19 +130,34 @@ export class LocalPostService {
     return PostRelationshipsModel.getReplies(postId);
   }
 
-  /**
-   * Reads tags for a specific post from local database
-   * @param postId - Composite post ID (author:postId)
-   * @returns Array of tag collections or empty array if not found
-   */
-  static async readTags(postId: string): Promise<TagCollectionModelSchema<string>[]> {
-    const tags = await PostTagsModel.findById(postId);
-    if (!tags) return [];
-    return [tags] as unknown as TagCollectionModelSchema<string>[];
-  }
-
   static async updatePostCounts({ postCompositeId, countChanges }: TPostCountsParams) {
     await PostCountsModel.updateCounts({ postCompositeId, countChanges });
+  }
+
+  /**
+   * Upserts a post TTL record so the post becomes stale again after `retryDelayMs`.
+   * Used when Nexus omits a subscribed post (deleted, or not indexed yet) so the
+   * coordinator retries it on a cooldown instead of every tick.
+   *
+   * The timestamp is calculated as: now - (postTtlMs - retryDelayMs). With
+   * `unlessWrittenSince`, a row written at or after that time (a local edit, or
+   * another successful refresh, landed while the batch was in flight) is kept, so
+   * the cooldown never shortens real freshness. The check and the write share one
+   * transaction.
+   */
+  static async upsertTtlWithDelay(
+    compositePostId: string,
+    retryDelayMs: number,
+    options: { unlessWrittenSince?: number } = {},
+  ): Promise<void> {
+    const lastUpdatedAt = Date.now() - (getTtlPostMs() - retryDelayMs);
+    await db.transaction('rw', PostTtlModel.table, async () => {
+      if (options.unlessWrittenSince !== undefined) {
+        const existing = await PostTtlModel.findById(compositePostId);
+        if (existing && existing.lastUpdatedAt >= options.unlessWrittenSince) return;
+      }
+      await PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt });
+    });
   }
 
   /**
@@ -166,7 +182,11 @@ export class LocalPostService {
     kind?: string;
   }) {
     try {
-      const changes: Partial<PostDetailsModelSchema> = { content };
+      // `deleted: false` clears the tombstone flag on any write that restores
+      // live content: `commitEdit` (and its rollback after a failed PUT) reuse
+      // this method, and a row left flagged deleted would keep rendering as a
+      // tombstone even though its content is back.
+      const changes: Partial<PostDetailsModelSchema> = { content, deleted: false };
       if (attachments !== undefined) {
         changes.attachments = attachments;
       }
@@ -250,7 +270,7 @@ export class LocalPostService {
    * @throws {DatabaseError} When database operations fail
    */
   static async create({ compositePostId, post }: TLocalSavePostParams) {
-    const { content, kind, parent: parentUri, attachments, embed } = post;
+    const { content, kind, parent: parentUri, attachments, embed, lock } = post;
 
     const repostedUri = embed?.uri ?? null;
     const normalizedKind = PostNormalizer.postKindToLowerCase(kind);
@@ -265,6 +285,7 @@ export class LocalPostService {
         kind: normalizedKind,
         uri: postUriBuilder(authorId, postId),
         attachments: attachments ?? null,
+        lock: lock ?? null,
       };
 
       const postRelationships: PostRelationshipsModelSchema = {
@@ -298,7 +319,14 @@ export class LocalPostService {
             PostDetailsModel.create(postDetails),
             PostRelationshipsModel.create(postRelationships),
             PostCountsModel.create(postCounts),
-            PostTagsModel.create({ id: compositePostId, tags: [] }),
+            // A new post has no tags on Nexus yet. Seed an initialized, complete, fresh window
+            // for its author so the first card mount does not force a tag request and the
+            // TTL pass does not flag it immediately.
+            PostTagsModel.create({
+              id: compositePostId,
+              tags: [],
+              cache: { cursor: 0, exhausted: true, fetchedAt: Date.now(), revision: 0, viewerId: authorId },
+            }),
           ]);
 
           const ops: Promise<unknown>[] = [];
@@ -381,24 +409,24 @@ export class LocalPostService {
   static async delete({ compositePostId }: TDeletePostParams): Promise<boolean> {
     const { pubky: authorId } = parseCompositeId(compositePostId);
 
-    // Idempotency guard: if the post is already tombstoned (`content ===
-    // DELETED`), short-circuit. Otherwise a stray re-delete would re-run the
-    // hard-delete transaction's `UserCountsModel.updateCounts({ posts: -1 })`
-    // and drift the author's post count. In normal UX this is unreachable —
-    // every render path for a tombstoned post shows the deleted-state
-    // component with no delete button — but the guard keeps the function
-    // idempotent against races and stale clients.
+    // Idempotency guard: if the post is already tombstoned (the `deleted` flag,
+    // or the legacy `content === DELETED` sentinel), short-circuit. Otherwise a
+    // stray re-delete would re-run the hard-delete transaction's
+    // `UserCountsModel.updateCounts({ posts: -1 })` and drift the author's post
+    // count. In normal UX this is unreachable — every render path for a
+    // tombstoned post shows the deleted-state component with no delete button —
+    // but the guard keeps the function idempotent against races and stale clients.
     const existing = await PostDetailsModel.findById(compositePostId);
-    if (existing?.content === DELETED) {
+    if (isPostDeleted(existing)) {
       Logger.warn('[LocalPostService.delete] post already tombstoned, skipping', { compositePostId });
       return false;
     }
 
     // TODO: There is an edge case where the post counts are not found, but the post is linked. This should be handled.
     const postCounts = await PostCountsModel.findById(compositePostId);
-    // If counts exist and post is linked → soft delete (mark as DELETED, keep records)
+    // If counts exist and post is linked → soft delete (tombstone, keep records)
     if (postCounts && this.isPostLinked(postCounts)) {
-      await PostDetailsModel.update(compositePostId, { content: DELETED });
+      await PostDetailsModel.update(compositePostId, { content: DELETED, deleted: true });
       return true;
     }
 
@@ -439,7 +467,7 @@ export class LocalPostService {
             // stays deleted. Auxiliary records (relationships, counts,
             // tags) still get fully removed below — only the details row
             // sticks around as a tombstone.
-            PostDetailsModel.update(compositePostId, { content: DELETED }),
+            PostDetailsModel.update(compositePostId, { content: DELETED, deleted: true }),
             PostRelationshipsModel.deleteById(compositePostId),
             PostCountsModel.deleteById(compositePostId),
             PostTagsModel.deleteById(compositePostId),

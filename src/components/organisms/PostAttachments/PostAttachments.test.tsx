@@ -1,13 +1,15 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
+import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { PostAttachments } from './PostAttachments';
 
-// Mock useToast
-const mockToast = vi.fn();
+// Mock toast
+vi.mock('@/molecules/Toaster/toast');
+
 vi.mock('@/molecules/PostAttachmentsAudios/PostAttachmentsAudios', () => {
   return {
     PostAttachmentsAudios: vi.fn(({ audios }) => (
@@ -44,12 +46,6 @@ vi.mock('@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVide
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({ toast: mockToast }),
-  };
-});
-
 // Mock atoms
 vi.mock('@/atoms/Container/Container', () => {
   return {
@@ -65,6 +61,7 @@ vi.mock('@/atoms/Container/Container', () => {
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getMetadata: vi.fn(),
+    fetchFiles: vi.fn(),
     getFileUrl: vi.fn(),
   },
 }));
@@ -144,6 +141,24 @@ describe('PostAttachments', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
+  });
+
+  it('keeps Cards pending while attachment metadata resolves, including media-only posts', async () => {
+    const pending = Promise.withResolvers<NexusFileDetails[]>();
+    mockGetMetadata.mockReturnValue(pending.promise);
+    const { container } = render(
+      <PostAttachments
+        attachments={['pubky://user1/pub/pubky.app/files/image1']}
+        localAttachments={undefined}
+        mediaVariant="cards"
+      />,
+    );
+    expect(container.querySelector('[data-post-content-pending]')).not.toBeNull();
+    await act(async () => {
+      pending.resolve([createMockImageMetadata('user1:image1')]);
+    });
+    await waitFor(() => expect(container.querySelector('[data-post-content-pending]')).toBeNull());
+    expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
   });
 
   describe('Rendering', () => {
@@ -391,7 +406,7 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not load attachments',
         });
@@ -405,7 +420,7 @@ describe('PostAttachments', () => {
       const { container } = render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalled();
+        expect(vi.mocked(toast)).toHaveBeenCalled();
       });
 
       // Should not render anything after error
@@ -430,7 +445,7 @@ describe('PostAttachments', () => {
       rerender(<PostAttachments attachments={newAttachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not load attachments',
         });
@@ -443,17 +458,18 @@ describe('PostAttachments', () => {
     it('does not toast or clear when the failing fetch was already cancelled', async () => {
       const attachments = ['pubky://user1/pub/pubky.app/files/image1'];
       let rejectMetadata: (error: Error) => void = () => undefined;
-      mockGetMetadata.mockReturnValue(
-        new Promise<NexusFileDetails[]>((_, reject) => {
-          rejectMetadata = reject;
-        }),
-      );
+      const pendingMetadata = new Promise<NexusFileDetails[]>((_, reject) => {
+        rejectMetadata = reject;
+      });
+      mockGetMetadata.mockReturnValue(pendingMetadata);
 
       const { container, rerender } = render(
         <PostAttachments attachments={attachments} localAttachments={undefined} />,
       );
 
-      // Removing the attachments cancels the in-flight fetch
+      await waitFor(() => expect(mockGetMetadata).toHaveBeenCalled());
+
+      // Removing the attachments retires the in-flight read
       rerender(<PostAttachments attachments={null} localAttachments={undefined} />);
 
       await act(async () => {
@@ -461,7 +477,7 @@ describe('PostAttachments', () => {
         await Promise.resolve();
       });
 
-      expect(mockToast).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
       expect(container.firstChild).toBeNull();
     });
   });
@@ -558,13 +574,17 @@ describe('PostAttachments', () => {
         <PostAttachments attachments={attachments} localAttachments={undefined} />,
       );
 
-      rerender(<PostAttachments attachments={null} localAttachments={undefined} />);
-
-      resolveMetadata([createMockImageMetadata('user1:image1')]);
-
       await waitFor(() => {
         expect(mockGetMetadata).toHaveBeenCalled();
       });
+
+      rerender(<PostAttachments attachments={null} localAttachments={undefined} />);
+
+      await act(async () => {
+        resolveMetadata([createMockImageMetadata('user1:image1')]);
+        await Promise.resolve();
+      });
+
       expect(container.firstChild).toBeNull();
     });
   });

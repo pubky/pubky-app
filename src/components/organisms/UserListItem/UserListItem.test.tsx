@@ -214,7 +214,7 @@ describe('UserListItem - card variant', () => {
     // fireEvent.click returns false when preventDefault was called — the
     // follow click must not bubble into the card link's navigation.
     expect(fireEvent.click(followButton)).toBe(false);
-    expect(onFollowClick).toHaveBeenCalledWith(mockUser.id, false, 'Test User');
+    expect(onFollowClick).toHaveBeenCalledWith(mockUser.id, false);
   });
 
   it('renders the Me button for the current user', () => {
@@ -222,6 +222,15 @@ describe('UserListItem - card variant', () => {
 
     expect(screen.getByRole('button', { name: /This is you/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Follow Test User/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('UserListItem - deleted users', () => {
+  it('renders [DELETED] instead of the pubky fallback', () => {
+    render(<UserListItem user={{ ...mockUser, name: '', deleted: true }} variant="card" onFollowClick={vi.fn()} />);
+
+    expect(screen.getByText('[DELETED]')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Follow \[DELETED\]/i })).toBeInTheDocument();
   });
 });
 

@@ -2,12 +2,13 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { SEARCH_PERSIST_KEY } from '../persistedKeys';
 import { createSearchActions } from './search.actions';
+import { migrateSearchPersistedState, SEARCH_STORE_VERSION } from './search.migrations';
 import { searchInitialState, SearchStore } from './search.types';
 
 /**
  * Search Store
  *
- * Manages recent searches (users and tags) with persistence to localStorage.
+ * Manages recent searches (users, tags and queries) with persistence to localStorage.
  * Recent searches are limited to MAX_RECENT_SEARCHES per type.
  */
 export const useSearchStore = create<SearchStore>()(
@@ -19,10 +20,13 @@ export const useSearchStore = create<SearchStore>()(
       }),
       {
         name: SEARCH_PERSIST_KEY,
-        // Persist all search state
+        version: SEARCH_STORE_VERSION,
+        migrate: migrateSearchPersistedState,
+        // Recent searches persist; active tags are URL-derived and reach is session-only.
         partialize: (state) => ({
           recentUsers: state.recentUsers,
           recentTags: state.recentTags,
+          recentQueries: state.recentQueries,
         }),
       },
     ),

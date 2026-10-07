@@ -57,6 +57,7 @@ const createProps = (overrides: Partial<QuickReplyComposerRowProps> = {}): Quick
   onChange: vi.fn(),
   onFocus: vi.fn(),
   onKeyDown: vi.fn(),
+  onSelect: vi.fn(),
   onPaste: vi.fn(),
   mentionIsOpen: false,
   mentionUsers: [],
@@ -107,6 +108,20 @@ describe('QuickReplyComposerRow', () => {
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onKeyDown).toHaveBeenCalledTimes(1);
     expect(onPaste).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the caret on selection and key events', () => {
+    const onSelect = vi.fn();
+    render(<QuickReplyComposerRow {...createProps({ onSelect })} />);
+
+    const textarea = screen.getByTestId('quick-reply-textarea');
+    // The caret moves without a change event: a click/drag selection, then an arrow key
+    fireEvent.select(textarea);
+    expect(onSelect).toHaveBeenCalled();
+
+    onSelect.mockClear();
+    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
+    expect(onSelect).toHaveBeenCalled();
   });
 
   it('renders mention suggestions when the popover is open', () => {

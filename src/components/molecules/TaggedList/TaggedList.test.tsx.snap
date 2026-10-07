@@ -13,14 +13,28 @@ exports[`TaggedList - Snapshots > matches snapshot with tags 1`] = `
   data-testid="container"
 >
   <div
+    data-loading="false"
+    data-loading-more="false"
     data-testid="tagged-item"
   >
     bitcoin
+    <button
+      data-testid="load-more-bitcoin"
+    >
+      more
+    </button>
   </div>
   <div
+    data-loading="false"
+    data-loading-more="false"
     data-testid="tagged-item"
   >
     satoshi
+    <button
+      data-testid="load-more-satoshi"
+    >
+      more
+    </button>
   </div>
 </div>
 `;

@@ -3,7 +3,7 @@ import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { RecordModelBase } from '@/models/shared/base/record/baseRecord';
 import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
-import type { NexusUserLink } from '@/services/nexus/nexus.types';
+import type { NexusSocialGraphStatus, NexusUserLink } from '@/services/nexus/nexus.types';
 
 export class UserDetailsModel extends RecordModelBase<Pubky, UserDetailsModelSchema> implements UserDetailsModelSchema {
   static table: Table<UserDetailsModelSchema> = db.table('user_details');
@@ -12,8 +12,12 @@ export class UserDetailsModel extends RecordModelBase<Pubky, UserDetailsModelSch
   bio: string;
   image: string | null;
   indexed_at: number;
+  nexusIndexedAt?: number;
+  localUpdatedAt?: number;
   links: NexusUserLink[] | null;
   status: string | null;
+  social_graph_status?: NexusSocialGraphStatus | null;
+  deleted?: boolean;
 
   constructor(userDetails: UserDetailsModelSchema) {
     super(userDetails);
@@ -21,7 +25,11 @@ export class UserDetailsModel extends RecordModelBase<Pubky, UserDetailsModelSch
     this.bio = userDetails.bio;
     this.image = userDetails.image;
     this.indexed_at = userDetails.indexed_at;
+    this.nexusIndexedAt = userDetails.nexusIndexedAt;
+    this.localUpdatedAt = userDetails.localUpdatedAt;
     this.links = userDetails.links;
     this.status = userDetails.status;
+    this.social_graph_status = userDetails.social_graph_status;
+    this.deleted = userDetails.deleted;
   }
 }

@@ -1,7 +1,13 @@
 import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
-import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
+import type {
+  TClearUnreadStreamParams,
+  TMarkUnreadPostsAsReadParams,
+  TStreamIdParams,
+} from '@/controllers/stream/posts/posts.types';
+import { db } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
 import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
 import { CompositeIdDomain } from '@/models/models.types';
@@ -10,12 +16,10 @@ import { ModerationModel } from '@/models/moderation/moderation';
 import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
-import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
-import type { RecordModelBase } from '@/models/shared/base/record/baseRecord';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import {
   buildPostReplyStreamId,
@@ -24,17 +28,20 @@ import {
 } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
 import type {
   TAddReplyToStreamParams,
+  TAlignPageParams,
   TPersistPostsParams,
   TPostDetailsTimestampParams,
   TPostStreamBulkParams,
-  TPostStreamPersistResult,
   TPostStreamUpsertParams,
   TPrependToStreamParams,
   TStreamResult,
 } from '@/services/local/stream/posts/post.types';
-import type { NexusFileDetails, NexusPostCounts, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
+import { LocalTagCacheService, type TagPreviewGuard } from '@/services/local/tag/tag-cache';
+import type { NexusPostCounts, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
+import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 
@@ -54,8 +61,8 @@ export class LocalStreamPostsService {
   /**
    * Save or update a stream of post IDs
    */
-  static async upsert({ streamId, stream }: TPostStreamUpsertParams): Promise<void> {
-    await PostStreamModel.upsert(streamId, stream);
+  static async upsert({ streamId, stream, tailCursor }: TPostStreamUpsertParams): Promise<void> {
+    await PostStreamModel.upsert(streamId, stream, this.tailCursorFields(tailCursor));
   }
 
   /**
@@ -63,13 +70,13 @@ export class LocalStreamPostsService {
    * @param postStreams - Array of post streams to upsert
    */
   static async bulkSave({ postStreams }: TPostStreamBulkParams): Promise<void> {
-    await Promise.all(postStreams.map(({ streamId, stream }) => this.upsert({ streamId, stream })));
+    await Promise.all(postStreams.map((postStream) => this.upsert(postStream)));
   }
 
   /**
    * Get a stream of post IDs by stream ID
    */
-  static async read({ streamId }: TStreamIdParams): Promise<{ stream: string[] } | null> {
+  static async read({ streamId }: TStreamIdParams): Promise<TStreamResult | null> {
     return await PostStreamModel.findById(streamId);
   }
 
@@ -131,7 +138,10 @@ export class LocalStreamPostsService {
     if (currentStream.includes(compositePostId)) return;
 
     const updatedStream = [compositePostId, ...currentStream];
-    await this.upsert({ streamId, stream: updatedStream });
+    // A resume cursor only describes the ids it was fetched with: an emptied row must not
+    // hand its old deep cursor to the ids that start it again.
+    const tailCursor = currentStream.length > 0 ? existing?.tailCursor : undefined;
+    await this.upsert({ streamId, stream: updatedStream, tailCursor });
   }
 
   /**
@@ -145,7 +155,9 @@ export class LocalStreamPostsService {
     if (!existing) return;
 
     const updatedStream = existing.stream.filter((id) => id !== compositePostId);
-    await this.upsert({ streamId, stream: updatedStream });
+    // Removing the last id leaves nothing the cursor describes; drop it with the ids.
+    const tailCursor = updatedStream.length > 0 ? existing.tailCursor : undefined;
+    await this.upsert({ streamId, stream: updatedStream, tailCursor });
   }
 
   static async getNotPersistedPostsInCache(postIds: string[]): Promise<string[]> {
@@ -174,42 +186,113 @@ export class LocalStreamPostsService {
   }
 
   /**
-   * Merge the unread stream with the post stream, sorted by timestamp.
+   * Merge all or selected unread IDs into the post stream, preserving stream order.
    * Filters out deleted posts from unread stream before merging.
    * @param streamId - The stream ID to merge the unread stream with the post stream
    * @returns void
    */
-  static async mergeUnreadStreamWithPostStream({ streamId }: TStreamIdParams): Promise<void> {
+  static async mergeUnreadStreamWithPostStream({ streamId, postIds }: TClearUnreadStreamParams): Promise<void> {
     const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
     if (!unreadPostStream) return;
     const postStream = await PostStreamModel.findById(streamId);
-    if (!postStream) return;
+    if (!postStream && postIds === undefined) return;
 
     // Filter out deleted posts from unread stream before merging
-    const validUnreadPosts = await PostDetailsModel.filterDeleted(unreadPostStream.stream);
+    const selectedIds = postIds === undefined ? null : new Set(postIds);
+    const selectedPosts = selectedIds
+      ? unreadPostStream.stream.filter((id) => selectedIds.has(id))
+      : unreadPostStream.stream;
+    const validUnreadPosts = await PostDetailsModel.filterDeleted(selectedPosts);
+    if (validUnreadPosts.length === 0) return;
 
-    // Deduplicate: unread posts first, then existing posts (excluding duplicates)
-    const existingIds = new Set(validUnreadPosts);
-    const uniqueExistingPosts = postStream.stream.filter((id) => !existingIds.has(id));
-    const combinedStream = [...validUnreadPosts, ...uniqueExistingPosts];
+    // An id both rows hold takes the unread position: a locally created post that a poll
+    // returned is at the head either way.
+    const unreadIds = new Set(validUnreadPosts);
+    const rest = (postStream?.stream ?? []).filter((id) => !unreadIds.has(id));
 
-    // Sort by timestamp (indexed_at) in descending order (most recent first)
-    const sortedStream = await sortPostIdsByTimestamp(combinedStream);
+    // Both parts are already in stream order: every head poll prepends a Nexus page that is
+    // newer than the previous one, and the cached row keeps the order its pages arrived in.
+    // Nothing is re-sorted by indexed_at — that would float an edited or deleted post above
+    // its real position (#2523), and an edited row head promoted above the polled posts
+    // would then feed its bumped indexed_at to the next head poll. The one cost is an own
+    // post written after the poll: it sits below the polled posts until the next poll returns
+    // it, at which point it takes the unread slot. The tail's resume cursor is untouched.
+    const combinedStream = [...validUnreadPosts, ...rest];
 
-    await PostStreamModel.upsert(streamId, sortedStream);
+    await PostStreamModel.upsert(streamId, combinedStream, this.tailCursorFields(postStream?.tailCursor));
+  }
+
+  /** Keep the merge and acknowledgement atomic with concurrent unread arrivals. */
+  static async markUnreadPostsAsRead(params: TMarkUnreadPostsAsReadParams): Promise<void> {
+    if (params.postIds.length === 0) return;
+    await db.transaction(
+      'rw',
+      [PostStreamModel.table, UnreadPostStreamModel.table, PostDetailsModel.table],
+      async () => {
+        await this.mergeUnreadStreamWithPostStream(params);
+        await this.clearUnreadStream(params);
+      },
+    );
   }
 
   /**
-   * Clear the unread stream and return the post IDs that were in it
-   * @param streamId - The stream ID to clear the unread stream for
-   * @returns Array of post IDs that were in the unread stream
+   * Merge and acknowledge the unread row from its first id whose details are cached and not a
+   * tombstone, downward in polled order, ids without details below it included: each of those
+   * is fetched by its card's local-first read when it renders, and a late-served one keeps its
+   * position whatever `indexed_at` its edit carries. The ids above that head are held back when
+   * they have no details, since as the main head one of them would resolve no timestamp and
+   * polling would stop (#2608); they stay unread for the poll-time hydration to retry. A
+   * tombstone among them is acknowledged, and one below the head is acknowledged and dropped
+   * from the merge by `mergeUnreadStreamWithPostStream`. The classification runs inside the
+   * transaction, so an id hydrated meanwhile is merged rather than left behind. Without a main
+   * row, or with an empty one, nothing is merged and the unread row is dropped, so the first
+   * page comes from Nexus with a real cursor instead of a cursor-less row seeded from unread
+   * ids. See docs/local-first.md, _Stream Pagination Cursors_.
    */
-  static async clearUnreadStream({ streamId }: TStreamIdParams): Promise<string[]> {
-    const unreadStream = await UnreadPostStreamModel.findById(streamId);
-    if (!unreadStream) return [];
-    const postIds = unreadStream.stream;
-    await UnreadPostStreamModel.deleteById(streamId);
-    return postIds;
+  static async markUnreadPostsAsReadFromResolvableHead({ streamId }: TStreamIdParams): Promise<void> {
+    await db.transaction(
+      'rw',
+      [PostStreamModel.table, UnreadPostStreamModel.table, PostDetailsModel.table],
+      async () => {
+        const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
+        if (!unreadPostStream) return;
+        const postStream = await PostStreamModel.findById(streamId);
+        if (!postStream || postStream.stream.length === 0) {
+          await this.clearUnreadStream({ streamId });
+          return;
+        }
+        const details = await PostDetailsModel.findByIdsPreserveOrder(unreadPostStream.stream);
+        const headIndex = details.findIndex((postDetails) => postDetails !== undefined && !isPostDeleted(postDetails));
+        await this.markUnreadPostsAsRead({
+          streamId,
+          postIds: unreadPostStream.stream.filter(
+            (_postId, index) => details[index] !== undefined || (headIndex !== -1 && index > headIndex),
+          ),
+        });
+      },
+    );
+  }
+
+  /**
+   * Acknowledge selected unread IDs, or clear the entire stream when omitted.
+   * The transaction preserves other IDs that arrived while the UI was loading.
+   * @param streamId - The stream ID to clear the unread stream for
+   * @returns Array of unread IDs that were cleared
+   */
+  static async clearUnreadStream({ streamId, postIds }: TClearUnreadStreamParams): Promise<string[]> {
+    return db.transaction('rw', UnreadPostStreamModel.table, async () => {
+      const unreadStream = await UnreadPostStreamModel.findById(streamId);
+      if (!unreadStream) return [];
+      const selectedIds = postIds === undefined ? new Set(unreadStream.stream) : new Set(postIds);
+      const clearedIds = unreadStream.stream.filter((id) => selectedIds.has(id));
+      const remainingIds = unreadStream.stream.filter((id) => !selectedIds.has(id));
+      if (remainingIds.length > 0) {
+        await UnreadPostStreamModel.upsert(streamId, remainingIds);
+      } else {
+        await UnreadPostStreamModel.deleteById(streamId);
+      }
+      return clearedIds;
+    });
   }
 
   /**
@@ -221,28 +304,30 @@ export class LocalStreamPostsService {
    * - Post counts (likes, replies, etc.)
    * - Post relationships (replies, reposts, etc.)
    * - Post tags
-   * - Post attachments
    *
    * Additionally, creates reply streams for posts that are replies to other posts,
    * mapping parent posts to their reply post IDs.
    *
    * @param posts - Array of posts from Nexus API to persist
-   * @returns Object containing an array of all post attachment URIs collected from the posts
    */
-  static async persistPosts({ posts }: TPersistPostsParams): Promise<TPostStreamPersistResult> {
+  static async persistPosts({
+    posts,
+    refreshGuard,
+    tagGuard = {},
+  }: TPersistPostsParams & { tagGuard?: TagPreviewGuard }): Promise<void> {
+    tagGuard = { ...tagGuard, validatedAt: tagGuard.validatedAt ?? getNexusResponseStartedAt(posts) };
     // Defensive check: if posts is empty or undefined, return early
-    if (!posts?.length) return { attachmentMetadata: [] };
+    if (!posts?.length) return;
 
     const postCounts: NexusModelTuple<NexusPostCounts>[] = [];
     const postRelationships: NexusModelTuple<NexusPostRelationships>[] = [];
     const postTags: NexusModelTuple<NexusTag[]>[] = [];
-    const postDetails: RecordModelBase<string, PostDetailsModelSchema>[] = [];
+    const postDetails: PostDetailsModelSchema[] = [];
     const postBookmarks: BookmarkModelSchema[] = [];
     const postModerations: ModerationModelSchema[] = [];
     const postTtl: NexusModelTuple<{ lastUpdatedAt: number }>[] = [];
 
     const postReplies: Record<ReplyStreamCompositeId, string[]> = {};
-    const attachmentMetadata: NexusFileDetails[] = [];
     const now = Date.now();
 
     for (const post of posts) {
@@ -252,11 +337,6 @@ export class LocalStreamPostsService {
       postCounts.push([postId, post.counts]);
 
       postRelationships.push([postId, post.relationships]);
-      if (post.attachments_metadata) {
-        post.attachments_metadata.forEach((metadata) => {
-          attachmentMetadata.push(metadata);
-        });
-      }
 
       // Collect bookmarks from Nexus response (viewer's bookmark status).
       //
@@ -311,38 +391,97 @@ export class LocalStreamPostsService {
       this.addReplyToStream({ repliedUri: post.relationships.replied, replyPostId: postId, postReplies });
     }
 
+    // Guards and writes run in ONE transaction so a local-first write cannot
+    // land between the check and the bulk save.
+    //
     // Tombstone guard. Defense-in-depth against a Nexus refetch racing a
-    // local delete: if a row already has `content === DELETED`, do NOT
-    // overwrite it with whatever Nexus is returning right now (the by-ids
-    // endpoint can be stale relative to the delete index, see
-    // `LocalPostService.delete`'s hard-delete branch). Tombstoned ids are
-    // dropped from every per-table batch below so we don't leave behind
-    // orphan counts / tags / relationships / bookmarks pointing at a
-    // deleted post.
-    const tombstonedIds = new Set(
-      (await PostDetailsModel.findByIdsPreserveOrder(postDetails.map((d) => d.id)))
-        .map((existing, i) => (existing?.content === DELETED ? postDetails[i].id : null))
-        .filter((id): id is string => id !== null),
-    );
-    const liveDetails = postDetails.filter((d) => !tombstonedIds.has(d.id));
-    const liveCounts = postCounts.filter(([id]) => !tombstonedIds.has(id));
-    const liveRelationships = postRelationships.filter(([id]) => !tombstonedIds.has(id));
-    const liveTags = postTags.filter(([id]) => !tombstonedIds.has(id));
-    const liveTtl = postTtl.filter(([id]) => !tombstonedIds.has(id));
-    const liveBookmarks = postBookmarks.filter((b) => !tombstonedIds.has(b.id));
-    const liveModerations = postModerations.filter((m) => !tombstonedIds.has(m.id));
+    // local delete: if a row already reads as deleted (the Nexus `deleted`
+    // flag, or the legacy `[DELETED]` content), do NOT overwrite it with
+    // whatever Nexus is returning right now (the by-ids endpoint can be stale
+    // relative to the delete index, see `LocalPostService.delete`'s
+    // hard-delete branch). Tombstoned ids are dropped from every per-table
+    // batch below so we don't leave behind orphan counts / tags /
+    // relationships / bookmarks pointing at a deleted post. The freshness
+    // record is the exception: a tombstone still advances its TTL (see
+    // `liveTtl`), so a visible deleted placeholder is not force-refetched on
+    // every refresh tick.
+    //
+    // Refresh guard (TTL path only). A local-first edit is newer than
+    // anything Nexus can return until Nexus has re-indexed it, and the owner's
+    // next edit reads the local row — clobbering it with an older copy would
+    // then write that older state back to the homeserver. Keep the local
+    // details when the row's TTL was written at or after the fetch started
+    // (an edit landed while the fetch was in flight) or when the Nexus copy
+    // is not indexed after the local one (Nexus has not caught up yet).
+    // Counts, tags, relationships and the TTL still refresh for those rows.
+    const detailIds = postDetails.map((d) => d.id);
+    await db.transaction(
+      'rw',
+      [
+        PostDetailsModel.table,
+        PostCountsModel.table,
+        PostTagsModel.table,
+        PostRelationshipsModel.table,
+        PostTtlModel.table,
+        BookmarkModel.table,
+        ModerationModel.table,
+      ],
+      async () => {
+        const existingDetails = await PostDetailsModel.findByIdsPreserveOrder(detailIds);
+        const existingTtl = refreshGuard ? await PostTtlModel.findByIds(detailIds) : [];
+        const ttlById = new Map(existingTtl.map((record) => [record.id, record.lastUpdatedAt]));
 
-    await Promise.all([
-      PostDetailsModel.bulkSave(liveDetails),
-      PostCountsModel.bulkSave(liveCounts),
-      PostTagsModel.bulkSave(liveTags),
-      PostRelationshipsModel.bulkSave(liveRelationships),
-      PostTtlModel.bulkSave(liveTtl),
-      // Persist bookmarks from Nexus (viewer's bookmark status for each post)
-      liveBookmarks.length > 0 ? BookmarkModel.bulkSave(liveBookmarks) : Promise.resolve(),
-      // Persist moderation records for moderated posts (is_blurred defaults to true)
-      liveModerations.length > 0 ? ModerationModel.bulkSave(liveModerations) : Promise.resolve(),
-    ]);
+        const tombstonedIds = new Set<string>();
+        const locallyNewerIds = new Set<string>();
+        existingDetails.forEach((existing, index) => {
+          const incoming = postDetails[index];
+          if (isPostDeleted(existing)) {
+            tombstonedIds.add(incoming.id);
+            return;
+          }
+          if (!refreshGuard || !existing) return;
+          const writtenSinceFetch = (ttlById.get(incoming.id) ?? 0) >= refreshGuard.fetchStartedAt;
+          const notIndexedAfterLocal = incoming.indexed_at <= existing.indexed_at;
+          if (writtenSinceFetch || notIndexedAfterLocal) locallyNewerIds.add(incoming.id);
+        });
+        if (locallyNewerIds.size > 0) {
+          Logger.debug('LocalStreamPostsService: Kept locally newer post details during refresh', {
+            ids: Array.from(locallyNewerIds).slice(0, 5),
+            count: locallyNewerIds.size,
+          });
+        }
+
+        const liveDetails = postDetails.filter((d) => !tombstonedIds.has(d.id) && !locallyNewerIds.has(d.id));
+        const liveCounts = postCounts.filter(([id]) => !tombstonedIds.has(id));
+        const liveRelationships = postRelationships.filter(([id]) => !tombstonedIds.has(id));
+        const liveTags = postTags.filter(([id]) => !tombstonedIds.has(id));
+        // The freshness record is the one row a tombstone still refreshes:
+        // `TtlApplication.findStalePostsByIds` returns every id whose TTL is
+        // missing or expired, and `deferOmittedIds` cannot hold back an id
+        // Nexus returned, so a tombstone left without one is force-refetched
+        // on every refresh tick. Content and auxiliary rows stay protected.
+        const liveTtl = postTtl;
+        // A bookmark the viewer removed locally while Nexus was still indexing
+        // the removal must not come back (see `recentUnbookmarks`).
+        const liveBookmarks = postBookmarks.filter(
+          (b) => !tombstonedIds.has(b.id) && !recentUnbookmarks.isProtected(tagGuard.viewerId, b.id),
+        );
+        const liveModerations = postModerations.filter((m) => !tombstonedIds.has(m.id));
+
+        if (tagGuard.isCurrent && !tagGuard.isCurrent()) return;
+        await Promise.all([
+          PostDetailsModel.bulkSave(liveDetails),
+          // Tag previews and counts share one revision-guarded write; it joins this transaction.
+          LocalTagCacheService.savePreviews('post', liveTags, tagGuard, liveCounts),
+          PostRelationshipsModel.bulkSave(liveRelationships),
+          PostTtlModel.bulkSave(liveTtl),
+          // Persist bookmarks from Nexus (viewer's bookmark status for each post)
+          liveBookmarks.length > 0 ? BookmarkModel.bulkSave(liveBookmarks) : Promise.resolve(),
+          // Persist moderation records for moderated posts (is_blurred defaults to true)
+          liveModerations.length > 0 ? ModerationModel.bulkSave(liveModerations) : Promise.resolve(),
+        ]);
+      },
+    );
 
     if (Object.keys(postReplies).length > 0) {
       await Promise.all(
@@ -354,7 +493,6 @@ export class LocalStreamPostsService {
         }),
       );
     }
-    return { attachmentMetadata };
   }
 
   /**
@@ -363,38 +501,120 @@ export class LocalStreamPostsService {
    * Creates the stream when it does not exist yet. Otherwise merges the incoming
    * IDs with the existing stream and removes duplicates before saving.
    *
-   * Normal timeline streams are re-sorted by post timestamp. Bookmark streams
-   * preserve membership order because their meaningful ordering is bookmark
-   * creation time, not post creation time.
+   * A descending Nexus page (`tailCursor` given) is appended in stream order and the
+   * row's resume cursor advances to the deepest page fetched. Re-sorting such a page by
+   * `indexed_at` would float edited and deleted posts above the raw resume anchor —
+   * Nexus keeps them at their original position — and the next round would re-walk
+   * ids it already delivered (#2523). Bookmark streams likewise preserve membership
+   * order (bookmark time, not post time). Chunks that carry no Nexus position
+   * (hydration-discovered replies, ascending reply pages) keep a row that has no cursor of
+   * its own newest-first by post timestamp, at creation and whenever they add ids, because
+   * `useReplyStream` reverses that row for chronological display. A cursor-less row is also
+   * normalized by a cursor-less chunk that adds nothing, because an earlier build stored such
+   * rows in hydration order and only re-sorted them on a later write. A row with a Nexus
+   * cursor is never re-sorted, whatever chunk reaches it, and nothing rewrites its ids when a
+   * chunk adds none.
    *
    * @param stream - Incoming post IDs to merge into the stream cache
    * @param streamId - Stream identifier to create or update
+   * @param tailCursor - Nexus `last_post_score` of a descending page, when persisting one
+   * @returns The stored stream, in row order (empty when nothing is cached)
    */
-  static async persistNewStreamChunk({ stream, streamId }: TPostStreamUpsertParams) {
-    const postStream = await PostStreamModel.findById(streamId);
+  static async persistNewStreamChunk({ stream, streamId, tailCursor }: TPostStreamUpsertParams): Promise<string[]> {
+    const storedRow = await PostStreamModel.findById(streamId);
+    const postStream = storedRow !== null && storedRow.stream.length > 0 ? storedRow : null;
+    // Only a cursor-less chunk landing on a row without a Nexus position of its own is
+    // ordered by post timestamp (an emptied row's stale cursor does not count).
+    const normalizesByTimestamp =
+      tailCursor === undefined && !this.isBookmarkStream(streamId) && postStream?.tailCursor === undefined;
 
-    if (!postStream) {
-      // If stream doesn't exist (e.g., database was deleted), create it with the new chunk
-      await PostStreamModel.upsert(streamId, stream);
-      return;
+    if (postStream === null) {
+      // No cached ids to extend (e.g., database was deleted): the chunk is the stream and
+      // its own position is the resume cursor — a stale cursor on an emptied row must not
+      // survive, or the next seam would skip everything above it. A cursor-less chunk (a
+      // reply row seeded from a hydration response) is stored newest-first from the start.
+      const initialStream = normalizesByTimestamp && stream.length > 1 ? await sortPostIdsByTimestamp(stream) : stream;
+      await PostStreamModel.upsert(streamId, initialStream, this.tailCursorFields(tailCursor));
+      return initialStream;
     }
 
     // Check for duplicates before adding
     const existingIds = new Set(postStream.stream);
     const newPostsToAdd = stream.filter((id) => !existingIds.has(id));
+    const deepestCursor = this.deepestTailCursor(postStream.tailCursor, tailCursor);
+    const nextTailCursor = this.tailCursorFields(deepestCursor);
+
+    if (newPostsToAdd.length === 0) {
+      // A cursor-less row is normalized by any cursor-less chunk that repeats its ids: a row an
+      // earlier build created in hydration order, or one seeded while its details were still
+      // missing, would otherwise keep that order until a new reply arrives.
+      if (normalizesByTimestamp && stream.length > 0) {
+        const sortedStream = await sortPostIdsByTimestamp(postStream.stream);
+        if (sortedStream.some((id, index) => id !== postStream.stream[index])) {
+          await PostStreamModel.upsert(streamId, sortedStream, nextTailCursor);
+          return sortedStream;
+        }
+        return postStream.stream;
+      }
+      // Nothing to add to a row with a Nexus cursor (an empty end page, or a page it already
+      // holds): never rewrite the ids — only a deeper cursor is worth persisting.
+      if (deepestCursor !== postStream.tailCursor) {
+        await PostStreamModel.upsert(streamId, postStream.stream, nextTailCursor);
+      }
+      return postStream.stream;
+    }
 
     // Combine existing and new posts
     const combinedStream = [...postStream.stream, ...newPostsToAdd];
 
-    if (this.isBookmarkStream(streamId)) {
-      await PostStreamModel.upsert(streamId, combinedStream);
-      return;
+    if (!normalizesByTimestamp) {
+      await PostStreamModel.upsert(streamId, combinedStream, nextTailCursor);
+      return combinedStream;
     }
 
     // Sort by timestamp (indexed_at) in descending order (most recent first)
     const sortedStream = await sortPostIdsByTimestamp(combinedStream);
 
-    await PostStreamModel.upsert(streamId, sortedStream);
+    await PostStreamModel.upsert(streamId, sortedStream, nextTailCursor);
+    return sortedStream;
+  }
+
+  /**
+   * The part of a Nexus page that lies below the cached row.
+   *
+   * A row without a persisted cursor (bootstrap-seeded, or written before cursors were
+   * tracked) resumes once from its tail post's timestamp. That is the post's score only
+   * while the post is unedited: an edit bumps it, and the seam page then starts somewhere
+   * inside or above the row. Only the ids the page lists after the last id the row already
+   * holds are below the tail; everything before is either cached already or above the row
+   * (a head poll's business, and possibly above the head the current walk started from),
+   * so it is neither served by the walk nor appended below the tail. A page sharing no id
+   * with the row is taken as lying below the tail, which is what a seam page normally is:
+   * no local timestamp can tell that shape from a page entirely above the row (an edited
+   * head reads as newer than it is), so that rarer shape is served once as it comes.
+   */
+  static async keepIdsBelowRow({ streamId, stream }: TAlignPageParams): Promise<string[]> {
+    if (stream.length === 0) return stream;
+    const row = await PostStreamModel.findById(streamId);
+    if (!row || row.stream.length === 0) return stream;
+
+    const rowIds = new Set(row.stream);
+    for (let index = stream.length - 1; index >= 0; index -= 1) {
+      if (rowIds.has(stream[index])) return stream.slice(index + 1);
+    }
+    return stream;
+  }
+
+  /** The deeper (smaller) of two Nexus resume cursors; pages only ever extend a stream downward. */
+  private static deepestTailCursor(existing: number | undefined, incoming: number | undefined): number | undefined {
+    if (existing === undefined) return incoming;
+    if (incoming === undefined) return existing;
+    return Math.min(existing, incoming);
+  }
+
+  /** Extra row fields for `PostStreamModel.upsert`; omitted entirely when there is no cursor. */
+  private static tailCursorFields(tailCursor: number | undefined): { tailCursor: number } | undefined {
+    return tailCursor === undefined ? undefined : { tailCursor };
   }
 
   private static isBookmarkStream(streamId: PostStreamId): boolean {
@@ -408,16 +628,34 @@ export class LocalStreamPostsService {
    * @returns The post IDs that were actually added (after deduplication)
    */
   static async persistUnreadNewStreamChunk({ stream, streamId }: TPostStreamUpsertParams): Promise<string[]> {
-    const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
-    if (!unreadPostStream) {
-      await UnreadPostStreamModel.upsert(streamId, stream);
-      return stream;
-    }
-    const existingIds = new Set(unreadPostStream.stream);
-    const newPostsToAdd = stream.filter((id) => !existingIds.has(id));
-    if (newPostsToAdd.length === 0) return [];
-    const combinedStream = [...newPostsToAdd, ...unreadPostStream.stream];
-    await UnreadPostStreamModel.upsert(streamId, combinedStream);
-    return newPostsToAdd;
+    return db.transaction('rw', UnreadPostStreamModel.table, async () => {
+      const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
+      if (!unreadPostStream) {
+        await UnreadPostStreamModel.upsert(streamId, stream);
+        return stream;
+      }
+      const existingIds = new Set(unreadPostStream.stream);
+      const newPostsToAdd = stream.filter((id) => !existingIds.has(id));
+      if (newPostsToAdd.length === 0) return [];
+
+      // Head polls can complete out of order (two tabs share this row), so a late, older page
+      // must not land its unique ids above newer ones. The page is in Nexus order: each new id
+      // goes right after the nearest id before it that the row already holds, and an id no
+      // cached id precedes is newer than the row head and goes on top. A page sharing no id
+      // with the row is taken as newer, which is what a poll above the head returns.
+      const combinedStream = [...unreadPostStream.stream];
+      let insertAt = 0;
+      for (const id of stream) {
+        const cachedIndex = combinedStream.indexOf(id);
+        if (cachedIndex !== -1) {
+          insertAt = cachedIndex + 1;
+          continue;
+        }
+        combinedStream.splice(insertAt, 0, id);
+        insertAt += 1;
+      }
+      await UnreadPostStreamModel.upsert(streamId, combinedStream);
+      return newPostsToAdd;
+    });
   }
 }

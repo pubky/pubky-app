@@ -1,0 +1,83 @@
+import { describe, expect, it } from 'vitest';
+import {
+  CONTENT_SEARCH_QUERY_MAX_LENGTH,
+  CONTENT_SEARCH_QUERY_MAX_TERMS,
+  CONTENT_SEARCH_QUERY_MIN_LENGTH,
+} from '@/config/search';
+import { toContentSearchKey, validateContentSearchQuery } from './contentSearch';
+
+describe('content search query validation', () => {
+  it('collapses whitespace so equivalent queries share one canonical form', () => {
+    // Nexus tokenizes `bitcoin   wallet` and `bitcoin wallet` identically, so
+    // both must produce the same recents chip, stream id and cache key.
+    expect(validateContentSearchQuery('  bitcoin   wallet  ')).toEqual({
+      isValid: true,
+      query: 'bitcoin wallet',
+    });
+  });
+
+  it('does not count whitespace padding toward the length budget', () => {
+    const padded = `a${' '.repeat(40)}b`;
+    expect(validateContentSearchQuery(padded)).toEqual({ isValid: true, query: 'a b' });
+  });
+
+  // Exactly-at-the-boundary queries must stay accepted: an off-by-one in any
+  // comparison (`<` vs `<=`) flips one of these.
+  it.each([
+    ['minimum length', 'ab'],
+    ['maximum length', 'a'.repeat(CONTENT_SEARCH_QUERY_MAX_LENGTH)],
+    ['maximum terms', 'one two three four'],
+  ])('accepts a query at the %s boundary', (_label, query) => {
+    expect(validateContentSearchQuery(query)).toEqual({ isValid: true, query });
+  });
+
+  it.each([
+    ['b', `Search must be at least ${CONTENT_SEARCH_QUERY_MIN_LENGTH} characters`],
+    ['1234567890123456789012345678901', `Search can be max ${CONTENT_SEARCH_QUERY_MAX_LENGTH} characters`],
+    ['one two three four five', `Search can contain up to ${CONTENT_SEARCH_QUERY_MAX_TERMS} terms`],
+  ])('rejects %s with the matching Nexus constraint', (query, message) => {
+    expect(validateContentSearchQuery(query)).toEqual({ isValid: false, message });
+  });
+
+  it('counts characters as code points, not UTF-16 units', () => {
+    // One emoji is one character to the user (`'😀'.length === 2` must not
+    // sneak past the minimum)…
+    expect(validateContentSearchQuery('😀')).toEqual({
+      isValid: false,
+      message: `Search must be at least ${CONTENT_SEARCH_QUERY_MIN_LENGTH} characters`,
+    });
+    // …and sixteen emojis (32 UTF-16 units) are sixteen characters, well
+    // under the 30-character maximum.
+    const emojiQuery = '🚀'.repeat(16);
+    expect(validateContentSearchQuery(emojiQuery)).toEqual({ isValid: true, query: emojiQuery });
+  });
+
+  it("keeps the user's casing — case is folded only by the search key", () => {
+    expect(validateContentSearchQuery('Bitcoin Wallets')).toEqual({ isValid: true, query: 'Bitcoin Wallets' });
+  });
+
+  it('keeps both the typed query and the key Nexus receives within bounds when lowercasing lengthens it', () => {
+    // `İ` lowercases to two code points (`i̇`): typed as 30 characters, sent as 31.
+    const query = `${'a'.repeat(CONTENT_SEARCH_QUERY_MAX_LENGTH - 1)}İ`;
+    expect(validateContentSearchQuery(query)).toEqual({
+      isValid: false,
+      message: `Search can be max ${CONTENT_SEARCH_QUERY_MAX_LENGTH} characters`,
+    });
+    expect(validateContentSearchQuery(query.slice(1))).toEqual({ isValid: true, query: query.slice(1) });
+
+    // A lone `İ` is one typed character, even though its key is two.
+    expect(validateContentSearchQuery('İ')).toEqual({
+      isValid: false,
+      message: `Search must be at least ${CONTENT_SEARCH_QUERY_MIN_LENGTH} characters`,
+    });
+    expect(validateContentSearchQuery('İa')).toEqual({ isValid: true, query: 'İa' });
+  });
+});
+
+describe('content search key', () => {
+  it('folds case so differently-cased queries share one key, leaving uncased text intact', () => {
+    expect(toContentSearchKey('Bitcoin WALLETS')).toBe(toContentSearchKey('bitcoin wallets'));
+    expect(toContentSearchKey('Bitcoin WALLETS')).toBe('bitcoin wallets');
+    expect(toContentSearchKey('ビットコイン 🔥')).toBe('ビットコイン 🔥');
+  });
+});

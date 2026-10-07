@@ -15,6 +15,17 @@ const mockUseAuthStatus = vi.fn(() => ({
 const mockIsPublicExploreRoute = vi.fn(() => false);
 const mockRequireAuth = vi.fn((action: () => void) => action());
 const mockUseFabAction = vi.fn<() => FabAction>(() => ({ kind: 'createPost', ariaLabel: 'New post' }));
+const mockUseKeyboardVisible = vi.fn(() => false);
+
+vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
+  useKeyboardVisible: () => mockUseKeyboardVisible(),
+}));
+
+const mockUsePathname = vi.fn(() => '/home');
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => mockUsePathname(),
+}));
 
 vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
   useAuthStatus: () => mockUseAuthStatus(),
@@ -99,6 +110,7 @@ vi.mock('@/atoms/Button/Button', () => ({
 describe('Fab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseKeyboardVisible.mockReturnValue(false);
     mockUseAuthStatus.mockReturnValue({
       isFullyAuthenticated: true,
       isLoading: false,
@@ -109,7 +121,31 @@ describe('Fab', () => {
     mockIsPublicExploreRoute.mockReturnValue(false);
     mockRequireAuth.mockImplementation((action: () => void) => action());
     mockUseFabAction.mockReturnValue({ kind: 'createPost', ariaLabel: 'New post' });
+    mockUsePathname.mockReturnValue('/home');
     useCollectionReorderStore.setState({ activeCollectionId: null });
+  });
+
+  it.each([
+    ['createPost', 'dialog-new-post'],
+    ['createCollection', 'new-collection-dialog'],
+  ] as const)('preserves the open %s dialog across keyboard visibility changes', (kind, dialogTestId) => {
+    mockUseFabAction.mockReturnValue({ kind, ariaLabel: 'Create' });
+    const { rerender } = render(<Fab />);
+    fireEvent.click(screen.getByTestId('new-post-cta'));
+    const dialog = screen.getByTestId(dialogTestId);
+    expect(dialog).toHaveAttribute('data-open', 'true');
+
+    mockUseKeyboardVisible.mockReturnValue(true);
+    rerender(<Fab />);
+    expect(screen.getByTestId('new-post-cta')).toHaveClass('hidden', 'lg:flex');
+    expect(screen.getByTestId(dialogTestId)).toBe(dialog);
+    expect(dialog).toHaveAttribute('data-open', 'true');
+
+    mockUseKeyboardVisible.mockReturnValue(false);
+    rerender(<Fab />);
+    expect(screen.getByTestId('new-post-cta')).not.toHaveClass('hidden');
+    expect(screen.getByTestId(dialogTestId)).toBe(dialog);
+    expect(dialog).toHaveAttribute('data-open', 'true');
   });
 
   it('renders the button with the stable test/cypress ids and the action aria-label', () => {
@@ -156,6 +192,12 @@ describe('Fab', () => {
       hasKeypair: false,
       hasProfile: false,
     });
+    const { container } = render(<Fab />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('returns null on onboarding routes even when fully authenticated', () => {
+    mockUsePathname.mockReturnValue('/onboarding/tags');
     const { container } = render(<Fab />);
     expect(container.firstChild).toBeNull();
   });
@@ -241,6 +283,7 @@ describe('Fab', () => {
 describe('Fab - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseKeyboardVisible.mockReturnValue(false);
     mockUseAuthStatus.mockReturnValue({
       isFullyAuthenticated: true,
       isLoading: false,

@@ -548,7 +548,7 @@ export function useSafeLiveQuery<T>(
 | Matches TanStack Query `{ data, error, isLoading }` pattern | Abstraction over Dexie       |
 | Centralized logging                                         |                              |
 
-**Status: Under Discussion**
+**Status of §8.3 only: under discussion** (the ADR itself is accepted; the `useLiveQuery` error-handling wrapper is the one open item)
 
 ---
 

@@ -4,6 +4,7 @@ import type { TOlderThanQueryParams } from '@/services/local/notification/notifi
 import type { NexusNotification } from '@/services/nexus/nexus.types';
 
 export type TNotificationApplicationNotificationsParams = {
+  isCurrent?: () => boolean;
   userId: Pubky;
   lastPolledTimestamp: number | undefined;
   lastRead: number;
@@ -22,6 +23,7 @@ export type TFetchNotificationsResult = {
 };
 
 export type TNotificationsPartialCacheHitParams = {
+  isCurrent?: () => boolean;
   userId: Pubky;
   limit: number;
   flatNotifications: TFlatNotificationList;
@@ -37,6 +39,7 @@ export type TNotificationsPartialCacheHitParams = {
  * @property limit - Maximum number of notifications to return
  */
 export type TGetOrFetchNotificationsParams = TOlderThanQueryParams & {
+  isCurrent?: () => boolean;
   userId: Pubky;
   allowedTypes?: NotificationType[];
 };
@@ -58,6 +61,7 @@ export type TGetOrFetchNotificationsResponse = TFlatNotifications & {
 };
 
 export type TPersistAndSummarizeParams = {
+  isCurrent?: () => boolean;
   notifications: NexusNotification[];
   lastRead: number;
   allowedTypes: NotificationType[];
@@ -65,6 +69,7 @@ export type TPersistAndSummarizeParams = {
 };
 
 export type TFetchMissingEntitiesParams = {
+  isCurrent?: () => boolean;
   notifications: NexusNotification[];
   viewerId: Pubky;
 };

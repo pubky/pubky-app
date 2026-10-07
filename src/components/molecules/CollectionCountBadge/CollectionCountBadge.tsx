@@ -14,12 +14,12 @@ interface CollectionCountBadgeProps {
   /**
    * Pill contrast against the parent surface. Always rendered as a pill.
    *
-   * - `on-card` (default): `bg-background` on `bg-card` parents (landing, hero,
-   *   bookmarks, embeds with a cover image).
+   * - `on-card` (default): `bg-background` on plain `bg-card` parents.
+   * - `on-cover`: `bg-card` over cover images, matching Dark buttons.
    * - `on-muted`: `bg-card` on `bg-muted` embed chrome (`presentation="embed"`
    *   without a cover — see `embeddedOnMuted` in `CollectionCard`).
    */
-  tone?: 'on-card' | 'on-muted';
+  tone?: 'on-card' | 'on-muted' | 'on-cover';
 }
 
 /**
@@ -32,8 +32,8 @@ interface CollectionCountBadgeProps {
  *
  * Renders as a pill so the count stays legible against the parent surface.
  * Default tone is `on-card` (`bg-background`). `CollectionCard` passes `on-muted`
- * (`bg-card`) for interactive embeds on `bg-muted` when the collection has no
- * cover image.
+ * (`bg-card`) for embeds without a cover. Surfaces with a cover use `on-cover`
+ * (also `bg-card`), matching the dark action pills over cover images.
  *
  * Compact notation (e.g. 1.2K, 3M) keeps long counts from blowing out the
  * header row.
@@ -43,7 +43,6 @@ export function CollectionCountBadge({
   showLabelOnMobile = false,
   tone = 'on-card',
 }: CollectionCountBadgeProps) {
-  const isOnMuted = tone === 'on-muted';
   const compactCount = compactNumber.format(count);
   const countLabel = count === 1 ? 'post' : 'posts';
 
@@ -54,7 +53,7 @@ export function CollectionCountBadge({
       aria-label={`${compactCount} ${countLabel}`}
       className={cn(
         'flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground',
-        isOnMuted ? 'bg-card' : 'bg-background',
+        tone === 'on-card' ? 'bg-background' : 'bg-card',
       )}
     >
       <StickyNote className="size-3 shrink-0" aria-hidden />

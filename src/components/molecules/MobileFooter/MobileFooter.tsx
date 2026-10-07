@@ -2,16 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Flame, Home, Library, Search, Settings, UserRoundPlus } from 'lucide-react';
+import { Flame, Home, Library, Search, Settings, Store, UserRoundPlus } from 'lucide-react';
 import { APP_ROUTES, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { getShopLink } from '@/config/externalLinks';
 import { FileController } from '@/controllers/file/file';
-import { useCollectionsNavDiscovery } from '@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
-import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisible';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
@@ -38,9 +38,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const unreadNotifications = useNotificationStore((state) => state.selectUnread());
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
-  const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset();
-  const { showCollectionsNew, markCollectionsNavSeen } = useCollectionsNavDiscovery();
-  const collectionsNewLabel = 'New';
+  const isKeyboardVisible = useKeyboardVisible();
 
   // Get avatar URL and fallback initial - same logic as desktop header
   const avatarUrl =
@@ -67,6 +65,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
       icon: Flame,
       label: 'Hot',
     },
+    { href: getShopLink(), icon: Store, label: 'Shop', rel: 'noopener noreferrer' },
     {
       href: APP_ROUTES.COLLECTIONS,
       activePrefix: APP_ROUTES.COLLECTIONS,
@@ -83,7 +82,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const protectedNavHrefs = new Set<string>([SETTINGS_ROUTES.ACCOUNT]);
   // Hide footer for guests only on non-explore routes. Core explore and dynamic public
   // routes (/home, /post/..., /profile/...) use the public explore footer.
-  if (!isAuthenticated && !isPublicExploreRoute) {
+  if (isKeyboardVisible || (!isAuthenticated && !isPublicExploreRoute)) {
     return null;
   }
 
@@ -91,16 +90,9 @@ export function MobileFooter({ className }: MobileFooterProps) {
     <Container
       overrideDefaults
       className={cn(
-        'fixed bottom-0 z-40 w-full overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 transition-transform duration-75 lg:hidden',
+        'fixed bottom-0 z-40 w-full overflow-x-auto bg-gradient-to-t from-background via-background/95 to-transparent px-3 py-4 lg:hidden',
         className,
       )}
-      style={
-        isKeyboardVisible && keyboardOffset > 0
-          ? {
-              transform: `translateY(-${keyboardOffset}px)`,
-            }
-          : undefined
-      }
     >
       <Container
         overrideDefaults
@@ -109,43 +101,30 @@ export function MobileFooter({ className }: MobileFooterProps) {
         {authenticatedNavItems.map((item) => {
           const Icon = item.icon;
           const itemIsActive = isNavItemActive(pathname, item);
-          const isCollectionsItem = item.href === APP_ROUTES.COLLECTIONS;
-          const showCollectionsNewTreatment = isCollectionsItem && showCollectionsNew;
           return (
             <Link
               key={item.href}
               href={item.href}
-              aria-label={showCollectionsNewTreatment ? `${item.label}, ${collectionsNewLabel}` : item.label}
+              rel={item.rel}
+              // Search prefetch can loop even after leaving a query search (#2755).
+              // Active feed links only scroll, so they also skip prefetch.
+              prefetch={item.href === APP_ROUTES.SEARCH || (item.isFeedRoute && itemIsActive) ? false : undefined}
+              aria-label={item.label}
               onClick={(event) => {
                 if (!isAuthenticated && protectedNavHrefs.has(item.href)) {
                   event.preventDefault();
                   setShowSignInDialog(true);
                   return;
                 }
-                if (isAuthenticated && isCollectionsItem) {
-                  markCollectionsNavSeen();
-                }
                 if (!item.isFeedRoute) return;
                 handleFeedNavClick(event, { isActive: itemIsActive, smoothScrollWhenActive: true });
               }}
               className={cn(
-                'rounded-full p-3 transition-all',
-                showCollectionsNewTreatment
-                  ? 'relative inline-flex border border-brand bg-white/5 text-brand hover:bg-brand/10'
-                  : itemIsActive
-                    ? 'bg-secondary'
-                    : 'border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10',
+                'shrink-0 rounded-full p-2 transition-all sm:p-3',
+                itemIsActive ? 'bg-secondary' : 'border border-border bg-white/5 backdrop-blur-sm hover:bg-white/10',
               )}
             >
               <Icon className="h-6 w-6" />
-              {showCollectionsNewTreatment ? (
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-12 left-1/2 -translate-x-1/2 text-xs font-semibold text-brand uppercase"
-                >
-                  {collectionsNewLabel}
-                </span>
-              ) : null}
             </Link>
           );
         })}
@@ -161,7 +140,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
               name={avatarName}
               fallbackSeed={currentUserPubky || avatarName}
               size="lg"
-              className="cursor-pointer"
+              className="h-10 w-10 cursor-pointer sm:h-12 sm:w-12"
               alt={'Profile'}
             />
             {unreadNotifications > 0 && (
@@ -184,7 +163,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
           <Button
             variant="secondary"
             size="icon"
-            className="size-12 items-center justify-center border bg-white/5"
+            className="size-10 items-center justify-center border bg-white/5 sm:size-12"
             aria-label="Join Pubky"
             onClick={() => setShowSignInDialog(true)}
           >

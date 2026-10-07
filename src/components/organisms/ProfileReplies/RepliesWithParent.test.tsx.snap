@@ -92,7 +92,7 @@ exports[`RepliesWithParent > Snapshots > should match snapshot with replies (no 
         </div>
       </div>
       <div
-        class="h-[20px]"
+        class="h-5"
         data-testid="container"
       />
     </div>
@@ -199,7 +199,7 @@ exports[`RepliesWithParent > Snapshots > should match snapshot with replies and 
         </div>
       </div>
       <div
-        class="h-[20px]"
+        class="h-5"
         data-testid="container"
       />
     </div>

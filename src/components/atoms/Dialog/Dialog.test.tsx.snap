@@ -11,7 +11,6 @@ exports[`Dialog - Snapshots > matches snapshot for DialogContent with close butt
   class="fixed inset-0 z-50 flex justify-center items-end sm:items-center"
 >
   <div
-    aria-labelledby="radix-normalized"
     class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto border bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:p-8 rounded-t-lg border-b-0 sm:border-b"
     data-cy="dialog-content"
     data-slot="dialog-content"
@@ -66,7 +65,6 @@ exports[`Dialog - Snapshots > matches snapshot for DialogContent with default pr
   class="fixed inset-0 z-50 flex justify-center items-end sm:items-center"
 >
   <div
-    aria-labelledby="radix-normalized"
     class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto border bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:p-8 rounded-t-lg border-b-0 sm:border-b"
     data-cy="dialog-content"
     data-slot="dialog-content"
@@ -190,7 +188,6 @@ exports[`Dialog - Snapshots > matches snapshot for DialogContent without close b
   class="fixed inset-0 z-50 flex justify-center items-end sm:items-center"
 >
   <div
-    aria-labelledby="radix-normalized"
     class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto border bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:p-8 rounded-t-lg border-b-0 sm:border-b"
     data-cy="dialog-content"
     data-slot="dialog-content"
@@ -349,7 +346,6 @@ exports[`Dialog - Snapshots > matches snapshot for DialogHeader 1`] = `
 
 exports[`Dialog - Snapshots > matches snapshot for DialogTrigger with asChild 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   data-as-child="true"
@@ -364,7 +360,6 @@ exports[`Dialog - Snapshots > matches snapshot for DialogTrigger with asChild 1`
 
 exports[`Dialog - Snapshots > matches snapshot for DialogTrigger with default props 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   data-as-child="false"

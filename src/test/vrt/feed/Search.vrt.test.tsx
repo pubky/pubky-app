@@ -2,6 +2,7 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
+import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
@@ -11,6 +12,8 @@ import { Header } from '@/organisms/Header/Header';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
 import { Search } from '@/templates/Feed/Search/Search';
+import { page } from 'vitest/browser';
+import { useSearchStore } from '@/stores/search/search.store';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
@@ -197,8 +200,8 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
-  useKeyboardOffset: () => ({ isKeyboardVisible: false, keyboardOffset: 0 }),
+vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
+  useKeyboardVisible: () => false,
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
@@ -210,13 +213,18 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 // stable fixture slice.
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
   const f = await fixtures;
-  const cache = new Map<string, unknown>();
+  const cache = new Map<string | undefined, unknown>();
   return {
-    useStreamPagination: ({ streamId }: { streamId: string }) => {
+    useStreamPagination: ({ streamId }: { streamId: string | undefined }) => {
       const cached = cache.get(streamId);
       if (cached) return cached;
       const result = {
-        postIds: streamId.includes(':collection:') ? f.searchCollectionIds : f.taggedSearchCompositeIds,
+        postIds:
+          !streamId || streamId.includes('q~unmatched')
+            ? []
+            : streamId.includes(':collection:')
+              ? f.searchCollectionIds
+              : f.taggedSearchCompositeIds,
         loading: false,
         loadingMore: false,
         error: null,
@@ -409,7 +417,10 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => {
 
 vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
   const f = await fixtures;
-  const cache = new Map<string, { showRepostHeader: boolean; shouldShowPostHeader: boolean }>();
+  const cache = new Map<
+    string,
+    { showRepostHeader: boolean; shouldShowPostHeader: boolean; originalPostId: string | null }
+  >();
   return {
     usePostHeaderVisibility: (compositeId: string) => {
       const cached = cache.get(compositeId);
@@ -419,6 +430,7 @@ vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
       const result = {
         showRepostHeader: !!(entry && 'relationships' in entry && entry.relationships.reposted),
         shouldShowPostHeader: true,
+        originalPostId: null,
       };
       cache.set(compositeId, result);
       return result;
@@ -474,13 +486,14 @@ vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
   useEnrichedTags: <T,>(tags: T[]) => ({ enrichedTags: tags, isLoading: false }),
 }));
 
-vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => {
-  const result = {
-    taggersByLabel: new Map<string, string[]>(),
-    taggerStates: new Map<string, { isLoading: boolean; error: string | null }>(),
-    fetchAllTaggers: async () => {},
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useEntityTaggers/useEntityTaggers')>();
+  const result: UseEntityTaggersResult = {
+    taggerStates: new Map(),
+    loadTaggers: async () => {},
+    loadMoreTaggers: async () => {},
   };
-  return { usePostTaggers: () => result };
+  return { ...actual, useEntityTaggers: () => result };
 });
 
 vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => {
@@ -525,30 +538,50 @@ vi.mock('@/hooks/useHotTags/useHotTags', () => {
 // tagged cases leave `searchInputUi` cleared so suggestions stay closed.
 vi.mock('@/hooks/useSearchInput/useSearchInput', async () => {
   const React = await import('react');
+  // Stable function identities, matching the real hook's contract: `setInputValue`
+  // is a useState setter, and SearchInput's URL-sync effect lists it as a dep — a
+  // per-render vi.fn() here refires that effect every render and loops the store sync.
+  const handleInputChange = vi.fn();
+  const handleKeyDown = vi.fn();
+  const handleFocus = () => {
+    searchInputUi.isFocused = true;
+  };
+  const setFocus = (focused: boolean) => {
+    searchInputUi.isFocused = focused;
+  };
   return {
     useSearchInput: () => {
+      // Real state seeded from the per-case preset: `setInputValue` must be
+      // LIVE (not inert) so the full-text case exercises SearchInput's URL
+      // seeding for real — if `?q=` ever stops reaching the input, the
+      // content baselines show an empty bar and the diff fails.
+      const [inputValue, setInputValue] = React.useState(searchInputUi.inputValue);
       const containerRef = React.useRef<HTMLDivElement>(null);
       const inputRef = React.useRef<HTMLInputElement>(null);
       return {
-        inputValue: searchInputUi.inputValue,
+        inputValue,
         isFocused: searchInputUi.isFocused,
         containerRef,
         inputRef,
-        handleInputChange: vi.fn(),
-        handleKeyDown: vi.fn(),
-        handleFocus: () => {
-          searchInputUi.isFocused = true;
-        },
-        clearInputValue: () => {
-          searchInputUi.inputValue = '';
-        },
-        setFocus: (focused: boolean) => {
-          searchInputUi.isFocused = focused;
-        },
+        handleInputChange,
+        handleKeyDown,
+        handleFocus,
+        clearInputValue: () => setInputValue(''),
+        setInputValue,
+        setFocus,
       };
     },
   };
 });
+
+// Tags pivot row on the full-text results page — deterministic prefix matches
+// for the `bitcoin design` query (exact terms first, then extensions).
+vi.mock('@/hooks/useContentSearchTags/useContentSearchTags', () => ({
+  useContentSearchTags: (query: string | null) => ({
+    tags: query === null ? [] : ['bitcoin', 'design', 'bitcoiners', 'design-systems'],
+    isLoading: false,
+  }),
+}));
 
 // When the field is focused with a query, return fixture users (by_name / by_id path).
 vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', async () => {
@@ -601,14 +634,46 @@ function setSearchTags(tags: string[]) {
   navigation.searchParams = tags.length ? new URLSearchParams({ tags: tags.join(',') }) : new URLSearchParams();
 }
 
+function setContentSearchQuery(query: string) {
+  navigation.searchParams = new URLSearchParams({ q: query });
+}
+
 function resetSearchInputUi() {
   searchInputUi.inputValue = '';
   searchInputUi.isFocused = false;
 }
 
 beforeEach(() => {
+  useSearchStore.getState().reset();
   setSearchTags([]);
   resetSearchInputUi();
+});
+
+describe('Search reach — visual regression', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders empty scoped results on %s', async (name, viewport) => {
+    setContentSearchQuery('unmatched query');
+    useSearchStore.getState().setReach('friends');
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport });
+    await expect.element(screen.getByRole('button', { name: 'Search in All' })).toBeVisible();
+    await matchVrtFrameScreenshot(`search-reach-empty-${name}`);
+  });
+
+  it.each([
+    ['mobile', VRT_VIEWPORT_MOBILE],
+    ['tablet', { width: 768, height: 1024 }],
+  ] as const)('renders the reach control in the %s drawer', async (name, viewport) => {
+    setContentSearchQuery('bitcoin design');
+    useSearchStore.getState().setReach('network');
+    await renderForVRT(<SearchWithLayout />, { viewport });
+    await page
+      .elementLocator(document.querySelector<HTMLButtonElement>('button:has(.lucide-sliders-horizontal)')!)
+      .click();
+    await expect.element(page.getByRole('radio', { name: 'My network' })).toHaveAttribute('aria-checked', 'true');
+    await matchVrtFrameScreenshot(`search-reach-drawer-${name}`);
+  });
 });
 
 describe('Search (empty state) — visual regression', () => {
@@ -658,6 +723,31 @@ describe('Search (tagged results) — visual regression', () => {
   });
 });
 
+describe('Search (full-text results) — visual regression', () => {
+  // No input preset here on purpose: SearchInput's URL-sync effect must seed
+  // `?q=` into the bar itself (the mocked `setInputValue` is live), so these
+  // baselines show — and guard — the query text in the input.
+  beforeEach(() => {
+    setContentSearchQuery('bitcoin design');
+  });
+
+  it('renders relevance-ranked content results at desktop viewport', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(screen.getByPlaceholder('Search').first()).toHaveValue('bitcoin design');
+    // exact: the accessible-name match is a substring match, so plain 'Tags'
+    // also resolves the right sidebar's 'Hot tags' heading (strict-mode error).
+    await expect.element(screen.getByRole('heading', { name: 'Tags', exact: true })).toBeVisible();
+    await matchVrtFrameScreenshot('search-content-desktop');
+  });
+
+  it('renders relevance-ranked content results at mobile viewport', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(screen.getByPlaceholder('Search').first()).toHaveValue('bitcoin design');
+    await expect.element(screen.getByRole('heading', { name: 'Tags', exact: true })).toBeVisible();
+    await matchVrtFrameScreenshot('search-content-mobile');
+  });
+});
+
 describe('Search (profile results) — visual regression', () => {
   // Autocomplete users panel — UI for Nexus `search/users/by_name` / `by_id`.
   // Empty URL (no ?tags=); focused input with a name prefix opens suggestions.
@@ -667,12 +757,58 @@ describe('Search (profile results) — visual regression', () => {
   });
 
   it('renders profile search suggestions at desktop viewport', async () => {
-    await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(screen.getByRole('button', { name: 'Clear and close search' })).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Show all results' })).toBeVisible();
     await matchVrtFrameScreenshot('search-profiles-desktop');
   });
 
   it('renders profile search suggestions at mobile viewport', async () => {
-    await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(screen.getByRole('button', { name: 'Clear and close search' })).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Show all results' })).toBeVisible();
     await matchVrtFrameScreenshot('search-profiles-mobile');
+  });
+});
+
+describe('Cards layout — search', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders Cards on %s', async (name, viewport) => {
+    const { useHomeStore } = await import('@/stores/home/home.store');
+    const state = useHomeStore.getState();
+    const previousLayout = state.layout;
+    state.layout = 'cards';
+    setContentSearchQuery('bitcoin design');
+    try {
+      await renderForVRT(<SearchWithLayout />, { viewport });
+      await expect.poll(() => document.querySelector('[data-cy="timeline-posts-cards"]')).not.toBeNull();
+      await expect
+        .poll(() => {
+          const feed = document.querySelector<HTMLElement>('[data-cy="timeline-posts-cards"]')!;
+          const cards = Array.from(feed.children).map((card) => card.getBoundingClientRect());
+          expect(cards.length).toBeGreaterThan(1);
+          expect(feed.getBoundingClientRect().bottom).toBeGreaterThanOrEqual(
+            Math.max(...cards.map((card) => card.bottom)) - 1,
+          );
+          for (const [index, card] of cards.entries()) {
+            expect(card.right).toBeLessThanOrEqual(feed.getBoundingClientRect().right + 1);
+            for (const other of cards.slice(index + 1)) {
+              expect(
+                card.left < other.right - 1 &&
+                  card.right > other.left + 1 &&
+                  card.top < other.bottom - 1 &&
+                  card.bottom > other.top + 1,
+              ).toBe(false);
+            }
+          }
+          return true;
+        })
+        .toBe(true);
+      await matchVrtFrameScreenshot(`search-cards-${name}`);
+    } finally {
+      state.layout = previousLayout;
+    }
   });
 });

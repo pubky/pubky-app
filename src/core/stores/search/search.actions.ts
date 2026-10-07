@@ -1,7 +1,10 @@
+import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
+import { toContentSearchKey } from '@/libs/search/contentSearch';
 import type { Pubky } from '@/models/models.types';
 import { ZustandSet } from '../stores.types';
-import { MAX_ACTIVE_SEARCH_TAGS, MAX_RECENT_SEARCHES } from './search.constants';
+import { MAX_RECENT_SEARCHES } from './search.constants';
 import {
+  RecentQuerySearch,
   RecentTagSearch,
   RecentUserSearch,
   SearchActions,
@@ -15,6 +18,7 @@ import { addItemToTop, addTagToArray } from './search.utils';
  * Actions/Mutators - State modification functions
  */
 export const createSearchActions = (set: ZustandSet<SearchStore>): SearchActions => ({
+  setReach: (reach) => set({ reach }, false, SearchActionTypes.SET_REACH),
   /**
    * Add a user to recent searches
    * Moves existing user to top if already present
@@ -53,13 +57,40 @@ export const createSearchActions = (set: ZustandSet<SearchStore>): SearchActions
   },
 
   /**
-   * Clear only recent searches (users and tags), keep active tags
+   * Add a full-text query to recent searches
+   * Moves existing query to top if already present, matching case-insensitively
+   * like Nexus `by_content`; the chip keeps the latest search's casing
+   * Removes oldest if at max capacity
+   * Note: Query should be validated (trimmed) before calling
+   */
+  addQuery: (query: string) => {
+    set(
+      (state) => {
+        const now = Date.now();
+        const newQuery: RecentQuerySearch = { query, searchedAt: now };
+        const queryKey = toContentSearchKey(query);
+        const newQueries = addItemToTop(
+          state.recentQueries,
+          newQuery,
+          (q) => toContentSearchKey(q.query) === queryKey,
+          MAX_RECENT_SEARCHES,
+        );
+        return { recentQueries: newQueries };
+      },
+      false,
+      SearchActionTypes.ADD_QUERY,
+    );
+  },
+
+  /**
+   * Clear only recent searches (users, tags, and queries), keep active tags
    */
   clearRecentSearches: () => {
     set(
       (_state) => ({
         recentUsers: [],
         recentTags: [],
+        recentQueries: [],
       }),
       false,
       SearchActionTypes.CLEAR_RECENT_SEARCHES,
@@ -68,13 +99,14 @@ export const createSearchActions = (set: ZustandSet<SearchStore>): SearchActions
 
   /**
    * Set active tags (used for URL → store sync)
-   * Replaces all active tags with the provided array
+   * Replaces all active tags with the provided array, capped like the URL
+   * parser (`getMaxStreamTags()`) so no searched tag is left without a chip
    * Note: Tags should be normalized (lowercase, trimmed) before calling
    */
   setActiveTags: (tags: string[]) => {
     set(
       () => ({
-        activeTags: tags.slice(0, MAX_ACTIVE_SEARCH_TAGS),
+        activeTags: tags.slice(0, getMaxStreamTags()),
       }),
       false,
       SearchActionTypes.SET_ACTIVE_TAGS,

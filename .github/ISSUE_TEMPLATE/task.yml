@@ -10,9 +10,10 @@ body:
         Internal development task. Use this for refactoring, tech debt, infrastructure, etc.
         
         📚 **Reference our docs:**
-        - Architecture: `.cursor/docs/core-context.md`
-        - Components: `.cursor/docs/component-guidelines.md`
-        - ADRs: `.cursor/adr/`
+        - Start here: `AGENTS.md`
+        - Architecture: `docs/architecture.md`
+        - Components: `docs/components.md`
+        - ADRs: `docs/adr/`
 
   - type: textarea
     id: description
@@ -54,7 +55,6 @@ body:
         - Runtime Config / Environment
         - App / Routes
         - Providers
-        - i18n
         - PWA / Service Worker
         - Tests
         - CI / Tooling

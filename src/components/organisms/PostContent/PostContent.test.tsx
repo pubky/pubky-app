@@ -62,6 +62,7 @@ describe('PostContent', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: false,
       repostAuthorId: null,
+      isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
       isLoading: false,
@@ -90,6 +91,7 @@ describe('PostContent', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: false,
       repostAuthorId: null,
+      isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
       isLoading: false,
@@ -109,6 +111,7 @@ describe('PostContent', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
       isLoading: false,
@@ -128,6 +131,7 @@ describe('PostContent', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: false,
       originalPostId: 'orig-post',
       isLoading: false,
@@ -162,6 +166,7 @@ describe('PostContent - Snapshots', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: false,
       repostAuthorId: null,
+      isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
       isLoading: false,
@@ -180,6 +185,7 @@ describe('PostContent - Snapshots', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: false,
       originalPostId: 'orig-post',
       isLoading: false,
@@ -198,6 +204,7 @@ describe('PostContent - Snapshots', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: false,
       originalPostId: 'orig-post',
       isLoading: false,

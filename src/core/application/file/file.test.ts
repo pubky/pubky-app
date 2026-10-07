@@ -520,6 +520,32 @@ describe('FileApplication', () => {
   });
 
   describe('persistFiles', () => {
+    it.each([{ uri: 'invalid-file-uri' }, { urls: '{invalid json' }])(
+      'keeps valid attachments when a peer has malformed metadata: %j',
+      async (invalid) => {
+        const valid = createMockFile('', 'valid.png', createFileUri('valid'));
+        const malformed = asOpaque<NexusFileDetails>({ ...valid, ...invalid });
+        const createMany = vi.spyOn(LocalFileService, 'createMany').mockResolvedValue(undefined);
+        await FileApplication.persistFiles([malformed, valid]);
+        expect(createMany).toHaveBeenCalledWith({
+          files: [
+            {
+              ...valid,
+              id: buildCompositeId({ pubky: TEST_PUBKY, id: 'valid' }),
+            },
+          ],
+        });
+      },
+    );
+
+    it('propagates a storage failure so an incomplete refresh can retry', async () => {
+      const failure = new Error('file storage unavailable');
+      vi.spyOn(LocalFileService, 'createMany').mockRejectedValue(failure);
+      await expect(
+        FileApplication.persistFiles([createMockFile('', 'valid.png', createFileUri('valid'))]),
+      ).rejects.toBe(failure);
+    });
+
     it('returns early when fileAttachments is empty', async () => {
       const createManySpy = vi.spyOn(LocalFileService, 'createMany');
 

@@ -1,10 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/molecules/Toaster/toast';
 import { useSignOut } from './useSignOut';
 
 const mockPush = vi.fn();
 const mockLogout = vi.fn();
-const mockToast = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -16,11 +16,7 @@ vi.mock('@/controllers/auth/auth', () => ({
   AuthController: { logout: (...args: unknown[]) => mockLogout(...args) },
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({ toast: mockToast }),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/app/routes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/routes')>();
@@ -64,7 +60,7 @@ describe('useSignOut', () => {
       await result.current.handleSignOut();
     });
 
-    expect(mockToast).toHaveBeenCalledWith(
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(
       expect.objectContaining({
         description: 'Could not sign out. Try again.',
       }),

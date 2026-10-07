@@ -6,7 +6,7 @@ import { z } from 'zod';
  * third parties against their own infrastructure).
  *
  * The config has multiple tiers:
- *  - REQUIRED network values (nexusUrl, cdnUrl, ...): a deployed container must set all of
+ *  - REQUIRED network values and Shop destination (nexusUrl, cdnUrl, ..., shopUrl): a deployed container must set all of
  *    them; partial config fails loudly instead of silently resolving to staging defaults.
  *  - OPTIONAL observability values (sentry*): absent means the feature is disabled (DSN) or
  *    a documented default applies (sample rates).
@@ -28,6 +28,7 @@ import { z } from 'zod';
 // ---------------------------------------------------------------------------
 
 const urlValue = z.url();
+const shopUrlValue = z.url({ protocol: /^https?$/ });
 const homeserverValue = z.string().min(1);
 /**
  * Declared deploy identity. Drives environment-gated behavior (e.g. the staging
@@ -171,6 +172,8 @@ export const APP_RUNTIME_DEFAULTS = {
   ttlPostMaxBatchSize: 20,
   ttlUserMaxBatchSize: 20,
   ttlRetryDelayMs: 60_000,
+  // Bounded indexing grace period, matching the existing tag-mutation default, not an SLA.
+  profileLocalEditTtlMs: 300_000,
   moderationId: 'nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy',
   moderatedTags: ['nudity'],
   exchangeRateApi: 'https://api1.blocktank.to/api/fx/rates/btc',
@@ -195,13 +198,23 @@ export const APP_RUNTIME_DEFAULTS = {
   playStoreUrl: 'https://play.google.com/store/apps/details?id=to.pubky.ring&pcampaignid=web_share',
 } as const;
 
+/**
+ * Pubky Passport signer origin. Deployed mode has NO default: an unset value disables the
+ * "Continue with Google" entry points until the operator points the deploy at a live Passport.
+ * The staging origin below is applied only by the lenient dev/test parse so `npm run dev:https`
+ * works without an `.env.local`.
+ */
+export const PASSPORT_RUNTIME_DEFAULTS = {
+  passportUrl: 'https://passport.staging.pubky.app',
+} as const;
+
 // ---------------------------------------------------------------------------
 // App-facing config shape
 // ---------------------------------------------------------------------------
 
 /**
- * REQUIRED tier: environment-specific network values. A deployed container must set all of
- * them (see `runtimeEnvInputSchema`).
+ * REQUIRED tier: environment-specific network values and Shop destination. A deployed container
+ * must set all of them (see `runtimeEnvInputSchema`).
  */
 export const networkConfigValueSchema = z.object({
   nexusUrl: urlValue,
@@ -214,6 +227,7 @@ export const networkConfigValueSchema = z.object({
   pkarrRelays: pkarrRelaysValue,
   testnet: testnetValue,
   deployEnv: deployEnvValue,
+  shopUrl: shopUrlValue,
 });
 
 export type NetworkRuntimeConfig = z.infer<typeof networkConfigValueSchema>;
@@ -223,6 +237,9 @@ export type NetworkRuntimeConfig = z.infer<typeof networkConfigValueSchema>;
  * Validates `window.__PUBKY_CONFIG__`.
  */
 export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
+  /** Optional browser telemetry. Only a client key is needed; endpoint overrides the SDK default. */
+  pulseClientKey: z.string().startsWith('pulse_client_').optional(),
+  pulseEndpoint: urlValue.optional(),
   /** Sentry DSN shared by browser/server/edge. Absent/empty disables Sentry entirely. */
   sentryDsn: urlValue.optional(),
   /** Environment tag attached to every Sentry event. Absent falls back to NODE_ENV (see sentry.ts). */
@@ -245,6 +262,7 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   ttlPostMaxBatchSize: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlPostMaxBatchSize),
   ttlUserMaxBatchSize: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlUserMaxBatchSize),
   ttlRetryDelayMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlRetryDelayMs),
+  profileLocalEditTtlMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.profileLocalEditTtlMs),
   moderationId: pubkyValue.optional(),
   moderatedTags: z.array(nonEmptyStringValue).default([...APP_RUNTIME_DEFAULTS.moderatedTags]),
   exchangeRateApi: urlValue.default(APP_RUNTIME_DEFAULTS.exchangeRateApi),
@@ -252,6 +270,8 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   preludeSdkTimeoutMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.preludeSdkTimeoutMs),
   plausibleDomain: nonEmptyStringValue.optional(),
   plausibleScriptUrl: urlValue.optional(),
+  /** Pubky Passport origin. Absent disables Passport ("Continue with Google") everywhere. */
+  passportUrl: urlValue.optional(),
   previewImage: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.previewImage),
   siteName: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.siteName),
   locale: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.locale),
@@ -270,6 +290,10 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   email: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.email),
   appStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.appStoreUrl),
   playStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.playStoreUrl),
+  /** Lock Server pubky the composer's lock flow signs into. Absent = Locks disabled. */
+  lockServer: nonEmptyStringValue.optional(),
+  /** Paykit Server address, where a creator connects the account that receives payments. Absent = Locks disabled. */
+  paykitServerUrl: urlValue.optional(),
 });
 
 const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
@@ -297,6 +321,11 @@ export const runtimeEnvInputSchema = z
     pkarrRelays: pkarrRelaysFromString,
     testnet: testnetFromString,
     deployEnv: deployEnvValue,
+    shopUrl: shopUrlValue,
+    lockServer: optionalTrimmedString,
+    paykitServerUrl: optionalUrlFromString,
+    pulseClientKey: optionalTrimmedString,
+    pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -317,6 +346,7 @@ export const runtimeEnvInputSchema = z
     ttlPostMaxBatchSize: optionalPositiveIntFromString,
     ttlUserMaxBatchSize: optionalPositiveIntFromString,
     ttlRetryDelayMs: optionalPositiveIntFromString,
+    profileLocalEditTtlMs: optionalPositiveIntFromString,
     moderationId: optionalTrimmedString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
@@ -324,6 +354,7 @@ export const runtimeEnvInputSchema = z
     preludeSdkTimeoutMs: optionalPositiveIntFromString,
     plausibleDomain: optionalTrimmedString,
     plausibleScriptUrl: optionalUrlFromString,
+    passportUrl: optionalUrlFromString,
     previewImage: optionalTrimmedString,
     siteName: optionalTrimmedString,
     locale: optionalTrimmedString,
@@ -358,6 +389,7 @@ export const NETWORK_RUNTIME_DEFAULTS: NetworkRuntimeConfig = {
   pkarrRelays: ['https://pkarr.pubky.app', 'https://pkarr.pubky.org'],
   testnet: false,
   deployEnv: 'staging',
+  shopUrl: 'https://shop.staging.pubky.app/marketplace',
 };
 
 /**
@@ -375,6 +407,11 @@ export const runtimeEnvInputSchemaWithDefaults = z
     pkarrRelays: z.string().default(JSON.stringify(NETWORK_RUNTIME_DEFAULTS.pkarrRelays)).pipe(pkarrRelaysFromString),
     testnet: z.string().default(String(NETWORK_RUNTIME_DEFAULTS.testnet)).pipe(testnetFromString),
     deployEnv: deployEnvValue.default(NETWORK_RUNTIME_DEFAULTS.deployEnv),
+    shopUrl: shopUrlValue.default(NETWORK_RUNTIME_DEFAULTS.shopUrl),
+    lockServer: optionalTrimmedString,
+    paykitServerUrl: optionalUrlFromString,
+    pulseClientKey: optionalTrimmedString,
+    pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -395,6 +432,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     ttlPostMaxBatchSize: optionalPositiveIntFromString,
     ttlUserMaxBatchSize: optionalPositiveIntFromString,
     ttlRetryDelayMs: optionalPositiveIntFromString,
+    profileLocalEditTtlMs: optionalPositiveIntFromString,
     moderationId: optionalTrimmedString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
@@ -402,6 +440,12 @@ export const runtimeEnvInputSchemaWithDefaults = z
     preludeSdkTimeoutMs: optionalPositiveIntFromString,
     plausibleDomain: optionalTrimmedString,
     plausibleScriptUrl: optionalUrlFromString,
+    // Lenient-only staging default; an explicit empty value still disables Passport in dev.
+    passportUrl: z
+      .string()
+      .default(PASSPORT_RUNTIME_DEFAULTS.passportUrl)
+      .transform((val) => (val.trim() !== '' ? val : undefined))
+      .pipe(urlValue.optional()),
     previewImage: optionalTrimmedString,
     siteName: optionalTrimmedString,
     locale: optionalTrimmedString,
@@ -441,10 +485,15 @@ const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
   pkarrRelays: 'PUBKY_RUNTIME_PKARR_RELAYS',
   testnet: 'PUBKY_RUNTIME_TESTNET',
   deployEnv: 'PUBKY_RUNTIME_ENV',
+  shopUrl: 'PUBKY_RUNTIME_SHOP_URL',
 };
 
 export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ...NETWORK_RUNTIME_ENV_NAMES,
+  lockServer: 'PUBKY_RUNTIME_LOCK_SERVER',
+  paykitServerUrl: 'PUBKY_RUNTIME_PAYKIT_SERVER_URL',
+  pulseClientKey: 'PUBKY_RUNTIME_PULSE_CLIENT_KEY',
+  pulseEndpoint: 'PUBKY_RUNTIME_PULSE_ENDPOINT',
   sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',
   sentryEnvironment: 'PUBKY_RUNTIME_SENTRY_ENVIRONMENT',
   sentryTracesSampleRate: 'PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE',
@@ -465,6 +514,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ttlPostMaxBatchSize: 'PUBKY_RUNTIME_TTL_POST_MAX_BATCH_SIZE',
   ttlUserMaxBatchSize: 'PUBKY_RUNTIME_TTL_USER_MAX_BATCH_SIZE',
   ttlRetryDelayMs: 'PUBKY_RUNTIME_TTL_RETRY_DELAY_MS',
+  profileLocalEditTtlMs: 'PUBKY_RUNTIME_PROFILE_LOCAL_EDIT_TTL_MS',
   moderationId: 'PUBKY_RUNTIME_MODERATION_ID',
   moderatedTags: 'PUBKY_RUNTIME_MODERATED_TAGS',
   exchangeRateApi: 'PUBKY_RUNTIME_EXCHANGE_RATE_API',
@@ -472,6 +522,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   preludeSdkTimeoutMs: 'PUBKY_RUNTIME_PRELUDE_SDK_TIMEOUT_MS',
   plausibleDomain: 'PUBKY_RUNTIME_PLAUSIBLE_DOMAIN',
   plausibleScriptUrl: 'PUBKY_RUNTIME_PLAUSIBLE_SCRIPT_URL',
+  passportUrl: 'PUBKY_RUNTIME_PASSPORT_URL',
   previewImage: 'PUBKY_RUNTIME_PREVIEW_IMAGE',
   siteName: 'PUBKY_RUNTIME_SITE_NAME',
   locale: 'PUBKY_RUNTIME_LOCALE',

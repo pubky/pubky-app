@@ -1,0 +1,71 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProfilePageSocialGraph - Snapshots > matches snapshot for networked tier 1`] = `
+<div
+  class="flex flex-col gap-2"
+  data-cy="profile-social-graph-section"
+  data-testid="container"
+>
+  <div
+    class="flex items-start gap-1"
+    data-testid="container"
+  >
+    <h2
+      class="text-2xl font-light text-muted-foreground"
+      data-testid="heading-2"
+    >
+      Social Graph
+    </h2>
+    <button
+      aria-expanded="false"
+      aria-haspopup="dialog"
+      aria-label="About social graph status"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground border-none size-8 hover:bg-white/10"
+      data-as-child="true"
+      data-cy="social-graph-help-btn"
+      data-size="icon"
+      data-slot="popover-trigger"
+      data-state="closed"
+      data-testid="popover-trigger"
+      data-variant="ghost"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-circle-question-mark size-4 text-white"
+        data-testid="circle-help-icon"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <path
+          d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+        />
+        <path
+          d="M12 17h.01"
+        />
+      </svg>
+    </button>
+  </div>
+  <div
+    class="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden bg-background [a&]:hover:bg-accent [a&]:hover:text-accent-foreground font-semibold uppercase border-brand text-brand"
+    data-cy="social-graph-badge"
+    data-slot="badge"
+    data-status="networked"
+    data-variant="outline"
+  >
+    Networked
+  </div>
+</div>
+`;

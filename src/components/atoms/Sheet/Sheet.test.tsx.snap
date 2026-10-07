@@ -31,8 +31,6 @@ exports[`Sheet - Snapshots > matches snapshot for SheetContent with bottom side 
     type="button"
   />
   <div
-    aria-describedby="radix-normalized"
-    aria-labelledby="radix-normalized"
     class="fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500 inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom"
     data-state="open"
     id="radix-normalized"
@@ -109,8 +107,6 @@ exports[`Sheet - Snapshots > matches snapshot for SheetContent with default side
     type="button"
   />
   <div
-    aria-describedby="radix-normalized"
-    aria-labelledby="radix-normalized"
     class="fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500 inset-y-0 right-0 h-full w-3/4 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm"
     data-state="open"
     id="radix-normalized"
@@ -187,8 +183,6 @@ exports[`Sheet - Snapshots > matches snapshot for SheetContent with left side 1`
     type="button"
   />
   <div
-    aria-describedby="radix-normalized"
-    aria-labelledby="radix-normalized"
     class="fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500 inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm"
     data-state="open"
     id="radix-normalized"
@@ -265,8 +259,6 @@ exports[`Sheet - Snapshots > matches snapshot for SheetContent with right side 1
     type="button"
   />
   <div
-    aria-describedby="radix-normalized"
-    aria-labelledby="radix-normalized"
     class="fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500 inset-y-0 right-0 h-full w-3/4 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm"
     data-state="open"
     id="radix-normalized"
@@ -343,8 +335,6 @@ exports[`Sheet - Snapshots > matches snapshot for SheetContent with top side 1`]
     type="button"
   />
   <div
-    aria-describedby="radix-normalized"
-    aria-labelledby="radix-normalized"
     class="fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500 inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top"
     data-state="open"
     id="radix-normalized"
@@ -448,7 +438,6 @@ exports[`Sheet - Snapshots > matches snapshot for SheetTitle 1`] = `
 
 exports[`Sheet - Snapshots > matches snapshot for SheetTrigger with asChild 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   data-state="closed"
@@ -460,7 +449,6 @@ exports[`Sheet - Snapshots > matches snapshot for SheetTrigger with asChild 1`] 
 
 exports[`Sheet - Snapshots > matches snapshot for SheetTrigger with default props 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   data-state="closed"

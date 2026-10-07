@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { FileController } from '@/controllers/file/file';
 import { StreamUserController } from '@/controllers/stream/users/users';
 import { UserController } from '@/controllers/user/user';
 import { Logger } from '@/libs/logger/logger';
+import { resolveUserDisplayName } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import type { UseBulkUserAvatarsResult, UserWithAvatar } from './useBulkUserAvatars.types';
@@ -44,10 +45,28 @@ export function useBulkUserAvatars(userIds: Pubky[]): UseBulkUserAvatarsResult {
     new Map<Pubky, NexusUserDetails>(),
   );
 
+  const detailsRef = useRef(userDetailsMap);
+  const inFlightIdsRef = useRef(new Set<Pubky>());
   useEffect(() => {
-    if (uniqueUserIds.length > 0) {
-      StreamUserController.getOrFetchUsers({ userIds: uniqueUserIds });
-    }
+    detailsRef.current = userDetailsMap;
+  }, [userDetailsMap]);
+
+  useEffect(() => {
+    // Dexie retains the previous query result while the next page's query runs.
+    // Avoid repeating the cache-miss scan for users we already have details for.
+    const missingIds = uniqueUserIds.filter((id) => !detailsRef.current.has(id) && !inFlightIdsRef.current.has(id));
+    if (missingIds.length === 0) return;
+    const inFlight = inFlightIdsRef.current;
+    missingIds.forEach((id) => inFlight.add(id));
+    void StreamUserController.getOrFetchUsers({ userIds: missingIds })
+      .catch(() => {
+        // Service errors are already reported. A later page can retry these IDs.
+      })
+      .finally(() => {
+        // Only actual local details count as success: a resolved batch may omit
+        // users, so neither failures nor omissions become permanently "handled".
+        missingIds.forEach((id) => inFlight.delete(id));
+      });
   }, [uniqueUserIds]);
 
   // Build map of users with computed avatar URLs
@@ -55,10 +74,12 @@ export function useBulkUserAvatars(userIds: Pubky[]): UseBulkUserAvatarsResult {
     const map = new Map<Pubky, UserWithAvatar>();
     for (const id of uniqueUserIds) {
       const details = userDetailsMap.get(id);
-      const avatarUrl = details?.image ? FileController.getAvatarUrl(id) : undefined;
+      // Version by indexed_at: a stale CDN copy would otherwise survive the
+      // profile edit that refreshed this row.
+      const avatarUrl = details?.image ? FileController.getAvatarUrl(id, details.indexed_at) : undefined;
       map.set(id, {
         id,
-        name: details?.name,
+        name: details ? resolveUserDisplayName(details) : undefined,
         avatarUrl,
       });
     }

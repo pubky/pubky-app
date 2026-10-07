@@ -110,7 +110,16 @@ describe('MobileHeader', () => {
     render(<MobileHeader />);
 
     const innerContainer = screen.getByTestId('logo').parentElement;
-    expect(innerContainer).toHaveClass('flex', 'w-full', 'items-center', 'justify-between', 'p-6');
+    expect(innerContainer).toHaveClass('flex', 'w-full', 'items-center', 'justify-between', 'px-4', 'py-6');
+    expect(innerContainer).not.toHaveClass('p-6');
+  });
+
+  it('preserves 24px top padding when the bottom padding is removed', () => {
+    render(<MobileHeader containerClassName="pb-0" />);
+
+    const innerContainer = screen.getByTestId('logo').parentElement;
+    expect(innerContainer).toHaveClass('px-4', 'py-6', 'pb-0');
+    expect(innerContainer).not.toHaveClass('p-6');
   });
 
   it('applies correct classes to left button', () => {

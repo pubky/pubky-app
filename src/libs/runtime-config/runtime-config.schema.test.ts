@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   APP_RUNTIME_DEFAULTS,
   NETWORK_RUNTIME_DEFAULTS,
+  PASSPORT_RUNTIME_DEFAULTS,
   runtimeConfigValueSchema,
   runtimeEnvInputSchema,
   runtimeEnvInputSchemaWithDefaults,
@@ -20,6 +21,7 @@ const VALID_ENV_INPUT = {
   pkarrRelays: '["https://pkarr.example.com"]',
   testnet: 'true',
   deployEnv: 'production',
+  shopUrl: 'https://shop.example.com/marketplace',
 };
 
 const SENTRY_ENV_INPUT = {
@@ -47,6 +49,22 @@ const APP_ENV_INPUT = {
 };
 
 describe('runtimeEnvInputSchema', () => {
+  it.each([undefined, '', '   ', 'not-a-url', '/marketplace', 'javascript:alert(1)', 'ftp://shop.example.com'])(
+    'rejects a missing or invalid required Shop URL: %s',
+    (shopUrl) => {
+      expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, shopUrl })).toThrow();
+      expect(() => runtimeConfigValueSchema.parse({ ...NETWORK_RUNTIME_DEFAULTS, shopUrl })).toThrow();
+    },
+  );
+
+  it.each(['https://shop.example.com/marketplace', 'http://localhost:3000/marketplace'])(
+    'uses the configured Shop destination: %s',
+    (shopUrl) => {
+      expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, shopUrl }).shopUrl).toBe(shopUrl);
+      expect(runtimeEnvInputSchemaWithDefaults.parse({ shopUrl }).shopUrl).toBe(shopUrl);
+    },
+  );
+
   it('parses string PKARR_RELAYS and TESTNET into parsed shapes', () => {
     const parsed = runtimeEnvInputSchema.parse(VALID_ENV_INPUT);
 
@@ -164,6 +182,11 @@ describe('runtimeEnvInputSchema', () => {
     );
   });
 
+  it('treats an empty Paykit Server URL as unset, and throws on a malformed one', () => {
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, paykitServerUrl: '  ' }).paykitServerUrl).toBeUndefined();
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, paykitServerUrl: 'not-a-url' })).toThrow();
+  });
+
   it('throws on invalid optional boolean values', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, notificationPollOnStart: 'tru' })).toThrow();
     expect(() => runtimeEnvInputSchemaWithDefaults.parse({ streamPollOnStart: 'yes' })).toThrow();
@@ -260,7 +283,12 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     const parsed = runtimeEnvInputSchemaWithDefaults.parse({});
 
     // Defaults must come out PARSED, not as strings.
-    expect(parsed).toEqual({ ...NETWORK_RUNTIME_DEFAULTS, ...SENTRY_RUNTIME_DEFAULTS, ...APP_RUNTIME_DEFAULTS });
+    expect(parsed).toEqual({
+      ...NETWORK_RUNTIME_DEFAULTS,
+      ...SENTRY_RUNTIME_DEFAULTS,
+      ...APP_RUNTIME_DEFAULTS,
+      ...PASSPORT_RUNTIME_DEFAULTS,
+    });
     expect(Array.isArray(parsed.pkarrRelays)).toBe(true);
     expect(typeof parsed.testnet).toBe('boolean');
     expect(parsed.moderationId).toBe(APP_RUNTIME_DEFAULTS.moderationId);
@@ -295,5 +323,25 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     expect(() => runtimeEnvInputSchemaWithDefaults.parse({ moderationId: 'moderation-key' })).toThrow(
       'Expected a 52-character z-base-32 Pubky',
     );
+  });
+
+  it('defaults passportUrl to the staging Passport only in lenient mode', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({}).passportUrl).toBe(PASSPORT_RUNTIME_DEFAULTS.passportUrl);
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).passportUrl).toBeUndefined();
+  });
+
+  it('lets an explicit blank passportUrl disable Passport in lenient mode', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ passportUrl: '' }).passportUrl).toBeUndefined();
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ passportUrl: '   ' }).passportUrl).toBeUndefined();
+  });
+
+  it('honors a provided passportUrl and rejects a malformed one', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ passportUrl: 'https://passport.example.com' }).passportUrl).toBe(
+      'https://passport.example.com',
+    );
+    expect(
+      runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, passportUrl: 'https://passport.example.com' }).passportUrl,
+    ).toBe('https://passport.example.com');
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, passportUrl: 'not-a-url' })).toThrow();
   });
 });

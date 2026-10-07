@@ -13,14 +13,12 @@ const mockUseBulkUserAvatars = vi.hoisted(() =>
 );
 
 const mockUseMutedUsers = vi.hoisted(() =>
-  vi.fn(
-    (): UseMutedUsersResult => ({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: (_userId: Pubky) => false,
-      isLoading: false,
-    }),
-  ),
+  vi.fn((): UseMutedUsersResult => ({
+    mutedUserIds: [],
+    mutedUserIdSet: new Set(),
+    isMuted: (_userId: Pubky) => false,
+    isLoading: false,
+  })),
 );
 
 const mockPush = vi.fn();
@@ -104,14 +102,12 @@ describe('HotTagsCardsSection', () => {
     mockUseBulkUserAvatars.mockImplementation(() => ({
       getUsersWithAvatars: vi.fn((_userIds: Pubky[]): UserWithAvatar[] => []),
     }));
-    mockUseMutedUsers.mockImplementation(
-      (): UseMutedUsersResult => ({
-        mutedUserIds: [],
-        mutedUserIdSet: new Set(),
-        isMuted: (_userId: Pubky) => false,
-        isLoading: false,
-      }),
-    );
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: [],
+      mutedUserIdSet: new Set(),
+      isMuted: (_userId: Pubky) => false,
+      isLoading: false,
+    }));
   });
 
   it('renders heading and empty state when tags are empty', () => {
@@ -126,6 +122,22 @@ describe('HotTagsCardsSection', () => {
     expect(screen.getByTestId('hot-tags-cards-section')).toBeInTheDocument();
     expect(screen.getByText('Hot tags')).toBeInTheDocument();
     expect(screen.getByText('No tags to show')).toBeInTheDocument();
+  });
+
+  it('visually hides the heading below the lg breakpoint in every state', () => {
+    mockUseHotTags.mockReturnValue({ rawTags: [], isLoading: false, error: null });
+    const { unmount: unmountEmpty } = render(<HotTagsCardsSection />);
+    expect(screen.getByText('Hot tags')).toHaveClass('sr-only', 'lg:not-sr-only');
+    unmountEmpty();
+
+    mockUseHotTags.mockReturnValue({ rawTags: [], isLoading: true, error: null });
+    const { unmount: unmountLoading } = render(<HotTagsCardsSection />);
+    expect(screen.getByText('Hot tags')).toHaveClass('sr-only', 'lg:not-sr-only');
+    unmountLoading();
+
+    mockUseHotTags.mockReturnValue({ rawTags: [], isLoading: false, error: 'Network error' });
+    render(<HotTagsCardsSection />);
+    expect(screen.getByText('Hot tags')).toHaveClass('sr-only', 'lg:not-sr-only');
   });
 
   it('renders tag cards when tags are available', () => {
@@ -176,14 +188,12 @@ describe('HotTagsCardsSection', () => {
   });
 
   it('excludes muted taggers from avatar bulk fetch and HotTagCard taggers', () => {
-    mockUseMutedUsers.mockImplementation(
-      (): UseMutedUsersResult => ({
-        mutedUserIds: ['muted-author'],
-        mutedUserIdSet: new Set(['muted-author']),
-        isMuted: (id: Pubky) => id === 'muted-author',
-        isLoading: false,
-      }),
-    );
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: ['muted-author'],
+      mutedUserIdSet: new Set(['muted-author']),
+      isMuted: (id: Pubky) => id === 'muted-author',
+      isLoading: false,
+    }));
 
     const getUsersWithAvatars = vi.fn(() => []);
     mockUseBulkUserAvatars.mockImplementation(() => ({ getUsersWithAvatars }));

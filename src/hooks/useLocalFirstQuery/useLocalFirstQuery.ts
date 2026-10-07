@@ -57,22 +57,37 @@ export function useLocalFirstQuery<T>({
   // "not found" state before the network response arrives.
   const [isFetching, setIsFetching] = useState(false);
 
+  // Dexie retains its previous result while dependencies change. Give each
+  // dependency/enable transition its own identity so neither a stale hit nor a
+  // stale miss can be consumed before the new local read completes.
+  const [query, setQuery] = useState(() => ({ deps: [...deps], enabled }));
+  const [settledQuery, setSettledQuery] = useState<typeof query | null>(null);
+  if (
+    query.enabled !== enabled ||
+    query.deps.length !== deps.length ||
+    deps.some((dep, i) => !Object.is(dep, query.deps[i]))
+  ) {
+    setQuery({ deps: [...deps], enabled });
+  }
+
   // Reactive read from IndexedDB — re-fires whenever the underlying data changes.
   // Returns `undefined` until the first query resolves (used to derive `isLoading`).
   // When `enabled` is false, short-circuits to `null` without calling `queryFn`.
-  const data = useLiveQuery(
+  const snapshot = useLiveQuery(
     async () => {
-      if (!enabled) return null;
+      if (!enabled) return { query, data: null };
       try {
-        return await queryFn();
+        return { query, data: await queryFn() };
       } catch (error) {
         Logger.error('[useLocalFirstQuery] queryFn failed', { error });
-        return null;
+        return { query, data: null };
       }
     },
-    [...(deps as unknown[]), enabled],
+    [query],
     undefined,
   );
+
+  const data = snapshot?.query === query ? snapshot.data : undefined;
 
   // Fetch arm — ensures data exists in IndexedDB.
   // The controller's `fetch*` method is network-only (no local read) — the
@@ -103,6 +118,7 @@ export function useLocalFirstQuery<T>({
     // `isFetching` when `data` is non-null, stale state is a latent bug.
     if (data !== null) {
       setIsFetching(false);
+      setSettledQuery(null);
       return;
     }
 
@@ -119,6 +135,7 @@ export function useLocalFirstQuery<T>({
       .finally(() => {
         if (!cancelled) {
           setIsFetching(false);
+          setSettledQuery(query);
         }
       });
 
@@ -136,6 +153,8 @@ export function useLocalFirstQuery<T>({
   // regardless of `isFetching` — we already have data to render.
   return {
     data,
-    isLoading: data === undefined || (data === null && isFetching),
+    // A miss is pending even in the render before the fetch effect starts.
+    // A later miss after a cache hit starts a fresh attempt in the same lifetime.
+    isLoading: data === undefined || (enabled && data === null && (isFetching || settledQuery !== query)),
   };
 }

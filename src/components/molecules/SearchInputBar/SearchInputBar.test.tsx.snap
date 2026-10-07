@@ -17,28 +17,33 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - defaul
     type="text"
     value=""
   />
-  <svg
+  <span
     aria-hidden="true"
-    class="lucide lucide-search pointer-events-none size-4 shrink-0 text-muted-foreground"
-    fill="none"
-    height="24"
-    stroke="currentColor"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    stroke-width="2"
-    viewBox="0 0 24 24"
-    width="24"
-    xmlns="http://www.w3.org/2000/svg"
+    class="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
   >
-    <path
-      d="m21 21-4.34-4.34"
-    />
-    <circle
-      cx="11"
-      cy="11"
-      r="8"
-    />
-  </svg>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-search size-4 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m21 21-4.34-4.34"
+      />
+      <circle
+        cx="11"
+        cy="11"
+        r="8"
+      />
+    </svg>
+  </span>
 </div>
 `;
 
@@ -59,28 +64,35 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - focuse
     type="text"
     value=""
   />
-  <svg
-    aria-hidden="true"
-    class="lucide lucide-search pointer-events-none size-4 shrink-0 text-muted-foreground"
-    fill="none"
-    height="24"
-    stroke="currentColor"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    stroke-width="2"
-    viewBox="0 0 24 24"
-    width="24"
-    xmlns="http://www.w3.org/2000/svg"
+  <button
+    aria-label="Clear and close search"
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border hover:text-accent-foreground hover:bg-accent/50 -mr-2 size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none"
+    data-size="icon"
+    data-slot="button"
+    data-variant="ghost"
+    type="button"
   >
-    <path
-      d="m21 21-4.34-4.34"
-    />
-    <circle
-      cx="11"
-      cy="11"
-      r="8"
-    />
-  </svg>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-x size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18 6 6 18"
+      />
+      <path
+        d="m6 6 12 12"
+      />
+    </svg>
+  </button>
 </div>
 `;
 
@@ -93,7 +105,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with a
 >
   <div
     aria-label="Active search tags"
-    class="flex min-w-0 items-center gap-2.5 overflow-x-auto py-2"
+    class="flex min-w-0 items-center gap-2 overflow-x-auto py-2"
     role="list"
   >
     <span
@@ -127,28 +139,33 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with a
     type="text"
     value=""
   />
-  <svg
+  <span
     aria-hidden="true"
-    class="lucide lucide-search pointer-events-none size-4 shrink-0 text-muted-foreground"
-    fill="none"
-    height="24"
-    stroke="currentColor"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    stroke-width="2"
-    viewBox="0 0 24 24"
-    width="24"
-    xmlns="http://www.w3.org/2000/svg"
+    class="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
   >
-    <path
-      d="m21 21-4.34-4.34"
-    />
-    <circle
-      cx="11"
-      cy="11"
-      r="8"
-    />
-  </svg>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-search size-4 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m21 21-4.34-4.34"
+      />
+      <circle
+        cx="11"
+        cy="11"
+        r="8"
+      />
+    </svg>
+  </span>
 </div>
 `;
 
@@ -169,27 +186,32 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with i
     type="text"
     value="test query"
   />
-  <svg
+  <span
     aria-hidden="true"
-    class="lucide lucide-search pointer-events-none size-4 shrink-0 text-muted-foreground"
-    fill="none"
-    height="24"
-    stroke="currentColor"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    stroke-width="2"
-    viewBox="0 0 24 24"
-    width="24"
-    xmlns="http://www.w3.org/2000/svg"
+    class="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
   >
-    <path
-      d="m21 21-4.34-4.34"
-    />
-    <circle
-      cx="11"
-      cy="11"
-      r="8"
-    />
-  </svg>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-search size-4 text-muted-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m21 21-4.34-4.34"
+      />
+      <circle
+        cx="11"
+        cy="11"
+        r="8"
+      />
+    </svg>
+  </span>
 </div>
 `;

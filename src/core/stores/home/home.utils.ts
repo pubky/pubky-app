@@ -44,6 +44,11 @@ const REACH_TO_SOURCE = {
 /** Maps streamId SOURCE part to REACH filter (auto-generated) */
 const SOURCE_TO_REACH = reverseMapping(REACH_TO_SOURCE);
 
+/** Maps a reach (anything but Me) to its stream source, which is also the Nexus reach value. */
+export function getSourceFromReach<R extends SourceMappedReachType>(reach: R): (typeof REACH_TO_SOURCE)[R] {
+  return REACH_TO_SOURCE[reach];
+}
+
 /** Maps CONTENT filter to streamId KIND part */
 const CONTENT_TO_KIND = {
   [CONTENT.ALL]: 'all',
@@ -55,6 +60,11 @@ const CONTENT_TO_KIND = {
   [CONTENT.LINKS]: StreamKind.LINK,
   [CONTENT.FILES]: StreamKind.FILE,
 } as const satisfies Record<ContentType, PostStreamKindSegment>;
+
+/** Maps a CONTENT filter directly to the stream-id kind segment. */
+export function getKindFromContent(content: ContentType): PostStreamKindSegment {
+  return CONTENT_TO_KIND[content];
+}
 
 /**
  * Tagged as is a standalone depth-2 Home feed in the V1 UI. Depth 0/1 domain

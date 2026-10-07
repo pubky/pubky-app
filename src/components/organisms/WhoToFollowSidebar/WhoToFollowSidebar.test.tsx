@@ -40,13 +40,13 @@ vi.mock('@/organisms/UserListItem/UserListItem', () => ({
     onFollowClick,
   }: {
     user: { id: string; name: string; isFollowing?: boolean };
-    onFollowClick?: (userId: string, isFollowing: boolean, displayName: string) => void;
+    onFollowClick?: (userId: string, isFollowing: boolean) => void;
   }) => (
     <button
       data-testid="user-list-item"
       data-user-id={user.id}
       type="button"
-      onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false, user.name)}
+      onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false)}
     >
       {user.name}
     </button>
@@ -68,9 +68,7 @@ describe('WhoToFollowSidebar', () => {
       userIds: [],
       isLoading: true,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 
@@ -89,9 +87,7 @@ describe('WhoToFollowSidebar', () => {
       userIds: ['user-1', 'user-2', 'user-3'],
       isLoading: false,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 
@@ -109,16 +105,14 @@ describe('WhoToFollowSidebar', () => {
       userIds: ['user-1'],
       isLoading: false,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 
     render(<WhoToFollowSidebar />);
     fireEvent.click(screen.getByText('User One'));
 
-    expect(hooksMocks.toggleFollow).toHaveBeenCalledWith('user-1', false, 'User One');
+    expect(hooksMocks.toggleFollow).toHaveBeenCalledWith('user-1', false);
     await waitFor(() => {
       expect(hooksMocks.useUserStream).toHaveBeenLastCalledWith(
         expect.objectContaining({
@@ -135,9 +129,7 @@ describe('WhoToFollowSidebar', () => {
       userIds: ['user-1'],
       isLoading: false,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 
@@ -160,9 +152,7 @@ describe('WhoToFollowSidebar', () => {
       userIds: [],
       isLoading: false,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 
@@ -184,9 +174,7 @@ describe('WhoToFollowSidebar', () => {
       userIds: [],
       isLoading: false,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 
@@ -213,9 +201,7 @@ describe('WhoToFollowSidebar', () => {
       userIds: ['user-1', 'user-2', 'user-3', 'user-4'],
       isLoading: false,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 
@@ -240,9 +226,7 @@ describe('WhoToFollowSidebar - Snapshots', () => {
       userIds: [],
       isLoading: true,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 
@@ -259,9 +243,7 @@ describe('WhoToFollowSidebar - Snapshots', () => {
       userIds: ['user-1', 'user-2'],
       isLoading: false,
       isLoadingMore: false,
-      hasMore: false,
       error: null,
-      loadMore: vi.fn(),
       refetch: vi.fn(),
     });
 

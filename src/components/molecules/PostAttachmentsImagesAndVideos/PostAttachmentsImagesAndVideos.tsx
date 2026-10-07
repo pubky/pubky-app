@@ -17,9 +17,9 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
 import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { cn } from '@/libs/utils/utils';
+import { toast } from '@/molecules/Toaster/toast';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { PostAttachmentsCarouselImage } from '../PostAttachmentsCarouselImage/PostAttachmentsCarouselImage';
-import { useToast } from '../Toaster/use-toast';
 
 const MAX_VISIBLE_MEDIA = 4;
 
@@ -39,6 +39,7 @@ type PostAttachmentsImagesAndVideosProps = {
   variant?: 'default' | 'list';
   renderTrigger?: (props: {
     imagesAndVideos: AttachmentConstructed[];
+    isPreviewOpen: boolean;
     openPreview: (index: number, event?: MouseEvent) => void;
   }) => ReactNode;
 };
@@ -53,9 +54,10 @@ export const PostAttachmentsImagesAndVideos = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
+  const [previewTrigger, setPreviewTrigger] = useState<HTMLElement | null>(null);
   const openPreview = (index: number, event?: MouseEvent) => {
     event?.stopPropagation();
+    if (event?.currentTarget instanceof HTMLElement) setPreviewTrigger(event.currentTarget);
     setCurrentIndex(index);
     setOpen(true);
   };
@@ -133,7 +135,7 @@ export const PostAttachmentsImagesAndVideos = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {renderTrigger ? (
-        renderTrigger({ imagesAndVideos, openPreview })
+        renderTrigger({ imagesAndVideos, openPreview, isPreviewOpen: open })
       ) : (
         /* Grid layout */
         <Container
@@ -208,6 +210,14 @@ export const PostAttachmentsImagesAndVideos = ({
         showCloseButton={false}
         overrideDefaults
         centered
+        onCloseAutoFocus={
+          renderTrigger
+            ? (event) => {
+                event.preventDefault();
+                previewTrigger?.focus();
+              }
+            : undefined
+        }
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           carouselRef.current?.focus();

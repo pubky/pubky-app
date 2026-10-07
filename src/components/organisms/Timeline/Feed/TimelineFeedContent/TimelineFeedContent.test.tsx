@@ -7,6 +7,7 @@ import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFe
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import {
   buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
@@ -20,12 +21,10 @@ import { useTimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
-  vi.fn(
-    (): UsePullToRefreshResult => ({
-      state: 'idle',
-      pullDistance: 0,
-    }),
-  ),
+  vi.fn((): UsePullToRefreshResult => ({
+    state: 'idle',
+    pullDistance: 0,
+  })),
 );
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
@@ -72,11 +71,7 @@ vi.mock('@/molecules/Timeline/TimelineLoading', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: vi.fn(),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/organisms/Timeline/Posts/Posts', () => {
   return {
@@ -115,9 +110,9 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
   };
 });
 
-vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
+vi.mock('@/organisms/Timeline/Posts/CardsPosts/CardsPosts', () => {
   return {
-    TimelineGridPosts: ({
+    TimelineCardsPosts: ({
       postIds,
       showEndMessage,
       emptyState,
@@ -129,11 +124,11 @@ vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
       trailingSlot?: ReactNode;
     }) => (
       <div
-        data-testid="timeline-grid-posts"
+        data-testid="timeline-cards-posts"
         data-show-end-message={String(showEndMessage)}
         data-has-trailing-slot={String(Boolean(trailingSlot))}
       >
-        <span data-testid="grid-post-count">{postIds.length}</span>
+        <span data-testid="cards-post-count">{postIds.length}</span>
         {postIds.length === 0 ? emptyState : null}
         {trailingSlot}
       </div>
@@ -176,33 +171,33 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/VisualTimelinePosts', () => {
 
 const COLLECTION_STREAM_ID = buildCollectionItemsStreamId('author-pubky', 'collection-post');
 
-const gridLayoutResolution: FeedLayoutResolution = {
-  requestedLayout: LAYOUT.COLUMNS,
-  effectiveLayout: LAYOUT.COLUMNS,
+const cardsLayoutResolution: FeedLayoutResolution = {
+  requestedLayout: LAYOUT.CARDS,
+  effectiveLayout: LAYOUT.CARDS,
+  isCardsActive: true,
   isVisualRequested: false,
   isVisualActive: false,
-  isGridActive: true,
   isPhoneViewport: false,
 };
 
-const visualGridLayoutResolution: FeedLayoutResolution = {
-  ...gridLayoutResolution,
+const visualCollectionLayoutResolution: FeedLayoutResolution = {
+  ...cardsLayoutResolution,
   requestedLayout: LAYOUT.VISUAL,
   effectiveLayout: LAYOUT.VISUAL,
+  isCardsActive: false,
   isVisualRequested: true,
   isVisualActive: true,
 };
 
 const visualLayoutResolution: FeedLayoutResolution = {
-  ...visualGridLayoutResolution,
-  isGridActive: false,
+  ...visualCollectionLayoutResolution,
 };
 
 const listLayoutResolution: FeedLayoutResolution = {
-  ...gridLayoutResolution,
+  ...cardsLayoutResolution,
   requestedLayout: LAYOUT.LIST,
   effectiveLayout: LAYOUT.LIST,
-  isGridActive: false,
+  isCardsActive: false,
 };
 
 const mockLoadMore = vi.fn();
@@ -210,6 +205,8 @@ const mockRefresh = vi.fn();
 const mockPrependPosts = vi.fn();
 const mockPrependOptimisticPosts = vi.fn();
 const mockRemovePosts = vi.fn();
+const mockRemoveCommit = vi.fn();
+const mockRemovePostsOptimistically = vi.fn(() => ({ commit: mockRemoveCommit, rollback: vi.fn() }));
 
 const defaultMutedUsersResult = {
   mutedUserIds: [],
@@ -229,7 +226,7 @@ const defaultPaginationResult = {
   prependPosts: mockPrependPosts,
   prependOptimisticPosts: mockPrependOptimisticPosts,
   removePosts: mockRemovePosts,
-  removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
+  removePostsOptimistically: mockRemovePostsOptimistically,
 };
 const mockUseStreamPagination = vi.mocked(useStreamPagination);
 const mockUseMutedUsers = vi.mocked(useMutedUsers);
@@ -245,7 +242,32 @@ describe('TimelineFeedContent', () => {
     vi.clearAllMocks();
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
     mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
+    vi.mocked(useUnreadPosts).mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
     mockUsePullToRefresh.mockReturnValue({ state: 'idle' as const, pullDistance: 0 });
+  });
+
+  it('passes mute-list readiness to the new-posts section', () => {
+    vi.mocked(useUnreadPosts).mockReturnValue({ unreadPostIds: ['author:new-post'], unreadCount: 1 });
+    mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, isLoading: true });
+    const feed = (
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+        variant={TIMELINE_FEED_VARIANT.HOME}
+        tagsLayout="inline"
+      />
+    );
+    const { rerender } = render(feed);
+    expect(screen.queryByTestId('new-posts-button')).not.toBeInTheDocument();
+
+    mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
+    rerender(
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+        variant={TIMELINE_FEED_VARIANT.HOME}
+        tagsLayout="inline"
+      />,
+    );
+    expect(screen.getByTestId('new-posts-button')).toHaveTextContent('1 new posts');
   });
 
   describe('TimelineFeedWithStream guard', () => {
@@ -279,6 +301,7 @@ describe('TimelineFeedContent', () => {
       );
       expect(screen.getByTestId('child')).toBeInTheDocument();
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
+      expect(screen.getByTestId('child').parentElement).toHaveClass('gap-4');
     });
 
     it('renders ordinary children before the persistent header and post list', () => {
@@ -669,6 +692,207 @@ describe('TimelineFeedContent', () => {
     });
   });
 
+  describe('Collection membership sync', () => {
+    const collectionFeed = (membershipPostIds: string[] | undefined) => (
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        membershipPostIds={membershipPostIds}
+      />
+    );
+    // The mocked hook is static, so tests simulate what the real hook does after
+    // an apply (the id leaves / enters `postIds`) by updating the mock.
+    const setLoadedIds = (postIds: string[], overrides: Partial<typeof defaultPaginationResult> = {}) =>
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds, hasMore: false, ...overrides });
+
+    beforeEach(() => {
+      // Loaded feed: post1, post2, post3; no more pages so the eager-load effect stays quiet.
+      setLoadedIds(['post1', 'post2', 'post3']);
+    });
+
+    it('treats the first envelope as the baseline and applies nothing', () => {
+      const { rerender } = render(collectionFeed(undefined));
+      rerender(collectionFeed(['post1', 'post2', 'post3']));
+
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
+      expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
+    });
+
+    it('prepends an added id the feed has not loaded, without refetching', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
+      rerender(collectionFeed(['post4', 'post1', 'post2', 'post3']));
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledTimes(1);
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post4']);
+      expect(mockRefresh).not.toHaveBeenCalled();
+    });
+
+    it('commits a removal for a dropped id the feed still shows', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
+      rerender(collectionFeed(['post1', 'post3']));
+
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
+      expect(mockRemoveCommit).toHaveBeenCalledTimes(1);
+    });
+
+    it('applies additions and removals from one envelope change together', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
+      rerender(collectionFeed(['post4', 'post1', 'post3']));
+
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post4']);
+    });
+
+    it('skips an added id the feed already shows', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2']));
+      rerender(collectionFeed(['post3', 'post1', 'post2']));
+
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
+    });
+
+    it('defers a removal until the dropped id is loaded, then commits it once', () => {
+      // post2 is in the envelope but its page has not arrived yet.
+      setLoadedIds(['post1']);
+      const { rerender } = render(collectionFeed(['post1', 'post2']));
+      rerender(collectionFeed(['post1']));
+      expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
+
+      // The page lands and brings post2 (Nexus had not re-indexed the removal).
+      setLoadedIds(['post1', 'post2']);
+      rerender(collectionFeed(['post1']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
+      expect(mockRemoveCommit).toHaveBeenCalledTimes(1);
+
+      // The hook drops the id; the next run has nothing left to remove.
+      setLoadedIds(['post1']);
+      rerender(collectionFeed(['post1']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
+    });
+
+    it('removes a dropped id again when a refresh re-serves it', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
+      rerender(collectionFeed(['post1', 'post3']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
+
+      setLoadedIds(['post1', 'post3']);
+      rerender(collectionFeed(['post1', 'post3']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
+
+      // Pull-to-refresh hits a lagging Nexus stream that still lists post2.
+      setLoadedIds(['post1', 'post2', 'post3']);
+      rerender(collectionFeed(['post1', 'post3']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(2);
+      expect(mockRemovePostsOptimistically).toHaveBeenLastCalledWith(['post2']);
+    });
+
+    it('re-adds an id the envelope drops and later restores', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2']));
+      rerender(collectionFeed(['post1']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
+
+      setLoadedIds(['post1']);
+      rerender(collectionFeed(['post1', 'post2']));
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post2']);
+    });
+
+    it('hides a dropped id in the same render, before the removal is committed', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,post2,post3');
+
+      rerender(collectionFeed(['post1', 'post3']));
+
+      // The render already excludes post2 (no flash to the end of the grid)…
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,post3');
+      // …and the effect commits it out of the hook state.
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
+    });
+
+    it('renders only loaded ids the membership contains, so a stale envelope matches the badge', () => {
+      render(collectionFeed(['post1', 'post3']));
+
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,post3');
+      expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
+    });
+
+    it('does nothing on a reorder-only change', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
+      rerender(collectionFeed(['post3', 'post1', 'post2']));
+
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
+      expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
+    });
+
+    it('defers additions until the initial load has settled', () => {
+      setLoadedIds([], { loading: true });
+      const { rerender } = render(collectionFeed(['post1']));
+      rerender(collectionFeed(['post4', 'post1']));
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
+
+      // The stream lands without post4 (Nexus has not indexed it yet).
+      setLoadedIds(['post1']);
+      rerender(collectionFeed(['post4', 'post1']));
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post4']);
+    });
+
+    it('reconciles members the settled initial stream never delivered', () => {
+      // A viewer opens a collection right after the owner added its first post:
+      // the envelope says [post1], the lagging items stream returns nothing.
+      setLoadedIds([]);
+      render(collectionFeed(['post1']));
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post1']);
+    });
+
+    it('does not reconcile members whose author is muted (the stream filters them on purpose)', () => {
+      mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, mutedUserIdSet: new Set(['muted-user']) });
+      setLoadedIds([]);
+
+      render(collectionFeed(['muted-user:post9', 'post1']));
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post1']);
+    });
+
+    it('waits for the mute list before reconciling missing collection members', () => {
+      const membershipPostIds = ['muted-user:post9', 'other-user:post1'];
+      mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, isLoading: true });
+      setLoadedIds([]);
+
+      const { rerender } = render(collectionFeed(membershipPostIds));
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
+
+      mockUseMutedUsers.mockReturnValue({
+        ...defaultMutedUsersResult,
+        mutedUserIds: ['muted-user'],
+        mutedUserIdSet: new Set(['muted-user']),
+      });
+      rerender(collectionFeed(membershipPostIds));
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledTimes(1);
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['other-user:post1']);
+    });
+
+    it('does not reconcile while more pages are still loading', () => {
+      setLoadedIds(['post1'], { loadingMore: true, hasMore: true });
+      const { rerender } = render(collectionFeed(['post1', 'post2']));
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
+
+      setLoadedIds(['post1']);
+      rerender(collectionFeed(['post1', 'post2']));
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post2']);
+    });
+
+    it('applies each membership change once, not on every re-render', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
+      rerender(collectionFeed(['post4', 'post1', 'post2', 'post3']));
+      rerender(collectionFeed(['post4', 'post1', 'post2', 'post3']));
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('Mute set changes', () => {
     const renderHomeFeed = () =>
       render(
@@ -879,7 +1103,7 @@ describe('TimelineFeedContent', () => {
   });
 });
 
-describe('Grid layout variants (decisions D5/D7)', () => {
+describe('Cards layout dispatch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
@@ -887,18 +1111,18 @@ describe('Grid layout variants (decisions D5/D7)', () => {
     mockUsePullToRefresh.mockReturnValue({ state: 'idle' as const, pullDistance: 0 });
   });
 
-  it('renders the grid renderer (not the vertical list) when isGridActive', () => {
+  it('renders the Cards renderer (not the vertical list) when isCardsActive', () => {
     render(
       <TimelineFeedWithStream
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
-    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-cards-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
-    expect(screen.getByTestId('grid-post-count')).toHaveTextContent('3');
+    expect(screen.getByTestId('cards-post-count')).toHaveTextContent('3');
   });
 
   it('renders ordinary children and the persistent header before the grid', () => {
@@ -907,7 +1131,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.HOME}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
         persistentHeader={<div data-testid="persistent-header">Tagged-as headline</div>}
       >
         <div data-testid="child">Post input</div>
@@ -916,7 +1140,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
 
     const child = screen.getByTestId('child');
     const persistentHeader = screen.getByTestId('persistent-header');
-    const grid = screen.getByTestId('timeline-grid-posts');
+    const grid = screen.getByTestId('timeline-cards-posts');
 
     expect(child.compareDocumentPosition(persistentHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(persistentHeader.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -928,10 +1152,10 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
-    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
+    expect(screen.getByTestId('timeline-cards-posts')).toHaveAttribute('data-show-end-message', 'false');
   });
 
   it('forwards a custom empty state to the grid renderer', () => {
@@ -945,7 +1169,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
         emptyState={<div data-testid="custom-empty">Collection is empty</div>}
       />,
     );
@@ -959,13 +1183,13 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
-        trailingSlot={<div data-testid="grid-trailing-slot">Add content</div>}
+        layoutResolution={cardsLayoutResolution}
+        trailingSlot={<div data-testid="cards-trailing-slot">Add content</div>}
       />,
     );
 
-    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-has-trailing-slot', 'true');
-    expect(screen.getByTestId('grid-trailing-slot')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-cards-posts')).toHaveAttribute('data-has-trailing-slot', 'true');
+    expect(screen.getByTestId('cards-trailing-slot')).toBeInTheDocument();
   });
 
   it('forwards the custom empty state and trailing slot to the List renderer', () => {
@@ -997,29 +1221,29 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
         variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
 
-    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-cards-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
-    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
+    expect(screen.getByTestId('timeline-cards-posts')).toHaveAttribute('data-show-end-message', 'false');
   });
 
-  it('keeps header children visible for bookmarks when visual layout still resolves to the grid', () => {
+  it('keeps header children visible for bookmarks in Cards', () => {
     render(
       <TimelineFeedWithStream
         streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
         variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
         tagsLayout="inline"
-        layoutResolution={visualGridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       >
         <div data-testid="bookmarks-header">Bookmarks hero</div>
       </TimelineFeedWithStream>,
     );
 
     expect(screen.getByTestId('bookmarks-header')).toBeInTheDocument();
-    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-cards-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('visual-timeline-posts')).not.toBeInTheDocument();
   });
 
@@ -1032,7 +1256,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
       />,
     );
     expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
-    expect(screen.queryByTestId('timeline-grid-posts')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-cards-posts')).not.toBeInTheDocument();
   });
 
   it('enables pull-to-refresh for the collection variant', () => {
@@ -1041,7 +1265,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
     expect(mockUsePullToRefresh).toHaveBeenCalledWith(expect.objectContaining({ disabled: false }));
@@ -1054,7 +1278,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
         pullToRefreshContainerRef={pullToRefreshContainerRef}
       />,
     );
@@ -1070,7 +1294,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
     expect(screen.getByTestId('pull-to-refresh')).toBeInTheDocument();
@@ -1093,7 +1317,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
     expect(mockRemovePosts).not.toHaveBeenCalled();
@@ -1104,7 +1328,7 @@ describe('Grid layout variants (decisions D5/D7)', () => {
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
-        layoutResolution={gridLayoutResolution}
+        layoutResolution={cardsLayoutResolution}
       />,
     );
 
@@ -1135,7 +1359,7 @@ describe('Visual layout variants', () => {
     expect(screen.getByTestId('collection-hero')).toBeInTheDocument();
     expect(screen.getByTestId('visual-timeline-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('timeline-grid-posts')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-cards-posts')).not.toBeInTheDocument();
   });
 
   it('hides header children for the home variant when the Visual mosaic is active', () => {

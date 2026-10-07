@@ -1,0 +1,37 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SocialGraphBadge - Snapshots > matches snapshot for established tier 1`] = `
+<div
+  class="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden bg-background [a&]:hover:bg-accent [a&]:hover:text-accent-foreground font-semibold uppercase border-chart-3 text-chart-3"
+  data-cy="social-graph-badge"
+  data-slot="badge"
+  data-status="established"
+  data-variant="outline"
+>
+  Established
+</div>
+`;
+
+exports[`SocialGraphBadge - Snapshots > matches snapshot for networked tier 1`] = `
+<div
+  class="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden bg-background [a&]:hover:bg-accent [a&]:hover:text-accent-foreground font-semibold uppercase border-brand text-brand"
+  data-cy="social-graph-badge"
+  data-slot="badge"
+  data-status="networked"
+  data-variant="outline"
+>
+  Networked
+</div>
+`;
+
+exports[`SocialGraphBadge - Snapshots > matches snapshot for new tier 1`] = `
+<div
+  class="inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden bg-background [a&]:hover:bg-accent [a&]:hover:text-accent-foreground font-semibold uppercase border-chart-6 text-chart-6"
+  data-cy="social-graph-badge"
+  data-slot="badge"
+  data-status="new"
+  data-variant="outline"
+>
+  New
+</div>
+`;

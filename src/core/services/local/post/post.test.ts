@@ -1,6 +1,7 @@
 import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
+import { getTtlPostMs } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -117,6 +118,38 @@ const setupUserCounts = async (userId: Pubky) => {
   await UserCountsModel.table.add(userCounts);
 };
 
+describe('LocalPostService.upsertTtlWithDelay', () => {
+  const postId = 'author:post';
+  const retryDelayMs = 60_000;
+
+  beforeEach(async () => {
+    await db.initialize();
+    await PostTtlModel.table.clear();
+  });
+
+  it('parks a missing row so it goes stale again after the retry delay', async () => {
+    const before = Date.now();
+    await LocalPostService.upsertTtlWithDelay(postId, retryDelayMs);
+    const parked = await PostTtlModel.findById(postId);
+    expect(parked!.lastUpdatedAt).toBeGreaterThanOrEqual(before - (getTtlPostMs() - retryDelayMs));
+    expect(parked!.lastUpdatedAt).toBeLessThanOrEqual(Date.now() - (getTtlPostMs() - retryDelayMs));
+  });
+
+  it('parks a row that predates the batch even when asked to keep newer writes', async () => {
+    await PostTtlModel.upsert({ id: postId, lastUpdatedAt: 1 });
+    await LocalPostService.upsertTtlWithDelay(postId, retryDelayMs, { unlessWrittenSince: Date.now() });
+    expect((await PostTtlModel.findById(postId))!.lastUpdatedAt).toBeGreaterThan(1);
+  });
+
+  it('keeps a row written since the batch started instead of shortening its freshness', async () => {
+    const fetchStartedAt = Date.now();
+    const fresh = fetchStartedAt + 1;
+    await PostTtlModel.upsert({ id: postId, lastUpdatedAt: fresh });
+    await LocalPostService.upsertTtlWithDelay(postId, retryDelayMs, { unlessWrittenSince: fetchStartedAt });
+    expect((await PostTtlModel.findById(postId))!.lastUpdatedAt).toBe(fresh);
+  });
+});
+
 describe('LocalPostService', () => {
   beforeEach(async () => {
     await db.initialize();
@@ -168,6 +201,10 @@ describe('LocalPostService', () => {
 
       expect(tags).toBeTruthy();
       expect(tags!.tags).toEqual([]);
+      // A new post has no tags on Nexus yet: its author's window is initialized, complete and fresh,
+      // so the first card mount does not force a tag request and the TTL pass does not flag it.
+      expect(tags!.cache).toMatchObject({ cursor: 0, exhausted: true, revision: 0, viewerId: testData.authorPubky });
+      expect(tags!.cache!.fetchedAt).toBeGreaterThan(0);
 
       expect(relationships).toBeTruthy();
       expect(relationships!.replied).toBeNull();
@@ -813,6 +850,37 @@ describe('LocalPostService', () => {
       const postDetails = await getSavedPost(postId);
       expect(postDetails).toBeTruthy();
       expect(postDetails!.content).toBe(DELETED);
+      expect(postDetails!.deleted).toBe(true);
+    });
+
+    it('sets the deleted flag on the soft-delete tombstone too', async () => {
+      const postId = testData.fullPostId1;
+      await setupExistingPost(postId, 'Original post content');
+      await setupUserCounts(testData.authorPubky);
+      await PostCountsModel.update(postId, { replies: 1 });
+
+      const result = await LocalPostService.delete({ compositePostId: postId });
+      expect(result).toBe(true);
+
+      const postDetails = await getSavedPost(postId);
+      expect(postDetails!.content).toBe(DELETED);
+      expect(postDetails!.deleted).toBe(true);
+    });
+
+    it('short-circuits a re-delete of a Nexus-shaped tombstone (flag, empty content)', async () => {
+      const postId = testData.fullPostId1;
+      await setupExistingPost(postId, 'Test post');
+      await setupUserCounts(testData.authorPubky);
+      await PostDetailsModel.table.update(postId, { content: '', deleted: true });
+
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+      try {
+        const result = await LocalPostService.delete({ compositePostId: postId });
+        expect(result).toBe(false);
+        expect(userCountsSpy).not.toHaveBeenCalled();
+      } finally {
+        userCountsSpy.mockRestore();
+      }
     });
 
     it('should handle deleting non-existent post gracefully (idempotent)', async () => {
@@ -871,6 +939,19 @@ describe('LocalPostService', () => {
       expect(details!.content).toBe('Edited content');
       expect(details!.attachments).toEqual(existingAttachments);
       expect(details!.kind).toBe('image');
+    });
+
+    it('clears the deleted flag when an edit restores live content', async () => {
+      const postId = testData.fullPostId1;
+      await setupExistingPost(postId, 'Original content');
+      // A tombstoned row (the Nexus shape) that an edit writes live content over.
+      await PostDetailsModel.table.update(postId, { content: '', deleted: true });
+
+      await LocalPostService.edit({ compositePostId: postId, content: 'Restored content' });
+
+      const details = await getSavedPost(postId);
+      expect(details!.content).toBe('Restored content');
+      expect(details!.deleted).toBe(false);
     });
 
     it('should touch post TTL on every edit', async () => {

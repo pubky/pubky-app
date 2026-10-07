@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
 import {
@@ -27,6 +28,13 @@ export function Header() {
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
   const currentTitle = stepConfig?.title;
+  // Onboarding steps reached after authentication (profile setup and the Experience screens): the
+  // logo must not link away mid-flow. Step numbers are not unique in the 4-step model, so match on
+  // the path instead.
+  const isPostAuthOnboardingStep =
+    pathname === ONBOARDING_ROUTES.PROFILE ||
+    pathname === ONBOARDING_ROUTES.TAGS ||
+    pathname === ONBOARDING_ROUTES.FOLLOW;
 
   // Hide header on mobile when:
   // - User is on a core explore route (/home, /hot, /search, /collections) — MobileHeader + MobileFooter
@@ -34,16 +42,12 @@ export function Header() {
   // - Authenticated on standard app routes — MobileHeader + MobileFooter
   const shouldHideHeaderOnMobile =
     isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
-  // Show title only for onboarding/logout pages (when stepConfig exists) and user is not authenticated,
-  // or during profile setup (step 5)
-  const shouldShowTitle = currentTitle && (!isAuthenticated || currentStep === 5);
+  // Show the step title on every onboarding page regardless of auth state: sign-up happens on the
+  // pubky step, so the later key steps (pubky, backup) and the post-auth steps (profile, experience)
+  // are all reached while authenticated. Outside onboarding (i.e. /logout) the title is only for
+  // signed-out users.
+  const shouldShowTitle = currentTitle && (isOnboarding || !isAuthenticated);
 
-  // App-shell layout: authenticated app pages and Explore mode (unauthenticated on a
-  // public route, e.g. feed/post/profile) both render the feed + sidebars, so the header
-  // must align with the content gutter. Onboarding and the landing page keep the default
-  // centered padding instead.
-  const isAppShellLayout = !isOnboarding && (isAuthenticated || isDynamicPublicRoute || isCoreExploreRoute);
-  const classNameNav = isAppShellLayout ? ' xl:px-0' : '';
   // Determine which header content to show:
   // - Onboarding: HeaderOnboarding
   // - Authenticated: HeaderSignIn (navigation + avatar)
@@ -63,11 +67,9 @@ export function Header() {
   };
 
   // Copyright page shows only logo (minimal header).
-  // Pass the same classNameNav as other routes so the logo doesn't shift
-  // horizontally when navigating between the app and /copyright.
   if (isCopyrightPage) {
     return (
-      <HeaderContainer classNameNav={classNameNav}>
+      <HeaderContainer>
         <Logo />
       </HeaderContainer>
     );
@@ -81,11 +83,8 @@ export function Header() {
   };
 
   return (
-    <HeaderContainer
-      classNameNav={classNameNav}
-      className={cn(isLandingPage && 'p-0 sm:py-6', shouldHideHeaderOnMobile && 'hidden lg:block')}
-    >
-      <Logo noLink={currentStep === 5} onClick={handleLandingLogoClick} />
+    <HeaderContainer className={cn(shouldHideHeaderOnMobile && 'hidden lg:block')}>
+      <Logo noLink={isPostAuthOnboardingStep} onClick={handleLandingLogoClick} />
       {shouldShowTitle && <HeaderTitle currentTitle={currentTitle} />}
       {renderHeaderContent()}
     </HeaderContainer>

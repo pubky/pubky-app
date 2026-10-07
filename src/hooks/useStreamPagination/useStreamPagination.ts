@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { STREAM_LOAD_MAX_RAW_SCAN } from '@/config/feed';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { NOT_FOUND_CACHED_STREAM } from '@/controllers/stream/posts/post.constants';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
@@ -68,6 +69,7 @@ export function useStreamPagination({
   streamId,
   limit = NEXUS_POSTS_PER_PAGE,
   resetOnStreamChange = true,
+  preserveCachedStream = false,
   onError,
 }: UseStreamPaginationOptions): UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);
@@ -90,8 +92,17 @@ export function useStreamPagination({
   // flight from the cursor it writes back. Reset in `clearState` (a fresh
   // fetch recounts consumed rows from scratch).
   const committedRemovalsRef = useRef(0);
+  // Monotonic token bumped by `clearState` (stream switch, refresh) and by the initial-load
+  // effect's cleanup (stream switch, unmount). A fetch snapshots it at entry and drops ALL of its
+  // state writes — success and failure — if a reset happened during its flight: a late-resolving request for a previous stream (or a pre-refresh cursor) must
+  // not overwrite the fresh stream's posts, cursors, hasMore, error, or loading flags.
+  const fetchGenerationRef = useRef(0);
   const activeStreamIdRef = useRef(streamId);
-  activeStreamIdRef.current = streamId;
+  // Written from an effect (not during render) for the React Compiler `refs`
+  // rule; the removal finalizer that reads it only runs after a commit.
+  useEffect(() => {
+    activeStreamIdRef.current = streamId;
+  }, [streamId]);
 
   /**
    * Sets the appropriate loading state based on load type
@@ -105,115 +116,161 @@ export function useStreamPagination({
   }, []);
 
   /**
-   * Fetches a slice from the stream
+   * Fetches the next visible page of the stream.
+   *
+   * One load may take several stream-layer rounds: filtering is client-side, so a round
+   * can come back with nothing new to show while the stream has more. Rather than
+   * returning empty and letting the scroll sentinel refire (which unmounts and remounts the
+   * loading block once per round and pulses the feed's height — #2523), the load keeps
+   * scanning with both resume cursors advanced, up to `STREAM_LOAD_MAX_RAW_SCAN` raw posts,
+   * until a visible post arrives, the stream ends, or a round makes no progress at all.
    */
   const fetchStreamSlice = useCallback(
     async (isInitialLoad: boolean) => {
+      // Inert hook (no `streamId`): nothing to paginate, so never load and never
+      // touch the loading flags the derived return masks anyway.
+      if (!streamId) return;
+
       setLoadingState(isInitialLoad, true);
       setError(null);
-      const committedRemovalsAtRequest = committedRemovalsRef.current;
+      const generationAtRequest = fetchGenerationRef.current;
+      const isStale = () => fetchGenerationRef.current !== generationAtRequest;
 
       try {
-        let result: TReadPostStreamChunkResponse;
-        // Always resume from `streamTail`; never recompute the cursor from the visible count.
+        // Resume positions for this load. Always resume from `streamTail`; never recompute
+        // the cursor from the visible count. Held in locals across chained rounds because the
+        // state writes below only land after this call completes.
+        let anchor = lastPostId;
+        let cursor = streamTail;
 
         if (isInitialLoad) {
-          // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream
-          await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+          // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream.
+          // Skipped for a caller that paginates a stream another surface owns and renders
+          // from its cached rows (`preserveCachedStream`): this reset deletes the shared row
+          // before the replacement page arrives, so a failed fetch would leave the caller
+          // with nothing to render. The load below stays additive either way.
+          if (!preserveCachedStream) {
+            await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+          }
 
           const cachedLastPostTimestamp = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
+          if (isStale()) return;
           setStreamTail(cachedLastPostTimestamp);
+          anchor = undefined;
+          // Skip streams always start at offset 0; score streams seed from the cached tail.
+          cursor = isSkipPaginatedStream(streamId) ? 0 : cachedLastPostTimestamp;
+        }
 
-          result = await StreamPostsController.getOrFetchStreamSlice({
+        // Resume positions and `hasMore` are committed once, after the scan: every round
+        // reads the locals, and a state write per round would re-render the feed (and
+        // re-create `loadMore`) once per round while nothing visible changes.
+        let reachedEnd = false;
+        let rawScanned = 0;
+        for (;;) {
+          const committedRemovalsAtRequest = committedRemovalsRef.current;
+          const result: TReadPostStreamChunkResponse = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
-            lastPostId: undefined,
-            // Skip streams always start at offset 0; score streams seed from the cached tail.
-            streamTail: isSkipPaginatedStream(streamId) ? 0 : cachedLastPostTimestamp,
+            lastPostId: anchor,
+            streamTail: cursor,
+            // Lets the cache walk re-anchor if `anchor` was removed from the cached row
+            // (its post deleted or un-bookmarked) instead of skipping to the row tail.
+            visiblePostIds: anchor === undefined ? undefined : postIdsRef.current,
             limit,
           });
-        } else {
-          result = await StreamPostsController.getOrFetchStreamSlice({
-            streamId,
-            lastPostId,
-            streamTail,
-            limit,
-          });
+
+          // A reset (stream switch or refresh) during the flight makes this response stale;
+          // every write below belongs to state that no longer exists.
+          if (isStale()) return;
+
+          // Advance BOTH resume positions from the response, even on a fully-filtered (empty)
+          // page: `streamTail` by the raw backend cursor, `lastPostId` (the local cache-walk
+          // anchor) by the raw scan anchor. Both advance by raw scanned data, never by the
+          // post-filter visible count — otherwise a fully-filtered round would restart the
+          // cache walk at the head and spin in place on long filtered runs. A score cursor
+          // is always Nexus's own position (persisted on the cached stream row), never a
+          // post's local `indexed_at`, which Nexus bumps on edit/delete without moving the
+          // post in the stream (#2523).
+          let nextCursor = cursor;
+          if (result.nextCursor != null) {
+            // Skip streams: `nextCursor` extends the offset this request captured
+            // at start, so removals committed during the flight are not in it —
+            // re-apply them or the absolute write below would discard their
+            // decrements. Clamped: a `clearState` during the flight resets the
+            // counter, and a stale resolution must not over-correct a fresh one.
+            const removalsDuringFlight = isSkipPaginatedStream(streamId)
+              ? Math.max(0, committedRemovalsRef.current - committedRemovalsAtRequest)
+              : 0;
+            nextCursor = Math.max(0, result.nextCursor - removalsDuringFlight);
+          }
+          // Never overwrite a defined anchor with undefined.
+          const nextAnchor = resolveResumeAnchor(result) ?? anchor;
+          const consumed = result.rawScannedCount ?? 0;
+          const progressed = consumed > 0 || nextAnchor !== anchor || nextCursor !== cursor;
+          anchor = nextAnchor;
+          cursor = nextCursor;
+          // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
+          // keeps hasMore so the advanced cursors are re-requested.
+          reachedEnd = result.reachedEnd === true;
+
+          // Deduplicate posts
+          const existingIds = new Set(postIdsRef.current);
+          const newUniquePostIds = result.nextPageIds.filter((id) => !existingIds.has(id));
+          if (newUniquePostIds.length > 0) {
+            // Update state with unique posts only
+            const updatedPostIds = isInitialLoad ? newUniquePostIds : [...postIdsRef.current, ...newUniquePostIds];
+            postIdsRef.current = updatedPostIds;
+            const displayedState = resolveDisplayedPostIds(
+              updatedPostIds,
+              optimisticPostIdsRef.current,
+              new Set(hiddenPostCountsRef.current.keys()),
+            );
+            optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+            setPostIds(displayedState.displayedPostIds);
+            break;
+          }
+
+          // Nothing new to show (fully filtered, or only duplicates). Keep scanning while the
+          // round consumed raw ids or moved a resume position and the raw-scan budget allows;
+          // otherwise yield with hasMore true — the auto-loading renderer decides whether to
+          // keep going (`TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS`) or hand over to a manual
+          // Load more.
+          rawScanned += consumed;
+          if (reachedEnd || !progressed || rawScanned >= STREAM_LOAD_MAX_RAW_SCAN) break;
         }
 
-        // Advance BOTH resume cursors from the response, even on a fully-filtered (empty)
-        // page: `streamTail` by the raw backend cursor, `lastPostId` (the local cache-walk
-        // anchor) by the raw scan anchor. Both advance by raw scanned data, never by the
-        // post-filter visible count — otherwise a fully-filtered round would restart the
-        // cache walk at the head and spin in place on long filtered runs.
-        if (result.nextCursor != null) {
-          // Skip streams: `nextCursor` extends the offset this request captured
-          // at start, so removals committed during the flight are not in it —
-          // re-apply them or the absolute write below would discard their
-          // decrements. Clamped: a `clearState` during the flight resets the
-          // counter, and a stale resolution must not over-correct a fresh one.
-          const removalsDuringFlight = isSkipPaginatedStream(streamId)
-            ? Math.max(0, committedRemovalsRef.current - committedRemovalsAtRequest)
-            : 0;
-          setStreamTail(Math.max(0, result.nextCursor - removalsDuringFlight));
-        }
-
-        // Never overwrite a defined anchor with undefined.
-        const nextAnchor = resolveResumeAnchor(result);
-        if (nextAnchor !== undefined) {
-          setLastPostId(nextAnchor);
-        }
-
-        // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
-        // keeps hasMore so the advanced cursors are re-requested. An auto-loading caller
-        // (useInfiniteScroll) still chains bounded rounds through a filtered region until the
-        // true stream end, with no per-user-action feedback. Known limitation, deliberately
-        // unchanged here — any remedy (toast + backoff, manual load-more) is a
-        // product-visible UX change tracked as follow-up.
-        if (result.nextPageIds.length === 0) {
-          setHasMore(!result.reachedEnd);
-          setLoadingState(isInitialLoad, false);
-          return;
-        }
-
-        // Deduplicate posts
-        const existingIds = new Set(postIdsRef.current);
-        const newUniquePostIds = result.nextPageIds.filter((id) => !existingIds.has(id));
-
-        setHasMore(result.reachedEnd !== true);
-
-        // If all posts were duplicates, don't update the UI but keep hasMore state
-        if (newUniquePostIds.length === 0) {
-          setLoadingState(isInitialLoad, false);
-          return;
-        }
-
-        // Update state with unique posts only
-        const updatedPostIds = isInitialLoad ? newUniquePostIds : [...postIdsRef.current, ...newUniquePostIds];
-        postIdsRef.current = updatedPostIds;
-        const displayedState = resolveDisplayedPostIds(
-          updatedPostIds,
-          optimisticPostIdsRef.current,
-          new Set(hiddenPostCountsRef.current.keys()),
-        );
-        optimisticPostIdsRef.current = displayedState.optimisticPostIds;
-        setPostIds(displayedState.displayedPostIds);
+        // Written unconditionally: a removal committed while this call awaited a page may
+        // have moved the live offset, so equality with the captured value does not mean the
+        // state still holds it (React skips the render for an unchanged primitive anyway).
+        setStreamTail(cursor);
+        if (anchor !== undefined) setLastPostId(anchor);
+        setHasMore(!reachedEnd);
       } catch (err) {
+        // AppErrors are logged by their factory; anything else is logged here, even when stale.
+        if (!isAppError(err)) Logger.error('Failed to fetch stream slice:', err);
+        // A stale failure belongs to a discarded request: surfacing it (error banner,
+        // hasMore=false, onError) would poison the fresh stream's state.
+        if (isStale()) return;
         const errorMessage = isAppError(err) ? err.message : 'An unknown error occurred.';
         setError(errorMessage);
         setHasMore(false);
-        Logger.error('Failed to fetch stream slice:', err);
         onError?.(err);
       } finally {
-        setLoadingState(isInitialLoad, false);
+        // The fresh stream's fetch owns the loading flags now; `clearState` or the
+        // initial-load effect already reset `loadingMore`, so a skipped write here cannot strand it.
+        if (!isStale()) {
+          setLoadingState(isInitialLoad, false);
+        }
       }
     },
-    [streamId, lastPostId, streamTail, limit, setLoadingState, onError],
+    [streamId, lastPostId, streamTail, limit, setLoadingState, preserveCachedStream, onError],
   );
 
   /**
    * Clears all state
    */
   const clearState = useCallback(({ preserveOptimisticPostIds = false, preserveHiddenPostIds = false } = {}) => {
+    // Invalidate in-flight fetches: their responses describe the state being cleared here.
+    fetchGenerationRef.current += 1;
     postIdsRef.current = [];
     if (!preserveHiddenPostIds) {
       hiddenPostCountsRef.current.clear();
@@ -233,12 +290,17 @@ export function useStreamPagination({
     committedRemovalsRef.current = 0;
     setHasMore(true);
     setError(null);
+    // An in-flight loadMore just became stale and will skip its own finally-clear;
+    // without this reset the stuck flag would permanently block `loadMore`.
+    setLoadingMore(false);
   }, []);
 
   /**
    * Refresh function - clears state and fetches from beginning
    */
   const refresh = useCallback(async () => {
+    if (!streamId) return;
+
     clearState({
       preserveOptimisticPostIds: isCollectionItemsStream(streamId),
       preserveHiddenPostIds: true,
@@ -369,6 +431,10 @@ export function useStreamPagination({
   }, []);
 
   const removePostsOptimistically = (postIds: string | string[]) => {
+    if (!streamId) {
+      return { commit: () => {}, rollback: () => {} };
+    }
+
     const existingPostIds = new Set([...postIdsRef.current, ...optimisticPostIdsRef.current]);
     const idsToRemove = [...new Set(Array.isArray(postIds) ? postIds : [postIds])].filter((id) =>
       existingPostIds.has(id),
@@ -427,12 +493,47 @@ export function useStreamPagination({
 
   // Initial load and reset when streamId changes
   useEffect(() => {
+    if (!streamId) {
+      // Inert: no stream to load. `clearState` still invalidates an in-flight
+      // load from a previously active stream so its late response cannot land
+      // on the next one.
+      clearState();
+      return;
+    }
+
     if (resetOnStreamChange) {
       clearState();
+    } else {
+      // The previous run's cleanup made any in-flight loadMore stale, so it will skip its own
+      // finally-clear; without this the flag would stay set and block `loadMore` for good.
+      setLoadingMore(false);
     }
     fetchStreamSlice(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // A stream switch or unmount (e.g. a keyed feed replacement) discards this run's pending work.
+    return () => {
+      fetchGenerationRef.current += 1;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pagination state changes must not restart the initial load
   }, [streamId]);
+
+  // Inert result: an undefined `streamId` means the consumer is not paginating
+  // right now (e.g. a closed picker). Report an empty settled stream and no-op
+  // every action so callers never render a permanent loading state.
+  if (!streamId) {
+    return {
+      postIds: [],
+      loading: false,
+      loadingMore: false,
+      error: null,
+      hasMore: false,
+      loadMore: async () => {},
+      refresh: async () => {},
+      prependPosts: async () => {},
+      prependOptimisticPosts: () => {},
+      removePosts: () => {},
+      removePostsOptimistically: () => ({ commit: () => {}, rollback: () => {} }),
+    };
+  }
 
   return {
     postIds,

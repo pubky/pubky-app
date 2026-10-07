@@ -2,10 +2,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROOT_ROUTES } from '@/app/routes';
+import { toast } from '@/molecules/Toaster/toast';
 import { Install } from './Install';
 
 const mockSearchParamsGet = vi.fn<(key: string) => string | null>(() => null);
-const mockToast = vi.fn();
 const mockSetInviteCode = vi.fn();
 const mockReplace = vi.fn();
 const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<'valid' | 'used' | 'invalid'>>();
@@ -48,19 +48,13 @@ vi.mock('@/molecules/OnboardingLayout/OnboardingLayout', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({
-      toast: mockToast,
-    }),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 describe('Install template', () => {
   beforeEach(() => {
     mockSearchParamsGet.mockReset();
     mockSearchParamsGet.mockReturnValue(null);
-    mockToast.mockClear();
+    vi.mocked(toast).mockClear();
     mockSetInviteCode.mockClear();
     mockReplace.mockClear();
     mockVerifySignupToken.mockReset();
@@ -85,7 +79,7 @@ describe('Install template', () => {
       expect(mockSetInviteCode).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
     });
     expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Invite code applied',
     });
     expect(mockReplace).not.toHaveBeenCalled();
@@ -103,7 +97,7 @@ describe('Install template', () => {
     });
     expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
     expect(mockSetInviteCode).not.toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       title: 'Invalid invite code',
     });
@@ -119,7 +113,7 @@ describe('Install template', () => {
     });
     expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
     expect(mockSetInviteCode).not.toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       title: 'Invite code already used',
     });
@@ -135,12 +129,12 @@ describe('Install template', () => {
     });
     expect(mockVerifySignupToken).toHaveBeenCalledWith('YVB2-YFRN-GDY0');
     expect(mockSetInviteCode).not.toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       title: "Couldn't verify invite code",
     });
     // The invalid-code error toast is not shown for transient errors.
-    expect(mockToast).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
   });
 
   it('does not verify or set invite code when URL param is missing', () => {
@@ -148,7 +142,7 @@ describe('Install template', () => {
 
     expect(mockVerifySignupToken).not.toHaveBeenCalled();
     expect(mockSetInviteCode).not.toHaveBeenCalled();
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 });
 

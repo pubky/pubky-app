@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
+import type { MarkdownEditorInlineImages } from './MarkdownEditor.types';
 
 const Editor = dynamic(() => import('./InitializedMDXEditor'), {
   ssr: false,
@@ -19,8 +20,9 @@ const Editor = dynamic(() => import('./InitializedMDXEditor'), {
 
 // This is what is imported by other components. Pre-initialized with plugins & styling, and ready
 // to accept other props, including a ref.
-export const MarkdownEditor = forwardRef<MDXEditorMethods, MDXEditorProps>((props, ref) => (
-  <Editor {...props} editorRef={ref} />
-));
+export const MarkdownEditor = forwardRef<
+  MDXEditorMethods,
+  MDXEditorProps & { inlineImages?: MarkdownEditorInlineImages }
+>((props, ref) => <Editor {...props} editorRef={ref} />);
 
 MarkdownEditor.displayName = 'MarkdownEditor';

@@ -17,7 +17,7 @@ import { parseCompositeId } from '@/models/models.utils';
 import { buildFollowedCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { AvatarStack } from '@/molecules/AvatarStack/AvatarStack';
 import { AvatarStackSkeleton } from '@/molecules/AvatarStack/AvatarStack.skeleton';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
 import { uniqueAuthors } from '@/organisms/Collections/collections.utils';
@@ -53,7 +53,6 @@ const EMPTY_IDS: string[] = [];
  * pushes a card into / out of this section without a reload.
  */
 export function FollowedCollections() {
-  const { toast } = useToast();
   // Gate the seed fetch on auth hydration. `StreamPostsController.getOrFetchStreamSlice`
   // reads `viewerId` from the auth store synchronously, and the bookmarks-collection
   // Nexus endpoint needs the viewer to resolve. If we fire pre-hydration the slice
@@ -64,6 +63,9 @@ export function FollowedCollections() {
 
   const [pagesShown, setPagesShown] = useState(1);
   const cursorRef = useRef<SeedCursor>(EMPTY_CURSOR);
+  // Visible ids the seed walk has served, so the cache walk can re-anchor after the anchor
+  // collection is un-bookmarked (its id leaves the cached row) instead of restarting at the head.
+  const walkedIdsRef = useRef<string[]>([]);
   const [reachedEnd, setReachedEnd] = useState(false);
   const [seedLoading, setSeedLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -76,14 +78,17 @@ export function FollowedCollections() {
         await StreamPostsController.prepareStreamForInitialLoad({ streamId });
         const cachedTail = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
         cursorRef.current = { lastPostId: undefined, streamTail: cachedTail };
+        walkedIdsRef.current = [];
       }
 
       const result = await StreamPostsController.getOrFetchStreamSlice({
         streamId,
         lastPostId: cursorRef.current.lastPostId,
+        visiblePostIds: cursorRef.current.lastPostId === undefined ? undefined : walkedIdsRef.current,
         streamTail: cursorRef.current.streamTail,
         limit: COLLECTIONS_SECTION_PAGE_SIZE,
       });
+      walkedIdsRef.current = [...walkedIdsRef.current, ...result.nextPageIds];
 
       // A fully-filtered slice (e.g. a run of deleted bookmarked collections) must
       // still advance the cache walk, so the anchor resolves from the raw scan.
@@ -142,7 +147,7 @@ export function FollowedCollections() {
           // the timeline's `isPostDeleted` guard in `useVisualFeedTiles`. The
           // live query observes `post_details`, so deleting flips visibility
           // immediately without a refresh.
-          if (detail && detail.kind === COLLECTION_KIND_STRING && !isPostDeleted(detail.content)) {
+          if (detail && detail.kind === COLLECTION_KIND_STRING && !isPostDeleted(detail)) {
             collectionIds.push(ids[i]);
             if (collectionIds.length >= visibleLimit) break;
           }

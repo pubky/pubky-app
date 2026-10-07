@@ -1,6 +1,10 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { useIsFollowing } from './useIsFollowing';
+
+const VALID_TARGET = PUBKY_52_STAGING_FIXTURE;
+const OTHER_VALID_TARGET = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 
 // Hoist mock data
 const mockState = vi.hoisted(() => ({
@@ -16,6 +20,16 @@ vi.mock('@/controllers/user/user', () => ({
     fetch: (params: { userId: string }) => mockFetch(params),
   },
 }));
+const mockSubscribeUser = vi.fn();
+const mockUnsubscribeUser = vi.fn();
+vi.mock('@/coordinators/ttl/ttl', () => ({
+  TtlCoordinator: {
+    getInstance: () => ({
+      subscribeUser: mockSubscribeUser,
+      unsubscribeUser: mockUnsubscribeUser,
+    }),
+  },
+}));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector?: (state: { currentUserPubky: string | null }) => unknown) => {
     const state = { currentUserPubky: mockState.currentUserPubky };
@@ -28,7 +42,7 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: (queryFn: () => Promise<unknown>, _deps: unknown[], defaultValue: unknown) => {
     queryFn();
     const result = mockGetRelationships.mock.results[mockGetRelationships.mock.results.length - 1];
-    return result?.value ?? defaultValue;
+    return result?.value == null ? defaultValue : { query: _deps[0], data: result.value };
   },
 }));
 
@@ -169,6 +183,40 @@ describe('useIsFollowing', () => {
 
       // Phase 1 optimization: fetchFn is skipped when useLiveQuery returns non-null data
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('TTL subscription (#1803)', () => {
+    it('subscribes the target user so a cached relationship is refreshed once stale', () => {
+      mockGetRelationships.mockReturnValue({ following: false });
+
+      const { unmount } = renderHook(() => useIsFollowing(VALID_TARGET));
+
+      expect(mockSubscribeUser).toHaveBeenCalledWith({ pubky: VALID_TARGET });
+      expect(mockUnsubscribeUser).not.toHaveBeenCalled();
+
+      unmount();
+
+      expect(mockUnsubscribeUser).toHaveBeenCalledWith({ pubky: VALID_TARGET });
+    });
+
+    it('does not subscribe a malformed profile identifier', () => {
+      mockGetRelationships.mockReturnValue({ following: false });
+
+      renderHook(() => useIsFollowing('invalid-profile-key'));
+
+      expect(mockSubscribeUser).not.toHaveBeenCalled();
+    });
+
+    it('re-subscribes when the target user changes', () => {
+      mockGetRelationships.mockReturnValue({ following: false });
+
+      const { rerender } = renderHook(({ id }) => useIsFollowing(id), { initialProps: { id: VALID_TARGET } });
+
+      rerender({ id: OTHER_VALID_TARGET });
+
+      expect(mockUnsubscribeUser).toHaveBeenCalledWith({ pubky: VALID_TARGET });
+      expect(mockSubscribeUser).toHaveBeenLastCalledWith({ pubky: OTHER_VALID_TARGET });
     });
   });
 });

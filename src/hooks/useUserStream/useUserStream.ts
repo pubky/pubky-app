@@ -7,13 +7,13 @@ import { StreamUserController } from '@/controllers/stream/users/users';
 import { UserController } from '@/controllers/user/user';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { resolveUserDisplayName } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import type { NexusTag, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
 import {
   DEFAULT_USER_STREAM_BUFFER_SIZE,
   DEFAULT_USER_STREAM_LIMIT,
-  DEFAULT_USER_STREAM_PAGE_SIZE,
   DEFAULT_USER_STREAM_REFILL_THRESHOLD,
 } from './useUserStream.constants';
 import type {
@@ -24,6 +24,20 @@ import type {
 } from './useUserStream.types';
 
 const EMPTY_PRESERVED_FOLLOWED_USER_IDS: Pubky[] = [];
+const EMPTY_DETAILS_MAP = new Map<Pubky, NexusUserDetails>();
+const EMPTY_RELATIONSHIPS_MAP = new Map<Pubky, UserRelationshipsModelSchema>();
+
+/**
+ * A live-query result tagged with the `userIds` it was computed for. `useLiveQuery` yields
+ * `undefined` before the first resolve and keeps returning the previous result while deps change,
+ * so the tag is the only reliable way to tell "settled for these ids" apart from both "not yet"
+ * and "stale from the previous ids" — including when the settled result is legitimately empty
+ * (nothing cached, or the read failed).
+ */
+interface LiveQuerySnapshot<T> {
+  forIds: Pubky[];
+  map: Map<Pubky, T>;
+}
 
 /**
  * useUserStream
@@ -31,18 +45,17 @@ const EMPTY_PRESERVED_FOLLOWED_USER_IDS: Pubky[] = [];
  * Hook for fetching users from a user stream (e.g., influencers, recommended).
  * Uses StreamUserController for fetching IDs and useLiveQuery for reactive details.
  *
+ * With `excludeFollowing`, followed users are hidden and the list is refilled once with the next
+ * slice (from the cache when it holds one, else from Nexus), then once more from Nexus only when
+ * that slice came from the cache and the list is still short.
+ *
  * @example
  * ```tsx
- * // Sidebar usage (fixed limit)
  * const { users, isLoading } = useUserStream({
  *   streamId: UserStreamTypes.RECOMMENDED,
  *   limit: 3,
- * });
- *
- * // Full page with infinite scroll
- * const { users, hasMore, loadMore } = useUserStream({
- *   streamId: UserStreamTypes.RECOMMENDED,
- *   paginated: true,
+ *   bufferSize: 10,
+ *   excludeFollowing: true,
  * });
  * ```
  */
@@ -52,13 +65,13 @@ export function useUserStream({
   includeCounts = false,
   includeRelationships = false,
   includeTags = false,
-  paginated = false,
   excludeFollowing = false,
+  showAll = false,
   preserveFollowedUserIds = EMPTY_PRESERVED_FOLLOWED_USER_IDS,
   bufferSize,
   refillThreshold,
 }: UseUserStreamParams): UseUserStreamResult {
-  const effectiveLimit = limit ?? (paginated ? DEFAULT_USER_STREAM_PAGE_SIZE : DEFAULT_USER_STREAM_LIMIT);
+  const effectiveLimit = limit ?? DEFAULT_USER_STREAM_LIMIT;
   const fetchLimit = Math.max(
     effectiveLimit,
     bufferSize ?? (excludeFollowing ? DEFAULT_USER_STREAM_BUFFER_SIZE : effectiveLimit),
@@ -66,17 +79,21 @@ export function useUserStream({
   const effectiveRefillThreshold =
     refillThreshold ?? (excludeFollowing ? DEFAULT_USER_STREAM_REFILL_THRESHOLD : effectiveLimit);
 
-  // Pagination state
+  // Stream state
   const [userIds, setUserIds] = useState<Pubky[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(paginated);
   const [error, setError] = useState<string | null>(null);
   const [isExhausted, setIsExhausted] = useState(false);
+  // The ids the initial read produced; only their hydration shows skeletons, a refill appends a
+  // new array and keeps the settled list on screen while its ids hydrate
+  const [initialReadIds, setInitialReadIds] = useState<Pubky[] | null>(null);
 
-  // Track skip position for pagination
+  // Track how far into the stream the reads have gone
   const skipRef = useRef(0);
-  const refillAttemptedRef = useRef(false);
+  // Refill steps: 1 reads the cached tail of the stream, 2 asks Nexus when that was not enough
+  const refillStepRef = useRef(0);
+  const lastSliceFromCacheRef = useRef(false);
 
   // Tags state (not reactive via useLiveQuery since it requires fetch)
   const [userTagsMap, setUserTagsMap] = useState<Map<Pubky, NexusTag[]>>(new Map());
@@ -85,19 +102,17 @@ export function useUserStream({
   // Reactive Data Queries
   // ============================================================================
 
-  const userDetailsMap = useLiveQuery(
-    async () => {
-      if (userIds.length === 0) return new Map<Pubky, NexusUserDetails>();
-      try {
-        return await UserController.getManyDetails({ userIds });
-      } catch (err) {
-        Logger.error('[useUserStream] Failed to query user details', { error: err });
-        return new Map<Pubky, NexusUserDetails>();
-      }
-    },
-    [userIds],
-    new Map<Pubky, NexusUserDetails>(),
-  );
+  const userDetailsSnapshot = useLiveQuery<LiveQuerySnapshot<NexusUserDetails> | undefined>(async () => {
+    if (userIds.length === 0) return { forIds: userIds, map: EMPTY_DETAILS_MAP };
+    try {
+      return { forIds: userIds, map: await UserController.getManyDetails({ userIds }) };
+    } catch (err) {
+      Logger.error('[useUserStream] Failed to query user details', { error: err });
+      // Settled-but-empty: consumers must fall through to their empty/error state, not spin forever
+      return { forIds: userIds, map: EMPTY_DETAILS_MAP };
+    }
+  }, [userIds]);
+  const userDetailsMap = userDetailsSnapshot?.map ?? EMPTY_DETAILS_MAP;
 
   const userCountsMap = useLiveQuery(
     async () => {
@@ -113,19 +128,18 @@ export function useUserStream({
     new Map<Pubky, NexusUserCounts>(),
   );
 
-  const userRelationshipsMap = useLiveQuery(
-    async () => {
-      if (!includeRelationships || userIds.length === 0) return new Map<Pubky, UserRelationshipsModelSchema>();
-      try {
-        return await UserController.getManyRelationships({ userIds });
-      } catch (err) {
-        Logger.error('[useUserStream] Failed to query user relationships', { error: err });
-        return new Map<Pubky, UserRelationshipsModelSchema>();
-      }
-    },
-    [userIds, includeRelationships],
-    new Map<Pubky, UserRelationshipsModelSchema>(),
-  );
+  const userRelationshipsSnapshot = useLiveQuery<
+    LiveQuerySnapshot<UserRelationshipsModelSchema> | undefined
+  >(async () => {
+    if (!includeRelationships || userIds.length === 0) return { forIds: userIds, map: EMPTY_RELATIONSHIPS_MAP };
+    try {
+      return { forIds: userIds, map: await UserController.getManyRelationships({ userIds }) };
+    } catch (err) {
+      Logger.error('[useUserStream] Failed to query user relationships', { error: err });
+      return { forIds: userIds, map: EMPTY_RELATIONSHIPS_MAP };
+    }
+  }, [userIds, includeRelationships]);
+  const userRelationshipsMap = userRelationshipsSnapshot?.map ?? EMPTY_RELATIONSHIPS_MAP;
 
   // Fetch tags when userIds change (requires API call, not just DB query)
   useEffect(() => {
@@ -153,10 +167,16 @@ export function useUserStream({
 
   const eligible: UserStreamUser[] = [];
   const preservedFollowedUsers = new Set(preserveFollowedUserIds);
+  // With `excludeFollowing`, an id counts only once the relationships live query covers it, so a
+  // user the viewer follows never shows for the tick between the details and relationships
+  // updates after a refill appends ids (the initial read is gated by `isHydrating` instead)
+  const relationshipsCoveredIds =
+    excludeFollowing && includeRelationships ? new Set(userRelationshipsSnapshot?.forIds ?? []) : null;
 
   for (const id of userIds) {
     const details = userDetailsMap.get(id);
     if (!details) continue;
+    if (relationshipsCoveredIds && !relationshipsCoveredIds.has(id)) continue;
 
     const counts = userCountsMap.get(id);
     const relationship = userRelationshipsMap.get(id);
@@ -166,10 +186,10 @@ export function useUserStream({
 
     eligible.push({
       id: details.id,
-      name: details.name,
+      name: resolveUserDisplayName(details),
       bio: details.bio,
       image: details.image,
-      avatarUrl: details.image ? FileController.getAvatarUrl(id) : null,
+      avatarUrl: details.image ? FileController.getAvatarUrl(id, details.indexed_at) : null,
       status: details.status,
       counts: counts
         ? {
@@ -185,17 +205,19 @@ export function useUserStream({
   }
 
   const eligibleCount = eligible.length;
-  const users = excludeFollowing && !paginated ? eligible.slice(0, effectiveLimit) : eligible;
+  const users = excludeFollowing && !showAll ? eligible.slice(0, effectiveLimit) : eligible;
 
-  // Track whether the live queries that feed eligibility have hydrated for the current `userIds`.
-  // `useLiveQuery` returns its default empty Map synchronously and only fills it on the next tick,
-  // so we use these flags to avoid two visible UX issues:
+  // Track whether the live queries that feed eligibility have settled for the current `userIds`.
+  // `useLiveQuery` yields `undefined` synchronously and only resolves on the next tick, so we use
+  // these flags to avoid two visible UX issues:
   //   1. an unnecessary force-network refill while `eligibleCount` is transiently 0 (refill effect),
   //   2. a "first three users blink to a different three" when `excludeFollowing` is on and the
   //      relationships map hydrates a tick after the details map (consumer-facing `isLoading`).
-  const detailsHydrated = userIds.length === 0 || userIds.some((id) => userDetailsMap.has(id));
+  // A settled-but-empty snapshot (nothing cached, or the read failed) counts as hydrated so the
+  // consumer falls through to its empty/error state instead of showing a skeleton forever.
+  const detailsHydrated = userIds.length === 0 || userDetailsSnapshot?.forIds === userIds;
   const relationshipsHydrated =
-    !includeRelationships || userIds.length === 0 || userIds.some((id) => userRelationshipsMap.has(id));
+    !includeRelationships || userIds.length === 0 || userRelationshipsSnapshot?.forIds === userIds;
 
   // ============================================================================
   // Fetch Logic
@@ -208,13 +230,30 @@ export function useUserStream({
         setIsLoading(true);
         setError(null);
         skipRef.current = 0;
-        refillAttemptedRef.current = false;
+        refillStepRef.current = 0;
         setIsExhausted(false);
       } else {
         setIsLoadingMore(true);
       }
 
       try {
+        // A failed read must not pass for the cached slice before it (see the refill effect)
+        lastSliceFromCacheRef.current = false;
+
+        // Showing every eligible user starts from the whole cached row, which can have grown past
+        // one slice over earlier visits; a shorter row takes the slice read below instead.
+        if (isInitial && showAll) {
+          const cachedIds = await StreamUserController.getStreamUserIds(streamId);
+          if (cachedIds.length > fetchLimit) {
+            await StreamUserController.getOrFetchUsers({ userIds: cachedIds });
+            lastSliceFromCacheRef.current = true;
+            setInitialReadIds(cachedIds);
+            setUserIds(cachedIds);
+            skipRef.current = cachedIds.length;
+            return;
+          }
+        }
+
         const readStreamSlice = options.forceNetwork
           ? StreamUserController.refreshStreamSlice
           : StreamUserController.getOrFetchStreamSlice;
@@ -233,22 +272,23 @@ export function useUserStream({
         if (streamExhausted) {
           setIsExhausted(true);
         }
+        // A slice without a `skip` came from the cache (see `UserStreamApplication.getOrFetchStreamSlice`)
+        lastSliceFromCacheRef.current = nextSkip === undefined && nextPageIds.length > 0;
 
         // Update user IDs
         if (isInitial) {
+          setInitialReadIds(nextPageIds);
           setUserIds(nextPageIds);
           skipRef.current = nextSkip ?? nextPageIds.length;
         } else if (nextPageIds.length > 0) {
           setUserIds((prev) => {
             const existingIds = new Set(prev);
             const newIds = nextPageIds.filter((id) => !existingIds.has(id));
-            return [...prev, ...newIds];
+            // A page of known ids keeps the array, so the live queries do not run again for nothing
+            return newIds.length === 0 ? prev : [...prev, ...newIds];
           });
           skipRef.current = nextSkip ?? skipRef.current + nextPageIds.length;
         }
-
-        // Update hasMore based on whether we got a full page
-        setHasMore(paginated && !streamExhausted && nextPageIds.length >= fetchLimit);
       } catch (err) {
         if (isInitial) {
           setError(isAppError(err) ? err.message : 'Failed to fetch users');
@@ -262,21 +302,12 @@ export function useUserStream({
         }
       }
     },
-    [streamId, fetchLimit, paginated, excludeFollowing],
+    [streamId, fetchLimit, excludeFollowing, showAll],
   );
 
-  const loadMore = useCallback(async () => {
-    if (!paginated || isLoadingMore || !hasMore) return;
-    await fetchStreamSlice(false);
-  }, [paginated, isLoadingMore, hasMore, fetchStreamSlice]);
-
   const refetch = useCallback(async () => {
-    if (paginated) {
-      setUserIds([]);
-      setHasMore(true);
-    }
     await fetchStreamSlice(true);
-  }, [paginated, fetchStreamSlice]);
+  }, [fetchStreamSlice]);
 
   // Initial fetch on mount or when streamId changes
   useEffect(() => {
@@ -284,19 +315,29 @@ export function useUserStream({
   }, [fetchStreamSlice]);
 
   useEffect(() => {
-    if (!excludeFollowing || isLoading || isLoadingMore || isExhausted || refillAttemptedRef.current) return;
+    if (!excludeFollowing || isLoading || isLoadingMore || isExhausted) return;
     if (userIds.length === 0) return;
 
     // Wait for the live queries that feed `eligibleCount` to hydrate before deciding to refill
     // (see the comment on `detailsHydrated` / `relationshipsHydrated` above).
     if (!detailsHydrated || !relationshipsHydrated) return;
 
-    const shouldRefill = eligibleCount < effectiveRefillThreshold || (!paginated && eligibleCount < effectiveLimit);
+    const shouldRefill = eligibleCount < effectiveRefillThreshold || eligibleCount < effectiveLimit;
 
     if (!shouldRefill) return;
 
-    refillAttemptedRef.current = true;
-    void fetchStreamSlice(false, { forceNetwork: true });
+    // Read the cached tail of the stream first: users an earlier visit fetched past this slice
+    // stay eligible when the viewer followed some of the slice elsewhere. Ask Nexus for fresh
+    // candidates only when that tail was still short, and only once.
+    if (refillStepRef.current === 0) {
+      refillStepRef.current = 1;
+      void fetchStreamSlice(false);
+      return;
+    }
+    if (refillStepRef.current === 1 && lastSliceFromCacheRef.current) {
+      refillStepRef.current = 2;
+      void fetchStreamSlice(false, { forceNetwork: true });
+    }
   }, [
     detailsHydrated,
     eligibleCount,
@@ -307,24 +348,24 @@ export function useUserStream({
     isExhausted,
     isLoading,
     isLoadingMore,
-    paginated,
     relationshipsHydrated,
     userIds.length,
   ]);
 
   // When `excludeFollowing` is on, the visible users depend on the relationships live query.
-  // Keep skeletons up until BOTH details and relationships are hydrated, otherwise the consumer
-  // briefly sees an unfiltered slice of the buffer that gets reshuffled once relationships arrive.
-  const isHydrating = excludeFollowing && userIds.length > 0 && !(detailsHydrated && relationshipsHydrated);
+  // Keep skeletons up until BOTH details and relationships are hydrated after the initial read,
+  // otherwise the consumer briefly sees an unfiltered slice of the buffer that gets reshuffled
+  // once relationships arrive. A refill append keeps the settled list instead (see
+  // `relationshipsCoveredIds`), so the list never drops to skeletons once shown.
+  const isHydrating =
+    excludeFollowing && userIds.length > 0 && userIds === initialReadIds && !(detailsHydrated && relationshipsHydrated);
 
   return {
     users,
     userIds,
     isLoading: isLoading || isHydrating,
     isLoadingMore,
-    hasMore,
     error,
-    loadMore,
     refetch,
   };
 }

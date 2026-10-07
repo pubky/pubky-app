@@ -1,6 +1,8 @@
 import * as React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
+import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import type { VisualPlaceholderKind, VisualRow, VisualTile } from './TimelineFeedVisual.types';
 import { VisualTimelinePosts } from './VisualTimelinePosts';
 
@@ -12,8 +14,18 @@ const {
   mockUseIsTouchDevice,
   mockUseRemoveDeletedPost,
   mockClickableTagsList,
+  mockUserDetailsRef,
 } = vi.hoisted(() => ({
   mockNavigateToPost: vi.fn(),
+  mockUserDetailsRef: {
+    current: { id: 'author', name: 'Author', image: null, status: 'vacationing' } as {
+      id: string;
+      name: string;
+      image: string | null;
+      status: string | null;
+      deleted?: boolean;
+    },
+  },
   mockPostHeaderUserInfo: vi.fn(({ timeAgo }: { timeAgo?: string }) => (
     <div data-testid="visual-overlay-header">{timeAgo ? `Header:${timeAgo}` : 'Header'}</div>
   )),
@@ -53,8 +65,12 @@ vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
 }));
 
 vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
-  useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null, status: 'vacationing' } }),
+  useUserDetails: () => ({ userDetails: mockUserDetailsRef.current }),
 }));
+
+afterEach(() => {
+  mockUserDetailsRef.current = { id: 'author', name: 'Author', image: null, status: 'vacationing' };
+});
 
 vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
   useAvatarUrl: () => null,
@@ -270,6 +286,11 @@ function createRows(): VisualRow[] {
   ];
 }
 
+/** The tiles behind `createRows()`: what the tile pipeline tracks for that mosaic. */
+function createTiles(): VisualTile[] {
+  return createRows().flatMap((row) => row.cells.flatMap((cell) => (cell.tile ? [cell.tile] : [])));
+}
+
 describe('VisualTimelinePosts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -287,12 +308,36 @@ describe('VisualTimelinePosts', () => {
     mockUseVisualFeedTiles.mockReturnValue({
       rows: createRows(),
       tail: [],
-      tiles: [],
+      tiles: createTiles(),
       hasPendingSnapshot: false,
       hasPendingTiles: false,
       hasPendingFiles: false,
       hasPendingPostDetails: false,
     });
+  });
+
+  it('subscribes visible visual tiles for TTL refresh and releases them on unmount', () => {
+    const coordinator = TtlCoordinator.getInstance();
+    const subscribe = vi.spyOn(coordinator, 'subscribePost').mockImplementation(() => {});
+    const unsubscribe = vi.spyOn(coordinator, 'unsubscribePost').mockImplementation(() => {});
+    try {
+      const view = render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+        />,
+      );
+      expect(subscribe).toHaveBeenCalledWith({ compositePostId: 'author:post1' });
+      view.unmount();
+      expect(unsubscribe).toHaveBeenCalledWith({ compositePostId: 'author:post1' });
+    } finally {
+      subscribe.mockRestore();
+      unsubscribe.mockRestore();
+    }
   });
 
   it('navigates to the parent post when the tile is clicked', () => {
@@ -622,6 +667,9 @@ describe('VisualTimelinePosts', () => {
       isLoading: true,
       threshold: 3000,
       debounceMs: 20,
+      // The budget measures mosaic tiles, not ids: no rows yet, so nothing to count.
+      itemCount: 0,
+      maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
     });
 
     await waitFor(() => {
@@ -836,6 +884,26 @@ describe('VisualTimelinePosts', () => {
     expect(mockPostHeaderUserInfo.mock.calls[0][0]).not.toHaveProperty('showPopover', false);
   });
 
+  it('labels a tombstoned author as [DELETED] in the overlay header', () => {
+    mockUserDetailsRef.current = { id: 'author', name: '', image: null, status: null, deleted: true };
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(mockPostHeaderUserInfo).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'author', userName: '[DELETED]' }),
+      undefined,
+    );
+  });
+
   it('renders the header and text inside a vertical stack with spacing', () => {
     render(
       <VisualTimelinePosts
@@ -917,8 +985,139 @@ describe('VisualTimelinePosts', () => {
           isLoading: false,
           threshold: 3000,
           debounceMs: 20,
+          itemCount: 1,
+          maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
         });
       });
+    });
+
+    it('counts a tile still probing as mosaic progress without gating the observer on pending work', async () => {
+      // A page whose tiles are unsettled already grew the tracked tiles, so it is not an
+      // unproductive load. The pending flags must not feed `isLoading`: a file Nexus no
+      // longer returns keeps `hasPendingFiles` set for good, and a gated observer would
+      // leave the feed with neither auto-loading nor the manual Load more.
+      const [readyTile] = createTiles();
+      const probingTile: VisualTile = {
+        ...readyTile,
+        id: 'tile-2',
+        postId: 'author:post2',
+        preferredSize: undefined,
+        rowSize: undefined,
+        probeState: 'pending',
+      };
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: createRows(),
+        tail: [],
+        tiles: [readyTile, probingTile],
+        hasPendingSnapshot: false,
+        hasPendingTiles: true,
+        hasPendingFiles: true,
+        hasPendingPostDetails: true,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={['author:post1', 'author:post2', 'author:post3']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ isLoading: false, itemCount: 2 }));
+      });
+    });
+
+    it('hands over to Load more when ids keep growing but the mosaic does not', async () => {
+      // Home/Search Visual with content set to All consumes a mixed stream: a page of
+      // text-only posts grows `postIds` while the tile pipeline drops every one of them. The
+      // budget must count mosaic progress, so those rounds are unproductive and the sentinel
+      // stops after the configured number of them.
+      const { useInfiniteScroll: realUseInfiniteScroll } = await vi.importActual<
+        typeof import('@/hooks/useInfiniteScroll/useInfiniteScroll')
+      >('@/hooks/useInfiniteScroll/useInfiniteScroll');
+      mockUseInfiniteScroll.mockImplementation(realUseInfiniteScroll);
+      const observerCallbacks: Array<(entries: Array<{ isIntersecting: boolean }>) => void> = [];
+      const previousObserver = window.IntersectionObserver;
+      Object.defineProperty(window, 'IntersectionObserver', {
+        writable: true,
+        configurable: true,
+        value: vi.fn(function (callback: (entries: Array<{ isIntersecting: boolean }>) => void) {
+          observerCallbacks.push(callback);
+          return { observe: vi.fn(), unobserve: vi.fn(), disconnect: vi.fn() };
+        }),
+      });
+      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+      const renderFeed = (postIds: string[]) => (
+        <VisualTimelinePosts
+          postIds={postIds}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={mockLoadMore}
+        />
+      );
+      const intersect = async () => {
+        await act(async () => {
+          observerCallbacks.at(-1)?.([{ isIntersecting: true }]);
+          await new Promise((resolve) => setTimeout(resolve, 40));
+        });
+      };
+
+      try {
+        const postIds = ['author:post1'];
+        const { rerender } = render(renderFeed(postIds));
+        await waitFor(() => expect(observerCallbacks.length).toBeGreaterThan(0));
+
+        for (let round = 1; round <= TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS; round += 1) {
+          await intersect();
+          expect(mockLoadMore).toHaveBeenCalledTimes(round);
+          // The page delivered ids but no tiles: the mosaic (createRows) stays the same.
+          postIds.push(`author:text-only-${round}`);
+          rerender(renderFeed([...postIds]));
+        }
+
+        await intersect();
+        expect(mockLoadMore).toHaveBeenCalledTimes(TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS);
+        expect(document.querySelector('[data-cy="timeline-load-more"]')).toBeInTheDocument();
+      } finally {
+        Object.defineProperty(window, 'IntersectionObserver', {
+          writable: true,
+          configurable: true,
+          value: previousObserver,
+        });
+      }
+    });
+
+    it('replaces the sentinel with a manual Load more once auto-loading stalls', async () => {
+      const resumeAutoLoad = vi.fn();
+      mockUseInfiniteScroll.mockReturnValue({
+        sentinelRef: vi.fn(),
+        isStalled: true,
+        resumeAutoLoad,
+      });
+
+      const { container } = render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
+      });
+      expect(container.querySelector('.h-5')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+      expect(resumeAutoLoad).toHaveBeenCalledTimes(1);
     });
 
     it('arms the observer when postIds is empty but hasMore (filtered stream region)', () => {
@@ -1127,7 +1326,7 @@ describe('VisualTimelinePosts', () => {
 
     it('renders the provided empty state without a trailing slot (visitor view, Grid/List parity)', () => {
       // Regression: emptyState must reach TimelineStateWrapper's emptyComponent
-      // like Posts/GridPosts do — a visitor whose visual collection feed
+      // like Posts/CardsPosts do — a visitor whose visual collection feed
       // resolves to zero posts sees CollectionItemsEmpty, not generic copy.
       mockUseVisualFeedTiles.mockReturnValue({
         rows: [],

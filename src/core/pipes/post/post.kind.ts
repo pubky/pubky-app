@@ -1,5 +1,9 @@
-import LinkifyIt from 'linkify-it';
+import { LinkifyIt } from 'linkify-it';
 import { PubkyAppPostKind } from 'pubky-app-specs';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { isVideoUrl } from '@/libs/utils/videoUrl';
 
 type TInferPostKindParams = {
   content: string;
@@ -24,20 +28,21 @@ type TResolveTagTargetCompositeIdParams = {
 };
 
 // Keep these aligned with PostLinkEmbeds so we treat links consistently.
+// linkify-it v6 defaults fuzzyLink to false; keep matching protocol-less URLs.
 const IGNORED_PROTOCOLS = ['ftp:', 'mailto:'];
 
 const stripMarkdownLinks = (content: string): string => {
   return content.replace(/\[([^\]]*)\]\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g, '<stripped-link>');
 };
 
-const hasSupportedUrl = (content: string): boolean => {
-  const linkify = new LinkifyIt();
+const getSupportedUrl = (content: string): string | null => {
+  const linkify = new LinkifyIt({ fuzzyLink: true });
   IGNORED_PROTOCOLS.forEach((protocol) => linkify.add(protocol, null));
 
   const strippedContent = stripMarkdownLinks(content);
   const match = linkify.match(strippedContent);
 
-  return Boolean(match?.[0]?.url);
+  return match?.[0]?.url ?? null;
 };
 
 const getAttachmentKind = (contentTypes: string[]): PubkyAppPostKind | null => {
@@ -59,11 +64,13 @@ const getAttachmentKind = (contentTypes: string[]): PubkyAppPostKind | null => {
 /**
  * Shared tail of kind inference, applied after the callers' own guards
  * (article on create, article/collection preservation on edit):
- * URL in content → Link, else attachment media kind, else Short.
+ * video URL in content → Video, other URL in content → Link, else attachment
+ * media kind, else Short.
  */
 const inferContentKind = (content: string, attachmentContentTypes: string[]): PubkyAppPostKind => {
-  if (hasSupportedUrl(content)) {
-    return PubkyAppPostKind.Link;
+  const url = getSupportedUrl(content);
+  if (url) {
+    return isVideoUrl(url) ? PubkyAppPostKind.Video : PubkyAppPostKind.Link;
   }
 
   return getAttachmentKind(attachmentContentTypes) ?? PubkyAppPostKind.Short;
@@ -99,6 +106,31 @@ export const inferPostKindForEdit = ({
   }
 
   return inferContentKind(content, attachmentContentTypes);
+};
+
+/** Kinds a lock post's public announcement may never use — it is a short teaser, not the content. */
+const KINDS_FORBIDDEN_FOR_ANNOUNCEMENT = new Set<PubkyAppPostKind>([
+  PubkyAppPostKind.Long,
+  PubkyAppPostKind.Collection,
+]);
+
+/**
+ * Kind of the public announcement that advertises a lock.
+ *
+ * The announcement is a teaser, so `long` and `collection` are rejected outright — the locked content
+ * behind it may still be either. Today the composer hides the article button while the lock switch is
+ * on, which already rules `long` out; this guard keeps that from breaking silently if the UI changes.
+ */
+export const inferAnnouncementKind = (params: TInferPostKindParams): PubkyAppPostKind => {
+  const kind = inferPostKindForCreate(params);
+  if (KINDS_FORBIDDEN_FOR_ANNOUNCEMENT.has(kind)) {
+    throw Err.validation(ValidationErrorCode.INVALID_INPUT, `A lock announcement cannot be a ${kind} post`, {
+      service: ErrorService.Local,
+      operation: 'inferAnnouncementKind',
+      context: { kind },
+    });
+  }
+  return kind;
 };
 
 /**

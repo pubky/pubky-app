@@ -12,11 +12,11 @@ export interface UsePostTagsResult {
   count: number;
   /** Loading state while fetching tags */
   isLoading: boolean;
-  /** Loading state while fetching more tags (kept for API compatibility) */
+  /** Loading state while fetching another page of tags */
   isLoadingMore: boolean;
-  /** Whether there are more tags to load (kept for API compatibility) */
+  /** Whether more tags are available from the server */
   hasMore: boolean;
-  /** Function to load more tags (no-op, kept for API compatibility) */
+  /** Load the next page of tags */
   loadMore: () => Promise<void>;
   /** Function to add a new tag */
   handleTagAdd: (tagString: string) => Promise<{ success: boolean; error?: string }>;

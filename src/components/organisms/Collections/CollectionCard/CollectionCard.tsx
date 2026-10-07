@@ -10,6 +10,8 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
+import type { UseTtlSubscriptionResult } from '@/hooks/useTtlSubscription/useTtlSubscription.types';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { resolveCollectionCoverImage } from '@/libs/post/collectionCoverImage';
@@ -63,6 +65,16 @@ interface CollectionCardProps {
  * state (title='', itemCount=0, etc.). Once details land we delegate to
  * `CollectionCardContent` with `postDetails` as a non-null prop. The
  * separation also keeps hook ordering clean for hooks that depend on the loaded envelope.
+ *
+ * Freshness: the envelope (name / description / cover / item count / layout)
+ * is a cached Dexie row that `usePostDetails` never re-fetches on a cache hit,
+ * so a `landing` card subscribes its composite id to the viewport TTL
+ * coordinator — the same path `PostMain` uses — and the live query picks up
+ * the refreshed row. `embed` cards skip their own subscription: they are
+ * always nested inside a surface that already subscribes the same id
+ * (`PostPreviewCard`, or `PostMain` via `PostContentBase`), so a second one
+ * would only add a redundant viewport observer. See docs/data-patterns.md —
+ * "Viewport TTL subscriptions".
  */
 export function CollectionCard({
   authorPubky,
@@ -75,6 +87,13 @@ export function CollectionCard({
   const isMobile = useIsMobile();
   const isWideLayout = useEffectiveTagsLayout() === 'side';
   const { postDetails, isLoading } = usePostDetails(compositeId);
+  // Standalone cards own the TTL subscription; embeds defer to the enclosing
+  // post surface (see the component doc above).
+  const { ref: ttlRef } = useTtlSubscription({
+    type: 'post',
+    id: compositeId,
+    enabled: presentation === 'landing',
+  });
 
   if (!postDetails) {
     // `undefined`/in-flight → skeleton; a settled `null` means the collection
@@ -83,11 +102,12 @@ export function CollectionCard({
     return isLoading ? <CollectionCardSkeleton className={className} /> : <CollectionMissing className={className} />;
   }
 
-  // Soft-deleted collections (`content === '[DELETED]'`) render the standard
-  // deleted-card fallback instead of an empty card. Short-circuits before
-  // `parseCollectionContent` is ever called against the `[DELETED]` sentinel.
+  // Soft-deleted collections (the Nexus `deleted` flag, or the legacy
+  // `[DELETED]` content) render the standard deleted-card fallback instead of
+  // an empty card. Short-circuits before `parseCollectionContent` is ever
+  // called against a tombstone.
   // `CollectionDeleted` owns its full card shell — no wrappers needed here.
-  if (isPostDeleted(postDetails.content)) {
+  if (isPostDeleted(postDetails)) {
     return <CollectionDeleted className={className} />;
   }
 
@@ -96,7 +116,7 @@ export function CollectionCard({
   // wins) and mirrors `PostContentBase`'s blur intercept — direct-render
   // surfaces (landing sections) need their own check since they bypass it.
   if (postDetails.is_blurred) {
-    return <CollectionCardBlurred compositeId={compositeId} className={className} />;
+    return <CollectionCardBlurred ref={ttlRef} compositeId={compositeId} className={className} />;
   }
 
   return (
@@ -110,6 +130,7 @@ export function CollectionCard({
       isMobile={isMobile}
       isWideLayout={isWideLayout}
       interactiveActions={interactiveActions}
+      ttlRef={ttlRef}
     />
   );
 }
@@ -124,6 +145,8 @@ interface CollectionCardContentProps {
   isMobile: boolean;
   isWideLayout: boolean;
   interactiveActions: boolean;
+  /** Viewport-observer ref from `useTtlSubscription`; attached to the card root. */
+  ttlRef: UseTtlSubscriptionResult['ref'];
 }
 
 function CollectionCardContent({
@@ -136,6 +159,7 @@ function CollectionCardContent({
   isMobile,
   isWideLayout,
   interactiveActions,
+  ttlRef,
 }: CollectionCardContentProps) {
   const isEmbed = presentation === 'embed';
   const showTagAddButton = interactiveActions && !isEmbed;
@@ -162,6 +186,7 @@ function CollectionCardContent({
 
   return (
     <Link
+      ref={ttlRef}
       overrideDefaults
       href={href}
       aria-label={title}
@@ -222,7 +247,7 @@ function CollectionCardContent({
               <CollectionCountBadge
                 count={itemCount}
                 showLabelOnMobile
-                tone={embeddedOnMuted ? 'on-muted' : 'on-card'}
+                tone={coverImage ? 'on-cover' : embeddedOnMuted ? 'on-muted' : 'on-card'}
               />
               <AvatarWithFallback
                 avatarUrl={ownerAvatarUrl}

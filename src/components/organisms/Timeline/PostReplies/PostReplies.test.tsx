@@ -9,12 +9,10 @@ import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.sche
 import { TimelinePostReplies } from './PostReplies';
 
 // Mock hooks
-const mockUseRequireAuth = vi.fn(
-  (): UseRequireAuthResult => ({
-    isAuthenticated: true,
-    requireAuth: <T,>(action: () => T) => action(),
-  }),
-);
+const mockUseRequireAuth = vi.fn((): UseRequireAuthResult => ({
+  isAuthenticated: true,
+  requireAuth: <T,>(action: () => T) => action(),
+}));
 
 const mockUsePostDetails = vi.fn(() => ({
   postDetails: {

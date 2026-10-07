@@ -7,11 +7,12 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { SEARCH_PEOPLE_PREVIEW_COUNT } from '@/config/search';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchPeople } from '@/hooks/useSearchPeople/useSearchPeople';
-import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
-import type { Pubky } from '@/models/models.types';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { useSearchReach } from '@/hooks/useSearchReach/useSearchReach';
+import { toast } from '@/molecules/Toaster/toast';
 import { UserListItem } from '@/organisms/UserListItem/UserListItem';
+import type { NexusSearchReach } from '@/services/nexus/search/search.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { SearchPersonCardSkeleton } from './SearchPeople.skeleton';
 
@@ -19,29 +20,39 @@ import { SearchPersonCardSkeleton } from './SearchPeople.skeleton';
  * SearchPeople
  *
  * "People" section on `/search` — users whose profile is tagged with the
- * searched tags, via `search/users/by_tags`. Collapsed to a preview of
- * `SEARCH_PEOPLE_PREVIEW_COUNT` cards; "See all" expands in place to the
- * paginated grid. Renders nothing without tags or matches.
+ * searched tags, within the Search reach, via `search/users/by_tags`.
+ * Collapsed to a preview of `SEARCH_PEOPLE_PREVIEW_COUNT` cards; "See all"
+ * expands in place to the paginated grid. Renders nothing without a tag search (a full-text query has
+ * no tags to match) or without matches.
  */
 export function SearchPeople() {
-  const tags = useSearchTags();
+  const criteria = useSearchCriteria();
+  const { nexusReach, currentUserPubky } = useSearchReach();
 
-  if (tags.length === 0) {
+  if (criteria.mode !== 'tags') {
     return null;
   }
 
-  // Remount on any tag change so the expansion state resets with the query.
-  return <SearchPeopleContent key={tags.join(',')} tags={tags} />;
+  const tags = criteria.tags;
+
+  // Remount on any viewer, reach or tag change so the expansion resets with the scope.
+  return (
+    <SearchPeopleContent
+      key={`${currentUserPubky ?? 'public'}:${nexusReach ?? 'all'}:${tags.join(',')}`}
+      tags={tags}
+      reach={nexusReach}
+    />
+  );
 }
 
 /** Inner data-driven body — only mounted with a non-empty tag list. */
-function SearchPeopleContent({ tags }: { tags: string[] }) {
-  const { toast } = useToast();
+function SearchPeopleContent({ tags, reach }: { tags: string[]; reach?: NexusSearchReach }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { toggleFollow, isUserLoading } = useFollowUser();
 
   const { users, loading, loadingMore, hasMore, loadMore } = useSearchPeople(tags, {
+    reach,
     onError: () => {
       toast({
         variant: 'error',
@@ -63,10 +74,6 @@ function SearchPeopleContent({ tags }: { tags: string[] }) {
   // A fully-filtered page keeps hasMore — with nothing to preview, surface
   // "Show more" directly so the cursor can still advance.
   const showShowMore = !loading && hasMore && (isExpanded || users.length === 0);
-
-  const handleFollow = async (userId: Pubky, isCurrentlyFollowing: boolean, displayName: string) => {
-    await toggleFollow(userId, isCurrentlyFollowing, displayName);
-  };
 
   return (
     <Container overrideDefaults data-cy="search-people-section" className="flex w-full flex-col gap-4">
@@ -93,7 +100,7 @@ function SearchPeopleContent({ tags }: { tags: string[] }) {
                 variant="card"
                 isLoading={isUserLoading(user.id)}
                 isCurrentUser={currentUserPubky === user.id}
-                onFollowClick={handleFollow}
+                onFollowClick={toggleFollow}
               />
             ))}
       </Container>

@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import type { Pubky } from '@/models/models.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { mockAuthStore } from '@/test-utils/stores';
 import { useBookmark } from './useBookmark';
@@ -18,13 +19,8 @@ vi.mock('@/controllers/bookmark/bookmark', () => ({
   },
 }));
 
-// Mock molecules (useToast)
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({ toast: mockToast }),
-  };
-});
+// Mock molecules (toast)
+vi.mock('@/molecules/Toaster/toast');
 
 describe('useBookmark', () => {
   const mockUserId = 'user-123' as Pubky;
@@ -102,7 +98,7 @@ describe('useBookmark', () => {
       userId: mockUserId,
     });
     expect(result.current.isBookmarked).toBe(true);
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Post saved to bookmarks',
     });
   });
@@ -126,7 +122,7 @@ describe('useBookmark', () => {
       userId: mockUserId,
     });
     expect(result.current.isBookmarked).toBe(false);
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Post removed from bookmarks',
     });
   });
@@ -145,7 +141,7 @@ describe('useBookmark', () => {
       await result.current.toggle();
     });
 
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Sign in to bookmark posts',
     });
@@ -221,7 +217,7 @@ describe('useBookmark', () => {
         await result.current.toggle();
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Collection followed',
       });
     });
@@ -247,7 +243,7 @@ describe('useBookmark', () => {
         await result.current.toggle();
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Collection unfollowed',
       });
     });
@@ -274,7 +270,7 @@ describe('useBookmark', () => {
         await result.current.toggle();
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not add bookmark',
       });
@@ -295,7 +291,7 @@ describe('useBookmark', () => {
       await result.current.toggle();
     });
 
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Could not add bookmark',
     });
@@ -322,7 +318,7 @@ describe('useBookmark', () => {
       });
 
       expect(result.current.isBookmarked).toBe(false);
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'warning',
         description: 'Removed from bookmarks on this device, but syncing failed.',
       });
@@ -343,7 +339,7 @@ describe('useBookmark', () => {
       });
 
       expect(result.current.isBookmarked).toBe(true);
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not remove bookmark',
       });
@@ -364,7 +360,7 @@ describe('useBookmark', () => {
       });
 
       expect(result.current.isBookmarked).toBe(true);
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'warning',
         description: 'Saved to bookmarks on this device, but syncing failed.',
       });
@@ -385,7 +381,7 @@ describe('useBookmark', () => {
       });
 
       expect(result.current.isBookmarked).toBe(true);
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not remove bookmark',
       });

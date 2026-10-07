@@ -38,9 +38,13 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
   ref,
 ) {
   const tagInputRef = useRef<TagInputHandle>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(widthMode !== 'full');
   useImperativeHandle(ref, () => ({
     focus: () => tagInputRef.current?.focus(),
+    // `nearest` keeps the reveal quiet when the panel is already on screen, and scrolls the
+    // minimum needed when it is not.
+    reveal: () => containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }),
   }));
   const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } = usePostTags(postId);
 
@@ -78,7 +82,7 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
     tags.length > 0 &&
     (tags.length > INITIAL_VISIBLE_TAGS || (hasMore && tags.length >= INITIAL_VISIBLE_TAGS));
   return (
-    <Container data-cy="post-tags-panel" className={cn('gap-2', className)}>
+    <Container ref={containerRef} data-cy="post-tags-panel" className={cn('gap-2', className)}>
       <Container
         overrideDefaults
         className={cn('flex flex-col gap-2', widthMode === 'fit' ? 'w-fit max-w-full' : 'w-full')}

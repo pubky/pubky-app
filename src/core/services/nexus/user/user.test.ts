@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNexusUrl } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
-import type { NexusTag, NexusUserDetails, TUserId } from '@/services/nexus/nexus.types';
+import type { NexusTag, NexusUserCounts, NexusUserDetails, TUserId } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { NexusUserService } from '@/services/nexus/user/user';
 import { buildUrlWithQuery } from '../nexus.utils';
 import { userApi } from './user.api';
 import {
+  PROFILE_LOOKUP_NOT_FOUND_RETRIES,
   TUserPaginationParams,
   TUserRelationshipParams,
   TUserTaggersParams,
@@ -184,7 +185,7 @@ describe('NexusUserService', () => {
 
   describe('taggers', () => {
     it('should construct correct URL with encoded label', async () => {
-      const queryNexusSpy = mockQueryNexus.mockResolvedValue([]);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue({ users: [], relationship: false });
 
       await NexusUserService.taggers({
         user_id: testUserId,
@@ -196,6 +197,7 @@ describe('NexusUserService', () => {
       // Verify label is URL-encoded (& becomes %26)
       expect(queryNexusSpy).toHaveBeenCalledWith({
         url: expect.stringMatching(/\/taggers\/rust%20%26%20wasm\?skip=10&limit=5$/),
+        staleTime: 0,
       });
     });
   });
@@ -217,7 +219,25 @@ describe('NexusUserService', () => {
       const result = await NexusUserService.details({ user_id: testUserId });
 
       expect(result).toEqual(mockUserDetails);
-      expect(queryNexusSpy).toHaveBeenCalledWith({ url: `${getNexusUrl()}/v0/user/${testUserId}/details` });
+      expect(queryNexusSpy).toHaveBeenCalledWith({
+        url: `${getNexusUrl()}/v0/user/${testUserId}/details`,
+      });
+    });
+
+    it('uses the short not-found budget only for an explicit profile lookup', async () => {
+      await NexusUserService.details({ user_id: testUserId, profileLookup: true });
+
+      expect(mockQueryNexus).toHaveBeenCalledWith({
+        url: `${getNexusUrl()}/v0/user/${testUserId}/details`,
+        notFoundRetries: PROFILE_LOOKUP_NOT_FOUND_RETRIES,
+      });
+    });
+
+    it('scopes the not-found budget below the shared Nexus one', () => {
+      // The shared Nexus budget is 5 retries (~15.5s); the profile lookup must be
+      // shorter, or the "User not found" page is parked behind the indexing window.
+      expect(PROFILE_LOOKUP_NOT_FOUND_RETRIES).toBeLessThan(5);
+      expect(PROFILE_LOOKUP_NOT_FOUND_RETRIES).toBeGreaterThanOrEqual(1);
     });
 
     it('should handle user with complete profile data', async () => {
@@ -241,6 +261,17 @@ describe('NexusUserService', () => {
       expect(result).toEqual(mockUserDetails);
       expect(result.name).toBe('Satoshi Nakamoto');
       expect(result.links).toHaveLength(2);
+    });
+  });
+
+  describe('counts', () => {
+    it('keeps the shared not-found budget (profile-lookup scope only)', async () => {
+      const mockCounts = { followers: 1, following: 2, friends: 0, posts: 3 } as NexusUserCounts;
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockCounts);
+
+      await NexusUserService.counts({ user_id: testUserId });
+
+      expect(queryNexusSpy).toHaveBeenCalledWith({ url: `${getNexusUrl()}/v0/user/${testUserId}/counts` });
     });
   });
 });

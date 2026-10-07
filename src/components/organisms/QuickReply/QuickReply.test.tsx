@@ -60,6 +60,7 @@ function createUsePostInputReturn(options: unknown, overrides: Record<string, un
     handleDragOver: vi.fn(),
     handleDrop: vi.fn(),
     handlePaste: vi.fn(),
+    handleSelectionChange: vi.fn(),
     setTags: vi.fn(),
     ...overrides,
   };
@@ -265,6 +266,23 @@ describe('QuickReply', () => {
     expect(screen.getByTestId('quick-reply-connector').parentElement).toHaveClass('absolute', '-inset-y-px', 'left-0');
     expect(screen.getByTestId('quick-reply-connector')).toHaveAttribute('height', '175');
     expect(screen.getByTestId('quick-reply-connector')).toHaveAttribute('variant', 'last');
+  });
+
+  it('forwards caret selection events to usePostInput handleSelectionChange', () => {
+    const handleSelectionChange = vi.fn();
+    mockUsePostInput.mockImplementation((options: unknown) =>
+      createUsePostInputReturn(options, { handleSelectionChange }),
+    );
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    const textarea = screen.getByTestId('quick-reply-textarea');
+    fireEvent.select(textarea);
+    expect(handleSelectionChange).toHaveBeenCalled();
+
+    handleSelectionChange.mockClear();
+    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
+    expect(handleSelectionChange).toHaveBeenCalled();
   });
 
   it('forwards clipboard paste to usePostInput handlePaste (image attachments)', () => {
@@ -473,6 +491,22 @@ describe('QuickReply', () => {
     expect(getExpandedPostHeader()).toHaveAttribute('data-count', '11');
     expect(getExpandedPostHeader()).toHaveAttribute('data-character-limit-placement', 'name-row');
     expect(screen.getByTestId('post-header-character-count')).toHaveTextContent(`11/${POST_MAX_CHARACTER_LENGTH}`);
+  });
+
+  it('counts an emoji reply draft at the enforced limit so the warning is not missed (issue #1761)', () => {
+    mockUsePostInput.mockImplementation((options: unknown) =>
+      createUsePostInputReturn(options, {
+        content: `😀${'a'.repeat(POST_MAX_CHARACTER_LENGTH - 2)}`,
+        isExpanded: true,
+      }),
+    );
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    expect(getExpandedPostHeader()).toHaveAttribute('data-count', POST_MAX_CHARACTER_LENGTH.toString());
+    expect(screen.getByTestId('post-header-character-count')).toHaveTextContent(
+      `${POST_MAX_CHARACTER_LENGTH}/${POST_MAX_CHARACTER_LENGTH}`,
+    );
   });
 
   it('does not show character count when collapsed', () => {
