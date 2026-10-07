@@ -11,6 +11,8 @@ exports[`DialogPrivacy - Snapshots > matches snapshot for default DialogPrivacy 
     <span
       class="cursor-pointer font-medium text-brand"
       data-testid="typography"
+      role="button"
+      tabindex="0"
     >
       Privacy Policy
     </span>
