@@ -120,6 +120,33 @@ exports[`InstallCard - Snapshots > matches snapshot 1`] = `
 </div>
 `;
 
+exports[`InstallFooter - Snapshots > matches snapshot for default InstallFooter 1`] = `
+<p
+  class="leading-light text-sm font-medium text-muted-foreground [&_a]:underline py-6"
+  data-testid="typography"
+>
+  Use 
+  <a
+    class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    href="https://pubkyring.app/"
+    rel="noopener noreferrer"
+    target="_blank"
+  >
+    Pubky Ring
+  </a>
+   or any other 
+  <a
+    class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    href="https://pubky.org"
+    rel="noopener noreferrer"
+    target="_blank"
+  >
+    Pubky Core
+  </a>
+  –powered keychain, or create your keys in the browser (less secure).
+</p>
+`;
+
 exports[`InstallHeader - Snapshots > matches snapshot 1`] = `
 <div
   class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
