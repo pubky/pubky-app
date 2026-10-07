@@ -49,7 +49,7 @@ exports[`HumanPhoneInputField - Snapshots > matches snapshot 1`] = `
         class="flex w-full max-w-128 flex-col gap-2"
       >
         <div
-          class="flex w-full flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
+          class="flex w-full flex-row items-center rounded-md border border-dashed border-input bg-background/20 px-5 py-2 shadow-xs"
           data-testid="human-phone-input-wrapper"
         >
           <input
@@ -116,7 +116,7 @@ exports[`HumanPhoneInputField - Snapshots > matches snapshot with error 1`] = `
         class="flex w-full max-w-128 flex-col gap-2"
       >
         <div
-          class="flex w-full flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
+          class="flex w-full flex-row items-center rounded-md border border-dashed border-input bg-background/20 px-5 py-2 shadow-xs"
           data-testid="human-phone-input-wrapper"
         >
           <input

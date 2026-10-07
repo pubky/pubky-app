@@ -68,14 +68,14 @@ export function HeaderSocialLinks({ ...props }: React.HTMLAttributes<HTMLDivElem
       data-testid="header-social-links"
       className={cn('mr-6 hidden flex-row justify-end gap-6 md:flex', props.className)}
     >
-      <Link href={getGithubLink()} target="_blank" variant="muted" size="default">
-        <Github2 className="h-6 w-6" />
+      <Link href={getGithubLink()} target="_blank" variant="muted" size="default" aria-label="GitHub">
+        <Github2 className="h-6 w-6" aria-hidden="true" />
       </Link>
-      <Link href={getTwitterGetpubkyLink()} target="_blank" variant="muted" size="default">
-        <XTwitter className="h-6 w-6" />
+      <Link href={getTwitterGetpubkyLink()} target="_blank" variant="muted" size="default" aria-label="X">
+        <XTwitter className="h-6 w-6" aria-hidden="true" />
       </Link>
-      <Link href={getTelegramLink()} target="_blank" variant="muted" size="default">
-        <Telegram className="h-6 w-6" />
+      <Link href={getTelegramLink()} target="_blank" variant="muted" size="default" aria-label="Telegram">
+        <Telegram className="h-6 w-6" aria-hidden="true" />
       </Link>
     </Container>
   );

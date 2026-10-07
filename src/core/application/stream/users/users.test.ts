@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserStreamApplication } from '@/application/stream/users/users';
+import { NEXUS_USER_STREAM_MAX_LIMIT } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
 import { buildStarterPackStreamId, buildUserCompositeId } from '@/models/stream/user/userStream.helper';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
@@ -447,6 +448,45 @@ describe('UserStreamApplication', () => {
 
       const cachedStream = await LocalStreamUsersService.findById(streamId);
       expect(cachedStream?.stream).toEqual(['user-1', 'user-2', 'user-3']);
+    });
+
+    it('should clamp the Nexus page to the user stream limit and judge exhaustion by it', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+      const page = Array.from({ length: NEXUS_USER_STREAM_MAX_LIMIT }, (_, i) => `user-${i}` as Pubky);
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch').mockResolvedValue(page);
+
+      const result = await UserStreamApplication.refreshStreamSlice({
+        streamId,
+        skip: 0,
+        limit: NEXUS_USER_STREAM_MAX_LIMIT + 10,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      expect(fetchSpy).toHaveBeenCalledWith({
+        streamId,
+        params: { skip: 0, limit: NEXUS_USER_STREAM_MAX_LIMIT, viewer_id: DEFAULT_VIEWER_ID },
+      });
+      expect(result.nextPageIds).toEqual(page);
+      expect(result.isExhausted).toBe(false);
+      expect(result.skip).toBe(NEXUS_USER_STREAM_MAX_LIMIT);
+    });
+
+    it('should serve a cache hit above the user stream limit without asking Nexus', async () => {
+      const streamId = UserStreamTypes.RECOMMENDED;
+      const cached = Array.from({ length: NEXUS_USER_STREAM_MAX_LIMIT + 10 }, (_, i) => `user-${i}` as Pubky);
+      await LocalStreamUsersService.upsert({ streamId, stream: cached });
+      await createUserDetails(cached);
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch');
+
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        skip: 0,
+        limit: cached.length,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(result.nextPageIds).toEqual(cached);
     });
 
     it('should mark short Nexus pages as exhausted', async () => {

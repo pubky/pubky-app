@@ -299,6 +299,22 @@ describe('Header Components', () => {
       expect(githubLink?.querySelector('svg')).toBeInTheDocument();
     });
 
+    it('gives each icon link an accessible name', () => {
+      render(<HeaderSocialLinks />);
+
+      expect(screen.getByRole('link', { name: 'GitHub' })).toHaveAttribute('href', 'https://github.com');
+      expect(screen.getByRole('link', { name: 'X' })).toHaveAttribute('href', 'https://twitter.com/getpubky');
+      expect(screen.getByRole('link', { name: 'Telegram' })).toHaveAttribute('href', 'https://t.me/getpubky');
+    });
+
+    it('hides the decorative icons from assistive technology', () => {
+      render(<HeaderSocialLinks />);
+
+      screen.getAllByRole('link').forEach((link) => {
+        expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      });
+    });
+
     it('renders links with correct hrefs', () => {
       render(<HeaderSocialLinks />);
 
