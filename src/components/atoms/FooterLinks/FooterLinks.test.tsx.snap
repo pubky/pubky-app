@@ -2,7 +2,7 @@
 
 exports[`FooterLinks - Snapshots > matches snapshot with complex children 1`] = `
 <p
-  class="leading-light text-sm font-medium text-muted-foreground opacity-80"
+  class="leading-light text-sm font-medium text-muted-foreground [&_a]:underline"
   data-testid="typography"
 >
   <span>
@@ -19,7 +19,7 @@ exports[`FooterLinks - Snapshots > matches snapshot with complex children 1`] = 
 
 exports[`FooterLinks - Snapshots > matches snapshot with custom className 1`] = `
 <p
-  class="leading-light text-sm font-medium text-muted-foreground opacity-80 custom-footer"
+  class="leading-light text-sm font-medium text-muted-foreground [&_a]:underline custom-footer"
   data-testid="typography"
 >
   Custom footer
@@ -28,7 +28,7 @@ exports[`FooterLinks - Snapshots > matches snapshot with custom className 1`] = 
 
 exports[`FooterLinks - Snapshots > matches snapshot with data-testid prop 1`] = `
 <p
-  class="leading-light text-sm font-medium text-muted-foreground opacity-80"
+  class="leading-light text-sm font-medium text-muted-foreground [&_a]:underline"
   data-testid="custom-footer-links"
 >
   Footer with test ID
@@ -37,7 +37,7 @@ exports[`FooterLinks - Snapshots > matches snapshot with data-testid prop 1`] = 
 
 exports[`FooterLinks - Snapshots > matches snapshot with default props 1`] = `
 <p
-  class="leading-light text-sm font-medium text-muted-foreground opacity-80"
+  class="leading-light text-sm font-medium text-muted-foreground [&_a]:underline"
   data-testid="typography"
 >
   Footer text
@@ -46,14 +46,14 @@ exports[`FooterLinks - Snapshots > matches snapshot with default props 1`] = `
 
 exports[`FooterLinks - Snapshots > matches snapshot with empty children 1`] = `
 <p
-  class="leading-light text-sm font-medium text-muted-foreground opacity-80"
+  class="leading-light text-sm font-medium text-muted-foreground [&_a]:underline"
   data-testid="typography"
 />
 `;
 
 exports[`FooterLinks - Snapshots > matches snapshot with id prop 1`] = `
 <p
-  class="leading-light text-sm font-medium text-muted-foreground opacity-80"
+  class="leading-light text-sm font-medium text-muted-foreground [&_a]:underline"
   data-testid="typography"
   id="footer-id"
 >
@@ -63,7 +63,7 @@ exports[`FooterLinks - Snapshots > matches snapshot with id prop 1`] = `
 
 exports[`FooterLinks - Snapshots > matches snapshot with simple text 1`] = `
 <p
-  class="leading-light text-sm font-medium text-muted-foreground opacity-80"
+  class="leading-light text-sm font-medium text-muted-foreground [&_a]:underline"
   data-testid="typography"
 >
   Simple text

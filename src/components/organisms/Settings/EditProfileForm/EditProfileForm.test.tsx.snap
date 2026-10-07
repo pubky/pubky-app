@@ -40,12 +40,12 @@ exports[`EditProfileForm - Snapshots > matches snapshot 1`] = `
             NAME*
           </label>
           <div
-            class="flex !bg-alpha-90/10 mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-12 text-base"
+            class="flex mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 pl-2 border-dashed min-h-12 text-base"
             data-testid="container"
           >
             <input
               aria-invalid="false"
-              class="flex h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 w-full border-none !bg-transparent"
+              class="flex min-w-0 rounded-md border border-input bg-transparent px-3 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto w-full border-none !bg-transparent py-4"
               data-testid="input"
               id="profile-name-input"
               placeholder="Enter your name"
@@ -65,7 +65,7 @@ exports[`EditProfileForm - Snapshots > matches snapshot 1`] = `
             BIO
           </label>
           <div
-            class="mx-auto flex w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border font-medium !bg-alpha-90/10 border-dashed"
+            class="mx-auto flex w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 font-medium border-dashed"
             data-testid="container"
           >
             <textarea
