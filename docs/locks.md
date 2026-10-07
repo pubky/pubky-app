@@ -248,6 +248,10 @@ LockedPostContent
 The no-price state covers legacy or unreadable lock files. Their content remains masked and
 cannot be unlocked; a separate unsupported-lock experience is outside the payment-only flow.
 
+While `lock.json` is still loading, the card covers the whole pill with one spinner (its contents
+stay invisible to keep the width) and keeps Unlock inert without dimming it, so the pill does not
+flash as disabled before the price arrives.
+
 `a == b` is team shorthand: **a** = the announcement's author account, **b** = the account
 that owns the lock (Lock Server side). Phase 1 assumes they are the same person, and
 own-content reads rely on it.
