@@ -381,11 +381,12 @@ export class PostController {
 
     const collection = await PostApplication.getDetails({ compositeId: compositeCollectionId });
 
-    // Tombstoned collections (`content === '[DELETED]'`) are treated as
-    // not-found here. Pre-tombstone refactor `!collection` caught hard-deleted
-    // rows; now they stick around as tombstones, and falling through would
-    // surface a misleading "Collection content is invalid" error.
-    if (!collection || isPostDeleted(collection.content)) {
+    // Tombstoned collections (the Nexus `deleted` flag, or the legacy
+    // `[DELETED]` content) are treated as not-found here. Pre-tombstone
+    // refactor `!collection` caught hard-deleted rows; now they stick around
+    // as tombstones, and falling through would surface a misleading
+    // "Collection content is invalid" error.
+    if (!collection || isPostDeleted(collection)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
         operation: 'commitEditCollection',
@@ -484,7 +485,7 @@ export class PostController {
 
     // Tombstoned collections are not-found. See `commitEditCollection` above
     // for the rationale.
-    if (!collection || isPostDeleted(collection.content)) {
+    if (!collection || isPostDeleted(collection)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
         operation: 'commitUpdateCollectionItem',
@@ -528,7 +529,7 @@ export class PostController {
 
     // Tombstoned collections are not-found. See `commitEditCollection` above
     // for the rationale.
-    if (!collection || isPostDeleted(collection.content)) {
+    if (!collection || isPostDeleted(collection)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
         operation: 'commitReorderCollectionItems',
@@ -615,7 +616,7 @@ export class PostController {
     }
 
     const current = await PostApplication.getDetails({ compositeId: compositePostId });
-    if (!current || isPostDeleted(current.content)) {
+    if (!current || isPostDeleted(current)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
         service: ErrorService.Local,
         operation: 'commitEdit',

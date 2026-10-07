@@ -169,12 +169,13 @@ export class PostApplication {
     return details
       .filter(
         (post): post is PostDetailsModelSchema =>
-          // Drop tombstoned rows explicitly — they would currently be filtered
-          // out downstream by `CollectionPostContent.parse('[DELETED]')`
-          // returning `null`, but that's incidental: it relies on `[DELETED]`
-          // failing JSON parse. The explicit check is self-documenting and
-          // keeps the picker robust against future parser changes.
-          post !== undefined && post.kind === 'collection' && !isPostDeleted(post.content),
+          // Drop tombstoned rows explicitly (the Nexus `deleted` flag, or the
+          // legacy `[DELETED]` content) — they would currently be filtered out
+          // downstream by `CollectionPostContent.parse` returning `null`, but
+          // that's incidental: it relies on the tombstone content failing JSON
+          // parse. The explicit check is self-documenting and keeps the picker
+          // robust against future parser changes.
+          post !== undefined && post.kind === 'collection' && !isPostDeleted(post),
       )
       .map((post) => {
         const content = CollectionPostContent.parse(post.content);

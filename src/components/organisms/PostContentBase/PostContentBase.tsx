@@ -36,7 +36,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
     return isLoading ? <PostContentBaseSkeleton /> : <PostUnavailable message={'Post not found.'} />;
   }
 
-  const isDeleted = isPostDeleted(postDetails.content);
+  const isDeleted = isPostDeleted(postDetails);
   const hasContent = postDetails.content.trim().length > 0;
   const isBlurred = postDetails.is_blurred;
   const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);

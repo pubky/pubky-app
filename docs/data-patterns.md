@@ -223,8 +223,9 @@ class PostController {
 // Application also normalizes data before persisting
 // Real: src/core/application/profile/profile.ts
 class ProfileApplication {
-  static async commitUpdate({ pubky, name, bio, image, links }) {
-    const { user, meta } = UserNormalizer.to({ name, bio, image, links, status }, pubky);
+  private static async commitChanges({ pubky, changes }) {
+    const published = UserNormalizer.fromPublished(await HomeserverService.getFreshJson(userUriBuilder(pubky)));
+    const { user, meta } = UserNormalizer.to(UserNormalizer.merge(published, changes), pubky);
     await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: user.toJson() });
     await LocalProfileService.updateDetails(user, pubky);
   }

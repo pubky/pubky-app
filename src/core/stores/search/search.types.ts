@@ -1,4 +1,7 @@
 import type { Pubky } from '@/models/models.types';
+import { REACH, type ReachType } from '@/stores/home/home.types';
+
+export type SearchReach = Exclude<ReachType, typeof REACH.ME>;
 
 /**
  * Recent search item types
@@ -22,6 +25,8 @@ export interface RecentQuerySearch {
  * Search Store State
  */
 export interface SearchState {
+  /** Session-only selection, independent of Home. */
+  reach: SearchReach;
   recentUsers: RecentUserSearch[];
   recentTags: RecentTagSearch[];
   /** Full-text queries submitted via the search input */
@@ -34,6 +39,7 @@ export interface SearchState {
  * Search Store Actions
  */
 export interface SearchActions {
+  setReach: (reach: SearchReach) => void;
   addUser: (userId: Pubky) => void;
   /** Add a tag to recent searches. Tag should be normalized (lowercase, trimmed) before calling */
   addTag: (tag: string) => void;
@@ -60,6 +66,7 @@ export type SearchStore = SearchState & SearchActions;
  * Initial state for search store
  */
 export const searchInitialState: SearchState = {
+  reach: REACH.ALL,
   recentUsers: [],
   recentTags: [],
   recentQueries: [],
@@ -70,6 +77,7 @@ export const searchInitialState: SearchState = {
  * Action types for DevTools
  */
 export enum SearchActionTypes {
+  SET_REACH = 'SET_REACH',
   ADD_USER = 'ADD_USER',
   ADD_TAG = 'ADD_TAG',
   ADD_QUERY = 'ADD_QUERY',

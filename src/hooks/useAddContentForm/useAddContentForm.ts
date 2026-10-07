@@ -107,7 +107,7 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
           viewerId: currentUserPubky,
         });
 
-        if (!post || isPostDeleted(post.content)) {
+        if (!post || isPostDeleted(post)) {
           setFieldError('We could not find that post.');
           return false;
         }
@@ -229,7 +229,7 @@ async function isAlreadyAdded({
 
   const collection = await PostController.getDetails({ compositeId: target.collectionId });
   const currentContent =
-    collection && !isPostDeleted(collection.content) ? CollectionPostContent.parse(collection.content) : null;
+    collection && !isPostDeleted(collection) ? CollectionPostContent.parse(collection.content) : null;
 
   return Boolean(currentContent?.items?.includes(postUri));
 }

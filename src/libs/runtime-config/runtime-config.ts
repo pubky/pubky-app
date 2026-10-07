@@ -197,6 +197,8 @@ export const getTtlBatchIntervalMs = (): number => getRuntimeConfig().ttlBatchIn
 export const getTtlPostMaxBatchSize = (): number => getRuntimeConfig().ttlPostMaxBatchSize;
 export const getTtlUserMaxBatchSize = (): number => getRuntimeConfig().ttlUserMaxBatchSize;
 export const getTtlRetryDelayMs = (): number => getRuntimeConfig().ttlRetryDelayMs;
+/** Indexing protection after a local profile write, independent of the normal refresh TTL. */
+export const getProfileLocalEditTtlMs = (): number => getRuntimeConfig().profileLocalEditTtlMs;
 export const getModerationId = (): string | undefined => getRuntimeConfig().moderationId;
 export const getModeratedTags = (): string[] => getRuntimeConfig().moderatedTags;
 export const getExchangeRateApi = (): string => getRuntimeConfig().exchangeRateApi;

@@ -176,6 +176,18 @@ exports[`ContentLayout - Mobile Snapshots > matches snapshot on mobile viewport 
       Mobile drawer
     </div>
   </div>
+  <div
+    class="w-64 p-6 sm:w-64 sm:p-6"
+    data-open="false"
+    data-testid="side-drawer-right"
+  >
+    <button>
+      Close
+    </button>
+    <div>
+      Phone right drawer
+    </div>
+  </div>
 </div>
 `;
 
@@ -347,6 +359,18 @@ exports[`ContentLayout - Snapshots > matches snapshot with default props 1`] = `
       data-testid="left-drawer-desktop"
     >
       Desktop drawer
+    </div>
+  </div>
+  <div
+    class="w-64 p-6 sm:w-64 sm:p-6"
+    data-open="false"
+    data-testid="side-drawer-right"
+  >
+    <button>
+      Close
+    </button>
+    <div>
+      Tablet right drawer
     </div>
   </div>
 </div>

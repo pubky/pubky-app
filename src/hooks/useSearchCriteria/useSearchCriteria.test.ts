@@ -25,6 +25,12 @@ describe('useSearchCriteria', () => {
       expect(result.current).toEqual({ mode: 'content', query: 'bitcoin wallet' });
     });
 
+    it("keeps the user's casing — only stream ids and recents dedupe are case-insensitive", () => {
+      mockQueryParam.value = 'Bitcoin Wallets';
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'content', query: 'Bitcoin Wallets' });
+    });
+
     it('wins over tags when both q and tags are present', () => {
       mockQueryParam.value = 'bitcoin';
       mockGet.mockReturnValue('pubky,nostr');
