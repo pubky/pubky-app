@@ -75,33 +75,36 @@ describe('LockContentParser', () => {
 });
 
 describe('LockFileParser', () => {
-  describe('resolvePriceSats', () => {
+  describe('resolvePrice', () => {
     const paymentLock = (params: Record<string, unknown>) => ({
       ...MOCK_LOCK_FILE,
       criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params }],
     });
 
-    it('reads the amount of a payment lock', () => {
-      expect(LockFileParser.resolvePriceSats(paymentLock({ amount: '1000' }))).toBe('1000');
+    it.each(['BTC', 'USD'])('reads the amount and %s denomination', (asset) => {
+      expect(LockFileParser.resolvePrice(paymentLock({ amount: '1000', asset }))).toEqual({ amount: '1000', asset });
     });
 
     it('returns null for a lock that is not a payment lock', () => {
-      expect(LockFileParser.resolvePriceSats(null)).toBeNull();
+      expect(LockFileParser.resolvePrice(null)).toBeNull();
       expect(
-        LockFileParser.resolvePriceSats({
+        LockFileParser.resolvePrice({
           ...MOCK_LOCK_FILE,
           criteria: [{ criterion_id: 'criterion-1', verifier_type: 'unsupported', params: {} }],
         }),
       ).toBeNull();
     });
 
-    // Amount shapes are `isPositiveIntegerString`'s own table; here only that the parser defers to it.
+    // Untrusted lock files must include a supported denomination and an exact atomic amount.
     it.each([
       ['missing', {}],
       ['a number rather than the wire string', { amount: 1000 }],
-      ['not a positive integer string', { amount: '007' }],
+      ['not a positive integer string', { amount: '007', asset: 'BTC' }],
+      ['unsupported asset', { amount: '1', asset: 'ETH' }],
+      ['missing asset', { amount: '1' }],
+      ['overflow', { amount: '18446744073709551616', asset: 'USD' }],
     ])('returns null when the amount is %s', (_label, params) => {
-      expect(LockFileParser.resolvePriceSats(paymentLock(params))).toBeNull();
+      expect(LockFileParser.resolvePrice(paymentLock(params))).toBeNull();
     });
   });
 });
@@ -113,7 +116,9 @@ describe('LockProofBundler', () => {
     it('builds one empty-payload proof with the reader pubky at the top level', () => {
       const paymentLock = {
         ...MOCK_LOCK_FILE,
-        criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
+        criteria: [
+          { criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000', asset: 'BTC' } },
+        ],
       };
       expect(LockProofBundler.buildPayment(paymentLock, LOCK_URL, 'bundle-1', 'reader123')).toEqual({
         version: 1,

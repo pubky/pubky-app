@@ -25,6 +25,7 @@ import type {
   TFetchLockFileResult,
   TGetConnectUrlParams,
   TGetPaykitSetupUrlParams,
+  TLockPriceAsset,
   TLocksSessionResult,
   TPaykitConnectionState,
   TPaykitSetupStatus,
@@ -129,11 +130,19 @@ export class LocksController {
    * Asks the Lock Server whether this creator's Paykit payout account is already set up. A rejected
    * session (401 → Auth) is cleared, as on restore, so the creator signs in again instead of retrying.
    */
-  static async fetchPaykitSetupStatus(): Promise<TPaykitSetupStatus> {
+  static async fetchPaykitSetupStatus(asset: TLockPriceAsset): Promise<TPaykitSetupStatus> {
+    const session = useLocksAuthStore.getState().selectLocksSession();
     try {
-      return await LocksApplication.fetchPaykitSetupStatus();
+      const status = await LocksApplication.fetchPaykitSetupStatus(asset);
+      if (useLocksAuthStore.getState().selectLocksSession() !== session) return 'unavailable';
+      if (status === 'setup_required') {
+        useLocksAuthStore.getState().setPaykitConnected(false);
+      }
+      return status;
     } catch (error) {
-      if (isAppError(error) && isAuthError(error)) this.clearSession();
+      if (isAppError(error) && isAuthError(error) && useLocksAuthStore.getState().selectLocksSession() === session) {
+        this.clearSession();
+      }
       throw error;
     }
   }
@@ -184,7 +193,7 @@ export class LocksController {
     const lockFile = await LocksApplication.fetchLockFile(params);
     return {
       lockFile,
-      priceSats: LockFileParser.resolvePriceSats(lockFile),
+      price: LockFileParser.resolvePrice(lockFile),
     };
   }
 

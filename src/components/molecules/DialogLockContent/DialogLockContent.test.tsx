@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogLockContent } from './DialogLockContent';
 
 const mocks = vi.hoisted(() => ({
@@ -79,7 +79,7 @@ describe('DialogLockContent', () => {
     enterPrice('07');
     fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
 
-    expect(onApplied).toHaveBeenCalledWith({ amountSats: '7' });
+    expect(onApplied).toHaveBeenCalledWith({ amount: '7', asset: 'BTC' as const });
   });
 
   it('keeps Apply Lock disabled until the price is a positive amount', () => {
@@ -101,7 +101,7 @@ describe('DialogLockContent', () => {
     enterPrice('1000');
     fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
 
-    expect(onApplied).toHaveBeenCalledWith({ amountSats: '1000' });
+    expect(onApplied).toHaveBeenCalledWith({ amount: '1000', asset: 'BTC' as const });
   });
 
   it('shows the USD value of the price when a rate is available', () => {
@@ -145,5 +145,42 @@ describe('DialogLockContent', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onApplied).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+describe('price denomination', () => {
+  const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+  beforeAll(() => {
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+  afterAll(() => {
+    if (originalScrollIntoView) HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    else delete (HTMLElement.prototype as { scrollIntoView?: () => void }).scrollIntoView;
+  });
+
+  const chooseCurrency = (currency: string) => {
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Price currency' }), { key: 'ArrowDown' });
+    fireEvent.click(screen.getByRole('option', { name: currency }));
+  };
+
+  it('applies an exact USD price and clears the previous amount on switching', () => {
+    const { onApplied } = setup();
+    enterPrice('1000');
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Price currency' }), { key: 'ArrowDown' });
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['Bitcoin', 'USD']);
+    fireEvent.click(screen.getByRole('option', { name: 'USD' }));
+    const field = screen.getByLabelText('USD Amount', { selector: 'input' });
+    expect(field).toHaveValue('');
+    expect(mocks.useBtcRate).toHaveBeenLastCalledWith(false);
+    fireEvent.change(field, { target: { value: '5.25' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
+    expect(onApplied).toHaveBeenCalledWith({ amount: '525', asset: 'USD' });
+  });
+
+  it('does not silently round excess precision', () => {
+    setup();
+    chooseCurrency('USD');
+    fireEvent.change(screen.getByLabelText('USD Amount', { selector: 'input' }), { target: { value: '1.001' } });
+    expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeDisabled();
   });
 });

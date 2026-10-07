@@ -16,7 +16,7 @@ describe('useLockFile', () => {
   beforeEach(() => {
     vi.mocked(LocksController.fetchLockFile).mockResolvedValue({
       lockFile: MOCK_LOCK_FILE,
-      priceSats: '1000',
+      price: { amount: '1000', asset: 'BTC' as const },
     });
   });
 
@@ -31,7 +31,7 @@ describe('useLockFile', () => {
   it('exposes the price of a payment lock', async () => {
     const { result } = renderHook(() => useLockFile(LOCK_URL));
 
-    await waitFor(() => expect(result.current.priceSats).toBe('1000'));
+    await waitFor(() => expect(result.current.price).toEqual({ amount: '1000', asset: 'BTC' }));
   });
 
   it('skips fetching when the url is nullish', () => {

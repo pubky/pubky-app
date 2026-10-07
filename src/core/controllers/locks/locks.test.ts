@@ -264,17 +264,35 @@ describe('LocksController (auth)', () => {
       });
       mocks.fetchPaykitSetupStatus.mockRejectedValue(rejected);
 
-      await expect(LocksController.fetchPaykitSetupStatus()).rejects.toBe(rejected);
+      await expect(LocksController.fetchPaykitSetupStatus('BTC')).rejects.toBe(rejected);
 
       const store = useLocksAuthStore.getState();
       expect(store.selectIsLocksAuthenticated()).toBe(false);
       expect(store.selectLocksSessionSecret()).toBeNull();
     });
 
+    it('discards readiness for a session that changed during the check', async () => {
+      mocks.fetchPaykitSetupStatus.mockImplementationOnce(async () => {
+        useLocksAuthStore.getState().init({ session: asOpaque<LocksSdkSession>({ id: 'other' }), secret: 'other' });
+        return 'ready';
+      });
+      await expect(LocksController.fetchPaykitSetupStatus('USD')).resolves.toBe('unavailable');
+      expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledWith('USD');
+    });
+
+    it('does not clear a new session when the old readiness check is rejected', async () => {
+      mocks.fetchPaykitSetupStatus.mockImplementationOnce(async () => {
+        useLocksAuthStore.getState().init({ session: asOpaque<LocksSdkSession>({ id: 'other' }), secret: 'other' });
+        throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' });
+      });
+      await expect(LocksController.fetchPaykitSetupStatus('USD')).rejects.toThrow('rejected');
+      expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBe('other');
+    });
+
     it('keeps the session when the check fails for a non-auth reason', async () => {
       mocks.fetchPaykitSetupStatus.mockRejectedValue(new Error('network down'));
 
-      await expect(LocksController.fetchPaykitSetupStatus()).rejects.toThrow('network down');
+      await expect(LocksController.fetchPaykitSetupStatus('BTC')).rejects.toThrow('network down');
 
       expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
     });
@@ -292,7 +310,7 @@ describe('LocksController (content)', () => {
     const params = {
       attachments: [],
       buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }),
-      lockConfig: { amountSats: '1000' },
+      lockConfig: { amount: '1000', asset: 'BTC' as const },
     };
 
     await expect(LocksController.createLockContent(params)).resolves.toBe(lock);
@@ -312,7 +330,7 @@ describe('LocksController.fetchLockFile', () => {
   it('delegates to the application and resolves the price', async () => {
     await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
       lockFile: MOCK_LOCK_FILE,
-      priceSats: '1000',
+      price: { amount: '1000', asset: 'BTC' as const },
     });
     expect(LocksApplication.fetchLockFile).toHaveBeenCalledWith({ lockUrl: VALID_LOCK_URL });
   });
@@ -322,7 +340,7 @@ describe('LocksController.fetchLockFile', () => {
 
     await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
       lockFile: null,
-      priceSats: null,
+      price: null,
     });
   });
 });

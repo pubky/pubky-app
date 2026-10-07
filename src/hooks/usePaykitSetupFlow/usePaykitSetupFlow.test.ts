@@ -50,6 +50,7 @@ const startFlow = (result: { current: ReturnType<typeof usePaykitSetupFlow> }) =
 describe('usePaykitSetupFlow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
     useLocksAuthStore.setState({ ...locksAuthInitialState, locksSessionSecret: 'secret-abc' });
     mocks.getPaykitSetupUrl.mockReturnValue(`${PAYKIT_ORIGIN}/setup?return_to=https://app.example&state=STATE`);
     mocks.readBridge.mockImplementation((_event: MessageEvent, _source: MessageEventSource | null, _origin: string) => {
@@ -58,14 +59,34 @@ describe('usePaykitSetupFlow', () => {
     });
   });
 
+  it('verifies denomination readiness after approval', async () => {
+    const { result } = renderHook(() => usePaykitSetupFlow('USD'));
+    const state = startFlow(result);
+    attachIframeSource(result);
+    expect(mocks.getPaykitSetupUrl).toHaveBeenCalledWith({ state });
+    await postCallback({ type: PAYKIT_SETUP_MESSAGE_TYPE, state });
+    expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledWith('USD');
+    expect(result.current.status).toBe(PaykitSetupFlowStatus.SUCCESS);
+  });
+
+  it('does not treat a callback as success when the server cannot confirm readiness', async () => {
+    mocks.fetchPaykitSetupStatus.mockResolvedValue('unavailable');
+    const { result } = renderHook(() => usePaykitSetupFlow('USD'));
+    const state = startFlow(result);
+    attachIframeSource(result);
+    await postCallback({ type: PAYKIT_SETUP_MESSAGE_TYPE, state });
+    expect(mocks.markPaykitConnected).not.toHaveBeenCalled();
+    expect(result.current.status).toBe(PaykitSetupFlowStatus.UNAVAILABLE);
+  });
+
   it('starts idle', () => {
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     expect(result.current.status).toBe(PaykitSetupFlowStatus.IDLE);
     expect(result.current.setupUrl).toBeNull();
   });
 
   it('start exposes the setup URL and waits for approval', () => {
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     startFlow(result);
 
     expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
@@ -73,7 +94,7 @@ describe('usePaykitSetupFlow', () => {
   });
 
   it('records the connection on a matching success callback', async () => {
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     const state = startFlow(result);
     attachIframeSource(result);
 
@@ -84,7 +105,7 @@ describe('usePaykitSetupFlow', () => {
   });
 
   it('fails on a failure callback without recording a connection', async () => {
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     const state = startFlow(result);
     attachIframeSource(result);
 
@@ -95,7 +116,7 @@ describe('usePaykitSetupFlow', () => {
   });
 
   it('fails when the callback state does not match the one it sent', async () => {
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     startFlow(result);
     attachIframeSource(result);
 
@@ -106,7 +127,7 @@ describe('usePaykitSetupFlow', () => {
   });
 
   it('fails when the Locks session changed while setup was open', async () => {
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     const state = startFlow(result);
     attachIframeSource(result);
     useLocksAuthStore.setState({ locksSessionSecret: 'secret-other' });
@@ -118,7 +139,7 @@ describe('usePaykitSetupFlow', () => {
   });
 
   it('stays waiting when the bridge rejects the message', async () => {
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     const state = startFlow(result);
     attachIframeSource(result);
     mocks.readBridge.mockReturnValueOnce(null);
@@ -130,7 +151,7 @@ describe('usePaykitSetupFlow', () => {
   });
 
   it('hands the bridge the iframe window and the Paykit origin to validate against', async () => {
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     const state = startFlow(result);
     attachIframeSource(result);
 
@@ -141,7 +162,7 @@ describe('usePaykitSetupFlow', () => {
 
   // [3] The listener is one-shot: a replayed callback must not connect a second time.
   it('accepts only the first callback, ignoring a replay', async () => {
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     const state = startFlow(result);
     attachIframeSource(result);
 
@@ -162,7 +183,7 @@ describe('usePaykitSetupFlow', () => {
   });
 
   it('ignores a callback that arrives after reset', async () => {
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     const state = startFlow(result);
     attachIframeSource(result);
     act(() => {
@@ -179,7 +200,7 @@ describe('usePaykitSetupFlow', () => {
     mocks.getPaykitSetupUrl.mockImplementation(() => {
       throw new Error('No Paykit Server configured');
     });
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     startFlow(result);
 
     expect(result.current.status).toBe(PaykitSetupFlowStatus.ERROR);
@@ -187,7 +208,7 @@ describe('usePaykitSetupFlow', () => {
   });
 
   it('reset returns to idle and drops the setup URL', async () => {
-    const { result } = renderHook(() => usePaykitSetupFlow());
+    const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
     startFlow(result);
 
     act(() => {
@@ -210,7 +231,7 @@ describe('usePaykitSetupFlow', () => {
 
     it('stops at unavailable without opening the setup when the check fails', async () => {
       mocks.fetchPaykitSetupStatus.mockRejectedValueOnce(new Error('Lock Server request failed with HTTP 502'));
-      const { result } = renderHook(() => usePaykitSetupFlow());
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
 
       await act(async () => {
         await result.current.check();
@@ -223,7 +244,7 @@ describe('usePaykitSetupFlow', () => {
     });
 
     it('drops the failed setup URL while it checks again', async () => {
-      const { result } = renderHook(() => usePaykitSetupFlow());
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
       const state = startFlow(result);
       attachIframeSource(result);
       await postCallback({ type: PAYKIT_SETUP_MESSAGE_TYPE, state, error: 'setup-failed' });
@@ -238,7 +259,7 @@ describe('usePaykitSetupFlow', () => {
 
     it('drops an answer that arrives after reset', async () => {
       const answer = holdAnswer();
-      const { result } = renderHook(() => usePaykitSetupFlow());
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
 
       act(() => void result.current.check());
       act(() => result.current.reset());
@@ -250,7 +271,7 @@ describe('usePaykitSetupFlow', () => {
 
     it('checks again when the Locks session changed while it asked', async () => {
       const answer = holdAnswer();
-      const { result } = renderHook(() => usePaykitSetupFlow());
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
 
       act(() => void result.current.check());
       expect(result.current.status).toBe(PaykitSetupFlowStatus.CHECKING);

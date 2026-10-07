@@ -86,7 +86,7 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
 
     expect(await screen.findByText('Locks Enabled')).toBeInTheDocument();
     expect(setupIframe()).not.toBeInTheDocument();
-    expect(mocks.paykitSetupStatus).toHaveBeenCalledWith(); // no creator argument: the session says who
+    expect(mocks.paykitSetupStatus).toHaveBeenCalledWith('BTC'); // no creator argument: the session says who
     expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(true);
   });
 

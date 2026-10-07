@@ -2,6 +2,7 @@ import type {
   LockFile,
   ReplicatedPost,
   TGuardedResource,
+  TLockPrice,
   TUnlockedContent,
   TVerificationStatus,
 } from '@/services/locks/locks.types';
@@ -72,12 +73,8 @@ export type TFetchOwnContentParams = {
   lockFile: LockFile;
 };
 
-/**
- * The creator's payment lock configuration. `amountSats` stays a string end to end — the Lock
- * Server wants the amount as a positive integer string, not a number.
- * Keep this object boundary so future lock options can grow without changing every workflow signature.
- */
-export type TLockConfig = { amountSats: string };
+/** The creator's price, in the selected denomination's smallest unit. */
+export type TLockConfig = TLockPrice;
 
 /**
  * One file to guard. The storage path is minted per upload, so the original filename is not part of

@@ -17,6 +17,7 @@ vi.mock('qrcode.react', () => ({
 }));
 
 type DialogOverrides = {
+  price?: React.ComponentProps<typeof DialogPayToUnlock>['price'];
   isSubmitting?: boolean;
   onRetry?: () => void;
   isStalled?: boolean;
@@ -34,7 +35,7 @@ const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}
     onOpenChange={overrides.onOpenChange ?? vi.fn()}
     lockTitle="My locked post"
     authorId="pubkycreator"
-    priceSats="1000"
+    price={overrides.price ?? { amount: '1000', asset: 'BTC' }}
     stage={stage}
     isStalled={overrides.isStalled ?? false}
     handshakePubky={overrides.handshakePubky ?? null}
@@ -50,6 +51,12 @@ const renderDialog = (stage: TPayToUnlockStage, overrides: DialogOverrides = {})
   render(dialogElement(stage, overrides), { wrapper: overrides.wrapper });
 
 describe('DialogPayToUnlock', () => {
+  it.each(['waiting', 'paid', 'unopened'] as const)('keeps USD denomination in the %s checkout state', (stage) => {
+    renderDialog(stage, { price: { amount: '500', asset: 'USD' } });
+    expect(screen.getByText('$5.00')).toBeInTheDocument();
+    expect(screen.getByText('COST TO UNLOCK')).toBeInTheDocument();
+  });
+
   it('applies wrapping and shrink constraints to the lock title', () => {
     renderDialog('retry');
 
@@ -184,7 +191,7 @@ describe('DialogPayToUnlock', () => {
     renderDialog('paid', { onViewContent });
 
     expect(screen.getByRole('heading', { name: 'Unlocked' })).toBeInTheDocument();
-    expect(screen.getByText('PAYMENT RECEIVED')).toHaveClass('text-brand');
+    expect(screen.getByText('COST TO UNLOCK')).toHaveClass('text-brand');
     expect(screen.getByText('₿ 1,000')).toBeInTheDocument();
     expect(screen.getByText('Thank you for supporting creators!')).toBeInTheDocument();
     expect(document.querySelector('.lucide-circle-check')).toHaveClass('size-[72px]');
@@ -212,7 +219,7 @@ describe('DialogPayToUnlock', () => {
     const onRecheck = vi.fn();
     renderDialog('unopened', { onRecheck });
 
-    expect(screen.getByText('PAYMENT RECEIVED')).toHaveClass('text-brand');
+    expect(screen.getByText('COST TO UNLOCK')).toHaveClass('text-brand');
     expect(screen.getByText(/could not be opened/)).toBeInTheDocument();
     expect(screen.queryByText(/Pay in Bitkit/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Try again/ })).not.toBeInTheDocument();

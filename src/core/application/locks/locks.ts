@@ -18,6 +18,7 @@ import type {
   TGenerateConnectUrlParams,
   TGeneratePaykitSetupUrlParams,
   TGuardedResource,
+  TLockPriceAsset,
   TLocksSessionResult,
   TPaykitConnectionState,
   TPaykitSetupStatus,
@@ -46,8 +47,6 @@ import type {
 
 // v1 payment locks must hold exactly one criterion, referenced once by the lock logic.
 const CRITERION_ID = 'criterion-1';
-// Only asset the Lock Server's v1 payment verifier takes.
-const PAYMENT_ASSET = 'BTC';
 const CREDENTIAL_TTL_SECONDS = 900;
 
 /**
@@ -69,8 +68,8 @@ export class LocksApplication {
   }
 
   /** Whether the Paykit payout account of the current Locks session's creator is set up. */
-  static fetchPaykitSetupStatus(): Promise<TPaykitSetupStatus> {
-    return LocksService.lookupPaykitSetupStatus();
+  static fetchPaykitSetupStatus(asset: TLockPriceAsset): Promise<TPaykitSetupStatus> {
+    return LocksService.lookupPaykitSetupStatus(asset);
   }
 
   /** Whether the Lock Server at `origin` is ready to serve — gates the auth flow before the iframe. */
@@ -533,7 +532,7 @@ export class LocksApplication {
     const criterion = {
       criterion_id: CRITERION_ID,
       verifier_type: VerifierType.PAYMENT,
-      params: { recipient_pubky: post.creator, amount: lockConfig.amountSats, asset: PAYMENT_ASSET },
+      params: { recipient_pubky: post.creator, amount: lockConfig.amount, asset: lockConfig.asset },
     };
 
     return LocksService.createContentLock({
