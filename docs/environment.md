@@ -73,11 +73,19 @@ All **environment-specific and deployer-facing public values** are configured at
 The contract has these tiers:
 
 - **Required (9 network values)**: `nexusUrl`, `cdnUrl`, `homeserver`, `homeserverUrl`, `homegateUrl`, `defaultHttpRelay`, `pkarrRelays`, `testnet`, `deployEnv`. (`deployEnv` — `PUBKY_RUNTIME_ENV`, `"production"` or `"staging"` — is the deploy's declared identity; it drives the staging homeserver sign-in guard (`isStagingHomeserverDeploy` in `@/config/network`), which is declared explicitly instead of inferred from network values so config drift can never silently disable it.) (`homeserverUrl` is the homeserver's HTTP base URL, used for invite-code verification — the homeserver pubkey has no resolvable HTTPS endpoint, see [pubky-core#410](https://github.com/pubky/pubky-core/issues/410).)
+- **Required Shop destination**: `shopUrl` (`PUBKY_RUNTIME_SHOP_URL`) is the full HTTP(S) URL opened by desktop and mobile Shop navigation. For staging, set `PUBKY_RUNTIME_SHOP_URL=https://shop.staging.pubky.app/marketplace`. Missing, blank, or invalid values fail at deployed startup; Shop is always shown. Local dev/test defaults to the same staging URL. Changing the destination requires a container restart and page reload, not an image rebuild. **Breaking deployment change:** every deployer upgrading to this build must set the variable before startup, including users of the public Docker image.
 - **Optional (5 Sentry values)**: `sentryDsn` (absent/empty disables Sentry entirely), `sentryEnvironment` (absent falls back to `NODE_ENV`), `sentryTracesSampleRate` / `sentryReplaysSessionSampleRate` / `sentryReplaysOnErrorSampleRate` (defaults `0.1` / `0.0` / `1.0`). A malformed value (bad DSN URL, rate outside `[0,1]`) fails loudly.
 - **Optional (2 Pulse values)**: `pulseClientKey` (absent/empty disables Pulse entirely; a provided value must start with `pulse_client_`) and `pulseEndpoint` (absent uses the SDK's hosted ingest host). See the Pulse paragraph below.
 - **Optional moderation identity**: `moderationId` must be a raw 52-character z-base-32 Pubky when set. In deployed environments, leaving it unset disables moderation-tag matching and the one-time default follow.
 - **Optional/defaulted public values**: operational polling and TTL settings, moderated tags, exchange-rate API, Prelude, Plausible, metadata/branding defaults, and external links. Missing values use the defaults in `src/libs/runtime-config/runtime-config.schema.ts`; malformed provided values still fail loudly.
 - **Optional Pubky Passport origin**: `passportUrl` (`PUBKY_RUNTIME_PASSPORT_URL`) is the Passport signer used by every "Continue with Google" entry point (landing hero, `/sign-in`, `/onboarding/join`). In deployed mode it has **no default**: unset disables the feature, so production stays off until a real Google sign-up and sign-in have been verified against the intended Passport + Homegate deployment. Local dev defaults to `https://passport.staging.pubky.app`; an explicit blank value disables it. Passport only accepts HTTPS callbacks, so the buttons are shown only when the page itself is served over HTTPS (`isPassportConfigured()` in `@/config/network` is the pure server-safe check; `usePassportEligibility` resolves the browser-side HTTPS check after mount). Plain `npm run dev` (HTTP) hides the buttons, redirects `/onboarding/join` to `/onboarding/human`, and logs a one-time warning; use `npm run dev:https` to exercise Passport locally. Passport's fallback callback is the static `public/passport/return.html` (path in `src/config/passport.ts`), not a Next route: a route under the root layout would boot the session restore inside the popup (same rule as the offline page, see `docs/pwa.md`).
+
+The current Shop rollout targets **staging only**. Apply the App deployment configuration from
+[pubky-stack #342](https://github.com/pubky/pubky-stack/pull/342) before deploying App PR #2774.
+The configured staging origin also works because Shop redirects `/` to `/marketplace`; using the
+full path avoids that extra redirect. Production configuration and the production destination will
+be prepared before the later production rollout; they do not block staging. This App variable does
+not change the Shop's separate `NEXT_PUBLIC_SOCIAL_HOST` setting for navigation back to App.
 
 Pulse browser telemetry is opt-in: set the public, write-only `PUBKY_RUNTIME_PULSE_CLIENT_KEY`
 (`pulse_client_…`, never an admin key); omit it for zero Pulse tracking. `PUBKY_RUNTIME_PULSE_ENDPOINT`
@@ -132,13 +140,13 @@ const url = getNexusUrl(); // resolved at call time
 
 ### Strict (deployed) vs lenient (dev/test)
 
-- **Deployed (`NODE_ENV=production`, including staging), or `PUBKY_RUNTIME_CONFIG_REQUIRED=true`**: the nine required network `PUBKY_RUNTIME_*` values must ALL be set. Missing/invalid config throws **at boot** (no silent fallback to staging defaults).
+- **Deployed (`NODE_ENV=production`, including staging), or `PUBKY_RUNTIME_CONFIG_REQUIRED=true`**: the nine network values and `PUBKY_RUNTIME_SHOP_URL` must ALL be set. Missing/invalid config throws **at boot** (no silent fallback to staging defaults).
 - **Local dev / tests**: the SAME `PUBKY_RUNTIME_*` names are read leniently — unset values resolve to the staging defaults in `runtime-config.schema.ts` (including `deployEnv: staging`, so the staging sign-in guard is active in plain local dev; set `PUBKY_RUNTIME_ENV=production` in `.env.local` to turn it off), including the staging moderation identity. Partial overrides (e.g. only `PUBKY_RUNTIME_NEXUS_URL=http://localhost:8080` in `.env.local`) layer over those defaults.
 - **Optional/defaulted tiers**: `PUBKY_RUNTIME_SENTRY_*` and the other deployer-facing public values can be set independently in any mode; malformed provided values fail loudly.
 
 `PUBKY_RUNTIME_MODERATION_ID` is intentionally different from the other app defaults in deployed mode: unset resolves to `undefined`, while a configured value must be a valid Pubky. This prevents a missing production setting from silently targeting the staging moderation account. Deployed startup emits a warning when it is unset so operators can distinguish an intentional disabled state from missing configuration.
 
-> Running a production build locally (`npm run build && npm run start`) runs as `NODE_ENV=production`, so it **requires** all nine network `PUBKY_RUNTIME_*` values. `npm run dev` does not — unset values use staging defaults. See the `PUBKY_RUNTIME_*` block in `.env.example`.
+> Running a production build locally (`npm run build && npm run start`) runs as `NODE_ENV=production`, so it **requires** all nine network `PUBKY_RUNTIME_*` values plus `PUBKY_RUNTIME_SHOP_URL`. `npm run dev` does not — unset values use staging defaults. See the `PUBKY_RUNTIME_*` block in `.env.example`.
 
 ### These are PUBLIC values
 
@@ -146,7 +154,7 @@ const url = getNexusUrl(); // resolved at call time
 
 ### Running the public image (`docker run`)
 
-Copy-paste starting point for any deployer — nine required values plus the optional Sentry and Pulse tiers:
+Copy-paste starting point for any deployer — ten required values plus the optional Sentry and Pulse tiers:
 
 ```bash
 docker run -p 3000:3000 \
@@ -159,6 +167,7 @@ docker run -p 3000:3000 \
   -e PUBKY_RUNTIME_PKARR_RELAYS='["https://pkarr.example.com"]' \
   -e PUBKY_RUNTIME_TESTNET=false \
   -e PUBKY_RUNTIME_ENV=production \
+  -e PUBKY_RUNTIME_SHOP_URL=https://shop.staging.pubky.app/marketplace \
   -e PUBKY_RUNTIME_SENTRY_DSN=https://<key>@<org>.ingest.sentry.io/<project> \
   -e PUBKY_RUNTIME_SENTRY_ENVIRONMENT=production \
   -e PUBKY_RUNTIME_PULSE_CLIENT_KEY=pulse_client_<your-client-key> \
@@ -197,4 +206,4 @@ If build-time environment validation fails, you'll see detailed error messages:
   - NEXT_PUBLIC_DB_VERSION: Expected number, received string
 ```
 
-If deployed runtime config is missing or invalid, the server exits at boot with the full list of required `PUBKY_RUNTIME_*` network variables.
+If deployed runtime config is missing or invalid, the server exits at boot with the full list of required `PUBKY_RUNTIME_*` variables, including the Shop destination.
