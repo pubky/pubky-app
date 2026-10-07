@@ -27,6 +27,15 @@ type UsePostCollectionsResult = {
   hasMore: boolean;
   isLoadingMore: boolean;
   loadMore: () => Promise<void>;
+  /**
+   * Drops a collection the viewer just removed the post from. The raw page holds the
+   * viewer's own collections too (consumers filter them out), and the stream is
+   * skip-paginated: once Nexus indexes the removal every later index shifts down, so the
+   * next page would step over one collection. The paginator's commit walks the offset
+   * back; if Nexus has not indexed the removal by then, the next page repeats one
+   * already-loaded row, which the paginator deduplicates.
+   */
+  removeCollection: (collectionId: string) => void;
 };
 
 /**
@@ -49,10 +58,16 @@ export function usePostCollections(
 ): UsePostCollectionsResult {
   const { pubky: authorId, id } = parseCompositeId(postId);
 
-  const { postIds, loading, loadingMore, hasMore, loadMore } = useStreamPagination({
+  const { postIds, loading, loadingMore, hasMore, loadMore, removePostsOptimistically } = useStreamPagination({
     streamId: enabled ? buildPostCollectionsStreamId(authorId, id) : undefined,
     limit: COLLECTIONS_SECTION_PAGE_SIZE,
   });
+
+  // The membership change has already succeeded locally when this runs, so the removal is
+  // committed at once: only the committed form adjusts the skip offset.
+  const removeCollection = (collectionId: string) => {
+    removePostsOptimistically(collectionId).commit();
+  };
 
   return {
     collectionIds: postIds,
@@ -60,5 +75,6 @@ export function usePostCollections(
     hasMore,
     isLoadingMore: loadingMore,
     loadMore,
+    removeCollection,
   };
 }

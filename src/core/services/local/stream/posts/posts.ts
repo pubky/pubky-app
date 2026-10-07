@@ -29,6 +29,7 @@ import {
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
+import { recentCollectionCounts } from '@/services/local/post/recentCollectionCounts';
 import type {
   TAddReplyToStreamParams,
   TAlignPageParams,
@@ -413,20 +414,15 @@ export class LocalStreamPostsService {
     // details when the row's TTL was written at or after the fetch started
     // (an edit landed while the fetch was in flight) or when the Nexus copy
     // is not indexed after the local one (Nexus has not caught up yet).
-    // Counts, tags, relationships and the TTL still refresh for those rows,
-    // except `collections`: the viewer's own collection writes bump it locally
-    // and stamp the TTL, so a response whose request started before such a
-    // write keeps the local value (the response would otherwise undo the bump
-    // and renew the TTL, hiding it until the next refresh). That one guard is
-    // not TTL-only, see `collectionsGuardAt` below.
+    // Counts, tags, relationships and the TTL still refresh for those rows.
     const detailIds = postDetails.map((d) => d.id);
-    // The `collections` guard applies on every path that persists a post response, not only
-    // the TTL refresh: notification hydration re-fetches cached posts with `force` and would
-    // otherwise accept a count from before a save that landed while its request was in flight.
-    // Its fetch boundary is the TTL path's explicit stamp, else the request start the tag
-    // guard resolved above (the time the query layer recorded for this response, or the one
-    // bootstrap passes for its nested page); a response nobody timed accepts the Nexus count.
-    const collectionsGuardAt = refreshGuard?.fetchStartedAt ?? tagGuard.validatedAt;
+    // One count is guarded on every path, not only the TTL refresh: `collections`, which the
+    // viewer's own collection writes bump locally while Nexus still has to index the edit
+    // (`recentCollectionCounts`). A response that overlapped the write, or started after it
+    // but before indexing, carries the old total and would undo the bump; the TTL cannot tell
+    // such a write from an ordinary persist, which renews the TTL too, so the registry is the
+    // only signal. Rows the viewer did not touch recently take the Nexus count.
+    const protectedCountIds = detailIds.filter((id) => recentCollectionCounts.isProtected(id));
     await db.transaction(
       'rw',
       [
@@ -440,27 +436,22 @@ export class LocalStreamPostsService {
       ],
       async () => {
         const existingDetails = await PostDetailsModel.findByIdsPreserveOrder(detailIds);
-        const existingTtl = collectionsGuardAt !== undefined ? await PostTtlModel.findByIds(detailIds) : [];
+        const existingTtl = refreshGuard ? await PostTtlModel.findByIds(detailIds) : [];
         const ttlById = new Map(existingTtl.map((record) => [record.id, record.lastUpdatedAt]));
-        const existingCounts = collectionsGuardAt !== undefined ? await PostCountsModel.findByIds(detailIds) : [];
-        const localCollectionsById = new Map(existingCounts.map((record) => [record.id, record.collections]));
+        const protectedCounts = protectedCountIds.length > 0 ? await PostCountsModel.findByIds(protectedCountIds) : [];
+        // Rows persisted before the field existed carry no local value to keep.
+        const localCollectionsById = new Map(protectedCounts.map((record) => [record.id, record.collections]));
 
         const tombstonedIds = new Set<string>();
         const locallyNewerIds = new Set<string>();
-        const writtenSinceFetchIds = new Set<string>();
         existingDetails.forEach((existing, index) => {
           const incoming = postDetails[index];
           if (isPostDeleted(existing)) {
             tombstonedIds.add(incoming.id);
             return;
           }
-          if (!existing) return;
-          // On the TTL path `collectionsGuardAt` is `refreshGuard.fetchStartedAt`, so this one
-          // check feeds both the count guard and the details guard below.
-          const ttlWrittenAt = ttlById.get(incoming.id) ?? 0;
-          const writtenSinceFetch = collectionsGuardAt !== undefined && ttlWrittenAt >= collectionsGuardAt;
-          if (writtenSinceFetch) writtenSinceFetchIds.add(incoming.id);
-          if (!refreshGuard) return;
+          if (!refreshGuard || !existing) return;
+          const writtenSinceFetch = (ttlById.get(incoming.id) ?? 0) >= refreshGuard.fetchStartedAt;
           const notIndexedAfterLocal = incoming.indexed_at <= existing.indexed_at;
           if (writtenSinceFetch || notIndexedAfterLocal) locallyNewerIds.add(incoming.id);
         });
@@ -475,7 +466,7 @@ export class LocalStreamPostsService {
         const liveCounts = postCounts
           .filter(([id]) => !tombstonedIds.has(id))
           .map(([id, counts]): NexusModelTuple<NexusPostCounts> => {
-            const localCollections = writtenSinceFetchIds.has(id) ? localCollectionsById.get(id) : undefined;
+            const localCollections = localCollectionsById.get(id);
             return localCollections === undefined ? [id, counts] : [id, { ...counts, collections: localCollections }];
           });
         const liveRelationships = postRelationships.filter(([id]) => !tombstonedIds.has(id));

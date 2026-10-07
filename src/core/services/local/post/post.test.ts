@@ -1,5 +1,5 @@
 import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -28,6 +28,7 @@ import { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
 import { LocalPostService } from '@/services/local/post/post';
 import type { TLocalSavePostParams } from '@/services/local/post/post.types';
+import { recentCollectionCounts } from '@/services/local/post/recentCollectionCounts';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 
@@ -961,6 +962,23 @@ describe('LocalPostService', () => {
       await setupExistingPost(itemA, 'item a');
       await setupExistingPost(itemB, 'item b');
       await setupExistingPost(itemC, 'item c');
+    });
+
+    afterEach(() => {
+      recentCollectionCounts.reset();
+    });
+
+    it('marks every item whose count moved as a recent local collection write', async () => {
+      await setupExistingPost(collectionId, collectionEnvelope([itemA, itemC]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 1 } });
+      await PostCountsModel.updateCounts({ postCompositeId: itemC, countChanges: { collections: 1 } });
+
+      // Drop A, keep C, add B.
+      await LocalPostService.edit({ compositePostId: collectionId, content: collectionEnvelope([itemC, itemB]) });
+
+      expect(recentCollectionCounts.isProtected(itemA)).toBe(true);
+      expect(recentCollectionCounts.isProtected(itemB)).toBe(true);
+      expect(recentCollectionCounts.isProtected(itemC)).toBe(false);
     });
 
     it('bumps every curated post when a collection is created, and stamps their TTL', async () => {

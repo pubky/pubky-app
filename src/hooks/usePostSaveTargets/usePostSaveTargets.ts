@@ -88,6 +88,7 @@ export function usePostSaveTargets(
     hasMore: hasMoreOtherCollections,
     isLoadingMore: isOtherCollectionsLoadingMore,
     loadMore: loadMoreOtherCollections,
+    removeCollection: removePostCollection,
   } = usePostCollections(postId, { enabled: isPickerOpen });
   const otherCollectionIds = postCollectionIds.filter((collectionId) => {
     // One malformed key from Nexus must not throw out of the picker's render.
@@ -135,6 +136,9 @@ export function usePostSaveTargets(
         postId,
         shouldAdd: !target.isSaved,
       });
+      // The curators list pages by offset and its raw page includes this collection: keep the
+      // offset aligned with the shorter list (an addition lands at the top and needs nothing).
+      if (target.isSaved) removePostCollection(collectionId);
       toast({
         title: target.isSaved ? 'Post removed from collection.' : 'Post added to collection.',
       });

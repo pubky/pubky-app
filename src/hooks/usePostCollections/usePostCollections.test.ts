@@ -14,12 +14,20 @@ const mocks = vi.hoisted(() => ({
     hasMore: false,
   },
   loadMore: vi.fn(),
+  commit: vi.fn(),
+  rollback: vi.fn(),
+  removePostsOptimistically: vi.fn(),
 }));
+mocks.removePostsOptimistically.mockImplementation(() => ({ commit: mocks.commit, rollback: mocks.rollback }));
 
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: (params: PaginationParams) => {
     mocks.paginationParams = params;
-    return { ...mocks.paginationResult, loadMore: mocks.loadMore };
+    return {
+      ...mocks.paginationResult,
+      loadMore: mocks.loadMore,
+      removePostsOptimistically: mocks.removePostsOptimistically,
+    };
   },
 }));
 
@@ -50,7 +58,20 @@ describe('usePostCollections', () => {
       hasMore: false,
       isLoadingMore: true,
       loadMore: mocks.loadMore,
+      removeCollection: expect.any(Function),
     });
+  });
+
+  it('commits a paginator removal for a collection the post was removed from', () => {
+    // Committed, not optimistic: only the committed removal walks the skip offset back so
+    // the next page does not step over a collection once Nexus has indexed the removal.
+    const { result } = renderHook(() => usePostCollections('author:post1', { enabled: true }));
+
+    result.current.removeCollection('current-user:collection1');
+
+    expect(mocks.removePostsOptimistically).toHaveBeenCalledWith('current-user:collection1');
+    expect(mocks.commit).toHaveBeenCalledTimes(1);
+    expect(mocks.rollback).not.toHaveBeenCalled();
   });
 
   it('stays inert with no stream while disabled (the default)', () => {

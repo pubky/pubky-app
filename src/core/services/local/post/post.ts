@@ -33,6 +33,7 @@ import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.un
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import type { TLocalSavePostParams, TLocalUpdatePostStreamParams } from '@/services/local/post/post.types';
+import { recentCollectionCounts } from '@/services/local/post/recentCollectionCounts';
 
 export class LocalPostService {
   private constructor() {}
@@ -678,14 +679,16 @@ export class LocalPostService {
 
   /**
    * Local counterpart of Nexus's COLLECTED edges (pubky-nexus#1067): every post the collection
-   * gained gets `collections + 1`, every post it dropped `collections - 1`, and each touched
-   * post's TTL is stamped so the coordinator does not overwrite the local change with a count
-   * Nexus has not re-indexed yet (the reply/repost count pattern above). Returns the pending
-   * writes for the caller's transaction.
+   * gained gets `collections + 1`, every post it dropped `collections - 1`. Each touched post is
+   * marked in `recentCollectionCounts` before the write, like `recentUnbookmarks`, so a Nexus
+   * count fetched before the edit is indexed does not undo the change (`persistPosts`), and its
+   * TTL is stamped so the coordinator does not schedule a refresh for it right away (the
+   * reply/repost count pattern above). Returns the pending writes for the caller's transaction.
    */
   private static updateCuratedPostCounts(previousItemIds: Set<string>, nextItemIds: Set<string>): Promise<unknown>[] {
     const ops: Promise<unknown>[] = [];
     const bump = (postCompositeId: string, collections: number) => {
+      recentCollectionCounts.markWritten(postCompositeId);
       ops.push(PostCountsModel.updateCounts({ postCompositeId, countChanges: { collections } }));
       ops.push(PostTtlModel.upsert({ id: postCompositeId, lastUpdatedAt: Date.now() }));
     };

@@ -199,6 +199,12 @@ Bookmark sync failures currently leave the local write and removal protection in
 
 Follow-ups: [cross-tab/device reconciliation and ghost rows](https://github.com/pubky/pubky-app/issues/2729), [stale bookmark stream membership](https://github.com/pubky/pubky-app/issues/2730), and [failed-write recovery](https://github.com/pubky/pubky-app/issues/2731).
 
+## Collection Count Protection
+
+`LocalPostService` bumps a post's local `post_counts.collections` when one of the viewer's collections gains or drops it (create, edit, delete of the collection) and marks the post in `recentCollectionCounts` before the write. `LocalStreamPostsService.persistPosts` keeps the local `collections` count for marked posts on every persistence path (TTL refresh, forced notification hydration, cache-miss fills, bootstrap); every other count in the response still lands. The TTL row is not the signal: an ordinary persist renews it too, so two overlapping responses would otherwise read as a local write, and a write stamped before a request started would not be protected while Nexus is still indexing it.
+
+Protection lasts five minutes (`COLLECTIONS_COUNT_PROTECTION_MS` in `src/config/collections.ts`), the same window as bookmark removals. It is in memory, per tab, keyed by composite post ID only (the count is not viewer-relative), and does not survive a page reload. While a post is protected, a change to its count by other users shows up only after the window; a failed homeserver write is rolled back through the same local edit, which keeps the post protected with its restored count.
+
 ## Persistence Order
 
 When writing related entities, persist dependencies first:

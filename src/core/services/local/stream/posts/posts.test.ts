@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { COLLECTIONS_COUNT_PROTECTION_MS } from '@/config/collections';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -16,22 +17,10 @@ import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStr
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
+import { recentCollectionCounts } from '@/services/local/post/recentCollectionCounts';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type { NexusPost, NexusPostDetails, NexusTag } from '@/services/nexus/nexus.types';
 import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
-
-// `persistPosts` reads the time the query layer recorded for a response to guard the
-// `collections` count on non-TTL paths; the service tests never go through `queryNexus`,
-// so the stamp is supplied here.
-const nexusUtilsMocks = vi.hoisted(() => ({ responseStartedAt: undefined as number | undefined }));
-vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/services/nexus/nexus.utils')>();
-  return {
-    ...actual,
-    getNexusResponseStartedAt: (response: object) =>
-      nexusUtilsMocks.responseStartedAt ?? actual.getNexusResponseStartedAt(response),
-  };
-});
 
 describe('LocalStreamPostsService', () => {
   const streamId: PostStreamId = PostStreamTypes.TIMELINE_ALL_ALL;
@@ -637,60 +626,36 @@ describe('LocalStreamPostsService', () => {
       expect((await PostDetailsModel.findById(compositeId))!.content).toBe('nexus copy');
     });
 
-    it('keeps a locally bumped collections count when the TTL row was written since the fetch started', async () => {
-      // The viewer saved the post to a collection while the refresh was in flight: the
-      // response carries the pre-save count and must not undo the bump.
-      await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt });
-      await PostCountsModel.table.put({
-        id: compositeId,
-        tags: 0,
-        unique_tags: 0,
-        replies: 1,
-        reposts: 0,
-        collections: 3,
-      });
-
-      await LocalStreamPostsService.persistPosts({
-        posts: [nexusCopy(BASE_TIMESTAMP + 20_000)],
-        refreshGuard: { fetchStartedAt },
-      });
-
-      const counts = (await PostCountsModel.findById(compositeId))!;
-      expect(counts.collections).toBe(3);
-      // Every other count still refreshes from the response.
-      expect(counts.replies).toBe(7);
-    });
-
-    it('refreshes the collections count when nothing was written locally since the fetch started', async () => {
-      await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
-      await PostCountsModel.table.put({
-        id: compositeId,
-        tags: 0,
-        unique_tags: 0,
-        replies: 1,
-        reposts: 0,
-        collections: 3,
-      });
-
-      await LocalStreamPostsService.persistPosts({
-        posts: [nexusCopy(BASE_TIMESTAMP + 20_000)],
-        refreshGuard: { fetchStartedAt },
-      });
-
-      expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
-    });
-
-    describe('without refreshGuard (forced notification hydration, cache-miss fills)', () => {
+    describe('collections count protection', () => {
+      // `recentCollectionCounts` is the only signal: an ordinary persist renews the TTL too, so
+      // the TTL cannot tell a local collection write from an overlapping response.
       const localCounts = { id: compositeId, tags: 0, unique_tags: 0, replies: 1, reposts: 0, collections: 3 };
 
       afterEach(() => {
-        nexusUtilsMocks.responseStartedAt = undefined;
+        recentCollectionCounts.reset();
       });
 
-      it('keeps a collections count written since the response request started', async () => {
-        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt });
+      it('keeps a collections count the viewer changed locally, on the TTL refresh path', async () => {
+        // The save landed before the refresh request started; Nexus has not indexed it yet.
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
         await PostCountsModel.table.put(localCounts);
-        nexusUtilsMocks.responseStartedAt = fetchStartedAt;
+        recentCollectionCounts.markWritten(compositeId);
+
+        await LocalStreamPostsService.persistPosts({
+          posts: [nexusCopy(BASE_TIMESTAMP + 20_000)],
+          refreshGuard: { fetchStartedAt: Date.now() },
+        });
+
+        const counts = (await PostCountsModel.findById(compositeId))!;
+        expect(counts.collections).toBe(3);
+        // Every other count still refreshes from the response.
+        expect(counts.replies).toBe(7);
+      });
+
+      it('keeps it on forced hydration and cache-miss fills too (no refresh guard)', async () => {
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+        await PostCountsModel.table.put(localCounts);
+        recentCollectionCounts.markWritten(compositeId);
 
         await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
 
@@ -701,33 +666,44 @@ describe('LocalStreamPostsService', () => {
         expect((await PostDetailsModel.findById(compositeId))!.content).toBe('nexus copy');
       });
 
-      it('refreshes the collections count when the local write predates the request', async () => {
-        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
-        await PostCountsModel.table.put(localCounts);
-        nexusUtilsMocks.responseStartedAt = fetchStartedAt;
-
-        await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
-
-        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
-      });
-
-      it('keeps a collections count written since a bootstrap request started (start passed via the tag guard)', async () => {
-        // Bootstrap persists `bootstrapData.posts`, a nested page the query layer never timed:
-        // its request start arrives as `tagGuard.validatedAt` instead.
-        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt });
+      it('takes the response count from an overlapping response that only renewed the TTL', async () => {
+        // A TTL batch and a notification batch overlapped: the older response persisted first
+        // and stamped the TTL after this request started. No local write happened, so the
+        // newer response's total is the truth.
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt + 1 });
         await PostCountsModel.table.put(localCounts);
 
         await LocalStreamPostsService.persistPosts({
           posts: [nexusCopy(BASE_TIMESTAMP + 20_000)],
-          tagGuard: { validatedAt: fetchStartedAt },
+          refreshGuard: { fetchStartedAt },
         });
 
-        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(3);
+        const counts = (await PostCountsModel.findById(compositeId))!;
+        expect(counts.collections).toBe(0);
+        expect(counts.replies).toBe(7);
+        // The details guard is still TTL-based and keeps the local row.
+        expect((await PostDetailsModel.findById(compositeId))!.content).toBe('local edit');
       });
 
-      it('accepts the response count when the query layer recorded no request start', async () => {
-        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt });
+      it('takes the response count once the protection window has passed', async () => {
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
         await PostCountsModel.table.put(localCounts);
+        recentCollectionCounts.markWritten(compositeId);
+        const later = Date.now() + COLLECTIONS_COUNT_PROTECTION_MS;
+        const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(later);
+
+        try {
+          await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
+        } finally {
+          nowSpy.mockRestore();
+        }
+
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
+      });
+
+      it('takes the response count for a marked post without a local counts row', async () => {
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+        recentCollectionCounts.markWritten(compositeId);
 
         await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
 
