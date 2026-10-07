@@ -11,7 +11,7 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { getGithubLink, getShopLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
-import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
+import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Github2, Telegram, XTwitter } from '@/icons';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
@@ -24,9 +24,8 @@ import { ProgressSteps } from '../ProgressSteps/ProgressSteps';
 export interface HeaderContainerProps {
   children: React.ReactNode;
   className?: string;
-  classNameNav?: string;
 }
-export const HeaderContainer = ({ children, className, classNameNav }: HeaderContainerProps) => {
+export const HeaderContainer = ({ children, className }: HeaderContainerProps) => {
   return (
     <Container
       overrideDefaults
@@ -41,8 +40,7 @@ export const HeaderContainer = ({ children, className, classNameNav }: HeaderCon
         size="container"
         className={cn(
           'pointer-events-auto mx-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 py-6 sm:flex-nowrap sm:gap-6',
-          PAGE_GUTTER_CLASS,
-          classNameNav,
+          CONTENT_GUTTER_CLASS,
         )}
       >
         {children}
