@@ -157,3 +157,26 @@ const fontStyleEl = document.createElement('style');
 fontStyleEl.id = '__vrt_inter_tight__';
 fontStyleEl.textContent = fontFaceCss;
 document.head.appendChild(fontStyleEl);
+
+// Load the faces before any test. `renderForVRT` used to await `document.fonts.ready`
+// inside the test, so the first capture in a file paid the cold load against the
+// 30s test budget. Playwright's screenshot path waits on the same promise. Doing
+// it here keeps that cost out of the test. A hard hang fails the file with this
+// message instead of a generic test timeout.
+const VRT_FONT_PRELOAD_TIMEOUT_MS = 20_000;
+await new Promise<void>((resolve, reject) => {
+  const timer = setTimeout(
+    () => reject(new Error(`VRT fonts were not ready after ${VRT_FONT_PRELOAD_TIMEOUT_MS}ms`)),
+    VRT_FONT_PRELOAD_TIMEOUT_MS,
+  );
+  void Promise.all([document.fonts.load('16px "Inter Tight"'), document.fonts.load('700 16px "Inter Tight"')])
+    .then(() => document.fonts.ready)
+    .then(() => {
+      clearTimeout(timer);
+      resolve();
+    })
+    .catch((error: unknown) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+});

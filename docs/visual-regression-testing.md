@@ -52,6 +52,14 @@ those baselines, delete the PNGs first so they are regenerated from scratch.
   resolves differently per run/region. This is the #1 cause of flakiness.
 - **Time** — `renderForVRT` calls `freezeNow()`; mock any relative-time hook to
   the stable formatter in `vrt.clock.ts`.
+- **Waits** — every wait in the harness is bounded (`fonts`, viewport ack,
+  image preload/decode, dynamic icons, cursor park). Playwright's default
+  action timeout is 0, so an untimed `hover()` or `document.fonts.ready` can
+  sit past the 30s test budget on a busy runner and fail as a generic test
+  timeout. Inter Tight is loaded in `vrt.setup.ts` before the file's tests, so
+  the first capture does not pay that cold start. Do not add an unbounded
+  `await` (font ready, `image.decode()`, a Playwright action with no `timeout`)
+  inside a test.
 - **Randomness** — `Math.random` is seeded by the harness, so name generators
   and placeholders stay stable.
 - **Images** — `next/image` is mocked to a plain `<img>` in `vrt.setup.ts` (the
