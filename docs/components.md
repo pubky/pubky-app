@@ -318,6 +318,13 @@ An arbitrary value is fine only when the scale cannot express it: a viewport fra
 
 ### Spacing
 
+Page-level headers and content share the 1200px container token and `CONTENT_GUTTER_CLASS`
+from `@/config/layoutClasses`: 16px side padding below `lg`, 24px from `lg`, and no
+internal side padding from `xl` (1280px), where the centered container supplies the
+outer space. Apply the gutter once to the width-constrained shell, including auth,
+onboarding, edit profile, and landing sections. Header spacing does not depend on
+the route or authentication state. Full-width section backgrounds stay outside this shell.
+
 ```tsx
 // Use Tailwind spacing scale
 <div className="p-4 gap-2 space-y-4" />

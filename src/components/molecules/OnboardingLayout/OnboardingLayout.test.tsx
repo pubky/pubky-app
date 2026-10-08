@@ -36,7 +36,7 @@ describe('OnboardingLayout', () => {
     expect(navContainer).not.toBeInTheDocument();
   });
 
-  it('applies the shared page gutter (16px mobile, 24px from lg)', () => {
+  it('applies the shared content gutter (16px mobile, 24px at lg, none at xl)', () => {
     render(
       <OnboardingLayout testId="default-gutter">
         <div>Content</div>
@@ -44,7 +44,7 @@ describe('OnboardingLayout', () => {
     );
 
     const root = screen.getByTestId('default-gutter').parentElement;
-    expect(root).toHaveClass('px-4', 'lg:px-6');
+    expect(root).toHaveClass('px-4', 'lg:px-6', 'xl:px-0');
     expect(root).not.toHaveClass('px-6');
   });
 
