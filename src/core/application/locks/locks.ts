@@ -489,8 +489,8 @@ export class LocksApplication {
     return LocksService.restoreSession();
   }
 
-  static signout(): Promise<void> {
-    return LocksService.signout();
+  static signout(session?: LocksSdkSession): Promise<void> {
+    return LocksService.signout(session);
   }
 
   static setLockServiceConfig(): Promise<void> {

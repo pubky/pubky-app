@@ -219,6 +219,12 @@ describe('LocksService (auth)', () => {
     expect(mocks.fakeSession.signout).toHaveBeenCalled();
   });
 
+  it('signout signs out the given session instead of the stored one', async () => {
+    const other = { signout: vi.fn(async () => {}) };
+    await LocksService.signout(other as never);
+    expect(other.signout).toHaveBeenCalledTimes(1);
+  });
+
   it('setLockServiceConfig writes the pointer through the store session with the configured lock server', async () => {
     useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     await LocksService.setLockServiceConfig();

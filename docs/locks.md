@@ -43,7 +43,8 @@ Three things break the usual pubky-app mental model:
 - **A second backend, with its own session.** The **Lock Server** stores the guarded
   content, verifies unlock proofs, and proxies reads. Its auth is completely separate from
   the pubky.app session (`useLocksAuthStore`, connect-flow sign-in) — and may even be a
-  different account than the one posting.
+  different account than the one posting. Until #2283 lands, though, Enable Locks only accepts a
+  Lock Server session that belongs to the account signed in to pubky.app (#2758).
 - **Nexus indexes the announcement, not the lock.** The announcement is an ordinary Nexus
   post and behaves like one; the locked payload and everything about the lock itself never
   reach Nexus. So for locks data there are no streams, no Dexie cache, no local-first
