@@ -33,18 +33,20 @@ export interface UseStreamPaginationOptions {
    */
   preserveCachedStream?: boolean;
   /**
-   * Skip-paginated streams only: raw rows to re-request before the resume offset on every
-   * page, for a consumer whose own local mutations shrink the server list at a time it
-   * cannot observe (Nexus indexes the homeserver write later). Each page then overlaps the
-   * previous one by this many rows, which the dedupe drops, so an index shift of up to this
-   * many rows can never step over a row. Raising it while a page is in flight discards that
-   * page's cursor advance and its end-of-stream signal: the page may already have been served
-   * from the shorter list, so the next request re-covers it from the same offset under the
-   * wider overlap. Capped at `limit - 1` so every request still advances.
+   * Skip-paginated streams only: raw rows to re-cover before the resume offset, for a
+   * consumer whose own local mutations shrink the server list at a time it cannot observe
+   * (Nexus indexes the homeserver write later). Every load rewinds its offset by this many
+   * rows once, then scans forward through the re-covered region like any other, dropping the
+   * repeats, so an index shift of up to this many rows can never step over a row, whether it
+   * spans a page or not, and every load still advances past where it started. Growth while a
+   * page is in flight discards that page's cursor advance and its end-of-stream signal (the
+   * page may already have been served from the shorter list) and rewinds the next round by
+   * the growth, so the page is re-covered.
    *
-   * Defaults to 0.
+   * A function is read when a request is issued, so a consumer can let its overlap expire
+   * without re-rendering. Defaults to 0.
    */
-  skipOverlap?: number;
+  skipOverlap?: number | (() => number);
   /**
    * Optional callback invoked when a stream slice fetch fails. Fires after
    * the internal `error` state is set but before the `loading` / `loadingMore`

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef } from 'react';
 import { COLLECTIONS_COUNT_PROTECTION_MS, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { parseCompositeId } from '@/models/models.utils';
@@ -33,9 +33,10 @@ type UsePostCollectionsResult = {
    * page holds the viewer's own collections too (consumers filter them out) and the stream
    * is skip-paginated, so once Nexus indexes the removal, at a time this hook cannot see,
    * every later index shifts down by one. Each recorded removal widens the paginator's
-   * `skipOverlap`: every page from then on re-requests that many rows before its offset and
-   * drops the repeats, so no curator is stepped over whenever the shift lands, including
-   * under a page already in flight. An addition lands at the top and needs nothing.
+   * `skipOverlap` for the protection window: every load from then on rewinds by that many
+   * rows and scans forward through the repeats, so no curator is stepped over whenever the
+   * shift lands, including under a page already in flight. An addition lands at the top and
+   * needs nothing.
    */
   recordRemoval: () => void;
 };
@@ -59,21 +60,26 @@ export function usePostCollections(
   { enabled = false }: UsePostCollectionsOptions = {},
 ): UsePostCollectionsResult {
   const { pubky: authorId, id } = parseCompositeId(postId);
-  // Own removals on this post, kept for as long as the consumer stays mounted rather than per
-  // enabled lifetime (a picker reopened before Nexus indexed a removal pages the old list too),
-  // and for at most the protection window, after which Nexus has indexed them like any other
-  // collection write. Expired ones are dropped when the next removal is recorded.
-  const [removalTimes, setRemovalTimes] = useState<number[]>([]);
+  // When the viewer removed the post from own collections. Kept for as long as the consumer
+  // stays mounted rather than per enabled lifetime (a picker reopened before Nexus indexed a
+  // removal pages the old list too), and read by the paginator as it issues each request, so
+  // a removal stops counting on its own once the protection window has passed and Nexus has
+  // indexed it like any other collection write. A ref, not state: the count never renders.
+  const removalTimesRef = useRef<number[]>([]);
+  const readPendingRemovals = () => {
+    const now = Date.now();
+    removalTimesRef.current = removalTimesRef.current.filter((at) => now - at < COLLECTIONS_COUNT_PROTECTION_MS);
+    return removalTimesRef.current.length;
+  };
 
   const { postIds, loading, loadingMore, hasMore, loadMore } = useStreamPagination({
     streamId: enabled ? buildPostCollectionsStreamId(authorId, id) : undefined,
     limit: COLLECTIONS_SECTION_PAGE_SIZE,
-    skipOverlap: removalTimes.length,
+    skipOverlap: readPendingRemovals,
   });
 
   const recordRemoval = () => {
-    const now = Date.now();
-    setRemovalTimes((times) => [...times.filter((at) => now - at < COLLECTIONS_COUNT_PROTECTION_MS), now]);
+    removalTimesRef.current = [...removalTimesRef.current, Date.now()];
   };
 
   return {

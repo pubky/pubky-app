@@ -1045,7 +1045,7 @@ describe('useStreamPagination', () => {
       );
     });
 
-    it('re-requests skipOverlap rows before every resume offset and drops the repeats', async () => {
+    it('rewinds every load by skipOverlap, scans forward through the repeats, and ends past its start', async () => {
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c1', 'c2', 'c3'],
@@ -1073,7 +1073,7 @@ describe('useStreamPagination', () => {
       );
       expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c4', 'c5']);
 
-      // Every later page keeps the overlap: the shift can land between any two requests.
+      // Every later load rewinds again: the shift can land between any two requests.
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c5', 'c6'],
@@ -1086,6 +1086,62 @@ describe('useStreamPagination', () => {
         expect.objectContaining({ streamId: collectionStreamId, streamTail: 4 }),
       );
       expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c4', 'c5', 'c6']);
+    });
+
+    it('re-covers a shift wider than a page in one load and still advances past its start', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      let overlap = 0;
+      const { result, rerender } = renderHook(() =>
+        useStreamPagination({ streamId: collectionStreamId, limit: 3, skipOverlap: overlap }),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5', 'c6'],
+        nextCursor: 6,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c4', 'c5', 'c6']);
+
+      // Five of the six loaded rows were the consumer's own and are gone server-side, indexed
+      // already: the first unseen row (`n1`) has shifted from index 6 to index 1. A rewind
+      // capped below the page would start at 4 and step over n1..n3; the full rewind starts
+      // at 1 and scans forward.
+      overlap = 5;
+      rerender();
+      const server = ['c6', 'n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7'];
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockImplementation(async ({ streamTail }) => {
+        const start = streamTail ?? 0;
+        const nextPageIds = server.slice(start, start + 3);
+        return {
+          nextPageIds,
+          nextCursor: start + nextPageIds.length,
+          rawScannedCount: nextPageIds.length,
+          reachedEnd: start + 3 >= server.length,
+        };
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      const requestedTails = () =>
+        vi.mocked(StreamPostsController.getOrFetchStreamSlice).mock.calls.map((call) => call[0].streamTail);
+      expect(requestedTails()).toEqual([1]);
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'n1', 'n2', 'n3']);
+
+      // The next load rewinds from its own start (4) and scans forward through the repeats
+      // until it finds something new, ending past where it started.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(requestedTails()).toEqual([0, 3]);
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'n1', 'n2', 'n3', 'n4', 'n5']);
     });
 
     it('keeps the offset of a page in flight when the overlap grows, so the next request re-covers it', async () => {
@@ -1131,17 +1187,20 @@ describe('useStreamPagination', () => {
       expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c5', 'c6', 'c7', 'c4']);
     });
 
-    it('caps the overlap below a page so every request still advances', async () => {
+    it('reads a skipOverlap getter when each request is issued', async () => {
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c1', 'c2', 'c3'],
         nextCursor: 3,
       });
+      let overlap = 0;
       const { result } = renderHook(() =>
-        useStreamPagination({ streamId: collectionStreamId, limit: 3, skipOverlap: 25 }),
+        useStreamPagination({ streamId: collectionStreamId, skipOverlap: () => overlap }),
       );
       await waitFor(() => expect(result.current.loading).toBe(false));
 
+      // Changed without a re-render: the consumer's history expired or grew on its own.
+      overlap = 2;
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c2', 'c3', 'c4'],
@@ -1151,7 +1210,6 @@ describe('useStreamPagination', () => {
         await result.current.loadMore();
       });
 
-      // 3 - min(25, limit - 1) = 1: one new row per page rather than the same page forever.
       expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
         expect.objectContaining({ streamId: collectionStreamId, streamTail: 1 }),
       );

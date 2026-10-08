@@ -31,7 +31,9 @@ export class PostCountsModel extends TupleModelBase<string, PostCountsModelSchem
   }
 
   static async updateCounts({ postCompositeId, countChanges }: TPostCountsParams): Promise<void> {
-    const postCounts = await PostCountsModel.findById(postCompositeId);
+    // The raw row rather than the hydrated model: a row persisted before `collections` existed
+    // carries no baseline for it, and the model's default would turn that into a numeric zero.
+    const [postCounts] = await PostCountsModel.findByIds([postCompositeId]);
     if (!postCounts) return;
 
     const updates: Partial<PostCountsModelSchema> = {};
@@ -48,7 +50,9 @@ export class PostCountsModel extends TupleModelBase<string, PostCountsModelSchem
     if (countChanges.unique_tags !== undefined) {
       updates.unique_tags = Math.max(0, postCounts.unique_tags + countChanges.unique_tags);
     }
-    if (countChanges.collections !== undefined) {
+    // A delta on an unknown total stays unknown: the next hydration supplies the real one,
+    // which the local-write guard then accepts (see `LocalStreamPostsService.persistPosts`).
+    if (countChanges.collections !== undefined && postCounts.collections !== undefined) {
       updates.collections = Math.max(0, postCounts.collections + countChanges.collections);
     }
 

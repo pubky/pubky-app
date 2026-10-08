@@ -1,9 +1,9 @@
-import { act, renderHook } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_COUNT_PROTECTION_MS, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { usePostCollections } from './usePostCollections';
 
-type PaginationParams = { streamId?: string; limit?: number; skipOverlap?: number };
+type PaginationParams = { streamId?: string; limit?: number; skipOverlap?: number | (() => number) };
 
 const mocks = vi.hoisted(() => ({
   paginationParams: null as PaginationParams | null,
@@ -22,6 +22,12 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
     return { ...mocks.paginationResult, loadMore: mocks.loadMore };
   },
 }));
+
+/** What the paginator would rewind by if it issued a request now. */
+const pendingOverlap = () => {
+  const { skipOverlap } = mocks.paginationParams ?? {};
+  return typeof skipOverlap === 'function' ? skipOverlap() : skipOverlap;
+};
 
 describe('usePostCollections', () => {
   beforeEach(() => {
@@ -43,8 +49,9 @@ describe('usePostCollections', () => {
     expect(mocks.paginationParams).toEqual({
       streamId: 'post_collections:author:post1',
       limit: COLLECTIONS_SECTION_PAGE_SIZE,
-      skipOverlap: 0,
+      skipOverlap: expect.any(Function),
     });
+    expect(pendingOverlap()).toBe(0);
     expect(result.current).toEqual({
       collectionIds: ['curator:collection1', 'curator:collection2'],
       isLoading: false,
@@ -59,9 +66,9 @@ describe('usePostCollections', () => {
     let enabled = true;
     const { result, rerender } = renderHook(() => usePostCollections('author:post1', { enabled }));
 
-    act(() => result.current.recordRemoval());
-    act(() => result.current.recordRemoval());
-    expect(mocks.paginationParams?.skipOverlap).toBe(2);
+    result.current.recordRemoval();
+    result.current.recordRemoval();
+    expect(pendingOverlap()).toBe(2);
 
     // Closing and reopening the picker before Nexus indexed the removals pages the old
     // list too, so the overlap outlives the enabled lifetime.
@@ -69,20 +76,21 @@ describe('usePostCollections', () => {
     rerender();
     enabled = true;
     rerender();
-    expect(mocks.paginationParams?.skipOverlap).toBe(2);
+    expect(pendingOverlap()).toBe(2);
   });
 
-  it('drops removals older than the protection window when a new one is recorded', () => {
+  it('lets a removal expire with the protection window, without another mutation or render', () => {
     vi.useFakeTimers();
     try {
       const { result } = renderHook(() => usePostCollections('author:post1', { enabled: true }));
 
-      act(() => result.current.recordRemoval());
-      vi.advanceTimersByTime(COLLECTIONS_COUNT_PROTECTION_MS);
-      act(() => result.current.recordRemoval());
+      result.current.recordRemoval();
+      vi.advanceTimersByTime(COLLECTIONS_COUNT_PROTECTION_MS - 1);
+      expect(pendingOverlap()).toBe(1);
 
-      // Nexus has long indexed the first removal: only the fresh one still needs an overlap.
-      expect(mocks.paginationParams?.skipOverlap).toBe(1);
+      // Nexus has long indexed it: the paginator's next request reads no overlap at all.
+      vi.advanceTimersByTime(1);
+      expect(pendingOverlap()).toBe(0);
     } finally {
       vi.useRealTimers();
     }
@@ -94,7 +102,7 @@ describe('usePostCollections', () => {
     expect(mocks.paginationParams).toEqual({
       streamId: undefined,
       limit: COLLECTIONS_SECTION_PAGE_SIZE,
-      skipOverlap: 0,
+      skipOverlap: expect.any(Function),
     });
     expect(result.current.collectionIds).toEqual([]);
     expect(result.current.isLoading).toBe(false);

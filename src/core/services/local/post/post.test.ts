@@ -90,6 +90,7 @@ const setupExistingPost = async (postId: string, content: string, parentUri?: st
     unique_tags: 0,
     replies: 0,
     reposts: 0,
+    collections: 0,
   };
 
   const postRelationships: PostRelationshipsModelSchema = {
@@ -992,7 +993,7 @@ describe('LocalPostService', () => {
       // The duplicate item counts once; an uncurated post is untouched.
       expect(await collectionsCount(itemA)).toBe(1);
       expect(await collectionsCount(itemB)).toBe(1);
-      expect(await collectionsCount(itemC)).toBeUndefined();
+      expect(await collectionsCount(itemC)).toBe(0);
       expect((await getSavedCounts(collectionId))!.collections).toBe(0);
       expect((await getPostTtl(itemA))!.lastUpdatedAt).toBeGreaterThanOrEqual(before);
       expect(await getPostTtl(itemC)).toBeNull();
@@ -1001,7 +1002,7 @@ describe('LocalPostService', () => {
     it('leaves counts alone for a short post whose content happens to look like an envelope', async () => {
       await LocalPostService.create(createSaveParams(collectionEnvelope([itemA]), collectionId));
 
-      expect(await collectionsCount(itemA)).toBeUndefined();
+      expect(await collectionsCount(itemA)).toBe(0);
     });
 
     it('reconciles counts against the previous envelope on edit', async () => {
@@ -1085,7 +1086,7 @@ describe('LocalPostService', () => {
 
       await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: collectionEnvelope([itemA]) });
 
-      expect(await collectionsCount(itemA)).toBeUndefined();
+      expect(await collectionsCount(itemA)).toBe(0);
     });
 
     it('decrements every curated post when a collection is hard deleted', async () => {
