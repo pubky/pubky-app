@@ -276,6 +276,11 @@ export function usePostInput({
     onArticleModeChange?.(isArticle);
   }, [isArticle, onArticleModeChange]);
 
+  // The title and body inputs run ahead of `articleTitle` and `content` by the debounce. Null once
+  // the state has caught up.
+  const pendingArticleTitleRef = useRef<string | null>(null);
+  const pendingArticleBodyRef = useRef<string | null>(null);
+
   // Handle click outside to collapse (only when expanded prop is false)
   useEffect(() => {
     if (expanded) return;
@@ -299,12 +304,14 @@ export function usePostInput({
       // mounted composers cannot shadow each other.
       if (target instanceof Element && target.closest('[data-lock-title-input]')) return;
 
-      // An empty composer is not always idle — the lock flow holds the draft outside it.
+      // An empty composer is not always idle: the lock flow holds the draft outside it, and an
+      // article's inputs run ahead of the state by the debounce (the first keystrokes of a new
+      // article are pending, not empty)
       const isInProgress =
-        Boolean(content.trim()) ||
+        Boolean((pendingArticleBodyRef.current ?? content).trim()) ||
         tags.length > 0 ||
         attachments.length > 0 ||
-        Boolean(articleTitle.trim()) ||
+        Boolean((pendingArticleTitleRef.current ?? articleTitle).trim()) ||
         Boolean(hasExternalContent?.());
       if (!isInProgress) {
         setIsExpanded(false);
@@ -343,11 +350,6 @@ export function usePostInput({
     textarea.style.height = '0px';
     textarea.style.height = `${textarea.scrollHeight}px`;
   }, [content, isArticle, isExpanded]);
-
-  // The title and body inputs run ahead of `articleTitle` and `content` by the debounce. Null once
-  // the state has caught up.
-  const pendingArticleTitleRef = useRef<string | null>(null);
-  const pendingArticleBodyRef = useRef<string | null>(null);
 
   const getLatestArticle = () => ({
     title: pendingArticleTitleRef.current ?? articleTitle,

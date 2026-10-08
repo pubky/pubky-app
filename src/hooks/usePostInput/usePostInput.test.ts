@@ -1678,6 +1678,34 @@ describe('usePostInput', () => {
   });
 
   describe('click outside collapse behavior', () => {
+    it('keeps a new article open while its first keystrokes are still pending in the debounce', () => {
+      vi.useFakeTimers();
+      try {
+        mockContent = '';
+        mockArticleTitle = '';
+        mockIsArticle = true;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post', expanded: false }));
+        act(() => {
+          result.current.handleArticleBodyChange('First words', false);
+        });
+
+        // Outside click before the debounce fired: the state is still empty, the editor is not
+        act(() => {
+          document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        });
+
+        expect(mockSetIsArticle).not.toHaveBeenCalledWith(false);
+
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+        expect(mockSetContent).toHaveBeenCalledWith('First words');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('adds event listener when expanded prop is false', () => {
       const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 
