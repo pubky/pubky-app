@@ -2,11 +2,11 @@
 
 exports[`LandingFinalSection - Snapshots > matches snapshot with default props 1`] = `
 <section
-  class="relative z-0 flex min-h-svh items-center py-10 sm:py-20 px-4 lg:px-6"
+  class="relative z-0 flex min-h-svh items-center py-10 sm:py-20"
   id="landing-final-section"
 >
   <div
-    class="mx-auto w-full flex-col flex container max-w-(--container-max-width) items-center gap-8 text-center"
+    class="mx-auto w-full flex-col flex container max-w-(--container-max-width) items-center gap-8 text-center px-4 lg:px-6 xl:px-0"
     data-testid="container"
   >
     <h2
