@@ -14,12 +14,24 @@ describe('Heading', () => {
     expect(screen.getByTestId(`heading-${level}`).tagName).toBe(`H${level}`);
   });
 
+  it('applies the md size class by default', () => {
+    render(<Heading>Default size</Heading>);
+    expect(screen.getByRole('heading')).toHaveClass('text-xl', 'font-semibold');
+  });
+
   it.each([
     ['sm', 'text-lg'],
     ['md', 'text-xl'],
     ['lg', 'text-2xl'],
+    ['xl', 'text-4xl'],
+    ['2xl', 'text-7xl'],
   ] as const)('applies size=%s class', (size, className) => {
     render(<Heading size={size}>Sized heading</Heading>);
     expect(screen.getByRole('heading')).toHaveClass(className);
+  });
+
+  it('merges a custom className', () => {
+    render(<Heading className="custom-class">Custom</Heading>);
+    expect(screen.getByRole('heading')).toHaveClass('custom-class', 'text-foreground');
   });
 });

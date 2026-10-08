@@ -1,83 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ProfileMenuActions } from './ProfileMenuActions';
-
-vi.mock('@/atoms/DropdownMenu/DropdownMenu', () => {
-  return {
-    DropdownMenu: ({
-      children,
-      open,
-      onOpenChange,
-    }: {
-      children: React.ReactNode;
-      open: boolean;
-      onOpenChange: (open: boolean) => void;
-    }) => (
-      <div data-testid="dropdown-menu" data-open={open.toString()}>
-        <button data-testid="dropdown-open-trigger" onClick={() => onOpenChange(true)} />
-        {children}
-      </div>
-    ),
-    DropdownMenuTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
-      <div data-testid="dropdown-trigger">{children}</div>
-    ),
-    DropdownMenuContent: ({
-      children,
-      align,
-      className,
-    }: {
-      children: React.ReactNode;
-      align: string;
-      className?: string;
-      onCloseAutoFocus?: (e: { preventDefault: () => void }) => void;
-    }) => (
-      <div data-testid="dropdown-content" data-align={align} className={className}>
-        {children}
-      </div>
-    ),
-  };
-});
-
-vi.mock('@/atoms/Sheet/Sheet', () => {
-  return {
-    Sheet: ({
-      children,
-      open,
-      onOpenChange,
-    }: {
-      children: React.ReactNode;
-      open: boolean;
-      onOpenChange: (open: boolean) => void;
-    }) => (
-      <div data-testid="sheet" data-open={open.toString()}>
-        <button data-testid="sheet-open-trigger" onClick={() => onOpenChange(true)} />
-        {children}
-      </div>
-    ),
-    SheetTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
-      <div data-testid="sheet-trigger">{children}</div>
-    ),
-    SheetContent: ({
-      children,
-      side,
-    }: {
-      children: React.ReactNode;
-      side: string;
-      onOpenAutoFocus?: (e: { preventDefault: () => void }) => void;
-    }) => (
-      <div data-testid="sheet-content" data-side={side}>
-        {children}
-      </div>
-    ),
-    SheetHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet-header">{children}</div>,
-    SheetTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="sheet-title" className={className}>
-        {children}
-      </div>
-    ),
-  };
-});
 
 const { mockUseIsMobile, mockUseProfileMenuActions, mockRequireAuth } = vi.hoisted(() => ({
   mockUseIsMobile: vi.fn(() => false),
@@ -114,7 +39,7 @@ vi.mock('./ProfileMenuActionsContent/ProfileMenuActionsContent', () => ({
     onActionComplete?: () => void;
   }) => (
     <div data-testid="profile-menu-actions-content" data-user-id={userId} data-variant={variant}>
-      <button onClick={onActionComplete}>Close</button>
+      <button onClick={onActionComplete}>Complete action</button>
     </div>
   ),
 }));
@@ -125,21 +50,58 @@ describe('ProfileMenuActions', () => {
     mockUseIsMobile.mockReturnValue(false);
   });
 
-  it('renders a desktop dropdown with the trigger and content', () => {
+  it('renders the trigger with the dropdown closed on desktop', () => {
     render(<ProfileMenuActions userId="pk:test123" trigger={<button>Menu</button>} />);
 
-    expect(screen.getByTestId('dropdown-menu')).toBeInTheDocument();
-    expect(screen.getByTestId('dropdown-trigger')).toHaveTextContent('Menu');
-    expect(screen.getByTestId('profile-menu-actions-content')).toHaveAttribute('data-user-id', 'pk:test123');
-    expect(screen.getByTestId('profile-menu-actions-content')).toHaveAttribute('data-variant', 'dropdown');
+    const trigger = screen.getByRole('button', { name: 'Menu' });
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('profile-menu-actions-content')).not.toBeInTheDocument();
   });
 
-  it('opens the menu through requireAuth on desktop', () => {
+  it('opens the dropdown through requireAuth when the trigger is clicked', async () => {
+    const user = userEvent.setup();
     render(<ProfileMenuActions userId="pk:test123" trigger={<button>Menu</button>} />);
 
-    fireEvent.click(screen.getByTestId('dropdown-open-trigger'));
+    const trigger = screen.getByRole('button', { name: 'Menu' });
+    await user.click(trigger);
+
     expect(mockRequireAuth).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('dropdown-menu')).toHaveAttribute('data-open', 'true');
+    await waitFor(() => {
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+    });
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const content = screen.getByTestId('profile-menu-actions-content');
+    expect(content).toHaveAttribute('data-user-id', 'pk:test123');
+    expect(content).toHaveAttribute('data-variant', 'dropdown');
+  });
+
+  it('does not open the dropdown when requireAuth withholds the action', async () => {
+    mockRequireAuth.mockImplementationOnce(() => undefined);
+    const user = userEvent.setup();
+    render(<ProfileMenuActions userId="pk:test123" trigger={<button>Menu</button>} />);
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
+
+    expect(mockRequireAuth).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('closes the dropdown when an action completes', async () => {
+    const user = userEvent.setup();
+    render(<ProfileMenuActions userId="pk:test123" trigger={<button>Menu</button>} />);
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
+    await waitFor(() => {
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Complete action' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
   });
 });
 
@@ -154,12 +116,40 @@ describe('ProfileMenuActions - mobile', () => {
     resetViewport();
   });
 
-  it('renders a bottom sheet on mobile', () => {
+  it('renders the trigger with the sheet closed', () => {
     render(<ProfileMenuActions userId="pk:test123" trigger={<button>Menu</button>} />);
 
-    expect(screen.getByTestId('sheet')).toBeInTheDocument();
-    expect(screen.getByTestId('sheet-content')).toHaveAttribute('data-side', 'bottom');
-    expect(screen.getByTestId('profile-menu-actions-content')).toHaveAttribute('data-variant', 'sheet');
-    expect(screen.getByTestId('sheet-title')).toHaveTextContent('Profile Actions');
+    const trigger = screen.getByRole('button', { name: 'Menu' });
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('opens a bottom sheet through requireAuth when the trigger is clicked', async () => {
+    const user = userEvent.setup();
+    render(<ProfileMenuActions userId="pk:test123" trigger={<button>Menu</button>} />);
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
+
+    expect(mockRequireAuth).toHaveBeenCalledTimes(1);
+    const dialog = await screen.findByRole('dialog', { name: 'Profile Actions' });
+    expect(dialog).toHaveClass('inset-x-0', 'bottom-0');
+    const content = screen.getByTestId('profile-menu-actions-content');
+    expect(content).toHaveAttribute('data-user-id', 'pk:test123');
+    expect(content).toHaveAttribute('data-variant', 'sheet');
+  });
+
+  it('closes the sheet when an action completes', async () => {
+    const user = userEvent.setup();
+    render(<ProfileMenuActions userId="pk:test123" trigger={<button>Menu</button>} />);
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
+    await screen.findByRole('dialog');
+
+    await user.click(screen.getByRole('button', { name: 'Complete action' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 });
