@@ -53,13 +53,17 @@ those baselines, delete the PNGs first so they are regenerated from scratch.
 - **Time** — `renderForVRT` calls `freezeNow()`; mock any relative-time hook to
   the stable formatter in `vrt.clock.ts`.
 - **Waits** — every wait in the harness is bounded (`fonts`, viewport ack,
-  image preload/decode, dynamic icons, cursor park). Playwright's default
-  action timeout is 0, so an untimed `hover()` or `document.fonts.ready` can
-  sit past the 30s test budget on a busy runner and fail as a generic test
-  timeout. Inter Tight is loaded in `vrt.setup.ts` before the file's tests, so
-  the first capture does not pay that cold start. Do not add an unbounded
-  `await` (font ready, `image.decode()`, a Playwright action with no `timeout`)
-  inside a test.
+  image preload/decode, dynamic icons, cursor park) and rejects with a message
+  naming the wait, so a stall is never reported as a generic
+  `Test timed out in 30000ms`. An untimed `document.fonts.ready` or
+  `image.decode()` has no limit at all, and a Playwright action without
+  `timeout` is given whatever is left of the test budget by Vitest, so its
+  `.catch` runs too late to help. Inter Tight is loaded in `vrt.setup.ts`
+  before the file's tests, so the first capture does not pay that cold start.
+  Do not add an unbounded `await` inside a test. Bounded waits still add up:
+  a surface whose first capture legitimately runs long on a busy macOS runner
+  (the `next/dynamic` markdown editor, the Collections overview) gets its own
+  `it`/`describe` timeout rather than a change to the project `testTimeout`.
 - **Randomness** — `Math.random` is seeded by the harness, so name generators
   and placeholders stay stable.
 - **Images** — `next/image` is mocked to a plain `<img>` in `vrt.setup.ts` (the

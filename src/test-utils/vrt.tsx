@@ -29,14 +29,15 @@ export const VRT_ROOT_TESTID = 'vrt-root';
  * the card, and tests that need a focused field (expanded QuickReply) would
  * lose `:focus-within`.
  *
- * Playwright's default action timeout is 0, so `hover()` waits forever for
- * the target to be "stable". The first paint on a busy runner (font load,
- * iframe scale) can keep that check pending longer than the 30s test budget;
- * the `.catch` below never runs until hover settles. `force` skips the
- * actionability wait and still moves the pointer. The short timeout is only
- * a backstop if the command itself wedges.
+ * Without an explicit `timeout`, Vitest hands Playwright the time left on the
+ * test budget, so a `hover()` stuck in its actionability retries (visible,
+ * stable, receives events) only gives up ~100ms before the test does and the
+ * `.catch` below cannot save the capture. `force` skips those checks and
+ * still moves the pointer to the same point. The bound is generous on
+ * purpose: a slow-but-working park must still land, or a mobile capture can
+ * keep a `:hover` state from the previous pointer position.
  */
-const CURSOR_PARK_TIMEOUT_MS = 1_000;
+const CURSOR_PARK_TIMEOUT_MS = 5_000;
 
 async function moveCursorToTopLeftCorner() {
   document.querySelectorAll('[data-vrt-cursor-target="true"]').forEach((el) => el.remove());
@@ -156,8 +157,13 @@ export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) 
 /** Faces are preloaded in setup; this only catches a load that starts with the render. */
 const FONT_READY_TIMEOUT_MS = 5_000;
 
+/**
+ * Always go through `document.fonts.ready`, never short-circuit on
+ * `document.fonts.status`: the getter flushes pending style and layout in
+ * Chromium, which is what starts a face the render just introduced (the
+ * latin-ext range). `status` is still `'loaded'` at that point.
+ */
 async function waitForFontsReady() {
-  if (document.fonts.status === 'loaded') return;
   await withTimeout(
     document.fonts.ready,
     FONT_READY_TIMEOUT_MS,
