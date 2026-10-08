@@ -247,6 +247,13 @@ LockedPostContent
 The no-price state covers legacy or unreadable lock files. Their content remains masked and
 cannot be unlocked; a separate unsupported-lock experience is outside the payment-only flow.
 
+Paths 1) and 2) load in two steps. The cached row's text renders at once and the attachment
+bytes follow, with one skeleton per attachment (`pendingAttachments`, typed by slot, down through
+`PostArticle` / `PostBody`), so a large image never holds the text back. An own lock shows its
+layout — the inert lock card and "My locked content" — from the first render in which `lock.json`
+proves the lock is mine (`isResolvingOwn`), with a text skeleton until the original is read. The
+Unlock button is never live on an own lock, even when that read fails.
+
 `a == b` is team shorthand: **a** = the announcement's author account, **b** = the account
 that owns the lock (Lock Server side). Phase 1 assumes they are the same person, and
 own-content reads rely on it.

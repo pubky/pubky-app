@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
-import type { LockFile, LockPostContent } from '@/services/locks/locks.types';
+import type { LockFile, LockPostContent, TUnlockedAttachment, TUnlockedContent } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LockedPostContent } from './LockedPostContent';
 
@@ -114,20 +114,45 @@ vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
 afterEach(() => {
   sessionNeedsUpgrade.value = false;
 });
+// One state object, as in the real store: a fresh `session` per render would re-run every effect that
+// depends on it.
+const authState = vi.hoisted(() => ({
+  currentUserPubky: 'pubkyreader' as string | null,
+  session: {} as object | null,
+}));
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (s: { currentUserPubky: string | null; session: object | null }) => unknown) =>
-    selector({ currentUserPubky: 'pubkyreader', session: {} }),
+  useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
 }));
 vi.mock('../PostArticle/PostArticle', () => ({
-  PostArticle: ({ content, variant }: { content: string; variant?: 'preview' | 'full' }) => (
-    <div data-testid="post-article" data-variant={variant ?? 'preview'}>
+  PostArticle: ({
+    content,
+    variant,
+    pendingAttachments,
+  }: {
+    content: string;
+    variant?: 'preview' | 'full';
+    pendingAttachments?: unknown[];
+  }) => (
+    <div data-testid="post-article" data-variant={variant ?? 'preview'} data-pending={pendingAttachments?.length ?? 0}>
       {content}
     </div>
   ),
 }));
 vi.mock('../PostBody/PostBody', () => ({
-  PostBody: ({ content, localAttachments }: { content: string; localAttachments?: unknown[] }) => (
-    <div data-testid="post-body" data-media={localAttachments?.length ?? 0}>
+  PostBody: ({
+    content,
+    localAttachments,
+    pendingAttachments,
+  }: {
+    content: string;
+    localAttachments?: unknown[];
+    pendingAttachments?: unknown[];
+  }) => (
+    <div
+      data-testid="post-body"
+      data-media={localAttachments?.length ?? 0}
+      data-pending={pendingAttachments?.length ?? 0}
+    >
       {content}
     </div>
   ),
@@ -175,6 +200,10 @@ describe('LockedPostContent', () => {
     authMocks.setShowSignInDialog.mockClear();
     vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue(null);
     vi.mocked(LocksController.replicateUnlockedContent).mockResolvedValue(undefined);
+    vi.mocked(LocksController.getOwnPost).mockResolvedValue(null);
+    vi.mocked(LocksController.getUnlockedPost).mockResolvedValue(null);
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([]);
+    vi.mocked(LocksController.fetchOwnContent).mockReset();
     pathname.value = '/home';
   });
 
@@ -474,6 +503,120 @@ describe('LockedPostContent', () => {
     expect(screen.getByText('₿1,000')).toBeInTheDocument(); // the price the creator set stays visible
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
     expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+  });
+
+  describe('own lock, two-step loading (#2717)', () => {
+    // stripPubkyPrefix('pubkypubkyreader') === 'pubkyreader' === currentUserPubky → own lock.
+    const ownLockFile = asOpaque<LockFile>({ creator: 'pubkypubkyreader' });
+    const deferred = <T,>() => {
+      let resolve!: (value: T) => void;
+      const promise = new Promise<T>((res) => {
+        resolve = res;
+      });
+      return { promise, resolve };
+    };
+    const renderOwn = () => render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkyreader:POST1" />);
+
+    // A large attachment kept the Unlock card on the creator's own post for seconds.
+    it('renders the own layout with a text skeleton before the original has been read', async () => {
+      const read = deferred<TUnlockedContent>();
+      mockLockData({ lockFile: ownLockFile, priceSats: '1000' });
+      vi.mocked(LocksController.fetchOwnContent).mockReturnValue(read.promise);
+      const { container } = renderOwn();
+
+      expect(screen.getByText('My locked content')).toBeInTheDocument();
+      expect(container.querySelector('[data-slot="skeleton"]')).not.toBeNull();
+      expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+
+      await act(async () =>
+        read.resolve({ post: { content: 'my own locked content', kind: 'short', attachments: null }, attachments: [] }),
+      );
+      expect(screen.getByText('my own locked content')).toBeInTheDocument();
+      expect(container.querySelector('[data-slot="skeleton"]')).toBeNull();
+    });
+
+    it('shows the cached own text at once and a skeleton per attachment until the bytes arrive', async () => {
+      const bytes = deferred<TUnlockedAttachment[]>();
+      mockLockData({ lockFile: ownLockFile, priceSats: '1000' });
+      vi.mocked(LocksController.getOwnPost).mockResolvedValue({
+        content: 'cached own',
+        kind: 'short',
+        attachments: [
+          { url: 'pubky://a', content_type: 'image/png' },
+          { url: 'pubky://b', content_type: 'image/png' },
+        ],
+      });
+      vi.mocked(LocksController.fetchReplicatedAttachments).mockReturnValue(bytes.promise);
+      renderOwn();
+
+      const body = await screen.findByText('cached own');
+      expect(body).toHaveAttribute('data-pending', '2');
+      expect(body).toHaveAttribute('data-media', '0');
+      expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
+
+      await act(async () =>
+        bytes.resolve([
+          { id: 'a', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 0 },
+          { id: 'b', contentType: 'image/png', bytes: new Uint8Array([1]), slot: 1 },
+        ]),
+      );
+      expect(body).toHaveAttribute('data-pending', '0');
+      expect(body).toHaveAttribute('data-media', '2');
+    });
+
+    it('keeps the lock card inert, with no skeleton, when reading the own original fails', async () => {
+      mockLockData({ lockFile: ownLockFile, priceSats: '1000' });
+      vi.mocked(LocksController.fetchOwnContent).mockRejectedValue(new Error('offline'));
+      const { container } = renderOwn();
+
+      await waitFor(() => expect(container.querySelector('[data-slot="skeleton"]')).toBeNull());
+      expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+      expect(screen.queryByText('My locked content')).not.toBeInTheDocument();
+    });
+
+    it('asks for the missing permission instead of a skeleton when the session predates /priv', async () => {
+      sessionNeedsUpgrade.value = true;
+      mockLockData({ lockFile: ownLockFile, priceSats: '1000' });
+      const { container } = renderOwn();
+
+      expect(await screen.findByTestId('locks-permission-notice')).toBeInTheDocument();
+      expect(container.querySelector('[data-slot="skeleton"]')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+    });
+  });
+
+  // The replica's text is cached but its files cannot be read: that is not the content the reader paid
+  // for, so the recovery hook must still be allowed to re-download it.
+  it('tells the recovery hook there is no content while cached text waits for bytes that never come', async () => {
+    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }), priceSats: '1000' });
+    vi.mocked(LocksController.getUnlockedPost).mockResolvedValue({
+      content: 'cached replica',
+      kind: 'short',
+      attachments: [{ url: 'pubky://a', content_type: 'image/png' }],
+    });
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockRejectedValue(new Error('unreadable'));
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue(null);
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+    const body = await screen.findByText('cached replica');
+    await waitFor(() => expect(body).toHaveAttribute('data-pending', '0'));
+    expect(resumeMocks.params?.hasContent).toBe(false);
+  });
+
+  // A reader who unlocked before gets the same two steps from their replicated copy.
+  it('shows the cached replica text under the Unlocked label before its bytes arrive', async () => {
+    mockLockData();
+    vi.mocked(LocksController.getUnlockedPost).mockResolvedValue({
+      content: 'cached replica',
+      kind: 'short',
+      attachments: [{ url: 'pubky://a', content_type: 'image/png' }],
+    });
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockReturnValue(new Promise(() => undefined));
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+    expect(await screen.findByText('cached replica')).toHaveAttribute('data-pending', '1');
+    expect(screen.getByText('Unlocked')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Unlock' })).not.toBeInTheDocument();
   });
 
   it('leaves the lock locked when I posted it under a different account (a != b)', async () => {
