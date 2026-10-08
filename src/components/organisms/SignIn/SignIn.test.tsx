@@ -192,8 +192,10 @@ const { mockCopyToClipboard } = vi.hoisted(() => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', () => {
+vi.mock('@/atoms/Button/Button', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/atoms/Button/Button')>();
   return {
+    ...actual,
     Button: ({
       asChild,
       children,

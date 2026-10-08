@@ -99,7 +99,7 @@ export const HumanPhoneCodeInput = ({ value, onChange, onEnter = () => {} }: Hum
           overrideDefaults={true}
           data-testid={`human-phone-code-input-${index}`}
           className={cn(
-            'rounded-md border border-dashed border-brand',
+            'rounded-md border border-dashed border-input bg-background/20',
             'px-2 py-4 shadow-xs',
             'flex items-center justify-center',
             'w-[33px] flex-shrink-0 flex-grow-0 md:w-[50px]',
