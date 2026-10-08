@@ -139,8 +139,9 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
       ref={wrapperRef}
       data-editor-block-type="inline-media"
       data-media-kind={mediaKind}
+      data-inline-media-node=""
       data-testid="inline-media-node"
-      className={cn('relative my-2 max-w-full overflow-hidden rounded-md bg-muted', isSelected && 'ring-2 ring-ring')}
+      className={cn('relative my-2 max-w-full overflow-hidden rounded-md', isSelected && 'ring-2 ring-ring')}
     >
       {/* Room on the right for the toolbar pinned to the corner */}
       <span
@@ -154,8 +155,8 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
         {altText && <span className="min-w-0 truncate">{altText}</span>}
       </span>
       {!readOnly && (
-        // The image node's toolbar, as MDXEditor draws it: its icons, its order, its corner; the
-        // colours and radius come from MDXEditor's own variables (globals.css, `data-inline-media-toolbar`)
+        // The image node's toolbar, as MDXEditor draws it: its icons, its order, its corner; the card
+        // and toolbar colours and the radius come from MDXEditor's own variables (globals.css)
         <span
           ref={toolbarRef}
           className="absolute top-0 right-0 z-10 flex gap-1 p-1"

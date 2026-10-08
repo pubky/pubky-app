@@ -414,10 +414,14 @@ body {
 
   /**
    * The inline media node's delete/settings toolbar is the image node's toolbar: same MDXEditor
-   * variables for its background, radius and icon colours, so the two never drift apart.
+   * variables for the card and toolbar background, the radius and the icon colours, so the two
+   * never drift apart.
    */
+  .mdxeditor [data-inline-media-node],
   .mdxeditor [data-inline-media-toolbar] {
     background-color: var(--baseBase);
+  }
+  .mdxeditor [data-inline-media-toolbar] {
     border-bottom-left-radius: var(--radius-base);
   }
   .mdxeditor [data-inline-media-toolbar] button {
