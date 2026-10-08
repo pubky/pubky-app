@@ -54,4 +54,30 @@ describe('Input', () => {
 
     expect(ref).toHaveBeenCalledWith(expect.any(HTMLInputElement));
   });
+
+  it('passes through the type attribute', () => {
+    render(<Input type="email" />);
+    expect(screen.getByTestId('input')).toHaveAttribute('type', 'email');
+  });
+
+  it('passes through required and readOnly', () => {
+    render(<Input required readOnly />);
+
+    const input = screen.getByTestId('input');
+    expect(input).toBeRequired();
+    expect(input).toHaveAttribute('readonly');
+  });
+
+  it('marks the invalid state through aria-invalid', () => {
+    render(<Input aria-invalid />);
+
+    const input = screen.getByTestId('input');
+    expect(input).toBeInvalid();
+    expect(input).toHaveClass('aria-invalid:border-destructive');
+  });
+
+  it('merges a custom className with the base classes', () => {
+    render(<Input className="custom-class" />);
+    expect(screen.getByTestId('input')).toHaveClass('custom-class', 'rounded-md', 'border-input');
+  });
 });

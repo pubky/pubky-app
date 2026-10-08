@@ -101,6 +101,55 @@ describe('TextareaField', () => {
     expect(textarea).toBeDisabled();
   });
 
+  it('renders the default variant with a solid border', () => {
+    render(<TextareaField value="" />);
+
+    const container = screen.getByTestId('container');
+    expect(container).toHaveClass('border', 'border-input');
+    expect(container).not.toHaveClass('border-dashed');
+    expect(screen.getByTestId('textarea')).toHaveAttribute('aria-invalid', 'false');
+  });
+
+  it('renders the dashed variant', () => {
+    render(<TextareaField value="" variant="dashed" />);
+    expect(screen.getByTestId('container')).toHaveClass('border-dashed');
+  });
+
+  it.each([
+    ['success', ['border-brand', 'text-brand']],
+    ['error', ['border-red-500', 'text-red-500']],
+  ] as const)('applies status=%s classes', (status, classNames) => {
+    render(<TextareaField value="" status={status} />);
+    expect(screen.getByTestId('container')).toHaveClass(...classNames);
+    expect(screen.getByTestId('textarea')).toHaveAttribute('aria-invalid', status === 'error' ? 'true' : 'false');
+  });
+
+  it('passes readOnly, rows and maxLength to the textarea', () => {
+    render(<TextareaField value="" readOnly rows={6} maxLength={120} />);
+
+    const textarea = screen.getByTestId('textarea');
+    expect(textarea).toHaveAttribute('readonly');
+    expect(textarea).toHaveAttribute('rows', '6');
+    expect(textarea).toHaveAttribute('maxlength', '120');
+  });
+
+  it.each([
+    ['default', 'text-muted-foreground'],
+    ['info', 'text-blue-500'],
+    ['alert', 'text-yellow-500'],
+    ['error', 'text-red-500'],
+    ['success', 'text-brand'],
+  ] as const)('styles the message for messageType=%s', (messageType, className) => {
+    render(<TextareaField value="" message="Hint" messageType={messageType} />);
+    expect(screen.getByTestId('typography')).toHaveClass(className);
+    expect(screen.getByTestId('typography')).toHaveTextContent('Hint');
+  });
+
+  it('does not render a message element without a message', () => {
+    render(<TextareaField value="" />);
+    expect(screen.queryByTestId('typography')).not.toBeInTheDocument();
+  });
+
   it('handles onKeyDown events', () => {
     const handleKeyDown = vi.fn();
     render(<TextareaField value="" onKeyDown={handleKeyDown} />);

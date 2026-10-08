@@ -9,6 +9,54 @@ describe('Container', () => {
     expect(container).toBeInTheDocument();
   });
 
+  describe('Variants', () => {
+    it('applies the default flex column classes without a size cap', () => {
+      render(<Container>Default</Container>);
+
+      const container = screen.getByTestId('container');
+      expect(container.tagName).toBe('DIV');
+      expect(container).toHaveClass('mx-auto', 'w-full', 'flex-col', 'flex');
+      expect(container.className).not.toMatch(/max-w-/);
+    });
+
+    it.each([
+      ['sm', 'max-w-screen-sm'],
+      ['md', 'max-w-screen-md'],
+      ['lg', 'max-w-screen-lg'],
+      ['xl', 'max-w-screen-xl'],
+      ['container', 'container'],
+    ] as const)('applies size=%s class', (size, className) => {
+      render(<Container size={size}>Sized</Container>);
+      expect(screen.getByTestId('container')).toHaveClass(className);
+    });
+
+    it.each([
+      ['flex', 'flex'],
+      ['grid', 'grid'],
+      ['block', 'block'],
+    ] as const)('applies display=%s class', (display, className) => {
+      render(<Container display={display}>Displayed</Container>);
+      expect(screen.getByTestId('container')).toHaveClass(className);
+    });
+
+    it('renders the requested element when as is set', () => {
+      render(<Container as="section">Section</Container>);
+      expect(screen.getByTestId('container').tagName).toBe('SECTION');
+    });
+
+    it('drops the default classes when overrideDefaults is set', () => {
+      render(
+        <Container overrideDefaults className="custom-class">
+          Override
+        </Container>,
+      );
+
+      const container = screen.getByTestId('container');
+      expect(container).toHaveClass('custom-class');
+      expect(container).not.toHaveClass('mx-auto', 'w-full', 'flex-col', 'flex');
+    });
+  });
+
   describe('Accessibility Props', () => {
     it('renders with aria-modal attribute', () => {
       render(

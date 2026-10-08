@@ -25,6 +25,22 @@ describe('Textarea', () => {
     expect(textarea).toBeDisabled();
   });
 
+  it('passes through readOnly and placeholder', () => {
+    render(<Textarea readOnly placeholder="Write something" data-testid="textarea" />);
+
+    const textarea = screen.getByTestId('textarea');
+    expect(textarea).toHaveAttribute('readonly');
+    expect(textarea).toHaveAttribute('placeholder', 'Write something');
+  });
+
+  it('marks the invalid state through aria-invalid', () => {
+    render(<Textarea aria-invalid data-testid="textarea" />);
+
+    const textarea = screen.getByTestId('textarea');
+    expect(textarea).toBeInvalid();
+    expect(textarea).toHaveClass('aria-invalid:border-destructive');
+  });
+
   it('handles updating value', () => {
     const { rerender } = render(<Textarea value="Initial value" onChange={() => {}} data-testid="textarea" />);
     const textarea = screen.getByTestId('textarea') as HTMLTextAreaElement;

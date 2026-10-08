@@ -131,6 +131,27 @@ describe('SettingsSection', () => {
     expect(button).toBeDisabled();
   });
 
+  it('uses the secondary button variant by default', () => {
+    render(<SettingsSection {...defaultProps} />);
+
+    const button = screen.getByTestId('button');
+    expect(button).toHaveAttribute('data-variant', 'secondary');
+    expect(button).toHaveAttribute('data-size', 'default');
+    expect(button).toHaveAttribute('id', 'edit-account-btn');
+  });
+
+  it('passes the destructive variant to the button', () => {
+    render(<SettingsSection {...defaultProps} buttonVariant="destructive" />);
+    expect(screen.getByTestId('button')).toHaveAttribute('data-variant', 'destructive');
+  });
+
+  it('renders the title as a level-4 heading and passes the icon size', () => {
+    render(<SettingsSection {...defaultProps} />);
+
+    expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Account Settings');
+    expect(screen.getByTestId('mock-button-icon')).toHaveAttribute('data-size', '16');
+  });
+
   it('calls buttonOnClick when button is clicked', () => {
     const handleClick = vi.fn();
     render(<SettingsSection {...defaultProps} buttonOnClick={handleClick} />);

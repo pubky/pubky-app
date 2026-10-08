@@ -82,6 +82,35 @@ describe('ContentContainer', () => {
     expect(screen.getByTestId('container')).toBeInTheDocument();
     expect(screen.getByText('Container content')).toBeInTheDocument();
   });
+
+  it('applies the lg max width and md gap by default', () => {
+    render(<ContentContainer>Defaults</ContentContainer>);
+    expect(screen.getByTestId('container')).toHaveClass('max-w-(--container-max-width)', 'gap-6');
+  });
+
+  it.each([
+    ['sm', 'max-w-[588px]'],
+    ['md', 'max-w-[800px]'],
+    ['lg', 'max-w-(--container-max-width)'],
+    ['xl', 'max-w-[1400px]'],
+  ] as const)('applies maxWidth=%s class', (maxWidth, className) => {
+    render(<ContentContainer maxWidth={maxWidth}>Sized</ContentContainer>);
+    expect(screen.getByTestId('container')).toHaveClass(className);
+  });
+
+  it.each([
+    ['sm', 'gap-3'],
+    ['md', 'gap-6'],
+    ['lg', 'gap-8'],
+  ] as const)('applies gap=%s class', (gap, className) => {
+    render(<ContentContainer gap={gap}>Spaced</ContentContainer>);
+    expect(screen.getByTestId('container')).toHaveClass(className);
+  });
+
+  it('merges a custom className', () => {
+    render(<ContentContainer className="custom-class">Custom</ContentContainer>);
+    expect(screen.getByTestId('container')).toHaveClass('custom-class', 'gap-6');
+  });
 });
 
 describe('ContentImage', () => {
