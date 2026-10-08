@@ -205,7 +205,8 @@ async function renderLogout(mode: LogoutMode, viewport: VrtViewport) {
   await expect.element(screen.getByRole('button', { name: 'Sign back in' })).toBeVisible();
   await expect.element(screen.getByRole('button', { name: 'Homepage' })).toBeVisible();
   if (viewport.width >= BREAKPOINTS.md) {
-    await expect.element(screen.getByRole('heading', { name: 'Signed out' })).toBeVisible();
+    // Exact: "You have securely signed out." also contains "signed out".
+    await expect.element(screen.getByRole('heading', { name: 'Signed out', exact: true })).toBeVisible();
   }
   return screen;
 }
