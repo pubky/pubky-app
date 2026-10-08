@@ -337,7 +337,7 @@ describe('InitializedMDXEditor', () => {
       render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
       const editor = screen.getByTestId('mdx-editor');
-      expect(editor.className).not.toContain('hidden');
+      expect(editor.parentElement).not.toHaveClass('hidden');
     });
 
     it('applies contentEditableClassName with prose styles', () => {
@@ -559,9 +559,9 @@ describe('InitializedMDXEditor', () => {
       const markdownButton = screen.getByTestId('button-with-tooltip-markdown');
       fireEvent.click(markdownButton);
 
-      // MDXEditor should now have hidden class
+      // MDXEditor's wrapper should now carry the hidden class
       const mdxEditor = screen.getByTestId('mdx-editor');
-      expect(mdxEditor.className).toContain('hidden');
+      expect(mdxEditor.parentElement).toHaveClass('hidden');
 
       // Markdown toolbar should be visible (parent wrapper should not have hidden)
       const markdownToolbar = screen.getByTestId('markdown-toolbar');
@@ -581,9 +581,9 @@ describe('InitializedMDXEditor', () => {
       expect(markdownButton).not.toBeDisabled();
       fireEvent.click(markdownButton);
 
-      // MDXEditor should have hidden class (switched to markdown mode)
+      // MDXEditor's wrapper should carry the hidden class (switched to markdown mode)
       const mdxEditor = screen.getByTestId('mdx-editor');
-      expect(mdxEditor.className).toContain('hidden');
+      expect(mdxEditor.parentElement).toHaveClass('hidden');
 
       // Markdown textarea should have the content from editor ref's getMarkdown()
       const textarea = screen.getByTestId('markdown-textarea');

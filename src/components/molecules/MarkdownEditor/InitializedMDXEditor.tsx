@@ -444,100 +444,105 @@ export default function InitializedMDXEditor({
       {/* Out-of-flow (absolute, zero-size) so it adds no flex gap; popup contents position themselves fixed */}
       <div ref={setOverlayContainer} data-testid="mdx-editor-overlay-container" className="absolute" />
 
-      {/* Rich text mode: MDXEditor (includes its own toolbar) — hidden via CSS in markdown mode */}
-      <MDXEditor
-        readOnly={readOnly}
-        overlayContainer={overlayContainer}
-        placeholder={'Start writing your masterpiece'}
-        className={cn('dark-theme cursor-auto', mode === 'markdown' && 'hidden')}
-        // leading-6, font-medium and text-secondary-foreground mirror PostText's
-        // article body text so the editor previews the published spacing (WYSIWYG).
-        contentEditableClassName="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
-        plugins={[
-          toolbarPlugin({
-            // Tight gap and padding: the whole row has to fit the feed composer's width (globals.css
-            // trims MDXEditor's own margins for the same reason)
-            toolbarClassName: 'bg-background! border rounded-md! flex-wrap gap-0.5! px-1!',
-            toolbarContents: () => (
-              <>
-                <UndoRedo />
-                <BlockTypeSelect />
-                <BoldItalicUnderlineToggles options={['Bold', 'Italic']} />
-                <StrikeThroughSupSubToggles options={['Strikethrough']} />
-                <ListsToggle options={['bullet', 'number']} />
-                <InsertThematicBreak />
-                <CreateLink />
-                {inlineMedia && (
-                  <>
-                    <InsertImage />
-                    <InsertInlineMediaButton mediaKind="video" />
-                    <InsertInlineMediaButton mediaKind="audio" />
-                    <InsertInlineMediaButton mediaKind="pdf" />
-                    <MediaDialogOpenReporter onOpenChange={setIsMediaDialogOpen} />
-                  </>
-                )}
-                <CodeToggle />
-                <InsertCodeBlock />
-                <ButtonWithTooltip title={'Emoji'} onClick={() => setShowEmojiPicker(true)}>
-                  <Smile className="size-6" />
-                </ButtonWithTooltip>
-                <ButtonWithTooltip
-                  title={'Markdown'}
-                  onClick={switchToMarkdownMode}
-                  // Mode switches while an upload is in flight would insert the
-                  // async result into the hidden editor pane
-                  disabled={(inlineMedia?.uploadingCount ?? 0) > 0}
-                >
-                  <MarkdownMark className="size-6" />
-                </ButtonWithTooltip>
-              </>
-            ),
-          }),
-          headingsPlugin(),
-          quotePlugin(),
-          listsPlugin(),
-          thematicBreakPlugin(),
-          linkPlugin(),
-          linkDialogPlugin({
-            showLinkTitleField: false,
-          }),
-          codeBlockPlugin({
-            defaultCodeBlockLanguage: 'plaintext',
-          }),
-          codeMirrorPlugin({
-            codeBlockLanguages: CODE_BLOCK_LANGUAGES,
-            codeMirrorExtensions: [oneDark],
-          }),
-          maxLengthPlugin(ARTICLE_MAX_CHARACTER_LENGTH),
-          ...(inlineMedia
-            ? [
-                imagePlugin({
-                  imageUploadHandler: inlineMedia.upload,
-                  imagePreviewHandler: async (imageSource) => resolvePreview(imageSource),
-                  // CRITICAL: resized images serialize as raw HTML <img> mdast
-                  // nodes, escaping the AST-based attachment rewrite on publish.
-                  disableImageResize: true,
-                  // App-styled responsive dialog with an upload loading state,
-                  // shared with the video/audio/PDF insert flows
-                  ImageDialog: MarkdownEditorMediaDialog,
-                }),
-                // Video, audio and PDF nodes: claims the image-syntax nodes whose
-                // file type the composer knows is not an image (see the plugin)
-                inlineMediaPlugin({
-                  getMediaType: inlineMedia.getMediaType,
-                  getMediaName: inlineMedia.getMediaName,
-                  getPreviewUrl: resolvePreview,
-                }),
-              ]
-            : []),
-        ]}
-        {...props}
-        onChange={(markdown, initialMarkdownNormalize) => {
-          updateMaxLengthWarning(markdown);
-          props.onChange?.(markdown, initialMarkdownNormalize);
-        }}
-        ref={editorRef}
-      />
+      {/* Rich text mode: MDXEditor (includes its own toolbar) — hidden via CSS in markdown mode. The
+          wrapper carries the toggle, not MDXEditor's own className: MDXEditor rebuilds its popup
+          container (the tooltips' portal target) whenever that prop changes, and a toolbar button
+          that did not re-render since would keep portaling into the detached one. */}
+      <Container overrideDefaults className={cn(mode === 'markdown' && 'hidden')}>
+        <MDXEditor
+          readOnly={readOnly}
+          overlayContainer={overlayContainer}
+          placeholder={'Start writing your masterpiece'}
+          className="dark-theme cursor-auto"
+          // leading-6, font-medium and text-secondary-foreground mirror PostText's
+          // article body text so the editor previews the published spacing (WYSIWYG).
+          contentEditableClassName="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+          plugins={[
+            toolbarPlugin({
+              // Tight gap and padding: the whole row has to fit the feed composer's width (globals.css
+              // trims MDXEditor's own margins for the same reason)
+              toolbarClassName: 'bg-background! border rounded-md! flex-wrap gap-0.5! px-1!',
+              toolbarContents: () => (
+                <>
+                  <UndoRedo />
+                  <BlockTypeSelect />
+                  <BoldItalicUnderlineToggles options={['Bold', 'Italic']} />
+                  <StrikeThroughSupSubToggles options={['Strikethrough']} />
+                  <ListsToggle options={['bullet', 'number']} />
+                  <InsertThematicBreak />
+                  <CreateLink />
+                  {inlineMedia && (
+                    <>
+                      <InsertImage />
+                      <InsertInlineMediaButton mediaKind="video" />
+                      <InsertInlineMediaButton mediaKind="audio" />
+                      <InsertInlineMediaButton mediaKind="pdf" />
+                      <MediaDialogOpenReporter onOpenChange={setIsMediaDialogOpen} />
+                    </>
+                  )}
+                  <CodeToggle />
+                  <InsertCodeBlock />
+                  <ButtonWithTooltip title={'Emoji'} onClick={() => setShowEmojiPicker(true)}>
+                    <Smile className="size-6" />
+                  </ButtonWithTooltip>
+                  <ButtonWithTooltip
+                    title={'Markdown'}
+                    onClick={switchToMarkdownMode}
+                    // Mode switches while an upload is in flight would insert the
+                    // async result into the hidden editor pane
+                    disabled={(inlineMedia?.uploadingCount ?? 0) > 0}
+                  >
+                    <MarkdownMark className="size-6" />
+                  </ButtonWithTooltip>
+                </>
+              ),
+            }),
+            headingsPlugin(),
+            quotePlugin(),
+            listsPlugin(),
+            thematicBreakPlugin(),
+            linkPlugin(),
+            linkDialogPlugin({
+              showLinkTitleField: false,
+            }),
+            codeBlockPlugin({
+              defaultCodeBlockLanguage: 'plaintext',
+            }),
+            codeMirrorPlugin({
+              codeBlockLanguages: CODE_BLOCK_LANGUAGES,
+              codeMirrorExtensions: [oneDark],
+            }),
+            maxLengthPlugin(ARTICLE_MAX_CHARACTER_LENGTH),
+            ...(inlineMedia
+              ? [
+                  imagePlugin({
+                    imageUploadHandler: inlineMedia.upload,
+                    imagePreviewHandler: async (imageSource) => resolvePreview(imageSource),
+                    // CRITICAL: resized images serialize as raw HTML <img> mdast
+                    // nodes, escaping the AST-based attachment rewrite on publish.
+                    disableImageResize: true,
+                    // App-styled responsive dialog with an upload loading state,
+                    // shared with the video/audio/PDF insert flows
+                    ImageDialog: MarkdownEditorMediaDialog,
+                  }),
+                  // Video, audio and PDF nodes: claims the image-syntax nodes whose
+                  // file type the composer knows is not an image (see the plugin)
+                  inlineMediaPlugin({
+                    getMediaType: inlineMedia.getMediaType,
+                    getMediaName: inlineMedia.getMediaName,
+                    getPreviewUrl: resolvePreview,
+                  }),
+                ]
+              : []),
+          ]}
+          {...props}
+          onChange={(markdown, initialMarkdownNormalize) => {
+            updateMaxLengthWarning(markdown);
+            props.onChange?.(markdown, initialMarkdownNormalize);
+          }}
+          ref={editorRef}
+        />
+      </Container>
 
       {/* Rich-text paste/drop uploads have no dialog or placeholder, so this
           pill is the only feedback while they're in flight. Portaled to the

@@ -97,225 +97,9 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
     data-testid="mdx-editor-overlay-container"
   />
   <div
-    class="dark-theme cursor-auto hidden"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
-    data-placeholder="Start writing your masterpiece"
-    data-plugins-count="10"
-    data-testid="mdx-editor"
-    markdown=""
+    class="hidden"
+    data-override-defaults="true"
   >
-    <div
-      data-testid="toolbar"
-    >
-      <button
-        data-testid="undo-redo"
-      >
-        Undo/Redo
-      </button>
-      <button
-        data-testid="block-type-select"
-      >
-        Block Type
-      </button>
-      <button
-        data-testid="bold-italic-toggles"
-      >
-        Bold/Italic
-      </button>
-      <button
-        data-testid="strikethrough-toggle"
-      >
-        Strikethrough
-      </button>
-      <button
-        data-testid="lists-toggle"
-      >
-        Lists
-      </button>
-      <button
-        data-testid="insert-thematic-break"
-      >
-        Insert Break
-      </button>
-      <button
-        data-testid="create-link"
-      >
-        Create Link
-      </button>
-      <button
-        data-testid="code-toggle"
-      >
-        Code
-      </button>
-      <button
-        data-testid="insert-code-block"
-      >
-        Insert Code Block
-      </button>
-      <button
-        data-testid="button-with-tooltip-emoji"
-        title="Emoji"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-face-slightly-smiling size-6"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 10V9"
-          />
-          <path
-            d="M16.472 15a6 6 0 01-8.943 0"
-          />
-          <path
-            d="M9 10V9"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-      </button>
-      <button
-        data-testid="button-with-tooltip-markdown"
-        title="Markdown"
-      >
-        <svg
-          class="size-6"
-          fill="none"
-          height="24"
-          viewBox="0 0 208 128"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            clip-rule="evenodd"
-            d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
-            fill="currentColor"
-            fill-rule="evenodd"
-          />
-          <path
-            d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
-            fill="currentColor"
-          />
-        </svg>
-      </button>
-    </div>
-    <div
-      data-testid="editor-content"
-    >
-      Editor Content
-    </div>
-  </div>
-</div>
-`;
-
-exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching max length warning 1`] = `
-<div>
-  <div
-    class="gap-4"
-  >
-    <div
-      class="hidden"
-      data-override-defaults="true"
-    >
-      <div
-        aria-label="Markdown editing toolbar"
-        class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
-        data-override-defaults="true"
-        data-testid="markdown-toolbar"
-        role="toolbar"
-      >
-        <button
-          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
-          data-size="icon"
-          data-testid="markdown-emoji-button"
-          data-variant="ghost"
-          title="Emoji"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-face-slightly-smiling size-6"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M15 10V9"
-            />
-            <path
-              d="M16.472 15a6 6 0 01-8.943 0"
-            />
-            <path
-              d="M9 10V9"
-            />
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-            />
-          </svg>
-        </button>
-        <button
-          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
-          data-size="icon"
-          data-testid="markdown-richtext-button"
-          data-variant="ghost"
-          title="Rich Text"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-type size-6"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M12 4v16"
-            />
-            <path
-              d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"
-            />
-            <path
-              d="M9 20h6"
-            />
-          </svg>
-        </button>
-      </div>
-      <textarea
-        autocomplete="off"
-        class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
-        data-testid="markdown-textarea"
-        maxlength="1000"
-        placeholder="Start writing your masterpiece"
-        variant="inline"
-      />
-    </div>
-    <div
-      class="absolute"
-      data-testid="mdx-editor-overlay-container"
-    />
     <div
       class="dark-theme cursor-auto"
       data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
@@ -434,6 +218,232 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
         data-testid="editor-content"
       >
         Editor Content
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching max length warning 1`] = `
+<div>
+  <div
+    class="gap-4"
+  >
+    <div
+      class="hidden"
+      data-override-defaults="true"
+    >
+      <div
+        aria-label="Markdown editing toolbar"
+        class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
+        data-override-defaults="true"
+        data-testid="markdown-toolbar"
+        role="toolbar"
+      >
+        <button
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
+          data-size="icon"
+          data-testid="markdown-emoji-button"
+          data-variant="ghost"
+          title="Emoji"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-face-slightly-smiling size-6"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15 10V9"
+            />
+            <path
+              d="M16.472 15a6 6 0 01-8.943 0"
+            />
+            <path
+              d="M9 10V9"
+            />
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            />
+          </svg>
+        </button>
+        <button
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
+          data-size="icon"
+          data-testid="markdown-richtext-button"
+          data-variant="ghost"
+          title="Rich Text"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-type size-6"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 4v16"
+            />
+            <path
+              d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"
+            />
+            <path
+              d="M9 20h6"
+            />
+          </svg>
+        </button>
+      </div>
+      <textarea
+        autocomplete="off"
+        class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
+        data-testid="markdown-textarea"
+        maxlength="1000"
+        placeholder="Start writing your masterpiece"
+        variant="inline"
+      />
+    </div>
+    <div
+      class="absolute"
+      data-testid="mdx-editor-overlay-container"
+    />
+    <div
+      class=""
+      data-override-defaults="true"
+    >
+      <div
+        class="dark-theme cursor-auto"
+        data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+        data-placeholder="Start writing your masterpiece"
+        data-plugins-count="10"
+        data-testid="mdx-editor"
+        markdown=""
+      >
+        <div
+          data-testid="toolbar"
+        >
+          <button
+            data-testid="undo-redo"
+          >
+            Undo/Redo
+          </button>
+          <button
+            data-testid="block-type-select"
+          >
+            Block Type
+          </button>
+          <button
+            data-testid="bold-italic-toggles"
+          >
+            Bold/Italic
+          </button>
+          <button
+            data-testid="strikethrough-toggle"
+          >
+            Strikethrough
+          </button>
+          <button
+            data-testid="lists-toggle"
+          >
+            Lists
+          </button>
+          <button
+            data-testid="insert-thematic-break"
+          >
+            Insert Break
+          </button>
+          <button
+            data-testid="create-link"
+          >
+            Create Link
+          </button>
+          <button
+            data-testid="code-toggle"
+          >
+            Code
+          </button>
+          <button
+            data-testid="insert-code-block"
+          >
+            Insert Code Block
+          </button>
+          <button
+            data-testid="button-with-tooltip-emoji"
+            title="Emoji"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-face-slightly-smiling size-6"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 10V9"
+              />
+              <path
+                d="M16.472 15a6 6 0 01-8.943 0"
+              />
+              <path
+                d="M9 10V9"
+              />
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+            </svg>
+          </button>
+          <button
+            data-testid="button-with-tooltip-markdown"
+            title="Markdown"
+          >
+            <svg
+              class="size-6"
+              fill="none"
+              height="24"
+              viewBox="0 0 208 128"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                clip-rule="evenodd"
+                d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
+                fill="currentColor"
+                fill-rule="evenodd"
+              />
+              <path
+                d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
+        <div
+          data-testid="editor-content"
+        >
+          Editor Content
+        </div>
       </div>
     </div>
     <div
@@ -571,123 +581,128 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
     data-testid="mdx-editor-overlay-container"
   />
   <div
-    class="custom-editor-class"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
-    data-placeholder="Start writing your masterpiece"
-    data-plugins-count="10"
-    data-testid="mdx-editor"
-    markdown=""
+    class=""
+    data-override-defaults="true"
   >
     <div
-      data-testid="toolbar"
+      class="custom-editor-class"
+      data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+      data-placeholder="Start writing your masterpiece"
+      data-plugins-count="10"
+      data-testid="mdx-editor"
+      markdown=""
     >
-      <button
-        data-testid="undo-redo"
+      <div
+        data-testid="toolbar"
       >
-        Undo/Redo
-      </button>
-      <button
-        data-testid="block-type-select"
-      >
-        Block Type
-      </button>
-      <button
-        data-testid="bold-italic-toggles"
-      >
-        Bold/Italic
-      </button>
-      <button
-        data-testid="strikethrough-toggle"
-      >
-        Strikethrough
-      </button>
-      <button
-        data-testid="lists-toggle"
-      >
-        Lists
-      </button>
-      <button
-        data-testid="insert-thematic-break"
-      >
-        Insert Break
-      </button>
-      <button
-        data-testid="create-link"
-      >
-        Create Link
-      </button>
-      <button
-        data-testid="code-toggle"
-      >
-        Code
-      </button>
-      <button
-        data-testid="insert-code-block"
-      >
-        Insert Code Block
-      </button>
-      <button
-        data-testid="button-with-tooltip-emoji"
-        title="Emoji"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-face-slightly-smiling size-6"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
+        <button
+          data-testid="undo-redo"
         >
-          <path
-            d="M15 10V9"
-          />
-          <path
-            d="M16.472 15a6 6 0 01-8.943 0"
-          />
-          <path
-            d="M9 10V9"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-      </button>
-      <button
-        data-testid="button-with-tooltip-markdown"
-        title="Markdown"
-      >
-        <svg
-          class="size-6"
-          fill="none"
-          height="24"
-          viewBox="0 0 208 128"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
+          Undo/Redo
+        </button>
+        <button
+          data-testid="block-type-select"
         >
-          <path
-            clip-rule="evenodd"
-            d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
-            fill="currentColor"
-            fill-rule="evenodd"
-          />
-          <path
-            d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
-            fill="currentColor"
-          />
-        </svg>
-      </button>
-    </div>
-    <div
-      data-testid="editor-content"
-    >
-      Editor Content
+          Block Type
+        </button>
+        <button
+          data-testid="bold-italic-toggles"
+        >
+          Bold/Italic
+        </button>
+        <button
+          data-testid="strikethrough-toggle"
+        >
+          Strikethrough
+        </button>
+        <button
+          data-testid="lists-toggle"
+        >
+          Lists
+        </button>
+        <button
+          data-testid="insert-thematic-break"
+        >
+          Insert Break
+        </button>
+        <button
+          data-testid="create-link"
+        >
+          Create Link
+        </button>
+        <button
+          data-testid="code-toggle"
+        >
+          Code
+        </button>
+        <button
+          data-testid="insert-code-block"
+        >
+          Insert Code Block
+        </button>
+        <button
+          data-testid="button-with-tooltip-emoji"
+          title="Emoji"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-face-slightly-smiling size-6"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15 10V9"
+            />
+            <path
+              d="M16.472 15a6 6 0 01-8.943 0"
+            />
+            <path
+              d="M9 10V9"
+            />
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            />
+          </svg>
+        </button>
+        <button
+          data-testid="button-with-tooltip-markdown"
+          title="Markdown"
+        >
+          <svg
+            class="size-6"
+            fill="none"
+            height="24"
+            viewBox="0 0 208 128"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              clip-rule="evenodd"
+              d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
+              fill="currentColor"
+              fill-rule="evenodd"
+            />
+            <path
+              d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        data-testid="editor-content"
+      >
+        Editor Content
+      </div>
     </div>
   </div>
 </div>
@@ -790,672 +805,9 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
     data-testid="mdx-editor-overlay-container"
   />
   <div
-    class="dark-theme cursor-auto"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
-    data-placeholder="Start writing your masterpiece"
-    data-plugins-count="10"
-    data-testid="mdx-editor"
-    markdown=""
-  >
-    <div
-      data-testid="toolbar"
-    >
-      <button
-        data-testid="undo-redo"
-      >
-        Undo/Redo
-      </button>
-      <button
-        data-testid="block-type-select"
-      >
-        Block Type
-      </button>
-      <button
-        data-testid="bold-italic-toggles"
-      >
-        Bold/Italic
-      </button>
-      <button
-        data-testid="strikethrough-toggle"
-      >
-        Strikethrough
-      </button>
-      <button
-        data-testid="lists-toggle"
-      >
-        Lists
-      </button>
-      <button
-        data-testid="insert-thematic-break"
-      >
-        Insert Break
-      </button>
-      <button
-        data-testid="create-link"
-      >
-        Create Link
-      </button>
-      <button
-        data-testid="code-toggle"
-      >
-        Code
-      </button>
-      <button
-        data-testid="insert-code-block"
-      >
-        Insert Code Block
-      </button>
-      <button
-        data-testid="button-with-tooltip-emoji"
-        title="Emoji"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-face-slightly-smiling size-6"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 10V9"
-          />
-          <path
-            d="M16.472 15a6 6 0 01-8.943 0"
-          />
-          <path
-            d="M9 10V9"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-      </button>
-      <button
-        data-testid="button-with-tooltip-markdown"
-        title="Markdown"
-      >
-        <svg
-          class="size-6"
-          fill="none"
-          height="24"
-          viewBox="0 0 208 128"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            clip-rule="evenodd"
-            d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
-            fill="currentColor"
-            fill-rule="evenodd"
-          />
-          <path
-            d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
-            fill="currentColor"
-          />
-        </svg>
-      </button>
-    </div>
-    <div
-      data-testid="editor-content"
-    >
-      Editor Content
-    </div>
-  </div>
-</div>
-`;
-
-exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker open 1`] = `
-<div
-  class="gap-4"
->
-  <div
-    class="hidden"
+    class=""
     data-override-defaults="true"
   >
-    <div
-      aria-label="Markdown editing toolbar"
-      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
-      data-override-defaults="true"
-      data-testid="markdown-toolbar"
-      role="toolbar"
-    >
-      <button
-        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
-        data-size="icon"
-        data-testid="markdown-emoji-button"
-        data-variant="ghost"
-        title="Emoji"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-face-slightly-smiling size-6"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 10V9"
-          />
-          <path
-            d="M16.472 15a6 6 0 01-8.943 0"
-          />
-          <path
-            d="M9 10V9"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-      </button>
-      <button
-        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
-        data-size="icon"
-        data-testid="markdown-richtext-button"
-        data-variant="ghost"
-        title="Rich Text"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-type size-6"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 4v16"
-          />
-          <path
-            d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"
-          />
-          <path
-            d="M9 20h6"
-          />
-        </svg>
-      </button>
-    </div>
-    <textarea
-      autocomplete="off"
-      class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
-      data-testid="markdown-textarea"
-      maxlength="1000"
-      placeholder="Start writing your masterpiece"
-      variant="inline"
-    />
-  </div>
-  <div
-    class="absolute"
-    data-testid="mdx-editor-overlay-container"
-  />
-  <div
-    class="dark-theme cursor-auto"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
-    data-placeholder="Start writing your masterpiece"
-    data-plugins-count="10"
-    data-testid="mdx-editor"
-    markdown=""
-  >
-    <div
-      data-testid="toolbar"
-    >
-      <button
-        data-testid="undo-redo"
-      >
-        Undo/Redo
-      </button>
-      <button
-        data-testid="block-type-select"
-      >
-        Block Type
-      </button>
-      <button
-        data-testid="bold-italic-toggles"
-      >
-        Bold/Italic
-      </button>
-      <button
-        data-testid="strikethrough-toggle"
-      >
-        Strikethrough
-      </button>
-      <button
-        data-testid="lists-toggle"
-      >
-        Lists
-      </button>
-      <button
-        data-testid="insert-thematic-break"
-      >
-        Insert Break
-      </button>
-      <button
-        data-testid="create-link"
-      >
-        Create Link
-      </button>
-      <button
-        data-testid="code-toggle"
-      >
-        Code
-      </button>
-      <button
-        data-testid="insert-code-block"
-      >
-        Insert Code Block
-      </button>
-      <button
-        data-testid="button-with-tooltip-emoji"
-        title="Emoji"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-face-slightly-smiling size-6"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 10V9"
-          />
-          <path
-            d="M16.472 15a6 6 0 01-8.943 0"
-          />
-          <path
-            d="M9 10V9"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-      </button>
-      <button
-        data-testid="button-with-tooltip-markdown"
-        title="Markdown"
-      >
-        <svg
-          class="size-6"
-          fill="none"
-          height="24"
-          viewBox="0 0 208 128"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            clip-rule="evenodd"
-            d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
-            fill="currentColor"
-            fill-rule="evenodd"
-          />
-          <path
-            d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
-            fill="currentColor"
-          />
-        </svg>
-      </button>
-    </div>
-    <div
-      data-testid="editor-content"
-    >
-      Editor Content
-    </div>
-  </div>
-  <div
-    data-testid="emoji-picker-dialog"
-  >
-    <button
-      data-testid="emoji-select-button"
-    >
-      Select Emoji
-    </button>
-  </div>
-</div>
-`;
-
-exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown content 1`] = `
-<div
-  class="gap-4"
->
-  <div
-    class="hidden"
-    data-override-defaults="true"
-  >
-    <div
-      aria-label="Markdown editing toolbar"
-      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
-      data-override-defaults="true"
-      data-testid="markdown-toolbar"
-      role="toolbar"
-    >
-      <button
-        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
-        data-size="icon"
-        data-testid="markdown-emoji-button"
-        data-variant="ghost"
-        title="Emoji"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-face-slightly-smiling size-6"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 10V9"
-          />
-          <path
-            d="M16.472 15a6 6 0 01-8.943 0"
-          />
-          <path
-            d="M9 10V9"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-      </button>
-      <button
-        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
-        data-size="icon"
-        data-testid="markdown-richtext-button"
-        data-variant="ghost"
-        title="Rich Text"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-type size-6"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 4v16"
-          />
-          <path
-            d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"
-          />
-          <path
-            d="M9 20h6"
-          />
-        </svg>
-      </button>
-    </div>
-    <textarea
-      autocomplete="off"
-      class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
-      data-testid="markdown-textarea"
-      maxlength="1000"
-      placeholder="Start writing your masterpiece"
-      variant="inline"
-    />
-  </div>
-  <div
-    class="absolute"
-    data-testid="mdx-editor-overlay-container"
-  />
-  <div
-    class="dark-theme cursor-auto"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
-    data-placeholder="Start writing your masterpiece"
-    data-plugins-count="10"
-    data-testid="mdx-editor"
-    markdown="# Test Content"
-  >
-    <div
-      data-testid="toolbar"
-    >
-      <button
-        data-testid="undo-redo"
-      >
-        Undo/Redo
-      </button>
-      <button
-        data-testid="block-type-select"
-      >
-        Block Type
-      </button>
-      <button
-        data-testid="bold-italic-toggles"
-      >
-        Bold/Italic
-      </button>
-      <button
-        data-testid="strikethrough-toggle"
-      >
-        Strikethrough
-      </button>
-      <button
-        data-testid="lists-toggle"
-      >
-        Lists
-      </button>
-      <button
-        data-testid="insert-thematic-break"
-      >
-        Insert Break
-      </button>
-      <button
-        data-testid="create-link"
-      >
-        Create Link
-      </button>
-      <button
-        data-testid="code-toggle"
-      >
-        Code
-      </button>
-      <button
-        data-testid="insert-code-block"
-      >
-        Insert Code Block
-      </button>
-      <button
-        data-testid="button-with-tooltip-emoji"
-        title="Emoji"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-face-slightly-smiling size-6"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 10V9"
-          />
-          <path
-            d="M16.472 15a6 6 0 01-8.943 0"
-          />
-          <path
-            d="M9 10V9"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-      </button>
-      <button
-        data-testid="button-with-tooltip-markdown"
-        title="Markdown"
-      >
-        <svg
-          class="size-6"
-          fill="none"
-          height="24"
-          viewBox="0 0 208 128"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            clip-rule="evenodd"
-            d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
-            fill="currentColor"
-            fill-rule="evenodd"
-          />
-          <path
-            d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
-            fill="currentColor"
-          />
-        </svg>
-      </button>
-    </div>
-    <div
-      data-testid="editor-content"
-    >
-      Editor Content
-    </div>
-  </div>
-</div>
-`;
-
-exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max length warning 1`] = `
-<div>
-  <div
-    class="gap-4"
-  >
-    <div
-      class="hidden"
-      data-override-defaults="true"
-    >
-      <div
-        aria-label="Markdown editing toolbar"
-        class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
-        data-override-defaults="true"
-        data-testid="markdown-toolbar"
-        role="toolbar"
-      >
-        <button
-          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
-          data-size="icon"
-          data-testid="markdown-emoji-button"
-          data-variant="ghost"
-          title="Emoji"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-face-slightly-smiling size-6"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M15 10V9"
-            />
-            <path
-              d="M16.472 15a6 6 0 01-8.943 0"
-            />
-            <path
-              d="M9 10V9"
-            />
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-            />
-          </svg>
-        </button>
-        <button
-          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
-          data-size="icon"
-          data-testid="markdown-richtext-button"
-          data-variant="ghost"
-          title="Rich Text"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-type size-6"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M12 4v16"
-            />
-            <path
-              d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"
-            />
-            <path
-              d="M9 20h6"
-            />
-          </svg>
-        </button>
-      </div>
-      <textarea
-        autocomplete="off"
-        class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
-        data-testid="markdown-textarea"
-        maxlength="1000"
-        placeholder="Start writing your masterpiece"
-        variant="inline"
-      />
-    </div>
-    <div
-      class="absolute"
-      data-testid="mdx-editor-overlay-container"
-    />
     <div
       class="dark-theme cursor-auto"
       data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
@@ -1574,6 +926,689 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
         data-testid="editor-content"
       >
         Editor Content
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker open 1`] = `
+<div
+  class="gap-4"
+>
+  <div
+    class="hidden"
+    data-override-defaults="true"
+  >
+    <div
+      aria-label="Markdown editing toolbar"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
+      data-override-defaults="true"
+      data-testid="markdown-toolbar"
+      role="toolbar"
+    >
+      <button
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
+        data-size="icon"
+        data-testid="markdown-emoji-button"
+        data-variant="ghost"
+        title="Emoji"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-face-slightly-smiling size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+        </svg>
+      </button>
+      <button
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
+        data-size="icon"
+        data-testid="markdown-richtext-button"
+        data-variant="ghost"
+        title="Rich Text"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-type size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 4v16"
+          />
+          <path
+            d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"
+          />
+          <path
+            d="M9 20h6"
+          />
+        </svg>
+      </button>
+    </div>
+    <textarea
+      autocomplete="off"
+      class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
+      data-testid="markdown-textarea"
+      maxlength="1000"
+      placeholder="Start writing your masterpiece"
+      variant="inline"
+    />
+  </div>
+  <div
+    class="absolute"
+    data-testid="mdx-editor-overlay-container"
+  />
+  <div
+    class=""
+    data-override-defaults="true"
+  >
+    <div
+      class="dark-theme cursor-auto"
+      data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+      data-placeholder="Start writing your masterpiece"
+      data-plugins-count="10"
+      data-testid="mdx-editor"
+      markdown=""
+    >
+      <div
+        data-testid="toolbar"
+      >
+        <button
+          data-testid="undo-redo"
+        >
+          Undo/Redo
+        </button>
+        <button
+          data-testid="block-type-select"
+        >
+          Block Type
+        </button>
+        <button
+          data-testid="bold-italic-toggles"
+        >
+          Bold/Italic
+        </button>
+        <button
+          data-testid="strikethrough-toggle"
+        >
+          Strikethrough
+        </button>
+        <button
+          data-testid="lists-toggle"
+        >
+          Lists
+        </button>
+        <button
+          data-testid="insert-thematic-break"
+        >
+          Insert Break
+        </button>
+        <button
+          data-testid="create-link"
+        >
+          Create Link
+        </button>
+        <button
+          data-testid="code-toggle"
+        >
+          Code
+        </button>
+        <button
+          data-testid="insert-code-block"
+        >
+          Insert Code Block
+        </button>
+        <button
+          data-testid="button-with-tooltip-emoji"
+          title="Emoji"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-face-slightly-smiling size-6"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15 10V9"
+            />
+            <path
+              d="M16.472 15a6 6 0 01-8.943 0"
+            />
+            <path
+              d="M9 10V9"
+            />
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            />
+          </svg>
+        </button>
+        <button
+          data-testid="button-with-tooltip-markdown"
+          title="Markdown"
+        >
+          <svg
+            class="size-6"
+            fill="none"
+            height="24"
+            viewBox="0 0 208 128"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              clip-rule="evenodd"
+              d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
+              fill="currentColor"
+              fill-rule="evenodd"
+            />
+            <path
+              d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        data-testid="editor-content"
+      >
+        Editor Content
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="emoji-picker-dialog"
+  >
+    <button
+      data-testid="emoji-select-button"
+    >
+      Select Emoji
+    </button>
+  </div>
+</div>
+`;
+
+exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown content 1`] = `
+<div
+  class="gap-4"
+>
+  <div
+    class="hidden"
+    data-override-defaults="true"
+  >
+    <div
+      aria-label="Markdown editing toolbar"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
+      data-override-defaults="true"
+      data-testid="markdown-toolbar"
+      role="toolbar"
+    >
+      <button
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
+        data-size="icon"
+        data-testid="markdown-emoji-button"
+        data-variant="ghost"
+        title="Emoji"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-face-slightly-smiling size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+        </svg>
+      </button>
+      <button
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
+        data-size="icon"
+        data-testid="markdown-richtext-button"
+        data-variant="ghost"
+        title="Rich Text"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-type size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 4v16"
+          />
+          <path
+            d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"
+          />
+          <path
+            d="M9 20h6"
+          />
+        </svg>
+      </button>
+    </div>
+    <textarea
+      autocomplete="off"
+      class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
+      data-testid="markdown-textarea"
+      maxlength="1000"
+      placeholder="Start writing your masterpiece"
+      variant="inline"
+    />
+  </div>
+  <div
+    class="absolute"
+    data-testid="mdx-editor-overlay-container"
+  />
+  <div
+    class=""
+    data-override-defaults="true"
+  >
+    <div
+      class="dark-theme cursor-auto"
+      data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+      data-placeholder="Start writing your masterpiece"
+      data-plugins-count="10"
+      data-testid="mdx-editor"
+      markdown="# Test Content"
+    >
+      <div
+        data-testid="toolbar"
+      >
+        <button
+          data-testid="undo-redo"
+        >
+          Undo/Redo
+        </button>
+        <button
+          data-testid="block-type-select"
+        >
+          Block Type
+        </button>
+        <button
+          data-testid="bold-italic-toggles"
+        >
+          Bold/Italic
+        </button>
+        <button
+          data-testid="strikethrough-toggle"
+        >
+          Strikethrough
+        </button>
+        <button
+          data-testid="lists-toggle"
+        >
+          Lists
+        </button>
+        <button
+          data-testid="insert-thematic-break"
+        >
+          Insert Break
+        </button>
+        <button
+          data-testid="create-link"
+        >
+          Create Link
+        </button>
+        <button
+          data-testid="code-toggle"
+        >
+          Code
+        </button>
+        <button
+          data-testid="insert-code-block"
+        >
+          Insert Code Block
+        </button>
+        <button
+          data-testid="button-with-tooltip-emoji"
+          title="Emoji"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-face-slightly-smiling size-6"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15 10V9"
+            />
+            <path
+              d="M16.472 15a6 6 0 01-8.943 0"
+            />
+            <path
+              d="M9 10V9"
+            />
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            />
+          </svg>
+        </button>
+        <button
+          data-testid="button-with-tooltip-markdown"
+          title="Markdown"
+        >
+          <svg
+            class="size-6"
+            fill="none"
+            height="24"
+            viewBox="0 0 208 128"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              clip-rule="evenodd"
+              d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
+              fill="currentColor"
+              fill-rule="evenodd"
+            />
+            <path
+              d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        data-testid="editor-content"
+      >
+        Editor Content
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max length warning 1`] = `
+<div>
+  <div
+    class="gap-4"
+  >
+    <div
+      class="hidden"
+      data-override-defaults="true"
+    >
+      <div
+        aria-label="Markdown editing toolbar"
+        class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
+        data-override-defaults="true"
+        data-testid="markdown-toolbar"
+        role="toolbar"
+      >
+        <button
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
+          data-size="icon"
+          data-testid="markdown-emoji-button"
+          data-variant="ghost"
+          title="Emoji"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-face-slightly-smiling size-6"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15 10V9"
+            />
+            <path
+              d="M16.472 15a6 6 0 01-8.943 0"
+            />
+            <path
+              d="M9 10V9"
+            />
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            />
+          </svg>
+        </button>
+        <button
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
+          data-size="icon"
+          data-testid="markdown-richtext-button"
+          data-variant="ghost"
+          title="Rich Text"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-type size-6"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 4v16"
+            />
+            <path
+              d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"
+            />
+            <path
+              d="M9 20h6"
+            />
+          </svg>
+        </button>
+      </div>
+      <textarea
+        autocomplete="off"
+        class="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
+        data-testid="markdown-textarea"
+        maxlength="1000"
+        placeholder="Start writing your masterpiece"
+        variant="inline"
+      />
+    </div>
+    <div
+      class="absolute"
+      data-testid="mdx-editor-overlay-container"
+    />
+    <div
+      class=""
+      data-override-defaults="true"
+    >
+      <div
+        class="dark-theme cursor-auto"
+        data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+        data-placeholder="Start writing your masterpiece"
+        data-plugins-count="10"
+        data-testid="mdx-editor"
+        markdown=""
+      >
+        <div
+          data-testid="toolbar"
+        >
+          <button
+            data-testid="undo-redo"
+          >
+            Undo/Redo
+          </button>
+          <button
+            data-testid="block-type-select"
+          >
+            Block Type
+          </button>
+          <button
+            data-testid="bold-italic-toggles"
+          >
+            Bold/Italic
+          </button>
+          <button
+            data-testid="strikethrough-toggle"
+          >
+            Strikethrough
+          </button>
+          <button
+            data-testid="lists-toggle"
+          >
+            Lists
+          </button>
+          <button
+            data-testid="insert-thematic-break"
+          >
+            Insert Break
+          </button>
+          <button
+            data-testid="create-link"
+          >
+            Create Link
+          </button>
+          <button
+            data-testid="code-toggle"
+          >
+            Code
+          </button>
+          <button
+            data-testid="insert-code-block"
+          >
+            Insert Code Block
+          </button>
+          <button
+            data-testid="button-with-tooltip-emoji"
+            title="Emoji"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-face-slightly-smiling size-6"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15 10V9"
+              />
+              <path
+                d="M16.472 15a6 6 0 01-8.943 0"
+              />
+              <path
+                d="M9 10V9"
+              />
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+            </svg>
+          </button>
+          <button
+            data-testid="button-with-tooltip-markdown"
+            title="Markdown"
+          >
+            <svg
+              class="size-6"
+              fill="none"
+              height="24"
+              viewBox="0 0 208 128"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                clip-rule="evenodd"
+                d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
+                fill="currentColor"
+                fill-rule="evenodd"
+              />
+              <path
+                d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
+        <div
+          data-testid="editor-content"
+        >
+          Editor Content
+        </div>
       </div>
     </div>
     <div
@@ -1714,124 +1749,129 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
     data-testid="mdx-editor-overlay-container"
   />
   <div
-    class="dark-theme cursor-auto"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
-    data-placeholder="Start writing your masterpiece"
-    data-plugins-count="10"
-    data-readonly="true"
-    data-testid="mdx-editor"
-    markdown=""
+    class=""
+    data-override-defaults="true"
   >
     <div
-      data-testid="toolbar"
+      class="dark-theme cursor-auto"
+      data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+      data-placeholder="Start writing your masterpiece"
+      data-plugins-count="10"
+      data-readonly="true"
+      data-testid="mdx-editor"
+      markdown=""
     >
-      <button
-        data-testid="undo-redo"
+      <div
+        data-testid="toolbar"
       >
-        Undo/Redo
-      </button>
-      <button
-        data-testid="block-type-select"
-      >
-        Block Type
-      </button>
-      <button
-        data-testid="bold-italic-toggles"
-      >
-        Bold/Italic
-      </button>
-      <button
-        data-testid="strikethrough-toggle"
-      >
-        Strikethrough
-      </button>
-      <button
-        data-testid="lists-toggle"
-      >
-        Lists
-      </button>
-      <button
-        data-testid="insert-thematic-break"
-      >
-        Insert Break
-      </button>
-      <button
-        data-testid="create-link"
-      >
-        Create Link
-      </button>
-      <button
-        data-testid="code-toggle"
-      >
-        Code
-      </button>
-      <button
-        data-testid="insert-code-block"
-      >
-        Insert Code Block
-      </button>
-      <button
-        data-testid="button-with-tooltip-emoji"
-        title="Emoji"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-face-slightly-smiling size-6"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
+        <button
+          data-testid="undo-redo"
         >
-          <path
-            d="M15 10V9"
-          />
-          <path
-            d="M16.472 15a6 6 0 01-8.943 0"
-          />
-          <path
-            d="M9 10V9"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-      </button>
-      <button
-        data-testid="button-with-tooltip-markdown"
-        title="Markdown"
-      >
-        <svg
-          class="size-6"
-          fill="none"
-          height="24"
-          viewBox="0 0 208 128"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
+          Undo/Redo
+        </button>
+        <button
+          data-testid="block-type-select"
         >
-          <path
-            clip-rule="evenodd"
-            d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
-            fill="currentColor"
-            fill-rule="evenodd"
-          />
-          <path
-            d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
-            fill="currentColor"
-          />
-        </svg>
-      </button>
-    </div>
-    <div
-      data-testid="editor-content"
-    >
-      Editor Content
+          Block Type
+        </button>
+        <button
+          data-testid="bold-italic-toggles"
+        >
+          Bold/Italic
+        </button>
+        <button
+          data-testid="strikethrough-toggle"
+        >
+          Strikethrough
+        </button>
+        <button
+          data-testid="lists-toggle"
+        >
+          Lists
+        </button>
+        <button
+          data-testid="insert-thematic-break"
+        >
+          Insert Break
+        </button>
+        <button
+          data-testid="create-link"
+        >
+          Create Link
+        </button>
+        <button
+          data-testid="code-toggle"
+        >
+          Code
+        </button>
+        <button
+          data-testid="insert-code-block"
+        >
+          Insert Code Block
+        </button>
+        <button
+          data-testid="button-with-tooltip-emoji"
+          title="Emoji"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-face-slightly-smiling size-6"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15 10V9"
+            />
+            <path
+              d="M16.472 15a6 6 0 01-8.943 0"
+            />
+            <path
+              d="M9 10V9"
+            />
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            />
+          </svg>
+        </button>
+        <button
+          data-testid="button-with-tooltip-markdown"
+          title="Markdown"
+        >
+          <svg
+            class="size-6"
+            fill="none"
+            height="24"
+            viewBox="0 0 208 128"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              clip-rule="evenodd"
+              d="m15 10c-2.7614 0-5 2.2386-5 5v98c0 2.761 2.2386 5 5 5h178c2.761 0 5-2.239 5-5v-98c0-2.7614-2.239-5-5-5zm-15 5c0-8.28427 6.71573-15 15-15h178c8.284 0 15 6.71573 15 15v98c0 8.284-6.716 15-15 15h-178c-8.28427 0-15-6.716-15-15z"
+              fill="currentColor"
+              fill-rule="evenodd"
+            />
+            <path
+              d="m30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39zm125 0-30-33h20v-35h20v35h20z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        data-testid="editor-content"
+      >
+        Editor Content
+      </div>
     </div>
   </div>
 </div>
