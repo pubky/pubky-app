@@ -439,10 +439,11 @@ export class LocalStreamPostsService {
         // collection write queued ahead of it has committed, and each marked its posts before
         // doing so. A sample taken before the transaction could miss the mark of an edit still
         // in flight, and this response would then overwrite the increment that edit committed.
-        const protectedCountIds = detailIds.filter((id) => recentCollectionCounts.isProtected(id));
+        const protectedCountIds = new Set(detailIds.filter((id) => recentCollectionCounts.isProtected(id)));
         const existingTtl = refreshGuard ? await PostTtlModel.findByIds(detailIds) : [];
         const ttlById = new Map(existingTtl.map((record) => [record.id, record.lastUpdatedAt]));
-        const protectedCounts = protectedCountIds.length > 0 ? await PostCountsModel.findByIds(protectedCountIds) : [];
+        const protectedCounts =
+          protectedCountIds.size > 0 ? await PostCountsModel.findByIds(Array.from(protectedCountIds)) : [];
         // Rows persisted before the field existed carry no local value to keep.
         const localCollectionsById = new Map(protectedCounts.map((record) => [record.id, record.collections]));
 
@@ -471,7 +472,15 @@ export class LocalStreamPostsService {
           .filter(([id]) => !tombstonedIds.has(id))
           .map(([id, counts]): NexusModelTuple<NexusPostCounts> => {
             const localCollections = localCollectionsById.get(id);
-            return localCollections === undefined ? [id, counts] : [id, { ...counts, collections: localCollections }];
+            if (localCollections === undefined) {
+              // A mark with no local value behind it (the member was never hydrated when its
+              // collection was deleted, or the row predates the field) stands for nothing:
+              // this response's count is the only one there is, and the next response must
+              // be free to replace it.
+              if (protectedCountIds.has(id)) recentCollectionCounts.clear(id);
+              return [id, counts];
+            }
+            return [id, { ...counts, collections: localCollections }];
           });
         const liveRelationships = postRelationships.filter(([id]) => !tombstonedIds.has(id));
         const liveTags = postTags.filter(([id]) => !tombstonedIds.has(id));

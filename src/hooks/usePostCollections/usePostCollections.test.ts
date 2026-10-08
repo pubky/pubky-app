@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
+import { COLLECTIONS_COUNT_PROTECTION_MS, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { usePostCollections } from './usePostCollections';
 
 type PaginationParams = { streamId?: string; limit?: number; skipOverlap?: number };
@@ -70,6 +70,22 @@ describe('usePostCollections', () => {
     enabled = true;
     rerender();
     expect(mocks.paginationParams?.skipOverlap).toBe(2);
+  });
+
+  it('drops removals older than the protection window when a new one is recorded', () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = renderHook(() => usePostCollections('author:post1', { enabled: true }));
+
+      act(() => result.current.recordRemoval());
+      vi.advanceTimersByTime(COLLECTIONS_COUNT_PROTECTION_MS);
+      act(() => result.current.recordRemoval());
+
+      // Nexus has long indexed the first removal: only the fresh one still needs an overlap.
+      expect(mocks.paginationParams?.skipOverlap).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('stays inert with no stream while disabled (the default)', () => {

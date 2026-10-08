@@ -1131,6 +1131,79 @@ describe('useStreamPagination', () => {
       expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c5', 'c6', 'c7', 'c4']);
     });
 
+    it('caps the overlap below a page so every request still advances', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      const { result } = renderHook(() =>
+        useStreamPagination({ streamId: collectionStreamId, limit: 3, skipOverlap: 25 }),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c2', 'c3', 'c4'],
+        nextCursor: 4,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      // 3 - min(25, limit - 1) = 1: one new row per page rather than the same page forever.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId: collectionStreamId, streamTail: 1 }),
+      );
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c4']);
+    });
+
+    it('does not take the end of the stream from a page in flight when the overlap grew', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      let overlap = 0;
+      const { result, rerender } = renderHook(() =>
+        useStreamPagination({ streamId: collectionStreamId, skipOverlap: overlap }),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      // The final page is in flight when the consumer's row removal lands and is indexed: the
+      // server serves the last rows from the shorter list and reports the end, having stepped
+      // over the row that shifted onto the page boundary.
+      const pendingPage = Promise.withResolvers<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValueOnce(pendingPage.promise);
+      let pendingLoad: Promise<void> | undefined;
+      act(() => {
+        pendingLoad = result.current.loadMore();
+      });
+      overlap = 1;
+      rerender();
+      await act(async () => {
+        pendingPage.resolve({ nextPageIds: ['c5', 'c6'], nextCursor: 5, reachedEnd: true });
+        await pendingLoad;
+      });
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c5', 'c6']);
+      expect(result.current.hasMore).toBe(true);
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5', 'c6'],
+        nextCursor: 5,
+        reachedEnd: true,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId: collectionStreamId, streamTail: 2 }),
+      );
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c5', 'c6', 'c4']);
+      expect(result.current.hasMore).toBe(false);
+    });
+
     it('does not count optimistic membership posts in collection offset pagination', async () => {
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({

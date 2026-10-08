@@ -64,6 +64,13 @@ describe('RecentCollectionCounts', () => {
     expect(registry.isProtected(postId)).toBe(false);
   });
 
+  it('stops protecting when the mark is cleared', () => {
+    registry.markWritten(postId);
+    registry.clear(postId);
+
+    expect(registry.isProtected(postId)).toBe(false);
+  });
+
   it('forgets everything on reset', () => {
     registry.markWritten(postId);
     registry.reset();

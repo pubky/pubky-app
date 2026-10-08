@@ -38,8 +38,9 @@ export interface UseStreamPaginationOptions {
    * cannot observe (Nexus indexes the homeserver write later). Each page then overlaps the
    * previous one by this many rows, which the dedupe drops, so an index shift of up to this
    * many rows can never step over a row. Raising it while a page is in flight discards that
-   * page's cursor advance: the page may already have been served from the shorter list, so
-   * the next request re-covers it from the same offset under the wider overlap.
+   * page's cursor advance and its end-of-stream signal: the page may already have been served
+   * from the shorter list, so the next request re-covers it from the same offset under the
+   * wider overlap. Capped at `limit - 1` so every request still advances.
    *
    * Defaults to 0.
    */

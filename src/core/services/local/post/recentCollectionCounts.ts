@@ -53,6 +53,11 @@ export class RecentCollectionCounts {
     return false;
   }
 
+  /** Forgets a mark, e.g. because hydration found no local count behind it. */
+  clear(postId: string): void {
+    this.writes.delete(postId);
+  }
+
   /** Test-only: restores the pristine state. */
   reset(): void {
     this.writes.clear();

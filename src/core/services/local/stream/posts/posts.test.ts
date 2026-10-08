@@ -728,12 +728,22 @@ describe('LocalStreamPostsService', () => {
         expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
       });
 
-      it('takes the response count for a marked post without a local counts row', async () => {
+      it('retires a mark with no local counts row behind it, so the next response lands too', async () => {
+        // A deleted collection marked a member that was never hydrated: the first response
+        // after that is the only count there is, and a later one must still replace it.
         await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
         recentCollectionCounts.markWritten(compositeId);
+        const withCollections = (collections: number) => {
+          const post = nexusCopy(BASE_TIMESTAMP + 20_000);
+          post.counts = { ...post.counts, collections };
+          return post;
+        };
 
-        await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
+        await LocalStreamPostsService.persistPosts({ posts: [withCollections(1)] });
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(1);
+        expect(recentCollectionCounts.isProtected(compositeId)).toBe(false);
 
+        await LocalStreamPostsService.persistPosts({ posts: [withCollections(0)] });
         expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
       });
     });

@@ -175,8 +175,10 @@ export function useStreamPagination({
         for (;;) {
           const committedRemovalsAtRequest = committedRemovalsRef.current;
           const overlapAtRequest = skipOverlapRef.current;
-          // `skipOverlap` re-covers rows before the offset; score cursors are positions, not counts.
-          const requestTail = isSkipPaginatedStream(streamId) ? Math.max(0, cursor - overlapAtRequest) : cursor;
+          // `skipOverlap` re-covers rows before the offset, capped below a page so every request
+          // still moves the offset forward; score cursors are positions, not counts.
+          const overlap = Math.min(overlapAtRequest, Math.max(0, limit - 1));
+          const requestTail = isSkipPaginatedStream(streamId) ? Math.max(0, cursor - overlap) : cursor;
           const result: TReadPostStreamChunkResponse = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId: anchor,
@@ -200,6 +202,7 @@ export function useStreamPagination({
           // post's local `indexed_at`, which Nexus bumps on edit/delete without moving the
           // post in the stream (#2523).
           let nextCursor = cursor;
+          let overlapGrew = false;
           if (result.nextCursor != null) {
             // Skip streams: `nextCursor` extends the offset this request captured
             // at start, so removals committed during the flight are not in it —
@@ -212,7 +215,7 @@ export function useStreamPagination({
             // The overlap grew while this page was in flight: the server list may already have
             // been the shorter one when it served the page, so keep the offset this page started
             // from and let the next request re-cover it under the wider overlap.
-            const overlapGrew = isSkipPaginatedStream(streamId) && skipOverlapRef.current > overlapAtRequest;
+            overlapGrew = isSkipPaginatedStream(streamId) && skipOverlapRef.current > overlapAtRequest;
             nextCursor = overlapGrew ? cursor : Math.max(0, result.nextCursor - removalsDuringFlight);
           }
           // Never overwrite a defined anchor with undefined.
@@ -222,8 +225,10 @@ export function useStreamPagination({
           anchor = nextAnchor;
           cursor = nextCursor;
           // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
-          // keeps hasMore so the advanced cursors are re-requested.
-          reachedEnd = result.reachedEnd === true;
+          // keeps hasMore so the advanced cursors are re-requested. A page held for re-covering
+          // may have stepped over the row that shifted onto its boundary, so its end is not
+          // final either: the re-covering request confirms it.
+          reachedEnd = result.reachedEnd === true && !overlapGrew;
 
           // Deduplicate posts
           const existingIds = new Set(postIdsRef.current);

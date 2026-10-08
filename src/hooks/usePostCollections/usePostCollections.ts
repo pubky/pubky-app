@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
+import { COLLECTIONS_COUNT_PROTECTION_MS, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { parseCompositeId } from '@/models/models.utils';
 import { buildPostCollectionsStreamId } from '@/models/stream/post/postStream.types';
@@ -59,17 +59,22 @@ export function usePostCollections(
   { enabled = false }: UsePostCollectionsOptions = {},
 ): UsePostCollectionsResult {
   const { pubky: authorId, id } = parseCompositeId(postId);
-  // Own removals on this post for as long as the consumer stays mounted, not per enabled
-  // lifetime: a picker reopened before Nexus indexed the removal pages the old list too.
-  const [removals, setRemovals] = useState(0);
+  // Own removals on this post, kept for as long as the consumer stays mounted rather than per
+  // enabled lifetime (a picker reopened before Nexus indexed a removal pages the old list too),
+  // and for at most the protection window, after which Nexus has indexed them like any other
+  // collection write. Expired ones are dropped when the next removal is recorded.
+  const [removalTimes, setRemovalTimes] = useState<number[]>([]);
 
   const { postIds, loading, loadingMore, hasMore, loadMore } = useStreamPagination({
     streamId: enabled ? buildPostCollectionsStreamId(authorId, id) : undefined,
     limit: COLLECTIONS_SECTION_PAGE_SIZE,
-    skipOverlap: removals,
+    skipOverlap: removalTimes.length,
   });
 
-  const recordRemoval = () => setRemovals((count) => count + 1);
+  const recordRemoval = () => {
+    const now = Date.now();
+    setRemovalTimes((times) => [...times.filter((at) => now - at < COLLECTIONS_COUNT_PROTECTION_MS), now]);
+  };
 
   return {
     collectionIds: postIds,

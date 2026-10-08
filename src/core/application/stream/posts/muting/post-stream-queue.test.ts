@@ -725,24 +725,27 @@ describe('PostStreamQueue', () => {
       expect(second.nextCursor).toBe(20); // still the saved raw offset
     });
 
-    it('drops a skip-stream buffer when the caller resumes from a different raw offset', async () => {
-      // The caller walked its offset back (a committed removal, an overlap re-request): the
-      // buffered rows and their cursor describe the list before that move.
+    it('keeps a skip-stream buffer when the caller walks its offset back, and fetches on from there', async () => {
+      // The caller walked its offset back (a committed removal, an overlap re-request). The
+      // buffered rows were never shown and stay valid; only the raw position moved.
       const skipId = 'collection:author:post' as PostStreamId;
       await seedOverflow(skipId, undefined);
       expect(queue.get(skipId)?.cursor).toBe(20);
+
+      const buffered = await queue.collect(skipId, { limit: 10, cursor: 19, filter: (p) => p, fetch: vi.fn() });
+      expect(buffered.posts).toEqual(Array.from({ length: 10 }, (_, i) => `author:post-${i + 5}`));
+      expect(buffered.nextCursor).toBe(19); // the caller's position, not the buffer's
+
       const fetch = vi.fn(async () => ({
         nextPageIds: ['author:fresh-1'],
         cacheMissPostIds: [],
         nextCursor: 20,
         reachedEnd: true,
       }));
-
-      const second = await queue.collect(skipId, { limit: 10, cursor: 19, filter: (p) => p, fetch });
-
+      const rest = await queue.collect(skipId, { limit: 10, cursor: 19, filter: (p) => p, fetch });
       expect(fetch).toHaveBeenCalledWith(19);
-      expect(second.posts).toEqual(['author:fresh-1']);
-      expect(second.nextCursor).toBe(20);
+      expect(rest.posts).toEqual([...Array.from({ length: 5 }, (_, i) => `author:post-${i + 15}`), 'author:fresh-1']);
+      expect(rest.nextCursor).toBe(20);
     });
   });
 
