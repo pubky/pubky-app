@@ -25,7 +25,7 @@ const PUBKY_BASE_URI = 'pubky://';
 const POST_PATH = '/pub/pubky.app/posts/';
 const FILE_PATH = '/pub/pubky.app/files/';
 
-export interface VRTImageFileFixture {
+interface VRTImageFileFixture {
   /** `author:fileId` composite — what `FileController.getFileUrl` receives. */
   id: string;
   name: string;
@@ -35,7 +35,7 @@ export interface VRTImageFileFixture {
   metadata: { width: string; height: string };
 }
 
-export interface VRTImagePostFixture {
+interface VRTImagePostFixture {
   compositeId: string;
   postId: string;
   details: NexusPostDetails;
