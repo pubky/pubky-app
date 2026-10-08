@@ -157,13 +157,8 @@ export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) 
 /** Faces are preloaded in setup; this only catches a load that starts with the render. */
 const FONT_READY_TIMEOUT_MS = 5_000;
 
-/**
- * Always go through `document.fonts.ready`, never short-circuit on
- * `document.fonts.status`: the getter flushes pending style and layout in
- * Chromium, which is what starts a face the render just introduced (the
- * latin-ext range). `status` is still `'loaded'` at that point.
- */
 async function waitForFontsReady() {
+  if (document.fonts.status === 'loaded') return;
   await withTimeout(
     document.fonts.ready,
     FONT_READY_TIMEOUT_MS,
