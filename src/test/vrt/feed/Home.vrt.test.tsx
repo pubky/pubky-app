@@ -964,13 +964,11 @@ async function withHomeLayout(layout: LayoutType, run: () => Promise<void>) {
   }
 }
 
-const LAYOUT_VIEWPORTS = [
-  ['desktop', VRT_VIEWPORT_DESKTOP],
-  ['mobile', VRT_VIEWPORT_MOBILE],
-] as const;
-
 describe('Cards layout — home', () => {
-  it.each(LAYOUT_VIEWPORTS)('renders Cards on %s', async (name, viewport) => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders Cards on %s', async (name, viewport) => {
     feedState.mode = 'default';
     await withHomeLayout(LAYOUT.CARDS, async () => {
       await renderForVRT(<HomeWithLayout />, { viewport });
@@ -1002,50 +1000,45 @@ describe('Cards layout — home', () => {
   });
 });
 
+// Wide, List and Visual are desktop-only: phones resolve every layout to
+// Columns (`resolveFeedLayout`), which the default Home mobile snapshot covers.
 describe('Wide layout — home', () => {
-  it.each(LAYOUT_VIEWPORTS)('renders Wide on %s', async (name, viewport) => {
+  it('renders Wide on desktop', async () => {
     feedState.mode = 'default';
     await withHomeLayout(LAYOUT.WIDE, async () => {
-      await renderForVRT(<HomeWithLayout />, { viewport });
+      await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
       await expect.element(page.getByRole('feed')).toBeVisible();
       await expect.poll(() => document.querySelectorAll('[data-cy="post-card"]').length).toBeGreaterThan(1);
-      await matchVrtFrameScreenshot(`home-wide-${name}`);
+      await matchVrtFrameScreenshot('home-wide-desktop');
     });
   });
 });
 
 describe('List layout — home', () => {
-  it.each(LAYOUT_VIEWPORTS)('renders List on %s', async (name, viewport) => {
+  it('renders List on desktop', async () => {
     feedState.mode = 'default';
     await withHomeLayout(LAYOUT.LIST, async () => {
-      await renderForVRT(<HomeWithLayout />, { viewport });
+      await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
       await expect.element(page.getByRole('feed')).toBeVisible();
       await expect.poll(() => document.querySelectorAll('[data-cy="post-card"]').length).toBeGreaterThan(1);
-      await matchVrtFrameScreenshot(`home-list-${name}`);
+      await matchVrtFrameScreenshot('home-list-desktop');
     });
   });
 });
 
 describe('Visual layout — home', () => {
   // Image-only posts: the mosaic is media-first, so the fixture carries no
-  // text content at all. Phones fall back to Columns (`resolveFeedLayout`),
-  // where the same posts render as full-width image cards.
-  it.each(LAYOUT_VIEWPORTS)('renders Visual on %s', async (name, viewport) => {
+  // text content at all.
+  it('renders Visual on desktop', async () => {
     const f = await fixtures;
     feedState.mode = 'imageOnly';
     await withHomeLayout(LAYOUT.VISUAL, async () => {
       await preloadImages(f.imageOnlyImageUrls);
-      await renderForVRT(<HomeWithLayout />, { viewport });
-      if (viewport.width >= 768) {
-        await expect.element(page.getByRole('button', { name: `Open post ${f.imageOnlyPostIds[0]}` })).toBeVisible();
-        expect(document.querySelector('[data-cy="visual-feed-container"]')).not.toBeNull();
-        expect(document.querySelectorAll('[data-cy="visual-feed-tile"]').length).toBe(f.imageOnlyPostIds.length);
-      } else {
-        await expect.element(page.getByRole('feed')).toBeVisible();
-        expect(document.querySelector('[data-cy="visual-feed-container"]')).toBeNull();
-        await expect.poll(() => document.querySelectorAll('[data-cy="post-card"] img').length).toBeGreaterThan(0);
-      }
-      await matchVrtFrameScreenshot(`home-visual-${name}`);
+      await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+      await expect.element(page.getByRole('button', { name: `Open post ${f.imageOnlyPostIds[0]}` })).toBeVisible();
+      expect(document.querySelector('[data-cy="visual-feed-container"]')).not.toBeNull();
+      expect(document.querySelectorAll('[data-cy="visual-feed-tile"]').length).toBe(f.imageOnlyPostIds.length);
+      await matchVrtFrameScreenshot('home-visual-desktop');
     });
   });
 });
