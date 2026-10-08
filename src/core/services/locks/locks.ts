@@ -37,7 +37,7 @@ import {
   paykitConnectionStateResponseSchema,
   paykitSetupStatusResponseSchema,
   submitProofResultSchema,
-  verificationStatusSchema,
+  verificationTaskResponseSchema,
 } from './locks.types';
 import {
   buildLocksOptions,
@@ -52,6 +52,9 @@ import {
 /** Opt-in flag telling the Lock Server `/connect` shell to deliver the code via postMessage
  * instead of redirecting back to `returnTo`. */
 const DELIVERY_POSTMESSAGE = 'postmessage';
+
+/** The only `status_message` the Lock Server sends; the SDK rejects any other. */
+const READER_WALLET_SETUP_NEEDED = 'Reader wallet setup needed';
 
 /**
  * IO boundary for the Lock Server via the locks-sdk. Client building, session/config reads, wasm
@@ -187,7 +190,7 @@ export class LocksService {
   /**
    * Whether the reader has published anything under their public Paykit namespace — the gate
    * between submitting the payment and the install-Bitkit screen. Presence only: it does not prove the
-   * receiver is valid or ready, so a submission can still fail after this returns true.
+   * receiver is valid or ready, so the payment can still end `failed` after this returns true.
    */
   static async hasPaykitReceiver(readerPubky: string): Promise<boolean> {
     try {
@@ -205,20 +208,21 @@ export class LocksService {
   static async lookupVerificationTask(creator: string, bundleId: string): Promise<TVerificationTask | null> {
     try {
       const viewer = await this.getViewer();
-      const response: unknown = await viewer.lookupVerificationTask(
-        new VerificationTaskHandleOptions(creator, bundleId),
+      const response = verificationTaskResponseSchema.safeParse(
+        await viewer.lookupVerificationTask(new VerificationTaskHandleOptions(creator, bundleId)),
       );
-      const status = verificationStatusSchema.safeParse(
-        typeof response === 'object' && response !== null && 'status' in response ? response.status : undefined,
-      );
-      if (!status.success) {
+      if (!response.success) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'verification task response is invalid', {
           service: ErrorService.Locks,
           operation: 'LocksService.lookupVerificationTask',
-          cause: status.error,
+          cause: response.error,
         });
       }
-      return { status: status.data };
+      return {
+        status: response.data.status,
+        walletSetupNeeded: response.data.status_message === READER_WALLET_SETUP_NEEDED,
+        admissionDeadlineAt: response.data.admission_deadline_at,
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('HTTP 404')) return null;
