@@ -161,6 +161,41 @@ describe('ArticleInlineMedia', () => {
     expect(video).toHaveAttribute('preload', 'none');
   });
 
+  it('opens an external PDF card through the reader link handler, a CDN slot directly', () => {
+    const onLinkClick = vi.fn();
+    const { rerender } = render(
+      <ArticleInlineMedia
+        src="https://example.com/paper.pdf"
+        alt="Report"
+        attachments={attachments}
+        authorId={AUTHOR}
+        postId={POST_ID}
+        files={files}
+        metadataSettled
+        onLinkClick={onLinkClick}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open PDF' }));
+    expect(onLinkClick).toHaveBeenCalledTimes(1);
+    expect(onLinkClick).toHaveBeenCalledWith('https://example.com/paper.pdf', expect.anything());
+
+    // The author's own file on the CDN is not an external destination
+    rerender(
+      <ArticleInlineMedia
+        src="attachment:3"
+        attachments={attachments}
+        authorId={AUTHOR}
+        postId={POST_ID}
+        files={files}
+        metadataSettled
+        onLinkClick={onLinkClick}
+      />,
+    );
+    fireEvent.click(screen.getByRole('link', { name: 'Open PDF' }));
+    expect(onLinkClick).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps external images on the image path', () => {
     renderMedia('https://example.com/pic.png');
 

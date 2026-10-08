@@ -1688,6 +1688,23 @@ describe('Article inline images', () => {
     mockUsePathname.mockReturnValue('/post/user/post1');
   });
 
+  it('hands an external PDF card the same link handler as the body links', () => {
+    const onLinkClick = vi.fn();
+    render(
+      <PostText
+        content={'[normal](https://phish.example/page)\n\n![Official wallet download](https://phish.example/get.pdf)'}
+        isArticle
+        fullArticle
+        articleMedia={articleMedia}
+        onLinkClick={onLinkClick}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open PDF' }));
+
+    expect(onLinkClick).toHaveBeenCalledWith('https://phish.example/get.pdf', expect.anything());
+  });
+
   it('renders inline images with the raw attachment destination when articleMedia is provided', () => {
     render(
       <PostText

@@ -156,6 +156,7 @@ export const PostText = memo(function PostText({
                     <ArticleInlineMedia
                       src={typeof props.src === 'string' ? props.src : undefined}
                       alt={props.alt}
+                      onLinkClick={onLinkClick}
                       {...articleMedia}
                     />
                   );

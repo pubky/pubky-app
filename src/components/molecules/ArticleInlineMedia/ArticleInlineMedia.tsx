@@ -36,7 +36,7 @@ const MediaFallback = ({ Icon, label }: { Icon: LucideIcon; label: string }) => 
  * referrer policy, so the first request to a third-party host waits for the reader to press play.
  * Each player is paused on its own once the reader scrolls past it, as post attachments are.
  */
-export const ArticleInlineMedia = ({ src, alt, ...source }: ArticleInlineMediaProps) => {
+export const ArticleInlineMedia = ({ src, alt, onLinkClick, ...source }: ArticleInlineMediaProps) => {
   const [failed, setFailed] = useState(false);
   const localStoreAttachments = useLocalFilesStore((state) =>
     'postId' in source ? state.posts[source.postId] : undefined,
@@ -94,7 +94,15 @@ export const ArticleInlineMedia = ({ src, alt, ...source }: ArticleInlineMediaPr
           <span className="min-w-0 truncate text-sm font-bold">{label}</span>
         </span>
         <Button asChild variant="dark" size="icon" className="h-8 w-10 shrink-0 border-none bg-card hover:bg-card/70">
-          <Link overrideDefaults href={resolved.url} target="_blank" rel="noopener noreferrer" aria-label="Open PDF">
+          {/* A third-party document opens the way a body link does: through the reader's confirmation */}
+          <Link
+            overrideDefaults
+            href={resolved.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open PDF"
+            onClick={resolved.external && onLinkClick ? (event) => onLinkClick(resolved.url, event) : undefined}
+          >
             <Download className="size-4" />
           </Link>
         </Button>

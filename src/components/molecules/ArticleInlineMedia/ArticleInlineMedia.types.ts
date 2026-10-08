@@ -24,6 +24,11 @@ export type ArticleInlineMediaProps = ArticleMediaSource & {
   /** Markdown image destination, passed through raw by PostText's urlTransform */
   src?: string;
   alt?: string;
+  /**
+   * The reader's handler for external links, the one every other link in the body goes through
+   * (safe-URL check and the confirmation dialog). An external PDF card opens through it.
+   */
+  onLinkClick?: (url: string, event: React.MouseEvent<HTMLAnchorElement>) => void;
 };
 
 export type ResolvedArticleMedia =
