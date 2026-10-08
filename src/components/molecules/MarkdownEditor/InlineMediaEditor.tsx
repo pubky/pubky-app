@@ -141,7 +141,7 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
       data-media-kind={mediaKind}
       data-inline-media-node=""
       data-testid="inline-media-node"
-      className={cn('relative my-2 max-w-full overflow-hidden rounded-md', isSelected && 'ring-2 ring-ring')}
+      className={cn('relative my-2 max-w-full overflow-hidden', isSelected && 'ring-2 ring-ring')}
     >
       {/* Room on the right for the toolbar pinned to the corner */}
       <span
