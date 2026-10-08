@@ -413,6 +413,23 @@ body {
   }
 
   /**
+   * The inline media node's delete/settings toolbar is the image node's toolbar: same MDXEditor
+   * variables for its background, radius and icon colours, so the two never drift apart.
+   */
+  .mdxeditor [data-inline-media-toolbar] {
+    background-color: var(--baseBase);
+    border-bottom-left-radius: var(--radius-base);
+  }
+  .mdxeditor [data-inline-media-toolbar] button {
+    color: var(--baseText);
+  }
+  @media (hover: hover) {
+    .mdxeditor [data-inline-media-toolbar] button:hover {
+      color: var(--baseTextContrast);
+    }
+  }
+
+  /**
    * MDXEditor code block dark mode fixes
    * Organized from outermost container to innermost elements:
    * 1. Wrapper container (outer border)

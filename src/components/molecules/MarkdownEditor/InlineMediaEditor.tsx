@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection';
 import { mergeRegister } from '@lexical/utils';
-import { readOnly$ } from '@mdxeditor/editor';
+import { iconComponentFor$, readOnly$ } from '@mdxeditor/editor';
 import { useCellValues, usePublisher } from '@mdxeditor/gurx';
 import {
   $getNodeByKey,
@@ -18,9 +18,7 @@ import {
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
 } from 'lexical';
-import { Settings, Trash2 } from 'lucide-react';
 import { Audio } from '@/atoms/Audio/Audio';
-import { Button } from '@/atoms/Button/Button';
 import { Video } from '@/atoms/Video/Video';
 import { fileNameFromUrl, type InlineNonImageMediaKind } from '@/libs/file/inlineMediaKind';
 import { cn } from '@/libs/utils/utils';
@@ -37,19 +35,21 @@ interface InlineMediaEditorProps {
 }
 
 /**
- * The in-editor rendering of an `InlineMediaNode`: a header row (kind icon, file name, description,
- * and the delete and edit buttons in the order MDXEditor's image toolbar uses) above a native
- * player; a PDF is the header alone. The header is where the node is selected from: a click on the
- * player itself is playback, since the native controls cover the whole element, so unlike an image
- * the node needs its own click target. Delete and keyboard handling mirror MDXEditor's `ImageEditor`.
+ * The in-editor rendering of an `InlineMediaNode`: a header row (kind icon, file name, description)
+ * above a native player, a PDF being the header alone, with the same toolbar an image node has:
+ * MDXEditor's delete and settings icons pinned to the block's top-right corner, in its order and
+ * styling. The header is where the node is selected from: a click on the player itself is playback,
+ * since the native controls cover the whole element, so unlike an image the node needs its own
+ * click target. Delete and keyboard handling mirror MDXEditor's `ImageEditor`.
  */
 export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: InlineMediaEditorProps) {
   const [editor] = useLexicalComposerContext();
   const [isSelected, setSelected, clearSelection] = useLexicalNodeSelection(nodeKey);
-  const [readOnly, previewResolver, nameResolver] = useCellValues(
+  const [readOnly, previewResolver, nameResolver, iconComponentFor] = useCellValues(
     readOnly$,
     inlineMediaPreviewResolver$,
     inlineMediaNameResolver$,
+    iconComponentFor$,
   );
   const openEditDialog = usePublisher(openEditInlineMediaDialog$);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -140,45 +140,49 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
       data-editor-block-type="inline-media"
       data-media-kind={mediaKind}
       data-testid="inline-media-node"
-      className={cn('my-2 max-w-full overflow-hidden rounded-md bg-muted', isSelected && 'ring-2 ring-ring')}
+      className={cn('relative my-2 max-w-full overflow-hidden rounded-md bg-muted', isSelected && 'ring-2 ring-ring')}
     >
+      {/* Room on the right for the toolbar pinned to the corner */}
       <span
-        className="flex items-center justify-between gap-2 px-3 py-2 text-sm text-muted-foreground"
+        className="flex min-w-0 items-center gap-x-2 py-2 pr-16 pl-3 text-sm text-muted-foreground"
         data-testid="inline-media-header"
       >
-        <span className="flex min-w-0 items-center gap-x-2">
-          <Icon aria-hidden="true" className="size-4 shrink-0" />
-          <span className="min-w-0 truncate text-foreground" data-testid="inline-media-name">
-            {name ?? label}
-          </span>
-          {altText && <span className="min-w-0 truncate">{altText}</span>}
+        <Icon aria-hidden="true" className="size-4 shrink-0" />
+        <span className="min-w-0 truncate text-foreground" data-testid="inline-media-name">
+          {name ?? label}
         </span>
-        {!readOnly && (
-          <span ref={toolbarRef} className="flex shrink-0 gap-1" data-testid="inline-media-toolbar">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7 rounded-md shadow-none"
-              aria-label="Delete media"
-              onClick={() => editor.update(removeNode)}
-            >
-              <Trash2 className="size-4" />
-            </Button>
-            <Button
-              ref={editButtonRef}
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7 rounded-md shadow-none"
-              aria-label="Edit media"
-              onClick={() => openEditDialog({ mediaKind, nodeKey, initialValues: { src, altText, title } })}
-            >
-              <Settings className="size-4" />
-            </Button>
-          </span>
-        )}
+        {altText && <span className="min-w-0 truncate">{altText}</span>}
       </span>
+      {!readOnly && (
+        // The image node's toolbar, as MDXEditor draws it: its icons, its order, its corner; the
+        // colours and radius come from MDXEditor's own variables (globals.css, `data-inline-media-toolbar`)
+        <span
+          ref={toolbarRef}
+          className="absolute top-0 right-0 z-10 flex gap-1 p-1"
+          data-inline-media-toolbar=""
+          data-testid="inline-media-toolbar"
+        >
+          <button
+            type="button"
+            className="cursor-default"
+            aria-label="Delete media"
+            title="Delete media"
+            onClick={() => editor.update(removeNode)}
+          >
+            {iconComponentFor('delete_small')}
+          </button>
+          <button
+            ref={editButtonRef}
+            type="button"
+            className="cursor-default"
+            aria-label="Edit media"
+            title="Edit media"
+            onClick={() => openEditDialog({ mediaKind, nodeKey, initialValues: { src, altText, title } })}
+          >
+            {iconComponentFor('settings')}
+          </button>
+        </span>
+      )}
 
       {mediaKind === 'video' && (
         <Video
