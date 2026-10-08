@@ -10,11 +10,11 @@ import { openNewInlineMediaDialog$ } from './inlineMediaPlugin';
 export function InsertInlineMediaButton({ mediaKind }: { mediaKind: InlineNonImageMediaKind }) {
   const readOnly = useCellValue(readOnly$);
   const openDialog = usePublisher(openNewInlineMediaDialog$);
-  const { label, Icon } = INLINE_MEDIA_KIND_UI[mediaKind];
+  const { insertTitle, Icon } = INLINE_MEDIA_KIND_UI[mediaKind];
 
   return (
     <ButtonWithTooltip
-      title={label}
+      title={insertTitle}
       disabled={readOnly}
       onClick={() => openDialog(mediaKind)}
       data-testid={`insert-inline-${mediaKind}`}
