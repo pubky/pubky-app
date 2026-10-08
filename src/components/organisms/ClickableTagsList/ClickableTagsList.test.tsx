@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
+import { useEntityTags } from '@/hooks/useEntityTags/useEntityTags';
 import type { Pubky } from '@/models/models.types';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
@@ -739,6 +740,23 @@ describe('ClickableTagsList', () => {
       render(<ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} />);
 
       expect(getPostTagButton('bitcoin', 5)).toBeInTheDocument();
+    });
+
+    it("forwards mergeTaggedId so a second entity's tags merge into the list", () => {
+      render(
+        <ClickableTagsList
+          taggedId="author:original"
+          mergeTaggedId="author:repost"
+          taggedKind={TagKind.POST}
+          tags={mockTags}
+        />,
+      );
+
+      expect(vi.mocked(useEntityTags)).toHaveBeenLastCalledWith(
+        'author:original',
+        TagKind.POST,
+        expect.objectContaining({ mergeEntityId: 'author:repost' }),
+      );
     });
   });
 

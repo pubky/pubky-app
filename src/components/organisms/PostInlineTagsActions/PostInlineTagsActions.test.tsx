@@ -22,12 +22,14 @@ vi.mock('@/atoms/Container/Container', () => ({
 vi.mock('../ClickableTagsList/ClickableTagsList', () => ({
   ClickableTagsList: ({
     taggedId,
+    mergeTaggedId,
     showCount,
     showInput,
     showAddButton,
     addMode,
   }: {
     taggedId: string;
+    mergeTaggedId?: string;
     showCount: boolean;
     showInput: boolean;
     showAddButton: boolean;
@@ -37,6 +39,7 @@ vi.mock('../ClickableTagsList/ClickableTagsList', () => ({
       data-testid="clickable-tags-list"
       data-add-mode={addMode}
       data-post-id={taggedId}
+      data-merge-post-id={mergeTaggedId}
       data-show-add-button={showAddButton}
       data-show-count={showCount}
       data-show-input={showInput}
@@ -75,12 +78,14 @@ vi.mock('../PostActionsBar/PostActionsBar', () => ({
 vi.mock('../PostTagsPanel/PostTagsPanel', () => ({
   PostTagsPanel: ({
     postId,
+    mergePostId,
     widthMode,
     autoFocusInput,
     enableLoadingSkeleton,
     className,
   }: {
     postId: string;
+    mergePostId?: string;
     widthMode: string;
     autoFocusInput: boolean;
     enableLoadingSkeleton: boolean;
@@ -88,6 +93,7 @@ vi.mock('../PostTagsPanel/PostTagsPanel', () => ({
   }) => (
     <div
       data-testid="post-tags-panel"
+      data-merge-post-id={mergePostId}
       data-auto-focus-input={autoFocusInput}
       data-enable-loading-skeleton={enableLoadingSkeleton}
       data-post-id={postId}
@@ -119,6 +125,16 @@ describe('PostInlineTagsActions', () => {
     expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-post-id', 'author:post-1');
     expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-show-add-button', 'true');
     expect(screen.queryByTestId('post-tags-panel')).not.toBeInTheDocument();
+  });
+
+  it('merges the second post into the collapsed list and the expanded panel alike', () => {
+    render(<PostInlineTagsActions {...defaultProps} tagsMergePostId="other:repost-1" />);
+
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-merge-post-id', 'other:repost-1');
+
+    fireEvent.click(screen.getByTestId('tag-button'));
+
+    expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-merge-post-id', 'other:repost-1');
   });
 
   it('toggles between inline tags and the editable tags panel', () => {

@@ -12,6 +12,8 @@ export interface PostTagsPanelHandle {
 export interface PostTagsPanelProps {
   /** The composite post ID (format: authorId:postId) */
   postId: string;
+  /** Optional second post whose tags are shown merged in (read-only); writes go to `postId` */
+  mergePostId?: string;
   /** Width behavior for the tags panel */
   widthMode?: 'fit' | 'full';
   /** Auto-focus the tag input when it mounts (useful when the panel is conditionally rendered) */

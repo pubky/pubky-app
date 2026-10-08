@@ -12,6 +12,8 @@ import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 
 interface PostInlineTagsActionsProps {
   postId: string;
+  /** Second post whose tags the expanded panel merges in (read-only) */
+  tagsMergePostId?: string;
   savePostId?: string;
   onReplyClick: () => void;
   onRepostClick: () => void;
@@ -22,6 +24,7 @@ interface PostInlineTagsActionsProps {
 
 export function PostInlineTagsActions({
   postId,
+  tagsMergePostId,
   savePostId = postId,
   onReplyClick,
   onRepostClick,
@@ -52,6 +55,7 @@ export function PostInlineTagsActions({
       {tagsExpanded ? (
         <PostTagsPanel
           postId={postId}
+          mergePostId={tagsMergePostId}
           widthMode="fit"
           autoFocusInput={!isMobile}
           enableLoadingSkeleton={false}
@@ -60,6 +64,7 @@ export function PostInlineTagsActions({
       ) : (
         <ClickableTagsList
           taggedId={postId}
+          mergeTaggedId={tagsMergePostId}
           taggedKind={TagKind.POST}
           maxTagLength={POST_TAGS_MAX_LENGTH}
           maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}

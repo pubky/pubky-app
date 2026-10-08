@@ -5,7 +5,10 @@ import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
-import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
+import {
+  getDisplayedPostId,
+  getInteractionPostId,
+} from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import type { UsePostListKeyboardResult } from '@/hooks/usePostListKeyboard/usePostListKeyboard.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
@@ -38,7 +41,7 @@ interface TimelineFeedItemProps {
  * - any other kind — `PostMain`, plus `TimelinePostReplies` outside single
  *   collection feeds.
  */
-function TimelineFeedItemBody({ postId, displayedPostId }: { postId: string; displayedPostId: string }) {
+function TimelineFeedItemBody({ postId, interactionPostId }: { postId: string; interactionPostId: string }) {
   const { postDetails } = usePostDetails(postId);
   const timelineFeed = useTimelineFeedContext();
   const shouldShowReplies = timelineFeed?.variant !== TIMELINE_FEED_VARIANT.COLLECTION;
@@ -55,7 +58,7 @@ function TimelineFeedItemBody({ postId, displayedPostId }: { postId: string; dis
   return (
     <>
       <PostMain postId={postId} isReply={false} />
-      {shouldShowReplies ? <TimelinePostReplies postId={displayedPostId} /> : null}
+      {shouldShowReplies ? <TimelinePostReplies postId={interactionPostId} /> : null}
     </>
   );
 }
@@ -71,6 +74,9 @@ function TimelineFeedItemBody({ postId, displayedPostId }: { postId: string; dis
 export function TimelineFeedItem({ postId, index, totalCount, setCardRef, onPostKeyDown }: TimelineFeedItemProps) {
   const visibility = usePostHeaderVisibility(postId);
   const displayedPostId = getDisplayedPostId(postId, visibility);
+  // Inline replies of a contentless repost are the original's for every viewer; navigation keeps
+  // the displayed id.
+  const interactionPostId = getInteractionPostId(postId, visibility);
   return (
     <Container
       data-cy="post-card"
@@ -82,7 +88,7 @@ export function TimelineFeedItem({ postId, index, totalCount, setCardRef, onPost
       onKeyDown={(e) => onPostKeyDown(displayedPostId, e)}
       className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <TimelineFeedItemBody postId={postId} displayedPostId={displayedPostId} />
+      <TimelineFeedItemBody postId={postId} interactionPostId={interactionPostId} />
     </Container>
   );
 }

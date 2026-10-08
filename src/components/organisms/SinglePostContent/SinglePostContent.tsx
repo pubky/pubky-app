@@ -4,7 +4,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
-import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
+import { getInteractionPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
@@ -27,7 +27,8 @@ import type { SinglePostContentProps } from './SinglePostContent.types';
  */
 export function SinglePostContent({ postId, postDetails }: SinglePostContentProps) {
   const visibility = usePostHeaderVisibility(postId);
-  const displayedPostId = getDisplayedPostId(postId, visibility);
+  // The thread (replies, quick reply) of a contentless repost is the original's, for every viewer.
+  const displayedPostId = getInteractionPostId(postId, visibility);
   const { postDetails: originalDetails } = usePostDetails(displayedPostId !== postId ? displayedPostId : null);
   const displayedDetails = displayedPostId === postId ? postDetails : originalDetails;
   const canReply = !isPostDeleted(postDetails) && !!displayedDetails && !isPostDeleted(displayedDetails);
