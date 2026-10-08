@@ -441,7 +441,21 @@ describe('LocksService (reader unlock)', () => {
     expect(mocks.fakeViewer.lookupVerificationTask).toHaveBeenCalledWith(
       expect.objectContaining({ creator: 'creator-b', bundle_id: 'b1' }),
     );
-    expect(task).toEqual({ status: 'completed' });
+    expect(task).toEqual({ status: 'completed', walletSetupNeeded: false, admissionDeadlineAt: null });
+  });
+
+  it('lookupVerificationTask reports the wallet setup notice and the invoice deadline', async () => {
+    mocks.fakeViewer.lookupVerificationTask.mockResolvedValueOnce({
+      status: 'pending',
+      status_message: 'Reader wallet setup needed',
+      admission_deadline_at: '2026-10-08T12:10:00Z',
+    } as never);
+
+    await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toEqual({
+      status: 'pending',
+      walletSetupNeeded: true,
+      admissionDeadlineAt: '2026-10-08T12:10:00Z',
+    });
   });
 
   it('lookupVerificationTask rejects an unknown lifecycle status', async () => {

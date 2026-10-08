@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
-import type { LockFile, TUnlockedContent, TVerificationStatus } from '@/services/locks/locks.types';
+import type { LockFile, TUnlockedContent, TVerificationStatus, TVerificationTask } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { CONNECTION_POLL_INTERVAL_MS, POLL_INTERVAL_MS, STALL_AFTER_MS, usePayToUnlock } from './usePayToUnlock';
 import type { TPayToUnlockStage } from './usePayToUnlock.types';
@@ -13,7 +13,7 @@ vi.mock('@/controllers/locks/locks', () => ({
     // Default so every test that does not care about the link still returns a settled one.
     fetchPaykitConnectionState: vi.fn(async () => 'connected'),
     // Defaults so a test that does not arrange the wait still gets a settled poll.
-    fetchPaymentStatus: vi.fn(async () => 'pending'),
+    fetchPaymentStatus: vi.fn(async () => ({ status: 'pending', walletSetupNeeded: false, admissionDeadlineAt: null })),
     fetchPaidContent: vi.fn(),
     hasPaykitReceiver: vi.fn(),
   },
@@ -56,6 +56,12 @@ const connectionCalls = () => vi.mocked(LocksController.fetchPaykitConnectionSta
 
 type TSubmitted = Awaited<ReturnType<typeof LocksController.startPayment>>;
 const submitted = (bundleId: string, status: TVerificationStatus = 'pending'): TSubmitted => ({ bundleId, status });
+const task = (status: TVerificationStatus, fields: Partial<TVerificationTask> = {}): TVerificationTask => ({
+  status,
+  walletSetupNeeded: false,
+  admissionDeadlineAt: null,
+  ...fields,
+});
 
 describe('usePayToUnlock (opening)', () => {
   beforeEach(() => {
@@ -106,7 +112,7 @@ describe('usePayToUnlock (opening)', () => {
     'resumes a saved bundle id without submitting when its task reports %s',
     async (status) => {
       vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('stored-1');
-      vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(status);
+      vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task(status));
 
       const { result } = renderPay();
       await waitFor(() => expect(result.current.stage).toBe('waiting'));
@@ -117,7 +123,7 @@ describe('usePayToUnlock (opening)', () => {
 
   it('shows the paid confirmation without replaying a saved bundle id that already completed', async () => {
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('stored-1');
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue('completed');
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('completed'));
 
     const { result, onCompleted } = renderPay();
     await waitFor(() => expect(result.current.stage).toBe('paid'));
@@ -139,7 +145,7 @@ describe('usePayToUnlock (opening)', () => {
     ['blocked', null, 'blocked'],
   ] as const)('connection state %s: QR %s, notice %s', async (connectionState, qr, issue) => {
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('stored-1');
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue('pending');
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('pending'));
     vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue(connectionState);
 
     const { result } = renderPay();
@@ -240,13 +246,13 @@ describe('usePayToUnlock (retry)', () => {
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue(null);
     vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('fresh-1'));
     vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('connected');
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue('pending');
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('pending'));
   });
 
   it('starts the payment on open and moves to waiting', async () => {
     vi.useFakeTimers();
     try {
-      vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue('pending');
+      vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('pending'));
 
       const { result } = renderPay();
       await act(async () => {
@@ -278,7 +284,7 @@ describe('usePayToUnlock (retry)', () => {
   // and only when the reader presses again: a dead payment must not re-charge anyone on its own.
   it.each(['failed', 'expired'] as const)('rejects the bundle id whose payment ended in %s', async (status) => {
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('dead-1');
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(status);
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task(status));
 
     const { result } = renderPay();
     await waitFor(() => expect(result.current.stage).toBe('retry'));
@@ -287,10 +293,52 @@ describe('usePayToUnlock (retry)', () => {
 
     await waitFor(() => expect(LocksController.startPayment).toHaveBeenCalledTimes(1));
     expect(LocksController.startPayment).toHaveBeenCalledWith(expect.objectContaining({ rejectBundleId: 'dead-1' }));
+    // `expired` comes after an invoice reached the wallet, so only `failed` re-checks it.
+    expect(LocksController.hasPaykitReceiver).toHaveBeenCalledTimes(status === 'failed' ? 1 : 0);
+  });
+
+  // A reader without a wallet ends `failed`: another id would fail the same way after the same wait.
+  it('moves to the install steps when Try again after failed finds no wallet', async () => {
+    vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('dead-1');
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('failed'));
+    vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(false);
+
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('retry'));
+    result.current.retry();
+
+    await waitFor(() => expect(result.current.stage).toBe('install'));
+    expect(LocksController.startPayment).not.toHaveBeenCalled();
+    expect(result.current.isSubmitting).toBe(false);
+
+    // The detour must not forget the dead id: reusing it would replay the failed task.
+    vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(true);
+    result.current.retry();
+    await waitFor(() => expect(LocksController.startPayment).toHaveBeenCalledTimes(1));
+    expect(LocksController.startPayment).toHaveBeenCalledWith(expect.objectContaining({ rejectBundleId: 'dead-1' }));
+  });
+
+  it.each([
+    [
+      'wallet check',
+      () => vi.mocked(LocksController.hasPaykitReceiver).mockRejectedValue(new Error('homeserver blip')),
+    ],
+    ['submission', () => vi.mocked(LocksController.startPayment).mockRejectedValue(new Error('network down'))],
+  ])('stays on the retry screen when the %s after a failed payment fails', async (_step, fail) => {
+    vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('dead-1');
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('failed'));
+    fail();
+
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('retry'));
+    result.current.retry();
+
+    await waitFor(() => expect(toastMock).toHaveBeenCalledTimes(2));
+    expect(result.current.stage).toBe('retry');
   });
 
   it('offers Try again without rejecting the saved id when the submission fails', async () => {
-    vi.mocked(LocksController.startPayment).mockRejectedValue(new Error('HTTP 502'));
+    vi.mocked(LocksController.startPayment).mockRejectedValue(new Error('network down'));
 
     const { result } = renderPay();
     await waitFor(() => expect(toastMock).toHaveBeenCalled());
@@ -355,9 +403,9 @@ describe('usePayToUnlock (retry)', () => {
       expect(result.current.isSubmitting).toBe(true);
     });
 
-    // Try again skips the wallet check, so a failure that started here has to come back here.
+    // Only this screen's button always checks the wallet, so a failure that started here comes back here.
     it('goes back to install when the submission after the re-check fails', async () => {
-      vi.mocked(LocksController.startPayment).mockRejectedValue(new Error('HTTP 502'));
+      vi.mocked(LocksController.startPayment).mockRejectedValue(new Error('network down'));
       const { result } = await openOnInstall();
 
       result.current.retry();
@@ -421,7 +469,7 @@ describe('usePayToUnlock (retry)', () => {
   // Two clicks in the same tick are the classic shape of a double payment.
   it('ignores a second retry while a submission is in flight', async () => {
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('dead-1');
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue('failed');
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('failed'));
     vi.mocked(LocksController.startPayment).mockImplementation(() => new Promise(() => {}));
 
     const { result } = renderPay();
@@ -429,6 +477,9 @@ describe('usePayToUnlock (retry)', () => {
     result.current.retry();
     result.current.retry();
 
+    // The wallet check after `failed` comes first, so the submission lands a tick later.
+    await waitFor(() => expect(LocksController.startPayment).toHaveBeenCalled());
+    expect(LocksController.hasPaykitReceiver).toHaveBeenCalledTimes(1);
     expect(LocksController.startPayment).toHaveBeenCalledTimes(1);
   });
 
@@ -447,7 +498,7 @@ describe('usePayToUnlock (finishing)', () => {
     authState.session = {};
     vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('connected');
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('stored-1');
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue('completed');
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('completed'));
   });
 
   // The payment landed and only the read failed, so this must not share the waiting screen, which
@@ -491,7 +542,7 @@ describe('usePayToUnlock (finishing)', () => {
     await waitFor(() => expect(result.current.stage).toBe('unopened'));
 
     // Hangs, so the stage can only have moved from the press itself.
-    vi.mocked(LocksController.fetchPaymentStatus).mockReturnValue(new Promise<TVerificationStatus>(() => {}));
+    vi.mocked(LocksController.fetchPaymentStatus).mockReturnValue(new Promise<TVerificationTask>(() => {}));
     act(() => result.current.recheck());
 
     expect(result.current.stage).toBe('waiting');
@@ -507,7 +558,7 @@ describe('usePayToUnlock (waiting)', () => {
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('stored-1');
     vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('stored-1'));
     vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('connected');
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue('pending');
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('pending'));
     vi.mocked(LocksController.fetchPaidContent).mockResolvedValue(unlockedContent);
   });
   afterEach(() => vi.useRealTimers());
@@ -525,17 +576,17 @@ describe('usePayToUnlock (waiting)', () => {
 
   /** Hangs the first polled task lookup (the open-time one still resolves) and hands back its release. */
   const holdOneLookup = (thenAlways: TVerificationStatus) => {
-    let release: (status: TVerificationStatus) => void = () => {};
+    let release: (value: TVerificationTask) => void = () => {};
     vi.mocked(LocksController.fetchPaymentStatus)
-      .mockResolvedValueOnce('pending')
+      .mockResolvedValueOnce(task('pending'))
       .mockImplementationOnce(
         () =>
           new Promise((r) => {
             release = r;
           }),
       )
-      .mockResolvedValue(thenAlways);
-    return (status: TVerificationStatus) => release(status);
+      .mockResolvedValue(task(thenAlways));
+    return (status: TVerificationStatus) => release(task(status));
   };
 
   /** Never settles — for proving one loop cannot hold the other up. */
@@ -627,7 +678,9 @@ describe('usePayToUnlock (waiting)', () => {
   // The whole point of splitting the loops: a hung link read must not hide a finished payment.
   it('finishes the payment while the link read never settles', async () => {
     vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(hangForever);
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValueOnce('pending').mockResolvedValue('completed');
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce(task('pending'))
+      .mockResolvedValue(task('completed'));
 
     const { result } = renderPay();
     await advance(0);
@@ -658,7 +711,9 @@ describe('usePayToUnlock (waiting)', () => {
 
   it('stops both loops when the payment ends', async () => {
     vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('none');
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValueOnce('pending').mockResolvedValue('completed');
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce(task('pending'))
+      .mockResolvedValue(task('completed'));
 
     const { result } = renderPay();
     await advance(0);
@@ -673,7 +728,9 @@ describe('usePayToUnlock (waiting)', () => {
   });
 
   it('never runs two reads of the same kind at once', async () => {
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValueOnce('pending').mockImplementation(hangForever);
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce(task('pending'))
+      .mockImplementation(hangForever);
     vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(hangForever);
 
     renderPay();
@@ -690,9 +747,9 @@ describe('usePayToUnlock (waiting)', () => {
 
   // A request from before the park settling late must not hand its in-flight slot to the new one.
   it('ignores a pre-park answer that lands after the resumed read', async () => {
-    let releaseParked: (status: TVerificationStatus) => void = () => {};
+    let releaseParked: (value: TVerificationTask) => void = () => {};
     vi.mocked(LocksController.fetchPaymentStatus)
-      .mockResolvedValueOnce('pending')
+      .mockResolvedValueOnce(task('pending'))
       .mockImplementationOnce(
         () =>
           new Promise((r) => {
@@ -713,7 +770,7 @@ describe('usePayToUnlock (waiting)', () => {
     expect(statusCalls()).toBe(3);
 
     await act(async () => {
-      releaseParked('pending');
+      releaseParked(task('pending'));
     });
     await returnToTab();
     // The resumed read is still out, so nothing new goes out beside it.
@@ -723,8 +780,11 @@ describe('usePayToUnlock (waiting)', () => {
   it.each(['failed', 'expired'] as const)(
     'offers Try again with the dead id rejected when the poll reports %s',
     async (status) => {
-      vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValueOnce('pending').mockResolvedValueOnce(status);
+      vi.mocked(LocksController.fetchPaymentStatus)
+        .mockResolvedValueOnce(task('pending'))
+        .mockResolvedValueOnce(task(status));
       vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('fresh-1'));
+      vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(true);
 
       const { result } = renderPay();
       await advance(0);
@@ -753,7 +813,7 @@ describe('usePayToUnlock (waiting)', () => {
 
   it('keeps polling through a lookup error', async () => {
     vi.mocked(LocksController.fetchPaymentStatus)
-      .mockResolvedValueOnce('pending')
+      .mockResolvedValueOnce(task('pending'))
       .mockRejectedValueOnce(new Error('blip'));
 
     const { result } = renderPay();
@@ -768,7 +828,7 @@ describe('usePayToUnlock (waiting)', () => {
 
   // A null mid-wait would mean the server lost the payment; one is treated like still-pending.
   it('keeps polling when the server briefly reports no task', async () => {
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValueOnce('pending').mockResolvedValueOnce(null);
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValueOnce(task('pending')).mockResolvedValueOnce(null);
 
     const { result } = renderPay();
     await advance(0);
@@ -800,7 +860,9 @@ describe('usePayToUnlock (waiting)', () => {
   });
 
   it('parks at the wall-clock deadline even when a read never settles', async () => {
-    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValueOnce('pending').mockImplementation(hangForever);
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce(task('pending'))
+      .mockImplementation(hangForever);
     vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(hangForever);
 
     const { result } = renderPay();
@@ -826,6 +888,90 @@ describe('usePayToUnlock (waiting)', () => {
     await advance(0);
     expect(statusCalls()).toBe(callsWhenParked.status + 1);
     expect(connectionCalls()).toBe(callsWhenParked.connection + 1);
+  });
+
+  // Scanning cannot help before the wallet is set up.
+  it('swaps the QR for the wallet setup notice while the server reports it', async () => {
+    vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('none');
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce(task('pending', { walletSetupNeeded: true }))
+      .mockResolvedValue(task('pending'));
+
+    const { result } = renderPay();
+    await advance(0);
+    expect(result.current.walletSetupNeeded).toBe(true);
+    expect(result.current.handshakePubky).toBeNull();
+
+    await advance(POLL_INTERVAL_MS);
+    expect(result.current.walletSetupNeeded).toBe(false);
+    expect(result.current.handshakePubky).toBe('pubkybob');
+  });
+
+  // The reader cannot pay before the invoice exists, so the server's time to create it does not count.
+  it('parks no sooner than three minutes after the invoice deadline', async () => {
+    const deadline = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('pending', { admissionDeadlineAt: deadline }));
+
+    const { result } = renderPay();
+    await advance(0);
+    await advance(10 * 60 * 1000);
+    expect(result.current.isStalled).toBe(false);
+
+    await advance(STALL_AFTER_MS);
+    expect(result.current.isStalled).toBe(true);
+  });
+
+  // The read on return hangs, so only the deadline kept from the earlier read can hold the wait.
+  it('keeps the invoice deadline when the tab comes back', async () => {
+    const deadline = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce(task('pending', { admissionDeadlineAt: deadline }))
+      .mockResolvedValueOnce(task('pending', { admissionDeadlineAt: deadline }))
+      .mockImplementation(hangForever);
+
+    const { result } = renderPay();
+    await advance(0);
+    await advance(5 * 60 * 1000);
+    await returnToTab();
+    await advance(7 * 60 * 1000);
+    expect(result.current.isStalled).toBe(false);
+
+    await advance(60 * 1000);
+    expect(result.current.isStalled).toBe(true);
+  });
+
+  // An unparsable time would make the delay NaN and a past one would shorten it; either parks too early.
+  it.each([
+    ['cannot be parsed', 'not a time'],
+    ['has already passed', new Date(Date.now() - 60 * 1000).toISOString()],
+  ])('still waits the full three minutes when the invoice deadline %s', async (_, deadline) => {
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('pending', { admissionDeadlineAt: deadline }));
+
+    const { result } = renderPay();
+    await advance(0);
+    await advance(STALL_AFTER_MS - POLL_INTERVAL_MS);
+    expect(result.current.isStalled).toBe(false);
+
+    await advance(POLL_INTERVAL_MS * 3);
+    expect(result.current.isStalled).toBe(true);
+  });
+
+  it('gives a fresh three minutes once the invoice exists', async () => {
+    const deadline = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce(task('pending', { admissionDeadlineAt: deadline }))
+      .mockResolvedValueOnce(task('pending', { admissionDeadlineAt: deadline }))
+      .mockResolvedValue(task('pending'));
+
+    const { result } = renderPay();
+    await advance(0);
+    // The first poll holds the wait on the deadline; the second sees the invoice and restarts the window.
+    await advance(POLL_INTERVAL_MS * 2);
+    await advance(STALL_AFTER_MS - POLL_INTERVAL_MS * 2);
+    expect(result.current.isStalled).toBe(false);
+
+    await advance(POLL_INTERVAL_MS * 2);
+    expect(result.current.isStalled).toBe(true);
   });
 
   // The tab coming back from Bitkit right as the throttled timer fires is the normal case, not a
@@ -925,9 +1071,9 @@ describe('usePayToUnlock (waiting)', () => {
 
   // A lookup that was already in flight when the modal closed must not open content nobody asked for.
   it('ignores a lookup that resolves after the modal closed', async () => {
-    let resolve: (status: TVerificationStatus) => void = () => {};
+    let resolve: (value: TVerificationTask) => void = () => {};
     vi.mocked(LocksController.fetchPaymentStatus)
-      .mockResolvedValueOnce('pending')
+      .mockResolvedValueOnce(task('pending'))
       .mockImplementationOnce(
         () =>
           new Promise((r) => {
@@ -941,7 +1087,7 @@ describe('usePayToUnlock (waiting)', () => {
 
     await advance(POLL_INTERVAL_MS);
     rerender({ open: false });
-    resolve('completed');
+    resolve(task('completed'));
     await advance(0);
     expect(LocksController.fetchPaidContent).not.toHaveBeenCalled();
     expect(onCompleted).not.toHaveBeenCalled();

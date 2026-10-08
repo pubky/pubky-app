@@ -34,7 +34,7 @@ import type {
   TUnlockedAttachment,
   TUnlockedContent,
   TUnlockedListItem,
-  TVerificationStatus,
+  TVerificationTask,
 } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
@@ -228,8 +228,8 @@ export class LocksController {
     return LocksApplication.fetchPaykitConnectionState(params);
   }
 
-  /** One read of the payment's verification status, or null when the submission never reached the server. */
-  static fetchPaymentStatus(params: TPaymentBundleParams): Promise<TVerificationStatus | null> {
+  /** One read of the payment's verification task, or null when the submission never reached the server. */
+  static fetchPaymentStatus(params: TPaymentBundleParams): Promise<TVerificationTask | null> {
     return LocksApplication.fetchPaymentStatus(params);
   }
 
