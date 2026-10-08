@@ -1,6 +1,8 @@
 // Consumed by Home VRT (visual layout + image-only columns fallback).
 // Not part of `VRT_FEED_POSTS` — these posts carry an image and NO text, so
 // the Visual mosaic baseline reflects the layout's intended media-only use.
+// The `vrt-visual-*.webp` assets are the brand line art lifted onto a dark
+// slate background so tile edges stay visible against the app background.
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import type {
@@ -9,9 +11,13 @@ import type {
   VisualTileSize,
 } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedVisual.types';
 import type { NexusPostCounts, NexusPostDetails, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
-import designReferencesUrl from '@/test/vrt/images/vrt-design-references.webp?url';
-import goldenHourUrl from '@/test/vrt/images/vrt-golden-hour.webp?url';
-import signalsFromFieldUrl from '@/test/vrt/images/vrt-signals-from-field.webp?url';
+import deskUrl from '@/test/vrt/images/vrt-visual-desk.webp?url';
+import goldenHourUrl from '@/test/vrt/images/vrt-visual-golden-hour.webp?url';
+import moveUrl from '@/test/vrt/images/vrt-visual-move.webp?url';
+import noteUrl from '@/test/vrt/images/vrt-visual-note.webp?url';
+import portraitUrl from '@/test/vrt/images/vrt-visual-portrait.webp?url';
+import referencesUrl from '@/test/vrt/images/vrt-visual-references.webp?url';
+import signalsUrl from '@/test/vrt/images/vrt-visual-signals.webp?url';
 import { HOUR_MS, MINUTE_MS, VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
 import { VRT_AUTHOR_PUBKYS } from './profiles';
 
@@ -121,7 +127,7 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
     authorKey: 'hana',
     postId: '0VRTIMAGE0HANA0002',
     fileId: 'vrt-image-only-desk',
-    imageUrl: '/images/collections-onboarding.webp',
+    imageUrl: deskUrl,
     imageName: 'Collections arranged on a desk',
     contentType: 'image/webp',
     width: 512,
@@ -135,7 +141,7 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
     authorKey: 'fynn',
     postId: '0VRTIMAGE0FYNN0003',
     fileId: 'vrt-image-only-signals',
-    imageUrl: signalsFromFieldUrl,
+    imageUrl: signalsUrl,
     imageName: 'Signals from the field',
     contentType: 'image/webp',
     width: 512,
@@ -149,7 +155,7 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
     authorKey: 'dion',
     postId: '0VRTIMAGE0DION0004',
     fileId: 'vrt-image-only-references',
-    imageUrl: designReferencesUrl,
+    imageUrl: referencesUrl,
     imageName: 'Design references',
     contentType: 'image/webp',
     width: 512,
@@ -162,7 +168,7 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
     authorKey: 'glen',
     postId: '0VRTIMAGE0GLEN0005',
     fileId: 'vrt-image-only-note',
-    imageUrl: '/images/note.webp',
+    imageUrl: noteUrl,
     imageName: 'Handwritten note',
     contentType: 'image/webp',
     width: 512,
@@ -176,11 +182,11 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
     authorKey: 'eira',
     postId: '0VRTIMAGE0EIRA0006',
     fileId: 'vrt-image-only-move',
-    imageUrl: '/images/landing-move.png',
+    imageUrl: moveUrl,
     imageName: 'Moving through a local-first network',
-    contentType: 'image/png',
-    width: 336,
-    height: 336,
+    contentType: 'image/webp',
+    width: 512,
+    height: 512,
     tileSize: 'square',
     agoMs: 5 * HOUR_MS,
     counts: { tags: 0, unique_tags: 0, replies: 3, reposts: 0 },
@@ -189,11 +195,11 @@ export const VRT_IMAGE_ONLY_POSTS: readonly VRTImagePostFixture[] = [
     authorKey: 'bran',
     postId: '0VRTIMAGE0BRAN0007',
     fileId: 'vrt-image-only-portrait',
-    imageUrl: '/images/landing-experience5.png',
+    imageUrl: portraitUrl,
     imageName: 'Pubky community portrait',
-    contentType: 'image/png',
-    width: 2304,
-    height: 800,
+    contentType: 'image/webp',
+    width: 512,
+    height: 178,
     tileSize: 'square',
     agoMs: 8 * HOUR_MS,
     counts: { tags: 0, unique_tags: 0, replies: 0, reposts: 0 },

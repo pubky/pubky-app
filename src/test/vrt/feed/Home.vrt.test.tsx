@@ -18,7 +18,7 @@ import { Fab } from '@/molecules/Fab/Fab';
 import { PostMain } from '@/organisms/PostMain/PostMain';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { APP_ROUTES } from '@/app/routes';
-import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
+import { CONTENT, type HomeState, LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { useState } from 'react';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
@@ -27,11 +27,12 @@ import { useState } from 'react';
 // data so the per-factory cost is negligible.
 //
 // Default Home screenshots keep `VRT_FEED_POSTS` only. Article-in-feed tests
-// prepend `VRT_ARTICLE`, collection-in-feed tests prepend a followed
-// collection, and the Visual layout swaps in `VRT_IMAGE_ONLY_POSTS` via this
-// flag so existing baselines stay put.
+// prepend `VRT_ARTICLE` and the Visual layout swaps in `VRT_IMAGE_ONLY_POSTS`
+// via this flag so existing baselines stay put. The Collections content
+// filter is not a mode: it changes the real stream id, which the pagination
+// mock keys on.
 const feedState = vi.hoisted(() => ({
-  mode: 'default' as 'default' | 'article' | 'collection' | 'imageOnly',
+  mode: 'default' as 'default' | 'article' | 'imageOnly',
   keyboardVisible: false,
   populatedHotTags: false,
 }));
@@ -66,18 +67,25 @@ const fixtures = vi.hoisted(async () => {
   for (const post of imagePostsModule.VRT_IMAGE_ONLY_POSTS) {
     postsByCompositeId.set(post.compositeId, post);
   }
-  // A collection the viewer follows, rendered as a standalone `CollectionCard`
-  // in the feed. Collection fixtures carry no relationships; give it the
-  // root-post shape the repost/reply mocks below read.
-  const feedCollection = collectionsModule.VRT_FOLLOWED_COLLECTIONS[0];
-  postsByCompositeId.set(feedCollection.compositeId, {
-    ...feedCollection,
-    relationships: { replied: null, reposted: null, mentioned: [] },
-  });
+  // The Collections content filter streams only `kind: 'collection'` posts,
+  // each rendered as a standalone `CollectionCard`. Collection fixtures carry
+  // no relationships; give them the root-post shape the repost mock reads.
+  const feedCollections = [
+    ...collectionsModule.VRT_FOLLOWED_COLLECTIONS,
+    ...collectionsModule.VRT_DISCOVER_COLLECTIONS,
+  ];
+  for (const collection of feedCollections) {
+    postsByCompositeId.set(collection.compositeId, {
+      ...collection,
+      relationships: { replied: null, reposted: null, mentioned: [] },
+    });
+  }
   const orderedCompositeIds = postsModule.VRT_FEED_POSTS.map((post) => post.compositeId);
   const articleFeedPostIds = [articleModule.VRT_ARTICLE.compositeId, ...orderedCompositeIds];
-  const collectionFeedPostIds = [feedCollection.compositeId, ...orderedCompositeIds];
-  const feedCollectionContent = JSON.parse(feedCollection.details.content) as { name: string };
+  const collectionFeedPostIds = feedCollections.map((collection) => collection.compositeId);
+  const feedCollectionNames = feedCollections.map(
+    (collection) => (JSON.parse(collection.details.content) as { name: string }).name,
+  );
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
   return {
     postsByCompositeId,
@@ -87,7 +95,7 @@ const fixtures = vi.hoisted(async () => {
     orderedCompositeIds,
     articleFeedPostIds,
     collectionFeedPostIds,
-    feedCollectionName: feedCollectionContent.name,
+    feedCollectionNames,
     imageOnlyPostIds: imagePostsModule.VRT_IMAGE_ONLY_POST_IDS,
     imageOnlyImageUrls: imagePostsModule.VRT_IMAGE_ONLY_IMAGE_URLS,
     imageOnlyVisualRows: imagePostsModule.VRT_IMAGE_ONLY_VISUAL_ROWS,
@@ -236,11 +244,15 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
   const results = {
     default: { ...shared, postIds: f.orderedCompositeIds },
     article: { ...shared, postIds: f.articleFeedPostIds },
-    collection: { ...shared, postIds: f.collectionFeedPostIds },
     imageOnly: { ...shared, postIds: f.imageOnlyPostIds },
   };
+  // The Collections content filter resolves (through the real home store and
+  // `useStreamIdFromFilters`) to the collection-kind timeline stream.
+  const collectionsResult = { ...shared, postIds: f.collectionFeedPostIds };
+  const { PostStreamTypes } = await import('@/models/stream/post/postStream.types');
   return {
-    useStreamPagination: () => results[feedState.mode],
+    useStreamPagination: ({ streamId }: { streamId: string }) =>
+      streamId === PostStreamTypes.TIMELINE_ALL_COLLECTION ? collectionsResult : results[feedState.mode],
   };
 });
 
@@ -950,18 +962,22 @@ describe('Mobile keyboard navigation visibility', () => {
   });
 });
 
-// The home store mock is a shared snapshot, so a layout swap must be undone
+// The home store mock is a shared snapshot, so a filter swap must be undone
 // after the screenshot or it leaks into every later Home test in this file.
-async function withHomeLayout(layout: LayoutType, run: () => Promise<void>) {
+async function withHomeFilters(filters: Partial<HomeState>, run: () => Promise<void>) {
   const { useHomeStore } = await import('@/stores/home/home.store');
   const state = useHomeStore.getState();
-  const previousLayout = state.layout;
-  state.layout = layout;
+  const previous = { ...state };
+  Object.assign(state, filters);
   try {
     await run();
   } finally {
-    state.layout = previousLayout;
+    Object.assign(state, previous);
   }
+}
+
+function withHomeLayout(layout: LayoutType, run: () => Promise<void>) {
+  return withHomeFilters({ layout }, run);
 }
 
 describe('Cards layout — home', () => {
@@ -1043,29 +1059,29 @@ describe('Visual layout — home', () => {
   });
 });
 
-describe('Home — collection in feed — visual regression', () => {
-  beforeEach(() => {
-    feedState.mode = 'collection';
-  });
-
-  async function renderHomeWithCollection(viewport: { width: number; height: number }) {
+// Collections never mix with other kinds under the "All" content filter; they
+// only appear when the Collections content filter is on, as a feed of
+// `CollectionCard`s. The filter is applied through the real home store so the
+// stream id (and the highlighted Content item) come from the app's own logic.
+describe('Home — collections content filter — visual regression', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders a feed of collections on %s', async (name, viewport) => {
     const f = await fixtures;
-    // The collection cover is a CSS `background-image`; `renderForVRT` only awaits `<img>`.
-    await preloadImages(f.collectionCoverUrls);
-    await renderForVRT(<HomeWithLayout />, { viewport });
-    const card = page.getByRole('link', { name: f.feedCollectionName, exact: true });
-    await expect.element(card).toBeVisible();
-    expect(card.element().getAttribute('data-cy')).toBe('collection-card');
-    expect(card.element().getAttribute('data-presentation')).toBe('landing');
-  }
-
-  it('renders a collection card at desktop viewport', async () => {
-    await renderHomeWithCollection(VRT_VIEWPORT_DESKTOP);
-    await matchVrtFrameScreenshot('home-feed-collection-desktop');
-  });
-
-  it('renders a collection card at mobile viewport', async () => {
-    await renderHomeWithCollection(VRT_VIEWPORT_MOBILE);
-    await matchVrtFrameScreenshot('home-feed-collection-mobile');
+    feedState.mode = 'default';
+    await withHomeFilters({ content: CONTENT.COLLECTIONS }, async () => {
+      // Collection covers are CSS `background-image`s; `renderForVRT` only awaits `<img>`.
+      await preloadImages(f.collectionCoverUrls);
+      await renderForVRT(<HomeWithLayout />, { viewport });
+      const firstCard = page.getByRole('link', { name: f.feedCollectionNames[0], exact: true });
+      await expect.element(firstCard).toBeVisible();
+      expect(firstCard.element().getAttribute('data-cy')).toBe('collection-card');
+      expect(firstCard.element().getAttribute('data-presentation')).toBe('landing');
+      const feedItems = Array.from(document.querySelectorAll('[data-cy="post-card"]'));
+      expect(feedItems.length).toBe(f.collectionFeedPostIds.length);
+      expect(feedItems.every((item) => item.querySelector('[data-cy="collection-card"]'))).toBe(true);
+      await matchVrtFrameScreenshot(`home-collections-filter-${name}`);
+    });
   });
 });
