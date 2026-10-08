@@ -454,7 +454,9 @@ export default function InitializedMDXEditor({
         contentEditableClassName="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
         plugins={[
           toolbarPlugin({
-            toolbarClassName: 'bg-background! border rounded-md! flex-wrap',
+            // Tight gap and padding: the whole row has to fit the feed composer's width (globals.css
+            // trims MDXEditor's own margins for the same reason)
+            toolbarClassName: 'bg-background! border rounded-md! flex-wrap gap-0.5! px-1!',
             toolbarContents: () => (
               <>
                 <UndoRedo />
