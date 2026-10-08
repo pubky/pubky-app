@@ -104,14 +104,23 @@ export function LockedPostContent({
     onResumed: showUnlockedContent,
   });
 
-  const { stage, isStalled, handshakePubky, connectionIssue, isSubmitting, retry, recheck, viewContent } =
-    usePayToUnlock({
-      open: isPayOpen,
-      lockUrl: lock ?? '',
-      lockFile,
-      onPurchased: markPurchased,
-      onCompleted: showUnlockedContent,
-    });
+  const {
+    stage,
+    isStalled,
+    handshakePubky,
+    connectionIssue,
+    walletSetupNeeded,
+    isSubmitting,
+    retry,
+    recheck,
+    viewContent,
+  } = usePayToUnlock({
+    open: isPayOpen,
+    lockUrl: lock ?? '',
+    lockFile,
+    onPurchased: markPurchased,
+    onCompleted: showUnlockedContent,
+  });
 
   if (!lockContent) return null;
 
@@ -186,6 +195,7 @@ export function LockedPostContent({
           isStalled={isStalled}
           handshakePubky={handshakePubky}
           connectionIssue={connectionIssue}
+          walletSetupNeeded={walletSetupNeeded}
           isSubmitting={isSubmitting}
           onRetry={retry}
           onRecheck={recheck}
