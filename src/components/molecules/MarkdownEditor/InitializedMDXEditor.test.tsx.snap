@@ -10,7 +10,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
   >
     <div
       aria-label="Markdown editing toolbar"
-      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
       data-override-defaults="true"
       data-testid="markdown-toolbar"
       role="toolbar"
@@ -230,7 +230,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
     >
       <div
         aria-label="Markdown editing toolbar"
-        class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+        class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
         data-override-defaults="true"
         data-testid="markdown-toolbar"
         role="toolbar"
@@ -484,7 +484,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
   >
     <div
       aria-label="Markdown editing toolbar"
-      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
       data-override-defaults="true"
       data-testid="markdown-toolbar"
       role="toolbar"
@@ -703,7 +703,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
   >
     <div
       aria-label="Markdown editing toolbar"
-      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
       data-override-defaults="true"
       data-testid="markdown-toolbar"
       role="toolbar"
@@ -922,7 +922,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
   >
     <div
       aria-label="Markdown editing toolbar"
-      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
       data-override-defaults="true"
       data-testid="markdown-toolbar"
       role="toolbar"
@@ -1150,7 +1150,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
   >
     <div
       aria-label="Markdown editing toolbar"
-      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
       data-override-defaults="true"
       data-testid="markdown-toolbar"
       role="toolbar"
@@ -1370,7 +1370,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
     >
       <div
         aria-label="Markdown editing toolbar"
-        class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+        class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
         data-override-defaults="true"
         data-testid="markdown-toolbar"
         role="toolbar"
@@ -1624,7 +1624,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
   >
     <div
       aria-label="Markdown editing toolbar"
-      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+      class="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
       data-override-defaults="true"
       data-testid="markdown-toolbar"
       role="toolbar"

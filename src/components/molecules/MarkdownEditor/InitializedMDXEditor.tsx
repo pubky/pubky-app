@@ -357,9 +357,10 @@ export default function InitializedMDXEditor({
     <Container className="gap-4">
       {/* Markdown mode: custom toolbar + textarea — hidden via CSS in rich text mode */}
       <Container overrideDefaults className={cn(mode === 'richtext' && 'hidden')}>
+        {/* Same gap and padding as the rich-text toolbar, so the mode toggle keeps the buttons in step */}
         <Container
           overrideDefaults
-          className="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
+          className="flex min-h-10.75 cursor-auto flex-wrap items-center gap-0.5 rounded-md border bg-background px-1 py-1.5"
           role="toolbar"
           aria-label={'Markdown editing toolbar'}
           data-testid="markdown-toolbar"
