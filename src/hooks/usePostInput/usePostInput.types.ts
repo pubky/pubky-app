@@ -88,6 +88,8 @@ export interface UsePostInputReturn {
     getPreviewUrl: (src: string) => string | null;
     /** MIME type of a file URI from this session or the edited post's attachments; null otherwise */
     getMediaType: (uri: string) => string | null;
+    /** File name of a URI the composer knows: uploaded this session, or an attachment of the edited post */
+    getMediaName: (uri: string) => string | null;
   };
   /**
    * True while the file rows of an edited article's inline attachments are still resolving, for a

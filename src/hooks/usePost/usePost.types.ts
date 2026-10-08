@@ -129,6 +129,8 @@ export interface UsePostReturn {
     getPreviewUrl: (src: string) => string | null;
     /** MIME type of a file uploaded this session; null for any other URI */
     getMediaType: (uri: string) => string | null;
+    /** File name of a URI uploaded this session; null for anything else. */
+    getMediaName: (uri: string) => string | null;
   };
   /** Inline media uploads currently in flight; publishing is blocked while > 0. */
   uploadingCount: number;

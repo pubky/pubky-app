@@ -522,7 +522,11 @@ export default function InitializedMDXEditor({
                 }),
                 // Video, audio and PDF nodes: claims the image-syntax nodes whose
                 // file type the composer knows is not an image (see the plugin)
-                inlineMediaPlugin({ getMediaType: inlineMedia.getMediaType, getPreviewUrl: resolvePreview }),
+                inlineMediaPlugin({
+                  getMediaType: inlineMedia.getMediaType,
+                  getMediaName: inlineMedia.getMediaName,
+                  getPreviewUrl: resolvePreview,
+                }),
               ]
             : []),
         ]}

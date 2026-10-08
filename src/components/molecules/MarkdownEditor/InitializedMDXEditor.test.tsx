@@ -1068,7 +1068,12 @@ describe('Inline images', () => {
   const imageFile = (name = 'pic.png') => new File(['x'], name, { type: 'image/png' });
 
   const setupInlineImages = (upload = vi.fn().mockResolvedValue(FILE_URI)) => {
-    const inlineMedia = { upload, getPreviewUrl: vi.fn(() => null), getMediaType: vi.fn(() => null) };
+    const inlineMedia = {
+      upload,
+      getPreviewUrl: vi.fn(() => null),
+      getMediaType: vi.fn(() => null),
+      getMediaName: vi.fn(() => null),
+    };
     const utils = render(<InitializedMDXEditor editorRef={null} markdown="" inlineMedia={inlineMedia} />);
     return { ...utils, upload };
   };
@@ -1091,10 +1096,17 @@ describe('Inline images', () => {
   it('registers the inline media plugin with the type resolver and the shared preview chain', () => {
     const upload = vi.fn().mockResolvedValue(FILE_URI);
     const getMediaType = vi.fn(() => 'video/mp4');
+    const getMediaName = vi.fn(() => 'clip.mp4');
     const getPreviewUrl = vi.fn((uri: string) => (uri === FILE_URI ? 'blob:session' : null));
-    render(<InitializedMDXEditor editorRef={null} markdown="" inlineMedia={{ upload, getPreviewUrl, getMediaType }} />);
+    render(
+      <InitializedMDXEditor
+        editorRef={null}
+        markdown=""
+        inlineMedia={{ upload, getPreviewUrl, getMediaType, getMediaName }}
+      />,
+    );
 
-    expect(inlineMediaPlugin).toHaveBeenCalledWith({ getMediaType, getPreviewUrl: expect.any(Function) });
+    expect(inlineMediaPlugin).toHaveBeenCalledWith({ getMediaType, getMediaName, getPreviewUrl: expect.any(Function) });
     const { getPreviewUrl: resolvePreview } = vi.mocked(inlineMediaPlugin).mock.calls[0][0]!;
     // Session object URL first, then the CDN for any other file URI, then an external URL as is
     expect(resolvePreview(FILE_URI)).toBe('blob:session');
@@ -1153,6 +1165,7 @@ describe('Inline images', () => {
       upload: vi.fn(),
       getPreviewUrl: vi.fn((): string | null => 'blob:session-preview'),
       getMediaType: vi.fn(() => null),
+      getMediaName: vi.fn(() => null),
     };
     render(<InitializedMDXEditor editorRef={null} markdown="" inlineMedia={inlineMedia} />);
 
@@ -1301,6 +1314,7 @@ describe('Rich-text uploading indicator', () => {
     upload: vi.fn(),
     getPreviewUrl: vi.fn(() => null),
     getMediaType: vi.fn(() => null),
+    getMediaName: vi.fn(() => null),
     uploadingCount,
   });
 
@@ -1325,7 +1339,7 @@ describe('Rich-text uploading indicator', () => {
       <InitializedMDXEditor
         editorRef={null}
         markdown=""
-        inlineMedia={{ upload: vi.fn(), getPreviewUrl: () => null, getMediaType: () => null }}
+        inlineMedia={{ upload: vi.fn(), getPreviewUrl: () => null, getMediaType: () => null, getMediaName: () => null }}
       />,
     );
     expect(screen.queryByTestId('richtext-uploading-indicator')).not.toBeInTheDocument();
@@ -1366,6 +1380,7 @@ describe('Upload-in-flight guards', () => {
     upload: vi.fn(),
     getPreviewUrl: vi.fn(() => null),
     getMediaType: vi.fn(() => null),
+    getMediaName: vi.fn(() => null),
     uploadingCount,
   });
 
@@ -1389,7 +1404,12 @@ describe('Upload-in-flight guards', () => {
       <InitializedMDXEditor
         editorRef={null}
         markdown=""
-        inlineMedia={{ upload, getPreviewUrl: vi.fn(() => null), getMediaType: vi.fn(() => null) }}
+        inlineMedia={{
+          upload,
+          getPreviewUrl: vi.fn(() => null),
+          getMediaType: vi.fn(() => null),
+          getMediaName: vi.fn(() => null),
+        }}
       />,
     );
 
@@ -1444,7 +1464,12 @@ describe('Unsupported image types in markdown mode', () => {
       <InitializedMDXEditor
         editorRef={null}
         markdown=""
-        inlineMedia={{ upload, getPreviewUrl: vi.fn(() => null), getMediaType: vi.fn(() => null) }}
+        inlineMedia={{
+          upload,
+          getPreviewUrl: vi.fn(() => null),
+          getMediaType: vi.fn(() => null),
+          getMediaName: vi.fn(() => null),
+        }}
       />,
     );
 

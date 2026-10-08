@@ -203,6 +203,8 @@ export function usePostInput({
       inlineMediaSession.getMediaType(uri) ??
       editInlineFiles.find((file) => file.uri === uri.trim())?.content_type ??
       null,
+    getMediaName: (uri: string) =>
+      inlineMediaSession.getMediaName(uri) ?? editInlineFiles.find((file) => file.uri === uri.trim())?.name ?? null,
   };
 
   // Seed and resolve the post's current attachments for the edit composer

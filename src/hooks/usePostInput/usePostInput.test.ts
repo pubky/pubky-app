@@ -72,8 +72,9 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 
 const mockInlineImageUpload = vi.fn();
 const mockGetMediaType = vi.fn((): string | null => null);
+const mockGetMediaName = vi.fn((): string | null => null);
 const mockUseAttachmentsMetadata = vi.fn((_params: { fileUris: readonly string[] }) => ({
-  files: [] as { uri: string; content_type: string }[],
+  files: [] as { uri: string; content_type: string; name?: string }[],
   isLoading: false,
 }));
 
@@ -99,7 +100,12 @@ vi.mock('@/hooks/usePost/usePost', () => ({
     repost: mockRepost,
     edit: mockEdit,
     isSubmitting: mockIsSubmitting,
-    inlineMedia: { upload: mockInlineImageUpload, getPreviewUrl: vi.fn(() => null), getMediaType: mockGetMediaType },
+    inlineMedia: {
+      upload: mockInlineImageUpload,
+      getPreviewUrl: vi.fn(() => null),
+      getMediaType: mockGetMediaType,
+      getMediaName: mockGetMediaName,
+    },
     uploadingCount: 0,
     serializeArticleForLock: vi.fn(() => null),
   })),
@@ -3556,6 +3562,7 @@ describe('usePostInput', () => {
     beforeEach(() => {
       mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
       mockGetMediaType.mockReturnValue(null);
+      mockGetMediaName.mockReturnValue(null);
     });
 
     it('types the inline slots of an edited article from their file rows, not the cover', () => {
@@ -3571,6 +3578,20 @@ describe('usePostInput', () => {
       expect(result.current.inlineMedia.getMediaType(` ${CLIP} `)).toBe('video/mp4');
       expect(result.current.inlineMedia.getMediaType(COVER)).toBeNull();
       expect(result.current.isEditInlineMediaLoading).toBe(false);
+    });
+
+    it('names an inline slot from its row, with a same-session upload answering first', () => {
+      mockUseAttachmentsMetadata.mockReturnValue({
+        files: [{ uri: CLIP, content_type: 'video/mp4', name: 'clip.mp4' }],
+        isLoading: false,
+      });
+
+      const { result } = editArticle();
+      expect(result.current.inlineMedia.getMediaName(CLIP)).toBe('clip.mp4');
+      expect(result.current.inlineMedia.getMediaName(COVER)).toBeNull();
+
+      mockGetMediaName.mockReturnValue('fresh.mp4');
+      expect(result.current.inlineMedia.getMediaName(CLIP)).toBe('fresh.mp4');
     });
 
     it('lets a same-session upload answer before the edited post rows', () => {

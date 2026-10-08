@@ -30,6 +30,10 @@ const mediaTypes: Record<string, string> = {
   [AUDIO_URI]: 'audio/mpeg',
   [IMAGE_URI]: 'image/png',
 };
+const mediaNames: Record<string, string> = {
+  [VIDEO_URI]: 'clip.mp4',
+  [AUDIO_URI]: 'song.mp3',
+};
 
 type UploadMock = ReturnType<typeof vi.fn<(file: File) => Promise<string>>>;
 
@@ -54,6 +58,7 @@ const mountEditor = (
         }),
         inlineMediaPlugin({
           getMediaType: options?.getMediaType ?? ((uri) => mediaTypes[uri] ?? null),
+          getMediaName: (uri) => mediaNames[uri] ?? null,
           getPreviewUrl: (uri) => (uri.startsWith('pubky://') ? `cdn://${uri}/main` : null),
         }),
       ]}
@@ -107,6 +112,18 @@ describe('inlineMediaPlugin', () => {
       expect(document.querySelectorAll('[data-lexical-decorator="true"]')).toHaveLength(2);
     });
     expect(getMarkdown(ref)).toBe(`![Pic](${IMAGE_URI})\n\n![Unknown](${fileUri('mystery')})`);
+  });
+
+  it('labels a node with its file name, an external link with its last path segment', async () => {
+    const NEXT_URI = fileUri('next');
+    mountEditor(`![Clip](${VIDEO_URI})\n\n![](https://example.com/videos/Big%20Clip.mp4)\n\n![](${NEXT_URI})\n`, {
+      getMediaType: (uri) => (uri === NEXT_URI ? 'audio/wav' : (mediaTypes[uri] ?? null)),
+    });
+
+    const names = await screen.findAllByTestId('inline-media-name');
+    expect(names.map((name) => name.textContent)).toEqual(['clip.mp4', 'Big Clip.mp4', 'Audio']);
+    // The description still shows, next to the name
+    expect(screen.getAllByTestId('inline-media-header')[0]).toHaveTextContent('Clip');
   });
 
   it('types an external https URL by its extension', async () => {
@@ -363,7 +380,7 @@ describe('inlineMediaPlugin', () => {
     await screen.findByTestId('inline-media-node');
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Edit media' }));
     });
     const altInput = await screen.findByTestId('video-dialog-alt-input');
     expect(altInput).toHaveValue('Clip');

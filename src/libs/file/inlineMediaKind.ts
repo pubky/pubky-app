@@ -30,6 +30,25 @@ export function getInlineMediaKindFromMime(mime: string | null | undefined): Inl
   return null;
 }
 
+/** The file name an external `https:` URL ends in (its last path segment, decoded), or null. */
+export function fileNameFromUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'https:') return null;
+  const lastSegment = parsed.pathname.split('/').pop() ?? '';
+  if (!lastSegment) return null;
+  try {
+    return decodeURIComponent(lastSegment);
+  } catch {
+    return lastSegment;
+  }
+}
+
 /**
  * Classifies an external `https:` URL by the file extension of its pathname. Only direct file
  * links qualify (no YouTube/Vimeo page URLs); query strings and fragments never count, and an

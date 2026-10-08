@@ -42,6 +42,8 @@ export interface UseInlineMediaUploadReturn {
   getSessionFile: (uri: string) => File | null;
   /** MIME type of a session-uploaded file URI (the editor routes non-images to a media node); null outside the session */
   getMediaType: (uri: string) => string | null;
+  /** The picked file's name for a URI uploaded this session; null for anything else. */
+  getMediaName: (uri: string) => string | null;
   /** Adds an externally uploaded file (e.g. a replacement cover) to the session for cleanup tracking */
   registerSessionUpload: (uri: string, file: File) => void;
   /** Number of uploads currently in flight; publish must be blocked while > 0 */

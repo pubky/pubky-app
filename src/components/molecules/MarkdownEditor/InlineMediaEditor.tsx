@@ -18,15 +18,15 @@ import {
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
 } from 'lexical';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Settings, Trash2 } from 'lucide-react';
 import { Audio } from '@/atoms/Audio/Audio';
 import { Button } from '@/atoms/Button/Button';
 import { Video } from '@/atoms/Video/Video';
-import type { InlineNonImageMediaKind } from '@/libs/file/inlineMediaKind';
+import { fileNameFromUrl, type InlineNonImageMediaKind } from '@/libs/file/inlineMediaKind';
 import { cn } from '@/libs/utils/utils';
 import { INLINE_MEDIA_KIND_UI } from './InitializedMDXEditor.constants';
 import { $isInlineMediaNode } from './InlineMediaNode';
-import { inlineMediaPreviewResolver$, openEditInlineMediaDialog$ } from './inlineMediaPlugin';
+import { inlineMediaNameResolver$, inlineMediaPreviewResolver$, openEditInlineMediaDialog$ } from './inlineMediaPlugin';
 
 interface InlineMediaEditorProps {
   src: string;
@@ -37,16 +37,20 @@ interface InlineMediaEditorProps {
 }
 
 /**
- * The in-editor rendering of an `InlineMediaNode`: a header row (kind, description, and the
- * edit-description and delete buttons) above a native player; a PDF is the header alone. The
- * header is where the node is selected from: a click on the player itself is playback, since the
- * native controls cover the whole element, so unlike an image the node needs its own click target.
- * Delete and keyboard handling mirror MDXEditor's `ImageEditor`.
+ * The in-editor rendering of an `InlineMediaNode`: a header row (kind icon, file name, description,
+ * and the delete and edit buttons in the order MDXEditor's image toolbar uses) above a native
+ * player; a PDF is the header alone. The header is where the node is selected from: a click on the
+ * player itself is playback, since the native controls cover the whole element, so unlike an image
+ * the node needs its own click target. Delete and keyboard handling mirror MDXEditor's `ImageEditor`.
  */
 export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: InlineMediaEditorProps) {
   const [editor] = useLexicalComposerContext();
   const [isSelected, setSelected, clearSelection] = useLexicalNodeSelection(nodeKey);
-  const [readOnly, previewResolver] = useCellValues(readOnly$, inlineMediaPreviewResolver$);
+  const [readOnly, previewResolver, nameResolver] = useCellValues(
+    readOnly$,
+    inlineMediaPreviewResolver$,
+    inlineMediaNameResolver$,
+  );
   const openEditDialog = usePublisher(openEditInlineMediaDialog$);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLSpanElement>(null);
@@ -58,6 +62,8 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
   // An external source gets no request before the author presses play, as in the reader: media
   // elements carry no referrer policy, and the node mounts on every open and mode switch
   const preload = src.startsWith('pubky://') ? 'metadata' : 'none';
+  // The file's own name tells two PDFs apart; an external link is named by its last path segment
+  const name = nameResolver(src) ?? fileNameFromUrl(src);
 
   const removeNode = () => {
     const node = $getNodeByKey(nodeKey);
@@ -142,30 +148,33 @@ export function InlineMediaEditor({ src, altText, title, mediaKind, nodeKey }: I
       >
         <span className="flex min-w-0 items-center gap-x-2">
           <Icon aria-hidden="true" className="size-4 shrink-0" />
-          <span className="min-w-0 truncate">{altText || label}</span>
+          <span className="min-w-0 truncate text-foreground" data-testid="inline-media-name">
+            {name ?? label}
+          </span>
+          {altText && <span className="min-w-0 truncate">{altText}</span>}
         </span>
         {!readOnly && (
           <span ref={toolbarRef} className="flex shrink-0 gap-1" data-testid="inline-media-toolbar">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7 rounded-md shadow-none"
+              aria-label="Delete media"
+              onClick={() => editor.update(removeNode)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
             <Button
               ref={editButtonRef}
               type="button"
               variant="ghost"
               size="icon"
-              className="size-7 rounded-full"
-              aria-label="Edit description"
+              className="size-7 rounded-md shadow-none"
+              aria-label="Edit media"
               onClick={() => openEditDialog({ mediaKind, nodeKey, initialValues: { src, altText, title } })}
             >
-              <Pencil className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7 rounded-full"
-              aria-label="Delete media"
-              onClick={() => editor.update(removeNode)}
-            >
-              <Trash2 className="size-4" />
+              <Settings className="size-4" />
             </Button>
           </span>
         )}

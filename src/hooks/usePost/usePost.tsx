@@ -608,6 +608,7 @@ export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePo
       upload: inlineMediaSession.uploadInlineMedia,
       getPreviewUrl: inlineMediaSession.getPreviewUrl,
       getMediaType: inlineMediaSession.getMediaType,
+      getMediaName: inlineMediaSession.getMediaName,
     },
     uploadingCount: inlineMediaSession.uploadingCount,
     serializeArticleForLock,

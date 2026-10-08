@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  fileNameFromUrl,
   getInlineMediaKindFromMime,
   inferMediaKindFromUrl,
   INLINE_MEDIA_KINDS,
@@ -33,6 +34,21 @@ describe('getInlineMediaKindFromMime', () => {
 
   it('lists every kind once', () => {
     expect(INLINE_MEDIA_KINDS).toEqual(['image', 'video', 'audio', 'pdf']);
+  });
+});
+
+describe('fileNameFromUrl', () => {
+  it('returns the decoded last path segment of an https URL, ignoring query and hash', () => {
+    expect(fileNameFromUrl('https://example.com/videos/Big%20Clip.mp4?x=1#t')).toBe('Big Clip.mp4');
+    expect(fileNameFromUrl(' https://example.com/paper.pdf ')).toBe('paper.pdf');
+  });
+
+  it('returns null for a URL with no file segment, another scheme, or no URL', () => {
+    expect(fileNameFromUrl('https://example.com/')).toBeNull();
+    expect(fileNameFromUrl('http://example.com/clip.mp4')).toBeNull();
+    expect(fileNameFromUrl('pubky://x/pub/pubky.app/files/id')).toBeNull();
+    expect(fileNameFromUrl('not a url')).toBeNull();
+    expect(fileNameFromUrl(undefined)).toBeNull();
   });
 });
 

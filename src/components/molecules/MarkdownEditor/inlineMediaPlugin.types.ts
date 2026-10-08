@@ -15,6 +15,8 @@ export type InlineMediaDialogState =
 export interface InlineMediaPluginParams {
   /** MIME type of a file URI known to the composer session or the edited post; null for anything else. */
   getMediaType: (uri: string) => string | null;
+  /** File name of such a URI, shown on the node; null for anything else. */
+  getMediaName: (uri: string) => string | null;
   /** A URL a browser can load for a file URI (the session's object URL, else the CDN); null for anything else. */
   getPreviewUrl: (uri: string) => string | null;
 }

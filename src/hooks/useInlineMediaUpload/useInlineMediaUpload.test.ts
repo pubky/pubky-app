@@ -98,7 +98,7 @@ describe('useInlineMediaUpload', () => {
       ['audio/mpeg', 'song.mp3'],
       ['audio/wav', 'song.wav'],
       ['application/pdf', 'paper.pdf'],
-    ])('uploads %s like an image and records its type for the editor', async (type, name) => {
+    ])('uploads %s like an image and records its type and name for the editor', async (type, name) => {
       vi.mocked(FileController.commitCreate).mockResolvedValue(fileUri('m'));
       const { result } = setup();
 
@@ -110,6 +110,8 @@ describe('useInlineMediaUpload', () => {
       expect(uri).toBe(fileUri('m'));
       expect(result.current.getMediaType(fileUri('m'))).toBe(type);
       expect(result.current.getMediaType(fileUri('elsewhere'))).toBeNull();
+      expect(result.current.getMediaName(fileUri('m'))).toBe(name);
+      expect(result.current.getMediaName(fileUri('elsewhere'))).toBeNull();
       expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 

@@ -231,6 +231,8 @@ export function useInlineMediaUpload({
 
   const getMediaType = (uri: string): string | null => getSessionFile(uri)?.type ?? null;
 
+  const getMediaName = (uri: string): string | null => getSessionFile(uri)?.name ?? null;
+
   const registerSessionUpload = (uri: string, file: File) => {
     getSession().set(uri, { objectUrl: URL.createObjectURL(file), file });
   };
@@ -310,6 +312,7 @@ export function useInlineMediaUpload({
     getPreviewUrl,
     getSessionFile,
     getMediaType,
+    getMediaName,
     registerSessionUpload,
     uploadingCount,
     finalizeSession,

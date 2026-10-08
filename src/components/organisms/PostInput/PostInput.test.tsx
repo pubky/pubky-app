@@ -533,7 +533,12 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handleDragOver: vi.fn(),
     handleDrop: vi.fn(),
     handlePaste: vi.fn(),
-    inlineMedia: { upload: vi.fn(), getPreviewUrl: vi.fn(() => null), getMediaType: vi.fn(() => null) },
+    inlineMedia: {
+      upload: vi.fn(),
+      getPreviewUrl: vi.fn(() => null),
+      getMediaType: vi.fn(() => null),
+      getMediaName: vi.fn(() => null),
+    },
     isEditInlineMediaLoading: false,
     uploadingCount: 0,
     serializeArticleForLock: vi.fn(() => null),

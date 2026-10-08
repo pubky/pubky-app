@@ -9,5 +9,7 @@ export interface MarkdownEditorInlineMedia {
   getPreviewUrl: (src: string) => string | null;
   /** MIME type of a file URI the composer knows (session upload or edited post attachment); null otherwise */
   getMediaType: (uri: string) => string | null;
+  /** File name of a URI the composer knows; the in-editor node is labelled with it. */
+  getMediaName: (uri: string) => string | null;
   uploadingCount?: number;
 }

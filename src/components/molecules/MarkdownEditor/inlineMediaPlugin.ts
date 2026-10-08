@@ -68,6 +68,7 @@ const inlineMediaParams$ = Cell<InlineMediaPluginParams | null>(null);
  */
 export const inlineMediaTypeResolver$ = Cell<(uri: string) => string | null>(() => null);
 export const inlineMediaPreviewResolver$ = Cell<(uri: string) => string | null>(() => null);
+export const inlineMediaNameResolver$ = Cell<(uri: string) => string | null>(() => null);
 export const inlineMediaDialogState$ = Cell<InlineMediaDialogState>({ type: 'inactive' });
 
 export const openNewInlineMediaDialog$ = Signal<InlineNonImageMediaKind>((r) => {
@@ -240,6 +241,7 @@ export const inlineMediaPlugin = realmPlugin<InlineMediaPluginParams>({
       [inlineMediaParams$]: params ?? null,
       [inlineMediaTypeResolver$]: (uri: string) => realm.getValue(inlineMediaParams$)?.getMediaType(uri) ?? null,
       [inlineMediaPreviewResolver$]: (uri: string) => realm.getValue(inlineMediaParams$)?.getPreviewUrl(uri) ?? null,
+      [inlineMediaNameResolver$]: (uri: string) => realm.getValue(inlineMediaParams$)?.getMediaName(uri) ?? null,
     });
 
     realm.pub(createActiveEditorSubscription$, (editor) =>
