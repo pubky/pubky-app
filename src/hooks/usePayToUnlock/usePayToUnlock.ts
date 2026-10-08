@@ -26,6 +26,12 @@ const NO_WALLET_TOAST = 'Bitkit is not set up yet. Finish the steps, then try ag
 const FINISH_FAILED_TOAST =
   'Your payment went through, but the content could not be opened. Nothing is lost — try again.';
 
+// A time the browser cannot parse leaves the plain 3 minutes; a NaN delay would park at once.
+const stallNotBeforeFor = (admissionDeadlineAt: string | null): number => {
+  const deadline = admissionDeadlineAt ? Date.parse(admissionDeadlineAt) : NaN;
+  return Number.isNaN(deadline) ? 0 : deadline + STALL_AFTER_MS;
+};
+
 /**
  * State machine behind the Pay to Unlock modal.
  *
@@ -129,7 +135,15 @@ export function usePayToUnlock({
    * The wait: two loops on their own timers, plus the shared park. Splitting them is the point —
    * a link read that hangs must not hold up the read that decides whether the reader has paid.
    */
-  const startPolling = (gen: number, bundleId: string, watchConnection: boolean, lookupNow = false) => {
+  const startPolling = (
+    gen: number,
+    bundleId: string,
+    watchConnection: boolean,
+    {
+      lookupNow = false,
+      admissionDeadlineAt = null,
+    }: { lookupNow?: boolean; admissionDeadlineAt?: string | null } = {},
+  ) => {
     if (!lockFile) return;
     waitingBundleId.current = bundleId;
     setIsStalled(false);
@@ -137,8 +151,9 @@ export function usePayToUnlock({
     let active = true;
     let stallTimer: number | null = null;
     // The reader cannot pay before the invoice exists, so the stall window does not start before the
-    // server's deadline for creating it. 0 once there is no such deadline.
-    let stallNotBefore = 0;
+    // server's deadline for creating it. 0 once there is no such deadline. Only the reopen path seeds
+    // it from its own read; otherwise lookups that all fail would park 3 minutes in, long before it.
+    let stallNotBefore = stallNotBeforeFor(admissionDeadlineAt);
     // Bumped when the wait parks: an answer from before the park is no longer ours to apply.
     let epoch = 0;
 
@@ -186,10 +201,8 @@ export function usePayToUnlock({
       if (!task) return true;
       setWalletSetupNeeded(task.walletSetupNeeded);
       // Re-armed when the deadline appears, and again when it clears: the invoice now exists, so the
-      // reader gets a full window to pay. A time the browser cannot parse leaves the plain 3 minutes;
-      // a NaN delay would park at once.
-      const deadline = task.admissionDeadlineAt ? Date.parse(task.admissionDeadlineAt) : NaN;
-      const notBefore = Number.isNaN(deadline) ? 0 : deadline + STALL_AFTER_MS;
+      // reader gets a full window to pay.
+      const notBefore = stallNotBeforeFor(task.admissionDeadlineAt);
       if (notBefore !== stallNotBefore) {
         stallNotBefore = notBefore;
         armStallTimer();
@@ -340,7 +353,9 @@ export function usePayToUnlock({
           // own lookup now, and re-submitting would only re-confirm what the lookup just said.
           if (task) {
             setWalletSetupNeeded(task.walletSetupNeeded);
-            if (applyStatus(gen, stored, task.status)) startPolling(gen, stored, true);
+            if (applyStatus(gen, stored, task.status)) {
+              startPolling(gen, stored, true, { admissionDeadlineAt: task.admissionDeadlineAt });
+            }
             return;
           }
         } else {
@@ -386,7 +401,7 @@ export function usePayToUnlock({
     setStage('waiting');
     // Unknown state included: only a settled link (or an operator block) ends the watch.
     const watchConnection = paymentStillRunning && connectionState !== 'connected' && connectionState !== 'blocked';
-    startPolling(generation.current, bundleId, watchConnection, true);
+    startPolling(generation.current, bundleId, watchConnection, { lookupNow: true });
   };
 
   const viewContent = () => {

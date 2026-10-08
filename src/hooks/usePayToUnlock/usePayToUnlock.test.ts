@@ -940,6 +940,24 @@ describe('usePayToUnlock (waiting)', () => {
     expect(result.current.isStalled).toBe(true);
   });
 
+  // Every lookup after the open-time one hangs, so only the deadline read on opening can hold the wait.
+  it('keeps the invoice deadline read on opening', async () => {
+    const deadline = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce(task('pending', { admissionDeadlineAt: deadline }))
+      .mockImplementation(hangForever);
+
+    const { result } = renderPay();
+    await advance(0);
+    await advance(POLL_INTERVAL_MS);
+    expect(statusCalls()).toBe(2);
+    await advance(12 * 60 * 1000 - POLL_INTERVAL_MS);
+    expect(result.current.isStalled).toBe(false);
+
+    await advance(60 * 1000);
+    expect(result.current.isStalled).toBe(true);
+  });
+
   // An unparsable time would make the delay NaN and a past one would shorten it; either parks too early.
   it.each([
     ['cannot be parsed', 'not a time'],
