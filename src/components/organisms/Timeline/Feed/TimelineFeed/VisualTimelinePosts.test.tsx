@@ -1324,6 +1324,34 @@ describe('VisualTimelinePosts', () => {
       expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
     });
 
+    it('reports a failed load beside the trailing slot instead of the empty state', () => {
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: [],
+        tail: [],
+        tiles: [],
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hiddenPostCount: 0,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error="Network error"
+          hasMore={false}
+          loadMore={vi.fn()}
+          emptyState={<div data-testid="collection-empty">No content yet</div>}
+          trailingSlot={<button data-testid="trailing-cta">Add content</button>}
+        />,
+      );
+
+      expect(screen.getByText('Error: Network error')).toBeInTheDocument();
+      expect(screen.queryByTestId('collection-empty')).not.toBeInTheDocument();
+      expect(screen.getByTestId('trailing-cta')).toBeInTheDocument();
+    });
+
     it('renders the provided empty state without a trailing slot (visitor view, Grid/List parity)', () => {
       // Regression: emptyState must reach TimelineStateWrapper's emptyComponent
       // like Posts/CardsPosts do — a visitor whose visual collection feed
@@ -1517,6 +1545,33 @@ describe('VisualTimelinePosts - Snapshots', () => {
         loading={false}
         loadingMore={false}
         error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+        emptyState={<div data-testid="collection-empty">No content yet</div>}
+        trailingSlot={<button data-testid="trailing-cta">Add your first post</button>}
+        showEndMessage={false}
+      />,
+    );
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for a failed load beside the trailing CTA', () => {
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+      hiddenPostCount: 0,
+    });
+
+    const { container } = render(
+      <VisualTimelinePosts
+        postIds={[]}
+        loading={false}
+        loadingMore={false}
+        error="Network error"
         hasMore={false}
         loadMore={vi.fn()}
         emptyState={<div data-testid="collection-empty">No content yet</div>}

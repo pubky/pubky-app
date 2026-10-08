@@ -275,6 +275,25 @@ describe('TimelinePosts', () => {
       expect(screen.getByTestId('trailing-cta')).toBeInTheDocument();
     });
 
+    it('reports a failed load beside the trailing CTA instead of the custom empty state', () => {
+      render(
+        <TimelinePosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error="Network error"
+          hasMore={false}
+          loadMore={vi.fn()}
+          emptyState={<div data-testid="custom-empty">Collection is empty</div>}
+          trailingSlot={<button data-testid="trailing-cta">Add content</button>}
+        />,
+      );
+
+      expect(screen.getByText('Error: Network error')).toBeInTheDocument();
+      expect(screen.queryByTestId('custom-empty')).not.toBeInTheDocument();
+      expect(screen.getByTestId('trailing-cta')).toBeInTheDocument();
+    });
+
     it('should render end message when no more posts to load', async () => {
       const fewPosts = ['author1:post1', 'author2:post2']; // Less than NEXUS_POSTS_PER_PAGE
 
@@ -735,6 +754,23 @@ describe('TimelinePosts - Snapshots', () => {
   it('should match snapshot for loading state', () => {
     const { container } = render(
       <TimelinePosts postIds={[]} loading={true} loadingMore={false} error={null} hasMore={true} loadMore={vi.fn()} />,
+    );
+
+    expect(container).toMatchSnapshot();
+  });
+
+  it('should match snapshot for a failed load beside a trailing CTA', () => {
+    const { container } = render(
+      <TimelinePosts
+        postIds={[]}
+        loading={false}
+        loadingMore={false}
+        error="Network error"
+        hasMore={false}
+        loadMore={vi.fn()}
+        emptyState={<div>Collection is empty</div>}
+        trailingSlot={<button>Add content</button>}
+      />,
     );
 
     expect(container).toMatchSnapshot();

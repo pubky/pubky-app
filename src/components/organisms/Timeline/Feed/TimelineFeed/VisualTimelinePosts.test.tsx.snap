@@ -1,5 +1,46 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`VisualTimelinePosts - Snapshots > matches snapshot for a failed load beside the trailing CTA 1`] = `
+<div
+  data-cy="visual-feed-container"
+>
+  <div
+    class="mx-auto flex w-full flex-col gap-6"
+    style="max-width: 1200px;"
+  >
+    <div
+      class="flex items-center justify-center py-8"
+    >
+      <span
+        class="text-destructive"
+      >
+        Error: 
+        Network error
+      </span>
+    </div>
+    <div
+      class="grid grid-cols-12 gap-6"
+    >
+      <div
+        class="min-w-0"
+        data-grid-item="true"
+        style="grid-column: span 6 / span 6;"
+      >
+        <div
+          style="aspect-ratio: 588 / 384;"
+        >
+          <button
+            data-testid="trailing-cta"
+          >
+            Add your first post
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`VisualTimelinePosts - Snapshots > matches snapshot for a populated visual feed 1`] = `
 <div
   data-cy="visual-feed-container"

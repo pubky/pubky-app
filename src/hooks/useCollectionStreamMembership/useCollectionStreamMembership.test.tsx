@@ -3,10 +3,16 @@ import { postUriBuilder } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { PostController } from '@/controllers/post/post';
+import { TtlController } from '@/controllers/ttl/ttl';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import type { UseStreamPaginationResult } from '@/hooks/useStreamPagination/useStreamPagination.types';
+import { AppError } from '@/libs/error/error';
+import { DatabaseErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
+import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { buildCollectionItemsStreamId } from '@/models/stream/post/postStream.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
@@ -33,6 +39,7 @@ function useCollectionFeed({
   return useCollectionStreamMembership({
     enabled: true,
     streamId,
+    collectionId: undefined,
     membershipPostIds: members,
     pagination,
     hydrationCapped: false,
@@ -80,7 +87,12 @@ describe('useCollectionStreamMembership', () => {
     postStreamQueue.clear();
   });
 
-  const createPost = () => PostController.commitCreate({ authorId: AUTHOR, content: 'Saved from feed' });
+  // Post ids are timestamps: creates in the same millisecond would share an id.
+  const nextTimestamp = () => new Promise((resolve) => setTimeout(resolve, 2));
+  const createPost = async () => {
+    await nextTimestamp();
+    return PostController.commitCreate({ authorId: AUTHOR, content: 'Saved from feed' });
+  };
   const mount = (ids: string[] | undefined) =>
     renderHook(({ members, streamId }) => useCollectionFeed({ streamId, members }), {
       initialProps: { members: ids, streamId: STREAM },
@@ -100,7 +112,7 @@ describe('useCollectionStreamMembership', () => {
     expect(result.current.postIds).toEqual([postId]);
   });
 
-  it('shows a cached save while initial hydration is pending without starting a second page load', async () => {
+  it('shows a cached save while initial hydration is pending and reports hydration until it settles', async () => {
     const id = await createPost();
     const pending = Promise.withResolvers<Awaited<ReturnType<typeof NexusPostStreamService.fetch>>>();
     vi.mocked(NexusPostStreamService.fetch).mockReturnValueOnce(pending.promise);
@@ -108,12 +120,12 @@ describe('useCollectionStreamMembership', () => {
     await waitFor(() => expect(result.current.postIds).toEqual([id]));
     await waitFor(() => expect(NexusPostStreamService.fetch).toHaveBeenCalledTimes(1));
     expect(result.current.loading).toBe(true);
-    await act(async () => {
-      await result.current.loadMore();
-    });
-    expect(NexusPostStreamService.fetch).toHaveBeenCalledTimes(1);
+    // Every member is already shown, yet the feed must keep scroll-to-load disarmed.
+    expect(result.current.isHydrating).toBe(true);
+    expect(result.current.displayLoading).toBe(false);
     await act(async () => pending.resolve({ post_keys: [], last_post_score: null }));
     await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.isHydrating).toBe(false);
     expect(result.current.postIds).toEqual([id]);
   });
 
@@ -243,6 +255,7 @@ describe('useCollectionStreamMembership', () => {
       const localOnly = await createPost();
       const explicitlyAdded = await createPost();
       const members = [...indexedIds, localOnly];
+      await nextTimestamp();
       const collectionId = await PostController.commitCreateCollection({
         authorId: AUTHOR,
         name: 'Paginated collection',
@@ -374,6 +387,7 @@ describe('useCollectionStreamMembership', () => {
       useCollectionStreamMembership({
         enabled: false,
         streamId: STREAM,
+        collectionId: undefined,
         membershipPostIds: ['author:b'],
         pagination,
         hydrationCapped: false,
@@ -382,8 +396,104 @@ describe('useCollectionStreamMembership', () => {
     expect(result.current.postIds).toBe(pagination.postIds);
     expect(result.current.removePosts).toBe(pagination.removePosts);
     expect(result.current.retainPost).toBeUndefined();
+    expect(result.current.refresh).toBe(pagination.refresh);
     expect(result.current.displayLoading).toBe(true);
-    expect(result.current.isHydratingMembers).toBe(false);
+    expect(result.current.isHydrating).toBe(false);
+  });
+
+  const mountEnvelopeFeed = (collectionId: string, pagination: UseStreamPaginationResult) =>
+    renderHook(() =>
+      useCollectionStreamMembership({
+        enabled: true,
+        streamId: STREAM,
+        collectionId,
+        membershipPostIds: [],
+        pagination,
+        hydrationCapped: false,
+      }),
+    );
+
+  it('refreshes the collection envelope together with the stream', async () => {
+    const forceRefresh = vi.spyOn(TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
+    const pagination = settledPagination();
+    const { result } = mountEnvelopeFeed(`${AUTHOR}:collection-a`, pagination);
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(pagination.refresh).toHaveBeenCalledOnce();
+    expect(forceRefresh).toHaveBeenCalledWith({ postIds: [`${AUTHOR}:collection-a`], viewerId: AUTHOR });
+  });
+
+  it('skips the owner’s envelope refresh right after a local write, so Nexus cannot revert an unindexed save', async () => {
+    const forceRefresh = vi.spyOn(TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
+    await PostTtlModel.upsert({ id: `${AUTHOR}:collection-a`, lastUpdatedAt: Date.now() });
+    const pagination = settledPagination();
+    const { result } = mountEnvelopeFeed(`${AUTHOR}:collection-a`, pagination);
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(pagination.refresh).toHaveBeenCalledOnce();
+    expect(forceRefresh).not.toHaveBeenCalled();
+  });
+
+  it('skips the owner’s envelope refresh when its freshness cannot be read', async () => {
+    const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+    const forceRefresh = vi.spyOn(TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
+    vi.spyOn(TtlController, 'findStalePostsByIds').mockRejectedValue(
+      new AppError({
+        category: ErrorCategory.Database,
+        code: DatabaseErrorCode.QUERY_FAILED,
+        message: 'Failed to read post TTL',
+        service: ErrorService.Local,
+        operation: 'test-envelope-freshness',
+      }),
+    );
+    const pagination = settledPagination();
+    const { result } = mountEnvelopeFeed(`${AUTHOR}:collection-a`, pagination);
+    await act(async () => {
+      await expect(result.current.refresh()).resolves.toBeUndefined();
+    });
+    expect(pagination.refresh).toHaveBeenCalledOnce();
+    expect(forceRefresh).not.toHaveBeenCalled();
+    expect(logError).not.toHaveBeenCalled();
+  });
+
+  it('always refreshes another author’s envelope, which this viewer never writes', async () => {
+    const forceRefresh = vi.spyOn(TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
+    await PostTtlModel.upsert({ id: 'curator:collection-b', lastUpdatedAt: Date.now() });
+    const { result } = mountEnvelopeFeed('curator:collection-b', settledPagination());
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(forceRefresh).toHaveBeenCalledWith({ postIds: ['curator:collection-b'], viewerId: AUTHOR });
+  });
+
+  it('still settles a refresh when the envelope refresh fails, logging only unreported errors', async () => {
+    const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+    const forceRefresh = vi
+      .spyOn(TtlController, 'forceRefreshPostsByIds')
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(
+        new AppError({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.SERVICE_UNAVAILABLE,
+          message: 'Nexus unavailable',
+          service: ErrorService.Nexus,
+          operation: 'test-envelope-refresh',
+        }),
+      );
+    const pagination = settledPagination();
+    const { result } = mountEnvelopeFeed('curator:collection-b', pagination);
+    await act(async () => {
+      await expect(result.current.refresh()).resolves.toBeUndefined();
+    });
+    expect(logError).toHaveBeenCalledOnce();
+    await act(async () => {
+      await expect(result.current.refresh()).resolves.toBeUndefined();
+    });
+    expect(forceRefresh).toHaveBeenCalledTimes(2);
+    expect(logError).toHaveBeenCalledOnce();
+    expect(pagination.refresh).toHaveBeenCalledTimes(2);
   });
 
   it('keeps the same postIds array across renders that change nothing visible', () => {
@@ -393,6 +503,7 @@ describe('useCollectionStreamMembership', () => {
       useCollectionStreamMembership({
         enabled: true,
         streamId: STREAM,
+        collectionId: undefined,
         membershipPostIds: ['author:b', 'author:a'],
         // A fresh result object per render, as the pagination hook returns.
         pagination: { ...actions, postIds: streamIds },
@@ -405,17 +516,17 @@ describe('useCollectionStreamMembership', () => {
     expect(result.current.postIds).toBe(shown);
   });
 
-  it('marks members still hydrating behind cached cards, then releases them once the stream settles', async () => {
+  it('keeps members hydrating behind cached cards, then releases them once the stream settles', async () => {
     const cached = await createPost();
     const pending = Promise.withResolvers<Awaited<ReturnType<typeof NexusPostStreamService.fetch>>>();
     vi.mocked(NexusPostStreamService.fetch).mockReturnValueOnce(pending.promise);
     const { result } = mount([cached, 'author:uncached']);
     await waitFor(() => expect(result.current.postIds).toEqual([cached]));
     expect(result.current.displayLoading).toBe(false);
-    expect(result.current.isHydratingMembers).toBe(true);
+    expect(result.current.isHydrating).toBe(true);
     await act(async () => pending.resolve({ post_keys: [], last_post_score: null }));
     await waitFor(() => expect(result.current.postIds).toEqual([cached, 'author:uncached']));
-    expect(result.current.isHydratingMembers).toBe(false);
+    expect(result.current.isHydrating).toBe(false);
   });
 
   it('keeps unhydrated members withheld after the stream fails, so they never mount as unavailable', async () => {
@@ -425,7 +536,7 @@ describe('useCollectionStreamMembership', () => {
     await waitFor(() => expect(result.current.error).not.toBeNull());
     await waitFor(() => expect(result.current.postIds).toEqual([cached]));
     expect(result.current.displayLoading).toBe(false);
-    expect(result.current.isHydratingMembers).toBe(false);
+    expect(result.current.isHydrating).toBe(false);
   });
 
   it('shows the error state instead of placeholders when no member could be hydrated', async () => {
@@ -443,6 +554,7 @@ describe('useCollectionStreamMembership', () => {
         useCollectionStreamMembership({
           enabled: true,
           streamId: STREAM,
+          collectionId: undefined,
           membershipPostIds: ['author:uncached'],
           pagination,
           hydrationCapped,
@@ -464,6 +576,7 @@ describe('useCollectionStreamMembership', () => {
       useCollectionStreamMembership({
         enabled: true,
         streamId: STREAM,
+        collectionId: undefined,
         membershipPostIds: ['author:uncached'],
         pagination: settledPagination({ hasMore: true }),
         hydrationCapped: false,

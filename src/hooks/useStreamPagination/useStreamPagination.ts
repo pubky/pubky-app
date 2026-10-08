@@ -312,9 +312,9 @@ export function useStreamPagination({
    * Load more function - fetches next page
    */
   const loadMore = useCallback(async () => {
-    if (loading || loadingMore || !hasMore) return;
+    if (loadingMore || !hasMore) return;
     await fetchStreamSlice(false);
-  }, [loading, loadingMore, hasMore, fetchStreamSlice]);
+  }, [loadingMore, hasMore, fetchStreamSlice]);
 
   /**
    * Add post(s) to the timeline, sorted by timestamp

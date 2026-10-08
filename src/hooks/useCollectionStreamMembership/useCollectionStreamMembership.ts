@@ -3,13 +3,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { PostController } from '@/controllers/post/post';
+import { TtlController } from '@/controllers/ttl/ttl';
 import { UserController } from '@/controllers/user/user';
 import type { UseStreamPaginationResult } from '@/hooks/useStreamPagination/useStreamPagination.types';
+import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
 import { sortPostIdsByMembership } from '@/libs/post/collectionItemOrder';
+import { getTtlRetryDelayMs } from '@/libs/runtime-config/runtime-config';
 import { isPostDeleted } from '@/libs/utils/utils';
-import { CompositeIdDomain } from '@/models/models.types';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 const NO_IDS: string[] = [];
 
@@ -17,6 +22,8 @@ interface UseCollectionStreamMembershipParams {
   /** Whether the feed is a single collection. Every other feed passes its pagination through untouched. */
   enabled: boolean;
   streamId: PostStreamId;
+  /** The collection post whose envelope supplies the membership; refreshed with the feed. */
+  collectionId: string | undefined;
   /** Complete local membership in collection order; undefined while its local read resolves. */
   membershipPostIds: string[] | undefined;
   /** Raw Nexus pagination. Its ids and offsets never include the projected local display. */
@@ -31,8 +38,12 @@ interface UseCollectionStreamMembershipParams {
 interface UseCollectionStreamMembershipResult extends UseStreamPaginationResult {
   /** Nothing can be shown yet: membership is unresolved, or no member is ready while hydration runs. */
   displayLoading: boolean;
-  /** Members still wait for batch hydration behind cards that are already shown. */
-  isHydratingMembers: boolean;
+  /**
+   * The stream has not settled (initial load, eager pages or a refresh). The feed shows
+   * its loading row and keeps scroll-to-load disarmed, since membership may already be
+   * on screen while the first page is still in flight.
+   */
+  isHydrating: boolean;
   /** Retain a collection card while its picker is open or its save is pending. Release on completion/unmount. */
   retainPost?: (postId: string) => () => void;
 }
@@ -86,6 +97,27 @@ function withoutRetention(retained: Map<object, string>, ids: string[]) {
   return new Map([...retained].filter(([, id]) => !ids.includes(id)));
 }
 
+// Pull-to-refresh is how a viewer gets past the envelope's TTL, so it refetches the
+// envelope with the stream. Only the owner writes the envelope locally, and a local
+// save stamps its TTL row but leaves `indexed_at` unchanged: Nexus can still serve the
+// pre-save envelope with a newer `indexed_at`, which the refresh guard would let
+// through (and the next save would push to the homeserver). The owner's refetch
+// therefore waits out the window the TTL coordinator already allows Nexus to index a
+// post (`ttlRetryDelayMs`) after any write to that row. A save Nexus indexes later
+// than that stays exposed until posts track pending local edits like profiles do.
+async function refreshEnvelope(collectionId: string, viewerId: Pubky | null) {
+  try {
+    if (parseCompositeId(collectionId).pubky === viewerId) {
+      const stale = await TtlController.findStalePostsByIds({ postIds: [collectionId], ttlMs: getTtlRetryDelayMs() });
+      if (stale.length === 0) return;
+    }
+    await TtlController.forceRefreshPostsByIds({ postIds: [collectionId], viewerId: viewerId ?? undefined });
+  } catch (error) {
+    // App errors are logged and captured where they are raised; the stream refresh still applies.
+    if (!isAppError(error)) Logger.error('[useCollectionStreamMembership] Failed to refresh the collection', { error });
+  }
+}
+
 // Stream hydration writes member details before authors and repost originals.
 // Wait for those card dependencies too, or mounting a cold card starts singleton
 // requests while the stream is still hydrating the same dependencies in batches.
@@ -131,10 +163,12 @@ async function getCachedCardIds(postIds: string[]) {
 export function useCollectionStreamMembership({
   enabled,
   streamId,
+  collectionId,
   membershipPostIds,
   pagination,
   hydrationCapped,
 }: UseCollectionStreamMembershipParams): UseCollectionStreamMembershipResult {
+  const viewerId = useAuthStore((state) => state.currentUserPubky);
   const { postIds: streamPostIds, loading, loadingMore, hasMore, error } = pagination;
   const members = enabled ? membershipPostIds : undefined;
   const [state, setState] = useState(() => initialState(streamId, members));
@@ -200,11 +234,11 @@ export function useCollectionStreamMembership({
   const displayLoading = enabled
     ? members === undefined || (projectedIds.length > 0 && postIds.length === 0 && !settled)
     : loading;
-  const isHydratingMembers = enabled && !settled && postIds.length > 0 && postIds.length < projectedIds.length;
+  const isHydrating = enabled && !settled;
 
-  const latest = useRef({ state, pagination, orderedIds });
+  const latest = useRef({ state, pagination, orderedIds, collectionId, viewerId });
   useEffect(() => {
-    latest.current = { state, pagination, orderedIds };
+    latest.current = { state, pagination, orderedIds, collectionId, viewerId };
   });
 
   // An envelope removal of a row the stream already served also leaves the raw page, so
@@ -261,6 +295,10 @@ export function useCollectionStreamMembership({
             retained.delete(token);
             return { ...current, retained };
           });
+      },
+      refresh: async () => {
+        const { pagination: raw, collectionId: envelopeId, viewerId: viewer } = latest.current;
+        await Promise.all([raw.refresh(), envelopeId ? refreshEnvelope(envelopeId, viewer) : undefined]);
       },
       prependOptimisticPosts: prepend,
       prependPosts: async (ids: string | string[]) => prepend(ids),
@@ -322,6 +360,6 @@ export function useCollectionStreamMembership({
     };
   });
 
-  if (!enabled) return { ...pagination, displayLoading: loading, isHydratingMembers: false };
-  return { ...pagination, ...actions, postIds, displayLoading, isHydratingMembers };
+  if (!enabled) return { ...pagination, displayLoading: loading, isHydrating: false };
+  return { ...pagination, ...actions, postIds, displayLoading, isHydrating };
 }

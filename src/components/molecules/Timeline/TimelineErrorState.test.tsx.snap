@@ -1,0 +1,16 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TimelineErrorState - Snapshots > matches snapshot 1`] = `
+<div
+  class="mx-auto w-full flex-col flex items-center justify-center py-8"
+  data-testid="container"
+>
+  <p
+    class="text-base font-medium text-destructive"
+    data-testid="typography"
+  >
+    Error: 
+    Network error
+  </p>
+</div>
+`;

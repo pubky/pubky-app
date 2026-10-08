@@ -208,10 +208,11 @@ function TimelineFeedContent({
     removePostsOptimistically,
     retainPost,
     displayLoading: feedDisplayLoading,
-    isHydratingMembers,
+    isHydrating,
   } = useCollectionStreamMembership({
     enabled: isCollectionFeed,
     streamId,
+    collectionId,
     membershipPostIds,
     pagination: stream,
     hydrationCapped: eagerLoadExhausted,
@@ -226,9 +227,10 @@ function TimelineFeedContent({
       : MuteFilter.filterPostsSafe(orderedPostIds, mutedUserIdSet)
     : orderedPostIds;
   const displayLoading = feedDisplayLoading || (isCollectionFeed && mutedUsersLoading);
-  // Members still hydrating behind cards that are already shown get the same
-  // loading row as a next page, instead of popping in without notice.
-  const isLoadingMore = loadingMore || isHydratingMembers;
+  // A collection can show its membership while its stream still loads. Until the
+  // stream settles the feed stays in its loading-more state, which keeps
+  // scroll-to-load disarmed, so no page request races the initial or eager loads.
+  const isLoadingMore = loadingMore || isHydrating;
 
   // Drain optimistic posts the global FAB enqueued for this feed. The FAB lives
   // outside this feed's React tree, so it cannot call `prependOptimisticPosts`

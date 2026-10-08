@@ -1,5 +1,38 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`TimelinePosts - Snapshots > should match snapshot for a failed load beside a trailing CTA 1`] = `
+<div>
+  <div
+    class="flex w-full flex-col gap-4"
+    data-cy="timeline-container"
+    data-testid="container"
+  >
+    <div
+      class="flex items-center justify-center py-8"
+      data-testid="container"
+    >
+      <p
+        class="text-base font-medium text-destructive"
+        data-testid="typography"
+      >
+        Error: 
+        Network error
+      </p>
+    </div>
+    <div
+      class="space-y-4"
+      data-cy="timeline-posts"
+      data-testid="container"
+      role="feed"
+    >
+      <button>
+        Add content
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`TimelinePosts - Snapshots > should match snapshot for empty state 1`] = `
 <div>
   <div

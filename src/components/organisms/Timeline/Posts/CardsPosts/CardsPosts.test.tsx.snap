@@ -932,3 +932,39 @@ exports[`TimelineCardsPosts - Snapshots > renders a complete Cards post 1`] = `
   </div>
 </div>
 `;
+
+exports[`TimelineCardsPosts - Snapshots > renders a failed load beside the trailing slot 1`] = `
+<div
+  class="flex w-full flex-col gap-4"
+  data-cy="timeline-container"
+  data-testid="container"
+>
+  <div
+    class="mx-auto w-full flex-col flex items-center justify-center py-8"
+    data-testid="container"
+  >
+    <p
+      class="text-base font-medium text-destructive"
+      data-testid="typography"
+    >
+      Error: 
+      Network error
+    </p>
+  </div>
+  <div
+    class="relative grid items-start gap-3 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+    data-cy="timeline-posts-cards"
+    data-testid="container"
+    role="feed"
+  >
+    <div
+      class="@container/grid min-h-48 [&>*:first-child]:min-h-48"
+      data-testid="container"
+    >
+      <button>
+        Add Post
+      </button>
+    </div>
+  </div>
+</div>
+`;

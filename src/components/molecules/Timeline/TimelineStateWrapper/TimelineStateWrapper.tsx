@@ -3,6 +3,7 @@
 import { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { TimelineErrorState } from '../TimelineErrorState';
 import { TimelineLoading } from '../TimelineLoading';
 
 interface TimelineStateWrapperProps {
@@ -50,17 +51,7 @@ export function TimelineStateWrapper({
   }
 
   if (error && !hasItems) {
-    return (
-      <>
-        {errorComponent ?? (
-          <Container className="flex items-center justify-center py-8">
-            <Typography size="md" className="text-destructive">
-              Error: {error}
-            </Typography>
-          </Container>
-        )}
-      </>
-    );
+    return <>{errorComponent ?? <TimelineErrorState message={error} />}</>;
   }
 
   if (!hasItems && hasMore) {

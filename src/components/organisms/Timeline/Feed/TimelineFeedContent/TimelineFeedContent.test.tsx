@@ -1,11 +1,12 @@
 import { createRef, type ReactNode, useEffect } from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
+import { TtlController } from '@/controllers/ttl/ttl';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
-import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
+import type { UsePullToRefreshOptions, UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import {
@@ -21,7 +22,7 @@ import { useTimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
-  vi.fn((): UsePullToRefreshResult => ({
+  vi.fn((_options: UsePullToRefreshOptions): UsePullToRefreshResult => ({
     state: 'idle',
     pullDistance: 0,
   })),
@@ -720,6 +721,43 @@ describe('TimelineFeedContent', () => {
       rerender(collectionFeed(['post1', 'uncached:post']));
       expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,uncached:post');
       expect(screen.getByTestId('loading-more')).toHaveTextContent('false');
+    });
+
+    it('passes the loading-more state while every member is shown and the stream still loads', () => {
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds: ['post1'], loading: true });
+      const { rerender } = render(collectionFeed(['post1']));
+      // The whole membership is on screen while the stream is still in flight; the
+      // loading row (and the disarmed sentinel) cover it instead of a page request.
+      expect(screen.getByTestId('post-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('loading-more')).toHaveTextContent('true');
+
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds: ['post1'], hasMore: false });
+      rerender(collectionFeed(['post1']));
+      expect(screen.getByTestId('loading-more')).toHaveTextContent('false');
+    });
+
+    it('refreshes the collection envelope with the stream on pull-to-refresh', async () => {
+      const forceRefresh = vi.spyOn(TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
+      try {
+        render(
+          <TimelineFeedWithStream
+            streamId={COLLECTION_STREAM_ID}
+            variant={TIMELINE_FEED_VARIANT.COLLECTION}
+            tagsLayout="inline"
+            collectionId="author-pubky:collection-post"
+            membershipPostIds={['post1']}
+          />,
+        );
+        const { onRefresh } = mockUsePullToRefresh.mock.lastCall![0];
+        await act(async () => {
+          await onRefresh();
+        });
+        expect(mockRefresh).toHaveBeenCalledOnce();
+        expect(forceRefresh).toHaveBeenCalledWith({ postIds: ['author-pubky:collection-post'], viewerId: undefined });
+      } finally {
+        forceRefresh.mockRestore();
+      }
     });
 
     it('waits for the local membership, then displays it even while Nexus is loading', () => {
