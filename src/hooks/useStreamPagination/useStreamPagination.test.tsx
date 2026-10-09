@@ -1262,6 +1262,111 @@ describe('useStreamPagination', () => {
       expect(result.current.hasMore).toBe(false);
     });
 
+    it('consumes a getter only when issuing a request, so expiry during a page keeps its final rewind', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      // A consumer history with one removal about to expire: a consuming read past expiry
+      // counts it once more and drops it; a non-consuming read never drops it.
+      let expired = false;
+      let pending = 1;
+      const history = (consume: boolean) => {
+        const count = pending;
+        if (consume && expired) pending = 0;
+        return count;
+      };
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId, skipOverlap: history }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      // The window expires while this page is in flight: the response-time read must not
+      // spend the removal's final rewind.
+      const pendingPage = Promise.withResolvers<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValueOnce(pendingPage.promise);
+      let pendingLoad: Promise<void> | undefined;
+      act(() => {
+        pendingLoad = result.current.loadMore();
+      });
+      expired = true;
+      await act(async () => {
+        pendingPage.resolve({ nextPageIds: ['c3', 'c4', 'c5'], nextCursor: 5 });
+        await pendingLoad;
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId: collectionStreamId, streamTail: 2 }),
+      );
+      expect(pending).toBe(1); // still there: nothing consumed it
+
+      // The next load is the first request after expiry: it rewinds once more, then the
+      // history is gone.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c5', 'c6', 'c7'],
+        nextCursor: 7,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId: collectionStreamId, streamTail: 4 }),
+      );
+      expect(pending).toBe(0);
+    });
+
+    it('detects growth during a page against the count left after consuming, not before', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      // One expired removal (counted once more, then dropped by the consuming read) and a
+      // fresh one recorded while the page is in flight: the fresh one is growth, and must
+      // not be masked by the expired one leaving.
+      let pending = 0;
+      let expiredLeft = 0;
+      const history = (consume: boolean) => {
+        const count = pending;
+        if (consume) {
+          pending -= expiredLeft;
+          expiredLeft = 0;
+        }
+        return count;
+      };
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId, skipOverlap: history }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      // One removal, expired by now and not yet counted by any request.
+      pending = 1;
+      expiredLeft = 1;
+      const pendingPage = Promise.withResolvers<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValueOnce(pendingPage.promise);
+      let pendingLoad: Promise<void> | undefined;
+      act(() => {
+        pendingLoad = result.current.loadMore();
+      });
+      pending += 1; // a fresh removal recorded mid-flight
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c3', 'c4', 'c5'],
+        nextCursor: 4,
+      });
+      await act(async () => {
+        // The held page shows nothing new, so the load goes on to its next round.
+        pendingPage.resolve({ nextPageIds: ['c1', 'c2', 'c3'], nextCursor: 5, rawScannedCount: 3 });
+        await pendingLoad;
+      });
+
+      // Round 1 rewound by the expired entry (3 - 1 = 2); its page was held and round 2
+      // rewound by the growth from that offset (2 - 1 = 1).
+      const requestedTails = vi
+        .mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mock.calls.map((call) => call[0].streamTail);
+      expect(requestedTails).toEqual([2, 1]);
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c4', 'c5']);
+    });
+
     it('does not count optimistic membership posts in collection offset pagination', async () => {
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({

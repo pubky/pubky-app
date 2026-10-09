@@ -59,9 +59,12 @@ function revealPostIds(
   };
 }
 
-/** The overlap a consumer asked for right now: a getter is read per request, a number as is. */
-function resolveSkipOverlap(skipOverlap: number | (() => number)): number {
-  return Math.max(0, typeof skipOverlap === 'function' ? skipOverlap() : skipOverlap);
+/**
+ * The overlap a consumer asks for right now: a number as is, a getter as it answers. Only the
+ * read that issues a load's first request may consume the consumer's expired history.
+ */
+function resolveSkipOverlap(skipOverlap: number | ((consume: boolean) => number), consume: boolean): number {
+  return Math.max(0, typeof skipOverlap === 'function' ? skipOverlap(consume) : skipOverlap);
 }
 
 /**
@@ -178,22 +181,25 @@ export function useStreamPagination({
         // re-create `loadMore`) once per round while nothing visible changes.
         let reachedEnd = false;
         let rawScanned = 0;
-        // `skipOverlap` rows re-covered so far by this load. The rewind is applied to the offset
-        // once per load (plus any growth during it), and the rounds then scan forward through
-        // the re-covered region like any other: a shift wider than a page is still re-covered
-        // in full, and the load still ends past where it started. Score cursors are positions,
-        // not counts, so they are never rewound.
-        let appliedOverlap = 0;
+        // `skipOverlap` handling. The first round of a load rewinds the offset by the consumer's
+        // pending overlap, through the one read that may retire its expired history; the rounds
+        // then scan forward through the re-covered region like any other, so a shift wider than
+        // a page is still re-covered in full and the load still ends past where it started.
+        // After every response a non-consuming read tells whether the overlap grew while the
+        // page was in flight; the next round then rewinds by that growth alone. Score cursors
+        // are positions, not counts, so they are never rewound.
+        let overlapApplied = false;
+        let pendingRewind = 0;
         for (;;) {
           const committedRemovalsAtRequest = committedRemovalsRef.current;
+          let overlapBaseline = 0;
           if (isSkipPaginatedStream(streamId)) {
-            const rewind = resolveSkipOverlap(skipOverlapRef.current) - appliedOverlap;
-            if (rewind > 0) {
-              cursor = Math.max(0, cursor - rewind);
-              appliedOverlap += rewind;
-            }
+            const rewind = overlapApplied ? pendingRewind : resolveSkipOverlap(skipOverlapRef.current, true);
+            overlapApplied = true;
+            pendingRewind = 0;
+            if (rewind > 0) cursor = Math.max(0, cursor - rewind);
+            overlapBaseline = resolveSkipOverlap(skipOverlapRef.current, false);
           }
-          const overlapAtRequest = appliedOverlap;
           const result: TReadPostStreamChunkResponse = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId: anchor,
@@ -230,8 +236,11 @@ export function useStreamPagination({
             // The overlap grew while this page was in flight: the server list may already have
             // been the shorter one when it served the page, so keep the offset this page started
             // from; the next round rewinds it by the growth and re-covers the page.
-            overlapGrew =
-              isSkipPaginatedStream(streamId) && resolveSkipOverlap(skipOverlapRef.current) > overlapAtRequest;
+            const overlapGrowth = isSkipPaginatedStream(streamId)
+              ? resolveSkipOverlap(skipOverlapRef.current, false) - overlapBaseline
+              : 0;
+            overlapGrew = overlapGrowth > 0;
+            if (overlapGrew) pendingRewind = overlapGrowth;
             nextCursor = overlapGrew ? cursor : Math.max(0, result.nextCursor - removalsDuringFlight);
           }
           // Never overwrite a defined anchor with undefined.

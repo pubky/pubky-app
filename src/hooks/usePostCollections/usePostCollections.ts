@@ -62,16 +62,18 @@ export function usePostCollections(
   const { pubky: authorId, id } = parseCompositeId(postId);
   // When the viewer removed the post from own collections. Kept for as long as the consumer
   // stays mounted rather than per enabled lifetime (a picker reopened before Nexus indexed a
-  // removal pages the old list too) and read by the paginator as it issues each request. A
-  // removal counts in every request inside the protection window and once more in the first
-  // request after it: that rewind reconciles the walk with the shift after the window the
-  // app allows Nexus for indexing, and only then is the removal dropped. Dropping it before
-  // a request would leave an idle picker's offset one row past a shift that landed meanwhile.
+  // removal pages the old list too) and read by the paginator. A removal counts in every
+  // request inside the protection window and once more in the first request after it: that
+  // rewind reconciles the walk with the shift after the window the app allows Nexus for
+  // indexing, and only then is the removal dropped. Only the read that issues a request may
+  // drop it (`consume`): the paginator's other reads compare counts around a page in flight,
+  // and dropping there would spend the final rewind on a read that requests nothing.
   // A ref, not state: the count never renders.
   const removalTimesRef = useRef<number[]>([]);
-  const readPendingRemovals = () => {
-    const now = Date.now();
+  const readPendingRemovals = (consume: boolean) => {
     const pending = removalTimesRef.current;
+    if (!consume) return pending.length;
+    const now = Date.now();
     removalTimesRef.current = pending.filter((at) => now - at < COLLECTIONS_COUNT_PROTECTION_MS);
     return pending.length;
   };

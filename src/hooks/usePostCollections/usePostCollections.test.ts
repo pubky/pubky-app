@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_COUNT_PROTECTION_MS, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { usePostCollections } from './usePostCollections';
 
-type PaginationParams = { streamId?: string; limit?: number; skipOverlap?: number | (() => number) };
+type PaginationParams = { streamId?: string; limit?: number; skipOverlap?: number | ((consume: boolean) => number) };
 
 const mocks = vi.hoisted(() => ({
   paginationParams: null as PaginationParams | null,
@@ -23,10 +23,10 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   },
 }));
 
-/** What the paginator would rewind by if it issued a request now. */
-const pendingOverlap = () => {
+/** What the paginator would rewind by if it issued a request now (`consume`), or sees without one. */
+const pendingOverlap = (consume = true) => {
   const { skipOverlap } = mocks.paginationParams ?? {};
-  return typeof skipOverlap === 'function' ? skipOverlap() : skipOverlap;
+  return typeof skipOverlap === 'function' ? skipOverlap(consume) : skipOverlap;
 };
 
 describe('usePostCollections', () => {
@@ -89,8 +89,12 @@ describe('usePostCollections', () => {
       expect(pendingOverlap()).toBe(1);
 
       // Past the window the removal counts for one more request, so a picker that sat idle
-      // while Nexus indexed the shift still rewinds over it once; then it is forgotten.
+      // while Nexus indexed the shift still rewinds over it once; then it is forgotten. A read
+      // that issues no request (the paginator's growth check around a page in flight) must
+      // not be the one to spend it.
       vi.advanceTimersByTime(1);
+      expect(pendingOverlap(false)).toBe(1);
+      expect(pendingOverlap(false)).toBe(1);
       expect(pendingOverlap()).toBe(1);
       expect(pendingOverlap()).toBe(0);
     } finally {
