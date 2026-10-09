@@ -107,20 +107,3 @@ describe('PostsEmpty', () => {
     expect(screen.queryByRole('button', { name: /Create a Post/i })).not.toBeInTheDocument();
   });
 });
-
-describe('PostsEmpty - Snapshots', () => {
-  beforeEach(() => {
-    mocks.isOwnProfile = true;
-  });
-
-  it('matches snapshot on own profile', () => {
-    const { container } = render(<PostsEmpty />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot on another user profile', () => {
-    mocks.isOwnProfile = false;
-    const { container } = render(<PostsEmpty />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

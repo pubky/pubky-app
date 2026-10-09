@@ -205,26 +205,11 @@ describe('Logout', () => {
     expect(mocks.authState.setIsLoggingOut).not.toHaveBeenCalled();
     expect(mocks.mockLogout).not.toHaveBeenCalled();
   });
-  describe('Snapshots', () => {
-    it('matches the backup confirmation state', () => {
-      const key = Keypair.random();
-      mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
-      mocks.authState.currentUserPubky = key.publicKey.z32();
-      const { container } = render(<Logout />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-    it('matches the canceled logout state with navigation at the bottom', async () => {
-      mocks.mockLogout.mockRejectedValue(createCanceledError());
-      const { container } = render(<Logout />);
-      await screen.findByText('Your account changed');
-      expect(screen.getByTestId('buttons-navigation').parentElement).toHaveClass('onboarding-nav');
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
   it('shows cancellation when a newer account supersedes logout', async () => {
     mocks.mockLogout.mockRejectedValue(createCanceledError());
     render(<Logout />);
     expect(await screen.findByText('Your account changed')).toBeInTheDocument();
+    expect(screen.getByTestId('buttons-navigation').parentElement).toHaveClass('onboarding-nav');
     expect(screen.queryByTestId('logout-content')).not.toBeInTheDocument();
     expect(mocks.mockLoggerError).not.toHaveBeenCalled();
   });

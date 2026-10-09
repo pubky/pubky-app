@@ -175,7 +175,8 @@ confirm the account-matching backup (Done → Confirm/delete seed); otherwise th
 gate. Cypress specs are QA-owned and must be adapted by QA. Ring users with an unrelated onboarding key skip that gate.
 
 Existing auth VRT baselines must follow the CI baseline workflow; never commit locally
-produced pixel baselines. Sign-in UI unit snapshots are separate from live-browser/staging verification.
+produced pixel baselines. Sign-in behaviour is covered by unit tests and appearance by VRT; neither replaces
+live-browser/staging verification.
 
 ### Actions during restoration
 

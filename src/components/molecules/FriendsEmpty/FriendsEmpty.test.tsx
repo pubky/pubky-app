@@ -116,10 +116,3 @@ describe('FriendsEmpty', () => {
     expect(mocks.push).toHaveBeenCalledWith(APP_ROUTES.HOT);
   });
 });
-
-describe('FriendsEmpty - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<FriendsEmpty />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

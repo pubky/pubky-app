@@ -116,10 +116,3 @@ describe('FollowingEmpty', () => {
     expect(mocks.push).toHaveBeenCalledWith(APP_ROUTES.HOT);
   });
 });
-
-describe('FollowingEmpty - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<FollowingEmpty />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

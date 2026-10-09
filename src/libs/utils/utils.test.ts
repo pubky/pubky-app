@@ -35,7 +35,6 @@ import {
   isValidPostCompositeId,
   isValidTagLabel,
   minutesAgo,
-  radixIdSerializer,
   readFromClipboard,
   resolveDisplayName,
   resolveUserDisplayName,
@@ -44,55 +43,9 @@ import {
   stripPubkyPrefix,
   truncateString,
 } from './utils';
-import { HASHTAG_IN_TEXT_REGEX, RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
+import { HASHTAG_IN_TEXT_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 
 describe('Utils', () => {
-  describe('radixIdSerializer', () => {
-    describe('regex patterns', () => {
-      it('RADIX_ID_TEST_REGEX matches Radix IDs', () => {
-        expect(RADIX_ID_TEST_REGEX.test('radix-_r_12345')).toBe(true);
-        expect(RADIX_ID_TEST_REGEX.test('_r_12345')).toBe(true);
-        expect(RADIX_ID_TEST_REGEX.test('class="radix-_r_12345"')).toBe(true);
-      });
-
-      it('RADIX_ID_TEST_REGEX does not match other strings', () => {
-        expect(RADIX_ID_TEST_REGEX.test('normal-id')).toBe(false);
-        expect(RADIX_ID_TEST_REGEX.test('radical')).toBe(false);
-      });
-
-      it('RADIX_ID_REGEX matches all occurrences globally', () => {
-        const input = 'id="radix-_r_1" and id="radix-_r_2"';
-        const matches = input.match(RADIX_ID_REGEX);
-        expect(matches).toHaveLength(2);
-        expect(matches).toEqual(['radix-_r_1', 'radix-_r_2']);
-      });
-    });
-
-    describe('test function', () => {
-      it('returns true for strings containing Radix IDs', () => {
-        expect(radixIdSerializer.test('some content with radix-_r_12345 inside')).toBe(true);
-      });
-
-      it('returns false for strings without Radix IDs', () => {
-        expect(radixIdSerializer.test('some content without special ids')).toBe(false);
-      });
-
-      it('returns false for non-string values', () => {
-        expect(radixIdSerializer.test(123)).toBe(false);
-        expect(radixIdSerializer.test(null)).toBe(false);
-        expect(radixIdSerializer.test({})).toBe(false);
-      });
-
-      it('does not have stateful issues with multiple calls (g flag check)', () => {
-        const input = 'radix-_r_123';
-        // If the regex had 'g' flag and was reused, subsequent calls might fail
-        expect(radixIdSerializer.test(input)).toBe(true);
-        expect(radixIdSerializer.test(input)).toBe(true);
-        expect(radixIdSerializer.test(input)).toBe(true);
-      });
-    });
-  });
-
   describe('cn', () => {
     it('should combine multiple class names', () => {
       const result = cn('class1', 'class2', 'class3');

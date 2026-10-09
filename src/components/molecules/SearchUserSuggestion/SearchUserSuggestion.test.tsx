@@ -117,20 +117,4 @@ describe('SearchUserSuggestion', () => {
     // Real formatPublicKey formats as abc1...f456 (length 8)
     expect(ariaLabel).toMatch(/[a-z0-9]+\.\.\.[a-z0-9]+/);
   });
-
-  describe('SearchUserSuggestion - Snapshots', () => {
-    it('matches snapshot with full user data', () => {
-      const { container } = render(<SearchUserSuggestion user={mockUser} onClick={vi.fn()} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot without avatar', () => {
-      const userWithoutAvatar = {
-        id: 'pk:xyz789' as Pubky,
-        name: 'Jane Doe',
-      };
-      const { container } = render(<SearchUserSuggestion user={userWithoutAvatar} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

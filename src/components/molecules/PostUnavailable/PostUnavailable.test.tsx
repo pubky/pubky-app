@@ -113,24 +113,3 @@ describe('PostUnavailable', () => {
     expect(button).toHaveAttribute('aria-busy', 'true');
   });
 });
-
-describe('PostUnavailable - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<PostUnavailable message="This post has been deleted by its author." />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with remove action', () => {
-    const { container } = render(
-      <PostUnavailable message="Post not found." onRemove={vi.fn()} removeDataCy="post-missing-remove-btn" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot while removing', () => {
-    const { container } = render(
-      <PostUnavailable message="This post has been deleted by its author." onRemove={vi.fn()} isRemoving />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -77,20 +77,4 @@ describe('SearchTagSection', () => {
     expect(screen.getByTestId('tag-bitcoin')).toBeInTheDocument();
     expect(screen.getByTestId('tag-satoshi')).toBeInTheDocument();
   });
-
-  describe('SearchTagSection - Snapshots', () => {
-    it('matches snapshot with tags', () => {
-      const onTagClick = vi.fn();
-      const { container } = render(
-        <SearchTagSection title="Recent searches" tags={mockTags} onTagClick={onTagClick} />,
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot when empty', () => {
-      const onTagClick = vi.fn();
-      const { container } = render(<SearchTagSection title="Empty" tags={[]} onTagClick={onTagClick} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

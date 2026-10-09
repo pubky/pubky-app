@@ -537,37 +537,3 @@ describe('DialogAddContent', () => {
     expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Post saved to bookmarks' });
   });
 });
-
-describe('DialogAddContent - Snapshots', () => {
-  it('matches the closed trigger snapshot', () => {
-    const { container } = render(<DialogAddContent />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the closed grid trigger snapshot', () => {
-    const { container } = render(<DialogAddContent triggerVariant="grid" />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the closed list trigger snapshot', () => {
-    const { container } = render(<DialogAddContent triggerVariant="list" />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the closed visual trigger snapshot', () => {
-    const { container } = render(<DialogAddContent triggerVariant="visual" dataCy="collection-add-content-visual" />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the opened desktop dialog snapshot', () => {
-    render(<DialogAddContent />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
-
-    expect(document.body).toMatchSnapshot();
-  });
-});

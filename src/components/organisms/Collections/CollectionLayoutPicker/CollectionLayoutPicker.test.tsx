@@ -86,15 +86,6 @@ describe('CollectionLayoutPicker', () => {
     const visualOption = await screen.findByRole('menuitem', { name: 'Visual' });
     expect(visualOption.querySelector('.lucide-check')).toHaveClass('text-brand');
   });
-
-  it('matches the open desktop picker snapshot', async () => {
-    renderPicker();
-
-    openDesktopPicker();
-    await screen.findByRole('menuitem', { name: 'Cards' });
-
-    expect(document.body).toMatchSnapshot();
-  });
 });
 
 describe('CollectionLayoutPicker - Mobile', () => {
@@ -125,19 +116,6 @@ describe('CollectionLayoutPicker - Mobile', () => {
     expect(onLayoutChange).not.toHaveBeenCalled();
   });
 });
-
-describe('CollectionLayoutPicker - Mobile Snapshots', () => {
-  beforeEach(() => setMobileViewport());
-  afterEach(() => resetViewport());
-
-  it('matches the open mobile picker snapshot', async () => {
-    renderPicker();
-    openDesktopPicker();
-    await screen.findByRole('menuitem', { name: 'Cards' });
-    expect(document.body).toMatchSnapshot();
-  });
-});
-
 describe('CollectionLayoutPicker Cards', () => {
   it('reports a Cards selection and closes the picker', async () => {
     const { onLayoutChange } = renderPicker({ layout: COLLECTION_LAYOUT.LIST });

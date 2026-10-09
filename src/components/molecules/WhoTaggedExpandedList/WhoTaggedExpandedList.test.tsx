@@ -210,24 +210,3 @@ describe('WhoTaggedExpandedList', () => {
     expect(screen.getByTestId('custom-test-id')).toBeInTheDocument();
   });
 });
-
-describe('WhoTaggedExpandedList - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot with single user', () => {
-    const { container } = render(<WhoTaggedExpandedList taggerIds={['user1']} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with multiple users', () => {
-    const { container } = render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with empty taggers', () => {
-    const { container } = render(<WhoTaggedExpandedList taggerIds={[]} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

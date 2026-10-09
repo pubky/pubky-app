@@ -152,11 +152,3 @@ describe('ProviderInApp', () => {
     });
   });
 });
-
-describe('ProviderInApp - Snapshots', () => {
-  it('matches snapshot for post embed', () => {
-    const { container } = render(<>{InApp.renderEmbed({ type: 'post', value: `${PUBKY}:${POST_ID}` })}</>);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

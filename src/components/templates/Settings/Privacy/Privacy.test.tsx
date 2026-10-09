@@ -15,10 +15,3 @@ describe('Privacy', () => {
     expect(screen.getByText('Blur censored posts or profile pictures')).toBeInTheDocument();
   });
 });
-
-describe('Privacy - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<Privacy />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

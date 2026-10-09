@@ -82,10 +82,3 @@ describe('LandingFinalSection', () => {
     expect(screen.getByRole('button', { name: 'over 18 years old.' })).toHaveFocus();
   });
 });
-
-describe('LandingFinalSection - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<LandingFinalSection />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

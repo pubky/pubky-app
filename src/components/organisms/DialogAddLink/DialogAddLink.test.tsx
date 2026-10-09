@@ -141,36 +141,3 @@ describe('DialogAddLink', () => {
     expect(mockOnSave).not.toHaveBeenCalled();
   });
 });
-
-describe('DialogAddLink - Snapshots', () => {
-  const mockOnSave = vi.fn();
-
-  it('matches snapshot for default DialogAddLink', () => {
-    render(<DialogAddLink onSave={mockOnSave} />);
-    fireEvent.click(screen.getByText('Add link'));
-
-    const dialogContent = screen.getByTestId('dialog-content');
-    expect(dialogContent.parentElement).toMatchSnapshot();
-  });
-
-  it('matches snapshot for DialogAddLink with iconPosition variations', () => {
-    // Test the InputField component with different icon positions to demonstrate iconPosition usage
-    const { container } = render(
-      <div>
-        <div data-testid="input-field" data-icon-position="left">
-          <input data-testid="input" placeholder="Left icon" />
-          <div data-testid="input-icon">Left Icon</div>
-        </div>
-        <div data-testid="input-field" data-icon-position="right">
-          <input data-testid="input" placeholder="Right icon" />
-          <div data-testid="input-icon">Right Icon</div>
-        </div>
-        <div data-testid="input-field" data-icon-position="center">
-          <input data-testid="input" placeholder="Center icon" />
-          <div data-testid="input-icon">Center Icon</div>
-        </div>
-      </div>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

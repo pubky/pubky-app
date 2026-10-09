@@ -115,18 +115,3 @@ describe('BookmarksCollection', () => {
     expect(hero).toHaveAttribute('data-is-profile-resolved', 'true');
   });
 });
-
-describe('BookmarksCollection - Snapshots', () => {
-  it('matches the snapshot for the resolved summary state', () => {
-    mockUseBookmarksCollectionSummary.mockReturnValue({
-      avatarName: 'Alice',
-      avatarSeed: 'alice-pubky',
-      avatarUrl: 'https://example.com/avatar.png',
-      bookmarkCount: 4,
-      isProfileResolved: true,
-    });
-
-    const { container } = render(<BookmarksCollection />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

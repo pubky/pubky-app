@@ -936,48 +936,4 @@ describe('PostArticleDetail', () => {
       coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
     });
   });
-
-  it('matches snapshot with default props', () => {
-    const { container } = render(<PostArticleDetail {...defaultProps} />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with cover image', () => {
-    mockUsePostArticle.mockReturnValue({
-      title: 'Article With Cover',
-      body: 'Article body with cover image',
-      coverImage: {
-        src: 'https://example.com/cover.jpg',
-        alt: 'Article cover',
-      },
-      hasCover: true,
-      isCoverLoading: false,
-    });
-
-    const { container } = render(
-      <PostArticleDetail
-        postId="snapshot-user:cover-post"
-        content='{"title":"Article With Cover","body":"Article body with cover image"}'
-        attachments={['pubky://user/pub/pubky.app/files/file-123']}
-        isBlurred={false}
-      />,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when blurred', () => {
-    const { container } = render(<PostArticleDetail {...defaultProps} isBlurred />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot in wide layout', () => {
-    useHomeStore.getState().setLayout(LAYOUT.WIDE);
-
-    const { container } = render(<PostArticleDetail {...defaultProps} />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });

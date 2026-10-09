@@ -268,17 +268,3 @@ describe('SearchPeople', () => {
     expect(screen.getByRole('button', { name: 'See all' })).toBeInTheDocument();
   });
 });
-
-describe('SearchPeople - Snapshots', () => {
-  it('matches snapshot in the collapsed preview state', () => {
-    setup({ people: { users: buildUsers(6) } });
-    const { container } = render(<SearchPeople />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot while loading', () => {
-    setup({ people: { loading: true } });
-    const { container } = render(<SearchPeople />);
-    expect(container).toMatchSnapshot();
-  });
-});

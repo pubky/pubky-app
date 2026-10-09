@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BackupNavigation, BackupPageHeader } from './Backup';
+import { BackupNavigation } from './Backup';
 
 // Mock Next.js router
 const mockPush = vi.fn();
@@ -129,12 +129,6 @@ describe('BackupNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
-  it('matches snapshot for default BackupNavigation', () => {
-    const { container } = render(<BackupNavigation />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
   it('renders buttons navigation component with back button', () => {
     render(<BackupNavigation />);
 
@@ -168,12 +162,5 @@ describe('BackupNavigation', () => {
 
     expect(screen.queryByTestId('back-button')).toBeInTheDocument();
     expect(screen.queryByTestId('back-button')).toBeDisabled();
-  });
-});
-
-describe('BackupPageHeader - Snapshots', () => {
-  it('matches snapshot for default BackupPageHeader', () => {
-    const { container } = render(<BackupPageHeader />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

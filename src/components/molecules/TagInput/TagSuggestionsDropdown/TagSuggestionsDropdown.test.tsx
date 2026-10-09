@@ -58,19 +58,3 @@ describe('TagSuggestionsDropdown', () => {
     expect(screen.getByText('lightning')).toBeInTheDocument();
   });
 });
-
-describe('TagSuggestionsDropdown - Snapshots', () => {
-  it('matches snapshot with suggestions', () => {
-    render(<TagSuggestionsDropdown {...defaultProps} />);
-
-    const dropdown = screen.getByTestId('tag-suggestions-dropdown');
-    expect(dropdown).toMatchSnapshot();
-  });
-
-  it('matches snapshot with selected index', () => {
-    render(<TagSuggestionsDropdown {...defaultProps} selectedIndex={0} />);
-
-    const dropdown = screen.getByTestId('tag-suggestions-dropdown');
-    expect(dropdown).toMatchSnapshot();
-  });
-});

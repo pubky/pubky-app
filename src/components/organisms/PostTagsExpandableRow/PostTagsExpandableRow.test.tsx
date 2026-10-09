@@ -1,10 +1,9 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useEntityTags } from '@/hooks/useEntityTags/useEntityTags';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostTagsExpandableRow } from './PostTagsExpandableRow';
 
 vi.mock('@/hooks/usePostCounts/usePostCounts', () => ({
@@ -337,54 +336,5 @@ describe('PostTagsExpandableRow', () => {
 
     expect(container.querySelector('[data-cy="post-tags-expandable-row"]')).toHaveClass('items-end');
     expect(container.querySelector('[data-cy="post-tags-expandable-row-actions"]')).toHaveClass('self-end');
-  });
-});
-
-describe('PostTagsExpandableRow - Snapshots', () => {
-  beforeEach(() => {
-    mockUseIsMobile.mockReturnValue(false);
-  });
-
-  it('matches the collapsed snapshot with extra actions', () => {
-    const { container } = render(
-      <PostTagsExpandableRow postId={POST_ID}>
-        <button type="button" aria-label="extra action">
-          Extra
-        </button>
-      </PostTagsExpandableRow>,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the expanded snapshot', () => {
-    const { container } = render(<PostTagsExpandableRow postId={POST_ID} />);
-
-    fireEvent.click(screen.getByLabelText('Tag post (3)'));
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('PostTagsExpandableRow - Mobile Snapshots', () => {
-  beforeEach(() => {
-    mockUseIsMobile.mockReturnValue(true);
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(
-      <PostTagsExpandableRow postId={POST_ID}>
-        <button type="button" aria-label="extra action">
-          Extra
-        </button>
-      </PostTagsExpandableRow>,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

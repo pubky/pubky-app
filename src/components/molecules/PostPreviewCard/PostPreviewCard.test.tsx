@@ -325,26 +325,3 @@ describe('PostPreviewCard', () => {
     expect(screen.getByTestId('collection-card')).toHaveAttribute('data-presentation', 'embed');
   });
 });
-
-describe('PostPreviewCard - Snapshots', () => {
-  beforeEach(() => {
-    mockUsePostDetails.mockReturnValue(resolvedPost);
-  });
-
-  it('matches snapshot with default props', () => {
-    const { container } = render(<PostPreviewCard postId="snapshot-post-id" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with extra className', () => {
-    const { container } = render(<PostPreviewCard postId="snapshot-post-id" className="bg-muted" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for a collection original', () => {
-    mockUsePostDetails.mockReturnValue(collectionPost);
-
-    const { container } = render(<PostPreviewCard postId={COLLECTION_COMPOSITE_ID} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

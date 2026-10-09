@@ -84,10 +84,3 @@ describe('NotificationSettings', () => {
     expect(mockSetNotificationPreference).toHaveBeenCalledWith('follow', true);
   });
 });
-
-describe('NotificationSettings - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<NotificationSettings />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

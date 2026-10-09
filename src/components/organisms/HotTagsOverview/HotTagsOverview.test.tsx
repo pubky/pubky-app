@@ -65,16 +65,3 @@ describe('HotTagsOverview', () => {
     expect(mockPush).toHaveBeenCalledWith('/search?tags=ai');
   });
 });
-
-describe('HotTagsOverview - Snapshots', () => {
-  it('matches snapshot while loading', () => {
-    mockUseHotTags.mockReturnValue({
-      rawTags: [],
-      isLoading: true,
-      error: null,
-    });
-
-    const { container } = render(<HotTagsOverview />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

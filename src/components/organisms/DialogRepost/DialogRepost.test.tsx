@@ -277,38 +277,3 @@ describe('DialogRepost', () => {
     expect(dialog).toHaveAttribute('data-open', 'true');
   });
 });
-
-describe('DialogRepost - Snapshots', () => {
-  const mockHandleContentChange = vi.fn();
-  const mockHandleOpenChange = vi.fn();
-  const mockHandleDiscard = vi.fn();
-  const mockSetShowConfirmDialog = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseConfirmableDialog.mockReturnValue({
-      showConfirmDialog: false,
-      setShowConfirmDialog: mockSetShowConfirmDialog,
-      resetKey: 0,
-      handleContentChange: mockHandleContentChange,
-      handleOpenChange: mockHandleOpenChange,
-      handleDiscard: mockHandleDiscard,
-    });
-  });
-
-  it('matches snapshot with default props', () => {
-    const onOpenChangeAction = vi.fn();
-    const { container } = render(
-      <DialogRepost postId="snapshot-post-id" open={false} onOpenChangeAction={onOpenChangeAction} />,
-    );
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with open prop', () => {
-    const onOpenChangeAction = vi.fn();
-    const { container } = render(
-      <DialogRepost postId="snapshot-post-id" open={true} onOpenChangeAction={onOpenChangeAction} />,
-    );
-    expect(container).toMatchSnapshot();
-  });
-});

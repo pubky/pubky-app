@@ -29,10 +29,3 @@ describe('Account', () => {
     expect(screen.getByText('Delete your account')).toBeInTheDocument();
   });
 });
-
-describe('Account - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<Account />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

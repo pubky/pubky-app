@@ -1,102 +1,45 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { getEmailLink, getTelegramLink, getTwitterLink } from '@/config/externalLinks';
 import { PopoverInviteHomeserver } from './PopoverInviteHomeserver';
 
-vi.mock('@/atoms/Popover/Popover', () => {
-  return {
-    Popover: ({ children }: { children: React.ReactNode }) => <div data-testid="popover">{children}</div>,
-    PopoverTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
-      <div data-testid="popover-trigger" data-as-child={asChild}>
-        {children}
-      </div>
-    ),
-    PopoverContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="popover-content" className={className}>
-        {children}
-      </div>
-    ),
-  };
-});
+// The popover opens on hover, which the atom disables on touch devices.
+vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
+  useIsTouchDevice: () => false,
+}));
 
-// Mock atoms
-vi.mock('@/atoms/Button/Button', () => {
-  return {
-    Button: ({
-      children,
-      variant,
-      size,
-      className,
-    }: {
-      children: React.ReactNode;
-      variant?: string;
-      size?: string;
-      className?: string;
-    }) => (
-      <button data-testid={`button-${variant || 'default'}`} data-size={size} className={className}>
-        {children}
-      </button>
-    ),
-  };
-});
+describe('PopoverInviteHomeserver', () => {
+  it('renders a help trigger and keeps the content closed until hovered', () => {
+    render(<PopoverInviteHomeserver />);
 
-vi.mock('@/atoms/Container/Container', () => {
-  return {
-    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="container" className={className}>
-        {children}
-      </div>
-    ),
-  };
-});
-
-vi.mock('@/atoms/Heading/Heading', () => {
-  return {
-    Heading: ({
-      children,
-      level = 1,
-      size,
-      className,
-    }: {
-      children: React.ReactNode;
-      level?: number;
-      size?: string;
-      className?: string;
-    }) => (
-      <div role="heading" aria-level={level} data-testid={`heading-${level}`} data-size={size} className={className}>
-        {children}
-      </div>
-    ),
-  };
-});
-
-vi.mock('@/atoms/Link/Link', () => {
-  return {
-    Link: ({ children, href, className }: { children: React.ReactNode; href: string; className?: string }) => (
-      <a data-testid="link" href={href} className={className}>
-        {children}
-      </a>
-    ),
-  };
-});
-
-vi.mock('@/atoms/Typography/Typography', () => {
-  return {
-    Typography: ({ children, size, className }: { children: React.ReactNode; size?: string; className?: string }) => (
-      <p data-testid="typography" data-size={size} className={className}>
-        {children}
-      </p>
-    ),
-  };
-});
-
-describe('PopoverInviteHomeserver - Snapshots', () => {
-  it('matches snapshot for default PopoverInviteHomeserver', () => {
-    const { container } = render(<PopoverInviteHomeserver />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(screen.getByTestId('circle-help-icon')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: "Don't have an invite yet?" })).not.toBeInTheDocument();
   });
 
-  it('matches snapshot for PopoverInviteHomeserver with custom className', () => {
-    const { container } = render(<PopoverInviteHomeserver className="custom-homeserver-style" />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('shows the invite explanation and contact links on hover', () => {
+    render(<PopoverInviteHomeserver />);
+
+    fireEvent.mouseEnter(screen.getByRole('button'));
+
+    expect(screen.getByRole('heading', { name: "Don't have an invite yet?" })).toBeInTheDocument();
+    expect(screen.getByText(/Ask the Pubky team for your invite code/)).toBeInTheDocument();
+    expect(screen.getByText(/A homeserver is a storage provider/)).toBeInTheDocument();
+
+    const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
+    expect(hrefs).toEqual([getEmailLink(), getTwitterLink(), getTelegramLink()]);
+  });
+
+  it('applies a default hover class to the trigger button', () => {
+    render(<PopoverInviteHomeserver />);
+
+    expect(screen.getByRole('button')).toHaveClass('hover:bg-brand/10');
+  });
+
+  it('replaces the default trigger class with className', () => {
+    render(<PopoverInviteHomeserver className="custom-homeserver-style" />);
+
+    const trigger = screen.getByRole('button');
+    expect(trigger).toHaveClass('custom-homeserver-style');
+    expect(trigger).not.toHaveClass('hover:bg-brand/10');
   });
 });

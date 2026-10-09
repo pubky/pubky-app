@@ -172,27 +172,3 @@ describe('DialogEditCollection', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
-
-describe('DialogEditCollection - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    useAuthStore.setState({
-      currentUserPubky: 'account',
-      session: mockSession(),
-      restoreStatus: 'ready',
-      showSignInDialog: false,
-    });
-    mocks.postDetails = { content: collectionContent() };
-  });
-
-  it('matches snapshot when open with the envelope prefilled', async () => {
-    mocks.postDetails = {
-      content: collectionContent({ name: 'Proof of Work', description: 'Bitcoin essays' }),
-    };
-
-    render(<DialogEditCollection open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
-
-    await waitFor(() => expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Proof of Work'));
-    expect(document.body).toMatchSnapshot();
-  });
-});

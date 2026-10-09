@@ -1006,55 +1006,20 @@ describe('CollectionHero', () => {
     });
   });
 });
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: TooltipProvider });
+}
 
-describe('CollectionHero - Snapshots', () => {
-  it('matches the snapshot for the owner state', () => {
-    setAuthStore(AUTHOR_PUBKY);
-
-    const { container } = renderHero();
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the snapshot for the owner reorder-active state', () => {
-    setAuthStore(AUTHOR_PUBKY);
-
-    const { container } = renderHero({
-      reorder: { isActive: true, isSaving: false, onEnter: vi.fn(), onSave: vi.fn(), onCancel: vi.fn() },
-    });
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the snapshot for the non-owner Follow state', () => {
-    setAuthStore('viewer-pubky');
-    setBookmark({ isBookmarked: false });
-
-    const { container } = renderHero();
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the snapshot when no cover image and no description are set', () => {
-    setPostDetails(COLLECTION_CONTENT_NO_COVER);
-    setAuthStore('viewer-pubky');
-
-    const { container } = renderHero();
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('CollectionHero - Mobile Snapshots', () => {
+describe('CollectionHero - mobile layout preference', () => {
   beforeEach(() => {
     mockViewportState.isMobile = true;
     setMobileViewport();
     setAuthStore(AUTHOR_PUBKY);
   });
+
   afterEach(() => {
     mockViewportState.isMobile = false;
     resetViewport();
-  });
-
-  it('matches the snapshot for the owner state', () => {
-    const { container } = renderHero();
-    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('shows Cards for a Visual preference without changing it', async () => {
@@ -1065,7 +1030,3 @@ describe('CollectionHero - Mobile Snapshots', () => {
     expect(onLayoutChange).not.toHaveBeenCalled();
   });
 });
-
-function render(ui: ReactElement) {
-  return rtlRender(ui, { wrapper: TooltipProvider });
-}

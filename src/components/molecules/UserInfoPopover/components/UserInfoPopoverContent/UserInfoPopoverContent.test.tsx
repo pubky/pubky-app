@@ -57,12 +57,3 @@ describe('UserInfoPopoverContent', () => {
     expect(screen.getByTestId('follow-button')).toBeInTheDocument();
   });
 });
-
-describe('UserInfoPopoverContent - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(
-      <UserInfoPopoverContent userId="user123" userName="User" avatarUrl="avatar" formattedPublicKey="pubkey" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

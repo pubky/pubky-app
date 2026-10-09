@@ -283,15 +283,6 @@ describe('ProfilePageContainer', () => {
     );
     expect(screen.getByTestId('custom-child')).toBeInTheDocument();
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(
-      <ProfilePageContainer>
-        <div>Test Content</div>
-      </ProfilePageContainer>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });
 
 describe('ProfilePageContainer - Props passed to layout', () => {

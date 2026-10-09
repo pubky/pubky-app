@@ -58,11 +58,3 @@ describe('NewCollectionCardCTA', () => {
     expect(useAuthStore.getState().showSignInDialog).toBe(true);
   });
 });
-
-describe('NewCollectionCardCTA - Snapshots', () => {
-  it('matches the closed trigger snapshot', () => {
-    const { container } = render(<NewCollectionCardCTA />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

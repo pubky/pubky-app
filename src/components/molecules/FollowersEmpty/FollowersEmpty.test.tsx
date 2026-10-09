@@ -112,10 +112,3 @@ describe('FollowersEmpty', () => {
     expect(screen.getByTestId('dialog-new-post')).toHaveAttribute('data-open', 'true');
   });
 });
-
-describe('FollowersEmpty - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<FollowersEmpty />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

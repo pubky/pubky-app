@@ -145,10 +145,3 @@ describe('Install template', () => {
     expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 });
-
-describe('Install template - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<Install />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

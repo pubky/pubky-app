@@ -147,11 +147,6 @@ describe('TaggedItem', () => {
     render(<TaggedItem tag={mockTag} onTagClick={mockOnTagClick} hideAvatars />);
     expect(screen.getByText('bitcoin (3)')).toBeInTheDocument();
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<TaggedItem tag={mockTag} onTagClick={mockOnTagClick} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });
 
 describe('TaggedItem - Expand/Collapse (Controlled)', () => {
@@ -215,22 +210,5 @@ describe('TaggedItem - Expand/Collapse (Controlled)', () => {
 
     rerender(<TaggedItem tag={mockTag} onTagClick={mockOnTagClick} isExpanded={true} />);
     expect(avatarGroupButton).toHaveAttribute('aria-expanded', 'true');
-  });
-});
-
-describe('TaggedItem - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockPush.mockClear();
-  });
-
-  it('matches snapshot with hideAvatars', () => {
-    const { container } = render(<TaggedItem tag={mockTag} onTagClick={mockOnTagClick} hideAvatars />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when expanded', () => {
-    const { container } = render(<TaggedItem tag={mockTag} onTagClick={mockOnTagClick} isExpanded={true} />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

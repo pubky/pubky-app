@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
 import { cleanup } from '@testing-library/react';
-import { expect, vi } from 'vitest';
+import { vi } from 'vitest';
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
 
 // =============================================================================
@@ -46,11 +46,10 @@ process.env.SUPPORT_ACCOUNT_ID = '123';
 
 const { db } = await import('@/database/franky/franky');
 
-// Global snapshot serializer to normalize Radix UI generated IDs
-// This ensures snapshot tests are consistent across test runs
-// See: https://github.com/pubky/pubky-app/issues/1101
-const { radixIdSerializer } = await import('@/libs/utils/utils');
-expect.addSnapshotSerializer(radixIdSerializer);
+// Resolve pubky-app-specs-backed MIME constants before per-file mocks of that
+// package can take effect. Previously this happened as a side effect of loading
+// the Radix snapshot serializer from `@/libs/utils/utils`.
+await import('@/config/posts');
 
 // Polyfill IntersectionObserver for jsdom
 class MockIntersectionObserver implements IntersectionObserver {

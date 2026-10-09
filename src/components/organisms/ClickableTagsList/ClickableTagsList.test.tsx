@@ -1,11 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import type { Pubky } from '@/models/models.types';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ClickableTagsList } from './ClickableTagsList';
 
 function getPostTagButton(label: string, count?: number) {
@@ -744,84 +743,5 @@ describe('ClickableTagsList', () => {
 
       expect(getPostTagButton('bitcoin', 5)).toBeInTheDocument();
     });
-  });
-
-  describe('Snapshots', () => {
-    beforeEach(() => {
-      mockUseIsMobile.mockReturnValue(false);
-    });
-
-    it('matches snapshot with input visible', () => {
-      const { container } = render(
-        <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showInput={true} />,
-      );
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with add button', () => {
-      const { container } = render(
-        <ClickableTagsList
-          taggedId="post-123"
-          taggedKind={TagKind.POST}
-          tags={mockTags}
-          maxTags={10}
-          showAddButton={true}
-        />,
-      );
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with close buttons', () => {
-      const { container } = render(
-        <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={mockTags} showTagClose={true} />,
-      );
-
-      expect(container).toMatchSnapshot();
-    });
-  });
-});
-
-const snapshotTags: NexusTag[] = [
-  { label: 'bitcoin', taggers_count: 5, taggers: ['user1', 'user2'], relationship: true },
-  { label: 'ethereum', taggers_count: 3, taggers: ['user3'], relationship: false },
-  { label: 'web3', taggers_count: 10, taggers: [], relationship: false },
-];
-
-describe('ClickableTagsList - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsAuthenticated = true;
-    mockUseIsMobile.mockReturnValue(false);
-    useAuthStore.setState({ setShowSignInDialog: vi.fn() });
-  });
-
-  it('matches snapshot with tags and count', () => {
-    const { container } = render(
-      <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={snapshotTags} showCount={true} />,
-    );
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('ClickableTagsList - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsAuthenticated = true;
-    mockUseIsMobile.mockReturnValue(true);
-    setMobileViewport();
-    useAuthStore.setState({ setShowSignInDialog: vi.fn() });
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(
-      <ClickableTagsList taggedId="post-123" taggedKind={TagKind.POST} tags={snapshotTags} showCount={true} />,
-    );
-    expect(container).toMatchSnapshot();
   });
 });

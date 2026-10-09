@@ -248,28 +248,4 @@ describe('StatusPickerWrapper', () => {
       });
     });
   });
-
-  describe('StatusPickerWrapper - Snapshots', () => {
-    it('matches snapshot with predefined status', () => {
-      const { container } = render(<StatusPickerWrapper emoji="🌴" status="vacationing" />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with custom status', () => {
-      const { container } = render(<StatusPickerWrapper emoji="😊" status="😊Working" />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with onStatusChange handler', () => {
-      const { container } = render(
-        <StatusPickerWrapper emoji="🌴" status="vacationing" onStatusChange={mockOnStatusChange} />,
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with custom sideOffset', () => {
-      const { container } = render(<StatusPickerWrapper emoji="🌴" status="vacationing" sideOffset={-50} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogSignIn } from './DialogSignIn';
 
 const authState = vi.hoisted(() => ({
@@ -160,42 +159,5 @@ describe('DialogSignIn', () => {
       // The DialogTitle provides accessibility for screen readers
       expect(screen.getByRole('heading', { name: 'Join Pubky' })).toBeInTheDocument();
     });
-  });
-});
-
-describe('DialogSignIn - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    authState.currentUserPubky = null;
-    authState.restoreStatus = 'idle';
-    authState.sessionReference = null;
-  });
-
-  it('matches snapshot when open', () => {
-    mockShowSignInDialog.value = true;
-    render(<DialogSignIn />);
-
-    const dialog = document.querySelector('[role="dialog"]');
-    expect(dialog?.parentElement).toMatchSnapshot();
-  });
-
-  it('matches snapshot when closed', () => {
-    mockShowSignInDialog.value = false;
-    const { container } = render(<DialogSignIn />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('DialogSignIn - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-    mockShowSignInDialog.value = true;
-    mockJoinRoute.value = '/onboarding/human';
-  });
-  afterEach(resetViewport);
-
-  it('matches the normal sign-in prompt on mobile', () => {
-    render(<DialogSignIn />);
-    expect(document.querySelector('[role="dialog"]')?.parentElement).toMatchSnapshot();
   });
 });
