@@ -81,7 +81,6 @@ vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider.constants', () => ({
   },
 }));
 
-vi.mock('@/organisms/SessionRecovery/SessionRecovery', () => ({ SessionRecovery: () => <div>Recover session</div> }));
 vi.mock('@/hooks/useRestoreLocksAuth/useRestoreLocksAuth', () => ({ useRestoreLocksAuth: () => {} }));
 
 // Mock @/atoms
@@ -166,6 +165,7 @@ describe('RouteGuardProvider — migration resync', () => {
     'allows logout and public browsing while resync awaits %s',
     (status) => {
       mocks.restoreStatus = status;
+      mocks.status = 'UNAUTHENTICATED';
       mocks.session = null;
       mocks.wasDbReset = true;
       mocks.pathname = '/logout';
@@ -190,7 +190,7 @@ describe('RouteGuardProvider — migration resync', () => {
           <div>Settings</div>
         </RouteGuardProvider>,
       );
-      expect(screen.getByText('Recover session')).toBeInTheDocument();
+      expect(mocks.mockRouterPush).toHaveBeenCalledWith('/login');
       expect(screen.queryByText('Settings')).not.toBeInTheDocument();
     },
   );

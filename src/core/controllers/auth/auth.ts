@@ -477,21 +477,13 @@ export class AuthController {
    * @returns Configured homeserver service instance
    */
   private static async signIn({ keypair }: TKeypairParams): Promise<boolean> {
-    const previous = useAuthStore.getState();
-    const expectedPubky =
-      previous.restoreStatus === 'reauth-required' ? (previous.currentUserPubky ?? undefined) : undefined;
-    // Reject a wrong recovery key before issuing or storing a root grant for it.
-    if (expectedPubky && keypair.publicKey.z32() !== expectedPubky) throw createAuthApprovalMismatchError();
     this.cancelActiveAuthFlow();
     const epoch = this.epoch;
     void this.retrySessionRetirement();
     const result = await AuthApplication.signIn({ keypair });
     if (epoch !== this.epoch) throw createCanceledError();
     if (!result) return false;
-    await this.completeAuthenticatedSession(result, {
-      epoch,
-      expectedPubky,
-    });
+    await this.completeAuthenticatedSession(result, { epoch });
     return true;
   }
 
@@ -839,14 +831,6 @@ export class AuthController {
     return await this.signIn({ keypair });
   }
 
-  /** Recover the retained account using its original, unbacked browser key. */
-  static async loginWithSavedKey(): Promise<boolean> {
-    const secret = useOnboardingStore.getState().secretKey;
-    const expected = useAuthStore.getState().currentUserPubky;
-    if (!secret || !expected || Identity.tryZ32FromSecret(secret) !== expected) throw createAuthApprovalMismatchError();
-    return this.signIn({ keypair: Identity.keypairFromSecretKey(secret) });
-  }
-
   /**
    * Decrypts the file to obtain the keypair, authenticates with the homeserver, and saves authenticated data if successful.
    * @param params - Object containing the encrypted file and password for decryption
@@ -1005,7 +989,6 @@ export class AuthController {
       capabilities: HOMESERVER_CAPABILITIES,
       generation: state.generation,
       fresh,
-      expectedPubky: state.restoreStatus === 'reauth-required' ? (state.currentUserPubky ?? undefined) : undefined,
     });
   }
 
@@ -1060,7 +1043,6 @@ export class AuthController {
         generation: state.generation,
         xCallback: params.xCallback,
         fresh: true,
-        expectedPubky: state.restoreStatus === 'reauth-required' ? (state.currentUserPubky ?? undefined) : undefined,
       },
       true,
     );

@@ -22,7 +22,6 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { toast } from '@/molecules/Toaster/toast';
-import { SessionRecovery } from '@/organisms/SessionRecovery/SessionRecovery';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
@@ -57,7 +56,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const session = useAuthStore((state) => state.session);
   const sessionReference = useAuthStore((state) => state.sessionReference);
   const restoreStatus = useAuthStore((state) => state.restoreStatus);
-  const needsRecovery = restoreStatus === 'temporary-error' || restoreStatus === 'reauth-required';
+  const needsSignIn = restoreStatus === 'temporary-error' || restoreStatus === 'reauth-required';
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const wasDbReset = useMigrationStore((state) => state.wasDbReset);
   const isPublic = PUBLIC_ROUTES.includes(pathname) || isDynamicPublicRoute(pathname);
@@ -75,8 +74,8 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     (pathname === AUTH_ROUTES.SIGN_IN ||
       Object.values(ONBOARDING_ROUTES).some((route) => matchesAllowedRoute(pathname, route))),
   );
-  const canBrowseDuringRecovery =
-    hasHydrated && (needsRecovery || restoreStatus === 'restoring') && (isPublic || isCoreExploreRoute(pathname));
+  const canBrowseWithoutSession =
+    hasHydrated && (needsSignIn || restoreStatus === 'restoring') && (isPublic || isCoreExploreRoute(pathname));
 
   // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)
   const isMigrationResyncRunningRef = useRef(false);
@@ -100,7 +99,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (!hasHydrated) return; // No need to resync if the app has NOT hydrated
     if (isMigrationResyncRunningRef.current) return; // No need to resync if the resync is ALREADY running
     if (!currentUserPubky) {
-      if (needsRecovery || sessionReference) return;
+      if (needsSignIn || sessionReference) return;
       // No need to resync if the user is NOT logged in
       useMigrationStore.getState().reset();
       return;
@@ -144,7 +143,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     };
 
     runResync();
-  }, [wasDbReset, hasHydrated, currentUserPubky, needsRecovery, restoreStatus, session, sessionReference]);
+  }, [wasDbReset, hasHydrated, currentUserPubky, needsSignIn, restoreStatus, session, sessionReference]);
 
   // Determine if the current route is accessible based on authentication status
   const isRouteAccessible = (() => {
@@ -155,7 +154,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (isDynamicPublicRoute(pathname)) return true;
 
     // Core explore pages still wait for hydration, but a failed restore cannot block public reads.
-    if (canBrowseDuringRecovery) return true;
+    if (canBrowseWithoutSession) return true;
 
     // An already-mounted private page may survive a healthy same-account exchange, never reauthorization.
     if (isLoading) return (restoreStatus === 'restoring' && preserveMountedPage) || interactiveAuth;
@@ -180,7 +179,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (isDynamicPublicRoute(pathname)) return;
 
     // Wait for authentication status to be determined for protected routes
-    if (isLoading || needsRecovery) return;
+    if (isLoading) return;
 
     // No redirect needed if user has access to current route
     if (isRouteAccessible) return;
@@ -201,7 +200,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (redirectTo && pathname !== redirectTo) {
       router.push(redirectTo);
     }
-  }, [status, pathname, router, isLoading, isRouteAccessible, needsRecovery]);
+  }, [status, pathname, router, isLoading, isRouteAccessible]);
 
   // Restore the Locks session alongside the homeserver one (no-op while Locks is unconfigured).
   useRestoreLocksAuth();
@@ -210,11 +209,10 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // 1. Authentication status is being determined (isLoading = true)
   // 2. Route access check has completed but user doesn't have access (will trigger redirect)
   // 3. Migration re-sync is in progress (wasDbReset = true)
-  if (hasHydrated && !isLoading && needsRecovery && !canBrowseDuringRecovery) {
-    return <SessionRecovery needsAuthorization={restoreStatus === 'reauth-required'} />;
-  }
-
-  if (!isRouteAccessible || (wasDbReset && !canBrowseDuringRecovery && !preserveMountedPage && !interactiveAuth)) {
+  if (
+    !isRouteAccessible ||
+    (wasDbReset && !needsSignIn && !canBrowseWithoutSession && !preserveMountedPage && !interactiveAuth)
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">

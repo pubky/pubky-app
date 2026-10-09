@@ -9,8 +9,11 @@ export function useAuthStatus(): AuthStatusResult {
   const isLoading = !onboarding.hasHydrated || !auth.hasHydrated || auth.restoreStatus === 'restoring' || pending;
   const hasKeypair = auth.session !== null;
   const hasProfile = auth.hasProfile;
-  const status =
-    hasKeypair && hasProfile === true
+  // A retained handle after failed bootstrap is not a ready session for route access.
+  const needsSignIn = auth.restoreStatus === 'reauth-required' || auth.restoreStatus === 'temporary-error';
+  const status = needsSignIn
+    ? AuthStatus.UNAUTHENTICATED
+    : hasKeypair && hasProfile === true
       ? AuthStatus.AUTHENTICATED
       : hasKeypair && hasProfile === false
         ? AuthStatus.NEEDS_PROFILE_CREATION

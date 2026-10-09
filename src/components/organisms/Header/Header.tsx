@@ -19,7 +19,12 @@ import { pathToStepConfig } from './Header.constants';
 
 export function Header() {
   const pathname = usePathname();
-  const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
+  const isAuthenticated = useAuthStore(
+    (state) =>
+      Boolean(state.currentUserPubky) &&
+      state.restoreStatus !== 'reauth-required' &&
+      state.restoreStatus !== 'temporary-error',
+  );
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;

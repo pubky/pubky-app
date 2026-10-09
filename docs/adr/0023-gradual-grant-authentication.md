@@ -15,7 +15,7 @@ for users whose existing sessions are cookies; valid stored grants must survive 
 Use grants for every supported homeserver authentication flow. Remove cookie login, active-session restore,
 persistence and fallback from app authentication. Retain old public cookie metadata solely for bounded remote
 revocation, retrying failed cleanup without adopting a cookie session. Migrate public metadata into `auth-store-v3`, preserving grant references and discarding cookie credentials.
-Retain the previous public identity for recovery; commit the new record before removing obsolete storage keys.
+Retain the previous public identity for sign-in and cleanup; commit the new record before removing obsolete storage keys.
 A persistent migration marker and a separate namespace fence writes from older app versions.
 
 Keep secrets in SDK `browserSessionStore`. Save before authenticated I/O and restore only through that store.
@@ -34,25 +34,26 @@ remain available for retry; generic auth errors do not prove revocation succeede
 ## Consequences
 
 - Legacy cookie users must authenticate again; existing valid grant users are not deliberately logged out.
-- IndexedDB/Web Locks are required for grant persistence. Unsupported or temporarily blocked storage offers recovery;
+- IndexedDB/Web Locks are required for grant persistence. Failed restoration uses the existing landing/sign-in flow;
   explicit local logout remains available and bounded even if SDK cleanup cannot finish.
 - Logout never claims remote revocation succeeded when it is unconfirmed. Successful pending SDK logout is distinguished
   from missing local credentials. Removal notifications recheck the active reference under generation and restore-attempt guards.
 - Cross-tab account changes bootstrap the incoming account and isolate account-specific memory. Same-account upgrades
-  preserve the profile and mounted public/explore composer; protected settings remain mounted during healthy same-account restoration but remain behind recovery after a failure. Accounts, published content and the Dexie version are unchanged.
+  preserve the profile and mounted public/explore composer; protected settings remain mounted during healthy same-account restoration but redirect to the landing page after a failure. Accounts, published content and the Dexie version are unchanged.
 - SDK/HS ambient-cookie fallback is an accepted transport limitation, separate from app cookie authentication support.
   Strict isolation is not a release blocker for #2600. App-owned raw public requests omit cookies.
 - SDK removal still lacks delegated-key ownership checks for duplicated pending approvals. Completed candidates rejected after approval (including scope/account mismatches and losing races)
-  remain saved but inactive until safe cleanup can be established. Recovery-key identity is checked before issuing a grant;
-  retained candidates must pass client validation and must not repeat a failed save.
+  remain saved but inactive until safe cleanup can be established. Permission upgrades stay bound to the current account; normal sign-in may select another account.
+  Retained candidates must pass client validation and must not repeat a failed save.
 - One profile bootstrap task owns a generation/session, including after its UI deadline. Retry joins that task;
   late success restores readiness. Session restoration also shares its underlying exchange across UI deadlines;
   a retry consumes its pending or completed result. Restore attempts retry only transient network/server failures with a fixed bound.
-  Automatic foreground recovery is throttled; manual retry remains available.
+  Automatic foreground recovery is throttled; the UI has no manual session-retry control.
 - AuthCoordinator owns startup, storage, online, visibility and SDK-removal listeners. RouteGuardProvider mounts it
   before route access is resolved and retains UI-specific error presentation.
-- Recovery exposes an account-matching saved key and backup controls. Direct logout waits for backup confirmation
-  before erasing browser-generated recovery material. Corrupt metadata exposes recovery without silently deleting data.
+- Use the existing landing page and sign-in dialog when a session cannot be restored; there is no dedicated recovery
+  screen. Direct logout still waits for backup confirmation before erasing browser-generated recovery material.
+  Failed restoration, including corrupt metadata, never silently deletes saved data.
 - Staging verification with real browsers and deployed Ring, Passport, HS and Locks builds is still required.
 
 ## Alternatives

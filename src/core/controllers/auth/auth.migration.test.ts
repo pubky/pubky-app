@@ -1260,54 +1260,31 @@ describe('Locks restore ownership after account changes', () => {
   });
 });
 
-describe('Passport same-account recovery', () => {
-  it.each([PUBKY, OTHER_PUBKY])(
-    'binds recovered Passport approval to the retained account (%s)',
-    async (approvedPubky) => {
-      seed(null, null);
-      useAuthStore
-        .getState()
-        .init({ currentUserPubky: PUBKY, session: null, sessionReference: null, generation: '', hasProfile: true });
-      localStorage.setItem(
-        AUTH_PERSIST_KEY,
-        JSON.stringify({
-          version: 3,
-          state: {
-            currentUserPubky: PUBKY,
-            sessionReference: null,
-            generation: '',
-            hasProfile: true,
-            retiringSession: null,
-          },
-        }),
-      );
+describe('sign-in after session expiry', () => {
+  describe.each(['ring', 'passport'] as const)('%s', (provider) => {
+    it.each([PUBKY, OTHER_PUBKY])('allows normal sign-in as %s after expiry', async (approvedPubky) => {
+      seed(null);
+      useAuthStore.getState().setRestoreStatus('reauth-required');
       const flow = startFlow();
-      const result = await AuthController.getPassportAuthUrl({ xCallback: { xSource: 'Pubky' } });
+      const result =
+        provider === 'passport'
+          ? await AuthController.getPassportAuthUrl({ xCallback: { xSource: 'Pubky' } })
+          : await AuthController.getAuthUrl();
+      expect(AuthApplication.startGrantFlow).toHaveBeenCalledWith(
+        expect.not.objectContaining({ expectedPubky: PUBKY }),
+      );
       const approved = grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES], approvedPubky);
       flow.approval.resolve(approved);
-      if (approvedPubky === OTHER_PUBKY) {
-        await result.awaitApproval;
-        await expect(AuthController.initializeAuthenticatedSession({ session: approved })).rejects.toMatchObject({
-          name: 'AuthApprovalMismatch',
-        });
-        expect(AuthApplication.saveSession).not.toHaveBeenCalled();
-        expect(useAuthStore.getState()).toMatchObject({
-          currentUserPubky: PUBKY,
-          session: null,
-          restoreStatus: 'reauth-required',
-        });
-      } else {
-        await result.awaitApproval;
-        await AuthController.initializeAuthenticatedSession({ session: approved });
-        expect(useAuthStore.getState()).toMatchObject({
-          currentUserPubky: PUBKY,
-          session: approved,
-          restoreStatus: 'ready',
-        });
-      }
-      expect(clearDatabase).not.toHaveBeenCalled();
-    },
-  );
+      await result.awaitApproval;
+      if (provider === 'passport') await AuthController.initializeAuthenticatedSession({ session: approved });
+      expect(useAuthStore.getState()).toMatchObject({
+        currentUserPubky: approvedPubky,
+        session: approved,
+        restoreStatus: 'ready',
+      });
+      expect(clearDatabase).toHaveBeenCalledTimes(approvedPubky === PUBKY ? 0 : 1);
+    });
+  });
   it('recognizes when SDK restore already completed pending remote logout', async () => {
     seed(null, narrowReference);
     const warn = vi.spyOn(Logger, 'warn');
@@ -1976,18 +1953,28 @@ describe('final review session ownership regressions', () => {
     expect(await retry).toBe(true);
     expect(useAuthStore.getState().session).toBe(narrowGrant);
   });
-  it('rejects a recovery key for another account before issuing a root grant', async () => {
-    useAuthStore.setState({ restoreStatus: 'reauth-required' });
-    const signin = vi.spyOn(AuthApplication, 'signIn');
-    vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(
-      asOpaque<Keypair>({ publicKey: { z32: () => OTHER_PUBKY } }),
-    );
-    await expect(AuthController.loginWithMnemonic({ mnemonic: 'other account phrase' })).rejects.toMatchObject({
-      name: 'AuthApprovalMismatch',
-    });
-    expect(signin).not.toHaveBeenCalled();
-    expect(AuthApplication.saveSession).not.toHaveBeenCalled();
-  });
+  it.each(['mnemonic', 'file'] as const)(
+    'allows signing in to another account with a %s after expiry',
+    async (method) => {
+      useAuthStore.setState({ restoreStatus: 'reauth-required' });
+      const keypair = asOpaque<Keypair>({ publicKey: { z32: () => OTHER_PUBKY } });
+      vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(keypair);
+      vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(keypair);
+      const session = grantSession(undefined, OTHER_PUBKY);
+      const signin = vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session });
+      const result =
+        method === 'mnemonic'
+          ? await AuthController.loginWithMnemonic({ mnemonic: 'other account phrase' })
+          : await AuthController.loginWithEncryptedFile({
+              encryptedFile: new File(['encrypted'], 'recovery.pkarr'),
+              password: 'password',
+            });
+      expect(result).toBe(true);
+      expect(signin).toHaveBeenCalledWith({ keypair });
+      expect(useAuthStore.getState()).toMatchObject({ currentUserPubky: OTHER_PUBKY, session, restoreStatus: 'ready' });
+      expect(clearDatabase).toHaveBeenCalledOnce();
+    },
+  );
   it('does not write metadata or notify subscribers for an empty retirement queue', async () => {
     const onChange = vi.fn();
     const unsubscribe = useAuthStore.subscribe(onChange);

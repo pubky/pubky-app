@@ -1,6 +1,13 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { APP_ROUTES, AUTH_ROUTES, COLLECTION_ROUTES, EXPLORE_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import {
+  APP_ROUTES,
+  AUTH_ROUTES,
+  COLLECTION_ROUTES,
+  EXPLORE_ROUTES,
+  ONBOARDING_ROUTES,
+  ROOT_ROUTES,
+} from '@/app/routes';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
@@ -31,9 +38,6 @@ vi.mock('@/controllers/auth/auth', () => ({
 }));
 vi.mock('@/controllers/migration/migration', () => ({ MigrationController: { resync: mocks.resync } }));
 vi.mock('@/hooks/useRestoreLocksAuth/useRestoreLocksAuth', () => ({ useRestoreLocksAuth: () => {} }));
-vi.mock('@/organisms/SessionRecovery/SessionRecovery', () => ({
-  SessionRecovery: () => <div>Recover session</div>,
-}));
 
 function ExplorePage() {
   const { requireAuth } = useRequireAuth();
@@ -75,7 +79,6 @@ describe('RouteGuardProvider recovery with real route and auth rules', () => {
         renderRoute();
 
         expect(screen.getByText('Public content')).toBeInTheDocument();
-        expect(screen.queryByText('Recover session')).not.toBeInTheDocument();
         expect(mocks.push).not.toHaveBeenCalled();
         expect(mocks.resync).not.toHaveBeenCalled();
         expect(useMigrationStore.getState().wasDbReset).toBe(wasDbReset);
@@ -86,14 +89,25 @@ describe('RouteGuardProvider recovery with real route and auth rules', () => {
         expect(useAuthStore.getState().currentUserPubky).toBe('retained-account');
       });
 
-      it.each([COLLECTION_ROUTES.BOOKMARKS, APP_ROUTES.SETTINGS, '/feed/custom', '/profile/notifications'])(
-        'keeps %s behind recovery',
+      it.each([ROOT_ROUTES, AUTH_ROUTES.SIGN_IN, ONBOARDING_ROUTES.HUMAN, ONBOARDING_ROUTES.BACKUP])(
+        'allows the existing sign-in/onboarding flow on %s',
         (pathname) => {
           mocks.pathname = pathname;
           renderRoute();
-          expect(screen.getByText('Recover session')).toBeInTheDocument();
-          expect(screen.queryByText('Public content')).not.toBeInTheDocument();
+          expect(screen.getByText('Public content')).toBeInTheDocument();
           expect(mocks.push).not.toHaveBeenCalled();
+          expect(mocks.resync).not.toHaveBeenCalled();
+          expect(useAuthStore.getState().currentUserPubky).toBe('retained-account');
+        },
+      );
+
+      it.each([COLLECTION_ROUTES.BOOKMARKS, APP_ROUTES.SETTINGS, '/feed/custom', '/profile/notifications'])(
+        'redirects %s to the landing page for sign-in',
+        (pathname) => {
+          mocks.pathname = pathname;
+          renderRoute();
+          expect(screen.queryByText('Public content')).not.toBeInTheDocument();
+          expect(mocks.push).toHaveBeenCalledWith(ROOT_ROUTES);
           expect(mocks.resync).not.toHaveBeenCalled();
         },
       );
@@ -209,12 +223,12 @@ describe('mounted recovery context', () => {
     );
     expect(screen.queryByText('Public content')).not.toBeInTheDocument();
   });
-  it('keeps private settings behind recovery even when previously mounted', () => {
+  it('redirects failed restoration from mounted private settings even with a retained session', () => {
     mocks.pathname = APP_ROUTES.SETTINGS;
     renderRoute();
     expect(screen.getByText('Public content')).toBeInTheDocument();
     act(() => useAuthStore.setState({ restoreStatus: 'temporary-error' }));
-    expect(screen.getByText('Recover session')).toBeInTheDocument();
+    expect(mocks.push).toHaveBeenCalledWith(ROOT_ROUTES);
     expect(screen.queryByText('Public content')).not.toBeInTheDocument();
   });
   it.each([AUTH_ROUTES.SIGN_IN, ONBOARDING_ROUTES.PROFILE])(

@@ -20,38 +20,15 @@ import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
-import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
-import { SessionRecovery } from '@/organisms/SessionRecovery/SessionRecovery';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export function DialogSignIn() {
   const showSignInDialog = useAuthStore((state) => state.showSignInDialog);
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
-  const sessionReference = useAuthStore((state) => state.sessionReference);
-  const restoreStatus = useAuthStore((state) => state.restoreStatus);
   const joinRoute = useJoinRoute();
   const handleClose = () => setShowSignInDialog(false);
-  if (restoreStatus === 'restoring' || (restoreStatus === 'idle' && sessionReference))
-    return (
-      <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
-        <DialogContent hiddenTitle="Restoring your session">
-          <div role="status" className="flex items-center gap-3">
-            <Spinner aria-hidden="true" />
-            <p>Restoring your session. Try your action again when it is ready.</p>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  if (restoreStatus === 'temporary-error' || restoreStatus === 'reauth-required')
-    return (
-      <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
-        <DialogContent className="max-h-screen overflow-y-auto" hiddenTitle="Restore your session">
-          <SessionRecovery needsAuthorization={restoreStatus === 'reauth-required'} compact />
-        </DialogContent>
-      </Dialog>
-    );
   return (
     <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
       <DialogContent className="w-[576px] gap-6">

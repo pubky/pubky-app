@@ -16,7 +16,7 @@ A valid older grant without the Locks scopes can be upgraded for the same accoun
 - `auth-store-v3` holds only public account/session metadata and SDK record IDs. Grant and proof secrets remain in
   SDK IndexedDB. App code never exports a completed session or adopts a cookie session.
 - Migration preserves valid `auth-store-v2` grant references, profile state, generation and pending grant retirement.
-  Cookie references from v1/v2 are discarded, retaining public account identity for same-account recovery.
+  Cookie references from v1/v2 are discarded, retaining public account identity for subsequent sign-in and cleanup.
   Old cookie metadata stays in its original key solely for remote revocation; it never enters v3 or the live session.
   Restore, adoption and logout attempt cleanup, retaining metadata on offline/failure for retry. Cookie cleanup is
   bounded independently of grant logout, and delayed cleanup cannot delete a newer metadata snapshot.
@@ -25,10 +25,10 @@ A valid older grant without the Locks scopes can be upgraded for the same accoun
 - Auth generations and Web Locks serialize adoption, migration, logout and metadata writes. Read-only generation checks
   do not migrate storage. Late approval/restore/bootstrap results cannot replace a newer account.
 - Missing SDK credentials, expired/rejected grants and account/client mismatch require reauthorization. Network,
-  IndexedDB and Web Locks failures preserve the saved reference and offer retry. Malformed metadata is not silently
+  IndexedDB and Web Locks failures preserve the saved reference for automatic retry. Malformed metadata is not silently
   treated as a fresh guest. The service maps only verified terminal SDK errors; it does not classify all
   `ClientStateError` failures as expired sessions. Initial hydration waits at most 12 seconds for the migration lock,
-  then exposes recovery without deleting saved metadata; a timed-out migration cannot write when its lock arrives later.
+  then allows normal sign-in without deleting saved metadata; a timed-out migration cannot write when its lock arrives later.
   Retryable network/server restore failures get at most three attempts, 400 ms apart; local storage and terminal
   auth failures do not enter that retry loop. Profile bootstrap is shared across retries and can settle ready after
   its UI timeout without starting overlapping work.
@@ -47,9 +47,11 @@ A valid older grant without the Locks scopes can be upgraded for the same accoun
   also check account ownership; delayed work cannot reinstall the previous account's session.
 - A retained public identity is not authorization. Public pages and the exact core explore routes (`/home`, `/hot`,
   `/search`, `/collections`) remain readable during recovery, including pending database resync. Explore routes still
-  wait for auth hydration; protected sub-routes such as `/collections/bookmarks` stay behind recovery. Mutations,
+  wait for auth hydration; protected sub-routes such as `/collections/bookmarks` redirect to the existing landing page when restoration fails. Mutations,
   including already-open menus and collection/delete/edit forms, require a ready session at action time. Pending
-  database resync cannot hide the recovery screen's logout route.
+  database resync cannot block landing, sign-in or logout after a failed restore. There is no dedicated session-recovery
+  screen or manual retry control; the usual sign-in dialog and routes handle reauthorization. Normal sign-in may select
+  another account; permission upgrades remain bound to the current account.
 
 ## SDK lifecycle and tabs
 
@@ -98,7 +100,7 @@ app identity, environment, homeserver, relay and signup-invite hash. The SDK ser
 Refresh starts a new attempt; unmount alone preserves mobile handoff. Treat pending serializations as sensitive.
 
 Completed approvals rejected after approval (including insufficient scopes, an account mismatch, and losing races)
-are retained without becoming active. Root-key recovery rejects a different identity before issuing its grant; retained
+are retained without becoming active. Permission upgrades reject a different identity; retained
 candidates still require the expected client ID, and failed SDK saves are not repeated by the retention fallback. SDK 0.15 removal still deletes delegated
 proof keys without ownership checks; a duplicated pending tab may share them. Do not infer safe key deletion from a
 count of completed records or clear all delegated keys on cancellation.
@@ -112,10 +114,9 @@ Passport still needs verification even when its source supports `signin_grant` a
 Browser signup retains its original keys and creation stage after uncertain network responses. It attempts signin
 before spending the invite again; only a definitive missing account in the still-current signup permits another create
 attempt. Only this known signup path may repair a proven missing PKARR record to the intended homeserver. Failed grant/bootstrap work must not
-destroy backup keys. Recovery offers backup controls and signin with an account-matching saved key; explicit UI
-logout routes through backup confirmation before clearing it. Downloading a file or completing the phrase quiz does
+destroy backup keys. The existing onboarding backup and logout confirmation protect saved browser keys before clearing them. Downloading a file or completing the phrase quiz does
 not itself authorize deletion: users with an existing backup select Done and confirm. Invite signup stops automatic
-retries once a grant is durably adopted, leaving profile-bootstrap retry to session recovery. A definitive rejected invite clears only the creation
+retries once a grant is durably adopted, leaving profile-bootstrap retry to the automatic session lifecycle. A definitive rejected invite clears only the creation
 attempt, allowing correction without replacing its keys. Missing delegated pending-flow keys and malformed SDK serializations start fresh authorization;
 transient storage failures keep the pending material for retry.
 
@@ -149,4 +150,4 @@ confirm the account-matching backup (Done → Confirm/delete seed); otherwise th
 gate. Cypress specs are QA-owned and must be adapted by QA. Ring users with an unrelated onboarding key skip that gate.
 
 Existing auth VRT baselines must follow the CI baseline workflow; never commit locally
-produced pixel baselines. Recovery UI unit snapshots are separate from live-browser/staging verification.
+produced pixel baselines. Sign-in UI unit snapshots are separate from live-browser/staging verification.

@@ -1,16 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { DialogSignIn } from './DialogSignIn';
 
-const recoveryState = vi.hoisted(() => ({
+const authState = vi.hoisted(() => ({
   currentUserPubky: null as string | null,
   restoreStatus: 'idle',
   sessionReference: null as object | null,
-}));
-vi.mock('@/organisms/SessionRecovery/SessionRecovery', () => ({
-  SessionRecovery: ({ needsAuthorization }: { needsAuthorization: boolean }) => (
-    <div>{needsAuthorization ? 'Authorize retained account' : 'Retry retained session'}</div>
-  ),
 }));
 const mockShowSignInDialog = vi.hoisted(() => ({ value: false }));
 const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
@@ -27,7 +23,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
     selector: (state: { showSignInDialog: boolean; setShowSignInDialog: typeof mockSetShowSignInDialog }) => unknown,
   ) =>
     selector({
-      ...recoveryState,
+      ...authState,
       showSignInDialog: mockShowSignInDialog.value,
       setShowSignInDialog: mockSetShowSignInDialog,
     }),
@@ -45,39 +41,27 @@ vi.mock('next/link', () => ({
 describe('DialogSignIn', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    recoveryState.currentUserPubky = null;
-    recoveryState.restoreStatus = 'idle';
-    recoveryState.sessionReference = null;
+    authState.currentUserPubky = null;
+    authState.restoreStatus = 'idle';
+    authState.sessionReference = null;
     mockShowSignInDialog.value = false;
     mockJoinRoute.value = '/onboarding/human';
   });
 
-  it.each(['temporary-error', 'reauth-required'])('shows account recovery for %s instead of guest signup', (status) => {
-    mockShowSignInDialog.value = true;
-    recoveryState.currentUserPubky = 'retained-user';
-    recoveryState.restoreStatus = status;
-    render(<DialogSignIn />);
-    expect(
-      screen.getByText(status === 'reauth-required' ? 'Authorize retained account' : 'Retry retained session'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Join Pubky')).not.toBeInTheDocument();
-  });
-  it('offers guest sign-in after generating an unregistered onboarding key', () => {
-    mockShowSignInDialog.value = true;
-    recoveryState.currentUserPubky = 'unregistered-key';
-    render(<DialogSignIn />);
-    expect(screen.getByRole('heading', { name: 'Join Pubky' })).toBeInTheDocument();
-    expect(screen.queryByText('Retry retained session')).not.toBeInTheDocument();
-  });
-  it.each(['idle', 'restoring'])('shows progress for an active saved-session restore (%s)', (status) => {
-    mockShowSignInDialog.value = true;
-    recoveryState.currentUserPubky = 'account';
-    recoveryState.sessionReference = {};
-    recoveryState.restoreStatus = status;
-    render(<DialogSignIn />);
-    expect(screen.getByText('Restoring your session. Try your action again when it is ready.')).toBeInTheDocument();
-    expect(screen.queryByText('Retry retained session')).not.toBeInTheDocument();
-  });
+  it.each(['idle', 'restoring', 'temporary-error', 'reauth-required'])(
+    'offers normal sign-in with a retained account (%s)',
+    (status) => {
+      mockShowSignInDialog.value = true;
+      authState.currentUserPubky = 'retained-account';
+      authState.sessionReference = {};
+      authState.restoreStatus = status;
+      render(<DialogSignIn />);
+      expect(screen.getByRole('heading', { name: 'Join Pubky' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('link', { name: 'Sign In' }));
+      expect(mockSetShowSignInDialog).toHaveBeenCalledWith(false);
+      expect(screen.queryByText(/retry saved session|restoring your session/i)).not.toBeInTheDocument();
+    },
+  );
   describe('rendering', () => {
     it('renders nothing when store has showSignInDialog=false', () => {
       mockShowSignInDialog.value = false;
@@ -182,9 +166,9 @@ describe('DialogSignIn', () => {
 describe('DialogSignIn - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    recoveryState.currentUserPubky = null;
-    recoveryState.restoreStatus = 'idle';
-    recoveryState.sessionReference = null;
+    authState.currentUserPubky = null;
+    authState.restoreStatus = 'idle';
+    authState.sessionReference = null;
   });
 
   it('matches snapshot when open', () => {
@@ -195,16 +179,23 @@ describe('DialogSignIn - Snapshots', () => {
     expect(dialog?.parentElement).toMatchSnapshot();
   });
 
-  it.each(['restoring', 'temporary-error', 'reauth-required'])('matches snapshot for %s', (status) => {
-    mockShowSignInDialog.value = true;
-    recoveryState.currentUserPubky = 'account';
-    recoveryState.restoreStatus = status;
-    render(<DialogSignIn />);
-    expect(document.querySelector('[role="dialog"]')?.parentElement).toMatchSnapshot();
-  });
   it('matches snapshot when closed', () => {
     mockShowSignInDialog.value = false;
     const { container } = render(<DialogSignIn />);
     expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('DialogSignIn - Mobile Snapshots', () => {
+  beforeEach(() => {
+    setMobileViewport();
+    mockShowSignInDialog.value = true;
+    mockJoinRoute.value = '/onboarding/human';
+  });
+  afterEach(resetViewport);
+
+  it('matches the normal sign-in prompt on mobile', () => {
+    render(<DialogSignIn />);
+    expect(document.querySelector('[role="dialog"]')?.parentElement).toMatchSnapshot();
   });
 });

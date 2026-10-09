@@ -53,6 +53,19 @@ describe('useAuthStatus', () => {
     mockAuthStore.selectIsAuthenticated = vi.fn(() => false);
   });
 
+  it.each(['temporary-error', 'reauth-required'])(
+    'requires normal sign-in after %s even with a retained handle and known profile',
+    (status) => {
+      mockAuthStore.session = mockSession;
+      mockAuthStore.hasProfile = true;
+      mockAuthStore.restoreStatus = status;
+      const { result } = renderHook(() => useAuthStatus());
+      expect(result.current.status).toBe('UNAUTHENTICATED');
+      expect(result.current.isFullyAuthenticated).toBe(false);
+      expect(result.current.isLoading).toBe(false);
+    },
+  );
+
   it('should return loading state when onboarding store not hydrated', () => {
     mockOnboardingStore.hasHydrated = false;
     mockAuthStore.hasHydrated = true;
