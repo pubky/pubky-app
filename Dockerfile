@@ -40,6 +40,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Enable standalone output for Docker builds
 ENV NEXT_STANDALONE=true
 
+# `next build --webpack` exceeds Node's default ~2GB heap inside this image
+# (pubky-stack CI: JavaScript heap out of memory, then SIGABRT). Raise the
+# old-space limit for the build. The runner stage does not inherit this ENV.
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
 # Build the application
 RUN npm run build
 
