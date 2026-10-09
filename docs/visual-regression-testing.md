@@ -52,6 +52,18 @@ those baselines, delete the PNGs first so they are regenerated from scratch.
   resolves differently per run/region. This is the #1 cause of flakiness.
 - **Time** — `renderForVRT` calls `freezeNow()`; mock any relative-time hook to
   the stable formatter in `vrt.clock.ts`.
+- **Waits** — every wait in the harness is bounded (`fonts`, viewport ack,
+  image preload/decode, dynamic icons, cursor park) and rejects with a message
+  naming the wait, so a stall is never reported as a generic
+  `Test timed out in 30000ms`. An untimed `document.fonts.ready` or
+  `image.decode()` has no limit at all, and a Playwright action without
+  `timeout` is given whatever is left of the test budget by Vitest, so its
+  `.catch` runs too late to help. Inter Tight is loaded in `vrt.setup.ts`
+  before the file's tests, so the first capture does not pay that cold start.
+  Do not add an unbounded `await` inside a test. Bounded waits still add up:
+  a surface whose first capture legitimately runs long on a busy macOS runner
+  (the `next/dynamic` markdown editor, the Collections overview) gets its own
+  `it`/`describe` timeout rather than a change to the project `testTimeout`.
 - **Randomness** — `Math.random` is seeded by the harness, so name generators
   and placeholders stay stable.
 - **Images** — `next/image` is mocked to a plain `<img>` in `vrt.setup.ts` (the
@@ -73,6 +85,17 @@ those baselines, delete the PNGs first so they are regenerated from scratch.
   covered by the wait, but a cold fetch can still race the initial paint —
   `preloadImages(...)` them too when a surface has flaked on a specific asset
   (see the Landing VRT's header/brand logos).
+- **App chrome** — the header nav (Home, Hot, Shop, Collections, Settings,
+  avatar) renders synchronously from the auth store mock and the runtime-config
+  defaults, so it needs no wait. The own-profile sidebar's **Unlocked** row is
+  the exception: `useUnlockedList` reads the reader's `/priv` from the
+  homeserver and shows a spinner until that read settles. `vrt.setup.ts` mocks
+  it to a settled empty read (count `0`) for every file, so no capture depends
+  on whether a real request has failed yet. Mock any other hook that does IO
+  for chrome the same way, in the shared setup, not per test. Note that a
+  chrome change under the 0.1% tolerance (one 48px icon button, one sidebar
+  row) does not fail existing baselines and `--update` does not rewrite them;
+  delete the affected PNGs so they are regenerated with the new chrome.
 - **Avatars** — VRT profile fixtures use `image: null` so every avatar renders
   `FacehashAvatar`. `vrt.setup.ts` sets `globalThis.__VRT__` and stabiliser CSS;
   `FacehashAvatar` disables blink, 3D tilt, and hover when that flag is set.
