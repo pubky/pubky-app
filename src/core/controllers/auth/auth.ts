@@ -21,7 +21,12 @@ import { NotificationCoordinator } from '@/coordinators/notifications/notificati
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { hasCapabilities } from '@/libs/auth/capabilities';
-import { pendingRetirements, type PersistedAuth, type SessionReference } from '@/libs/auth/session.types';
+import {
+  type ActiveSessionFailure,
+  pendingRetirements,
+  type PersistedAuth,
+  type SessionReference,
+} from '@/libs/auth/session.types';
 import {
   createAuthApprovalMismatchError,
   createCanceledError,
@@ -398,6 +403,30 @@ export class AuthController {
     }
   }
 
+  static subscribeSessionFailures(listener: (failure: ActiveSessionFailure) => void): () => void {
+    return AuthApplication.subscribeSessionFailures(listener);
+  }
+
+  /** Drop an unusable live handle without deleting account data or canceling a newer sign-in. */
+  static requireSessionReauthentication({ generation, session }: { generation: string; session?: Session }): boolean {
+    const snapshot = useAuthStore.getState();
+    if (
+      !snapshot.session ||
+      snapshot.isLoggingOut ||
+      snapshot.generation !== generation ||
+      (session && snapshot.session !== session) ||
+      !this.isCurrentGeneration(generation)
+    )
+      return false;
+    ++this.restoreVersion;
+    this.sessionRestore = null;
+    this.cancelModerationFollow();
+    // Set the status first so clearing the handle cannot trigger automatic startup restoration.
+    snapshot.setRestoreStatus('reauth-required');
+    snapshot.setSession(null);
+    return true;
+  }
+
   /** SDK notifications also cover removal outside this app's localStorage transitions. */
   static async syncRemovedSession(id: string | null): Promise<void> {
     await this.syncSessionFromStorage();
@@ -648,10 +677,11 @@ export class AuthController {
         previous.needsAccountSync
       )
         await this.bootstrapProfile(session, generation);
-      if (this.isCurrentGeneration(generation)) useAuthStore.getState().setRestoreStatus('ready');
+      if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session)
+        useAuthStore.getState().setRestoreStatus('ready');
     } catch (error) {
       // The replacement is already durable. Never resurrect the previous session or erase this grant.
-      if (useAuthStore.getState().generation === generation)
+      if (useAuthStore.getState().generation === generation && useAuthStore.getState().session === session)
         useAuthStore.getState().setRestoreStatus('temporary-error');
       throw error;
     }

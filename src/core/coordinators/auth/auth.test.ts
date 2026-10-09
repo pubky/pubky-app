@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthController } from '@/controllers/auth/auth';
+import type { ActiveSessionFailure } from '@/libs/auth/session.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
 import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
+import { mockSession } from '@/test-utils/pubky';
 import { mockGrantReference } from '@/test-utils/pubky';
 import { AuthCoordinator } from './auth';
 
@@ -13,6 +15,8 @@ vi.mock('@/controllers/auth/auth', () => ({
     retrySessionRetirement: vi.fn().mockResolvedValue(undefined),
     syncSessionFromStorage: vi.fn().mockResolvedValue(undefined),
     syncRemovedSession: vi.fn().mockResolvedValue(undefined),
+    subscribeSessionFailures: vi.fn(() => vi.fn()),
+    requireSessionReauthentication: vi.fn(() => true),
   },
 }));
 const coordinator = AuthCoordinator.getInstance();
@@ -26,10 +30,47 @@ beforeEach(() => {
 afterEach(() => {
   coordinator.stop();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
 describe('AuthCoordinator', () => {
+  it('shares only accepted failure generations, ignores malformed events and closes subscriptions', () => {
+    const postMessage = vi.fn();
+    const close = vi.fn();
+    const channels: { onmessage: ((event: MessageEvent<unknown>) => void) | null }[] = [];
+    vi.stubGlobal(
+      'BroadcastChannel',
+      class {
+        onmessage = null;
+        postMessage = postMessage;
+        close = close;
+        constructor() {
+          channels.push(this);
+        }
+      },
+    );
+    coordinator.start();
+    coordinator.start();
+    expect(AuthController.subscribeSessionFailures).toHaveBeenCalledOnce();
+    const listener = vi.mocked(AuthController.subscribeSessionFailures).mock.calls[0][0];
+    const failure: ActiveSessionFailure = { session: mockSession(), generation: 'active' };
+    listener(failure);
+    expect(AuthController.requireSessionReauthentication).toHaveBeenCalledWith(failure);
+    expect(postMessage).toHaveBeenCalledExactlyOnceWith({ generation: 'active' });
+    vi.mocked(AuthController.requireSessionReauthentication).mockReturnValueOnce(false);
+    listener(failure);
+    expect(postMessage).toHaveBeenCalledOnce();
+    channels[0].onmessage!(new MessageEvent('message', { data: { generation: 'remote' } }));
+    expect(AuthController.requireSessionReauthentication).toHaveBeenLastCalledWith({ generation: 'remote' });
+    const count = vi.mocked(AuthController.requireSessionReauthentication).mock.calls.length;
+    for (const data of [null, {}, { generation: 1 }]) channels[0].onmessage!(new MessageEvent('message', { data }));
+    expect(AuthController.requireSessionReauthentication).toHaveBeenCalledTimes(count);
+    coordinator.stop();
+    expect(close).toHaveBeenCalledOnce();
+    expect(vi.mocked(AuthController.subscribeSessionFailures).mock.results[0].value).toHaveBeenCalledOnce();
+  });
+
   it('starts once, waits for hydration and stops all event subscriptions', async () => {
     coordinator.start();
     coordinator.start();

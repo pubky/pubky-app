@@ -115,6 +115,47 @@ describe('AuthController restored session lifecycle', () => {
     vi.unstubAllGlobals();
   });
 
+  it('requires normal sign-in after an active failure without erasing saved account data', () => {
+    useAuthStore.setState({ session: sessionA, restoreStatus: 'ready', hasProfile: true });
+    persistState();
+    const before = useAuthStore.getState();
+    expect(AuthController.requireSessionReauthentication({ session: sessionA, generation: before.generation })).toBe(
+      true,
+    );
+    expect(useAuthStore.getState()).toMatchObject({
+      session: null,
+      restoreStatus: 'reauth-required',
+      currentUserPubky: pubkyA,
+      sessionReference: before.sessionReference,
+      hasProfile: true,
+      generation: before.generation,
+    });
+    expect(databaseHelpers.clearDatabase).not.toHaveBeenCalled();
+    expect(HomeserverService.logout).not.toHaveBeenCalled();
+    expect(AuthController.requireSessionReauthentication({ generation: before.generation })).toBe(false);
+  });
+
+  it.each(['different-session', 'different-generation', 'newer-durable-login', 'logging-out'])(
+    'ignores a stale active failure: %s',
+    (condition) => {
+      useAuthStore.setState({ session: sessionA, restoreStatus: 'ready', generation: 'current' });
+      persistState();
+      if (condition === 'newer-durable-login') {
+        const stored = JSON.parse(localStorage.getItem(AUTH_PERSIST_KEY)!);
+        stored.state.generation = 'newer';
+        localStorage.setItem(AUTH_PERSIST_KEY, JSON.stringify(stored));
+      }
+      if (condition === 'logging-out') useAuthStore.setState({ isLoggingOut: true });
+      expect(
+        AuthController.requireSessionReauthentication({
+          session: condition === 'different-session' ? sessionB : sessionA,
+          generation: condition === 'different-generation' ? 'old' : 'current',
+        }),
+      ).toBe(false);
+      expect(useAuthStore.getState()).toMatchObject({ session: sessionA, restoreStatus: 'ready' });
+    },
+  );
+
   it.each(['exists', 'missing', 'failed'] as const)(
     'ignores a late %s profile result after logout and account replacement',
     async (result) => {

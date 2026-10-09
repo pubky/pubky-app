@@ -122,6 +122,7 @@ vi.mock('@/stores/migration/migration.store', () => ({
 }));
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
+    subscribeSessionFailures: vi.fn(() => vi.fn()),
     retrySessionRetirement: vi.fn().mockResolvedValue(undefined),
     restorePersistedSession: mocks.restorePersistedSession,
     retireLegacyCookieSessions: mocks.retireLegacyCookieSessions,

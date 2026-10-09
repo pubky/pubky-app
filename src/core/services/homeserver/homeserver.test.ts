@@ -5,6 +5,7 @@ import { AppError } from '@/libs/error/error';
 import {
   AuthErrorCode,
   ClientErrorCode,
+  DatabaseErrorCode,
   NetworkErrorCode,
   ServerErrorCode,
   TimeoutErrorCode,
@@ -56,6 +57,8 @@ const mockState = vi.hoisted(() => ({
   eventStreamForUser: vi.fn(),
   // Auth store session
   currentSession: null as Session | null,
+  generation: 'active-generation',
+  restoreStatus: 'ready',
 }));
 
 // Mock global fetch for generateSignupToken tests (calls /api/dev/signup-token)
@@ -82,6 +85,10 @@ vi.mock('@/libs/logger/logger', () => ({
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: {
     getState: () => ({
+      session: mockState.currentSession,
+      generation: mockState.generation,
+      restoreStatus: mockState.restoreStatus,
+      sessionReference: { sessionStoreId: 'active-record' },
       selectSession: () => {
         // Access mockState.currentSession at call time, not at mock creation time
         return mockState.currentSession;
@@ -2290,5 +2297,134 @@ describe('retention validation', () => {
     });
     await HomeserverService.retainUnusedSession(candidate);
     expect(mockState.saveGrant).not.toHaveBeenCalled();
+  });
+});
+
+describe('active session failure notifications', () => {
+  let service: typeof import('./homeserver').HomeserverService;
+  let unsubscribe: () => void;
+  const listener = vi.fn();
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    service = (await import('./homeserver')).HomeserverService;
+    mockState.currentSession = createMockSession();
+    mockState.generation = 'request-generation';
+    mockState.restoreStatus = 'ready';
+    unsubscribe = service.subscribeSessionFailures(listener);
+  });
+  afterEach(() => {
+    unsubscribe();
+  });
+
+  it.each(['put', 'delete', 'get', 'requestGet', 'blob', 'list', 'exists', 'bytes'])(
+    'reports an exhausted SDK auth failure for owned %s',
+    async (operation) => {
+      const failure = { name: 'RequestError', message: 'Unauthorized', data: { statusCode: 401 } };
+      for (const mock of [
+        mockState.sessionStoragePutJson,
+        mockState.sessionStorageDelete,
+        mockState.sessionStorageGet,
+        mockState.sessionStoragePutBytes,
+        mockState.sessionStorageList,
+        mockState.sessionStorageExists,
+      ])
+        mock.mockRejectedValueOnce(failure);
+      const url = 'pubky://user/priv/social/test';
+      const session = mockState.currentSession;
+      const actions: Record<string, () => Promise<unknown>> = {
+        put: () => service.request({ method: HttpMethod.PUT, url }),
+        delete: () => service.delete(url),
+        get: () => service.get(url),
+        requestGet: () => service.request({ method: HttpMethod.GET, url }),
+        blob: () => service.putBlob({ url, blob: new Uint8Array() }),
+        list: () => service.list({ baseDirectory: url }),
+        exists: () => service.exists(url),
+        bytes: () => service.getBytesIfExists(url),
+      };
+      await expect(actions[operation]()).rejects.toMatchObject({ code: AuthErrorCode.SESSION_EXPIRED });
+      expect(listener).toHaveBeenCalledExactlyOnceWith({ session, generation: 'request-generation' });
+      // Clear unused one-shot failures before the next parameterized case.
+      for (const mock of [
+        mockState.sessionStoragePutJson,
+        mockState.sessionStorageDelete,
+        mockState.sessionStorageGet,
+        mockState.sessionStoragePutBytes,
+        mockState.sessionStorageList,
+        mockState.sessionStorageExists,
+      ])
+        mock.mockReset();
+    },
+  );
+  it('handles a final raw GET 401 response, preserving its normal error', async () => {
+    mockState.sessionStorageGet.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }));
+    await expect(service.get('pubky://user/pub/test')).rejects.toMatchObject({ code: AuthErrorCode.SESSION_EXPIRED });
+    expect(listener).toHaveBeenCalledOnce();
+  });
+  it.each([
+    { name: 'RequestError', message: 'Forbidden', data: { statusCode: 403 } },
+    { name: 'RequestError', message: 'Unavailable', data: { statusCode: 503 } },
+    { name: 'NetworkError', message: 'Offline' },
+    { name: 'ClientStateError', message: 'Temporary IndexedDB failure' },
+  ])('keeps a nonterminal SDK error out of the auth lifecycle: $message', async (error) => {
+    mockState.sessionStoragePutJson.mockRejectedValueOnce(error);
+    await expect(service.request({ method: HttpMethod.PUT, url: 'pubky://user/pub/test' })).rejects.toThrow();
+    expect(listener).not.toHaveBeenCalled();
+  });
+  it('does not invalidate an active account for a public resource or sign-in failure', async () => {
+    const error = { name: 'RequestError', message: 'Unauthorized', data: { statusCode: 401 } };
+    mockState.publicStorageGet.mockRejectedValueOnce(error);
+    await expect(service.get('pubky://another-user/pub/test')).rejects.toThrow();
+    mockState.restoreGrant.mockRejectedValueOnce(error);
+    await expect(service.restoreReference(mockGrantReference())).rejects.toThrow();
+    expect(listener).not.toHaveBeenCalled();
+  });
+  it('retains the requesting session and generation when a later login wins', async () => {
+    const session = mockState.currentSession;
+    let reject!: (error: unknown) => void;
+    mockState.sessionStoragePutJson.mockReturnValueOnce(
+      new Promise((_, fail) => {
+        reject = fail;
+      }),
+    );
+    const request = service.request({ method: HttpMethod.PUT, url: 'pubky://user/pub/test' });
+    mockState.currentSession = createMockSession();
+    mockState.generation = 'new-login';
+    reject({ name: 'RequestError', message: 'Unauthorized', data: { statusCode: 401 } });
+    await expect(request).rejects.toThrow();
+    expect(listener).toHaveBeenCalledExactlyOnceWith({ session, generation: 'request-generation' });
+  });
+  it('leaves successful SDK retries alone and stops observing after unsubscribe', async () => {
+    mockState.sessionStoragePutJson.mockResolvedValueOnce(undefined);
+    await service.request({ method: HttpMethod.PUT, url: 'pubky://user/pub/test' });
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+    mockState.sessionStoragePutJson.mockRejectedValueOnce({ name: 'AuthenticationError', message: 'Expired' });
+    await expect(service.request({ method: HttpMethod.PUT, url: 'pubky://user/pub/test' })).rejects.toThrow();
+    expect(listener).not.toHaveBeenCalled();
+  });
+  it('recognizes terminal SDK session state but leaves bootstrap failures to restoration', async () => {
+    mockState.sessionStoragePutJson.mockRejectedValueOnce({
+      name: 'ClientStateError',
+      message: 'Browser session is no longer valid.',
+    });
+    await expect(service.request({ method: HttpMethod.PUT, url: 'pubky://user/pub/test' })).rejects.toThrow();
+    expect(listener).toHaveBeenCalledOnce();
+    listener.mockClear();
+    mockState.restoreStatus = 'restoring';
+    mockState.sessionStoragePutJson.mockRejectedValueOnce({ name: 'AuthenticationError', message: 'Expired' });
+    await expect(service.request({ method: HttpMethod.PUT, url: 'pubky://user/pub/test' })).rejects.toThrow();
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('classifies SDK persistence failures as storage errors', async () => {
+    const { getAuthClientId } = await import('@/config/auth');
+    const session = asOpaque<Session>({ grant: { sessionInfo: async () => ({ clientId: getAuthClientId() }) } });
+    mockState.sessionStoreAvailable.mockResolvedValue(true);
+    mockState.saveGrant.mockRejectedValueOnce({ name: 'ClientStateError', message: 'Quota exceeded' });
+    await expect(service.saveSession(session)).rejects.toMatchObject({
+      code: DatabaseErrorCode.WRITE_FAILED,
+      category: ErrorCategory.Database,
+      operation: 'saveSession',
+    });
   });
 });

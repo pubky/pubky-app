@@ -1,3 +1,4 @@
+import type { Session } from '@synonymdev/pubky';
 import { z } from 'zod';
 
 export const sessionReferenceSchema = z.object({
@@ -11,6 +12,9 @@ export const sessionReferenceSchema = z.object({
 
 /** Grant secrets stay in the SDK's IndexedDB; this record contains only public metadata. */
 export type SessionReference = z.infer<typeof sessionReferenceSchema>;
+/** Identity of the active session that made a request; never persisted or sent across tabs. */
+export type ActiveSessionFailure = { session: Session; generation: string };
+
 export type SessionRestoreStatus = 'idle' | 'restoring' | 'ready' | 'temporary-error' | 'reauth-required';
 
 export const persistedAuthSchema = z.object({

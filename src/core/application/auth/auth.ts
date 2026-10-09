@@ -2,7 +2,7 @@ import type { Session } from '@synonymdev/pubky';
 import { userUriBuilder } from 'pubky-app-specs';
 import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
 import { getAuthClientId } from '@/config/auth';
-import type { PersistedAuth, SessionReference } from '@/libs/auth/session.types';
+import type { ActiveSessionFailure, PersistedAuth, SessionReference } from '@/libs/auth/session.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -68,6 +68,10 @@ export class AuthApplication {
         error: appError,
       };
     }
+  }
+
+  static subscribeSessionFailures(listener: (failure: ActiveSessionFailure) => void): () => void {
+    return HomeserverService.subscribeSessionFailures(listener);
   }
 
   static startGrantFlow(request: GrantFlowRequest) {

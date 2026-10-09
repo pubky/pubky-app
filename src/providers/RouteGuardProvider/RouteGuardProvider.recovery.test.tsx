@@ -31,6 +31,7 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
+    subscribeSessionFailures: vi.fn(() => vi.fn()),
     retrySessionRetirement: vi.fn().mockResolvedValue(undefined),
     retireLegacyCookieSessions: vi.fn().mockResolvedValue(undefined),
     restorePersistedSession: mocks.restore,

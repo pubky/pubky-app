@@ -49,6 +49,11 @@ remain available for retry; generic auth errors do not prove revocation succeede
   late success restores readiness. Session restoration also shares its underlying exchange across UI deadlines;
   a retry consumes its pending or completed result. Restore attempts retry only transient network/server failures with a fixed bound.
   Automatic foreground recovery is throttled; the UI has no manual session-retry control.
+- Terminal failures of active, owned HS storage requests notify AuthCoordinator through a controller/application
+  subscription. The controller drops only the matching live session and requires ordinary sign-in, retaining saved
+  credentials and account data. A same-origin BroadcastChannel shares only the failed app generation with other tabs;
+  delayed errors cannot invalidate a newer generation/session. Network failures and permission denials do not trigger
+  this transition. SDK refresh/retry runs before failures reach this subscription.
 - AuthCoordinator owns startup, storage, online, visibility and SDK-removal listeners. RouteGuardProvider mounts it
   before route access is resolved and retains UI-specific error presentation.
 - Use the existing landing page and sign-in dialog when a session cannot be restored; there is no dedicated recovery

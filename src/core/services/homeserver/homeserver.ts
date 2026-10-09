@@ -8,7 +8,7 @@ import {
   getTestnet,
   isStagingHomeserverDeploy,
 } from '@/config/network';
-import type { SessionReference } from '@/libs/auth/session.types';
+import type { ActiveSessionFailure, SessionReference } from '@/libs/auth/session.types';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, DatabaseErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -66,6 +66,44 @@ export class HomeserverService {
   private constructor() {}
 
   private static pubkySdk: Pubky | null = null;
+
+  private static sessionFailureListeners = new Set<(failure: ActiveSessionFailure) => void>();
+
+  static subscribeSessionFailures(listener: (failure: ActiveSessionFailure) => void): () => void {
+    this.sessionFailureListeners.add(listener);
+    return () => {
+      this.sessionFailureListeners.delete(listener);
+    };
+  }
+
+  /** Observe only owned requests, after the SDK has exhausted its bearer refresh/retry. */
+  private static async withActiveSession<T>(session: Session, request: () => Promise<T>): Promise<T> {
+    const snapshot = useAuthStore.getState();
+    const generation = snapshot.generation;
+    try {
+      return await request();
+    } catch (error) {
+      const terminal =
+        extractStatusCode(error) === HttpStatusCode.UNAUTHORIZED ||
+        (error instanceof AppError &&
+          error.service === ErrorService.Homeserver &&
+          error.code === AuthErrorCode.SESSION_EXPIRED) ||
+        (isPubkyErrorLike(error) &&
+          error.name === 'AuthenticationError' &&
+          extractStatusCode(error) !== HttpStatusCode.FORBIDDEN) ||
+        (snapshot.sessionReference && this.unusableGrantReason(error, snapshot.sessionReference.sessionStoreId));
+      if (terminal && snapshot.session === session && snapshot.restoreStatus === 'ready') {
+        for (const listener of this.sessionFailureListeners) {
+          try {
+            listener({ session, generation });
+          } catch {
+            // A lifecycle observer must not replace the original request error or prevent rollback.
+          }
+        }
+      }
+      throw error;
+    }
+  }
 
   /**
    * Gets the Pubky SDK singleton.
@@ -290,7 +328,18 @@ export class HomeserverService {
         });
       }
       await this.assertSessionStoreAvailable();
-      const saved = await this.getPubkySdk().browserSessionStore.save(session);
+      const saved = await this.getPubkySdk()
+        .browserSessionStore.save(session)
+        .catch((error) => {
+          if (isPubkyErrorLike(error) && error.name === 'ClientStateError') {
+            throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Could not save the authenticated session.', {
+              service: ErrorService.Local,
+              operation: 'saveSession',
+              cause: error,
+            });
+          }
+          throw error;
+        });
       return {
         kind: 'grant',
         sessionStoreId: saved.id,
@@ -531,18 +580,18 @@ export class HomeserverService {
 
       switch (method) {
         case HttpMethod.GET: {
-          const response = await getOwnedResponse({ session, path, url });
+          const response = await this.withActiveSession(session, () => getOwnedResponse({ session, path, url }));
           return (await parseResponseOrUndefined<T>({ response })) as T;
         }
         case HttpMethod.PUT:
-          await session.storage
-            .putJson(path, bodyJson ?? {})
-            .catch((error) => handleError({ error, additionalContext: { url, method } }));
+          await this.withActiveSession(session, () => session.storage.putJson(path, bodyJson ?? {})).catch((error) =>
+            handleError({ error, additionalContext: { url, method } }),
+          );
           return undefined as T;
         case HttpMethod.DELETE:
-          await session.storage
-            .delete(path)
-            .catch((error) => handleError({ error, additionalContext: { url, method } }));
+          await this.withActiveSession(session, () => session.storage.delete(path)).catch((error) =>
+            handleError({ error, additionalContext: { url, method } }),
+          );
           return undefined as T;
       }
     }
@@ -589,7 +638,7 @@ export class HomeserverService {
     const owned = this.resolveOwnedSessionPath(url);
     if (owned) {
       try {
-        await owned.session.storage.putBytes(owned.path, blob);
+        await this.withActiveSession(owned.session, () => owned.session.storage.putBytes(owned.path, blob));
         return;
       } catch (error) {
         return handleError({ error, additionalContext: { url, method: HttpMethod.PUT } });
@@ -634,7 +683,9 @@ export class HomeserverService {
       const owned = this.resolveOwnedSessionPath(baseDirectory);
       if (owned) {
         const dirPath = owned.path.endsWith('/') ? owned.path : (`${owned.path}/` as StoragePath<string>);
-        const files = await owned.session.storage.list(dirPath, cursor ?? null, reverse, limit, false);
+        const files = await this.withActiveSession(owned.session, () =>
+          owned.session.storage.list(dirPath, cursor ?? null, reverse, limit, false),
+        );
         Logger.debug('List successful', { baseDirectory, filesCount: files.length });
         return files;
       }
@@ -724,7 +775,9 @@ export class HomeserverService {
     try {
       const owned = this.resolveOwnedSessionPath(url);
       if (owned) {
-        return await getOwnedResponse({ session: owned.session, path: owned.path, url });
+        return await this.withActiveSession(owned.session, () =>
+          getOwnedResponse({ session: owned.session, path: owned.path, url }),
+        );
       }
 
       if (isHttpUrl(url)) {
@@ -763,9 +816,13 @@ export class HomeserverService {
     }
 
     try {
-      const response = await owned.session.storage.get(owned.path);
+      const response = await this.withActiveSession(owned.session, async () => {
+        const response = await owned.session.storage.get(owned.path);
+        if (response.status !== HttpStatusCode.NOT_FOUND)
+          await assertOk({ response, url, operation: 'getBytesIfExists' });
+        return response;
+      });
       if (response.status === HttpStatusCode.NOT_FOUND) return null;
-      await assertOk({ response, url, operation: 'getBytesIfExists' });
       const lastModified = Date.parse(response.headers.get('last-modified') ?? '');
       return {
         bytes: new Uint8Array(await response.arrayBuffer()),
@@ -804,7 +861,7 @@ export class HomeserverService {
 
     try {
       const owned = this.resolveOwnedSessionPath(url);
-      if (owned) return await owned.session.storage.exists(owned.path);
+      if (owned) return await this.withActiveSession(owned.session, () => owned.session.storage.exists(owned.path));
       if (isHttpUrl(url)) {
         const response = await pubkySdk.client.fetch(url, { credentials: 'omit' });
         if (response.status === HttpStatusCode.NOT_FOUND) return false;

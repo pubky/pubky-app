@@ -1,4 +1,5 @@
 import { AuthController } from '@/controllers/auth/auth';
+import type { ActiveSessionFailure } from '@/libs/auth/session.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 
@@ -8,6 +9,8 @@ const AUTO_RECOVERY_COOLDOWN_MS = 10_000;
 export class AuthCoordinator {
   private static instance: AuthCoordinator | null = null;
   private unsubscribe: (() => void) | null = null;
+  private unsubscribeSessionFailures: (() => void) | null = null;
+  private failureChannel: BroadcastChannel | null = null;
   private retiredLegacy = false;
   private nextRecoveryAt = 0;
   private nextOnlineCleanupAt = 0;
@@ -77,10 +80,28 @@ export class AuthCoordinator {
       void AuthController.syncRemovedSession(null).catch(() => {});
   };
 
+  private sessionFailed = (failure: ActiveSessionFailure) => {
+    if (AuthController.requireSessionReauthentication(failure)) {
+      this.failureChannel?.postMessage({ generation: failure.generation });
+    }
+  };
+
+  private remoteSessionFailed = (event: MessageEvent<unknown>) => {
+    const data = event.data;
+    if (!data || typeof data !== 'object' || !('generation' in data) || typeof data.generation !== 'string') return;
+    AuthController.requireSessionReauthentication({ generation: data.generation });
+  };
+
   start(onRestoreError?: (error: unknown) => void): void {
     this.onRestoreError = onRestoreError;
     if (this.unsubscribe) return;
     this.unsubscribe = useAuthStore.subscribe(this.onAuthChange);
+    this.unsubscribeSessionFailures = AuthController.subscribeSessionFailures(this.sessionFailed);
+    // Share only the public auth generation; bearer and refresh coordination stay in the SDK.
+    if (typeof BroadcastChannel !== 'undefined') {
+      this.failureChannel = new BroadcastChannel('pubky-app-session-failures');
+      this.failureChannel.onmessage = this.remoteSessionFailed;
+    }
     window.addEventListener('storage', this.synchronize);
     window.addEventListener('pubky-session-changed', this.sessionRemoved);
     window.addEventListener('online', this.online);
@@ -91,6 +112,10 @@ export class AuthCoordinator {
   stop(): void {
     this.unsubscribe?.();
     this.unsubscribe = null;
+    this.unsubscribeSessionFailures?.();
+    this.unsubscribeSessionFailures = null;
+    this.failureChannel?.close();
+    this.failureChannel = null;
     this.onRestoreError = undefined;
     this.retiredLegacy = false;
     this.nextRecoveryAt = 0;
