@@ -1,75 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Metadata } from './Metadata';
 
-describe('Metadata - Snapshots', () => {
-  it('matches snapshot for default metadata configuration', () => {
-    const result = Metadata({
-      title: 'Test Title',
-      description: 'Test Description',
-    });
-    expect(result).toMatchSnapshot();
-  });
-
-  it('matches snapshot for metadata with custom parameters', () => {
-    const result = Metadata({
-      title: 'Custom Title',
-      description: 'Custom Description',
-      image: '/custom-image.jpg',
-      type: 'article',
-      url: 'https://custom-url.com',
-      siteName: 'Custom Site',
-      locale: 'it_IT',
-      author: 'Custom Author',
-      keywords: 'custom, keywords',
-      robots: false,
-    });
-    expect(result).toMatchSnapshot();
-  });
-
-  it('matches snapshot for metadata with minimal configuration', () => {
-    const result = Metadata({
-      title: 'Minimal',
-      description: 'Minimal description',
-    });
-    expect(result).toMatchSnapshot();
-  });
-
-  it('matches snapshot for metadata with image', () => {
-    const result = Metadata({
-      title: 'Image Test',
-      description: 'Testing custom image',
-      image: '/image.jpg',
-    });
-    expect(result).toMatchSnapshot();
-  });
-
-  it('matches snapshot with empty strings', () => {
-    const result = Metadata({
-      title: '',
-      description: '',
-    });
-    expect(result).toMatchSnapshot();
-  });
-
-  it('matches snapshot with long title and description', () => {
-    const longTitle = 'A'.repeat(1000);
-    const longDescription = 'B'.repeat(1000);
-    const result = Metadata({
-      title: longTitle,
-      description: longDescription,
-    });
-    expect(result).toMatchSnapshot();
-  });
-
-  it('matches snapshot with special characters', () => {
-    const result = Metadata({
-      title: 'Special chars: <>&"\'',
-      description: 'More special: ©®™€£¥',
-    });
-    expect(result).toMatchSnapshot();
-  });
-});
-
 describe('Metadata - omitImages', () => {
   it('includes static openGraph/twitter images by default', () => {
     const result = Metadata({ title: 'T', description: 'D' });
@@ -119,5 +50,40 @@ describe('Metadata - optional description', () => {
     // Title is still emitted so the page doesn't fall back to parent metadata.
     expect(result.title).toBe('T');
     expect(result.openGraph.title).toBe('T');
+  });
+});
+
+describe('Metadata - custom fields', () => {
+  it('maps custom openGraph, twitter, and document fields', () => {
+    const result = Metadata({
+      title: 'Custom Title',
+      description: 'Custom Description',
+      image: '/custom-image.jpg',
+      type: 'article',
+      url: 'https://custom-url.com',
+      siteName: 'Custom Site',
+      locale: 'it_IT',
+      author: 'Custom Author',
+      keywords: 'custom, keywords',
+      robots: false,
+    });
+
+    expect(result.openGraph.type).toBe('article');
+    expect(result.openGraph.locale).toBe('it_IT');
+    expect(result.openGraph.url).toBe('https://custom-url.com');
+    expect(result.openGraph.siteName).toBe('Custom Site');
+    expect(result.openGraph.images).toEqual([
+      {
+        url: '/custom-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Custom Title',
+      },
+    ]);
+    expect(result.twitter.images).toEqual(['/custom-image.jpg']);
+    expect(result.authors).toEqual([{ name: 'Custom Author' }]);
+    expect(result.keywords).toBe('custom, keywords');
+    expect(result.robots).toEqual({ index: false, follow: false });
+    expect(result.alternates.canonical).toBe('https://custom-url.com');
   });
 });

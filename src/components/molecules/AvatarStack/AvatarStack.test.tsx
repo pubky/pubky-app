@@ -172,15 +172,3 @@ describe('AvatarStack', () => {
     expect(screen.getByTestId('avatar-stack')).toBeInTheDocument();
   });
 });
-
-describe('AvatarStack - Snapshots', () => {
-  it('matches snapshot for a typical 3-pubky case', () => {
-    const { container } = render(<AvatarStack pubkys={PUBKYS_7.slice(0, 3)} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for an overflow case (7 pubkys, default cap 5)', () => {
-    const { container } = render(<AvatarStack pubkys={PUBKYS_7} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

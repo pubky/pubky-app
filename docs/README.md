@@ -30,7 +30,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `data-patterns.md`             | Composite IDs, streams, TTL, pipes normalization, Dexie tables and schema changes                                  |
 | `error-handling.md`            | Error conventions using AppError and Err.\* factories                                                              |
 | `components.md`                | Component patterns, Shadcn, atomic design, Figma, icon imports, toasts, forms                                      |
-| `component-testing.md`         | Unit test and snapshot test rules                                                                                  |
+| `component-testing.md`         | Unit test rules for UI components                                                                                  |
 | `visual-regression-testing.md` | VRT tests, determinism, CI-owned baselines                                                                         |
 | `skeleton-architecture.md`     | Skeleton loader placement, naming, and testing patterns                                                            |
 | `z-index.md`                   | Z-index layering conventions                                                                                       |

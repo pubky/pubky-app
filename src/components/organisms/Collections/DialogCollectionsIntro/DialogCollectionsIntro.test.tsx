@@ -62,15 +62,3 @@ describe('DialogCollectionsIntro', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
-
-describe('DialogCollectionsIntro - Snapshots', () => {
-  it('matches snapshot when open', () => {
-    render(<DialogCollectionsIntro open onOpenChange={vi.fn()} onContinue={vi.fn()} />);
-    expect(document.body).toMatchSnapshot();
-  });
-
-  it('matches snapshot when closed', () => {
-    const { container } = render(<DialogCollectionsIntro open={false} onOpenChange={vi.fn()} onContinue={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

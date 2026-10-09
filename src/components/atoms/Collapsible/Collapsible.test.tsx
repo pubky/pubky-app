@@ -77,15 +77,3 @@ describe('Collapsible', () => {
     expect(screen.getByTestId('collapsible-content')).toHaveClass('custom-content');
   });
 });
-
-describe('Collapsible - Snapshots', () => {
-  it('matches snapshot when closed', () => {
-    const { container } = render(<Example />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when open', () => {
-    const { container } = render(<Example defaultOpen />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

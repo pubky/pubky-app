@@ -70,16 +70,3 @@ describe('InvitePopover', () => {
     expect(description).toBeInTheDocument();
   });
 });
-
-// Note: snapshot cannot capture entire popover content, so the above unit tests are more important
-describe('PopoverInvite - Snapshots', () => {
-  it('matches snapshot for default PopoverInvite', () => {
-    const { container } = render(<PopoverInvite />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for PopoverInvite with custom className', () => {
-    const { container } = render(<PopoverInvite className="custom-invite-style" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

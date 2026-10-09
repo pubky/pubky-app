@@ -1,77 +1,50 @@
-import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Avatar, AvatarFallback, AvatarImage } from './Avatar';
 
-describe('AvatarImage', () => {
-  it('component exists and can be imported', () => {
-    expect(() => {
-      render(
-        <Avatar>
-          <AvatarImage src="/test.jpg" alt="Test avatar" />
-        </Avatar>,
-      );
-    }).not.toThrow();
+describe('Avatar', () => {
+  it('defaults to the default size and merges className on the root', () => {
+    const { container } = render(<Avatar className="custom-avatar" />);
+
+    const root = container.firstChild;
+    expect(root).toHaveClass('h-10', 'w-10', 'rounded-full');
+    expect(root).toHaveClass('custom-avatar');
   });
 
-  it('applies custom className', () => {
+  it.each([
+    ['sm', 'h-6'],
+    ['md', 'h-8'],
+    ['default', 'h-10'],
+    ['lg', 'h-12'],
+    ['xl', 'h-16'],
+  ] as const)('applies size=%s', (size, className) => {
+    const { container } = render(<Avatar size={size} />);
+    expect(container.firstChild).toHaveClass(className);
+  });
+
+  it('shows the fallback while the image has not loaded', () => {
     render(
       <Avatar>
-        <AvatarImage src="/test.jpg" alt="Test" className="custom-image" />
-      </Avatar>,
-    );
-    // AvatarImage may not render in test environment, but should not throw
-    expect(() => {
-      render(
-        <Avatar>
-          <AvatarImage src="/test.jpg" alt="Test" className="custom-image" />
-        </Avatar>,
-      );
-    }).not.toThrow();
-  });
-});
-
-describe('Avatar - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<Avatar />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<Avatar className="custom-avatar" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom data attribute', () => {
-    const { container } = render(<Avatar data-custom="custom-avatar"></Avatar>);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with AvatarFallback only', () => {
-    const { container } = render(
-      <Avatar>
-        <AvatarFallback>JD</AvatarFallback>
-      </Avatar>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with AvatarImage and AvatarFallback', () => {
-    const { container } = render(
-      <Avatar>
         <AvatarImage src="/test.jpg" alt="Test avatar" />
-        <AvatarFallback>JD</AvatarFallback>
+        <AvatarFallback>AB</AvatarFallback>
       </Avatar>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+
+    // jsdom never fires image load events, so Radix keeps the image unmounted
+    // and renders the fallback instead.
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.getByText('AB')).toBeInTheDocument();
   });
 
-  it('matches snapshot with custom AvatarFallback className', () => {
-    const { container } = render(
+  it('merges className on AvatarFallback', () => {
+    render(
       <Avatar>
         <AvatarFallback className="custom-fallback">AB</AvatarFallback>
       </Avatar>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+
+    const fallback = screen.getByText('AB');
+    expect(fallback).toHaveClass('bg-muted');
+    expect(fallback).toHaveClass('custom-fallback');
   });
 });

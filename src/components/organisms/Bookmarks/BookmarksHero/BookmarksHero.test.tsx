@@ -89,19 +89,3 @@ describe('BookmarksHero', () => {
     expect(screen.queryByText('U', { selector: 'div' })).not.toBeInTheDocument();
   });
 });
-
-describe('BookmarksHero - Snapshots', () => {
-  it('matches the snapshot with count and avatar state', () => {
-    const { container } = render(
-      <BookmarksHero
-        avatarName="Alice"
-        avatarSeed="alice-pubky"
-        avatarUrl="https://example.com/avatar.png"
-        bookmarkCount={15}
-        isProfileResolved={true}
-      />,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

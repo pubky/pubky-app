@@ -465,31 +465,4 @@ describe('MyCollections', () => {
       expect(mockGetAvatarUrl).not.toHaveBeenCalled();
     });
   });
-
-  describe('MyCollections - Snapshots', () => {
-    it('matches the snapshot for the signed-out fallback state', () => {
-      setup({ currentUserPubky: null });
-
-      const { container } = render(<MyCollections />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches the snapshot for the authenticated state with two loaded cards', () => {
-      const ids = [`${AUTHOR_A}:p1`, `${AUTHOR_A}:p2`];
-      setup({
-        currentUserPubky: CURRENT_USER_PUBKY,
-        userDetails: { name: 'Alice', image: null, indexed_at: 0 },
-        pagination: {
-          postIds: ids,
-          loading: false,
-          hasMore: true,
-        },
-      });
-      // Resolved live query, no tombstones → echoes `postIds`.
-      vi.mocked(useLiveQuery).mockReturnValue(ids);
-
-      const { container } = render(<MyCollections />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

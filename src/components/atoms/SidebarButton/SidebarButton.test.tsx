@@ -40,20 +40,3 @@ describe('SidebarButton', () => {
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 });
-
-describe('SidebarButton - Snapshots', () => {
-  it('matches snapshot with FileText icon', () => {
-    const { container } = render(<SidebarButton icon={FileText}>Terms of service</SidebarButton>);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with LockKeyhole icon', () => {
-    const { container } = render(<SidebarButton icon={LockKeyhole}>Privacy policy</SidebarButton>);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with Users icon', () => {
-    const { container } = render(<SidebarButton icon={Users}>See all</SidebarButton>);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

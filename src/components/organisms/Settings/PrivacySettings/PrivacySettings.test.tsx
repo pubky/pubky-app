@@ -104,17 +104,3 @@ describe('PrivacySettings', () => {
     expect(mockSetShowConfirm).toHaveBeenCalledWith(true);
   });
 });
-
-describe('PrivacySettings - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseSettingsStore.mockReturnValue({
-      privacy: defaultPrivacyPreferences,
-    });
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<PrivacySettings />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

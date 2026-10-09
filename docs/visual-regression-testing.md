@@ -86,7 +86,7 @@ those baselines, delete the PNGs first so they are regenerated from scratch.
 A template alone misses chrome the root layout adds. Onboarding pages render
 under `<Header />` (the step bar), mounted by `src/app/layout.tsx`. Render that
 wrapper in the test and mock what it reads (`usePathname`, `useAuthStore`,
-`usePublicRoute`) so the snapshot matches what the user sees.
+`usePublicRoute`) so the screenshot matches what the user sees.
 
 ## Limitation: can't capture a page taller than the screen
 
@@ -98,7 +98,7 @@ makes the browser scale the whole screenshot by an env-dependent factor, which
 breaks the cross-OS comparison.
 
 **What to do:** accept the viewport crop (every other VRT here does), or capture
-a tall page section by section (header / card / footer as separate snapshots).
+a tall page section by section (header / card / footer as separate captures).
 
 See [Vitest Discussion #7749](https://github.com/vitest-dev/vitest/discussions/7749).
 

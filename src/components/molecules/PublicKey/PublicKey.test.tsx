@@ -154,19 +154,3 @@ describe('PublicKeyNavigation', () => {
     expect(mockPush).not.toHaveBeenCalledWith(ONBOARDING_ROUTES.BACKUP);
   });
 });
-
-describe('PublicKey Components - Snapshots', () => {
-  describe('PublicKeyHeader - Snapshots', () => {
-    it('matches snapshot for default PublicKeyHeader', () => {
-      const { container } = render(<PublicKeyHeader />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
-
-  describe('PublicKeyNavigation - Snapshots', () => {
-    it('matches snapshot for default PublicKeyNavigation', () => {
-      const { container } = render(<PublicKeyNavigation />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
-});

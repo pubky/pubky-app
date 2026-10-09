@@ -115,21 +115,3 @@ describe('UserInfoPopoverHeader', () => {
     expect(usernameTypography).toHaveClass('block', 'w-full', 'max-w-full', 'truncate');
   });
 });
-
-describe('UserInfoPopoverHeader - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(
-      <UserInfoPopoverHeader
-        userId="snapshotUser"
-        userName="Snapshot User"
-        formattedPublicKey="snapshot123"
-        avatarUrl="x"
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

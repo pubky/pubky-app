@@ -1,10 +1,9 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostSavePicker } from './PostSavePicker';
 
 const OTHER_AUTHOR = 'other-author';
@@ -642,57 +641,5 @@ describe('PostSavePicker', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Load more' }));
 
     expect(mockState.resumeAutoLoad).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('PostSavePicker - Snapshots', () => {
-  beforeEach(() => {
-    resetMockState();
-  });
-
-  it('matches desktop picker snapshot when open', async () => {
-    renderPicker();
-
-    openPicker();
-
-    await screen.findByText('Bookmarks');
-
-    expect(document.body).toMatchSnapshot();
-  });
-
-  it('matches desktop picker snapshot with other collections and a count', async () => {
-    mockState.isBookmarked = false;
-    mockState.collection1Saved = false;
-    mockState.collectionsCount = 2;
-    mockState.otherCollectionIds = [OTHER_COLLECTION_1, OTHER_COLLECTION_2];
-    renderPicker();
-
-    openPicker();
-
-    await screen.findByText('Also in collections:');
-
-    expect(document.body).toMatchSnapshot();
-  });
-});
-
-describe('PostSavePicker - Mobile Snapshots', () => {
-  beforeEach(() => {
-    resetMockState();
-    mockState.isMobile = true;
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', async () => {
-    renderPicker();
-
-    openPicker();
-
-    await screen.findByText('Bookmarks');
-
-    expect(document.body).toMatchSnapshot();
   });
 });
