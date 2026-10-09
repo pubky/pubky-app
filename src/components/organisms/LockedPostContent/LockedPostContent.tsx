@@ -64,7 +64,7 @@ export function LockedPostContent({
   const isFocusedPostPage =
     routeParams?.userId === authorId && routeParams?.postId === rawPostId && !isNestedPostPreview;
   const lockContent = LocksController.getLockContent(content);
-  const { lockFile, priceSats } = useLockFile(lock);
+  const { lockFile, priceSats, isLoading: isLockFileLoading } = useLockFile(lock);
   const { unlockedPost, applyUnlockedContent, media, isOwnLock, isResolvingReplica } = useUnlockedContent({
     lock,
     lockFile,
@@ -176,6 +176,7 @@ export function LockedPostContent({
           <LockedPostCard
             title={lockContent.lock_title}
             priceSats={priceSats}
+            isLoading={isLockFileLoading}
             unlockOpen={isPayOpen}
             onUnlock={handleUnlock}
             // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal
