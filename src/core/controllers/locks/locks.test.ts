@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   fetchPaykitSetupStatus: vi.fn(),
   createLockContent: vi.fn(),
   fetchLockFile: vi.fn(),
+  getOrFetchLockFile: vi.fn(),
   hasPaykitReceiver: vi.fn(),
   fetchPurchaseBundleId: vi.fn(),
   fetchPaidContent: vi.fn(),
@@ -47,6 +48,7 @@ vi.mock('@/application/locks/locks', () => ({
     fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
     createLockContent: mocks.createLockContent,
     fetchLockFile: mocks.fetchLockFile,
+    getOrFetchLockFile: mocks.getOrFetchLockFile,
     hasPaykitReceiver: mocks.hasPaykitReceiver,
     fetchPurchaseBundleId: mocks.fetchPurchaseBundleId,
     fetchPaidContent: mocks.fetchPaidContent,
@@ -404,6 +406,30 @@ describe('LocksController.fetchLockFile', () => {
   });
 });
 
+describe('LocksController.getOrFetchLockFile', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getOrFetchLockFile.mockResolvedValue(MOCK_LOCK_FILE);
+  });
+
+  it('delegates to the application and resolves the price', async () => {
+    await expect(LocksController.getOrFetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
+      lockFile: MOCK_LOCK_FILE,
+      priceSats: '1000',
+    });
+    expect(mocks.getOrFetchLockFile).toHaveBeenCalledWith({ lockUrl: VALID_LOCK_URL });
+  });
+
+  it('resolves a null price without a lock file', async () => {
+    mocks.getOrFetchLockFile.mockResolvedValue(null);
+
+    await expect(LocksController.getOrFetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
+      lockFile: null,
+      priceSats: null,
+    });
+  });
+});
+
 describe('LocksController.getLockContent', () => {
   it('parses the announcement content of a lock post', () => {
     const content = JSON.stringify({ lock_title: 't', teaser_description: 'd' });
@@ -462,7 +488,7 @@ describe('LocksController.fetchUnlockedList', () => {
 
 describe('LocksController.fetchOwnContent', () => {
   it("delegates loading the creator's own guarded content to the application", async () => {
-    const params = { lockFile: MOCK_LOCK_FILE };
+    const params = { lockUrl: VALID_LOCK_URL, lockFile: MOCK_LOCK_FILE };
     const content = { post: { content: 'mine', kind: 'short', attachments: null }, attachments: [] };
     mocks.fetchOwnContent.mockResolvedValue(content);
 

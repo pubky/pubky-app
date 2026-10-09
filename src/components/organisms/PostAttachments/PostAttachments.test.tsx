@@ -162,6 +162,27 @@ describe('PostAttachments', () => {
   });
 
   describe('Rendering', () => {
+    // Unlocked content: the text is on screen while its bytes download, so the media area keeps its shape.
+    it('renders a skeleton per pending attachment, in its bucket, and no media', () => {
+      const { container } = render(
+        <PostAttachments
+          attachments={null}
+          localAttachments={[]}
+          pendingAttachments={[
+            { slot: 0, type: 'image/png' },
+            { slot: 1, type: 'video/mp4' },
+            { slot: 2, type: 'audio/mpeg' },
+          ]}
+        />,
+      );
+
+      const skeletons = container.querySelectorAll('[data-slot="skeleton"]');
+      expect(skeletons).toHaveLength(3);
+      expect(skeletons[0]).toHaveClass('h-52'); // media tile
+      expect(skeletons[2]).toHaveClass('h-14'); // audio row
+      expect(screen.queryByTestId('post-attachments-images-and-videos')).not.toBeInTheDocument();
+    });
+
     it('renders nothing when attachments is null', () => {
       const { container } = render(<PostAttachments attachments={null} localAttachments={undefined} />);
       expect(container.firstChild).toBeNull();
@@ -767,6 +788,22 @@ describe('PostAttachments', () => {
 });
 
 describe('PostAttachments - Snapshots', () => {
+  it('matches snapshot with pending attachments', () => {
+    const { container } = render(
+      <PostAttachments
+        attachments={null}
+        localAttachments={[]}
+        pendingAttachments={[
+          { slot: 0, type: 'image/png' },
+          { slot: 1, type: 'video/mp4' },
+          { slot: 2, type: 'audio/mpeg' },
+        ]}
+      />,
+    );
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
