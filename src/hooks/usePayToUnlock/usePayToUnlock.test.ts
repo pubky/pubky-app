@@ -546,6 +546,8 @@ describe('usePayToUnlock (finishing)', () => {
     act(() => result.current.recheck());
 
     expect(result.current.stage).toBe('waiting');
+    // This wait re-reads the content, never the link, so there is no link state to be waiting on.
+    expect(result.current.isConnectionPending).toBe(false);
   });
 });
 
@@ -689,6 +691,44 @@ describe('usePayToUnlock (waiting)', () => {
     await advance(POLL_INTERVAL_MS);
     expect(result.current.stage).toBe('paid');
     expect(LocksController.fetchPaidContent).toHaveBeenCalledWith({ lockFile, bundleId: 'stored-1' });
+  });
+
+  // The submission reports no link state, so the wait is "checking" until the first read answers;
+  // a failed read keeps it there rather than claiming a connection nobody has seen.
+  it('reports the link as pending until the first read answers, through a failed one', async () => {
+    vi.mocked(LocksController.fetchPaykitConnectionState)
+      .mockRejectedValueOnce(new Error('Paykit unavailable'))
+      .mockResolvedValue('none');
+
+    const { result } = renderPay();
+    await advance(0);
+    expect(result.current.stage).toBe('waiting');
+    expect(connectionCalls()).toBe(1);
+    expect(result.current.isConnectionPending).toBe(true);
+
+    await advance(CONNECTION_POLL_INTERVAL_MS);
+    expect(connectionCalls()).toBe(2);
+    expect(result.current.isConnectionPending).toBe(false);
+    expect(result.current.handshakePubky).toBe('pubkybob');
+  });
+
+  // The download after a completed payment keeps the waiting stage; a link read still out by then
+  // must not leave the screen saying it is checking the connection.
+  it('drops the pending link once the payment completes, even with the link read still out', async () => {
+    vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(hangForever);
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce(task('pending'))
+      .mockResolvedValue(task('completed'));
+    vi.mocked(LocksController.fetchPaidContent).mockReturnValue(new Promise<TUnlockedContent>(() => {}));
+
+    const { result } = renderPay();
+    await advance(0);
+    expect(result.current.isConnectionPending).toBe(true);
+
+    await advance(POLL_INTERVAL_MS);
+    expect(result.current.stage).toBe('waiting');
+    expect(LocksController.fetchPaidContent).toHaveBeenCalledWith({ lockFile, bundleId: 'stored-1' });
+    expect(result.current.isConnectionPending).toBe(false);
   });
 
   it('keeps the last QR and keeps polling the task when the link read fails', async () => {

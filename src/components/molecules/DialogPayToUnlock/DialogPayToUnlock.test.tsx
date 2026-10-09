@@ -22,6 +22,7 @@ type DialogOverrides = {
   isStalled?: boolean;
   handshakePubky?: string | null;
   connectionIssue?: 'recovery_required' | 'blocked' | null;
+  isConnectionPending?: boolean;
   walletSetupNeeded?: boolean;
   onRecheck?: () => void;
   onViewContent?: () => void;
@@ -40,6 +41,7 @@ const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}
     isStalled={overrides.isStalled ?? false}
     handshakePubky={overrides.handshakePubky ?? null}
     connectionIssue={overrides.connectionIssue ?? null}
+    isConnectionPending={overrides.isConnectionPending ?? false}
     walletSetupNeeded={overrides.walletSetupNeeded ?? false}
     isSubmitting={overrides.isSubmitting ?? false}
     onRetry={overrides.onRetry ?? vi.fn()}
@@ -106,6 +108,31 @@ describe('DialogPayToUnlock', () => {
     expect(screen.queryByRole('button', { name: /Try again|I completed the steps/ })).not.toBeInTheDocument();
     // The footer button reads Close (the X in the corner is also named Close, hence the data-cy hook).
     expect(document.querySelector('[data-cy="pay-to-unlock-cancel"]')).toHaveTextContent('Close');
+  });
+
+  // Nothing has reached Bitkit before the first link read answers, so there is nothing to confirm yet.
+  it('waiting: says it is checking the connection until the link state is known', () => {
+    const { rerender } = renderDialog('waiting', { isConnectionPending: true });
+
+    expect(screen.getByText('Checking your Bitkit connection…')).toBeInTheDocument();
+    expect(screen.queryByText('Please confirm in Bitkit.')).not.toBeInTheDocument();
+    expect(screen.queryByText('AWAITING PAYMENT')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+
+    rerender(dialogElement('waiting'));
+    expect(screen.getByText('Please confirm in Bitkit.')).toBeInTheDocument();
+    expect(screen.getByText('AWAITING PAYMENT')).toBeInTheDocument();
+  });
+
+  // The notices say something the checking copy does not, so they win while the link is unknown.
+  it.each([
+    ['the wallet setup notice', { walletSetupNeeded: true }, /Finish setting up Bitkit/],
+    ['the parked copy', { isStalled: true }, /Still waiting for the payment/],
+  ])('waiting + unknown link: shows %s instead of the checking copy', (_name, state, copy) => {
+    renderDialog('waiting', { isConnectionPending: true, ...state });
+
+    expect(screen.getByText(copy)).toBeInTheDocument();
+    expect(screen.queryByText('Checking your Bitkit connection…')).not.toBeInTheDocument();
   });
 
   it('waiting: shows the creator pubky QR while the hook hands one over', () => {
@@ -368,6 +395,11 @@ describe('DialogPayToUnlock - Snapshots', () => {
 
   it('matches snapshot for the waiting stage', () => {
     renderDialog('waiting');
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the waiting stage while the link state is unknown', () => {
+    renderDialog('waiting', { isConnectionPending: true });
     expect(screen.getByRole('dialog')).toMatchSnapshot();
   });
 

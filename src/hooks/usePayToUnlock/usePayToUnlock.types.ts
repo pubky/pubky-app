@@ -30,6 +30,8 @@ export interface UsePayToUnlockResult {
   handshakePubky: string | null;
   /** A link state the reader cannot fix by waiting or paying — shown as a notice instead of the QR. */
   connectionIssue: 'recovery_required' | 'blocked' | null;
+  /** True until the first link read answers — the wait then says it is checking, not that Bitkit needs a confirm. */
+  isConnectionPending: boolean;
   /** The server is waiting for the reader to finish setting up their wallet — shown as a notice instead of the QR. */
   walletSetupNeeded: boolean;
   /** True while a wallet check started from a button or the proof submission is in flight. */

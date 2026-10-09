@@ -41,6 +41,7 @@ vi.mock('@/hooks/usePayToUnlock/usePayToUnlock', () => ({
       isStalled: false,
       handshakePubky: 'pubkybob',
       connectionIssue: null,
+      isConnectionPending: false,
       walletSetupNeeded: false,
       isSubmitting: false,
       retry: payMocks.retry,

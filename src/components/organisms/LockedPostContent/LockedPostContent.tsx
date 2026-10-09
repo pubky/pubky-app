@@ -109,6 +109,7 @@ export function LockedPostContent({
     isStalled,
     handshakePubky,
     connectionIssue,
+    isConnectionPending,
     walletSetupNeeded,
     isSubmitting,
     retry,
@@ -204,6 +205,7 @@ export function LockedPostContent({
           isStalled={isStalled}
           handshakePubky={handshakePubky}
           connectionIssue={connectionIssue}
+          isConnectionPending={isConnectionPending}
           walletSetupNeeded={walletSetupNeeded}
           isSubmitting={isSubmitting}
           onRetry={retry}

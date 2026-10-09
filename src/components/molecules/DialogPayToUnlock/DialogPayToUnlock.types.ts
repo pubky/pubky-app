@@ -16,6 +16,8 @@ export interface DialogPayToUnlockProps {
   handshakePubky: string | null;
   /** Waiting stage: a wallet-link state the reader cannot fix here — replaces the QR with a notice. */
   connectionIssue: 'recovery_required' | 'blocked' | null;
+  /** Waiting stage: the wallet-link state is not known yet — the copy says it is checking instead of awaiting payment. */
+  isConnectionPending: boolean;
   /** Waiting stage: the server waits for the reader to finish setting up their wallet — replaces the QR with a notice. */
   walletSetupNeeded: boolean;
   /** True while the install screen's wallet check or a submission is in flight — locks the primary button, and
