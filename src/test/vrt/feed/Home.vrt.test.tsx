@@ -5,7 +5,13 @@
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
-import { matchVrtFrameScreenshot, preloadImages, renderForVRT, waitForMarkdownEditorReady } from '@/test-utils/vrt';
+import {
+  matchVrtFrameScreenshot,
+  preloadImages,
+  renderForVRT,
+  selectArticleComposerTab,
+  waitForMarkdownEditorReady,
+} from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -684,12 +690,6 @@ async function waitForArticleComposer() {
   await waitForMarkdownEditorReady();
 }
 
-/** Opens one of the article composer's tabs; the panels stay mounted, so the switch is immediate. */
-async function selectArticleTab(name: 'Content' | 'Title' | 'Header' | 'Preview') {
-  await page.getByRole('tab', { name }).click();
-  await expect.element(page.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true');
-}
-
 describe('Home (global feed) — visual regression', () => {
   beforeEach(() => {
     feedState.mode = 'default';
@@ -942,21 +942,21 @@ describe('New article dialog — visual regression', () => {
 
   it('renders the empty cover slot in the Header tab at desktop viewport', async () => {
     await renderNewArticleDialog(VRT_VIEWPORT_DESKTOP);
-    await selectArticleTab('Header');
+    await selectArticleComposerTab('Header');
     await expect.element(page.getByText('Add image')).toBeVisible();
     await matchVrtFrameScreenshot('dialog-new-article-header-desktop');
   });
 
   it('renders the empty cover slot in the Header tab at mobile viewport', async () => {
     await renderNewArticleDialog(VRT_VIEWPORT_MOBILE);
-    await selectArticleTab('Header');
+    await selectArticleComposerTab('Header');
     await expect.element(page.getByText('Add image')).toBeVisible();
     await matchVrtFrameScreenshot('dialog-new-article-header-mobile');
   });
 
   it('renders the title in its own tab at mobile viewport', async () => {
     await renderNewArticleDialog(VRT_VIEWPORT_MOBILE);
-    await selectArticleTab('Title');
+    await selectArticleComposerTab('Title');
     await expect.element(page.getByPlaceholder('Title')).toBeVisible();
     await matchVrtFrameScreenshot('dialog-new-article-title-mobile');
   });

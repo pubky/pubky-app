@@ -3,7 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from '@/molecules/Toaster/toast';
 
-export interface UseFullscreenReturn {
+interface UseFullscreenOptions {
+  /**
+   * Whether the surface offering the toggle is showing. While false, fullscreen entered through this
+   * hook is left: the control that would exit it is gone, and nothing else in the app does.
+   * @default true
+   */
+  enabled?: boolean;
+}
+
+interface UseFullscreenReturn {
   /** True while the document is fullscreen, whether this hook or something else put it there. */
   isFullscreen: boolean;
   /** False where the Fullscreen API is missing (iOS Safari), so a caller can leave its control out. */
@@ -19,10 +28,10 @@ export interface UseFullscreenReturn {
  * dialogs, toasts) renders on `document.body`, and an element in fullscreen sits in the top layer
  * above everything outside it, so fullscreening the composer alone would hide every dialog it opens.
  *
- * Fullscreen entered through this hook ends when the caller unmounts, so closing the dialog that
- * offered the control never leaves the page stuck in it.
+ * Fullscreen entered through this hook ends when the caller unmounts or disables it, so closing the
+ * dialog that offered the control, or publishing out of article mode, never leaves the page stuck.
  */
-export function useFullscreen(): UseFullscreenReturn {
+export function useFullscreen({ enabled = true }: UseFullscreenOptions = {}): UseFullscreenReturn {
   // Both start false so the server render and the first client render agree; the effect reads the browser.
   const [isSupported, setIsSupported] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -42,13 +51,13 @@ export function useFullscreen(): UseFullscreenReturn {
 
     return () => {
       document.removeEventListener('fullscreenchange', handleChange);
-      if (enteredHereRef.current && document.fullscreenElement) {
-        void document.exitFullscreen().catch(() => {
-          // The surface that entered fullscreen is gone; nothing is left to tell
-        });
-      }
+      leaveIfEnteredHere(enteredHereRef);
     };
   }, []);
+
+  useEffect(() => {
+    if (!enabled) leaveIfEnteredHere(enteredHereRef);
+  }, [enabled]);
 
   const toggle = async () => {
     const leaving = Boolean(document.fullscreenElement);
@@ -68,4 +77,13 @@ export function useFullscreen(): UseFullscreenReturn {
   };
 
   return { isFullscreen, isSupported, toggle };
+}
+
+/** Leaves fullscreen only when this hook entered it: fullscreen the user chose elsewhere is theirs. */
+function leaveIfEnteredHere(enteredHereRef: React.RefObject<boolean>) {
+  if (!enteredHereRef.current || !document.fullscreenElement) return;
+  enteredHereRef.current = false;
+  void document.exitFullscreen().catch(() => {
+    // The surface that entered fullscreen is gone; nothing is left to tell
+  });
 }

@@ -22,7 +22,7 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
       data-slot="tabs-trigger"
       className={cn(
         'inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors',
-        'hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50',
+        'hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50',
         'data-[state=active]:border-foreground data-[state=active]:text-foreground',
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
         className,

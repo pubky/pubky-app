@@ -155,19 +155,23 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
                     {displayKind === 'skeleton' ? (
                       <Skeleton className="size-full rounded-md" />
                     ) : (
-                      <Image src={a.previewUrl!} alt="Image preview" className="size-full object-cover object-center" />
-                    )}
-                    {displayKind !== 'skeleton' && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={a.onRemove}
-                        disabled={isSubmitting}
-                        data-cy="post-input-attachment-remove"
-                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 disabled:pointer-events-auto disabled:cursor-not-allowed"
-                      >
-                        <Trash2 className="size-4" /> Remove image
-                      </Button>
+                      <>
+                        <Image
+                          src={a.previewUrl!}
+                          alt="Image preview"
+                          className="size-full object-cover object-center"
+                        />
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={a.onRemove}
+                          disabled={isSubmitting}
+                          data-cy="post-input-attachment-remove"
+                          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 disabled:pointer-events-auto disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="size-4" /> Remove image
+                        </Button>
+                      </>
                     )}
                   </Container>
                 );

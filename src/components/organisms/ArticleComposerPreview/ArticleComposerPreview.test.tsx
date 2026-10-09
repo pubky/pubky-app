@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PostText } from '@/molecules/PostText/PostText';
 import type { PostTextProps } from '@/molecules/PostText/PostText.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { PostHeader } from '../PostHeader/PostHeader';
 import type { PostHeaderProps } from '../PostHeader/PostHeader.types';
 import { ArticleComposerPreview } from './ArticleComposerPreview';
 
@@ -96,7 +98,7 @@ describe('ArticleComposerPreview', () => {
     expect(text).toHaveAttribute('data-content', 'Plain paragraph.');
     expect(text).toHaveAttribute('data-is-article', 'true');
     expect(text).toHaveAttribute('data-full-article', 'true');
-    expect(text).toHaveClass('[&_a]:pointer-events-none');
+    expect(screen.getByTestId('article-composer-preview')).toHaveClass('[&_a]:pointer-events-none');
   });
 
   it('serializes inline media to attachment slots and feeds them the session entries', () => {
@@ -149,15 +151,39 @@ describe('ArticleComposerPreview', () => {
         title="T"
         body="Body"
         authorPubky={AUTHOR}
-        coverAttachment={{ src: 'https://cdn.example/cover', alt: 'Old cover', type: 'image/webp' }}
+        coverAttachment={{
+          uri: `pubky://${AUTHOR}/pub/pubky.app/files/cover`,
+          type: 'image/webp',
+          name: 'Old cover',
+          urls: { main: 'https://cdn.example/main/cover', feed: 'https://cdn.example/feed/cover' },
+        }}
         inlineMedia={inlineMedia}
       />,
     );
 
-    expect(screen.getByTestId('article-composer-preview-cover')).toHaveAttribute('src', 'https://cdn.example/cover');
+    // The same variant the cover strip shows for it
+    expect(screen.getByTestId('article-composer-preview-cover')).toHaveAttribute(
+      'src',
+      'https://cdn.example/feed/cover',
+    );
     expect(readLocalAttachments()).toEqual([
-      { type: 'image/webp', name: 'Old cover', urls: { main: 'https://cdn.example/cover' } },
+      { type: 'image/webp', name: 'Old cover', urls: { main: 'https://cdn.example/feed/cover' } },
     ]);
+  });
+
+  it('renders no cover while a kept cover is still resolving', () => {
+    render(
+      <ArticleComposerPreview
+        title="T"
+        body="Body"
+        authorPubky={AUTHOR}
+        coverAttachment={{ uri: `pubky://${AUTHOR}/pub/pubky.app/files/cover`, type: '', name: '', urls: null }}
+        inlineMedia={inlineMedia}
+      />,
+    );
+
+    expect(screen.queryByTestId('article-composer-preview-cover')).not.toBeInTheDocument();
+    expect(readLocalAttachments()).toEqual([]);
   });
 
   it('revokes the cover object URL on unmount', () => {
@@ -188,6 +214,36 @@ describe('ArticleComposerPreview', () => {
 
     expect(screen.getByTestId('post-text')).toHaveAttribute('data-content', '![hand typed](attachment:3)');
     expect(readLocalAttachments()).toEqual([]);
+  });
+
+  it('cancels clicks on body links so a tag or mention cannot navigate away from the draft', () => {
+    vi.mocked(PostText).mockImplementationOnce(() => (
+      <p data-testid="post-text">
+        <a href="/search?tags=design" data-testid="body-link">
+          #design
+        </a>
+      </p>
+    ));
+    render(<ArticleComposerPreview title="T" body="#design" authorPubky={AUTHOR} inlineMedia={inlineMedia} />);
+
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    screen.getByTestId('body-link').dispatchEvent(click);
+
+    expect(click.defaultPrevented).toBe(true);
+  });
+
+  it('cancels clicks on the byline link too', () => {
+    vi.mocked(PostHeader).mockImplementationOnce(() => (
+      <a href="/profile" data-testid="byline-link">
+        Satoshi Nakamoto
+      </a>
+    ));
+    render(<ArticleComposerPreview title="T" body="Body" authorPubky={AUTHOR} inlineMedia={inlineMedia} />);
+
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    screen.getByTestId('byline-link').dispatchEvent(click);
+
+    expect(click.defaultPrevented).toBe(true);
   });
 
   it('shows placeholders for an empty title and body', () => {

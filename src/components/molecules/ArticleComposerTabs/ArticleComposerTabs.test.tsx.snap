@@ -21,7 +21,7 @@ exports[`ArticleComposerTabs - Snapshots > matches snapshot on desktop 1`] = `
     <button
       aria-controls="radix-normalized-content-content"
       aria-selected="true"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-content"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -64,7 +64,7 @@ exports[`ArticleComposerTabs - Snapshots > matches snapshot on desktop 1`] = `
     <button
       aria-controls="radix-normalized-content-header"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-header"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -114,7 +114,7 @@ exports[`ArticleComposerTabs - Snapshots > matches snapshot on desktop 1`] = `
     <button
       aria-controls="radix-normalized-content-preview"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-preview"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -178,7 +178,7 @@ exports[`ArticleComposerTabs - Snapshots > matches snapshot on mobile 1`] = `
     <button
       aria-controls="radix-normalized-content-content"
       aria-selected="true"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-content"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -221,7 +221,7 @@ exports[`ArticleComposerTabs - Snapshots > matches snapshot on mobile 1`] = `
     <button
       aria-controls="radix-normalized-content-title"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-title"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -264,7 +264,7 @@ exports[`ArticleComposerTabs - Snapshots > matches snapshot on mobile 1`] = `
     <button
       aria-controls="radix-normalized-content-header"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-header"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -314,7 +314,7 @@ exports[`ArticleComposerTabs - Snapshots > matches snapshot on mobile 1`] = `
     <button
       aria-controls="radix-normalized-content-preview"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-preview"
       data-orientation="horizontal"
       data-radix-collection-item=""

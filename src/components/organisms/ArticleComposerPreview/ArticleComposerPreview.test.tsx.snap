@@ -2,7 +2,7 @@
 
 exports[`ArticleComposerPreview - Snapshots > matches snapshot with a cover and an empty body 1`] = `
 <div
-  class="mx-auto w-full flex-col flex max-h-[60dvh] cursor-auto overflow-y-auto"
+  class="mx-auto w-full flex-col flex max-h-[60dvh] cursor-auto overflow-y-auto [&_a]:pointer-events-none"
   data-testid="article-composer-preview"
 >
   <h1
@@ -39,7 +39,7 @@ exports[`ArticleComposerPreview - Snapshots > matches snapshot with a cover and 
 
 exports[`ArticleComposerPreview - Snapshots > matches snapshot with a title and body 1`] = `
 <div
-  class="mx-auto w-full flex-col flex max-h-[60dvh] cursor-auto overflow-y-auto"
+  class="mx-auto w-full flex-col flex max-h-[60dvh] cursor-auto overflow-y-auto [&_a]:pointer-events-none"
   data-testid="article-composer-preview"
 >
   <h1
@@ -60,7 +60,6 @@ exports[`ArticleComposerPreview - Snapshots > matches snapshot with a title and 
     data-testid="container"
   >
     <div
-      class="[&_a]:pointer-events-none"
       data-content="Snapshot body"
       data-full-article="true"
       data-is-article="true"

@@ -9,6 +9,7 @@ import {
   preloadImages,
   renderForVRT,
   VRT_ROOT_TESTID,
+  selectArticleComposerTab,
   waitForMarkdownEditorReady,
 } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
@@ -564,12 +565,6 @@ async function renderEditArticle(viewport: { width: number; height: number }) {
   await waitForMarkdownEditorReady(dialog);
 }
 
-/** Opens one of the article composer's tabs; the panels stay mounted, so the switch is immediate. */
-async function selectArticleTab(name: 'Content' | 'Title' | 'Header' | 'Preview') {
-  await page.getByRole('tab', { name }).click();
-  await expect.element(page.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true');
-}
-
 describe('Article — editing — visual regression', () => {
   it('renders the edit article dialog at desktop viewport', async () => {
     await renderEditArticle(VRT_VIEWPORT_DESKTOP);
@@ -583,14 +578,14 @@ describe('Article — editing — visual regression', () => {
 
   it('renders the kept cover in the Header tab at desktop viewport', async () => {
     await renderEditArticle(VRT_VIEWPORT_DESKTOP);
-    await selectArticleTab('Header');
+    await selectArticleComposerTab('Header');
     await expect.element(page.getByAltText('Image preview')).toBeVisible();
     await matchVrtFrameScreenshot('article-editing-header-desktop');
   });
 
   it('renders the kept cover in the Header tab at mobile viewport', async () => {
     await renderEditArticle(VRT_VIEWPORT_MOBILE);
-    await selectArticleTab('Header');
+    await selectArticleComposerTab('Header');
     await expect.element(page.getByAltText('Image preview')).toBeVisible();
     await matchVrtFrameScreenshot('article-editing-header-mobile');
   });
@@ -598,19 +593,20 @@ describe('Article — editing — visual regression', () => {
   it('renders the published-form preview at desktop viewport', async () => {
     const f = await fixtures;
     await renderEditArticle(VRT_VIEWPORT_DESKTOP);
-    await selectArticleTab('Preview');
-    await expect.element(page.getByTestId('article-composer-preview')).toBeVisible();
-    await expect.element(page.getByText('A feed is a scanning surface, not a document.')).toBeVisible();
-    await expect.element(page.getByAltText(f.articleCoverName)).toBeVisible();
+    await selectArticleComposerTab('Preview');
+    // Scoped to the panel: the published page behind the dialog shows the same body and cover
+    const preview = page.getByTestId('article-composer-preview');
+    await expect.element(preview.getByText('A feed is a scanning surface, not a document.')).toBeVisible();
+    await expect.element(preview.getByAltText(f.articleCoverName)).toBeVisible();
     await matchVrtFrameScreenshot('article-editing-preview-desktop');
   });
 
   it('renders the published-form preview at mobile viewport', async () => {
     const f = await fixtures;
     await renderEditArticle(VRT_VIEWPORT_MOBILE);
-    await selectArticleTab('Preview');
-    await expect.element(page.getByTestId('article-composer-preview')).toBeVisible();
-    await expect.element(page.getByAltText(f.articleCoverName)).toBeVisible();
+    await selectArticleComposerTab('Preview');
+    const preview = page.getByTestId('article-composer-preview');
+    await expect.element(preview.getByAltText(f.articleCoverName)).toBeVisible();
     await matchVrtFrameScreenshot('article-editing-preview-mobile');
   });
 });

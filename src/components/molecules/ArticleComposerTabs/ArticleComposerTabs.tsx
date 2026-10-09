@@ -3,11 +3,8 @@
 import { Eye, Image as ImageIcon, type LucideIcon, TextAlignStart, Type } from 'lucide-react';
 import { TabsList, TabsTrigger } from '@/atoms/Tabs/Tabs';
 import { cn } from '@/libs/utils/utils';
-import {
-  ARTICLE_COMPOSER_TAB,
-  type ArticleComposerTab,
-  type ArticleComposerTabsProps,
-} from './ArticleComposerTabs.types';
+import { ARTICLE_COMPOSER_TAB, type ArticleComposerTab } from './ArticleComposerTabs.constants';
+import type { ArticleComposerTabsProps } from './ArticleComposerTabs.types';
 
 const TAB_UI: Record<ArticleComposerTab, { label: string; Icon: LucideIcon }> = {
   [ARTICLE_COMPOSER_TAB.CONTENT]: { label: 'Content', Icon: TextAlignStart },

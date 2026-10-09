@@ -117,21 +117,24 @@ vi.mock('@/atoms/Container/Container', () => {
 
 vi.mock('@/atoms/Input/Input', () => {
   return {
-    Input: vi.fn(({ type, accept, multiple, onChange, ref, className, id, placeholder, defaultValue, disabled }) => (
-      <input
-        ref={ref}
-        type={type}
-        accept={accept}
-        multiple={multiple}
-        onChange={onChange}
-        className={className}
-        id={id}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-        disabled={disabled}
-        data-testid="input"
-      />
-    )),
+    Input: vi.fn(
+      ({ type, accept, multiple, onChange, ref, className, id, placeholder, defaultValue, value, disabled }) => (
+        <input
+          ref={ref}
+          type={type}
+          accept={accept}
+          multiple={multiple}
+          onChange={onChange}
+          className={className}
+          id={id}
+          placeholder={placeholder}
+          defaultValue={defaultValue}
+          value={value}
+          disabled={disabled}
+          data-testid="input"
+        />
+      ),
+    ),
   };
 });
 
@@ -457,7 +460,7 @@ vi.mock('@/organisms/ArticleComposerPreview/ArticleComposerPreview', () => ({
       body: string;
       authorPubky: string;
       coverFile?: File;
-      coverAttachment?: { src: string } | null;
+      coverAttachment?: ExistingAttachment;
     }) => (
       <div
         data-testid="article-composer-preview"
@@ -465,7 +468,7 @@ vi.mock('@/organisms/ArticleComposerPreview/ArticleComposerPreview', () => ({
         data-body={body}
         data-author={authorPubky}
         data-cover-file={coverFile?.name}
-        data-cover-src={coverAttachment?.src}
+        data-cover-src={coverAttachment?.urls?.main}
       />
     ),
   ),
@@ -1020,13 +1023,55 @@ describe('PostInput', () => {
       expect(root).not.toHaveClass('border-dashed');
       // Title sits outside the dashed body box on desktop
       const title = screen.getByPlaceholderText('Title');
-      expect(title.parentElement).toBe(root);
+      const titleWrapper = title.parentElement!;
+      expect(titleWrapper.parentElement).toBe(root);
       expect(title).toHaveValue('Draft title');
       expect(title).toHaveClass('border-dashed');
-      expect(screen.getByTestId('article-composer-tabs').nextElementSibling).toBe(title);
+      expect(screen.getByTestId('article-composer-tabs').nextElementSibling).toBe(titleWrapper);
       // The dashed frame moved to the body box
-      expect(title.nextElementSibling).toHaveClass('border-dashed');
+      expect(titleWrapper.nextElementSibling).toHaveClass('border-dashed');
       expect(screen.queryByTestId('article-composer-panel-title')).not.toBeInTheDocument();
+    });
+
+    it('keeps the title field with the Content tab on desktop, hidden but mounted on the other tabs', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      const title = screen.getByPlaceholderText('Title');
+
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Header' }));
+      expect(title.parentElement).toHaveClass('hidden');
+      expect(screen.getByPlaceholderText('Title')).toBe(title);
+
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Content' }));
+      expect(title.parentElement).not.toHaveClass('hidden');
+    });
+
+    it('follows every keystroke in the title and hands the change to the composer', () => {
+      const handleArticleTitleChange = vi.fn();
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, {
+          isArticle: true,
+          articleTitle: 'Draft title',
+          content: 'Draft body',
+          handleArticleTitleChange,
+        }),
+      );
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Draft title!' } });
+
+      // The debounced composer state has not caught up, yet the field shows the keystroke
+      expect(screen.getByPlaceholderText('Title')).toHaveValue('Draft title!');
+      expect(handleArticleTitleChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('takes a title set underneath it, as an edit opening does', () => {
+      const { rerender } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      expect(screen.getByPlaceholderText('Title')).toHaveValue('Draft title');
+
+      mockUsePostReturn.articleTitle = 'Restored title';
+      rerender(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.getByPlaceholderText('Title')).toHaveValue('Restored title');
     });
 
     it('starts on Content with the editor and the cover panel both mounted', () => {
@@ -1097,7 +1142,7 @@ describe('PostInput', () => {
 
       expect(screen.getByTestId('article-composer-preview')).toHaveAttribute(
         'data-cover-src',
-        'https://cdn.example.com/feed/file-1',
+        'https://cdn.example.com/main/file-1',
       );
     });
 

@@ -1,13 +1,6 @@
+import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import type { MarkdownEditorInlineMedia } from '@/molecules/MarkdownEditor/MarkdownEditor.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
-
-/** A cover already persisted on the article being edited, resolved to a renderable URL. */
-export interface ArticleComposerPreviewCover {
-  src: string;
-  alt: string;
-  /** MIME type: the published renderer only treats an image slot as a cover. */
-  type: string;
-}
 
 export interface ArticleComposerPreviewProps {
   title: string;
@@ -19,8 +12,8 @@ export interface ArticleComposerPreviewProps {
   userDetails?: NexusUserDetails | null;
   /** A cover picked this session. Wins over `coverAttachment` when both are set. */
   coverFile?: File;
-  /** The cover kept from the published article (edit). */
-  coverAttachment?: ArticleComposerPreviewCover | null;
+  /** The cover kept from the published article (edit); nothing renders for it until its URLs resolve. */
+  coverAttachment?: ExistingAttachment;
   /** The composer session's lookups, so the preview renders the same bytes the editor shows. */
   inlineMedia: Pick<MarkdownEditorInlineMedia, 'getPreviewUrl' | 'getMediaType' | 'getMediaName'>;
   className?: string;

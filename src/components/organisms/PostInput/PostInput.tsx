@@ -17,6 +17,7 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
+import { useArticleComposerTab } from '@/hooks/useArticleComposerTab/useArticleComposerTab';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useCharacterLimitWarning } from '@/hooks/useCharacterLimitWarning/useCharacterLimitWarning';
 import { useComposerHeightAnimation } from '@/hooks/useComposerHeightAnimation/useComposerHeightAnimation';
@@ -30,19 +31,15 @@ import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
 import type { TLockDraft } from '@/hooks/usePostInputLock/usePostInputLock.types';
-import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { deserializeArticleBody } from '@/libs/post/articleInlineMedia';
 import { areLockAttachmentsWithinLimit, hasSvgAttachment } from '@/libs/post/lockAttachments';
 import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
-import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';
+import { canSubmitPost, cn, getEnforcedCharacterCount, resolveUserDisplayName } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { ArticleComposerTabs } from '@/molecules/ArticleComposerTabs/ArticleComposerTabs';
-import {
-  ARTICLE_COMPOSER_TAB,
-  type ArticleComposerTab,
-} from '@/molecules/ArticleComposerTabs/ArticleComposerTabs.types';
+import { ARTICLE_COMPOSER_TAB } from '@/molecules/ArticleComposerTabs/ArticleComposerTabs.constants';
 import { DialogLockContent } from '@/molecules/DialogLockContent/DialogLockContent';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
@@ -69,6 +66,10 @@ import type { PostInputProps } from './PostInput.types';
 // In MiB like the app's other size labels, rounded down so a file under the label is never refused.
 const LOCK_ATTACHMENT_MAX_SIZE_LABEL = `${Math.floor((LOCK_ATTACHMENT_MAX_SIZE / (1024 * 1024)) * 10) / 10}MB`;
 const LOCK_LIMITS_MESSAGE = `Locked content supports up to ${LOCK_ATTACHMENT_MAX_FILES} files of ${LOCK_ATTACHMENT_MAX_SIZE_LABEL} each.`;
+
+// An article panel that stays mounted while another tab shows: the rich editor imports its markdown
+// once and the cover strip owns the file input, so unmounting either would lose state.
+const PERSISTENT_PANEL_PROPS = { forceMount: true, tabIndex: -1, className: 'data-[state=inactive]:hidden' } as const;
 
 export function PostInput({
   dataCy,
@@ -98,13 +99,7 @@ export function PostInput({
   layoutOverride,
 }: PostInputProps) {
   const [lockDraft, setLockDraft] = useState<TLockDraft | null>(null);
-  // Which article section is showing. Phones have a Title tab of their own; wider viewports keep
-  // the title with the body, so a Title selection carried across the breakpoint reads as Content.
-  const [articleTab, setArticleTab] = useState<ArticleComposerTab>(ARTICLE_COMPOSER_TAB.CONTENT);
   const isMobile = useIsMobile();
-  const activeArticleTab =
-    !isMobile && articleTab === ARTICLE_COMPOSER_TAB.TITLE ? ARTICLE_COMPOSER_TAB.CONTENT : articleTab;
-  const { isFullscreen, isSupported: isFullscreenSupported, toggle: toggleFullscreen } = useFullscreen();
 
   const {
     textareaRef,
@@ -424,13 +419,28 @@ export function PostInput({
     onLockModeChange?.(isLockEnabled);
   }, [isLockEnabled, onLockModeChange]);
 
-  // Leaving article mode (a publish, a lock capture, a reset) forgets the tab: the next article
-  // starts on its content, not on an empty preview.
-  useEffect(() => {
-    if (!isArticle) setArticleTab(ARTICLE_COMPOSER_TAB.CONTENT);
-  }, [isArticle]);
-
+  // Phones have a Title tab of their own; wider viewports keep the title with the body.
+  const articleTab = useArticleComposerTab({ isArticle, isMobile });
+  // Leaving article mode takes the toggle away, so fullscreen entered from it ends with it.
+  const {
+    isFullscreen,
+    isSupported: isFullscreenSupported,
+    toggle: toggleFullscreen,
+  } = useFullscreen({ enabled: isArticle });
   const currentUserAvatarUrl = useAvatarUrl(currentUserDetails);
+
+  // The title the field shows. `articleTitle` commits through a debounce, so binding the field to
+  // it would lag the keystrokes; the draft follows every keystroke and takes `articleTitle` whenever
+  // that changes underneath it (an edit opening, a lock draft restored). A commit always carries the
+  // value the field already holds, so it never moves the draft. State over an uncontrolled field: the
+  // field moves between the tab row and the Title panel at the phone breakpoint, and a remount must
+  // not lose the keystrokes the debounce has not committed yet.
+  const [articleTitleDraft, setArticleTitleDraft] = useState(articleTitle);
+  const [syncedArticleTitle, setSyncedArticleTitle] = useState(articleTitle);
+  if (articleTitle !== syncedArticleTitle) {
+    setSyncedArticleTitle(articleTitle);
+    setArticleTitleDraft(articleTitle);
+  }
 
   const inheritedTagsLayout = useEffectiveTagsLayout();
   const tagsLayout = layoutOverride ?? inheritedTagsLayout;
@@ -444,16 +454,17 @@ export function PostInput({
     !isAuthenticated ? 'px-6' : '',
     isDragging ? 'border-brand' : 'border-input',
   );
-  const articlePanelClassName = 'data-[state=inactive]:hidden';
 
-  // Uncontrolled on purpose: the title commits through a debounce, so a controlled value would lag
-  // the keystrokes. Desktop renders it as a field between the tabs and the body box; phones give it
-  // a tab of its own, styled as the heading it becomes.
-  const articleTitleInput = isArticle ? (
+  // Desktop renders the title as a field between the tabs and the body box; phones give it a tab of
+  // its own, styled as the heading it becomes.
+  const articleTitleInput = (
     <Input
       placeholder={'Title'}
-      defaultValue={articleTitle}
-      onChange={handleArticleTitleChangeWithAuth}
+      value={articleTitleDraft}
+      onChange={(event) => {
+        setArticleTitleDraft(event.target.value);
+        handleArticleTitleChangeWithAuth?.(event);
+      }}
       maxLength={ARTICLE_TITLE_MAX_CHARACTER_LENGTH}
       disabled={isSubmitting || !isAuthenticated}
       data-cy="article-title-input"
@@ -463,17 +474,29 @@ export function PostInput({
           : 'h-auto cursor-text border-dashed bg-background/20 px-6 py-4 font-medium'
       }
     />
-  ) : null;
+  );
 
-  // Only the edit variant has a persisted cover; a new one picked this session takes over.
-  const existingCover = isEdit ? existingAttachments[0] : undefined;
-  const existingCoverPreviewUrl = existingCover ? getAttachmentPreviewUrl(existingCover) : null;
+  // One element for both modes: only one of the two places below mounts at a time, so the file input
+  // ref stays valid, and the article flag is the only difference between them.
+  const attachmentsInput = (
+    <PostInputAttachments
+      ref={fileInputRef}
+      attachments={attachments}
+      setAttachments={setAttachmentsWithAuth}
+      handleFilesAdded={handleFilesAddedWithAuth}
+      isSubmitting={isSubmitting}
+      isArticle={isArticle}
+      handleFileClick={handleFileClickWithAuth}
+      existingAttachments={isEdit ? existingAttachments : undefined}
+      onRemoveExisting={isEdit ? removeExistingAttachmentWithAuth : undefined}
+    />
+  );
 
   return (
     <Tabs
       asChild
-      value={activeArticleTab}
-      onValueChange={(value) => setArticleTab(value as ArticleComposerTab)}
+      value={articleTab.value}
+      onValueChange={articleTab.onValueChange}
       // Only the article composer has tabs: the root stays the same element in both modes so a
       // switch never remounts the composer, and an unused tabs context costs nothing.
       className={isArticle ? 'gap-3' : 'gap-0'}
@@ -504,8 +527,17 @@ export function PostInput({
 
         {showThreadConnector && <PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
 
-        {isArticle && <ArticleComposerTabs isMobile={isMobile} />}
-        {isArticle && !isMobile && articleTitleInput}
+        {isArticle && (
+          <>
+            <ArticleComposerTabs isMobile={isMobile} />
+            {/* The title belongs to the Content tab; it stays mounted so switching tabs keeps its focus state */}
+            {!isMobile && (
+              <div className={cn(articleTab.value !== ARTICLE_COMPOSER_TAB.CONTENT && 'hidden')}>
+                {articleTitleInput}
+              </div>
+            )}
+          </>
+        )}
 
         <Container
           className={cn(
@@ -631,17 +663,12 @@ export function PostInput({
                   </Container>
                 )}
 
-                {/* The article sections. Content, Title and Header stay mounted while another tab
-                    shows: the rich editor imports its markdown once and the title field is
-                    uncontrolled, so unmounting either would lose what the user typed since the
-                    last debounce. Preview mounts on demand, it is derived from state. */}
+                {/* The article sections. Preview mounts on demand, it is derived from state. */}
                 {isArticle ? (
                   <>
                     <TabsContent
                       value={ARTICLE_COMPOSER_TAB.CONTENT}
-                      forceMount
-                      tabIndex={-1}
-                      className={articlePanelClassName}
+                      {...PERSISTENT_PANEL_PROPS}
                       data-testid="article-composer-panel-content"
                     >
                       <MarkdownEditor
@@ -658,9 +685,7 @@ export function PostInput({
                     {isMobile && (
                       <TabsContent
                         value={ARTICLE_COMPOSER_TAB.TITLE}
-                        forceMount
-                        tabIndex={-1}
-                        className={articlePanelClassName}
+                        {...PERSISTENT_PANEL_PROPS}
                         data-testid="article-composer-panel-title"
                       >
                         {articleTitleInput}
@@ -669,22 +694,10 @@ export function PostInput({
 
                     <TabsContent
                       value={ARTICLE_COMPOSER_TAB.HEADER}
-                      forceMount
-                      tabIndex={-1}
-                      className={articlePanelClassName}
+                      {...PERSISTENT_PANEL_PROPS}
                       data-testid="article-composer-panel-header"
                     >
-                      <PostInputAttachments
-                        ref={fileInputRef}
-                        attachments={attachments}
-                        setAttachments={setAttachmentsWithAuth}
-                        handleFilesAdded={handleFilesAddedWithAuth}
-                        isSubmitting={isSubmitting}
-                        isArticle
-                        handleFileClick={handleFileClickWithAuth}
-                        existingAttachments={isEdit ? existingAttachments : undefined}
-                        onRemoveExisting={isEdit ? removeExistingAttachmentWithAuth : undefined}
-                      />
+                      {attachmentsInput}
                     </TabsContent>
 
                     <TabsContent
@@ -699,27 +712,15 @@ export function PostInput({
                           authorPubky={currentUserPubky}
                           userDetails={currentUserDetails}
                           coverFile={attachments[0]}
-                          coverAttachment={
-                            existingCover && existingCoverPreviewUrl
-                              ? { src: existingCoverPreviewUrl, alt: existingCover.name, type: existingCover.type }
-                              : null
-                          }
+                          // Only the edit variant has a persisted cover; a new one picked this session wins
+                          coverAttachment={isEdit ? existingAttachments[0] : undefined}
                           inlineMedia={inlineMedia}
                         />
                       )}
                     </TabsContent>
                   </>
                 ) : (
-                  <PostInputAttachments
-                    ref={fileInputRef}
-                    attachments={attachments}
-                    setAttachments={setAttachmentsWithAuth}
-                    handleFilesAdded={handleFilesAddedWithAuth}
-                    isSubmitting={isSubmitting}
-                    handleFileClick={handleFileClickWithAuth}
-                    existingAttachments={isEdit ? existingAttachments : undefined}
-                    onRemoveExisting={isEdit ? removeExistingAttachmentWithAuth : undefined}
-                  />
+                  attachmentsInput
                 )}
 
                 {/* Show original post preview for reposts */}
@@ -773,7 +774,7 @@ export function PostInput({
                           isArticle && currentUserPubky ? (
                             <AvatarWithFallback
                               avatarUrl={currentUserAvatarUrl}
-                              name={currentUserDetails?.name ?? ''}
+                              name={resolveUserDisplayName(currentUserDetails)}
                               fallbackSeed={currentUserPubky}
                               size="md"
                               data-testid="article-composer-avatar"

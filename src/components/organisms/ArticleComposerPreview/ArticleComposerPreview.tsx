@@ -5,6 +5,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
 import { ARTICLE_ATTACHMENT_MAX_FILES } from '@/config/posts';
+import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { serializeArticleBody } from '@/libs/post/articleInlineMedia';
 import { cn } from '@/libs/utils/utils';
@@ -23,8 +24,9 @@ import type { ArticleComposerPreviewProps } from './ArticleComposerPreview.types
  * entries, the same seed the publish writes to the local files store. What this shows is what the
  * article page shows a moment after publishing.
  *
- * Interaction is read-only: links in the body are inert, so a tag or mention cannot navigate away
- * from the draft. Players still play.
+ * Interaction is read-only: a click on any link, the byline's included, is cancelled before it
+ * reaches the anchor (pointer or keyboard), so a tag, a mention or the author's name cannot navigate
+ * away from the draft. Players still play.
  */
 export function ArticleComposerPreview({
   title,
@@ -46,10 +48,13 @@ export function ArticleComposerPreview({
     };
   }, [coverObjectUrl]);
 
+  const coverAttachmentUrl = coverAttachment ? getAttachmentPreviewUrl(coverAttachment) : null;
   const cover =
     coverFile && coverObjectUrl
       ? { src: coverObjectUrl, alt: coverFile.name, type: coverFile.type }
-      : (coverAttachment ?? null);
+      : coverAttachment && coverAttachmentUrl
+        ? { src: coverAttachmentUrl, alt: coverAttachment.name, type: coverAttachment.type }
+        : null;
 
   // The published form of the body. A body the publish would refuse (a hand-typed slot, too many
   // files) previews as written: the publish is where the user is told why.
@@ -81,20 +86,18 @@ export function ArticleComposerPreview({
   return (
     <Container
       data-testid="article-composer-preview"
-      className={cn('max-h-[60dvh] cursor-auto overflow-y-auto', className)}
+      className={cn('max-h-[60dvh] cursor-auto overflow-y-auto [&_a]:pointer-events-none', className)}
+      // Capture phase, so Next's Link sees `defaultPrevented` and skips its client navigation too.
+      // On the root: the byline links to the author's profile, exactly like a body mention would.
+      onClickCapture={(event) => {
+        if (event.target instanceof Element && event.target.closest('a')) event.preventDefault();
+      }}
     >
       <Typography as="h1" size="2xl" className={cn('mb-6 wrap-anywhere', !trimmedTitle && 'text-muted-foreground')}>
         {trimmedTitle || 'Untitled article'}
       </Typography>
 
-      <PostHeader
-        postId={authorPubky}
-        isReplyInput
-        userDetails={userDetails}
-        showPopover={false}
-        size="extraLarge"
-        timeAgoPlacement="bottom-left"
-      />
+      <PostHeader postId={authorPubky} isReplyInput userDetails={userDetails} showPopover={false} size="extraLarge" />
 
       <Container className="mt-6 gap-6">
         {cover && (
@@ -107,13 +110,7 @@ export function ArticleComposerPreview({
         )}
 
         {hasBody ? (
-          <PostText
-            content={previewBody}
-            isArticle
-            fullArticle
-            articleMedia={{ localAttachments }}
-            className="[&_a]:pointer-events-none"
-          />
+          <PostText content={previewBody} isArticle fullArticle articleMedia={{ localAttachments }} />
         ) : (
           <Typography className="text-muted-foreground">Nothing to preview yet.</Typography>
         )}

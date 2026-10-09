@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Tabs } from '@/atoms/Tabs/Tabs';
 import { ArticleComposerTabs } from './ArticleComposerTabs';
-import { ARTICLE_COMPOSER_TAB } from './ArticleComposerTabs.types';
+import { ARTICLE_COMPOSER_TAB } from './ArticleComposerTabs.constants';
 
 function renderTabs(isMobile: boolean) {
   return render(

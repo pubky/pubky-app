@@ -20,7 +20,7 @@ exports[`PostInput - Mobile Snapshots > matches article mode snapshot on mobile 
     <button
       aria-controls="radix-normalized-content-content"
       aria-selected="true"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-content"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -63,7 +63,7 @@ exports[`PostInput - Mobile Snapshots > matches article mode snapshot on mobile 
     <button
       aria-controls="radix-normalized-content-title"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-title"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -106,7 +106,7 @@ exports[`PostInput - Mobile Snapshots > matches article mode snapshot on mobile 
     <button
       aria-controls="radix-normalized-content-header"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-header"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -156,7 +156,7 @@ exports[`PostInput - Mobile Snapshots > matches article mode snapshot on mobile 
     <button
       aria-controls="radix-normalized-content-preview"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-preview"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -502,6 +502,7 @@ exports[`PostInput - Mobile Snapshots > matches expanded snapshot on mobile view
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -635,6 +636,7 @@ exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] 
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -758,6 +760,7 @@ exports[`PostInput - Snapshots > matches snapshot for a collapsed post composer 
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -850,6 +853,7 @@ exports[`PostInput - Snapshots > matches snapshot for an expanded post composer 
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -929,7 +933,7 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
     <button
       aria-controls="radix-normalized-content-content"
       aria-selected="true"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-content"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -972,7 +976,7 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
     <button
       aria-controls="radix-normalized-content-header"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-header"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -1022,7 +1026,7 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
     <button
       aria-controls="radix-normalized-content-preview"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-preview"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -1062,12 +1066,16 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
       </span>
     </button>
   </div>
-  <input
-    class="h-auto cursor-text border-dashed bg-background/20 px-6 py-4 font-medium"
-    data-testid="input"
-    placeholder="Title"
-    value="Test Article Title"
-  />
+  <div
+    class=""
+  >
+    <input
+      class="h-auto cursor-text border-dashed bg-background/20 px-6 py-4 font-medium"
+      data-testid="input"
+      placeholder="Title"
+      value="Test Article Title"
+    />
+  </div>
   <div
     class="min-w-0 contain-inline-size rounded-md border border-dashed transition-colors duration-200 p-6 border-input [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
@@ -1357,6 +1365,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
           </div>
           <div
             data-existing-count="0"
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -1436,7 +1445,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
     <button
       aria-controls="radix-normalized-content-content"
       aria-selected="true"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-content"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -1479,7 +1488,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
     <button
       aria-controls="radix-normalized-content-header"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-header"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -1529,7 +1538,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
     <button
       aria-controls="radix-normalized-content-preview"
       aria-selected="false"
-      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
       data-cy="article-composer-tab-preview"
       data-orientation="horizontal"
       data-radix-collection-item=""
@@ -1569,12 +1578,16 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
       </span>
     </button>
   </div>
-  <input
-    class="h-auto cursor-text border-dashed bg-background/20 px-6 py-4 font-medium"
-    data-testid="input"
-    placeholder="Title"
-    value="Existing Article Title"
-  />
+  <div
+    class=""
+  >
+    <input
+      class="h-auto cursor-text border-dashed bg-background/20 px-6 py-4 font-medium"
+      data-testid="input"
+      placeholder="Title"
+      value="Existing Article Title"
+    />
+  </div>
   <div
     class="min-w-0 contain-inline-size rounded-md border border-dashed transition-colors duration-200 p-6 border-input [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
@@ -1865,6 +1878,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with existing
           </div>
           <div
             data-existing-count="1"
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -2008,6 +2022,7 @@ exports[`PostInput - Snapshots > matches snapshot for list layout 1`] = `
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -2154,6 +2169,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -2289,6 +2305,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="true"
             data-testid="post-input-attachments"
           >
@@ -2423,6 +2440,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -2563,6 +2581,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -2696,6 +2715,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -2830,6 +2850,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -2964,6 +2985,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -3102,6 +3124,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -3236,6 +3259,7 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -3414,6 +3438,7 @@ exports[`PostInput - Snapshots > matches snapshot with a logged-out fallback ava
             </div>
           </div>
           <div
+            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
