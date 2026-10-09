@@ -38,6 +38,7 @@ describe('useLockFile', () => {
     const { result } = renderHook(() => useLockFile(null));
 
     expect(result.current.lockFile).toBeNull();
+    expect(result.current.isLoading).toBe(false);
     expect(result.current.hasError).toBe(false);
     expect(LocksController.fetchLockFile).not.toHaveBeenCalled();
   });
@@ -48,5 +49,17 @@ describe('useLockFile', () => {
 
     await waitFor(() => expect(result.current.hasError).toBe(true));
     expect(result.current.lockFile).toBeNull();
+    // A failed fetch must not leave the card spinning forever.
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  // `priceSats` is null both while loading and for a lock without a price; only this flag tells them apart.
+  it('reports loading until the lock file arrives', async () => {
+    const { result } = renderHook(() => useLockFile(LOCK_URL));
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.priceSats).toBeNull();
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 });
