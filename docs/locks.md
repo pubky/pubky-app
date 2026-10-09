@@ -424,17 +424,17 @@ Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
 
 ## Sessions from before locks
 
-A Pubky Ring session carries exactly the capability list approved at sign-in, for its whole life,
-and the app restores its SDK grant record on each page load. Legacy cookie users sign in again during the grant-only migration. Locks added two
+A grant carries the capability list approved at sign-in for its whole life, and the app restores its SDK record on
+each page load. Legacy cookie users sign in again during the grant-only migration. Locks added two
 entries to that list (`HOMESERVER_CAPABILITIES` in `@/config/network`: `/priv/social/:rw` for the
-reader's replicas and purchases, `/priv/app.locks/content/:r` for a creator's own originals). A user who
-signed in through Ring before those entries shipped keeps a session without them: `/pub` keeps
+reader's replicas and purchases, `/priv/app.locks/content/:r` for a creator's own originals). A user
+with a valid saved Ring grant issued before those entries shipped keeps a session without them: `/pub/pubky.app/` keeps
 working, so the feed, posting and profiles are unaffected, but the homeserver answers every read
-or write under `/priv` with **403** (a session that lacks the capability; 401 is only "no session").
+or write under the missing private scopes with **403** (insufficient permission; 401 means authentication failed).
 Keypair sign-in is unaffected: the SDK mints it with the root capability, `/:rw` — confirmed against
 the local stack, and root covers every required entry with no special case.
 
-The app does not sign such a user out. Instead (#2373):
+The app does not sign out a user merely because a valid grant lacks Locks scopes. Instead (#2373):
 
 - **Detection is derived, not stored.** `sessionNeedsUpgrade` (`@/libs/capabilities/capabilities`)
   compares `session.info.capabilities` against the required list by coverage, with the homeserver's
@@ -446,7 +446,7 @@ The app does not sign such a user out. Instead (#2373):
   Approval validates the account, environment and required scopes, saves the grant, then retires
   the previous credential. It preserves the profile, database and composer state. A rejected or
   canceled approval leaves the existing session intact; a retirement failure keeps the new grant
-  and offers recovery. See [the grant migration contract](migrations/2600-grant-auth-and-locks.md).
+  active and queues the previous grant for cleanup retry. See [the grant migration contract](migrations/2600-grant-auth-and-locks.md).
 
 - **Retire the previous grant after adoption.** The replacement is saved before SDK signout and local removal of the
   previous grant. A failed retirement remains retryable; it never restores the previous session over the replacement.
@@ -465,10 +465,11 @@ The app does not sign such a user out. Instead (#2373):
   for it with a 403 per render. A creator whose Lock Server and Bitkit are already connected in this tab
   still meets the step: `usePostInputLock` gates the lock dialog on the session as well.
 
-Release note: after the deploy, users already signed in through Ring are not logged out, and
-nothing under `/pub` changes behaviour. Every locked post they scroll past shows the notice with
-its Unlock parked (the app cannot tell which locks they unlocked before), and so does their
-Unlocked page; a creator meets the extra step the next time they lock a post.
+Release note: the grant-only migration requires existing cookie users, including Ring users, to sign in again.
+New Ring/Passport grants request the Locks scopes upfront. Existing valid grants are preserved; only those missing
+the scopes need the permission notice and upgrade flow described above. For those users, every locked post shows
+the notice with Unlock paused (the app cannot read which locks they unlocked before), as does their Unlocked page;
+a creator meets the extra step when they next lock a post.
 
 ## Testing & local demo
 

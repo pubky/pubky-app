@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed — 2026-10-08. This unmerged PR replaces its earlier gradual-migration proposal with the team's grant-only decision.
+Proposed for merge in [PR #2614](https://github.com/pubky/pubky-app/pull/2614); implements the team's grant-only decision.
 
 ## Context
 
@@ -14,15 +14,16 @@ for users whose existing sessions are cookies; valid stored grants must survive 
 
 Use grants for every supported homeserver authentication flow. Remove cookie login, active-session restore,
 persistence and fallback from app authentication. Retain old public cookie metadata solely for bounded remote
-revocation, retrying failed cleanup without adopting a cookie session. Migrate public metadata into `auth-store-v3`, preserving grant references and discarding cookie credentials.
+revocation, retrying failed cleanup without adopting a cookie session. Migrate public metadata into `auth-store-v3`, preserving grant references and excluding cookie exports.
 Retain the previous public identity for sign-in and cleanup; commit the new record before removing obsolete storage keys.
 A persistent migration marker and a separate namespace fence writes from older app versions.
 
-Keep secrets in SDK `browserSessionStore`. Save before authenticated I/O and restore only through that store.
+Keep completed grant credentials in SDK `browserSessionStore`. Save before authenticated storage I/O and restore grants only through that store.
 The SDK owns shared bearer coordination, renewal and grant-proof logout. App generations/Web Locks still serialize
 public-reference transitions and reject stale callbacks. Services own I/O, Application returns results, and Controllers
-own store changes. This decision extends ADR 0004's read-only session-store exception: `LocksService` may also
-read `useAuthStore.currentUserPubky` solely to verify that a retained creator session belongs to the active app account
+own store changes. This decision extends ADR 0004's read-only session-store exception: `HomeserverService` may read
+the session's generation, restore status and saved reference to identify terminal failures of the active session.
+`LocksService` may also read `useAuthStore.currentUserPubky` solely to verify that a retained creator session belongs to the active app account
 before I/O. Other auth/UI fields remain outside that exception; controllers retain all store writes. Pending Ring/Passport flows and uncertain signup retain their existing recovery material.
 
 Ring and Passport request ordinary app and merged Locks capabilities upfront. Root-key login/signup obtains root grants.
@@ -59,7 +60,9 @@ remain available for retry; generic auth errors do not prove revocation succeede
 - Use the existing landing page and sign-in dialog when a session cannot be restored; there is no dedicated recovery
   screen. Direct logout still waits for backup confirmation before erasing browser-generated recovery material.
   Failed restoration, including corrupt metadata, never silently deletes saved data.
-- Staging verification with real browsers and deployed Ring, Passport, HS and Locks builds is still required.
+- Local browser QA against the staging homeserver covers grant renewal, terminal rejection across tabs and storage
+  failures. Deployed Ring/Passport approval, complete Locks flows and the remaining browser/rollout checks still require
+  [release verification](../migrations/2600-grant-auth-and-locks.md#verification-before-production-rollout).
 
 ## Alternatives
 

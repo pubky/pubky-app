@@ -25,4 +25,4 @@ Codify dependency boundaries: UI → controllers → pipes/application → servi
 
 - **ADR-0009: Application Layer Cross-Domain Orchestration** — Extends this ADR to allow Application-to-Application calls for cross-domain workflow orchestration while maintaining unidirectional flow principles.
 
-- **[ADR-0023: Grant-Only Authentication](0023-gradual-grant-authentication.md)** — Proposes the additional read-only Locks account-ownership check at the IO boundary.
+- **[ADR-0023: Grant-Only Authentication](0023-gradual-grant-authentication.md)** — Extends session-store reads to identify the active homeserver session that failed and to check Locks creator-account ownership at the IO boundary. Store writes remain in controllers.

@@ -217,14 +217,29 @@ all `ClientStateError` values to reauthorization or use `list()` to infer missin
 
 The same boundary recognizes `Delegated grant key not found: <keyId>` only for `ClientStateError`. SDK 0.15 emits
 this after successfully reading a delegated session whose signing-key record is absent. It maps to
-`missing_local_grant`, allowing same-account reauthorization. The key ID is SDK-owned and differs from the session
-record ID; do not expose it in app errors. Keep the real-SDK missing-key test alongside transient storage failures.
+`missing_local_grant`, requiring sign-in again. The key ID is SDK-owned and differs from the session
+record ID; do not expose it in app errors. `GrantFlowService` uses the same SDK error name and anchored message pattern
+when a pending delegated approval can no longer resume, so it can start a fresh approval. Other storage failures preserve
+the pending flow. Keep the real-SDK missing-key test alongside the pending-flow regression tests.
 
 SDK 0.15 `Unsupported stored session version.` is terminal for restoration by this build; map it to
 `unsupported_stored_session` without deleting or regenerating the record. Legacy cookie revocation separately
 recognizes the exact `AuthenticationError` message `Authentication error: The provided auth request has expired or
 was cancelled.` from `restoreSession(export)`. This means no live cookie was found; it is not a generic network-error
 exception. Keep both contracts covered by the real-SDK tests in `session-store.contract.test.ts` on SDK updates.
+
+### Grant failures during use and sign-in
+
+After SDK refresh/retry has finished, terminal failures from active, owned homeserver storage requests notify
+AuthCoordinator through the controller/application subscription. AuthController requires sign-in again only if the
+captured session and generation still match the active account. The original request error still reaches its caller
+so local-first rollback can run. Network failures, server errors and permission denials do not invalidate the session.
+Public fetches and the separate Lock Server authentication flow do not enter this subscription.
+
+Encrypted-file sign-in distinguishes decryption errors from storage and transport errors by `AppError` metadata.
+`ClientStateError` from the SDK `browserSessionStore.save()` call maps to `Database/WRITE_FAILED`; storage availability
+and app-reference writes keep their own database errors. Report a browser-storage problem for those failures, not an
+invalid password or damaged backup. Unknown errors use a generic sign-in failure message.
 
 ### Expected auth control flow
 

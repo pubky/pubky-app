@@ -66,9 +66,18 @@ previous cookie sessions; its result is never adopted.
 Web Locks must work. SDK notifications for removed/cleared records trigger a fenced recheck of the active reference.
 
 The SDK owns bearer renewal, concurrent request locks and its bounded 401 recovery. There is no app refresh token,
-bearer-sharing implementation or restore-on-401 loop. Grant expiry is read from `grant.sessionInfo()`; the server's
-730-day grant and one-hour bearer defaults are not app timers. Reload old app tabs during rollout: an already-running
+bearer-sharing implementation or restore-on-401 loop. Both expiry timestamps come from `grant.sessionInfo()`.
+The [SDK's default issued grant lifetime](https://github.com/pubky/pubky-homeserver/blob/v0.15.0/pubky-sdk/src/actors/auth/grant/constants.rs)
+is 730 days; a signer can choose another lifetime. [HS 0.15 issues bearers](https://github.com/pubky/pubky-homeserver/blob/v0.15.0/pubky-homeserver/src/client_server/auth/grant/service.rs)
+for up to one hour, capped by grant expiry. These are not app timers. Reload old app tabs during rollout: an already-running
 older SDK cannot participate in the new coordination protocol.
+
+If an active, owned HS storage request still fails with a terminal authentication error after SDK recovery,
+AuthCoordinator asks AuthController to invalidate only the matching live session/generation. Protected routes return
+to the existing landing page; public pages stay readable and account actions open ordinary sign-in. Saved credentials
+and account data are retained. A same-origin BroadcastChannel shares only the failed generation, never tokens.
+Network failures, server errors and 403 permission denials leave the session active. A delayed error from an older
+session cannot invalidate a newer login; the original error still reaches the request caller for rollback.
 
 Call `session.signout()` directly, without a preceding storage request. SDK 0.15 supports grant-proof logout after
 bearer expiry and retry of pending logout. Revocation precedes best-effort removal of owned SDK records; never call
@@ -95,9 +104,11 @@ release blocker for this migration. App-owned raw public HTTP calls omit cookies
 
 ## Ring, Passport and signup
 
-Pending authorization is tab-scoped, bounded to three minutes and bound to purpose, account, generation, full scopes,
-app identity, environment, homeserver, relay and signup-invite hash. The SDK serialization mode selects the resume API.
-Refresh starts a new attempt; unmount alone preserves mobile handoff. Treat pending serializations as sensitive.
+Pending authorization is tab-scoped. A saved attempt can resume for three minutes when its purpose, account,
+generation, full scopes, app identity, environment, homeserver, relay, callback metadata and signup-invite hash match.
+This is the app's resume window, not a grant/bearer lifetime or a hard deadline for live approval polling.
+The SDK serialization mode selects the resume API. Explicit QR regeneration starts a new attempt; page reload can
+resume a matching saved attempt. Unmount alone preserves mobile handoff. Treat pending serializations as sensitive.
 
 Completed approvals rejected after approval (including insufficient scopes, an account mismatch, and losing races)
 are retained without becoming active. Permission upgrades reject a different identity; retained
@@ -120,6 +131,10 @@ retries once a grant is durably adopted, leaving profile-bootstrap retry to the 
 attempt, allowing correction without replacing its keys. Missing delegated pending-flow keys and malformed SDK serializations start fresh authorization;
 transient storage failures keep the pending material for retry.
 
+Encrypted-file sign-in reports decryption, session-storage and connection failures separately. A correct file must
+not be labeled invalid when IndexedDB or the app's metadata write fails. After storage recovers, retrying the same
+file can complete sign-in; there is no separate saved-session retry screen.
+
 ## Locks contract
 
 Locks keeps its merged UI, payment behavior and independent Lock Server authentication. `@synonymdev/locks-sdk`
@@ -135,8 +150,18 @@ remain visible. `modifiedAt` is milliseconds since epoch, or null.
 
 ## Verification before production rollout
 
-Automated tests cover the app's transitions and selected real-SDK storage contracts. They do not certify deployed signers,
-server rollout, real payments or browser coordination. Verify these on staging with the intended deployed builds:
+At [6f986089](https://github.com/pubky/pubky-app/commit/6f986089deb6c41c2510e80c3af77d5978a7f840), verification includes:
+
+- Full unit suite: 16,479 passed, 2 expected failures and 2 skipped; lint, TypeScript, formatting and production build passed.
+- Local Chromium/WebKit QA against the staging HS: real grant revocation across two tabs, successful bearer refresh
+  and alternating writes, account switching with a delayed old 401, and network/503/403 failures that retain the session.
+- Encrypted-file sign-in: wrong password, app-metadata and SDK-store write failures, and successful retry after storage
+  recovers. Revocation and storage-error scenarios also passed on a separate local production build.
+- Four sign-in VRT checks passed (Chromium/WebKit, desktop/mobile) against the CI-generated baselines.
+
+This does not certify the deployed preview, physical iOS/Ring handoff, Google OAuth or complete Locks payments.
+Bearer expiry QA shortened the local expiry timestamp before real refresh; it did not wait for a full hour.
+Verify the following release matrix on staging with the intended deployed builds:
 
 1. Two tabs: repeated open/reload, alternating writes, bearer expiry/renewal, SDK removal and cross-tab logout.
 2. Chromium, Firefox and Safari/iOS: both SDK storage modes, blocked storage, offline/hanging logout, legacy cookie
