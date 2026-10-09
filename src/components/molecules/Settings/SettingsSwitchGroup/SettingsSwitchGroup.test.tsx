@@ -16,15 +16,3 @@ describe('SettingsSwitchGroup', () => {
     expect(screen.getByText('Child 2')).toBeInTheDocument();
   });
 });
-
-describe('SettingsSwitchGroup - Snapshots', () => {
-  it('matches snapshot with children', () => {
-    const { container } = render(
-      <SettingsSwitchGroup>
-        <div>Child 1</div>
-        <div>Child 2</div>
-      </SettingsSwitchGroup>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -109,10 +109,3 @@ describe('WhoToFollowPage', () => {
     expect(screen.getByTestId('content-layout')).toHaveAttribute('data-disable-wide-shell-layout', 'true');
   });
 });
-
-describe('WhoToFollowPage - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<WhoToFollowPage />);
-    expect(container).toMatchSnapshot();
-  });
-});

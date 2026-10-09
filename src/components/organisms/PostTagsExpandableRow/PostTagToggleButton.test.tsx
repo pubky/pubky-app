@@ -70,11 +70,3 @@ describe('PostTagToggleButton', () => {
     expect(onToggle).not.toHaveBeenCalled();
   });
 });
-
-describe('PostTagToggleButton - Snapshots', () => {
-  it('matches the default snapshot', () => {
-    const { container } = render(<PostTagToggleButton postId={POST_ID} expanded={false} onToggle={vi.fn()} />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

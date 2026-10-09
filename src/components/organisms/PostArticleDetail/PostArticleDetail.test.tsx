@@ -1,6 +1,6 @@
 import React, { type ElementType, forwardRef, type ReactNode, useImperativeHandle } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import {
@@ -1030,66 +1030,5 @@ describe('PostArticleDetail', () => {
       coverImageDesktopVariant: POST_COVER_DESKTOP_VARIANT,
       coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
     });
-  });
-
-  it('matches snapshot with default props', () => {
-    const { container } = render(<PostArticleDetail {...defaultProps} />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with cover image', () => {
-    mockUsePostArticle.mockReturnValue({
-      title: 'Article With Cover',
-      body: 'Article body with cover image',
-      coverImage: {
-        src: 'https://example.com/cover.jpg',
-        alt: 'Article cover',
-      },
-      hasCover: true,
-      isCoverLoading: false,
-    });
-
-    const { container } = render(
-      <PostArticleDetail
-        postId="snapshot-user:cover-post"
-        content='{"title":"Article With Cover","body":"Article body with cover image"}'
-        attachments={['pubky://user/pub/pubky.app/files/file-123']}
-        isBlurred={false}
-      />,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when blurred', () => {
-    const { container } = render(<PostArticleDetail {...defaultProps} isBlurred />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot in wide layout', () => {
-    useHomeStore.getState().setLayout(LAYOUT.WIDE);
-
-    const { container } = render(<PostArticleDetail {...defaultProps} />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('PostArticleDetail - Mobile Snapshots', () => {
-  beforeEach(() => {
-    resetMocks();
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<PostArticleDetail {...defaultProps} />);
-
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

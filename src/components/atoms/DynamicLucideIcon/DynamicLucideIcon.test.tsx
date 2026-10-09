@@ -72,11 +72,3 @@ describe('DynamicLucideIcon', () => {
     expect(container.firstChild).toBeNull();
   });
 });
-
-describe('DynamicLucideIcon - Snapshots', () => {
-  it('matches snapshot for a consumer-provided fallback', () => {
-    const { container } = render(<DynamicLucideIcon name={null} fallback={Library} className="size-6" />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

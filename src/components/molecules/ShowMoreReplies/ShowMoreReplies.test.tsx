@@ -58,20 +58,3 @@ describe('ShowMoreReplies', () => {
     expect(connectorColumn).toBeInTheDocument();
   });
 });
-
-describe('ShowMoreReplies - Snapshots', () => {
-  it('matches snapshot with count of 5', () => {
-    const { container } = render(<ShowMoreReplies count={5} onClick={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with count of 1', () => {
-    const { container } = render(<ShowMoreReplies count={1} onClick={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with isLast=true', () => {
-    const { container } = render(<ShowMoreReplies count={3} onClick={vi.fn()} isLast={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

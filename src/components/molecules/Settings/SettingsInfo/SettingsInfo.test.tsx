@@ -46,10 +46,3 @@ describe('SettingsInfo', () => {
     expect(screen.getByText(new RegExp(`© ${new Date().getFullYear()} Synonym Software`))).toBeInTheDocument();
   });
 });
-
-describe('SettingsInfo - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<SettingsInfo />);
-    expect(container).toMatchSnapshot();
-  });
-});

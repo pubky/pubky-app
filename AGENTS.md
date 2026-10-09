@@ -14,7 +14,6 @@ Node 24 (`.nvmrc`), dependencies via `npm ci`. The pre-commit hook runs `lint-st
 | Dev server (port 3000)  | `npm run dev` (staging defaults are built in, no `.env` needed)                                |
 | Format, lint, types     | `npm run format:check`, `npm run lint`, `npm run typecheck`                                    |
 | Unit tests (jsdom)      | `npm test` (~13k tests, minutes); one file `npm test -- <path>`; one name `npm test -- -t "x"` |
-| Snapshots               | `npm run test:update-snapshots`                                                                |
 | Visual regression (VRT) | `npm run test:vrt` (`npm run test:vrt:setup` once); baselines are CI-owned, never commit local |
 | Production build        | `npm run build` (`next build --webpack`)                                                       |
 | E2E (Cypress)           | `npm run test:e2e`; needs the full pubky-stack, not runnable from a bare checkout              |
@@ -79,8 +78,9 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   (ESLint-enforced); deploy-time values are `PUBKY_RUNTIME_*` getters, never secrets. `docs/environment.md`
 - Observability: throw via `Err.*`; they capture to Sentry and, in a consenting browser, Pulse. No other direct
   `captureException` except `app/error.tsx` / `app/global-error.tsx`, for non-`AppError` values; no raw user data. `docs/sentry.md`
-- Tests: colocated `*.test.tsx`, one snapshot per test, mobile snapshot blocks for viewport-aware organisms; no `as any` or
-  `as unknown as T` (use the `src/test-utils` helpers). `docs/component-testing.md`
+- Tests: colocated `*.test.tsx`; assert props, variants, and interactions in unit tests; visual appearance via VRT; no
+  snapshot tests (removed for VRT, must not return); no `as any` or `as unknown as T` (use the `src/test-utils`
+  helpers). `docs/component-testing.md`
 
 ## Before you edit, read
 
@@ -113,9 +113,8 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 
 Definition of done: correct layer only; naming conventions; existing primitives reused and no new dependency without a
 reason; `Err.*` everywhere and nothing double-logs; no new colours, spacing, z-index or memo; read pitfalls and TTL refresh
-considered; no visible behaviour reduced; concrete imports and no barrels; tests at the right level including mobile
-snapshots; `lint`, `typecheck` and targeted tests pass; VRT, ADR, `DB_VERSION` and config changes called out; the diff
-reads like the surrounding code.
+considered; no visible behaviour reduced; concrete imports and no barrels; tests at the right level; `lint`, `typecheck`
+and targeted tests pass; VRT, ADR, `DB_VERSION` and config changes called out; the diff reads like the surrounding code.
 
 Commits and branches: `type(scope): description` (imperative, lower-case, no period, ≤72 chars); branches
 `<type>/<issue>-<kebab-description>` cut from `dev`; PRs target `dev`, draft unless asked, one change per PR. Cypress specs

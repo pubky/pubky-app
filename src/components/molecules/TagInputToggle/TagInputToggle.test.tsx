@@ -102,29 +102,3 @@ describe('TagInputToggle', () => {
     expect(screen.getByTestId('button-content').parentElement?.parentElement).toHaveClass('animated-width-container');
   });
 });
-
-describe('TagInputToggle - Snapshots', () => {
-  it('matches snapshot in button state', () => {
-    const { container } = render(
-      <TagInputToggle
-        showInput={false}
-        inputContent={<div data-testid="input-content">Input</div>}
-        addButtonContent={<button data-testid="button-content">Add</button>}
-      />,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot in input state', () => {
-    const { container } = render(
-      <TagInputToggle
-        showInput={true}
-        inputContent={<div data-testid="input-content">Input</div>}
-        addButtonContent={<button data-testid="button-content">Add</button>}
-      />,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

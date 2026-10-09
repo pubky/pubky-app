@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
-import { PostContentBase } from '../PostContentBase/PostContentBase';
 import { PostContent } from './PostContent';
 
 // Mock hooks used by PostContent
@@ -145,73 +144,5 @@ describe('PostContent', () => {
     expect(screen.getByTestId('post-content-base')).toHaveAttribute('data-post-id', 'plain-repost-123');
     // PostPreviewCard should also be rendered for reposts
     expect(screen.getByTestId('post-preview-card')).toBeInTheDocument();
-  });
-});
-
-describe('PostContent - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(PostContentBase).mockImplementation(({ postId, className }: { postId: string; className?: string }) => (
-      <div data-testid="post-content-base" data-post-id={postId} className={className}>
-        PostContentBase {postId}
-      </div>
-    ));
-  });
-
-  it('matches snapshot with single-line content', () => {
-    mockUsePostDetails.mockReturnValue({
-      postDetails: createMockPostDetails({ content: 'One liner' }),
-      isLoading: false,
-    });
-    mockUseRepostInfo.mockReturnValue({
-      isRepost: false,
-      repostAuthorId: null,
-      isReply: false,
-      isCurrentUserRepost: false,
-      originalPostId: null,
-      isLoading: false,
-      hasError: false,
-    });
-
-    const { container } = render(<PostContent postId="post-1" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot as repost with content', () => {
-    mockUsePostDetails.mockReturnValue({
-      postDetails: createMockPostDetails({ content: 'Quote' }),
-      isLoading: false,
-    });
-    mockUseRepostInfo.mockReturnValue({
-      isRepost: true,
-      repostAuthorId: 'author',
-      isReply: false,
-      isCurrentUserRepost: false,
-      originalPostId: 'orig-post',
-      isLoading: false,
-      hasError: false,
-    });
-
-    const { container } = render(<PostContent postId="repost-1" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot as repost without content', () => {
-    mockUsePostDetails.mockReturnValue({
-      postDetails: createMockPostDetails({ content: '' }),
-      isLoading: false,
-    });
-    mockUseRepostInfo.mockReturnValue({
-      isRepost: true,
-      repostAuthorId: 'author',
-      isReply: false,
-      isCurrentUserRepost: false,
-      originalPostId: 'orig-post',
-      isLoading: false,
-      hasError: false,
-    });
-
-    const { container } = render(<PostContent postId="repost-2" />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

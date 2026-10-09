@@ -79,9 +79,4 @@ describe('HumanPhoneCode', () => {
 
     verifySmsCodeMock.mockRestore();
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<HumanPhoneCode phoneNumber="1234567890" onBack={() => {}} onSuccess={() => {}} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });

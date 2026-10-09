@@ -340,22 +340,3 @@ describe('DialogNewCollection', () => {
     });
   });
 });
-
-describe('DialogNewCollection - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.useAuthoredCollections.mockReturnValue({ collections: [{ id: 'seed-collection' }], isLoading: false });
-  });
-
-  it('matches snapshot when open', () => {
-    render(
-      <DialogNewCollection>
-        <Button>Open dialog</Button>
-      </DialogNewCollection>,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
-
-    expect(document.body).toMatchSnapshot();
-  });
-});

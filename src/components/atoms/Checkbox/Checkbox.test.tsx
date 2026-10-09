@@ -29,46 +29,45 @@ describe('Checkbox', () => {
 
     expect(handleChange).toHaveBeenCalledTimes(1);
   });
-});
 
-describe('Checkbox - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<Checkbox />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('renders the description below the label', () => {
+    render(<Checkbox label="Notify me" description="Send a weekly summary" />);
+
+    expect(screen.getByLabelText('Notify me')).toBeInTheDocument();
+    expect(screen.getByText('Send a weekly summary')).toHaveClass('text-sm', 'text-muted-foreground');
   });
 
-  it('matches snapshot when checked', () => {
-    const { container } = render(<Checkbox checked={true} />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('reflects the checked state', () => {
+    render(<Checkbox checked onCheckedChange={() => {}} />);
+
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).toHaveAttribute('aria-checked', 'true');
+    expect(checkbox).toHaveAttribute('data-state', 'checked');
+    expect(checkbox).toHaveClass('data-[state=checked]:bg-brand');
   });
 
-  it('matches snapshot when unchecked', () => {
-    const { container } = render(<Checkbox checked={false} />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('renders disabled and ignores clicks', () => {
+    const handleChange = vi.fn();
+    render(<Checkbox label="Locked" disabled onCheckedChange={handleChange} />);
+
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).toBeDisabled();
+    expect(checkbox).toHaveAttribute('data-disabled');
+
+    fireEvent.click(screen.getByText('Locked'));
+    expect(handleChange).not.toHaveBeenCalled();
   });
 
-  it('matches snapshot when disabled', () => {
-    const { container } = render(<Checkbox disabled />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('stays checked while disabled', () => {
+    render(<Checkbox disabled checked onCheckedChange={() => {}} />);
+
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).toBeDisabled();
+    expect(checkbox).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('matches snapshot when disabled and checked', () => {
-    const { container } = render(<Checkbox disabled checked={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with label', () => {
-    const { container } = render(<Checkbox label="Test label" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with label and description', () => {
-    const { container } = render(<Checkbox label="Label" description="Description text" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with label, description and checked', () => {
-    const { container } = render(<Checkbox label="Checked label" description="Description text" checked={true} />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('merges a custom className', () => {
+    render(<Checkbox className="custom-class" />);
+    expect(screen.getByRole('checkbox')).toHaveClass('custom-class', 'h-4', 'w-4', 'rounded');
   });
 });
