@@ -222,6 +222,14 @@ describe('Header', () => {
     },
   );
 
+  it('keeps account navigation visible while restoring', () => {
+    mockCurrentUserPubky = 'retained-account';
+    mockRestoreStatus = 'restoring';
+    render(<Header />);
+    expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /sign in/i })).not.toBeInTheDocument();
+  });
+
   it('renders header container with logo and home header', () => {
     mockUsePathname.mockReturnValue(ROOT_ROUTES);
 

@@ -14,17 +14,13 @@ import {
 import { HeaderHome } from '@/molecules/HeaderHome/HeaderHome';
 import { HeaderSignIn } from '@/molecules/HeaderSignIn/HeaderSignIn';
 import { Logo } from '@/molecules/Logo/Logo';
+import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { pathToStepConfig } from './Header.constants';
 
 export function Header() {
   const pathname = usePathname();
-  const isAuthenticated = useAuthStore(
-    (state) =>
-      Boolean(state.currentUserPubky) &&
-      state.restoreStatus !== 'reauth-required' &&
-      state.restoreStatus !== 'temporary-error',
-  );
+  const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;

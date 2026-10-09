@@ -49,6 +49,8 @@ import { toast } from '@/molecules/Toaster/toast';
 import { DialogLocksAuth } from '@/organisms/DialogLocksAuth/DialogLocksAuth';
 import { POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainLayoutRules';
 import { BODY_TEXT_CLASS_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainTypography';
+import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
@@ -200,6 +202,8 @@ export function PostInput({
     removeExistingAttachment,
   });
   const isSubmitting = isWriting || isWaiting;
+  const restoreStatus = useAuthStore((state) => state.restoreStatus);
+  const displayUserPubky = selectDisplayUserPubky({ currentUserPubky, restoreStatus });
 
   const isPostVariant = variant === POST_INPUT_VARIANT.POST;
 
@@ -468,10 +472,10 @@ export function PostInput({
           onAnimationComplete={skipHeightMotion ? undefined : onHeightAnimationComplete}
         >
           <div ref={stateContentMeasureRef} className="relative">
-            {!isArticle && currentUserPubky && (
+            {!isArticle && displayUserPubky && (
               <div data-testid="post-input-stable-avatar" className="absolute top-0 left-0 z-10">
                 <PostHeader
-                  postId={currentUserPubky}
+                  postId={displayUserPubky}
                   isReplyInput={true}
                   userDetails={currentUserDetails}
                   showPopover={false}
@@ -493,9 +497,9 @@ export function PostInput({
                 />
               )}
 
-              {isArticle && currentUserPubky && (
+              {isArticle && displayUserPubky && (
                 <PostHeader
-                  postId={currentUserPubky}
+                  postId={displayUserPubky}
                   isReplyInput={true}
                   userDetails={currentUserDetails}
                   showPopover={false}
@@ -504,10 +508,19 @@ export function PostInput({
                 />
               )}
 
+              {isArticle && !displayUserPubky && (
+                <AvatarWithFallback
+                  name=""
+                  fallbackSeed="user"
+                  size={AVATAR_SIZE_BY_HEADER_SIZE[headerSize]}
+                  data-testid="post-input-fallback-avatar"
+                />
+              )}
+
               {!isArticle && (
                 <Container overrideDefaults className="relative flex min-w-0 flex-col gap-4">
                   <AnimatePresence initial={false} mode="popLayout">
-                    {isExpanded && currentUserPubky && (
+                    {isExpanded && displayUserPubky && (
                       <motion.div
                         key="post-input-expanded-header"
                         data-testid="post-input-expanded-header"
@@ -517,7 +530,7 @@ export function PostInput({
                         variants={dissolveVariants}
                       >
                         <PostHeader
-                          postId={currentUserPubky}
+                          postId={displayUserPubky}
                           isReplyInput={true}
                           userDetails={currentUserDetails}
                           characterLimit={characterLimit}
@@ -534,14 +547,14 @@ export function PostInput({
                     overrideDefaults
                     className={cn('flex w-full min-w-0 items-stretch', GAP_CLASS_BY_HEADER_SIZE[headerSize])}
                   >
-                    {!isExpanded && currentUserPubky && (
+                    {!isExpanded && displayUserPubky && (
                       <div
                         data-testid="post-input-collapsed-avatar-placeholder"
                         className={cn('shrink-0 self-start', AVATAR_CLASS_BY_HEADER_SIZE[headerSize])}
                         aria-hidden="true"
                       />
                     )}
-                    {!currentUserPubky && (
+                    {!displayUserPubky && (
                       <div className="shrink-0 self-start">
                         <AvatarWithFallback
                           name=""
