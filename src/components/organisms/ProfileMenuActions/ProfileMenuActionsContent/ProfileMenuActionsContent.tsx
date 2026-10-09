@@ -9,8 +9,13 @@ import { useProfileMenuActions } from '@/hooks/useProfileMenuActions/useProfileM
 import { ProfileMenuActionsContentSkeleton } from './ProfileMenuActionsContent.skeleton';
 import type { ProfileMenuActionsContentProps } from './ProfileMenuActionsContent.types';
 
-export function ProfileMenuActionsContent({ userId, variant, onActionComplete }: ProfileMenuActionsContentProps) {
-  const { menuItems, isLoading } = useProfileMenuActions(userId);
+export function ProfileMenuActionsContent({
+  userId,
+  variant,
+  onActionComplete,
+  active = true,
+}: ProfileMenuActionsContentProps) {
+  const { menuItems, isLoading } = useProfileMenuActions(userId, active);
 
   if (isLoading) {
     return <ProfileMenuActionsContentSkeleton />;

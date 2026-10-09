@@ -48,7 +48,7 @@ import type {
 } from './usePostMenuActions.types';
 
 export function usePostMenuActions(postId: string, options: UsePostMenuActionsOptions): UsePostMenuActionsResult {
-  const { onReportClick, onEditClick, onDeleteClick, isDeleting = false } = options;
+  const { onReportClick, onEditClick, onDeleteClick, isDeleting = false, active = true } = options;
   const parsedId = parseCompositeId(postId);
   // Normalize author ID to ensure consistent format (strip pubky: or pk: prefix)
   // This is necessary because composite IDs may contain prefixed pubky IDs
@@ -58,8 +58,8 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const { postDetails, isLoading: isPostLoading } = usePostDetails(postId);
   const { profile: authorProfile, isLoading: isAuthorLoading } = useUserProfile(postAuthorId);
   const { isFollowing, isLoading: isFollowingLoading } = useIsFollowing(postAuthorId);
-  const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = useFollowUser();
-  const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = useMuteUser();
+  const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = useFollowUser(active);
+  const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = useMuteUser(active);
   const { isMuted, isLoading: isMutedUsersLoading } = useMutedUsers();
   const { copyToClipboard: copyPubky } = useCopyToClipboard({
     successTitle: 'Pubky copied to clipboard',

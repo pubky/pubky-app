@@ -64,6 +64,32 @@ describe('mutations waiting on real auth state', () => {
     },
   );
 
+  it('cancels follow and mute while a closed menu is still mounted for its exit animation', async () => {
+    const { result, rerender } = renderHook(
+      ({ active }) => ({
+        follow: useFollowUser(active),
+        mute: useMuteUser(active),
+      }),
+      { initialProps: { active: true } },
+    );
+    let follow!: Promise<boolean>;
+    let mute!: Promise<boolean>;
+    act(() => {
+      follow = result.current.follow.toggleFollow('other', false);
+      mute = result.current.mute.toggleMute('other', false);
+    });
+    await act(async () => {
+      rerender({ active: false });
+    });
+    await act(async () => {
+      useAuthStore.setState({ session: mockSession(), restoreStatus: 'ready' });
+      expect(await follow).toBe(false);
+      expect(await mute).toBe(false);
+    });
+    expect(UserController.commitFollow).not.toHaveBeenCalled();
+    expect(MuteController.commitMute).not.toHaveBeenCalled();
+  });
+
   it('does not follow or bookmark before restore, then executes each once', async () => {
     const { result } = renderHook(useActions);
     await waitFor(() => expect(result.current.bookmark.isLoading).toBe(false));

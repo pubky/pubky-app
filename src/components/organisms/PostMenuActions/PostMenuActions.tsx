@@ -69,6 +69,7 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
             </SheetHeader>
             <Container overrideDefaults className="flex flex-col gap-2">
               <PostMenuActionsContent
+                active={open}
                 postId={postId}
                 variant={MENU_VARIANT.SHEET}
                 onActionComplete={closeMenu}
@@ -89,6 +90,7 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
             <PostMenuActionsContent
+              active={open}
               postId={postId}
               variant={MENU_VARIANT.DROPDOWN}
               onActionComplete={closeMenu}

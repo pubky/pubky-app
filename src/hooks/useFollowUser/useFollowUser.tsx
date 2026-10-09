@@ -33,8 +33,8 @@ const EMPTY_PENDING_ACTIONS: ReadonlyMap<Pubky, FollowAction> = new Map();
  * const showSpinner = isUserLoading(userId);
  * ```
  */
-export function useFollowUser(): UseFollowUserResult {
-  const { waitForAuth } = useRequireAuth();
+export function useFollowUser(active = true): UseFollowUserResult {
+  const { waitForAuth } = useRequireAuth(active);
   const inFlight = useRef(new Set<Pubky>());
   const { currentUserPubky } = useAuthStore();
   // Every in-flight toggle keyed by user, so concurrent clicks on different users each keep their

@@ -17,8 +17,8 @@ import type { UseMuteUserResult } from './useMuteUser.types';
  * Handles the mute action through the MuteController, which manages
  * local database updates and homeserver sync.
  */
-export function useMuteUser(): UseMuteUserResult {
-  const { waitForAuth } = useRequireAuth();
+export function useMuteUser(active = true): UseMuteUserResult {
+  const { waitForAuth } = useRequireAuth(active);
   const inFlight = useRef(new Set<Pubky>());
   const { currentUserPubky } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
