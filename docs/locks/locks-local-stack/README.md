@@ -535,11 +535,16 @@ PUBKY_RUNTIME_HOMEGATE_URL=http://localhost:6288
 PUBKY_RUNTIME_DEFAULT_HTTP_RELAY=http://127.0.0.1:15412/inbox
 PUBKY_RUNTIME_PKARR_RELAYS=["http://localhost:15411"]
 PUBKY_RUNTIME_TESTNET=true
+PUBKY_RUNTIME_ENV=production
 PUBKY_RUNTIME_LOCK_SERVER=<the "lock_server" value from http://127.0.0.1:3000/.well-known/locks-server>
 PUBKY_RUNTIME_PAYKIT_SERVER_URL=http://localhost:3001
 ```
 
 1. Without `PUBKY_RUNTIME_LOCK_SERVER` and `PUBKY_RUNTIME_PAYKIT_SERVER_URL`, the app hides the Locks features.
 2. `npm run build && npm run start` runs in production mode, which also requires
-   `PUBKY_RUNTIME_SHOP_URL` (for example `https://shop.staging.pubky.app/marketplace`) and all network values above.
-3. Sign in to the app with the recovery file and passphrase from `.local/<role>/` (section 7).
+   `PUBKY_RUNTIME_SHOP_URL` (for example `https://shop.staging.pubky.app/marketplace`) and every value in the block
+   above, including `PUBKY_RUNTIME_ENV`.
+3. `PUBKY_RUNTIME_ENV=production` turns off the staging homeserver sign-in guard. With `staging`, every sign-in
+   resolves the account's homeserver through the local PKARR relay and compares it with `PUBKY_RUNTIME_HOMESERVER`;
+   that works on the local stack only when the relay answers, so `production` is the safer value here.
+4. Sign in to the app with the recovery file and passphrase from `.local/<role>/` (section 7).

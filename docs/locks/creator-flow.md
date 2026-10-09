@@ -244,7 +244,7 @@ Expected: **Enable Locks (1/2)** (the Lock Server) and **Enable Locks (2/2)** (t
 finish before the price dialog. If you finish only step 1, close and reopen, the remaining step shows as
 **Enable Locks** without a number. A new session shows a single unnumbered step.
 
-2. Open your own locked post.
+2. Before step 1, or with another session from before Locks, open your own locked post.
 
 Expected: the permission notice ("Pubky.app needs your permission to read your Locks data on your
 homeserver.") instead of the content. After approving, the content shows.
