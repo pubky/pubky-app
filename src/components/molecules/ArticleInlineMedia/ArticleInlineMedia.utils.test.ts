@@ -144,6 +144,26 @@ describe('resolveArticleMedia — unlocked content', () => {
   });
 });
 
+describe('resolveArticleMedia — unlocked content still downloading', () => {
+  it('holds the space of a pending slot and keeps the rest on their paths', () => {
+    const resolve = (src: string) =>
+      resolveArticleMedia({
+        src,
+        localAttachments: [{ type: 'video/mp4', name: 'clip.mp4', urls: { main: 'blob:clip' }, slot: 0 }],
+        pendingAttachments: [
+          { type: 'application/pdf', slot: 1 },
+          { type: 'image/png', slot: 2 },
+        ],
+      });
+
+    expect(resolve('attachment:0')).toEqual({ kind: 'video', url: 'blob:clip', name: 'clip.mp4', external: false });
+    expect(resolve('attachment:1')).toEqual({ kind: 'loading' });
+    // A pending image slot stays on the image path, whose own skeleton holds it
+    expect(resolve('attachment:2')).toEqual({ kind: 'image' });
+    expect(resolve('attachment:3')).toEqual({ kind: 'image' });
+  });
+});
+
 describe('resolveArticleMedia — direct destinations', () => {
   it('types an https URL by its extension and marks it external', () => {
     expect(cdn('https://example.com/clip.mp4')).toEqual({

@@ -108,6 +108,57 @@ describe('PostArticle - unlocked article body images', () => {
     expect(screen.getAllByRole('img')).toHaveLength(1);
   });
 
+  const pending = (type: string, slot: number) => ({ slot, type });
+  const PENDING_IMAGES = [pending('image/png', 0), pending('image/png', 1), pending('image/png', 2)];
+
+  // #2757: the text is on screen while the reader's copy of the images still downloads.
+  it('holds a skeleton for the cover and each body image while the bytes download', () => {
+    const { container } = render(
+      <PostArticle
+        content={article(BODY)}
+        attachments={null}
+        localAttachments={[]}
+        variant="full"
+        pendingAttachments={PENDING_IMAGES}
+      />,
+    );
+
+    expect(screen.getByText('First paragraph')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(1); // the cover
+    expect(container.querySelectorAll('[data-testid="article-inline-image-loading"]')).toHaveLength(2);
+    expect(container.querySelector(PLACEHOLDER)).not.toBeInTheDocument();
+  });
+
+  it('holds the cover box in the preview card while the bytes download', () => {
+    const { container } = render(
+      <PostArticle
+        content={article(BODY)}
+        attachments={null}
+        localAttachments={[]}
+        pendingAttachments={PENDING_IMAGES}
+      />,
+    );
+
+    expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(1);
+    expect(container.querySelector('[data-testid="article-inline-image-loading"]')).not.toBeInTheDocument();
+  });
+
+  // A video in slot 0 never becomes a cover, so a skeleton there would only appear and vanish.
+  it('holds no cover box while a video in slot 0 downloads', () => {
+    const { container } = render(
+      <PostArticle
+        content={article(BODY)}
+        attachments={null}
+        localAttachments={[]}
+        variant="full"
+        pendingAttachments={[pending('video/mp4', 0), pending('image/png', 1), pending('image/png', 2)]}
+      />,
+    );
+
+    expect(container.querySelector('[data-slot="skeleton"]')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-testid="article-inline-image-loading"]')).toHaveLength(2);
+  });
+
   it('shows no body image in the preview card', () => {
     const { container } = render(
       <PostArticle

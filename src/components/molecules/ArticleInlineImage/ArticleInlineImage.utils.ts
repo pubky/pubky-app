@@ -1,7 +1,7 @@
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { isAttachmentRefScheme, isAuthorFileUri, parseAttachmentRef } from '@/libs/post/articleInlineMedia';
 import { getAttachmentAtSlot } from '@/libs/utils/unlockedMedia';
-import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import type { AttachmentConstructed, PendingAttachment } from '@/organisms/PostAttachments/PostAttachments.types';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { ResolvedArticleImageSrc } from './ArticleInlineImage.types';
 
@@ -60,6 +60,7 @@ export function resolveArticleImageSrc(params: {
 export function resolveUnlockedArticleImageSrc(params: {
   src: string | null | undefined;
   localAttachments: AttachmentConstructed[];
+  pendingAttachments?: PendingAttachment[];
 }): ResolvedArticleImageSrc {
   const trimmed = params.src?.trim();
   if (!trimmed) return { kind: 'invalid' };
@@ -67,9 +68,9 @@ export function resolveUnlockedArticleImageSrc(params: {
   const index = parseAttachmentRef(trimmed);
   if (index !== null) {
     const attachment = getAttachmentAtSlot(params.localAttachments, index);
-    return attachment?.type.startsWith('image')
-      ? { kind: 'attachment', url: attachment.urls.main, index }
-      : { kind: 'invalid' };
+    if (attachment?.type.startsWith('image')) return { kind: 'attachment', url: attachment.urls.main, index };
+    const pending = getAttachmentAtSlot(params.pendingAttachments, index);
+    return pending?.type.startsWith('image') ? { kind: 'pending' } : { kind: 'invalid' };
   }
   if (isAttachmentRefScheme(trimmed)) return { kind: 'invalid' };
 

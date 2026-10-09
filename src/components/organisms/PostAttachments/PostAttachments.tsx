@@ -10,6 +10,7 @@ import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImage
 import { PostMediaCarousel } from '@/molecules/PostMediaCarousel/PostMediaCarousel';
 import { toast } from '@/molecules/Toaster/toast';
 import { categorizeAttachments, splitAttachmentsByMediaType } from './PostAttachments.helpers';
+import { PostAttachmentsSkeleton } from './PostAttachments.skeleton';
 import type { PostAttachmentsProps } from './PostAttachments.types';
 
 export const PostAttachments = ({
@@ -18,6 +19,7 @@ export const PostAttachments = ({
   mediaVariant = 'default',
   className,
   children,
+  pendingAttachments = [],
 }: PostAttachmentsProps) => {
   const mediaContainerRef = usePauseMediaOutsideViewport();
 
@@ -32,6 +34,10 @@ export const PostAttachments = ({
   const { imagesAndVideos, audios, genericFiles } = localAttachments?.length
     ? categorizeAttachments(localAttachments)
     : splitAttachmentsByMediaType(files);
+
+  if (pendingAttachments.length > 0 && mediaVariant === 'default') {
+    return <PostAttachmentsSkeleton attachments={pendingAttachments} className={className} />;
+  }
 
   const isContentPending = mediaVariant === 'cards' && isLoading;
   if (!imagesAndVideos.length && !audios.length && !genericFiles.length && !children && !isContentPending) return null;

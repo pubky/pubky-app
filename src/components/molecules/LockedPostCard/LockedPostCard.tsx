@@ -4,6 +4,7 @@ import { type MouseEvent, useEffect, useRef, useState } from 'react';
 import { Check, LockOpen, Pencil, StickyNote, Wallet } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
+import { Spinner } from '@/atoms/Spinner/Spinner';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
 import { formatSats } from '@/libs/utils/formatSats';
 import { cn } from '@/libs/utils/utils';
@@ -12,7 +13,7 @@ import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewN
 interface LockedPostCardProps {
   /** Creator-typed lock title for the reader/preview view. Ignored when `editableTitle` is set. */
   title?: string;
-  /** The lock price shown beside Unlock. Nullish until known → the masked dots. */
+  /** The lock price shown beside Unlock. Nullish → the masked dots, unless `isLoading` shows the spinner instead. */
   priceSats?: string | null;
   onUnlock?: () => void;
   /** Whether the unlock modal is open. Keeps the slid-over button parked until the modal closes. */
@@ -23,6 +24,8 @@ interface LockedPostCardProps {
    * (sign-in) would leave it parked over the price for good.
    */
   slideOnUnlock?: boolean;
+  /** The lock file is still loading: one spinner covers the pill. */
+  isLoading?: boolean;
   /** Force the Unlock control disabled. Defaults to `!onUnlock` (inert without a handler). */
   disabled?: boolean;
   /**
@@ -47,11 +50,14 @@ export function LockedPostCard({
   onUnlock,
   unlockOpen,
   slideOnUnlock = true,
+  isLoading = false,
   disabled,
   editableTitle,
   className,
 }: LockedPostCardProps) {
-  const isDisabled = disabled ?? !onUnlock;
+  // Loading is inert but undimmed: a dimmed pill would flash as disabled right before the price arrives.
+  const isDimmed = !isLoading && (disabled ?? !onUnlock);
+  const isDisabled = isLoading || isDimmed;
   const priceLabel = priceSats ? formatSats(priceSats) : HIDDEN_REQUIREMENT_MASK;
 
   const isNested = useIsNestedPostPreview();
@@ -150,7 +156,7 @@ export function LockedPostCard({
           className={cn(
             'relative flex w-fit items-center gap-1 rounded-full p-1',
             isNested ? 'bg-background' : 'bg-card',
-            isDisabled && 'cursor-not-allowed opacity-50',
+            isDimmed && 'cursor-not-allowed opacity-50',
           )}
         >
           <Button
@@ -160,15 +166,20 @@ export function LockedPostCard({
             disabled={isDisabled}
             onClick={handleUnlock}
             style={{ transform: `translateX(${slideX}px)`, transitionDuration: `${SLIDE_MS}ms` }}
-            className="relative z-10 h-10 gap-2 rounded-full px-4 transition-transform ease-out disabled:opacity-100"
+            className={cn(
+              'relative z-10 h-10 gap-2 rounded-full px-4 transition-transform ease-out disabled:opacity-100',
+              isLoading && 'invisible',
+            )}
           >
             <LockOpen className="size-4 shrink-0" aria-hidden />
             {'Unlock'}
           </Button>
-          <div ref={lockInfoRef} className="flex items-center gap-1.5 px-4 text-brand">
+          {/* `invisible`, not removed: the hidden contents keep the pill at its loaded width. */}
+          <div ref={lockInfoRef} className={cn('flex items-center gap-1.5 px-4 text-brand', isLoading && 'invisible')}>
             <Wallet className="size-4 shrink-0" aria-hidden />
             <span className="text-xs leading-4 font-medium tracking-[1.2px]">{priceLabel}</span>
           </div>
+          {isLoading && <Spinner size="sm" className="absolute inset-0 m-auto" />}
         </div>
       </div>
 

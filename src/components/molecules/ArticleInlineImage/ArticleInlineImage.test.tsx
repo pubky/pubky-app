@@ -123,6 +123,35 @@ describe('ArticleInlineImage - unlocked content', () => {
     expect(img).toHaveAttribute('alt', 'Second');
   });
 
+  it('holds the space of an image slot whose bytes are still downloading, instead of the placeholder', () => {
+    render(
+      <ArticleInlineImage
+        src="attachment:1"
+        alt="Soon"
+        localAttachments={[]}
+        pendingAttachments={[{ slot: 1, type: 'image/png' }]}
+      />,
+    );
+
+    expect(screen.getByTestId('article-inline-image-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('article-inline-image-fallback')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('article-inline-image')).not.toBeInTheDocument();
+  });
+
+  it('renders the placeholder for a reference no pending slot will fill', () => {
+    render(
+      <ArticleInlineImage
+        src="attachment:5"
+        alt="Lost"
+        localAttachments={[]}
+        pendingAttachments={[{ slot: 1, type: 'image/png' }]}
+      />,
+    );
+
+    expect(screen.getByTestId('article-inline-image-fallback')).toHaveTextContent('Lost');
+    expect(screen.queryByTestId('article-inline-image-loading')).not.toBeInTheDocument();
+  });
+
   it('renders the placeholder for a slot whose file was lost', () => {
     render(<ArticleInlineImage src="attachment:1" alt="Lost" localAttachments={localAttachments} />);
 
