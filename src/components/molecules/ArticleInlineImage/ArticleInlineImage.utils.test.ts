@@ -76,6 +76,19 @@ describe('resolveUnlockedArticleImageSrc', () => {
   const resolveUnlocked = (src: string | null | undefined, localAttachments: AttachmentConstructed[] = []) =>
     resolveUnlockedArticleImageSrc({ src, localAttachments });
 
+  it('reports an image slot still downloading as pending, not invalid', () => {
+    const pendingAttachments = [
+      { slot: 0, type: 'video/mp4' },
+      { slot: 1, type: 'image/png' },
+    ];
+    const resolvePending = (src: string) =>
+      resolveUnlockedArticleImageSrc({ src, localAttachments: [], pendingAttachments });
+
+    expect(resolvePending('attachment:1')).toEqual({ kind: 'pending' });
+    expect(resolvePending('attachment:0')).toEqual({ kind: 'invalid' }); // a video never renders inline
+    expect(resolvePending('attachment:2')).toEqual({ kind: 'invalid' }); // nothing will fill this slot
+  });
+
   it('resolves an attachment reference to the local object URL of that slot', () => {
     expect(resolveUnlocked('attachment:1', [media('cover', 0), media('inline', 1)])).toEqual({
       kind: 'attachment',
