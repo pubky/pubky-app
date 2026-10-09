@@ -49,8 +49,11 @@ type UseEditCollectionResult = {
  * strings come from `collections.edit`; shared form labels/validation messages
  * stay in `collections.new`.
  */
-export function useEditCollection({ compositeCollectionId }: UseEditCollectionParams): UseEditCollectionResult {
-  const { requireAuth } = useRequireAuth();
+export function useEditCollection({
+  compositeCollectionId,
+  active = true,
+}: UseEditCollectionParams): UseEditCollectionResult {
+  const { waitForAuth } = useRequireAuth(active);
   const { postDetails } = usePostDetails(compositeCollectionId);
   const collection = postDetails ? parseCollectionContent(postDetails.content) : null;
 
@@ -115,7 +118,7 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
 
     let ok = false;
     await form.handleSubmit(async (data) => {
-      if (!requireAuth(() => true)) return;
+      if (!(await waitForAuth())) return;
       const name = data[CREATE_COLLECTION_FORM_FIELDS.NAME];
       const description = data[CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION];
       const layout = data[CREATE_COLLECTION_FORM_FIELDS.LAYOUT];

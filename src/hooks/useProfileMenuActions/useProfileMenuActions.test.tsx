@@ -88,7 +88,7 @@ describe('useProfileMenuActions', () => {
     toggleFollow: vi.fn().mockResolvedValue(undefined),
     isFollowLoading: false,
     isUserLoading: vi.fn().mockReturnValue(false),
-    toggleMute: vi.fn().mockResolvedValue(undefined),
+    toggleMute: vi.fn().mockResolvedValue(true),
     isMuteLoading: false,
     isMuteUserLoading: vi.fn().mockReturnValue(false),
     isMuted: vi.fn().mockReturnValue(false),
@@ -188,25 +188,14 @@ describe('useProfileMenuActions', () => {
     { recovery: 'temporary-error with a live session', restoreStatus: 'temporary-error', session: mockSession() },
     { recovery: 'restoring', restoreStatus: 'restoring', session: null },
   ] as const)('an already-open menu during $recovery', ({ restoreStatus, session }) => {
-    it.each([PROFILE_MENU_ACTION_IDS.FOLLOW, PROFILE_MENU_ACTION_IDS.MUTE])(
-      'blocks a retained %s callback before the account action runs',
-      async (actionId) => {
-        const { result } = renderHook(() => useProfileMenuActions(mockUserId));
-        const retainedAction = result.current.menuItems.find((item) => item.id === actionId);
-        expect(retainedAction).toBeDefined();
-
-        await act(async () => {
-          useAuthStore.setState({ restoreStatus, session });
-          await retainedAction?.onClick();
-        });
-
-        expect(defaultMocks.toggleFollow).not.toHaveBeenCalled();
-        expect(defaultMocks.toggleMute).not.toHaveBeenCalled();
-        expect(vi.mocked(toast)).not.toHaveBeenCalled();
-        expect(useAuthStore.getState().currentUserPubky).toBe('currentUser123');
-        expect(useAuthStore.getState().showSignInDialog).toBe(true);
-      },
-    );
+    it('does not announce a mute that the mutation hook canceled', async () => {
+      defaultMocks.toggleMute.mockResolvedValueOnce(false);
+      const { result } = renderHook(() => useProfileMenuActions(mockUserId));
+      await act(async () => {
+        await result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.MUTE)?.onClick();
+      });
+      expect(toast).not.toHaveBeenCalled();
+    });
 
     it('keeps retained public copy and share callbacks available', async () => {
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));

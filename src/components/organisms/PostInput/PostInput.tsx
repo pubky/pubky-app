@@ -60,6 +60,7 @@ const LOCK_ATTACHMENT_MAX_SIZE_LABEL = `${Math.floor((LOCK_ATTACHMENT_MAX_SIZE /
 const LOCK_LIMITS_MESSAGE = `Locked content supports up to ${LOCK_ATTACHMENT_MAX_FILES} files of ${LOCK_ATTACHMENT_MAX_SIZE_LABEL} each.`;
 
 export function PostInput({
+  active = true,
   dataCy,
   id,
   variant,
@@ -112,7 +113,7 @@ export function PostInput({
     handleArticleBodyChange,
     isDragging,
     isExpanded,
-    isSubmitting,
+    isSubmitting: isWriting,
     showEmojiPicker,
     setShowEmojiPicker,
     displayPlaceholder,
@@ -142,6 +143,7 @@ export function PostInput({
     handleMentionKeyDown,
     handleSelectionChange,
   } = usePostInput({
+    active,
     variant,
     postId,
     originalPostId,
@@ -164,6 +166,7 @@ export function PostInput({
   });
 
   const {
+    isWaiting,
     isAuthenticated,
     handleExpandWithAuth,
     handleSubmitWithAuth,
@@ -181,6 +184,7 @@ export function PostInput({
     handleArticleClickWithAuth,
     removeExistingAttachmentWithAuth,
   } = usePostInputAuthHandlers({
+    active,
     handleExpand,
     handleSubmit,
     setTags,
@@ -195,6 +199,7 @@ export function PostInput({
     handleArticleClick,
     removeExistingAttachment,
   });
+  const isSubmitting = isWriting || isWaiting;
 
   const isPostVariant = variant === POST_INPUT_VARIANT.POST;
 
@@ -239,6 +244,7 @@ export function PostInput({
     submitOrPublish,
     isPublishing: isPublishingLock,
   } = usePostInputLock({
+    active,
     isEnabled: isPostVariant,
     // Something to lock: any body text or at least one attachment. An article needs a title and a
     // body, as it does to be published.

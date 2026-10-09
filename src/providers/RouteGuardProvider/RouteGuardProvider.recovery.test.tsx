@@ -86,7 +86,7 @@ describe('RouteGuardProvider recovery with real route and auth rules', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Account action' }));
         expect(mocks.write).not.toHaveBeenCalled();
-        expect(useAuthStore.getState().showSignInDialog).toBe(true);
+        expect(useAuthStore.getState().showSignInDialog).toBe(restoreStatus === 'reauth-required');
         expect(useAuthStore.getState().currentUserPubky).toBe('retained-account');
       });
 

@@ -127,19 +127,13 @@ describe('EditProfileForm', () => {
     expect(screen.getByText('Avatar')).toBeInTheDocument();
   });
 
-  it('preserves an open form but waits for a fresh save click after session recovery', () => {
+  it('delegates saving to the profile hook, which waits for authentication', () => {
     render(<EditProfileForm />);
     act(() => useAuthStore.setState({ session: null, restoreStatus: 'restoring' }));
     fireEvent.click(screen.getByTestId('save-profile-button'));
-
-    expect(mockHandlers.handleSubmit).not.toHaveBeenCalled();
-    expect(useAuthStore.getState().showSignInDialog).toBe(true);
-    expect(screen.getByTestId('edit-profile-form')).toBeInTheDocument();
-
-    act(() => useAuthStore.setState({ session: mockSession(), restoreStatus: 'ready' }));
-    expect(mockHandlers.handleSubmit).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByTestId('save-profile-button'));
     expect(mockHandlers.handleSubmit).toHaveBeenCalledOnce();
+    expect(useAuthStore.getState().showSignInDialog).toBe(false);
+    expect(screen.getByTestId('edit-profile-form')).toBeInTheDocument();
   });
 });
 

@@ -176,3 +176,11 @@ gate. Cypress specs are QA-owned and must be adapted by QA. Ring users with an u
 
 Existing auth VRT baselines must follow the CI baseline workflow; never commit locally
 produced pixel baselines. Sign-in UI unit snapshots are separate from live-browser/staging verification.
+
+### Actions during restoration
+
+- Delay account mutations until the existing restore completes; do not start another restore for each click.
+- Check Follow, mute, bookmarks, posts/replies, collections, profile edits and deletion before local writes or uploads.
+- Repeated clicks execute once. A failed restore preserves the draft; temporary errors do not open sign-in.
+- Closing a dialog, leaving its route, signing out or switching accounts cancels its waiting action. Restoring later does not replay it.
+- On `/logout`, confirm backup for the original account. A cross-tab account or grant change cancels that sign-out until explicitly requested again.

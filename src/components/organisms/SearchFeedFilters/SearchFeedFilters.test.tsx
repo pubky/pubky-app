@@ -52,6 +52,7 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     requireAuth: (action: () => unknown) => action(),
     isAuthenticated: true,
+    waitForAuth: async () => true,
   }),
 }));
 

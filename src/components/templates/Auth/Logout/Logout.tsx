@@ -1,6 +1,6 @@
 'use client';
 
-import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ROOT_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
@@ -49,6 +49,8 @@ export function Logout() {
   const authHasHydrated = useAuthStore((state) => state.hasHydrated);
   const session = useAuthStore((state) => state.session);
   const sessionReference = useAuthStore((state) => state.sessionReference);
+  const generation = useAuthStore((state) => state.generation);
+  const logoutIntent = useRef<{ pubky: string | null; generation: string } | null>(null);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const restoreStatus = useAuthStore((state) => state.restoreStatus);
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
@@ -64,9 +66,16 @@ export function Logout() {
     session === null && sessionReference === null && currentUserPubky === null && restoreStatus === 'idle';
 
   useEffect(() => {
-    if (!isHydrated || needsBackup || isLoggingOut) return;
-
-    if (viewState !== 'idle') return;
+    if (!isHydrated || isLoggingOut || viewState !== 'idle') return;
+    if (!logoutIntent.current) logoutIntent.current = { pubky: currentUserPubky, generation };
+    if (
+      !isSignedOut &&
+      (logoutIntent.current.pubky !== currentUserPubky || logoutIntent.current.generation !== generation)
+    ) {
+      setViewState('canceled');
+      return;
+    }
+    if (needsBackup) return;
 
     if (isSignedOut) {
       setViewState('success');
@@ -74,14 +83,15 @@ export function Logout() {
     }
 
     void handleRouteLogout(setViewState);
-  }, [isHydrated, isLoggingOut, isSignedOut, viewState, needsBackup]);
+  }, [isHydrated, isLoggingOut, isSignedOut, viewState, needsBackup, currentUserPubky, generation]);
 
   const onHandleHome = () => {
     router.push(ROOT_ROUTES);
   };
 
   const onHandleRetry = () => {
-    void handleRouteLogout(setViewState);
+    logoutIntent.current = { pubky: currentUserPubky, generation };
+    setViewState('idle');
   };
 
   const renderLoadingState = () => (
@@ -132,7 +142,7 @@ export function Logout() {
     !isHydrated || isLoggingOut || viewState === 'loading' || (viewState === 'idle' && !isSignedOut);
 
   const content =
-    needsBackup && isHydrated ? (
+    needsBackup && isHydrated && viewState !== 'canceled' ? (
       <>
         <Container className="gap-6">
           <PageHeader>

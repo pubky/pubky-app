@@ -11,6 +11,7 @@ import { APP_CAPABILITIES, LOCKS_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
 import { getDeployEnv, getHomeserver, HOMESERVER_CAPABILITIES } from '@/config/network';
 import type {
+  SessionReadiness,
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
   TSignUpParams,
@@ -106,6 +107,49 @@ function resetTabStore<T>(
 
 export class AuthController {
   private constructor() {} // Prevent instantiation
+
+  /** Observe the current restore; never start another SDK restore for a user action. */
+  static waitForSession(signal?: AbortSignal): Promise<SessionReadiness> {
+    const initial = useAuthStore.getState();
+    const classify = (): SessionReadiness | null => {
+      const state = useAuthStore.getState();
+      if (
+        signal?.aborted ||
+        state.isLoggingOut ||
+        state.generation !== initial.generation ||
+        state.currentUserPubky !== initial.currentUserPubky
+      )
+        return 'canceled';
+      if (!state.hasHydrated) return 'unavailable';
+      if (state.currentUserPubky && state.session && state.restoreStatus === 'ready') return 'ready';
+      if (state.restoreStatus === 'temporary-error') return 'unavailable';
+      if (
+        state.restoreStatus === 'restoring' ||
+        (state.currentUserPubky && state.sessionReference && state.restoreStatus === 'idle')
+      )
+        return null;
+      return 'sign-in';
+    };
+    const current = classify();
+    if (current) return Promise.resolve(current);
+    return new Promise((resolve) => {
+      const finish = (result: SessionReadiness) => {
+        unsubscribe();
+        clearTimeout(timeout);
+        signal?.removeEventListener('abort', abort);
+        resolve(result);
+      };
+      const abort = () => finish('canceled');
+      const unsubscribe = useAuthStore.subscribe(() => {
+        const result = classify();
+        if (result) finish(result);
+      });
+      const timeout = setTimeout(() => finish('unavailable'), 12_000);
+      signal?.addEventListener('abort', abort, { once: true });
+      const result = classify();
+      if (result) finish(result);
+    });
+  }
 
   private static activeAuthFlow: {
     key: string;

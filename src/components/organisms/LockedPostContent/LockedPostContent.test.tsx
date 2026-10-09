@@ -24,6 +24,7 @@ const payMocks = vi.hoisted(() => ({
 const authMocks = vi.hoisted(() => {
   const mocks = {
     isAuthenticated: true,
+    waitForAuth: async () => true,
     setShowSignInDialog: vi.fn(),
     requireAuth: vi.fn((action: () => unknown) => {
       if (mocks.isAuthenticated) return action();
@@ -71,7 +72,11 @@ vi.mock('@/hooks/usePurchaseResume/usePurchaseResume', () => ({
   },
 }));
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
-  useRequireAuth: () => ({ isAuthenticated: authMocks.isAuthenticated, requireAuth: authMocks.requireAuth }),
+  useRequireAuth: () => ({
+    isAuthenticated: authMocks.isAuthenticated,
+    requireAuth: authMocks.requireAuth,
+    waitForAuth: async () => authMocks.requireAuth(() => true) === true,
+  }),
 }));
 vi.mock('@/molecules/DialogPayToUnlock/DialogPayToUnlock', () => ({
   DialogPayToUnlock: ({

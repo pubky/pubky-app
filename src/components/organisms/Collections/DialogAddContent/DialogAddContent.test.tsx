@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
 
 const COLLECTION_ID = `${VIEWER}:collection-1`;
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({
     push: mocks.routerPush,
   }),

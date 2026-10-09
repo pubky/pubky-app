@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TagKind } from '@/application/tag/tag.types';
 import { TagController } from '@/controllers/tag/tag';
 import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTagCache } from '@/hooks/useTagCache/useTagCache';
 import type { Pubky } from '@/models/models.types';
 import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
@@ -107,10 +108,14 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
     return allTagsWithIndex.map((item) => item.tag);
   }, [localTags, zeroTaggerTags, tagOrder]);
 
+  const { waitForAuth } = useRequireAuth();
+
   const handleTagAdd = useCallback(
     async (tagString: string): Promise<{ success: boolean; error?: string }> => {
       const revision = viewRevision.current;
       const label = tagString.trim();
+      if (!(await waitForAuth(label.toLowerCase()))) return { success: false };
+      if (viewRevision.current !== revision) return { success: false };
 
       if (!label) return { success: false, error: 'Tag label cannot be empty' };
       if (!userId) return { success: false, error: 'User ID is required' };
@@ -152,12 +157,14 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         return { success: false, error: 'Failed to add tag' };
       }
     },
-    [userId, viewerId, allTags],
+    [userId, viewerId, allTags, waitForAuth],
   );
 
   const handleTagToggle = useCallback(
     async (tag: { label: string; relationship?: boolean }): Promise<void> => {
       const revision = viewRevision.current;
+      if (!(await waitForAuth(tag.label.toLowerCase()))) return;
+      if (viewRevision.current !== revision) return;
       if (!userId || !viewerId) return;
 
       const currentTagIndex = allTags.findIndex((t) => t.label === tag.label);
@@ -223,7 +230,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         });
       }
     },
-    [userId, viewerId, allTags, tagOrder],
+    [userId, viewerId, allTags, tagOrder, waitForAuth],
   );
 
   const hasMore =

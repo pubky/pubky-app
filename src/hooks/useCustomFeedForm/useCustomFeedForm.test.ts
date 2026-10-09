@@ -74,7 +74,7 @@ describe('useCustomFeedForm', () => {
     expect(mocks.commitUpdate).not.toHaveBeenCalled();
     expect(mocks.commitDelete).not.toHaveBeenCalled();
     expect(result.current.form.getValues('name')).toBe('My Feed');
-    expect(useAuthStore.getState().showSignInDialog).toBe(true);
+    expect(useAuthStore.getState().showSignInDialog).toBe(false);
   });
 
   beforeEach(() => {

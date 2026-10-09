@@ -8,6 +8,7 @@ import {
   ARTICLE_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
 import { FileController } from '@/controllers/file/file';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
@@ -60,6 +61,7 @@ export function useInlineImageUpload({
   authorPubky,
   getInlineBudget,
 }: UseInlineImageUploadOptions): UseInlineImageUploadReturn {
+  const { waitForAuth } = useRequireAuth(enabled);
   const sessionRef = useRef<Map<string, SessionUpload> | null>(null);
   const [uploadingCount, setUploadingCount] = useState(0);
   // Synchronous twin of uploadingCount: budget checks must see uploads
@@ -111,8 +113,11 @@ export function useInlineImageUpload({
     setUploadingCount((count) => count + 1);
     let uri: string;
     try {
+      if (!(await waitForAuth(crypto.randomUUID())) || discardedRef.current)
+        throw taggedRejection('Inline image upload canceled.');
       uri = await FileController.commitCreate({ file, pubky });
     } catch (error) {
+      if (error instanceof Error && error.name === INLINE_IMAGE_UPLOAD_REJECTION_NAME) throw error;
       Logger.error('[useInlineImageUpload] Inline image upload failed', { error });
       toast({
         variant: 'error',

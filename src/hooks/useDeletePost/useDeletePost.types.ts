@@ -1,4 +1,5 @@
 export interface UseDeletePostOptions {
+  active?: boolean;
   /**
    * Override the success / failure toast copy. Useful when the deleted post is
    * something other than a generic post (e.g. a collection) so the toast reads
@@ -15,5 +16,5 @@ export interface UseDeletePostResult {
   /** Whether deletion is in progress */
   isDeleting: boolean;
   /** Deletes the post with the given ID */
-  deletePost: (postId: string) => Promise<void>;
+  deletePost: (postId: string) => Promise<boolean>;
 }

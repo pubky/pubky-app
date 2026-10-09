@@ -67,7 +67,7 @@ for (const [name, viewport] of [
       } else if (state === 'canceled') {
         await expect.element(page.getByRole('heading', { name: 'Your account changed' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
-      } else await expect.element(page.getByText('You have signed out of this tab.')).toBeVisible();
+      } else await expect.element(page.getByText('You have signed out.')).toBeVisible();
       if (state !== 'success') {
         const back = page.getByRole('button', { name: 'Homepage' }).element();
         expect(back.getBoundingClientRect().top).toBeGreaterThanOrEqual(0);

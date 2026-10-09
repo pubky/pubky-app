@@ -22,7 +22,7 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const { deletePost, isDeleting } = useDeletePost();
+  const { deletePost, isDeleting } = useDeletePost({ active: deleteConfirmOpen });
   const { requireAuth } = useRequireAuth();
   const { postDetails } = usePostDetails(postId);
   // Collection posts use a dedicated form dialog because their content is a
@@ -46,7 +46,7 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
   };
 
   const handleDeleteConfirm = () => {
-    deletePost(postId);
+    return deletePost(postId);
   };
 
   // Handle open/close with auth check - opens sign-in dialog for unauthenticated users

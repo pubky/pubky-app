@@ -47,6 +47,7 @@ export function ProfileMenuActionsContent({ userId, variant, onActionComplete }:
           </Button>
         ) : (
           <DropdownMenuItem
+            onSelect={(event) => event.preventDefault()}
             key={item.id}
             data-cy={`profile-menu-action-${item.id}`}
             onClick={() => handleItemClick(item)}

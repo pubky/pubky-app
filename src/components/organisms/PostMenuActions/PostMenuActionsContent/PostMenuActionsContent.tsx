@@ -59,6 +59,7 @@ export function PostMenuActionsContent({
           </Button>
         ) : (
           <DropdownMenuItem
+            onSelect={(event) => event.preventDefault()}
             key={item.id}
             data-cy={`post-menu-action-${item.id}`}
             onClick={() => handleItemClick(item)}

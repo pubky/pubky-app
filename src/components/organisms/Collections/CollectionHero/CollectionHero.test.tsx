@@ -1,4 +1,4 @@
-import { fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
@@ -58,7 +58,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 const mockDeleteState = vi.hoisted(() => ({
-  deletePost: vi.fn().mockResolvedValue(undefined),
+  deletePost: vi.fn().mockResolvedValue(true),
   isDeleting: false,
 }));
 const mockViewportState = vi.hoisted(() => ({
@@ -621,13 +621,13 @@ describe('CollectionHero', () => {
       expect(mockRequireAuth).toHaveBeenCalledTimes(2);
     });
 
-    it('does not delete or navigate if authorization is lost after confirmation opens', () => {
+    it('does not navigate when the delete hook cancels authorization', async () => {
       setAuthStore(AUTHOR_PUBKY);
       renderHero();
       fireEvent.click(screen.getByLabelText('Delete'));
-      canMutate = false;
-      fireEvent.click(screen.getByTestId('dialog-confirm-delete-btn'));
-      expect(mockDeletePost).not.toHaveBeenCalled();
+      mockDeletePost.mockResolvedValueOnce(false);
+      await act(async () => fireEvent.click(screen.getByTestId('dialog-confirm-delete-btn')));
+      expect(mockDeletePost).toHaveBeenCalledWith(COMPOSITE_ID);
       expect(mockRouterReplace).not.toHaveBeenCalled();
     });
 
@@ -861,19 +861,6 @@ describe('CollectionHero', () => {
 
       expect(mockRequireAuth).toHaveBeenCalledTimes(1);
       expect(openRepostDialog).toHaveBeenCalledTimes(1);
-    });
-
-    it('prompts sign-in instead of toggling bookmark when a guest clicks Follow', () => {
-      setAuthStore(null);
-      const toggle = setBookmark({ isBookmarked: false });
-      mockRequireAuth.mockImplementation(<T,>(_action: () => T) => undefined as T);
-
-      renderHero();
-
-      fireEvent.click(screen.getByLabelText('Follow'));
-
-      expect(mockRequireAuth).toHaveBeenCalledTimes(1);
-      expect(toggle).not.toHaveBeenCalled();
     });
 
     it('prompts sign-in instead of opening the share dialog when a guest clicks Share', () => {

@@ -58,7 +58,13 @@ remain available for retry; generic auth errors do not prove revocation succeede
 - AuthCoordinator owns startup, storage, online, visibility and SDK-removal listeners. RouteGuardProvider mounts it
   before route access is resolved and retains UI-specific error presentation.
 - Use the existing landing page and sign-in dialog when a session cannot be restored; there is no dedicated recovery
-  screen. Direct logout still waits for backup confirmation before erasing browser-generated recovery material.
+  screen. Mutations use `useRequireAuth().waitForAuth()` before local writes or uploads: join an existing restore
+  for up to 12 seconds, then proceed only for the same ready account and generation. Temporary failure or timeout
+  cancels with a retry message; missing or expired authentication opens sign-in. Closing the owning dialog,
+  unmounting, navigation, logout or account replacement cancels the wait without replaying the action.
+  Synchronous guards remain for browser gestures and opening controls; they do not open sign-in while restoration runs.
+  Direct logout waits for backup confirmation before erasing browser-generated recovery material and cancels if
+  another tab replaces the account or grant while that confirmation is open.
   Failed restoration, including corrupt metadata, never silently deletes saved data.
 - Local browser QA against the staging homeserver covers grant renewal, terminal rejection across tabs and storage
   failures. Deployed Ring/Passport approval, complete Locks flows and the remaining browser/rollout checks still require

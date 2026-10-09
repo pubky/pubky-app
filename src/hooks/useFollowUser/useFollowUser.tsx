@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { UserController } from '@/controllers/user/user';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
@@ -33,6 +34,8 @@ const EMPTY_PENDING_ACTIONS: ReadonlyMap<Pubky, FollowAction> = new Map();
  * ```
  */
 export function useFollowUser(): UseFollowUserResult {
+  const { waitForAuth } = useRequireAuth();
+  const inFlight = useRef(new Set<Pubky>());
   const { currentUserPubky } = useAuthStore();
   // Every in-flight toggle keyed by user, so concurrent clicks on different users each keep their
   // own loading state instead of the last click overwriting a single `loadingUserId`.
@@ -42,6 +45,7 @@ export function useFollowUser(): UseFollowUserResult {
   const toggleFollow = useCallback(
     async (userId: Pubky, isCurrentlyFollowing: boolean) => {
       if (!currentUserPubky) {
+        await waitForAuth(userId);
         setError('User not authenticated');
         return false;
       }
@@ -51,11 +55,14 @@ export function useFollowUser(): UseFollowUserResult {
         return false;
       }
 
+      if (inFlight.current.has(userId)) return false;
+      inFlight.current.add(userId);
       const pendingAction: FollowAction = isCurrentlyFollowing ? FOLLOW_ACTIONS.UNFOLLOW : FOLLOW_ACTIONS.FOLLOW;
       setPendingActions((prev) => new Map(prev).set(userId, pendingAction));
       setError(null);
 
       try {
+        if (!(await waitForAuth(userId))) return false;
         const action = isCurrentlyFollowing ? HttpMethod.DELETE : HttpMethod.PUT;
 
         await UserController.commitFollow(action, {
@@ -85,6 +92,7 @@ export function useFollowUser(): UseFollowUserResult {
         Logger.error('[useFollowUser] Failed to toggle follow:', err);
         return false;
       } finally {
+        inFlight.current.delete(userId);
         setPendingActions((prev) => {
           if (!prev.has(userId)) return prev;
           const next = new Map(prev);
@@ -93,7 +101,7 @@ export function useFollowUser(): UseFollowUserResult {
         });
       }
     },
-    [currentUserPubky],
+    [currentUserPubky, waitForAuth],
   );
 
   const isUserLoading = useCallback((userId: Pubky) => pendingActions.has(userId), [pendingActions]);

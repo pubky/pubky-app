@@ -155,9 +155,7 @@ function CollectionHeroContent({
 
   const handleFollowToggle = () => {
     if (isBookmarkLoading || isToggling) return;
-    requireAuth(() => {
-      void toggle();
-    });
+    void toggle();
   };
 
   // Sharing a collection = reposting the underlying post; reuse the standard
@@ -198,19 +196,20 @@ function CollectionHeroContent({
   // toast reads as "Collection deleted" not "Post deleted".
   const router = useRouter();
   const deleteCollectionDescription = `Are you sure you want to delete '${title || authorPubky}'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.`;
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { deletePost, isDeleting } = useDeletePost({
+    active: deleteConfirmOpen,
     toastMessages: {
       deleted: 'Your collection has been deleted',
       deleteFailed: 'Failed to delete collection. Please try again.',
     },
   });
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const handleDelete = () => requireAuth(() => setDeleteConfirmOpen(true));
-  const handleDeleteConfirm = () =>
-    requireAuth(async () => {
-      await deletePost(compositeId);
-      router.replace(APP_ROUTES.COLLECTIONS);
-    });
+  const handleDeleteConfirm = async () => {
+    if (!(await deletePost(compositeId))) return false;
+    router.replace(APP_ROUTES.COLLECTIONS);
+    return true;
+  };
   // While reorder mode is active, every other owner action is disabled so the
   // hero reads as "you are reordering" — only Save order / Cancel stay live.
   const isReorderActive = reorder?.isActive ?? false;
@@ -344,7 +343,7 @@ function CollectionHeroContent({
                     <Button
                       variant="default"
                       size="icon"
-                      onClick={() => requireAuth(reorder.onSave)}
+                      onClick={reorder.onSave}
                       disabled={reorder.isSaving}
                       aria-label={'Save order'}
                       data-cy="collection-hero-save-order-btn"

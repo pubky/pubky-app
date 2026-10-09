@@ -38,7 +38,7 @@ export function QuickReply({
     setAttachments,
     isDragging,
     isExpanded,
-    isSubmitting,
+    isSubmitting: isWriting,
     showEmojiPicker,
     setShowEmojiPicker,
     displayPlaceholder,
@@ -73,6 +73,7 @@ export function QuickReply({
   });
 
   const {
+    isWaiting,
     isAuthenticated,
     handleExpandWithAuth,
     handleSubmitWithAuth,
@@ -96,6 +97,7 @@ export function QuickReply({
     handleEmojiSelect,
     handlePaste,
   });
+  const isSubmitting = isWriting || isWaiting;
 
   const { ref: cardRef, height: cardHeight } = useElementHeight();
   const shouldReduceMotion = useReducedMotion();

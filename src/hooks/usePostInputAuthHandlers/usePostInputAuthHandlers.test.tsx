@@ -13,6 +13,7 @@ const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
 vi.mock('@/stores/auth/auth.store', () => {
   const getState = () =>
     mockAuthStore({
+      hasHydrated: true,
       currentUserPubky: mockCurrentUserPubky.value,
       session: mockCurrentUserPubky.value ? mockSession() : null,
       restoreStatus: mockCurrentUserPubky.value ? 'ready' : 'idle',
@@ -72,25 +73,25 @@ describe('usePostInputAuthHandlers', () => {
   });
 
   describe('void actions (requireAuth)', () => {
-    it('runs the underlying action when authenticated', () => {
+    it('runs the underlying action when authenticated', async () => {
       mockCurrentUserPubky.value = 'test-pubky-123';
       const options = createOptions();
       const { result } = renderHook(() => usePostInputAuthHandlers(options));
 
-      act(() => {
-        result.current.handleSubmitWithAuth();
+      await act(async () => {
+        await result.current.handleSubmitWithAuth();
       });
 
       expect(options.handleSubmit).toHaveBeenCalledTimes(1);
       expect(mockSetShowSignInDialog).not.toHaveBeenCalled();
     });
 
-    it('opens the sign-in dialog for guests', () => {
+    it('opens the sign-in dialog for guests', async () => {
       const options = createOptions();
       const { result } = renderHook(() => usePostInputAuthHandlers(options));
 
-      act(() => {
-        result.current.handleSubmitWithAuth();
+      await act(async () => {
+        await result.current.handleSubmitWithAuth();
       });
 
       expect(options.handleSubmit).not.toHaveBeenCalled();

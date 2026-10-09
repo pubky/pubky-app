@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
@@ -8,7 +9,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 interface DialogConfirmDeleteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
+  onConfirm: () => void | boolean | Promise<void | boolean>;
   /**
    * Dialog title. Defaults to the delete-post copy; collections pass
    * 'Delete collection?'.
@@ -27,9 +28,18 @@ export function DialogConfirmDelete({
   title = 'Delete post?',
   description = 'This action cannot be undone. The post will be permanently deleted.',
 }: DialogConfirmDeleteProps) {
-  const handleDelete = () => {
-    onConfirm();
-    onOpenChange(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const inFlight = useRef(false);
+  const handleDelete = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setIsDeleting(true);
+    try {
+      if ((await onConfirm()) !== false) onOpenChange(false);
+    } finally {
+      inFlight.current = false;
+      setIsDeleting(false);
+    }
   };
   const handleCancel = () => {
     onOpenChange(false);
@@ -42,7 +52,13 @@ export function DialogConfirmDelete({
         </DialogHeader>
         <Typography className="text-base tracking-wide text-white/80">{description}</Typography>
         <DialogFooter>
-          <Button variant="destructive" size="lg" onClick={handleDelete} data-cy="dialog-confirm-delete-btn">
+          <Button
+            variant="destructive"
+            size="lg"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            data-cy="dialog-confirm-delete-btn"
+          >
             <Trash2 className="h-4 w-4" />
             {'Delete'}
           </Button>

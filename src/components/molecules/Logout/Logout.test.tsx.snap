@@ -16,7 +16,7 @@ exports[`LogoutContent - Snapshots > matches the signed-out illustration layout 
       </span>
     </h1>
     <h2>
-      You have signed out of this tab.
+      You have signed out.
     </h2>
   </header>
   <div

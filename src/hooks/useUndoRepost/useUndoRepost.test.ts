@@ -67,7 +67,7 @@ describe('useUndoRepost', () => {
     const deletion = Promise.withResolvers<void>();
     vi.mocked(PostController.commitDelete).mockReturnValueOnce(deletion.promise);
     const { result } = renderHook(() => useUndoRepost());
-    let undo: Promise<void>;
+    let undo: Promise<boolean>;
 
     act(() => {
       undo = result.current.undoRepost(repostId);

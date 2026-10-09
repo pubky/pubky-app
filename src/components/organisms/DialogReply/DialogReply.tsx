@@ -32,6 +32,7 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
           {/* Reply input */}
           <Container className="relative w-full min-w-0 pl-6" overrideDefaults>
             <PostInput
+              active={open}
               dataCy="reply-post-input"
               id="reply-post-input"
               key={resetKey}

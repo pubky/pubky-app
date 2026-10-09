@@ -18,7 +18,7 @@ export function DialogEditCollection({ open, onOpenChange, compositeCollectionId
   // begins. RHF's own `formState.isSubmitting` would otherwise be batched.
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
-  const { form, cover, isLoaded, submit, reset } = useEditCollection({ compositeCollectionId });
+  const { form, cover, isLoaded, submit, reset } = useEditCollection({ compositeCollectionId, active: open });
 
   const handleOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen);

@@ -52,9 +52,9 @@ type SavePickerContentProps = {
   hasMoreCollections: boolean;
   isCollectionsLoadingMore: boolean;
   loadMoreCollections: () => Promise<void>;
-  toggleBookmark: () => Promise<void>;
-  toggleCollection: (collectionId: string) => Promise<void>;
-  createCollectionWithPost: (name: string) => Promise<void>;
+  toggleBookmark: () => Promise<boolean>;
+  toggleCollection: (collectionId: string) => Promise<boolean>;
+  createCollectionWithPost: (name: string) => Promise<boolean>;
 };
 
 function SaveTargetIcon({ isSaved, isBusy }: SaveTargetIconProps) {
@@ -139,7 +139,7 @@ function CollectionRow({
 }: {
   layout: SavePickerLayout;
   collection: PostSaveCollectionTarget;
-  onToggleCollection: (collectionId: string) => Promise<void>;
+  onToggleCollection: (collectionId: string) => Promise<boolean>;
 }) {
   return (
     <SavePickerRow
@@ -175,7 +175,6 @@ function SavePickerContent({
   toggleCollection,
   createCollectionWithPost,
 }: SavePickerContentProps) {
-  const { requireAuth } = useRequireAuth();
   const [newCollectionName, setNewCollectionName] = useState('');
   const canCreate = newCollectionName.trim().length > 0 && !isCreatingCollection;
 
@@ -196,10 +195,7 @@ function SavePickerContent({
 
   const handleCreate = async () => {
     if (!canCreate) return;
-    await requireAuth(async () => {
-      await createCollectionWithPost(newCollectionName);
-      setNewCollectionName('');
-    });
+    if (await createCollectionWithPost(newCollectionName)) setNewCollectionName('');
   };
 
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -226,7 +222,7 @@ function SavePickerContent({
           layout={layout}
           disabled={isBookmarkBusy}
           dataCy="post-save-bookmarks-option"
-          onActivate={() => void requireAuth(toggleBookmark)}
+          onActivate={() => void toggleBookmark()}
         >
           <Bookmark className="size-4" />
           <Typography
@@ -252,9 +248,7 @@ function SavePickerContent({
               key={collection.id}
               layout={layout}
               collection={collection}
-              onToggleCollection={async (collectionId) => {
-                await requireAuth(() => toggleCollection(collectionId));
-              }}
+              onToggleCollection={toggleCollection}
             />
           ))
         )}

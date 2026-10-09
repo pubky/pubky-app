@@ -25,7 +25,17 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       open?: boolean;
       onOpenChange?: (open: boolean) => void;
     }) => (
-      <div data-testid="dialog" data-open={open} onClick={() => onOpenChange?.(!open)}>
+      <div
+        data-testid="dialog"
+        data-open={open}
+        onClick={(event) => {
+          if (
+            event.target === event.currentTarget ||
+            (event.target as HTMLElement).closest('[data-testid="custom-feed-dialog-trigger"]')
+          )
+            onOpenChange?.(!open);
+        }}
+      >
         {children}
       </div>
     ),
@@ -390,7 +400,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders in create mode with trigger child', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -428,7 +438,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders dialog title with translated title for create', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -442,7 +452,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed();
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -453,7 +463,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders feed name input with placeholder', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -465,7 +475,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders the generic icon picker with the default feed icon', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -483,7 +493,7 @@ describe('CustomFeedDialog', () => {
     mockCommitCreate.mockResolvedValue(createMockFeed({ id: 'new-feed-123', icon: 'mountain' }));
 
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -508,7 +518,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed();
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -519,7 +529,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders feed name input as enabled in create mode', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -530,7 +540,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders all filter section labels', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -543,7 +553,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders the post-tag input and hides profile tags until Tagged as is selected', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -564,7 +574,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders Save Feed button', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -577,7 +587,7 @@ describe('CustomFeedDialog', () => {
 
   it('does not render Delete Feed button in create mode', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -589,7 +599,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed();
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -602,7 +612,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders Delete Feed before Save Feed in edit mode', () => {
     render(
-      <CustomFeedDialog mode="edit" feed={createMockFeed()}>
+      <CustomFeedDialog mode="edit" feed={createMockFeed()} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -613,7 +623,7 @@ describe('CustomFeedDialog', () => {
 
   it('limits the dialog content to the xl width preset', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -627,7 +637,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed();
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -637,7 +647,7 @@ describe('CustomFeedDialog', () => {
 
   it('does not disable dialog trigger in create mode', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -649,7 +659,7 @@ describe('CustomFeedDialog', () => {
 
   it('disables Save Feed button when name is empty (create mode)', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -659,7 +669,7 @@ describe('CustomFeedDialog', () => {
 
   it('disables Save Feed button when tags are empty (create mode)', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -673,7 +683,7 @@ describe('CustomFeedDialog', () => {
 
   it('requires a profile tag before saving an explicitly selected Tagged-as feed', async () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -693,7 +703,7 @@ describe('CustomFeedDialog', () => {
 
   it('updates name when typing in input', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -707,7 +717,7 @@ describe('CustomFeedDialog', () => {
 
   it('adds a tag when tag input triggers onTagAdd', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -720,7 +730,7 @@ describe('CustomFeedDialog', () => {
 
   it('removes a tag when PostTag close button is clicked', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -739,7 +749,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed({ tags: ['bitcoin', 'lightning'] });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -756,7 +766,7 @@ describe('CustomFeedDialog', () => {
     });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -775,7 +785,7 @@ describe('CustomFeedDialog', () => {
     });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -787,7 +797,7 @@ describe('CustomFeedDialog', () => {
 
   it('clears profile tags on every explicit non-Tagged-as selection', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -804,7 +814,7 @@ describe('CustomFeedDialog', () => {
 
   it('caps profile tags at five and hides the emoji selector at the limit', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -826,7 +836,7 @@ describe('CustomFeedDialog', () => {
     );
 
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -858,7 +868,7 @@ describe('CustomFeedDialog', () => {
     mockCommitUpdate.mockResolvedValue({ ...mockFeed, name: 'Renamed legacy feed' });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -888,7 +898,7 @@ describe('CustomFeedDialog', () => {
     mockCommitUpdate.mockResolvedValue({ ...mockFeed, reach: PubkyAppFeedReach.Friends, domain_tags: [] });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -912,7 +922,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed({ tags: ['bitcoin'] });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -924,7 +934,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders all reach filter options', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -944,7 +954,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders all sort filter options', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -956,7 +966,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders all layout filter options', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -969,7 +979,7 @@ describe('CustomFeedDialog', () => {
 
   it('keeps the layout section visible with the responsive layout hint collapsed', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -986,7 +996,7 @@ describe('CustomFeedDialog', () => {
     const user = userEvent.setup();
 
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1002,7 +1012,7 @@ describe('CustomFeedDialog', () => {
 
   it.each([true, false])('keeps a completed touch tap usable (synthesized click: %s)', async (synthesizeClick) => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1028,7 +1038,7 @@ describe('CustomFeedDialog', () => {
 
   it('renders all content filter options', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1046,7 +1056,7 @@ describe('CustomFeedDialog', () => {
 
   it('limits content filter options when layout is Visual', async () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1068,7 +1078,7 @@ describe('CustomFeedDialog', () => {
 
   it('offers Cards with all content types and preserves the selected content', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1091,7 +1101,7 @@ describe('CustomFeedDialog', () => {
 
   it('sets default reach to All in create mode', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1101,7 +1111,7 @@ describe('CustomFeedDialog', () => {
 
   it('sets default sort to Recent in create mode', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1111,7 +1121,7 @@ describe('CustomFeedDialog', () => {
 
   it('sets default layout to Columns in create mode', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1121,7 +1131,7 @@ describe('CustomFeedDialog', () => {
 
   it('sets default content to ALL in create mode', () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1131,7 +1141,7 @@ describe('CustomFeedDialog', () => {
 
   it('coerces unsupported content to ALL when switching to Visual', async () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1148,7 +1158,7 @@ describe('CustomFeedDialog', () => {
 
   it('does not restore unsupported content when leaving Visual', async () => {
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1171,7 +1181,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed({ name: 'Bitcoin News' });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1183,7 +1193,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed({ id: 'feed-explicit', name: 'Explicit Feed', icon: 'mountain' });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1201,7 +1211,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed({ icon: undefined });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1213,7 +1223,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed({ reach: PubkyAppFeedReach.Friends });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1225,7 +1235,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed({ content: null });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1237,7 +1247,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed({ layout: PubkyAppFeedLayout.Visual, content: PubkyAppPostKind.Video });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1249,7 +1259,7 @@ describe('CustomFeedDialog', () => {
     const mockFeed = createMockFeed({ layout: PubkyAppFeedLayout.Visual, content: PubkyAppPostKind.Short });
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1266,7 +1276,7 @@ describe('CustomFeedDialog', () => {
     mockCommitCreate.mockResolvedValue(mockCreatedFeed);
 
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1301,7 +1311,7 @@ describe('CustomFeedDialog', () => {
     mockCommitCreate.mockResolvedValue(mockCreatedFeed);
 
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1324,7 +1334,7 @@ describe('CustomFeedDialog', () => {
     mockCommitCreate.mockRejectedValue(new Error('Network error'));
 
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1348,7 +1358,7 @@ describe('CustomFeedDialog', () => {
     mockCommitCreate.mockResolvedValue(mockCreatedFeed);
 
     render(
-      <CustomFeedDialog mode="create">
+      <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
@@ -1380,7 +1390,7 @@ describe('CustomFeedDialog', () => {
       mockCommitCreate.mockResolvedValue(mockCreatedFeed);
 
       render(
-        <CustomFeedDialog mode="create">
+        <CustomFeedDialog mode="create" open>
           <button>Create Feed</button>
         </CustomFeedDialog>,
       );
@@ -1419,7 +1429,7 @@ describe('CustomFeedDialog', () => {
       mockCommitUpdate.mockResolvedValue(mockUpdatedFeed);
 
       render(
-        <CustomFeedDialog mode="edit" feed={mockFeed}>
+        <CustomFeedDialog mode="edit" feed={mockFeed} open>
           <button>Edit Feed</button>
         </CustomFeedDialog>,
       );
@@ -1455,7 +1465,7 @@ describe('CustomFeedDialog', () => {
     mockCommitUpdate.mockResolvedValue(createMockFeed({ icon: 'mountain' }));
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1483,7 +1493,7 @@ describe('CustomFeedDialog', () => {
     mockCommitUpdate.mockResolvedValue(mockUpdatedFeed);
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1507,7 +1517,7 @@ describe('CustomFeedDialog', () => {
     mockCommitUpdate.mockResolvedValue(createMockFeed({ id: 'feed-updated' }));
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1527,7 +1537,7 @@ describe('CustomFeedDialog', () => {
     mockCommitUpdate.mockResolvedValue(createMockFeed({ id: 'feed-updated' }));
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1548,7 +1558,7 @@ describe('CustomFeedDialog', () => {
     mockCommitUpdate.mockRejectedValue(new Error('Network error'));
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1571,7 +1581,7 @@ describe('CustomFeedDialog', () => {
     mockCommitUpdate.mockResolvedValue(createMockFeed());
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1599,7 +1609,7 @@ describe('CustomFeedDialog', () => {
     mockCommitDelete.mockResolvedValue(undefined);
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1616,7 +1626,7 @@ describe('CustomFeedDialog', () => {
     mockCommitDelete.mockResolvedValue(undefined);
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1637,7 +1647,7 @@ describe('CustomFeedDialog', () => {
     mockCommitDelete.mockResolvedValue(undefined);
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );
@@ -1656,7 +1666,7 @@ describe('CustomFeedDialog', () => {
     mockCommitDelete.mockRejectedValue(new Error('Delete failed'));
 
     render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
+      <CustomFeedDialog mode="edit" feed={mockFeed} open>
         <button>Edit Feed</button>
       </CustomFeedDialog>,
     );

@@ -45,6 +45,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
         </DialogHeader>
 
         <PostInput
+          active={open}
           dataCy="edit-post-input"
           key={resetKey}
           variant={POST_INPUT_VARIANT.EDIT}

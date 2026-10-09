@@ -46,7 +46,7 @@ type UseCustomFeedFormResult = {
  */
 export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFeedFormResult {
   const { mode, feed, open } = params;
-  const { requireAuth } = useRequireAuth();
+  const { waitForAuth } = useRequireAuth(open);
   const [loading, setLoading] = useState(false);
   // Synchronous re-entrancy truth: a queued second click can run a stale
   // render's closure before React commits `loading`, so the guard cannot rely
@@ -83,7 +83,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
 
     try {
       await form.handleSubmit(async (data) => {
-        if (!requireAuth(() => true)) return;
+        if (!(await waitForAuth())) return;
         // `null` is the feed record's "no content filter"; the form carries a
         // sentinel instead because a Select cannot hold null as an option value.
         // Tagged as is a UI-only reach: persist as WoT + the form's domain_tags.
@@ -141,11 +141,12 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
   };
 
   const deleteFeed = async (): Promise<boolean> => {
-    if (inFlightRef.current || mode !== 'edit' || !requireAuth(() => true)) return false;
+    if (inFlightRef.current || mode !== 'edit') return false;
     inFlightRef.current = true;
     setLoading(true);
 
     try {
+      if (!(await waitForAuth())) return false;
       const currentFeedHref = `${APP_ROUTES.FEED}/${feed.id}`;
 
       await FeedController.commitDelete({

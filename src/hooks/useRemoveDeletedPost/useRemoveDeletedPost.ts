@@ -64,16 +64,20 @@ async function isPostStillInCollection(collectionId: string, postId: string): Pr
 export function useRemoveDeletedPost(postId: string): UseRemoveDeletedPostResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const feed = useTimelineFeedContext();
-  const { requireAuth } = useRequireAuth();
+  const { waitForAuth } = useRequireAuth();
   const target = resolveRemovalTarget(feed, currentUserPubky);
   const [isRemoving, setIsRemoving] = useState(false);
   const isRemovingRef = useRef(false);
   const remove = async (): Promise<boolean> => {
     if (!feed?.removePostsOptimistically || !target || !currentUserPubky || isRemovingRef.current) return false;
 
-    if (!requireAuth(() => true)) return false;
     isRemovingRef.current = true;
     setIsRemoving(true);
+    if (!(await waitForAuth())) {
+      isRemovingRef.current = false;
+      setIsRemoving(false);
+      return false;
+    }
     const optimisticRemoval = feed.removePostsOptimistically(postId);
 
     try {

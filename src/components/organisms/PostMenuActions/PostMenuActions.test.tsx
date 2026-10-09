@@ -103,6 +103,7 @@ vi.mock('@/hooks/usePostMenuActions/usePostMenuActions', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
+    waitForAuth: async () => true,
     requireAuth: mockRequireAuth,
   }),
 }));

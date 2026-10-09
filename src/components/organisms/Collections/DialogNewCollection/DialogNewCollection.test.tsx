@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   useAuthoredCollections: vi.fn(),
 }));
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({ push: mocks.push }),
 }));
 
@@ -70,7 +71,7 @@ describe('DialogNewCollection', () => {
       );
       fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-      expect(useAuthStore.getState().showSignInDialog).toBe(true);
+      expect(useAuthStore.getState().showSignInDialog).toBe(restoreStatus === 'reauth-required');
     },
   );
 
@@ -92,7 +93,7 @@ describe('DialogNewCollection', () => {
       );
       await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save collection' })));
       expect(mocks.commitCreateCollection).not.toHaveBeenCalled();
-      expect(useAuthStore.getState().showSignInDialog).toBe(true);
+      expect(useAuthStore.getState().showSignInDialog).toBe(restoreStatus === 'reauth-required');
       expect(screen.getByLabelText('Title')).toHaveValue('Keep this draft');
       expect(mocks.push).not.toHaveBeenCalled();
     },

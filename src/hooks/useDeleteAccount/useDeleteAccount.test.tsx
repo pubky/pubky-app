@@ -16,14 +16,14 @@ vi.mock('@/controllers/profile/profile', () => ({
   },
 }));
 
-vi.mock('@/controllers/auth/auth', () => ({
-  AuthController: {
-    logout: vi.fn(),
-  },
-}));
+vi.mock('@/controllers/auth/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/controllers/auth/auth')>();
+  return { AuthController: { logout: vi.fn(), waitForSession: actual.AuthController.waitForSession } };
+});
 
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({
     push: mockPush,
     replace: vi.fn(),
@@ -53,7 +53,7 @@ describe('useDeleteAccount', () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  it.each(['restoring', 'temporary-error', 'reauth-required', 'ready'] as const)(
+  it.each(['temporary-error', 'reauth-required', 'ready'] as const)(
     'blocks an already-open confirmation after the session is removed (%s)',
     async (restoreStatus) => {
       const { result } = renderHook(() => useDeleteAccount());
@@ -67,17 +67,17 @@ describe('useDeleteAccount', () => {
       expect(ProfileController.commitDelete).not.toHaveBeenCalled();
       expect(AuthController.logout).not.toHaveBeenCalled();
       expect(mockPush).not.toHaveBeenCalled();
-      expect(toast).not.toHaveBeenCalled();
+      expect(toast).toHaveBeenCalledTimes(restoreStatus === 'temporary-error' ? 1 : 0);
       expect(result.current.isDeleting).toBe(false);
       expect(result.current.progress).toBe(0);
-      expect(useAuthStore.getState().showSignInDialog).toBe(true);
+      expect(useAuthStore.getState().showSignInDialog).toBe(restoreStatus !== 'temporary-error');
     },
   );
 
-  it('requires a new confirmation after recovery instead of replaying deletion', async () => {
+  it('requires a new confirmation after a failed restore instead of replaying deletion', async () => {
     const { result } = renderHook(() => useDeleteAccount());
     await act(async () => {
-      useAuthStore.setState({ session: null, restoreStatus: 'restoring' });
+      useAuthStore.setState({ session: null, restoreStatus: 'temporary-error' });
       await result.current.handleDeleteAccount();
     });
 
@@ -91,6 +91,25 @@ describe('useDeleteAccount', () => {
       pubky: mockPubky,
       setProgress: expect.any(Function),
     });
+  });
+
+  it('cancels a queued deletion when its confirmation dialog closes', async () => {
+    useAuthStore.setState({ session: null, restoreStatus: 'restoring' });
+    const { result, rerender } = renderHook(({ active }) => useDeleteAccount(active), {
+      initialProps: { active: true },
+    });
+    let pending!: Promise<void>;
+    act(() => {
+      pending = result.current.handleDeleteAccount();
+    });
+    expect(result.current.isWaiting).toBe(true);
+    expect(result.current.isDeleting).toBe(false);
+    await act(async () => rerender({ active: false }));
+    await act(async () => {
+      useAuthStore.setState({ session: mockSession(), restoreStatus: 'ready' });
+      await pending;
+    });
+    expect(ProfileController.commitDelete).not.toHaveBeenCalled();
   });
 
   it('returns initial state', () => {

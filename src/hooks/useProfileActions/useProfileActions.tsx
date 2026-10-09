@@ -42,7 +42,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
   const { copyToClipboard: copyProfileLinkToClipboard } = useCopyToClipboard({
     successTitle: 'Profile link copied to clipboard',
   });
-  const { requireAuth } = useRequireAuth();
+  const { waitForAuth } = useRequireAuth();
   const { handleSignOut: onSignOut, isLoading: isLoggingOut } = useSignOut();
 
   const onEdit = useCallback(() => {
@@ -58,7 +58,7 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
   }, [link, copyProfileLinkToClipboard]);
 
   const onStatusChange = async (status: string) => {
-    if (!requireAuth(() => true)) return;
+    if (!(await waitForAuth())) return;
     const currentUserPubky = useAuthStore.getState().currentUserPubky;
     if (!currentUserPubky) {
       Logger.error('No authenticated user found');

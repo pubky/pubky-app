@@ -25,6 +25,7 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: vi.fn(() => ({
     isAuthenticated: true,
+    waitForAuth: async () => true,
     requireAuth: vi.fn((action: () => void) => action()),
   })),
 }));

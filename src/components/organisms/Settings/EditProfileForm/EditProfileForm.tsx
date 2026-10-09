@@ -12,7 +12,6 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { USER_MAX_LINKS } from '@/config/user';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useProfileForm } from '@/hooks/useProfileForm/useProfileForm';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { extractInitials } from '@/libs/utils/utils';
 import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
 import { InputField } from '@/molecules/InputField/InputField';
@@ -22,7 +21,6 @@ import { DialogAddLink } from '../../DialogAddLink/DialogAddLink';
 import { DialogCropImage } from '../../DialogCropImage/DialogCropImage';
 
 export const EditProfileForm = () => {
-  const { requireAuth } = useRequireAuth();
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const { state, errors, handlers, cropDialog, fileInputRef, isSubmitDisabled } = useProfileForm({
     mode: 'edit',
@@ -225,7 +223,7 @@ export const EditProfileForm = () => {
           </Button>
           <Button
             size="lg"
-            onClick={() => requireAuth(handlers.handleSubmit)}
+            onClick={handlers.handleSubmit}
             disabled={isSubmitDisabled}
             data-testid="save-profile-button"
             data-cy="edit-profile-save-btn"

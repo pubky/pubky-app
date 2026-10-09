@@ -483,3 +483,5 @@ describe('useInlineImageUpload', () => {
     });
   });
 });
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({ useRequireAuth: () => ({ waitForAuth: async () => true }) }));

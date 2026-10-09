@@ -6,6 +6,7 @@ import { mockSession } from '@/test-utils/pubky';
 import { NewCollectionCardCTA } from './NewCollectionCardCTA';
 
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock('@/controllers/post/post', () => ({

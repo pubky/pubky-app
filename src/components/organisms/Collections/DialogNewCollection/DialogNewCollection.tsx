@@ -48,7 +48,7 @@ export function DialogNewCollection({
   // begins. RHF's own `formState.isSubmitting` would otherwise be batched.
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
-  const { form, cover, submit, reset } = useCreateCollection();
+  const { form, cover, submit, reset } = useCreateCollection(open);
 
   const setOpen = (nextOpen: boolean) => {
     if (!isControlled) setOpenState(nextOpen);
@@ -67,19 +67,18 @@ export function DialogNewCollection({
     if (!nextOpen) closeFlow();
   };
 
-  const handleSave = () =>
-    requireAuth(async () => {
-      flushSync(() => setIsSavingLocal(true));
-      try {
-        const compositeId = await submit();
-        if (!compositeId) return;
-        closeFlow();
-        const { pubky, id } = parseCompositeId(compositeId);
-        router.push(getCollectionRoute(pubky, id));
-      } finally {
-        setIsSavingLocal(false);
-      }
-    });
+  const handleSave = async () => {
+    flushSync(() => setIsSavingLocal(true));
+    try {
+      const compositeId = await submit();
+      if (!compositeId) return;
+      closeFlow();
+      const { pubky, id } = parseCompositeId(compositeId);
+      router.push(getCollectionRoute(pubky, id));
+    } finally {
+      setIsSavingLocal(false);
+    }
+  };
 
   const isSaving = isSavingLocal || form.formState.isSubmitting;
 

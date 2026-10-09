@@ -2326,7 +2326,7 @@ describe('usePostInput', () => {
     it('tells usePost to keep the uploaded images while a lock draft holds them', () => {
       renderHook(() => usePostInput({ variant: 'post', keepInlineImages: true }));
 
-      expect(usePost).toHaveBeenLastCalledWith({ keepInlineImages: true });
+      expect(usePost).toHaveBeenLastCalledWith({ keepInlineImages: true, active: true });
     });
   });
 

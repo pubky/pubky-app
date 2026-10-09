@@ -10,6 +10,7 @@ import { Logout } from './Logout';
 const mocks = vi.hoisted(() => {
   const authState = {
     hasHydrated: true,
+    generation: 'original',
     restoreStatus: 'idle',
     session: {} as object | null,
     currentUserPubky: 'account' as string | null,
@@ -169,6 +170,24 @@ describe('Logout', () => {
     expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
     expect(mocks.mockLogout).toHaveBeenCalledOnce();
   });
+  it.each(['different account', 'new grant'])('does not transfer a pending backup logout to a %s', async (change) => {
+    const key = Keypair.random();
+    mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
+    mocks.authState.currentUserPubky = key.publicKey.z32();
+    mocks.mockLogout.mockResolvedValue(undefined);
+    const { rerender } = render(<Logout />);
+    expect(screen.getByText('Back up your key before signing out')).toBeInTheDocument();
+    mocks.authState.generation = 'incoming';
+    if (change === 'different account') mocks.authState.currentUserPubky = Keypair.random().publicKey.z32();
+    mocks.onboardingState.secretKey = '';
+    rerender(<Logout />);
+    expect(await screen.findByText('Your account changed')).toBeInTheDocument();
+    expect(mocks.mockLogout).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
+    expect(mocks.mockLogout).toHaveBeenCalledOnce();
+  });
+
   it('does not ask for a backup of an unrelated onboarding key', async () => {
     mocks.onboardingState.secretKey = Buffer.from(Keypair.random().secret()).toString('hex');
     mocks.mockLogout.mockResolvedValue(undefined);
@@ -215,6 +234,7 @@ describe('Logout', () => {
     mocks.onboardingState.hasHydrated = true;
     mocks.onboardingState.secretKey = '';
     mocks.authState.hasHydrated = true;
+    mocks.authState.generation = 'original';
     mocks.authState.restoreStatus = 'idle';
     mocks.authState.session = {};
     mocks.authState.currentUserPubky = 'account';

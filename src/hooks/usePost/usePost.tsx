@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ARTICLE_ATTACHMENT_MAX_FILES } from '@/config/posts';
 import { FileController } from '@/controllers/file/file';
 import { PostController } from '@/controllers/post/post';
 import type { TEditPostAttachments } from '@/controllers/post/post.types';
 import { useInlineImageUpload } from '@/hooks/useInlineImageUpload/useInlineImageUpload';
 import type { InlineImageLocalEntry } from '@/hooks/useInlineImageUpload/useInlineImageUpload.types';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
@@ -91,7 +92,7 @@ const showSessionExpiredToast = () =>
     description: 'Session expired. Please sign in.',
   });
 
-export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UsePostReturn {
+export function usePost({ keepInlineImages = false, active = true }: UsePostOptions = {}): UsePostReturn {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -100,6 +101,8 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
   const [articleTitle, setArticleTitle] = useState('');
   const [lockTitle, setLockTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const inFlight = useRef(false);
+  const { waitForAuth } = useRequireAuth(active);
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
@@ -111,7 +114,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
   // uploads aren't in the body yet, so `serializeArticleBody` at publish
   // remains the authoritative cap enforcement.
   const inlineImageSession = useInlineImageUpload({
-    enabled: isArticle,
+    enabled: isArticle && active,
     keepSession: keepInlineImages,
     authorPubky: currentUserId,
     getInlineBudget: () =>
@@ -261,9 +264,12 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     // allow empty content and attachments
     if ((!content.trim() && attachments.length === 0) || !postId || !currentUserId) return;
 
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsSubmitting(true);
 
     try {
+      if (!(await waitForAuth())) return;
       const createdPostId = await PostController.commitCreate({
         parentPostId: postId,
         content: content.trim(),
@@ -283,6 +289,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
       Logger.error('[usePost] Failed to submit reply:', err);
       showCommitErrorToast(err, 'Could not post reply. Try again.');
     } finally {
+      inFlight.current = false;
       setIsSubmitting(false);
     }
   };
@@ -296,12 +303,13 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     )
       return;
 
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsSubmitting(true);
-    // From here until finally, discarding the session must not delete files:
-    // the commit may succeed and the published article would reference them
-    inlineImageSession.setCommitting(true);
-
     try {
+      if (!(await waitForAuth())) return;
+      // Only protect files once the commit can start; closing during restore may discard them.
+      inlineImageSession.setCommitting(true);
       let articleBody = '';
       let inlineUris: string[] = [];
       if (isArticle) {
@@ -345,6 +353,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
       showCommitErrorToast(err, 'Could not create post. Try again.');
     } finally {
       inlineImageSession.setCommitting(false);
+      inFlight.current = false;
       setIsSubmitting(false);
     }
   };
@@ -352,9 +361,12 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
   const repost = async ({ originalPostId, successToastTitle, onSuccess, onUndo }: UsePostRepostOptions) => {
     if (!originalPostId || !currentUserId) return;
 
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsSubmitting(true);
 
     try {
+      if (!(await waitForAuth())) return;
       const createdPostId = await PostController.commitCreate({
         originalPostId,
         content: content.trim(),
@@ -376,6 +388,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
       Logger.error('[usePost] Failed to repost:', err);
       showCommitErrorToast(err, 'Could not repost. Try again.');
     } finally {
+      inFlight.current = false;
       setIsSubmitting(false);
     }
   };
@@ -397,12 +410,13 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
     )
       return;
 
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsSubmitting(true);
-    // From here until finally, discarding the session must not delete files:
-    // the commit may succeed and the edited article would reference them
-    inlineImageSession.setCommitting(true);
-
     try {
+      if (!(await waitForAuth())) return;
+      // Only protect files once the commit can start; closing during restore may discard them.
+      inlineImageSession.setCommitting(true);
       let editContentPayload: string;
       let editAttachments: TEditPostAttachments | undefined;
       let articleSeedEntries: (InlineImageLocalEntry | null)[] | undefined;
@@ -527,6 +541,7 @@ export function usePost({ keepInlineImages = false }: UsePostOptions = {}): UseP
       });
     } finally {
       inlineImageSession.setCommitting(false);
+      inFlight.current = false;
       setIsSubmitting(false);
     }
   };

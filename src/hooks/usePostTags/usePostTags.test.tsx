@@ -120,6 +120,7 @@ describe('usePostTags', () => {
     act(() => {
       add = result.current.handleTagAdd('slow');
     });
+    await waitFor(() => expect(TagController.commitCreate).toHaveBeenCalled());
     vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('other-viewer'));
     rerender();
     await act(async () => {
@@ -144,6 +145,7 @@ describe('usePostTags', () => {
       removal = result.current.handleTagToggle({ label: 'shared', relationship: true });
     });
 
+    await waitFor(() => expect(TagController.commitDelete).toHaveBeenCalled());
     vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('new-viewer'));
     setupLiveQueryMock({ tags: tags.map((tag) => ({ ...tag, relationship: false })) }, { unique_tags: 2 });
     rerender();
@@ -172,6 +174,7 @@ describe('usePostTags', () => {
     act(() => {
       toggle = result.current.handleTagToggle({ label: 'solo', relationship: true });
     });
+    await waitFor(() => expect(TagController.commitDelete).toHaveBeenCalled());
     unmount();
     await act(async () => {
       pending.reject(new Error('offline'));
@@ -514,3 +517,8 @@ describe('usePostTags', () => {
     });
   });
 });
+
+// These tests exercise the mutation after auth readiness; restore races use the real store in auth-wait tests.
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ waitForAuth: async () => true }),
+}));

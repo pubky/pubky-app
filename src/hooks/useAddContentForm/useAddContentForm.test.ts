@@ -46,6 +46,7 @@ vi.mock('@/controllers/post/post', () => ({
 vi.mock('@/stores/auth/auth.store', () => {
   const getState = () =>
     mockAuthStore({
+      hasHydrated: true,
       currentUserPubky: mocks.currentUserPubky,
       session: mocks.restoreStatus === 'ready' ? mockSession() : null,
       restoreStatus: mocks.restoreStatus,

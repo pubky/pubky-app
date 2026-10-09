@@ -88,11 +88,10 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       id: POST_MENU_ACTION_IDS.FOLLOW,
       label: isFollowing ? `Unfollow ${username}` : `Follow ${username}`,
       icon: isFollowing ? UserRoundMinus : UserRoundPlus,
-      onClick: () =>
-        requireAuth(async () => {
-          // useFollowUser handles all feedback (toast + state) and never throws.
-          await toggleFollow(postAuthorId, isFollowing);
-        }),
+      onClick: async () => {
+        // useFollowUser handles all feedback (toast + state) and never throws.
+        await toggleFollow(postAuthorId, isFollowing);
+      },
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
       disabled: isFollowLoading || isUserLoading(postAuthorId),
     });
@@ -133,20 +132,19 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       id: POST_MENU_ACTION_IDS.MUTE,
       label: isUserMuted ? `Unmute ${username}` : `Mute ${username}`,
       icon: isUserMuted ? Megaphone : MegaphoneOff,
-      onClick: () =>
-        requireAuth(async () => {
-          try {
-            await toggleMute(postAuthorId, isUserMuted);
-            toast({
-              title: isUserMuted ? 'User unmuted' : 'User muted',
-            });
-          } catch (error) {
-            toast({
-              variant: 'error',
-              description: isAppError(error) ? error.message : 'Could not update mute status',
-            });
-          }
-        }),
+      onClick: async () => {
+        try {
+          if (!(await toggleMute(postAuthorId, isUserMuted))) return;
+          toast({
+            title: isUserMuted ? 'User unmuted' : 'User muted',
+          });
+        } catch (error) {
+          toast({
+            variant: 'error',
+            description: isAppError(error) ? error.message : 'Could not update mute status',
+          });
+        }
+      },
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
       disabled: isMuteLoading || isMuteUserLoading(postAuthorId),
     });

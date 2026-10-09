@@ -70,6 +70,7 @@ vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({
 }));
 
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({ push: vi.fn() }),
 }));
 

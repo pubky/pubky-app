@@ -15,6 +15,7 @@ import { useProfileActions } from './useProfileActions';
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({
     push: mockPush,
   }),
@@ -24,11 +25,10 @@ vi.mock('@/molecules/Toaster/toast');
 
 // Mock AuthController.logout
 const mockLogout = vi.fn();
-vi.mock('@/controllers/auth/auth', () => ({
-  AuthController: {
-    logout: () => mockLogout(),
-  },
-}));
+vi.mock('@/controllers/auth/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/controllers/auth/auth')>();
+  return { AuthController: { logout: () => mockLogout(), waitForSession: actual.AuthController.waitForSession } };
+});
 
 // Mock useCopyToClipboard hook
 const mockCopyToClipboard = vi.fn();
@@ -52,7 +52,7 @@ describe('useProfileActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(Logger, 'error').mockImplementation(() => {});
-    useAuthStore.setState({ ...authInitialState, session: mockSession(), restoreStatus: 'ready' });
+    useAuthStore.setState({ ...authInitialState, hasHydrated: true, session: mockSession(), restoreStatus: 'ready' });
   });
 
   describe('Action handlers', () => {
@@ -233,7 +233,7 @@ describe('useProfileActions', () => {
       act(() => useAuthStore.setState({ restoreStatus: 'temporary-error' }));
       await act(() => result.current.onStatusChange('available'));
       expect(commit).not.toHaveBeenCalled();
-      expect(useAuthStore.getState().showSignInDialog).toBe(true);
+      expect(useAuthStore.getState().showSignInDialog).toBe(false);
       commit.mockRestore();
     });
 

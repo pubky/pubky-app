@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { PubkyAppPost } from 'pubky-app-specs';
 import { LocksController } from '@/controllers/locks/locks';
 import { PostController } from '@/controllers/post/post';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import type { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -31,19 +32,25 @@ const POST_CONTENT_TYPE = 'application/octet-stream';
  * that lock's URL is posted like any other post.
  */
 export function useCreateLockContent({
+  active = true,
   lockedPost,
   announcement,
   lockConfig,
 }: TUseCreateLockContentParams): TUseCreateLockContentReturn {
+  const { waitForAuth } = useRequireAuth(active);
+  const inFlight = useRef(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
   const pubky = useAuthStore((state) => state.currentUserPubky);
 
   const publish = async (): Promise<TPublishResult> => {
+    if (inFlight.current) return { status: 'canceled' };
+    inFlight.current = true;
     setError(null);
     setIsPublishing(true);
 
     try {
+      if (!(await waitForAuth())) return { status: 'canceled' };
       // The composer is only reachable when signed in, so a missing pubky is a programming error.
       if (!pubky)
         throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No pubky.app session', {
@@ -136,6 +143,7 @@ export function useCreateLockContent({
       }
       return { status: 'failed' };
     } finally {
+      inFlight.current = false;
       setIsPublishing(false);
     }
   };

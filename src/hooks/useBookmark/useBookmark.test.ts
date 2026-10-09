@@ -127,7 +127,7 @@ describe('useBookmark', () => {
     });
   });
 
-  it('shows error toast when user is not logged in', async () => {
+  it('does not write a bookmark for a guest', async () => {
     vi.mocked(useAuthStore).mockImplementation((selector) => selector(mockAuthStore({ currentUserPubky: null })));
     vi.mocked(BookmarkController.exists).mockResolvedValue(false);
 
@@ -141,10 +141,7 @@ describe('useBookmark', () => {
       await result.current.toggle();
     });
 
-    expect(vi.mocked(toast)).toHaveBeenCalledWith({
-      variant: 'error',
-      description: 'Sign in to bookmark posts',
-    });
+    expect(toast).not.toHaveBeenCalled();
     expect(BookmarkController.commitCreate).not.toHaveBeenCalled();
   });
 
@@ -388,3 +385,5 @@ describe('useBookmark', () => {
     });
   });
 });
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({ useRequireAuth: () => ({ waitForAuth: async () => true }) }));

@@ -189,9 +189,10 @@ describe('PostSavePicker', () => {
 
   describe.each([false, true])('recovery with mobile layout: %s', (isMobile) => {
     it.each(['reauth-required', 'temporary-error'] as const)(
-      'gates all actions in an already-open picker during %s and keeps the draft',
+      'preserves the draft when the mutation hooks cancel during %s',
       async (restoreStatus) => {
         mockState.isMobile = isMobile;
+        mockState.createCollectionWithPost.mockResolvedValueOnce(false);
         renderPicker();
         openPicker();
         const input = await screen.findByPlaceholderText('Collection name');
@@ -208,10 +209,10 @@ describe('PostSavePicker', () => {
           fireEvent.click(screen.getByText('Proof of Work'));
           fireEvent.click(screen.getByRole('button', { name: 'Create collection' }));
         });
-        expect(mockState.toggleBookmark).not.toHaveBeenCalled();
-        expect(mockState.toggleCollection).not.toHaveBeenCalled();
-        expect(mockState.createCollectionWithPost).not.toHaveBeenCalled();
-        expect(useAuthStore.getState().showSignInDialog).toBe(true);
+        expect(mockState.toggleBookmark).toHaveBeenCalledOnce();
+        expect(mockState.toggleCollection).toHaveBeenCalledOnce();
+        expect(mockState.createCollectionWithPost).toHaveBeenCalledOnce();
+        expect(useAuthStore.getState().showSignInDialog).toBe(false);
         expect(input).toHaveValue('Keep this draft');
       },
     );

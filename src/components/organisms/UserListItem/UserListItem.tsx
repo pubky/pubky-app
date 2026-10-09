@@ -8,7 +8,6 @@ import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, formatPublicKey, resolveUserDisplayName } from '@/libs/utils/utils';
 import { FollowButton } from '@/molecules/FollowButton/FollowButton';
@@ -379,7 +378,6 @@ export function UserListItem({
   'data-testid': dataTestId,
 }: UserListItemProps) {
   // Auth requirement for follow action
-  const { requireAuth } = useRequireAuth();
 
   // Subscribe to TTL coordinator based on viewport visibility
   const { ref: ttlRef } = useTtlSubscription({
@@ -412,7 +410,7 @@ export function UserListItem({
   const handleFollowClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    requireAuth(() => onFollowClick?.(user.id, isFollowing));
+    void onFollowClick?.(user.id, isFollowing);
   };
   const commonProps: VariantProps = {
     user,

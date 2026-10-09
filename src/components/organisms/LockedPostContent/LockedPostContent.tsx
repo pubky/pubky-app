@@ -75,7 +75,7 @@ export function LockedPostContent({
     isResolvingOwn,
     isResolvingReplica,
   } = useUnlockedContent({ lock, lockFile, postId });
-  const { requireAuth, isAuthenticated } = useRequireAuth();
+  const { waitForAuth, isAuthenticated } = useRequireAuth();
   // A session from before the app asked for `/priv` cannot read whether this reader already
   // unlocked, so ask for the permission first and keep the card inert: a second unlock would
   // charge them twice. Gated on the session, not on a refused read, so the card does not flip from
@@ -128,7 +128,11 @@ export function LockedPostContent({
   // reader gets the sign-in dialog instead. Unsupported legacy locks have no unlock handler, and
   // neither does the creator's own lock: it stays inert even if reading the original failed.
   const handleUnlock =
-    priceSats && !showPermissionNotice && !isOwnLock ? () => requireAuth(() => setIsPayOpen(true)) : undefined;
+    priceSats && !showPermissionNotice && !isOwnLock
+      ? async () => {
+          if (await waitForAuth()) setIsPayOpen(true);
+        }
+      : undefined;
 
   return (
     <Container className={cn('min-w-0 gap-4', className)}>

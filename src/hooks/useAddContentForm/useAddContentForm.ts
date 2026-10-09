@@ -37,7 +37,7 @@ interface UseAddContentFormResult {
 const MAX_POST_URL_LENGTH = 2048;
 
 export function useAddContentForm({ target, onSuccess }: UseAddContentFormOptions): UseAddContentFormResult {
-  const { requireAuth } = useRequireAuth();
+  const { waitForAuth } = useRequireAuth();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const [isPending, setIsPending] = useState(false);
   // Refs, not state: reentrancy guards must flip synchronously — the isPending state a render closure
@@ -126,7 +126,7 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
         }
 
         // The awaits above give the user time to dismiss the dialog; never commit after it closed.
-        if (!mountedRef.current || !requireAuth(() => true)) return false;
+        if (!mountedRef.current || !(await waitForAuth())) return false;
 
         if (target.type === 'bookmarks') {
           await BookmarkController.commitCreate({

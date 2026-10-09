@@ -118,7 +118,7 @@ describe('usePostMenuActions', () => {
     toggleFollow: vi.fn().mockResolvedValue(undefined),
     isFollowLoading: false,
     isUserLoading: vi.fn().mockReturnValue(false),
-    toggleMute: vi.fn().mockResolvedValue(undefined),
+    toggleMute: vi.fn().mockResolvedValue(true),
     isMuteLoading: false,
     isMuteUserLoading: vi.fn().mockReturnValue(false),
     isMuted: vi.fn().mockReturnValue(false),
@@ -195,38 +195,35 @@ describe('usePostMenuActions', () => {
     { recovery: 'temporary-error with a live session', restoreStatus: 'temporary-error', session: mockSession() },
     { recovery: 'restoring', restoreStatus: 'restoring', session: null },
   ] as const)('an already-open menu during $recovery', ({ restoreStatus, session }) => {
-    it.each([
-      POST_MENU_ACTION_IDS.FOLLOW,
-      POST_MENU_ACTION_IDS.MUTE,
-      POST_MENU_ACTION_IDS.REPORT,
-      POST_MENU_ACTION_IDS.EDIT,
-      POST_MENU_ACTION_IDS.DELETE,
-    ])('blocks a retained %s callback before the account action runs', async (actionId) => {
-      const currentUserPubky =
-        actionId === POST_MENU_ACTION_IDS.EDIT || actionId === POST_MENU_ACTION_IDS.DELETE
-          ? mockAuthorId
-          : mockCurrentUserId;
-      useAuthStore.setState({ currentUserPubky });
-      mockUseCurrentUserProfile.mockReturnValue({ currentUserPubky });
-      const callbacks = { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() };
-      const { result } = renderHook(() => usePostMenuActions(mockPostId, callbacks));
-      const retainedAction = result.current.menuItems.find((item) => item.id === actionId);
-      expect(retainedAction).toBeDefined();
+    it.each([POST_MENU_ACTION_IDS.REPORT, POST_MENU_ACTION_IDS.EDIT, POST_MENU_ACTION_IDS.DELETE])(
+      'blocks a retained %s callback before the account action runs',
+      async (actionId) => {
+        const currentUserPubky =
+          actionId === POST_MENU_ACTION_IDS.EDIT || actionId === POST_MENU_ACTION_IDS.DELETE
+            ? mockAuthorId
+            : mockCurrentUserId;
+        useAuthStore.setState({ currentUserPubky });
+        mockUseCurrentUserProfile.mockReturnValue({ currentUserPubky });
+        const callbacks = { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() };
+        const { result } = renderHook(() => usePostMenuActions(mockPostId, callbacks));
+        const retainedAction = result.current.menuItems.find((item) => item.id === actionId);
+        expect(retainedAction).toBeDefined();
 
-      await act(async () => {
-        useAuthStore.setState({ restoreStatus, session });
-        await retainedAction?.onClick();
-      });
+        await act(async () => {
+          useAuthStore.setState({ restoreStatus, session });
+          await retainedAction?.onClick();
+        });
 
-      expect(defaultMocks.toggleFollow).not.toHaveBeenCalled();
-      expect(defaultMocks.toggleMute).not.toHaveBeenCalled();
-      expect(callbacks.onReportClick).not.toHaveBeenCalled();
-      expect(callbacks.onEditClick).not.toHaveBeenCalled();
-      expect(callbacks.onDeleteClick).not.toHaveBeenCalled();
-      expect(vi.mocked(toast)).not.toHaveBeenCalled();
-      expect(useAuthStore.getState().currentUserPubky).toBe(currentUserPubky);
-      expect(useAuthStore.getState().showSignInDialog).toBe(true);
-    });
+        expect(defaultMocks.toggleFollow).not.toHaveBeenCalled();
+        expect(defaultMocks.toggleMute).not.toHaveBeenCalled();
+        expect(callbacks.onReportClick).not.toHaveBeenCalled();
+        expect(callbacks.onEditClick).not.toHaveBeenCalled();
+        expect(callbacks.onDeleteClick).not.toHaveBeenCalled();
+        expect(vi.mocked(toast)).toHaveBeenCalledTimes(restoreStatus === 'temporary-error' ? 1 : 0);
+        expect(useAuthStore.getState().currentUserPubky).toBe(currentUserPubky);
+        expect(useAuthStore.getState().showSignInDialog).toBe(restoreStatus === 'reauth-required');
+      },
+    );
 
     it('keeps retained public copy and share callbacks available', async () => {
       const { result } = renderHook(() =>
