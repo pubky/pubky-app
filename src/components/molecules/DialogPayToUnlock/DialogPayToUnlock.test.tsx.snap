@@ -1272,7 +1272,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the parked waiting
           class="font-medium text-base text-secondary-foreground"
           data-testid="typography"
         >
-          Still waiting for the payment. Pay in Bitkit, then check again.
+          This purchase is still pending. Check Bitkit, then check again here.
         </p>
         <button
           class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-foreground/4 border-border hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal"
@@ -2071,12 +2071,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
         class="font-medium text-base text-secondary-foreground"
         data-testid="typography"
       >
-        <span
-          class="hidden lg:inline"
-        >
-          Awaiting payment. 
-        </span>
-        Please confirm in Bitkit.
+        Check Bitkit for a payment request. Review and confirm it there when it appears.
       </p>
     </div>
     <div
@@ -2089,12 +2084,6 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
         data-testid="spinner"
         role="status"
       />
-      <p
-        class="text-xs font-medium tracking-widest text-muted-foreground uppercase lg:hidden"
-        data-testid="typography"
-      >
-        AWAITING PAYMENT
-      </p>
     </div>
   </div>
   <div
@@ -2818,8 +2807,46 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
         class="font-medium text-base text-secondary-foreground"
         data-testid="typography"
       >
-        Your Bitkit connection to this creator is being restored. Keep Bitkit open while we reconnect.
+        Your connection to this creator needs to be restored. Keep Bitkit open.
       </p>
+      <p
+        class="font-medium text-base text-secondary-foreground"
+        data-testid="typography"
+      >
+        <span
+          class="hidden lg:inline"
+        >
+          If this creator is not in your Bitkit contacts, scan this code to add them.
+        </span>
+        <span
+          class="lg:hidden"
+        >
+          If needed, add this creator to your Bitkit contacts.
+        </span>
+      </p>
+      <a
+        class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal w-full lg:hidden"
+        data-cy="pay-to-unlock-bitkit-link"
+        data-size="lg"
+        data-slot="button"
+        data-variant="default"
+        href="bitkit://contact?pubky=pubkylockcreator"
+      >
+        Open in Bitkit
+      </a>
+    </div>
+    <div
+      aria-label="Creator Pubky QR code"
+      class="hidden shrink-0 self-center rounded-md bg-foreground p-2 lg:block"
+      data-cy="pay-to-unlock-handshake-qr"
+      data-testid="container"
+      role="img"
+    >
+      <div
+        data-size="112"
+        data-testid="qr-code"
+        data-value="pubkylockcreator"
+      />
     </div>
   </div>
   <div
@@ -3056,7 +3083,22 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
         class="font-medium text-base text-secondary-foreground"
         data-testid="typography"
       >
-        Scan with Bitkit and pay to unlock.
+        Connecting to this creator. Keep Bitkit open.
+      </p>
+      <p
+        class="font-medium text-base text-secondary-foreground"
+        data-testid="typography"
+      >
+        <span
+          class="hidden lg:inline"
+        >
+          If this creator is not in your Bitkit contacts, scan this code to add them.
+        </span>
+        <span
+          class="lg:hidden"
+        >
+          If needed, add this creator to your Bitkit contacts.
+        </span>
       </p>
       <a
         class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal w-full lg:hidden"
@@ -3066,7 +3108,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
         data-variant="default"
         href="bitkit://contact?pubky=pubkylockcreator"
       >
-        Pay with Bitkit
+        Open in Bitkit
       </a>
     </div>
     <div
@@ -3317,7 +3359,7 @@ exports[`DialogPayToUnlock - Snapshots > matches snapshot for the waiting stage 
         class="font-medium text-base text-secondary-foreground"
         data-testid="typography"
       >
-        Finish setting up Bitkit. The payment request arrives once your wallet is ready.
+        Finish setting up Bitkit, then keep it open to connect to this creator.
       </p>
     </div>
   </div>

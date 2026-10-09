@@ -49,7 +49,7 @@ export function DialogPayToUnlock({
   stage,
   isStalled,
   handshakePubky,
-  connectionIssue,
+  connectionState,
   isConnectionPending,
   walletSetupNeeded,
   isSubmitting,
@@ -60,7 +60,7 @@ export function DialogPayToUnlock({
   // The install screen comes before any submission, so it never has a Noise link state to show.
   const isInstall = stage === 'install';
   const showQr = Boolean(handshakePubky) && stage === 'waiting';
-  const hasNotice = Boolean(connectionIssue) || walletSetupNeeded;
+  const hasNotice = connectionState === 'blocked' || connectionState === 'recovery_required' || walletSetupNeeded;
   const showSpinner = stage === 'checking' || (stage === 'waiting' && !showQr && !isStalled && !hasNotice);
   const showPrimary = stage === 'retry' || isInstall;
   const primaryLabel = isInstall ? 'I completed the steps' : 'Try again';
@@ -128,24 +128,6 @@ export function DialogPayToUnlock({
               </Typography>
             </Container>
 
-            {showQr && handshakePubky && (
-              <>
-                <Typography className="text-base text-secondary-foreground">
-                  {'Scan with Bitkit and pay to unlock.'}
-                </Typography>
-                {/* A phone cannot scan its own screen, so mobile hands the same pubky over by deeplink. */}
-                <Button
-                  asChild
-                  variant={ButtonVariant.DEFAULT}
-                  size="lg"
-                  className="w-full lg:hidden"
-                  data-cy="pay-to-unlock-bitkit-link"
-                >
-                  <a href={generateBitkitContactDeeplink(withPubkyPrefix(handshakePubky))}>{'Pay with Bitkit'}</a>
-                </Button>
-              </>
-            )}
-
             {isInstall && (
               <Container overrideDefaults className="flex flex-wrap gap-x-3 gap-y-1">
                 {INSTALL_STEPS.map((step, index) => (
@@ -158,23 +140,43 @@ export function DialogPayToUnlock({
             )}
 
             {/* A parked wait shows only its Check again copy; the notices still apply there. */}
-            {stage === 'waiting' && !showQr && (hasNotice || !isStalled) && (
+            {stage === 'waiting' && (hasNotice || !isStalled) && (
               <Typography className="text-base text-secondary-foreground">
-                {connectionIssue === 'blocked' ? (
-                  'This creator cannot receive payments from you right now. Please contact support.'
-                ) : walletSetupNeeded ? (
-                  'Finish setting up Bitkit. The payment request arrives once your wallet is ready.'
-                ) : connectionIssue === 'recovery_required' ? (
-                  'Your Bitkit connection to this creator is being restored. Keep Bitkit open while we reconnect.'
-                ) : isConnectionPending ? (
-                  'Checking your Bitkit connection…'
-                ) : (
-                  <>
-                    <span className="hidden lg:inline">{'Awaiting payment. '}</span>
-                    {'Please confirm in Bitkit.'}
-                  </>
-                )}
+                {connectionState === 'blocked'
+                  ? 'This creator cannot receive payments from you right now. Please contact support.'
+                  : walletSetupNeeded
+                    ? 'Finish setting up Bitkit, then keep it open to connect to this creator.'
+                    : connectionState === 'recovery_required'
+                      ? 'Your connection to this creator needs to be restored. Keep Bitkit open.'
+                      : isConnectionPending
+                        ? 'Checking your Bitkit connection…'
+                        : connectionState === 'handshake'
+                          ? 'Connecting to this creator. Keep Bitkit open.'
+                          : connectionState === 'none'
+                            ? 'Your Bitkit connection to this creator is not ready yet. Keep Bitkit open.'
+                            : 'Check Bitkit for a payment request. Review and confirm it there when it appears.'}
               </Typography>
+            )}
+
+            {showQr && handshakePubky && (
+              <>
+                <Typography className="text-base text-secondary-foreground">
+                  <span className="hidden lg:inline">
+                    {'If this creator is not in your Bitkit contacts, scan this code to add them.'}
+                  </span>
+                  <span className="lg:hidden">{'If needed, add this creator to your Bitkit contacts.'}</span>
+                </Typography>
+                {/* A phone cannot scan its own screen, so mobile hands the same pubky over by deeplink. */}
+                <Button
+                  asChild
+                  variant={ButtonVariant.DEFAULT}
+                  size="lg"
+                  className="w-full lg:hidden"
+                  data-cy="pay-to-unlock-bitkit-link"
+                >
+                  <a href={generateBitkitContactDeeplink(withPubkyPrefix(handshakePubky))}>{'Open in Bitkit'}</a>
+                </Button>
+              </>
             )}
 
             {/* Parked, not failed: the purchase is alive, so the reader gets a way back to it rather
@@ -182,7 +184,7 @@ export function DialogPayToUnlock({
             {stage === 'waiting' && isStalled && (
               <Container overrideDefaults className="flex flex-col items-start gap-3">
                 <Typography className="text-base text-secondary-foreground">
-                  {'Still waiting for the payment. Pay in Bitkit, then check again.'}
+                  {'This purchase is still pending. Check Bitkit, then check again here.'}
                 </Typography>
                 <Button variant={ButtonVariant.OUTLINE} size="lg" onClick={onRecheck} data-cy="pay-to-unlock-recheck">
                   {'Check again'}
@@ -248,10 +250,6 @@ export function DialogPayToUnlock({
               className="flex shrink-0 flex-col items-center gap-3 self-center lg:size-24 lg:justify-center"
             >
               <Spinner size="md" />
-              {/* Mobile moves "Awaiting payment" under the spinner; the checking copy has no such split. */}
-              {stage === 'waiting' && !isConnectionPending && (
-                <Typography className={cn(FIELD_LABEL_CLASS, 'lg:hidden')}>{'AWAITING PAYMENT'}</Typography>
-              )}
             </Container>
           )}
 

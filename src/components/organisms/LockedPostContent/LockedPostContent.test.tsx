@@ -40,7 +40,7 @@ vi.mock('@/hooks/usePayToUnlock/usePayToUnlock', () => ({
       stage: 'retry',
       isStalled: false,
       handshakePubky: 'pubkybob',
-      connectionIssue: null,
+      connectionState: 'handshake',
       isConnectionPending: false,
       walletSetupNeeded: false,
       isSubmitting: false,
@@ -79,15 +79,17 @@ vi.mock('@/molecules/DialogPayToUnlock/DialogPayToUnlock', () => ({
     open,
     priceSats,
     handshakePubky,
+    connectionState,
     onViewContent,
   }: {
     open: boolean;
     priceSats: string;
     handshakePubky: string | null;
+    connectionState: string | null;
     onViewContent: () => void;
   }) =>
     open ? (
-      <div data-testid="pay-dialog" data-handshake-pubky={handshakePubky}>
+      <div data-testid="pay-dialog" data-handshake-pubky={handshakePubky} data-connection-state={connectionState}>
         {priceSats}
         <button onClick={onViewContent}>{'Mock view content'}</button>
       </div>
@@ -254,6 +256,7 @@ describe('LockedPostContent', () => {
       // The card defers onUnlock until its slide-over finishes; findBy waits that out.
       expect(await screen.findByTestId('pay-dialog')).toHaveTextContent('1000');
       expect(screen.getByTestId('pay-dialog')).toHaveAttribute('data-handshake-pubky', 'pubkybob');
+      expect(screen.getByTestId('pay-dialog')).toHaveAttribute('data-connection-state', 'handshake');
       expect(authMocks.requireAuth).toHaveBeenCalled();
     });
 
