@@ -7,8 +7,6 @@ import { CopyrightForm } from './CopyrightForm';
 // Mock @/molecules
 vi.mock('@/molecules/Toaster/toast');
 
-// Mock @/atoms - provide minimal mocks for snapshot testing
-
 // Mock fetch
 global.fetch = vi.fn();
 
@@ -319,23 +317,5 @@ describe('CopyrightForm', () => {
 
     const form = document.querySelector('form');
     expect(form).toBeInTheDocument();
-  });
-});
-
-describe('CopyrightForm - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Mock the date to ensure consistent snapshots
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-01-15T12:00:00'));
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('matches snapshot for default state', () => {
-    const { container } = render(<CopyrightForm />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

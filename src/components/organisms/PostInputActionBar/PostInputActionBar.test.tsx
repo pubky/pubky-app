@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInputActionBar } from './PostInputActionBar';
 
 // Use real libs - use actual implementations
@@ -251,66 +250,5 @@ describe('PostInputActionBar', () => {
     render(<PostInputActionBar hideArticleButton={false} lockSwitch={{ checked: false, onCheckedChange }} />);
     fireEvent.click(screen.getByRole('switch', { name: 'Lock content' }));
     expect(onCheckedChange).toHaveBeenCalledWith(true);
-  });
-});
-
-describe('PostInputActionBar - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot with default props', () => {
-    const { container } = render(<PostInputActionBar hideArticleButton={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with all callbacks', () => {
-    const onEmojiClick = vi.fn();
-    const onImageClick = vi.fn();
-    const onArticleClick = vi.fn();
-    const onPostClick = vi.fn();
-
-    const { container } = render(
-      <PostInputActionBar
-        hideArticleButton={false}
-        onEmojiClick={onEmojiClick}
-        onImageClick={onImageClick}
-        onArticleClick={onArticleClick}
-        onPostClick={onPostClick}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with disabled post button', () => {
-    const { container } = render(<PostInputActionBar hideArticleButton={false} isPostDisabled={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with hideArticleButton prop', () => {
-    const { container } = render(<PostInputActionBar hideArticleButton={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with isArticle prop', () => {
-    const { container } = render(<PostInputActionBar hideArticleButton={false} isArticle={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('PostInputActionBar - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(useIsMobile).mockReturnValue(true);
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<PostInputActionBar hideArticleButton={false} />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

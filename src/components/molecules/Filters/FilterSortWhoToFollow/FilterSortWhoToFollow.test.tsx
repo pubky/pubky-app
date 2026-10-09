@@ -35,10 +35,3 @@ describe('FilterSortWhoToFollow', () => {
     expect(screen.getByTestId('filter-sort-who-to-follow-radiogroup')).toBeInTheDocument();
   });
 });
-
-describe('FilterSortWhoToFollow - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<FilterSortWhoToFollow />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

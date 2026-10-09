@@ -54,10 +54,3 @@ describe('NotificationsEmpty', () => {
     expect(image).toHaveAttribute('data-alt', 'Notifications - Empty state');
   });
 });
-
-describe('NotificationsEmpty - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<NotificationsEmpty />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

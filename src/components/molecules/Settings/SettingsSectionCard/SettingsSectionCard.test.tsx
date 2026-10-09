@@ -68,31 +68,3 @@ describe('SettingsSectionCard', () => {
     expect(screen.getByText('Test content')).toBeInTheDocument();
   });
 });
-
-describe('SettingsSectionCard - Snapshots', () => {
-  const defaultProps = {
-    icon: User,
-    title: 'Test Section',
-    children: <div>Test content</div>,
-  };
-
-  it('matches snapshot with icon and title', () => {
-    const { container } = render(<SettingsSectionCard {...defaultProps} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot without icon and title', () => {
-    const { container } = render(<SettingsSectionCard>{<div>Test content only</div>}</SettingsSectionCard>);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with description', () => {
-    const { container } = render(<SettingsSectionCard {...defaultProps} description="Test description" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<SettingsSectionCard {...defaultProps} className="custom-section" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

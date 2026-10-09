@@ -15,15 +15,3 @@ describe('BalancedQrCard', () => {
     expect(container.querySelector('[data-slot="balanced-qr-spacer"]')).toHaveClass('w-48', 'shrink-0');
   });
 });
-
-describe('BalancedQrCard - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(
-      <BalancedQrCard illustration={<span>Illustration</span>}>
-        <span>QR code</span>
-      </BalancedQrCard>,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

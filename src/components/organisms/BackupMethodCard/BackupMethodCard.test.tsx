@@ -364,14 +364,3 @@ describe('BackupMethodCard', () => {
     });
   });
 });
-
-describe('BackupMethodCard - Snapshots', () => {
-  it('matches snapshot for default BackupMethodCard', () => {
-    mockUseOnboardingStore.mockReturnValue({
-      mnemonic: '',
-    });
-
-    const { container } = render(<BackupMethodCard />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

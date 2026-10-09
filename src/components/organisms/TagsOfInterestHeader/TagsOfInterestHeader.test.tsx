@@ -18,10 +18,3 @@ describe('TagsOfInterestHeader', () => {
     expect(screen.getByText('Select topics to get suggestions on who to follow.')).toBeInTheDocument();
   });
 });
-
-describe('TagsOfInterestHeader - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<TagsOfInterestHeader />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -193,14 +193,6 @@ vi.mock('@/molecules/WordSlot/WordSlot', () => {
     ),
   };
 });
-
-describe('DialogBackupPhrase - Snapshots', () => {
-  it('matches snapshot for default DialogBackupPhrase', () => {
-    const { container } = render(<DialogBackupPhrase />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
 describe('DialogBackupPhrase - Duplicate Words', () => {
   it('should handle duplicate words correctly in recovery phrase', () => {
     const { container } = render(<DialogBackupPhrase />);

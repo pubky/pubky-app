@@ -76,8 +76,7 @@ npm run lint           # eslint
 npm run typecheck      # tsc --noEmit (includes tests)
 npm test               # vitest --project unit (jsdom); ~13k tests, several minutes
 npm test -- src/components/atoms/Button/Button.test.tsx   # one file
-npm test -- -t "snapshot"                                 # one name pattern
-npm run test:update-snapshots
+npm test -- -t "handles click events"                     # one name pattern
 npm run test:vrt                       # vitest --project vrt (chromium+firefox+webkit; needs npm run test:vrt:setup once)
 npm run test:vrt:check-baselines       # every __screenshots__ folder has a sibling test
 npm run build                          # next build --webpack (CI also smoke-tests `next start`)
@@ -94,7 +93,7 @@ Right-sized verification:
 - Run the full `npm test` before handing off a cross-cutting change; `npm run build` when the change is route- or config-wide.
 - Cypress e2e needs the full pubky-stack (private `pubky/pubky-stack`) and runs on push to `master`/`dev` in CI. Do not attempt it from a bare checkout, and do not report an e2e result you did not obtain.
 
-Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; `describe('<Component>')` plus a separate `describe('<Component> - Snapshots')` with exactly one `expect().toMatchSnapshot()` per test; mobile blocks (`- Mobile Snapshots`) for organisms/templates that use `useIsMobile` directly or through a child, via `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are ESLint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
+Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; assert props, variants, and interactions in unit tests; visual appearance via VRT (`visual-regression-testing.md`); no snapshot tests. For mobile layout branches driven by `useIsMobile`, use `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are ESLint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
 
 Manual checks for UI work: desktop and narrow viewport, loading/empty/error states, hover/focus/disabled states, dark-on-brand contrast, and the mobile path where a Sheet replaces a Popover.
 
@@ -165,7 +164,7 @@ These apply to every diff and are what a reviewer (human or Greptile) checks fir
 - [ ] Local-first consequences considered: cache hits, tombstones and missing rows handled on reads; affected rows marked fresh on writes; no second freshness mechanism.
 - [ ] No existing visible behaviour silently reduced, and no `src/config/*` limit tuned for a local fix.
 - [ ] Imports are concrete alias paths; no barrel files added.
-- [ ] Tests at the right level updated/added, including mobile snapshots for viewport-aware organisms.
+- [ ] Tests at the right level updated/added, including mobile layout branches for viewport-aware organisms.
 - [ ] `npm run lint`, `npm run typecheck`, targeted tests pass; `npm run build` when the change is route/config wide.
 - [ ] VRT baseline impact flagged to the user; ADR, `DB_VERSION` or config-limit changes called out in the PR.
 - [ ] Commit messages and branch name follow `commit-message.md`; the diff contains no unrelated cleanup and reads like the surrounding code.

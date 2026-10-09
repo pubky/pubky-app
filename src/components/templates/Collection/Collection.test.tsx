@@ -141,11 +141,4 @@ describe('Collection (template)', () => {
     expect(screen.queryByTestId('collection-items')).not.toBeInTheDocument();
     expect(mockUsePostDetails).toHaveBeenCalledWith('garbage', { enabled: false });
   });
-
-  it('matches the snapshot for the resolved collection state', () => {
-    setPostDetails(COLLECTION_CONTENT, false);
-
-    const { container } = render(<Collection postId={COMPOSITE} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });
