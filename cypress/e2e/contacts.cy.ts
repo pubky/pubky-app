@@ -47,11 +47,16 @@ describe('contacts', () => {
     cy.get('[data-cy="profile-following-empty"]').should('be.visible');
     cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');
 
-    // Follow again and unfollow from the following list. The row and the count both clear.
+    // Follow again and unfollow from the following list. The count drops at once; the row
+    // stays until reload so it can be followed again.
     cy.get(`@${targetAlias}`).then((pubky) => {
       searchAndFollowProfile(`${pubky}`, targetName);
     });
     unfollowUserByUsername(targetName);
+    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '0');
+
+    cy.reload();
+    cy.get('[data-cy="profile-filter-item-following"]').click();
     cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '0');
     cy.get('[data-cy="profile-following-empty"]').should('be.visible');
     cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');

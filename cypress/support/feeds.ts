@@ -27,10 +27,8 @@ export const chooseCustomFeedOption = (sectionTestId: string, label: string) => 
 
 export const addCustomFeedTag = (tag: string) => {
   const label = tag.toLowerCase();
-  cy.get('[data-testid="custom-feed-dialog-content"]')
-    .find('[data-testid="feed-tag-input"]')
-    .find('[data-cy="add-tag-input"]')
-    .type(`${label}{enter}`);
+  // TagInput does not forward data-testid; the field is the shared add-tag input.
+  cy.get('[data-testid="custom-feed-dialog-content"]').find('[data-cy="add-tag-input"]').type(`${label}{enter}`);
   cy.get('[data-testid="custom-feed-dialog-content"]')
     .find(`[data-cy="post-tag"][data-tag-label="${label}"]`)
     .should('be.visible');
@@ -56,6 +54,15 @@ export const saveCustomFeed = () => {
 
 export const expectFeedTab = (feedName: string) => {
   cy.get('[data-cy="feed-navigation"]').find(`a[aria-label="${feedName}"]`).should('be.visible');
+};
+
+// The home filters persist, and the test before this one leaves Following + Popularity on.
+// Own posts are hidden on Following, so reset before creating posts the test has to see.
+export const resetHomeFeedToAllRecent = () => {
+  cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="all-reach-toggle"]').click();
+  waitForFeedToLoad();
+  cy.get('[data-cy="filter-sort-radiogroup"]').find('[data-cy="recent-sort-toggle"]').click();
+  waitForFeedToLoad();
 };
 
 export const goToHomeFeedTab = () => {

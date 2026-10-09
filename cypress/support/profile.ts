@@ -210,8 +210,14 @@ export const unfollowUserByUsername = (username: string) => {
       expect($btn.attr('aria-label')).to.match(/^Unfollow\b/);
       cy.wrap($btn).click();
     });
-  // Unfollow removes the user from the following stream, so the row leaves the list.
-  cy.contains('[data-cy="profile-follower-item-name"]', username).should('not.exist');
+  // Own following/friends lists keep an unfollowed row so it can be followed again.
+  // The toggle is what changes immediately; a later reload drops the row.
+  cy.contains('[data-cy="profile-follower-item-name"]', username)
+    .closest('[data-testid^="user-list-item-"]')
+    .find('[data-cy="user-list-item-follow-toggle-btn"]')
+    .filter(':visible')
+    .should('have.attr', 'aria-label')
+    .and('match', /^Follow\b/);
 };
 
 export const waitForPutLastRead = () => {

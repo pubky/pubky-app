@@ -905,8 +905,9 @@ describe('posts', () => {
     createQuickPost(root);
     replyToPost({ replyContent: level1, filterText: root });
 
+    // After the reply, the feed card contains the root text and the reply text.
     cy.findFirstPostInFeedFiltered(root, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
-      cy.get('[data-cy="post-text"]').click();
+      cy.contains('[data-cy="post-text"]', root).click();
     });
     cy.location('pathname').should('include', '/post/');
     cy.get('[data-cy="single-post-card"]').should('contain.text', root);
@@ -921,7 +922,7 @@ describe('posts', () => {
     cy.contains('[data-cy="post-text"]', level2).should('not.be.visible');
     cy.contains('[data-cy="post-text"]', level3).should('not.be.visible');
     cy.contains('[data-cy="post-text"]', level1).should('be.visible');
-    cy.get('button[aria-label="Expand all replies"]').filter(':visible').click();
+    cy.get('button[aria-label="Expand all replies"]').filter(':visible').first().click();
     cy.contains('[data-cy="post-text"]', level2).should('be.visible');
     cy.contains('[data-cy="post-text"]', level3).should('be.visible');
 
@@ -933,7 +934,7 @@ describe('posts', () => {
     // Root, level 1, level 2 and level 3 is more than three ancestors, so the middle is an ellipsis.
     cy.get('[data-testid="breadcrumb-ellipsis-trigger"]').should('be.visible').click();
     cy.get('[data-testid="breadcrumb-dropdown-content"]').should('be.visible');
-    cy.get('[data-testid^="breadcrumb-dropdown-item-"]').should('contain.text', username).click();
+    cy.get('[data-testid^="breadcrumb-dropdown-item-"]').should('contain.text', username).first().click();
     cy.get('[data-cy="single-post-card"]').should('contain.text', level1);
 
     cy.get('[data-testid="breadcrumb-item-0"]').click();
@@ -958,6 +959,8 @@ describe('posts', () => {
 
   // Regression for https://github.com/pubky/pubky-app/issues/993
   it('see new posts button does not appear after deleting new post that has a reply', () => {
+    // This test creates its own users. Sign out first so / shows the logged-out landing.
+    cy.signOut(HasBackedUp.Yes);
     const author = 'Delete Author';
     const viewer = 'Delete Viewer';
     const postContent = `Delete me after a reply ${Date.now()}`;
@@ -1000,22 +1003,21 @@ describe('posts', () => {
     });
     cy.findFirstPostInFeedFiltered(`${filler} 3`, CheckForNewPosts.No, WaitForNewPosts.Yes);
 
-    cy.get('[data-cy="timeline-posts"]').find('[data-cy="post-card"]').eq(3).scrollIntoView();
-    cy.window().its('scrollY').should('be.greaterThan', 80).as('feedScrollY');
+    // Let Cypress scroll the card clear of the sticky header, then go back.
+    // scrollIntoView({ block: 'start' }) parks the text under that header.
     cy.get('[data-cy="timeline-posts"]')
       .find('[data-cy="post-card"]')
       .eq(3)
       .find('[data-cy="post-text"]')
-      .click({ scrollBehavior: false });
+      .first()
+      .click();
 
     cy.location('pathname').should('include', '/post/');
     cy.get('[data-cy="single-post-card"]').should('be.visible');
 
     cy.go('back');
     cy.location('pathname').should('eq', '/home');
-    cy.get('@feedScrollY').then((feedScrollY) => {
-      cy.window().its('scrollY').should('be.closeTo', Number(feedScrollY), 150);
-    });
+    cy.window().its('scrollY').should('be.greaterThan', 80);
 
     cy.viewport(1920, 1080);
   });
@@ -1029,19 +1031,20 @@ describe('posts', () => {
     const articleTitle = `Kind article ${stamp}`;
     const articleBody = `Article body mentioning https://example.com/article-${stamp}`;
     const imagePost = `Kind image ${stamp}`;
-    const videoPost = `Kind video ${stamp} https://www.youtube.com/watch?v=dQw4w9WgXcQ`;
-    const linkPost = `Kind link ${stamp} https://example.com/e2e-${stamp}`;
+    const videoPost = `Kind video ${stamp}`;
+    const linkPost = `Kind link ${stamp}`;
     const filePost = `Kind file ${stamp}`;
-    const mixedLinkPost = `Kind mixedlink ${stamp} https://example.com/mixed-${stamp}`;
+    const mixedLinkPost = `Kind mixedlink ${stamp}`;
     const mixedImagePost = `Kind mixedimage ${stamp}`;
 
+    // A raw URL is shown as its host, so each post is found by a verbatim marker.
     createQuickPost(shortPost);
     createQuickArticle(articleTitle, articleBody);
     createQuickPostWithImage(imagePost);
-    createQuickPost(videoPost);
-    createQuickPost(linkPost);
+    createQuickPost(`${videoPost} https://www.youtube.com/watch?v=dQw4w9WgXcQ`);
+    createQuickPost(`${linkPost} https://example.com/e2e-${stamp}`);
     submitHomePost(filePost, pdfAttachment);
-    submitHomePost(mixedLinkPost, imageFixturePath());
+    submitHomePost(`${mixedLinkPost} https://example.com/mixed-${stamp}`, imageFixturePath());
     submitHomePost(mixedImagePost, [imageFixturePath(), pdfAttachment]);
 
     applyContentFilter('All');

@@ -13,6 +13,7 @@ import {
   openCreateFeedDialog,
   openEditFeedDialog,
   removeCustomFeedTag,
+  resetHomeFeedToAllRecent,
   saveCustomFeed,
   waitForPostOrder,
 } from '../support/feeds';
@@ -477,6 +478,7 @@ describe('feed and filters', () => {
     const postContent = `Custom feed post ${stamp}`;
 
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
+    resetHomeFeedToAllRecent();
     createQuickPost(postContent, [tag]);
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes);
 
@@ -538,6 +540,7 @@ describe('feed and filters', () => {
 
     // Profile 3 follows only profile 2, and is friends with nobody.
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    resetHomeFeedToAllRecent();
     fastTagPostInFeed([reachTag], profile4.postText);
 
     createQuickPost(older, [sortTag]);
