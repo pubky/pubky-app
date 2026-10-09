@@ -23,6 +23,7 @@
 import '@/app/globals.css';
 
 import { vi } from 'vitest';
+import type { UseUnlockedListResult } from '@/hooks/useUnlockedList/useUnlockedList.types';
 
 // Stabilize cross-OS / cross-run rendering for visual snapshots.
 // Applied once per test file at setup time.
@@ -120,6 +121,20 @@ vi.mock('next/image', () => ({
     });
   },
 }));
+
+// 2c. Settle the own-profile sidebar up front. `useUnlockedList` (mounted by
+//     `ProfilePageContainer` for the signed-in user) reads the reader's `/priv`
+//     from the homeserver; the per-file auth mocks supply a session, so without
+//     this it issues a real request from the VRT browser. The Unlocked row then
+//     shows a spinner until that request fails, and whether a capture lands
+//     before or after that is timing. Resolve it synchronously as a successful
+//     empty read so every capture shows the same settled chrome: the row with a
+//     count of 0, like the other rows. A file that needs items overrides this
+//     with its own `vi.mock` (test-file mocks win over setup mocks).
+vi.mock('@/hooks/useUnlockedList/useUnlockedList', () => {
+  const settled: UseUnlockedListResult = { items: [], count: 0, isLoading: false, isError: false };
+  return { useUnlockedList: (): UseUnlockedListResult => settled };
+});
 
 // 3. Load Inter Tight from `@fontsource-variable/inter-tight` (committed npm
 //    dep; same font as the real app's `next/font/google` Inter Tight, just
