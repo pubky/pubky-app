@@ -407,7 +407,7 @@ describe('PostArticle', () => {
 
       expect(screen.getByTestId('post-text')).toHaveAttribute(
         'data-article-images',
-        JSON.stringify({ localAttachments: [mockLocalImageAttachment] }),
+        JSON.stringify({ localAttachments: [mockLocalImageAttachment], pendingAttachments: [] }),
       );
     });
 
