@@ -51,6 +51,15 @@ Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-
 - **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file. Never hardcode a path string in a component; add or use a builder (`getProfileRoute`, `getCollectionRoute`, …).
 - **Active nav state:** a nav item that links to a default child route (footer Settings → `SETTINGS_ROUTES.ACCOUNT`) but must stay active on sibling routes (`/settings/notifications`) needs active detection on the parent prefix (`activePrefix: APP_ROUTES.SETTINGS`, see `MobileFooter`), not only `href` or `pathname.startsWith(href + '/')`.
 
+`MobileFooter` always disables prefetch for Search. With Next.js 16.3.6, any `/search` prefetch from the footer after a
+search with query params has rendered can loop on metadata requests, including after navigating to Home or opening a
+post modal. Optimistic route prediction omits the parallel `@post/[...catchAll]` parameter from the cache key
+([#2755](https://github.com/pubky/pubky-app/issues/2755), [reproduction and upgrade checks](search-prefetch-loop.md)).
+Already-active Home also skips prefetch because its click only scrolls to the top via `handleFeedNavClick`; active
+Search keeps that behavior and preserves its query. Other destinations retain Next's default prefetch behavior,
+including Settings and Collections when their parent prefix is active on a different child route. Verify with a
+production build; automatic prefetching is disabled in development.
+
 #### Explore mode (unauthenticated browsing)
 
 Guests can open routes that do not require a session:
@@ -308,6 +317,13 @@ Build forms with `react-hook-form` + `zod` (via `@hookform/resolvers/zod`). Cano
 An arbitrary value is fine only when the scale cannot express it: a viewport fraction with no named utility (`max-h-[75dvh]`; the full viewport is `h-dvh`, `max-h-screen`, `max-w-screen`), a `calc()` over the viewport or a CSS variable (`max-h-[calc(100dvh-2rem)]` in the `Dialog` atom), or a CSS variable set by a library (`translate-x-[var(--radix-toast-swipe-move-x)]`). Fixed lengths and colours always come from the scale and the tokens.
 
 ### Spacing
+
+Page-level headers and content share the 1200px container token and `CONTENT_GUTTER_CLASS`
+from `@/config/layoutClasses`: 16px side padding below `lg`, 24px from `lg`, and no
+internal side padding from `xl` (1280px), where the centered container supplies the
+outer space. Apply the gutter once to the width-constrained shell, including auth,
+onboarding, edit profile, and landing sections. Header spacing does not depend on
+the route or authentication state. Full-width section backgrounds stay outside this shell.
 
 ```tsx
 // Use Tailwind spacing scale

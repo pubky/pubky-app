@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Flame, Home, Library, Settings, UserRoundPlus } from 'lucide-react';
+import { Flame, Home, Library, Settings, Store, UserRoundPlus } from 'lucide-react';
 import { APP_ROUTES, isCoreExploreRoute, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
@@ -10,8 +10,8 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
-import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
+import { getGithubLink, getShopLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
+import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Github2, Telegram, XTwitter } from '@/icons';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
@@ -24,9 +24,8 @@ import { ProgressSteps } from '../ProgressSteps/ProgressSteps';
 export interface HeaderContainerProps {
   children: React.ReactNode;
   className?: string;
-  classNameNav?: string;
 }
-export const HeaderContainer = ({ children, className, classNameNav }: HeaderContainerProps) => {
+export const HeaderContainer = ({ children, className }: HeaderContainerProps) => {
   return (
     <Container
       overrideDefaults
@@ -41,8 +40,7 @@ export const HeaderContainer = ({ children, className, classNameNav }: HeaderCon
         size="container"
         className={cn(
           'pointer-events-auto mx-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 py-6 sm:flex-nowrap sm:gap-6',
-          PAGE_GUTTER_CLASS,
-          classNameNav,
+          CONTENT_GUTTER_CLASS,
         )}
       >
         {children}
@@ -68,14 +66,14 @@ export function HeaderSocialLinks({ ...props }: React.HTMLAttributes<HTMLDivElem
       data-testid="header-social-links"
       className={cn('mr-6 hidden flex-row justify-end gap-6 md:flex', props.className)}
     >
-      <Link href={getGithubLink()} target="_blank" variant="muted" size="default">
-        <Github2 className="h-6 w-6" />
+      <Link href={getGithubLink()} target="_blank" variant="muted" size="default" aria-label="GitHub">
+        <Github2 className="h-6 w-6" aria-hidden="true" />
       </Link>
-      <Link href={getTwitterGetpubkyLink()} target="_blank" variant="muted" size="default">
-        <XTwitter className="h-6 w-6" />
+      <Link href={getTwitterGetpubkyLink()} target="_blank" variant="muted" size="default" aria-label="X">
+        <XTwitter className="h-6 w-6" aria-hidden="true" />
       </Link>
-      <Link href={getTelegramLink()} target="_blank" variant="muted" size="default">
-        <Telegram className="h-6 w-6" />
+      <Link href={getTelegramLink()} target="_blank" variant="muted" size="default" aria-label="Telegram">
+        <Telegram className="h-6 w-6" aria-hidden="true" />
       </Link>
     </Container>
   );
@@ -89,6 +87,7 @@ type NavigationItemConfig = {
   dataCy?: string;
   activePrefix?: string;
   isFeedRoute?: boolean;
+  external?: boolean;
 };
 type HeaderNavigationButtonsProps = {
   counter?: number;
@@ -97,7 +96,7 @@ type HeaderNavigationButtonsProps = {
   avatarSeed?: string;
   className?: string;
 };
-const NAVIGATION_ITEMS: NavigationItemConfig[] = [
+const getNavigationItems = (): NavigationItemConfig[] => [
   {
     href: APP_ROUTES.HOME,
     icon: Home,
@@ -111,6 +110,7 @@ const NAVIGATION_ITEMS: NavigationItemConfig[] = [
     label: 'Hot',
     dataCy: 'header-hot-btn',
   },
+  { href: getShopLink(), icon: Store, label: 'Shop', dataCy: 'header-shop-btn', external: true },
   {
     href: APP_ROUTES.COLLECTIONS,
     icon: Library,
@@ -137,6 +137,7 @@ type NavigationButtonProps = {
   isActive: boolean;
   dataCy?: string;
   isFeedRoute?: boolean;
+  external?: boolean;
 };
 const NavigationButton = ({
   href,
@@ -146,6 +147,7 @@ const NavigationButton = ({
   isActive,
   dataCy,
   isFeedRoute,
+  external,
 }: NavigationButtonProps) => {
   const button = (
     <Button
@@ -162,6 +164,8 @@ const NavigationButton = ({
   return href ? (
     <Link
       href={href}
+      target={external ? '_self' : undefined}
+      rel={external ? 'noopener noreferrer' : undefined}
       data-cy={dataCy}
       onClick={
         isFeedRoute ? (event) => handleFeedNavClick(event, { isActive, smoothScrollWhenActive: true }) : undefined
@@ -184,13 +188,14 @@ export function HeaderNavigationButtons({
   const counterString = counter > 21 ? '21+' : counter.toString();
   return (
     <Container className={cn('hidden w-auto flex-row items-center justify-start gap-3 lg:flex', className)}>
-      {NAVIGATION_ITEMS.map((item) => (
+      {getNavigationItems().map((item) => (
         <NavigationButton
           key={item.href}
           href={item.href}
           icon={item.icon}
           label={item.label}
-          isActive={isNavItemActive(pathname, item)}
+          isActive={!item.external && isNavItemActive(pathname, item)}
+          external={item.external}
           dataCy={item.dataCy}
           isFeedRoute={item.isFeedRoute}
         />
@@ -238,9 +243,9 @@ export function HeaderExploreNavigationButtons({
   return (
     <Container className={cn('hidden min-w-0 flex-1 flex-row items-center justify-end gap-3 lg:flex', className)}>
       {showSearch && <SearchInput />}
-      {NAVIGATION_ITEMS.map((item) => {
+      {getNavigationItems().map((item) => {
         // Core explore routes navigate freely; Settings requires an account.
-        const requiresAuth = !isCoreExploreRoute(item.href);
+        const requiresAuth = !item.external && !isCoreExploreRoute(item.href);
         return (
           <NavigationButton
             key={item.href}
@@ -248,7 +253,8 @@ export function HeaderExploreNavigationButtons({
             onClick={requiresAuth ? () => requireAuth(() => router.push(item.href)) : undefined}
             icon={item.icon}
             label={item.label}
-            isActive={isNavItemActive(pathname, item)}
+            isActive={!item.external && isNavItemActive(pathname, item)}
+            external={item.external}
             dataCy={item.dataCy}
           />
         );

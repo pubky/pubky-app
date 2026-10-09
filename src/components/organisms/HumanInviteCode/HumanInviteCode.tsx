@@ -153,7 +153,7 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
           <Container
             data-testid="human-invite-code-input-field"
             className={cn(
-              'flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-6 py-4 shadow-xs',
+              'flex-row items-center gap-3 rounded-md border border-dashed bg-background/20 px-6 py-4 shadow-xs',
               isVerified && !isVerifying
                 ? 'border-brand'
                 : showDestructiveBorder
@@ -209,7 +209,7 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
           id="human-invite-back-btn"
           size="lg"
           className="w-full flex-1 rounded-full md:flex-0"
-          variant="secondary"
+          variant="outline"
           onClick={onBack}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

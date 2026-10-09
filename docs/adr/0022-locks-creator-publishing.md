@@ -6,6 +6,10 @@ Accepted — 2026-07-13
 
 Covers the creator side of Locks Phase 1. The reader/unlock side is a separate, upcoming decision.
 
+**Interim note (#2758, 2026-10-08):** until #2283 lands, Enable Locks requires the Lock Server session to belong
+to the account signed in to pubky.app. The two-identities decision below is unchanged; the check is
+temporary.
+
 ## Context
 
 Locks lets a creator publish content that readers can only open after satisfying a payment proof.

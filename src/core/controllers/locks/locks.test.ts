@@ -5,6 +5,7 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { TUnlockedContent } from '@/services/locks/locks.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
 import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
@@ -63,7 +64,10 @@ vi.mock('@/application/locks/locks', () => ({
   },
 }));
 
-const fakeSession = asOpaque<LocksSdkSession>({ id: 'locks-session' });
+const fakeSession = asOpaque<LocksSdkSession>({
+  id: 'locks-session',
+  creatorPubky: () => `pubky${MOCK_LOCK_AUTHOR_PUBKY}`,
+});
 
 describe('LocksController (auth)', () => {
   beforeEach(() => {
@@ -74,6 +78,7 @@ describe('LocksController (auth)', () => {
     mocks.signout.mockResolvedValue(undefined);
     mocks.setLockServiceConfig.mockResolvedValue(undefined);
     useLocksAuthStore.setState(locksAuthInitialState);
+    useAuthStore.setState({ currentUserPubky: MOCK_LOCK_AUTHOR_PUBKY });
   });
 
   it('getConnectUrl derives returnTo from the app origin and forwards it', async () => {
@@ -191,6 +196,31 @@ describe('LocksController (auth)', () => {
     expect(store.selectIsLocksAuthenticated()).toBe(false);
     expect(store.selectLocksSession()).toBeNull();
     expect(store.selectLocksSessionSecret()).toBeNull();
+  });
+
+  it('rejects a session for an account other than the signed-in one, signs it out and does not persist it', async () => {
+    const otherSession = asOpaque<LocksSdkSession>({ creatorPubky: () => 'pubkyotheraccount' });
+    mocks.exchangeSessionCode.mockResolvedValueOnce({ session: otherSession, secret: 'secret-other' });
+
+    await expect(LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' })).rejects.toMatchObject({
+      code: AuthErrorCode.FORBIDDEN,
+    });
+
+    expect(mocks.signout).toHaveBeenCalledTimes(1);
+    expect(mocks.signout).toHaveBeenCalledWith(otherSession);
+    expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+    expect(mocks.setLockServiceConfig).not.toHaveBeenCalled();
+  });
+
+  it('rejects the session when the pubky.app session is gone', async () => {
+    useAuthStore.setState({ currentUserPubky: null });
+
+    await expect(LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' })).rejects.toMatchObject({
+      code: AuthErrorCode.FORBIDDEN,
+    });
+
+    expect(mocks.signout).toHaveBeenCalledWith(fakeSession);
+    expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
   });
 
   describe('restorePersistedLocksSession', () => {

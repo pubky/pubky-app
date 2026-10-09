@@ -182,7 +182,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="bg-opacity-90 h-14 rounded-md border border-dashed p-4 shadow-sm"
+              className="h-14 rounded-md border border-dashed bg-background/20 p-4 shadow-sm"
               placeholder={'Enter your password'}
               autoComplete="current-password"
               disabled={isRestoring}

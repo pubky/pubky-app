@@ -652,11 +652,10 @@ describe('LocksApplication (payment unlock)', () => {
       expect(mocks.lookupVerificationTask).toHaveBeenCalledWith('pubkybob', 'bundle-1');
     });
 
-    it('returns only the status of the task the server holds', async () => {
-      mocks.lookupVerificationTask.mockResolvedValue({ status: 'in_progress' });
-      await expect(LocksApplication.fetchPaymentStatus({ lockFile, bundleId: 'bundle-1' })).resolves.toBe(
-        'in_progress',
-      );
+    it('returns the task the server holds', async () => {
+      const task = { status: 'pending', walletSetupNeeded: true, admissionDeadlineAt: '2026-10-08T12:10:00Z' };
+      mocks.lookupVerificationTask.mockResolvedValue(task);
+      await expect(LocksApplication.fetchPaymentStatus({ lockFile, bundleId: 'bundle-1' })).resolves.toEqual(task);
     });
 
     // Only a 404 means "no task"; an outage shown as null would pass for a submission that never landed.

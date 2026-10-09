@@ -40,6 +40,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Enable standalone output for Docker builds
 ENV NEXT_STANDALONE=true
 
+# `next build --webpack` exceeds Node's default ~2GB heap inside this image
+# (pubky-stack CI: JavaScript heap out of memory, then SIGABRT). Raise the
+# old-space limit for the build. The runner stage does not inherit this ENV.
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
 # Build the application
 RUN npm run build
 
@@ -105,7 +110,7 @@ ENV HOSTNAME="0.0.0.0"
 
 # Runtime configuration (PUBLIC values, NOT secrets) is supplied per-environment at container
 # runtime (Ansible / docker compose / k8s). With NODE_ENV=production the app fails fast (at boot)
-# if any of the REQUIRED network values are missing rather than silently falling back to staging
+# if any of the REQUIRED network values or the Shop destination are missing rather than silently falling back to staging
 # defaults. Optional/defaulted PUBKY_RUNTIME_* values can override deployer-facing public config
 # without rebuilding the image. See docs/environment.md and src/libs/runtime-config.
 #
@@ -119,6 +124,7 @@ ENV HOSTNAME="0.0.0.0"
 #   PUBKY_RUNTIME_PKARR_RELAYS   (JSON array string, e.g. '["https://pkarr.pubky.app"]')
 #   PUBKY_RUNTIME_TESTNET        ("true" | "false")
 #   PUBKY_RUNTIME_ENV            ("production" | "staging"; drives the staging sign-in guard)
+#   PUBKY_RUNTIME_SHOP_URL       (full HTTP(S) destination; currently https://shop.staging.pubky.app/marketplace)
 #
 # Optional (absent DSN disables Sentry entirely; rates have defaults 0.1 / 0.0 / 1.0):
 #   PUBKY_RUNTIME_SENTRY_DSN

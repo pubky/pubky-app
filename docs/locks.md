@@ -43,7 +43,8 @@ Three things break the usual pubky-app mental model:
 - **A second backend, with its own session.** The **Lock Server** stores the guarded
   content, verifies unlock proofs, and proxies reads. Its auth is completely separate from
   the pubky.app session (`useLocksAuthStore`, connect-flow sign-in) — and may even be a
-  different account than the one posting.
+  different account than the one posting. Until #2283 lands, though, Enable Locks only accepts a
+  Lock Server session that belongs to the account signed in to pubky.app (#2758).
 - **Nexus indexes the announcement, not the lock.** The announcement is an ordinary Nexus
   post and behaves like one; the locked payload and everything about the lock itself never
   reach Nexus. Locks have no Nexus streams. Their immutable descriptors and readable posts
@@ -272,18 +273,22 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    toast, and the reader stays; a wallet → the modal moves to checking, then mints, saves and
    submits. A failed check on open lands on the blocked screen; a failed check from the button, or a
    failed submission after it, shows a toast and returns to the install screen. The check reports
-   presence only, so a submission can still fail afterwards (one `502` covers both "wallet not
-   ready" and "Paykit down" — a distinct code is a pending ask on the locks side).
+   presence only, so the payment can still end `failed` afterwards (step 4).
 3. A saved id is looked up first (`fetchPaymentStatus`; SDK 404 maps to `null`). `completed` →
    credential; `failed`/`expired` → **Try again**, which mints a fresh id (those cannot be retried,
-   and doing it automatically could charge twice). `pending`/`in_progress` → the task is already
-   running, so nothing is submitted and the wait resumes. Only a saved id with **no task** is
-   submitted again: that submission never reached the server.
+   and doing it automatically could charge twice). After `failed`, **Try again** checks the wallet
+   first and goes to the install screen when there is none. `pending`/`in_progress` → the task is
+   already running, so nothing is submitted and the wait resumes. Only a saved id with **no task**
+   is submitted again: that submission never reached the server.
 4. `startPayment` reuses the saved id or mints and saves a fresh one, then submits the proof (empty
    payload, reader pubky at the bundle's top level). Replaying the same bundle is safe and creates no
-   second payment request. Paykit delivers the payment request to the reader's wallet; the app never
-   sees an address or invoice. A failed submission (for example `502`) shows **Try again**, which
-   keeps the saved id.
+   second payment request. The Lock Server answers `pending` at once and creates the Paykit invoice
+   afterwards, retrying for up to 10 minutes (its `admission_deadline_at`); Paykit then delivers the
+   payment request to the reader's wallet, and the app never sees an address or invoice. A reader
+   without a usable wallet or a Paykit outage therefore ends the task `failed`, not the submission.
+   While the server waits on the reader's wallet it says so (`status_message`), and the modal shows a
+   setup notice in place of the handoff. A failed submission (network, rate limit) shows
+   **Try again**, which keeps the saved id.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
    created; with nothing submitted, the install screen has no link state. `none` shows the handoff
    that hands the creator's pubky to Bitkit: a QR on desktop, and below the `lg` breakpoint (1024px)
@@ -299,7 +304,8 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    so a link read that hangs cannot delay a finished payment. The task lookup is the only lifecycle
    truth. `connected` and `blocked` end the link loop; a terminal task status ends both. Visibility
    return and **Check again** restart the pair, and both park together after 3 wall-clock minutes
-   without failing the purchase.
+   without failing the purchase. While the invoice does not exist yet, those 3 minutes count from the
+   server's invoice deadline instead; once it exists, they start again.
 7. Turning a completed payment into content (credential → read) parks the same way when it fails,
    and **Check again** runs it again. Retrying is free — the entitlement is durable and the
    credential is minted fresh each time, which is also why an expired credential needs no detection.

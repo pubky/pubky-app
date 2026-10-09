@@ -88,6 +88,31 @@ describe('post-stream id builders', () => {
       }
     });
 
+    it('maps differently-cased queries to one id so they share a stream cache', () => {
+      expect(buildContentSearchStreamId('Bitcoin Wallets')).toBe(buildContentSearchStreamId('bitcoin wallets'));
+      expect(buildContentSearchStreamId('BITCOIN', StreamKind.COLLECTION, { type: 'author', author: TEST_PUBKY })).toBe(
+        buildContentSearchStreamId('bitcoin', StreamKind.COLLECTION, { type: 'author', author: TEST_PUBKY }),
+      );
+      expect(buildContentSearchStreamId('Bitcoin Wallets')).toBe('content_search:q~bitcoin%20wallets:all');
+      expect(parseContentSearchStreamId(buildContentSearchStreamId('Bitcoin Wallets'))?.query).toBe('bitcoin wallets');
+    });
+
+    it.each(['following', 'friends', 'wot'] as const)(
+      'shares differently-cased queries within %s reach without dropping the scope',
+      (reach) => {
+        const streamId = buildContentSearchStreamId('Bitcoin Wallets', StreamKind.COLLECTION, { type: 'reach', reach });
+
+        expect(streamId).toBe(
+          buildContentSearchStreamId('bitcoin wallets', StreamKind.COLLECTION, { type: 'reach', reach }),
+        );
+        expect(parseContentSearchStreamId(streamId)).toEqual({
+          query: 'bitcoin wallets',
+          kind: StreamKind.COLLECTION,
+          reach,
+        });
+      },
+    );
+
     it('round-trips author-scoped ids (profile "Filter posts") preserving the q~ marker', () => {
       const streamId = buildContentSearchStreamId('bitcoin: wallets & privacy', StreamKind.COLLECTION, {
         type: 'author',

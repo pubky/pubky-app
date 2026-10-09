@@ -11,6 +11,8 @@ exports[`DialogTerms - Snapshots > matches snapshot for default DialogTerms 1`] 
     <span
       class="cursor-pointer font-medium text-brand"
       data-testid="typography"
+      role="button"
+      tabindex="0"
     >
       Terms of Service
     </span>
