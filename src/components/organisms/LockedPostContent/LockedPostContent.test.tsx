@@ -163,13 +163,15 @@ const mockLockData = ({
   lockContent = { lock_title: 'Secret', teaser_description: 'A teaser' },
   lockFile = null,
   priceSats = null,
+  isLoading = false,
 }: {
   lockContent?: LockPostContent | null;
   lockFile?: LockFile | null;
   priceSats?: string | null;
+  isLoading?: boolean;
 } = {}) => {
   vi.mocked(LocksController.getLockContent).mockReturnValue(lockContent);
-  vi.mocked(useLockFile).mockReturnValue({ lockFile, priceSats });
+  vi.mocked(useLockFile).mockReturnValue({ lockFile, priceSats, isLoading });
 };
 
 const LOCK_URL = 'pubky://hs/pub/app.locks/lock1.json';
@@ -231,11 +233,12 @@ describe('LockedPostContent', () => {
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
   });
 
-  // The price only becomes known with the lock file, so until then the card keeps it masked.
-  it('shows the mask while the lock file is still loading', () => {
-    mockLockData({ lockFile: null, priceSats: null });
+  // Until the lock file arrives, neither the price nor whether the lock is the viewer's own is known.
+  it('shows a spinner on an inert card while the lock file is still loading', () => {
+    mockLockData({ lockFile: null, priceSats: null, isLoading: true });
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
-    expect(screen.getByText('••••••')).toBeInTheDocument();
+    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
   });
 
   describe('payment lock', () => {
@@ -375,11 +378,13 @@ describe('LockedPostContent', () => {
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
   });
 
-  it('disables Unlock while the lock file is loading', () => {
-    // Submitting without a lock file returns silently — the dialog would look broken.
-    mockLockData({ lockFile: null });
+  it('disables Unlock when the lock file fetch failed', () => {
+    mockLockData({ lockFile: null, isLoading: false });
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+    // A failed fetch stops the spinner and falls back to the mask.
+    expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    expect(screen.getByText('••••••')).toBeInTheDocument();
   });
 
   it('sends unlocked article content to the article renderer, which keeps its title', async () => {

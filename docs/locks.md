@@ -255,6 +255,10 @@ layout — the inert lock card and "My locked content" — from the first render
 proves the lock is mine (`isResolvingOwn`), with a text skeleton until the original is read. The
 Unlock button is never live on an own lock, even when that read fails.
 
+While `lock.json` is still loading, the card covers the whole pill with one spinner (its contents
+stay invisible to keep the width) and keeps Unlock inert without dimming it, so the pill does not
+flash as disabled before the price arrives.
+
 `a == b` is team shorthand: **a** = the announcement's author account, **b** = the account
 that owns the lock (Lock Server side). Phase 1 assumes they are the same person, and
 own-content reads rely on it.

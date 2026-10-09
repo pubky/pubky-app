@@ -76,6 +76,26 @@ describe('useLockFile', () => {
 
     await act(async () => undefined);
     expect(result.current.lockFile).toBeNull();
+    expect(result.current.isLoading).toBe(false);
     expect(LocksController.getOrFetchLockFile).not.toHaveBeenCalled();
+  });
+
+  it('stops loading (without throwing) when the controller rejects', async () => {
+    vi.mocked(LocksController.getOrFetchLockFile).mockRejectedValue(new Error('invalid or unreachable'));
+    const { result } = renderHook(() => useLockFile(LOCK_URL));
+
+    // A failed fetch must not leave the card spinning forever.
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.lockFile).toBeNull();
+  });
+
+  // `priceSats` is null both while loading and for a lock without a price; only this flag tells them apart.
+  it('reports loading until the lock file arrives', async () => {
+    const { result } = renderHook(() => useLockFile(LOCK_URL));
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.priceSats).toBeNull();
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 });
