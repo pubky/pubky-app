@@ -88,8 +88,10 @@ describe('usePostCollections', () => {
       vi.advanceTimersByTime(COLLECTIONS_COUNT_PROTECTION_MS - 1);
       expect(pendingOverlap()).toBe(1);
 
-      // Nexus has long indexed it: the paginator's next request reads no overlap at all.
+      // Past the window the removal counts for one more request, so a picker that sat idle
+      // while Nexus indexed the shift still rewinds over it once; then it is forgotten.
       vi.advanceTimersByTime(1);
+      expect(pendingOverlap()).toBe(1);
       expect(pendingOverlap()).toBe(0);
     } finally {
       vi.useRealTimers();

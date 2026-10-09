@@ -40,8 +40,10 @@ export class RecentCollectionCounts {
   /**
    * True while the local `collections` count of `postId` must win over the one a
    * Nexus response carries. A response persisted inside the window either predates
-   * the write or may predate Nexus indexing it; one persisted after the window
-   * started after the write by at least the window and is trusted.
+   * the write or may predate Nexus indexing it. After the window every response is
+   * accepted whatever its request's start time: the window is the allowance the
+   * app gives Nexus for indexing, measured on this clock at persist time, not a
+   * confirmation that the response saw the indexed write.
    */
   isProtected(postId: string): boolean {
     const write = this.writes.get(postId);
