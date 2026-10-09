@@ -1,0 +1,151 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Tabs - Snapshots > matches snapshot with the first tab active 1`] = `
+<div
+  class="flex flex-col gap-3"
+  data-orientation="horizontal"
+  data-slot="tabs"
+  dir="ltr"
+>
+  <div
+    aria-label="Sections"
+    aria-orientation="horizontal"
+    class="flex w-full items-center"
+    data-orientation="horizontal"
+    data-slot="tabs-list"
+    role="tablist"
+    style="outline: none;"
+    tabindex="0"
+  >
+    <button
+      aria-controls="radix-normalized-content-one"
+      aria-selected="true"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="active"
+      id="radix-normalized-trigger-one"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      One
+    </button>
+    <button
+      aria-controls="radix-normalized-content-two"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-two"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      Two
+    </button>
+  </div>
+  <div
+    aria-labelledby="radix-normalized-trigger-one"
+    class="outline-none"
+    data-orientation="horizontal"
+    data-slot="tabs-content"
+    data-state="active"
+    id="radix-normalized-content-one"
+    role="tabpanel"
+    style="animation-duration: 0s;"
+    tabindex="0"
+  >
+    First panel
+  </div>
+  <div
+    aria-labelledby="radix-normalized-trigger-two"
+    class="outline-none"
+    data-orientation="horizontal"
+    data-slot="tabs-content"
+    data-state="inactive"
+    hidden=""
+    id="radix-normalized-content-two"
+    role="tabpanel"
+    tabindex="0"
+  />
+</div>
+`;
+
+exports[`Tabs - Snapshots > matches snapshot with the second tab active 1`] = `
+<div
+  class="flex flex-col gap-3"
+  data-orientation="horizontal"
+  data-slot="tabs"
+  dir="ltr"
+>
+  <div
+    aria-label="Sections"
+    aria-orientation="horizontal"
+    class="flex w-full items-center"
+    data-orientation="horizontal"
+    data-slot="tabs-list"
+    role="tablist"
+    style="outline: none;"
+    tabindex="0"
+  >
+    <button
+      aria-controls="radix-normalized-content-one"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-one"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      One
+    </button>
+    <button
+      aria-controls="radix-normalized-content-two"
+      aria-selected="true"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="active"
+      id="radix-normalized-trigger-two"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      Two
+    </button>
+  </div>
+  <div
+    aria-labelledby="radix-normalized-trigger-one"
+    class="outline-none"
+    data-orientation="horizontal"
+    data-slot="tabs-content"
+    data-state="inactive"
+    hidden=""
+    id="radix-normalized-content-one"
+    role="tabpanel"
+    tabindex="0"
+  />
+  <div
+    aria-labelledby="radix-normalized-trigger-two"
+    class="outline-none"
+    data-orientation="horizontal"
+    data-slot="tabs-content"
+    data-state="active"
+    id="radix-normalized-content-two"
+    role="tabpanel"
+    style="animation-duration: 0s;"
+    tabindex="0"
+  >
+    Second panel
+  </div>
+</div>
+`;

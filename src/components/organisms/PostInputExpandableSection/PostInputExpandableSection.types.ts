@@ -35,4 +35,8 @@ export interface PostInputExpandableSectionProps {
    * so its presence also hides the article button: an announcement may never be `long`.
    */
   lockCard?: ReactNode;
+  /** Passed through to the action bar: content rendered before its buttons. */
+  leadingContent?: PostInputActionBarProps['leadingContent'];
+  /** Passed through to the action bar: the browser fullscreen toggle. */
+  fullscreen?: PostInputActionBarProps['fullscreen'];
 }

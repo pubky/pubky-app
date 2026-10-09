@@ -233,8 +233,28 @@ vi.mock('../PostInputTags/PostInputTags', () => ({
 
 vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
   PostInputActionBar: vi.fn(
-    ({ onPostClick, onEmojiClick, onImageClick, onArticleClick, isPostDisabled, isSubmitting }) => (
+    ({
+      onPostClick,
+      onEmojiClick,
+      onImageClick,
+      onArticleClick,
+      isPostDisabled,
+      isSubmitting,
+      leadingContent,
+      fullscreen,
+    }) => (
       <div data-testid="post-input-action-bar" data-post-disabled={String(isPostDisabled)}>
+        {leadingContent}
+        {fullscreen ? (
+          <button
+            data-testid="fullscreen-button"
+            onClick={fullscreen.onToggle}
+            aria-pressed={fullscreen.isFullscreen}
+            aria-label="Enter fullscreen"
+          >
+            Fullscreen
+          </button>
+        ) : null}
         <button data-testid="emoji-button" onClick={onEmojiClick} aria-label="Add emoji">
           Emoji
         </button>
@@ -423,6 +443,43 @@ vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
     ),
   };
 });
+
+vi.mock('@/organisms/ArticleComposerPreview/ArticleComposerPreview', () => ({
+  ArticleComposerPreview: vi.fn(
+    ({
+      title,
+      body,
+      authorPubky,
+      coverFile,
+      coverAttachment,
+    }: {
+      title: string;
+      body: string;
+      authorPubky: string;
+      coverFile?: File;
+      coverAttachment?: { src: string } | null;
+    }) => (
+      <div
+        data-testid="article-composer-preview"
+        data-title={title}
+        data-body={body}
+        data-author={authorPubky}
+        data-cover-file={coverFile?.name}
+        data-cover-src={coverAttachment?.src}
+      />
+    ),
+  ),
+}));
+
+vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
+  useAvatarUrl: vi.fn(() => undefined),
+}));
+
+const mockToggleFullscreen = vi.fn();
+const mockUseFullscreenReturn = { isFullscreen: false, isSupported: true, toggle: mockToggleFullscreen };
+vi.mock('@/hooks/useFullscreen/useFullscreen', () => ({
+  useFullscreen: vi.fn(() => mockUseFullscreenReturn),
+}));
 
 vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
@@ -937,7 +994,169 @@ describe('PostInput', () => {
     mockUsePostReturn.content = 'Article body';
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
-    expect(getStatePostHeader()).not.toHaveAttribute('data-count');
+    // The article composer has no header row: the byline is the avatar in the action bar
+    expect(screen.queryByTestId('post-header')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-count]')).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('post-input-action-bar')).getByTestId('article-composer-avatar'),
+    ).toBeInTheDocument();
+  });
+
+  describe('article tabs', () => {
+    beforeEach(() => {
+      mockUsePostReturn.isArticle = true;
+      mockUsePostReturn.isExpanded = true;
+      mockUsePostReturn.articleTitle = 'Draft title';
+      mockUsePostReturn.content = 'Draft body';
+      mockUseFullscreenReturn.isFullscreen = false;
+      mockUseFullscreenReturn.isSupported = true;
+    });
+
+    it('renders Content, Header and Preview tabs with the title field between the tabs and the body box', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Content', 'Header', 'Preview']);
+      const root = screen.getAllByTestId('container')[0];
+      expect(root).not.toHaveClass('border-dashed');
+      // Title sits outside the dashed body box on desktop
+      const title = screen.getByPlaceholderText('Title');
+      expect(title.parentElement).toBe(root);
+      expect(title).toHaveValue('Draft title');
+      expect(title).toHaveClass('border-dashed');
+      expect(screen.getByTestId('article-composer-tabs').nextElementSibling).toBe(title);
+      // The dashed frame moved to the body box
+      expect(title.nextElementSibling).toHaveClass('border-dashed');
+      expect(screen.queryByTestId('article-composer-panel-title')).not.toBeInTheDocument();
+    });
+
+    it('starts on Content with the editor and the cover panel both mounted', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.getByTestId('article-composer-panel-content')).toHaveAttribute('data-state', 'active');
+      expect(
+        within(screen.getByTestId('article-composer-panel-content')).getByTestId('markdown-editor'),
+      ).toBeInTheDocument();
+      const headerPanel = screen.getByTestId('article-composer-panel-header');
+      expect(headerPanel).toHaveAttribute('data-state', 'inactive');
+      expect(headerPanel).toHaveClass('data-[state=inactive]:hidden');
+      expect(within(headerPanel).getByTestId('post-input-attachments')).toHaveAttribute('data-is-article', 'true');
+      expect(screen.queryByTestId('article-composer-preview')).not.toBeInTheDocument();
+    });
+
+    it('keeps the editor mounted while the Header tab shows', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Header' }));
+
+      expect(screen.getByTestId('article-composer-panel-header')).toHaveAttribute('data-state', 'active');
+      expect(screen.getByTestId('article-composer-panel-content')).toHaveAttribute('data-state', 'inactive');
+      expect(screen.getByTestId('markdown-editor')).toBeInTheDocument();
+    });
+
+    it('mounts the preview from the draft when the Preview tab shows', () => {
+      const cover = new File(['cover'], 'cover.jpg', { type: 'image/jpeg' });
+      mockUsePostReturn.attachments = [cover];
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Preview' }));
+
+      const preview = screen.getByTestId('article-composer-preview');
+      expect(preview).toHaveAttribute('data-title', 'Draft title');
+      expect(preview).toHaveAttribute('data-body', 'Draft body');
+      expect(preview).toHaveAttribute('data-author', 'test-user-id:pubkey');
+      expect(preview).toHaveAttribute('data-cover-file', 'cover.jpg');
+    });
+
+    it('hands the preview the kept cover of an edited article', () => {
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, {
+          isArticle: true,
+          articleTitle: 'Draft title',
+          content: 'Draft body',
+          existingAttachments: [
+            {
+              uri: 'pubky://author/pub/pubky.app/files/file-1',
+              type: 'image/jpeg',
+              name: 'existing-cover.jpg',
+              urls: { main: 'https://cdn.example.com/main/file-1', feed: 'https://cdn.example.com/feed/file-1' },
+            },
+          ],
+        }),
+      );
+
+      render(
+        <PostInput
+          variant={POST_INPUT_VARIANT.EDIT}
+          editPostId="test-post-123"
+          editContent='{"title":"Draft title","body":"Draft body"}'
+          editIsArticle={true}
+          editAttachments={['pubky://author/pub/pubky.app/files/file-1']}
+        />,
+      );
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Preview' }));
+
+      expect(screen.getByTestId('article-composer-preview')).toHaveAttribute(
+        'data-cover-src',
+        'https://cdn.example.com/feed/file-1',
+      );
+    });
+
+    it('offers the fullscreen toggle in the action bar when the browser supports it', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      fireEvent.click(screen.getByTestId('fullscreen-button'));
+
+      expect(mockToggleFullscreen).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the fullscreen toggle out where the browser has no Fullscreen API', () => {
+      mockUseFullscreenReturn.isSupported = false;
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.queryByTestId('fullscreen-button')).not.toBeInTheDocument();
+    });
+
+    it('does not offer the fullscreen toggle or the avatar slot for a plain post', () => {
+      mockUsePostReturn.isArticle = false;
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.queryByTestId('fullscreen-button')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('article-composer-avatar')).not.toBeInTheDocument();
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    });
+
+    describe('on mobile', () => {
+      beforeEach(() => {
+        vi.mocked(useIsMobile).mockReturnValue(true);
+        setMobileViewport();
+      });
+
+      afterEach(() => {
+        vi.mocked(useIsMobile).mockReturnValue(false);
+        resetViewport();
+      });
+
+      it('splits the title into its own tab inside the body box', () => {
+        render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+        expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+          'Content',
+          'Title',
+          'Header',
+          'Preview',
+        ]);
+        const titlePanel = screen.getByTestId('article-composer-panel-title');
+        expect(titlePanel).toHaveAttribute('data-state', 'inactive');
+        const title = within(titlePanel).getByPlaceholderText('Title');
+        expect(title).toHaveClass('text-2xl', 'font-bold');
+        expect(title).not.toHaveClass('border-dashed');
+
+        fireEvent.mouseDown(screen.getByRole('tab', { name: 'Title' }));
+
+        expect(titlePanel).toHaveAttribute('data-state', 'active');
+        expect(screen.getByTestId('article-composer-panel-content')).toHaveAttribute('data-state', 'inactive');
+      });
+    });
   });
 
   it('renders with repost variant', () => {
@@ -1817,6 +2036,15 @@ describe('PostInput - Mobile Snapshots', () => {
         <PostInput variant={POST_INPUT_VARIANT.POST} />
       </PostMainLayoutProvider>,
     );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches article mode snapshot on mobile viewport', () => {
+    mockUsePostReturn.isArticle = true;
+    mockUsePostReturn.articleTitle = 'Mobile Article Title';
+    mockUsePostReturn.content = 'Mobile article body';
+
+    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

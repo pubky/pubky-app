@@ -678,10 +678,16 @@ async function expandFirstQuickReply(screen: Awaited<ReturnType<typeof renderFor
 }
 
 async function waitForArticleComposer() {
-  await expect.element(page.getByPlaceholder('Article Title')).toBeVisible();
-  await expect.element(page.getByText('Add image')).toBeVisible();
+  await expect.element(page.getByRole('tablist', { name: 'Article sections' })).toBeVisible();
+  await expect.element(page.getByRole('tab', { name: 'Content' })).toHaveAttribute('aria-selected', 'true');
   await expect.element(page.getByText('Publish')).toBeVisible();
   await waitForMarkdownEditorReady();
+}
+
+/** Opens one of the article composer's tabs; the panels stay mounted, so the switch is immediate. */
+async function selectArticleTab(name: 'Content' | 'Title' | 'Header' | 'Preview') {
+  await page.getByRole('tab', { name }).click();
+  await expect.element(page.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true');
 }
 
 describe('Home (global feed) — visual regression', () => {
@@ -932,6 +938,27 @@ describe('New article dialog — visual regression', () => {
   it('renders the new article dialog at mobile viewport', async () => {
     await renderNewArticleDialog(VRT_VIEWPORT_MOBILE);
     await matchVrtFrameScreenshot('dialog-new-article-mobile');
+  });
+
+  it('renders the empty cover slot in the Header tab at desktop viewport', async () => {
+    await renderNewArticleDialog(VRT_VIEWPORT_DESKTOP);
+    await selectArticleTab('Header');
+    await expect.element(page.getByText('Add image')).toBeVisible();
+    await matchVrtFrameScreenshot('dialog-new-article-header-desktop');
+  });
+
+  it('renders the empty cover slot in the Header tab at mobile viewport', async () => {
+    await renderNewArticleDialog(VRT_VIEWPORT_MOBILE);
+    await selectArticleTab('Header');
+    await expect.element(page.getByText('Add image')).toBeVisible();
+    await matchVrtFrameScreenshot('dialog-new-article-header-mobile');
+  });
+
+  it('renders the title in its own tab at mobile viewport', async () => {
+    await renderNewArticleDialog(VRT_VIEWPORT_MOBILE);
+    await selectArticleTab('Title');
+    await expect.element(page.getByPlaceholder('Title')).toBeVisible();
+    await matchVrtFrameScreenshot('dialog-new-article-title-mobile');
   });
 });
 

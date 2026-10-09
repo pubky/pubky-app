@@ -1,0 +1,358 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ArticleComposerTabs - Snapshots > matches snapshot on desktop 1`] = `
+<div
+  class="flex flex-col gap-3"
+  data-orientation="horizontal"
+  data-slot="tabs"
+  dir="ltr"
+>
+  <div
+    aria-label="Article sections"
+    aria-orientation="horizontal"
+    class="flex w-full items-center cursor-auto"
+    data-orientation="horizontal"
+    data-slot="tabs-list"
+    data-testid="article-composer-tabs"
+    role="tablist"
+    style="outline: none;"
+    tabindex="0"
+  >
+    <button
+      aria-controls="radix-normalized-content-content"
+      aria-selected="true"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-content"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="active"
+      id="radix-normalized-trigger-content"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-text-align-start"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M21 5H3"
+        />
+        <path
+          d="M15 12H3"
+        />
+        <path
+          d="M17 19H3"
+        />
+      </svg>
+      <span
+        class=""
+      >
+        Content
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-header"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-header"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-header"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-image"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="18"
+          rx="2"
+          ry="2"
+          width="18"
+          x="3"
+          y="3"
+        />
+        <circle
+          cx="9"
+          cy="9"
+          r="2"
+        />
+        <path
+          d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+        />
+      </svg>
+      <span
+        class=""
+      >
+        Header
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-preview"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-preview"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-preview"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-eye"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+        />
+      </svg>
+      <span
+        class=""
+      >
+        Preview
+      </span>
+    </button>
+  </div>
+</div>
+`;
+
+exports[`ArticleComposerTabs - Snapshots > matches snapshot on mobile 1`] = `
+<div
+  class="flex flex-col gap-3"
+  data-orientation="horizontal"
+  data-slot="tabs"
+  dir="ltr"
+>
+  <div
+    aria-label="Article sections"
+    aria-orientation="horizontal"
+    class="flex w-full items-center cursor-auto"
+    data-orientation="horizontal"
+    data-slot="tabs-list"
+    data-testid="article-composer-tabs"
+    role="tablist"
+    style="outline: none;"
+    tabindex="0"
+  >
+    <button
+      aria-controls="radix-normalized-content-content"
+      aria-selected="true"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-content"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="active"
+      id="radix-normalized-trigger-content"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-text-align-start"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M21 5H3"
+        />
+        <path
+          d="M15 12H3"
+        />
+        <path
+          d="M17 19H3"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Content
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-title"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-title"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-title"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-type"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M12 4v16"
+        />
+        <path
+          d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"
+        />
+        <path
+          d="M9 20h6"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Title
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-header"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-header"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-header"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-image"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="18"
+          rx="2"
+          ry="2"
+          width="18"
+          x="3"
+          y="3"
+        />
+        <circle
+          cx="9"
+          cy="9"
+          r="2"
+        />
+        <path
+          d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Header
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-preview"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-preview"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-preview"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-eye"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Preview
+      </span>
+    </button>
+  </div>
+</div>
+`;

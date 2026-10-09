@@ -6,6 +6,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { Tabs, TabsContent } from '@/atoms/Tabs/Tabs';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import {
@@ -16,16 +17,20 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useCharacterLimitWarning } from '@/hooks/useCharacterLimitWarning/useCharacterLimitWarning';
 import { useComposerHeightAnimation } from '@/hooks/useComposerHeightAnimation/useComposerHeightAnimation';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { useFullscreen } from '@/hooks/useFullscreen/useFullscreen';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
 import type { TLockDraft } from '@/hooks/usePostInputLock/usePostInputLock.types';
+import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { deserializeArticleBody } from '@/libs/post/articleInlineMedia';
@@ -33,6 +38,11 @@ import { areLockAttachmentsWithinLimit, hasSvgAttachment } from '@/libs/post/loc
 import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
+import { ArticleComposerTabs } from '@/molecules/ArticleComposerTabs/ArticleComposerTabs';
+import {
+  ARTICLE_COMPOSER_TAB,
+  type ArticleComposerTab,
+} from '@/molecules/ArticleComposerTabs/ArticleComposerTabs.types';
 import { DialogLockContent } from '@/molecules/DialogLockContent/DialogLockContent';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
@@ -46,6 +56,7 @@ import {
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { toast } from '@/molecules/Toaster/toast';
+import { ArticleComposerPreview } from '@/organisms/ArticleComposerPreview/ArticleComposerPreview';
 import { DialogLocksAuth } from '@/organisms/DialogLocksAuth/DialogLocksAuth';
 import { POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainLayoutRules';
 import { BODY_TEXT_CLASS_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainTypography';
@@ -87,6 +98,13 @@ export function PostInput({
   layoutOverride,
 }: PostInputProps) {
   const [lockDraft, setLockDraft] = useState<TLockDraft | null>(null);
+  // Which article section is showing. Phones have a Title tab of their own; wider viewports keep
+  // the title with the body, so a Title selection carried across the breakpoint reads as Content.
+  const [articleTab, setArticleTab] = useState<ArticleComposerTab>(ARTICLE_COMPOSER_TAB.CONTENT);
+  const isMobile = useIsMobile();
+  const activeArticleTab =
+    !isMobile && articleTab === ARTICLE_COMPOSER_TAB.TITLE ? ARTICLE_COMPOSER_TAB.CONTENT : articleTab;
+  const { isFullscreen, isSupported: isFullscreenSupported, toggle: toggleFullscreen } = useFullscreen();
 
   const {
     textareaRef,
@@ -406,279 +424,389 @@ export function PostInput({
     onLockModeChange?.(isLockEnabled);
   }, [isLockEnabled, onLockModeChange]);
 
+  // Leaving article mode (a publish, a lock capture, a reset) forgets the tab: the next article
+  // starts on its content, not on an empty preview.
+  useEffect(() => {
+    if (!isArticle) setArticleTab(ARTICLE_COMPOSER_TAB.CONTENT);
+  }, [isArticle]);
+
+  const currentUserAvatarUrl = useAvatarUrl(currentUserDetails);
+
   const inheritedTagsLayout = useEffectiveTagsLayout();
   const tagsLayout = layoutOverride ?? inheritedTagsLayout;
   const usesWidePadding = tagsLayout === 'side';
   const headerSize = POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT[tagsLayout];
 
+  // The dashed frame: the whole composer for a post, the body box under the tab row for an article.
+  const dashedFrameClassName = cn(
+    'rounded-md border border-dashed transition-colors duration-200',
+    usesWidePadding ? 'p-12' : 'p-6',
+    !isAuthenticated ? 'px-6' : '',
+    isDragging ? 'border-brand' : 'border-input',
+  );
+  const articlePanelClassName = 'data-[state=inactive]:hidden';
+
+  // Uncontrolled on purpose: the title commits through a debounce, so a controlled value would lag
+  // the keystrokes. Desktop renders it as a field between the tabs and the body box; phones give it
+  // a tab of its own, styled as the heading it becomes.
+  const articleTitleInput = isArticle ? (
+    <Input
+      placeholder={'Title'}
+      defaultValue={articleTitle}
+      onChange={handleArticleTitleChangeWithAuth}
+      maxLength={ARTICLE_TITLE_MAX_CHARACTER_LENGTH}
+      disabled={isSubmitting || !isAuthenticated}
+      data-cy="article-title-input"
+      className={
+        isMobile
+          ? 'h-auto rounded-none border-none bg-transparent p-0 text-2xl leading-none font-bold shadow-none'
+          : 'h-auto cursor-text border-dashed bg-background/20 px-6 py-4 font-medium'
+      }
+    />
+  ) : null;
+
+  // Only the edit variant has a persisted cover; a new one picked this session takes over.
+  const existingCover = isEdit ? existingAttachments[0] : undefined;
+  const existingCoverPreviewUrl = existingCover ? getAttachmentPreviewUrl(existingCover) : null;
+
   return (
-    <Container
-      data-cy={dataCy}
-      id={id}
-      ref={containerRef}
-      data-state={isExpanded ? 'expanded' : 'collapsed'}
-      className={cn(
-        'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
-        'max-w-full min-w-0',
-        usesWidePadding ? 'p-12' : 'p-6',
-        !isAuthenticated ? 'px-6' : '',
-        isDragging ? 'border-brand' : 'border-input',
-      )}
-      onClick={handleExpandWithAuth}
-      onDragEnter={(event) => handleDragEventWithAuth(event, handleDragEnter)}
-      onDragLeave={(event) => handleDragEventWithAuth(event, handleDragLeave)}
-      onDragOver={(event) => handleDragEventWithAuth(event, handleDragOver)}
-      onDrop={(event) => handleDragEventWithAuth(event, handleDrop)}
+    <Tabs
+      asChild
+      value={activeArticleTab}
+      onValueChange={(value) => setArticleTab(value as ArticleComposerTab)}
+      // Only the article composer has tabs: the root stays the same element in both modes so a
+      // switch never remounts the composer, and an unused tabs context costs nothing.
+      className={isArticle ? 'gap-3' : 'gap-0'}
     >
-      {/* Drag overlay — visual only: it must not intercept the drop, or the
-          article body editors underneath never receive their inline-image
-          drops (the container's bubbled handler would treat them as covers) */}
-      {isDragging && (
-        <Container
-          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
-          overrideDefaults
-        >
-          <Typography className="text-brand">{'Drop files here'}</Typography>
-        </Container>
-      )}
-
-      {showThreadConnector && <PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
       <Container
-        className={cn(
-          'min-w-0 contain-inline-size',
-          '[&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150',
-          'focus-within:[&_textarea::placeholder]:opacity-0',
-          'motion-reduce:[&_textarea::placeholder]:transition-none',
-        )}
+        data-cy={dataCy}
+        id={id}
+        ref={containerRef}
+        data-state={isExpanded ? 'expanded' : 'collapsed'}
+        className={cn('relative max-w-full min-w-0 cursor-pointer rounded-md', !isArticle && dashedFrameClassName)}
+        onClick={handleExpandWithAuth}
+        onDragEnter={(event) => handleDragEventWithAuth(event, handleDragEnter)}
+        onDragLeave={(event) => handleDragEventWithAuth(event, handleDragLeave)}
+        onDragOver={(event) => handleDragEventWithAuth(event, handleDragOver)}
+        onDrop={(event) => handleDragEventWithAuth(event, handleDrop)}
       >
-        <motion.div
-          data-testid="post-input-state-height"
-          className={skipHeightMotion ? undefined : 'overflow-hidden'}
-          initial={false}
-          // `false` disables Framer height control entirely (needed for dialogs).
-          animate={skipHeightMotion ? false : { height: animatedHeight }}
-          transition={skipHeightMotion ? undefined : { height: heightTransition }}
-          onAnimationComplete={skipHeightMotion ? undefined : onHeightAnimationComplete}
+        {/* Drag overlay — visual only: it must not intercept the drop, or the
+            article body editors underneath never receive their inline-image
+            drops (the container's bubbled handler would treat them as covers) */}
+        {isDragging && (
+          <Container
+            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
+            overrideDefaults
+          >
+            <Typography className="text-brand">{'Drop files here'}</Typography>
+          </Container>
+        )}
+
+        {showThreadConnector && <PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
+
+        {isArticle && <ArticleComposerTabs isMobile={isMobile} />}
+        {isArticle && !isMobile && articleTitleInput}
+
+        <Container
+          className={cn(
+            'min-w-0 contain-inline-size',
+            isArticle && dashedFrameClassName,
+            '[&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150',
+            'focus-within:[&_textarea::placeholder]:opacity-0',
+            'motion-reduce:[&_textarea::placeholder]:transition-none',
+          )}
         >
-          <div ref={stateContentMeasureRef} className="relative">
-            {!isArticle && currentUserPubky && (
-              <div data-testid="post-input-stable-avatar" className="absolute top-0 left-0 z-10">
-                <PostHeader
-                  postId={currentUserPubky}
-                  isReplyInput={true}
-                  userDetails={currentUserDetails}
-                  showPopover={false}
-                  showUserInfo={false}
-                  size={headerSize}
-                />
-              </div>
-            )}
-
-            <div data-testid="post-input-state-content" className="relative flex min-w-0 flex-col gap-4">
-              {isArticle && (
-                <Input
-                  placeholder={'Article Title'}
-                  defaultValue={articleTitle}
-                  onChange={handleArticleTitleChangeWithAuth}
-                  maxLength={ARTICLE_TITLE_MAX_CHARACTER_LENGTH}
-                  disabled={isSubmitting || !isAuthenticated}
-                  className="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
-                />
+          <motion.div
+            data-testid="post-input-state-height"
+            className={skipHeightMotion ? undefined : 'overflow-hidden'}
+            initial={false}
+            // `false` disables Framer height control entirely (needed for dialogs).
+            animate={skipHeightMotion ? false : { height: animatedHeight }}
+            transition={skipHeightMotion ? undefined : { height: heightTransition }}
+            onAnimationComplete={skipHeightMotion ? undefined : onHeightAnimationComplete}
+          >
+            <div ref={stateContentMeasureRef} className="relative">
+              {!isArticle && currentUserPubky && (
+                <div data-testid="post-input-stable-avatar" className="absolute top-0 left-0 z-10">
+                  <PostHeader
+                    postId={currentUserPubky}
+                    isReplyInput={true}
+                    userDetails={currentUserDetails}
+                    showPopover={false}
+                    showUserInfo={false}
+                    size={headerSize}
+                  />
+                </div>
               )}
 
-              {isArticle && currentUserPubky && (
-                <PostHeader
-                  postId={currentUserPubky}
-                  isReplyInput={true}
-                  userDetails={currentUserDetails}
-                  showPopover={false}
-                  showUserInfo={false}
-                  size={headerSize}
-                />
-              )}
+              <div data-testid="post-input-state-content" className="relative flex min-w-0 flex-col gap-4">
+                {!isArticle && (
+                  <Container overrideDefaults className="relative flex min-w-0 flex-col gap-4">
+                    <AnimatePresence initial={false} mode="popLayout">
+                      {isExpanded && currentUserPubky && (
+                        <motion.div
+                          key="post-input-expanded-header"
+                          data-testid="post-input-expanded-header"
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                          variants={dissolveVariants}
+                        >
+                          <PostHeader
+                            postId={currentUserPubky}
+                            isReplyInput={true}
+                            userDetails={currentUserDetails}
+                            characterLimit={characterLimit}
+                            characterLimitPlacement={tagsLayout === 'inline' ? 'name-row' : 'metadata'}
+                            showPopover={false}
+                            visuallyHideAvatar={true}
+                            size={headerSize}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
-              {!isArticle && (
-                <Container overrideDefaults className="relative flex min-w-0 flex-col gap-4">
-                  <AnimatePresence initial={false} mode="popLayout">
-                    {isExpanded && currentUserPubky && (
-                      <motion.div
-                        key="post-input-expanded-header"
-                        data-testid="post-input-expanded-header"
-                        initial="hidden"
-                        animate="visible"
-                        exit="exit"
-                        variants={dissolveVariants}
-                      >
-                        <PostHeader
-                          postId={currentUserPubky}
-                          isReplyInput={true}
-                          userDetails={currentUserDetails}
-                          characterLimit={characterLimit}
-                          characterLimitPlacement={tagsLayout === 'inline' ? 'name-row' : 'metadata'}
-                          showPopover={false}
-                          visuallyHideAvatar={true}
-                          size={headerSize}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <Container
-                    overrideDefaults
-                    className={cn('flex w-full min-w-0 items-stretch', GAP_CLASS_BY_HEADER_SIZE[headerSize])}
-                  >
-                    {!isExpanded && currentUserPubky && (
-                      <div
-                        data-testid="post-input-collapsed-avatar-placeholder"
-                        className={cn('shrink-0 self-start', AVATAR_CLASS_BY_HEADER_SIZE[headerSize])}
-                        aria-hidden="true"
-                      />
-                    )}
-                    {!currentUserPubky && (
-                      <div className="shrink-0 self-start">
-                        <AvatarWithFallback
-                          name=""
-                          fallbackSeed="user"
-                          size={AVATAR_SIZE_BY_HEADER_SIZE[headerSize]}
-                          data-testid="post-input-fallback-avatar"
-                        />
-                      </div>
-                    )}
-                    <Container overrideDefaults className="relative flex min-w-0 flex-1 items-center">
-                      <Textarea
-                        name="post-input-textarea"
-                        ref={textareaRef}
-                        placeholder={
-                          isLockMode ? 'Write a short announcement to tease your content.' : displayPlaceholder
-                        }
-                        variant="inline"
-                        className={cn(
-                          'field-sizing-fixed w-full rounded-none',
-                          BODY_TEXT_CLASS_BY_TAGS_LAYOUT[tagsLayout],
-                        )}
-                        value={content}
-                        onChange={handleChangeWithAuth}
-                        onFocus={handleExpandWithAuth}
-                        onKeyDown={handleKeyDown}
-                        onKeyUp={handleSelectionChange}
-                        onSelect={handleSelectionChange}
-                        onPaste={handlePasteWithAuth}
-                        maxLength={composerMaxLength}
-                        rows={1}
-                        disabled={isSubmitting}
-                        readOnly={!isAuthenticated}
-                        aria-haspopup="listbox"
-                        autoFocus={autoFocusTextarea}
-                        // Suppress the iOS keyboard autofill accessory bar (passwords/cards/contacts)
-                        autoComplete="off"
-                      />
-
-                      {/* Mention autocomplete popover */}
-                      {mentionIsOpen && (
-                        <MentionPopover
-                          anchorRef={textareaRef}
-                          users={mentionUsers}
-                          selectedIndex={mentionSelectedIndex}
-                          onSelect={handleMentionSelect}
-                          onHover={setMentionSelectedIndex}
+                    <Container
+                      overrideDefaults
+                      className={cn('flex w-full min-w-0 items-stretch', GAP_CLASS_BY_HEADER_SIZE[headerSize])}
+                    >
+                      {!isExpanded && currentUserPubky && (
+                        <div
+                          data-testid="post-input-collapsed-avatar-placeholder"
+                          className={cn('shrink-0 self-start', AVATAR_CLASS_BY_HEADER_SIZE[headerSize])}
+                          aria-hidden="true"
                         />
                       )}
+                      {!currentUserPubky && (
+                        <div className="shrink-0 self-start">
+                          <AvatarWithFallback
+                            name=""
+                            fallbackSeed="user"
+                            size={AVATAR_SIZE_BY_HEADER_SIZE[headerSize]}
+                            data-testid="post-input-fallback-avatar"
+                          />
+                        </div>
+                      )}
+                      <Container overrideDefaults className="relative flex min-w-0 flex-1 items-center">
+                        <Textarea
+                          name="post-input-textarea"
+                          ref={textareaRef}
+                          placeholder={
+                            isLockMode ? 'Write a short announcement to tease your content.' : displayPlaceholder
+                          }
+                          variant="inline"
+                          className={cn(
+                            'field-sizing-fixed w-full rounded-none',
+                            BODY_TEXT_CLASS_BY_TAGS_LAYOUT[tagsLayout],
+                          )}
+                          value={content}
+                          onChange={handleChangeWithAuth}
+                          onFocus={handleExpandWithAuth}
+                          onKeyDown={handleKeyDown}
+                          onKeyUp={handleSelectionChange}
+                          onSelect={handleSelectionChange}
+                          onPaste={handlePasteWithAuth}
+                          maxLength={composerMaxLength}
+                          rows={1}
+                          disabled={isSubmitting}
+                          readOnly={!isAuthenticated}
+                          aria-haspopup="listbox"
+                          autoFocus={autoFocusTextarea}
+                          // Suppress the iOS keyboard autofill accessory bar (passwords/cards/contacts)
+                          autoComplete="off"
+                        />
+
+                        {/* Mention autocomplete popover */}
+                        {mentionIsOpen && (
+                          <MentionPopover
+                            anchorRef={textareaRef}
+                            users={mentionUsers}
+                            selectedIndex={mentionSelectedIndex}
+                            onSelect={handleMentionSelect}
+                            onHover={setMentionSelectedIndex}
+                          />
+                        )}
+                      </Container>
                     </Container>
                   </Container>
-                </Container>
-              )}
-
-              <PostInputAttachments
-                ref={fileInputRef}
-                attachments={attachments}
-                setAttachments={setAttachmentsWithAuth}
-                handleFilesAdded={handleFilesAddedWithAuth}
-                isSubmitting={isSubmitting}
-                isArticle={isArticle}
-                handleFileClick={handleFileClickWithAuth}
-                existingAttachments={isEdit ? existingAttachments : undefined}
-                onRemoveExisting={isEdit ? removeExistingAttachmentWithAuth : undefined}
-              />
-
-              {isArticle && (
-                <MarkdownEditor
-                  ref={markdownEditorRef}
-                  autoFocus
-                  markdown={sanitizeCodeBlockLanguages(content)}
-                  onChange={handleArticleBodyChangeWithAuth}
-                  readOnly={isSubmitting || !isAuthenticated}
-                  inlineMedia={{ ...inlineMedia, uploadingCount }}
-                  isLoading={isEditInlineMediaLoading}
-                />
-              )}
-
-              {/* Show original post preview for reposts */}
-              {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
-                <PostPreviewCard postId={originalPostId} className="bg-card" interactiveActions={false} />
-              )}
-
-              <AnimatePresence initial={false} mode="popLayout">
-                {isExpanded && (
-                  <motion.div
-                    key="post-input-expanded-controls"
-                    data-testid="post-input-expanded-controls"
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    variants={dissolveVariants}
-                  >
-                    <PostInputExpandableSection
-                      content={content}
-                      tags={tags}
-                      isSubmitting={isSubmitting || isPublishingLock}
-                      isArticle={isArticle}
-                      isDisabled={!isAuthenticated}
-                      setTags={setTagsWithAuth}
-                      onSubmit={submitOrPublish}
-                      showEmojiPicker={showEmojiPicker}
-                      setShowEmojiPicker={setShowEmojiPicker}
-                      onEmojiSelect={handleEmojiSelectWithAuth}
-                      onImageClick={handleFileClickWithAuth}
-                      onArticleClick={handleArticleClickWithAuth}
-                      isPostDisabled={isAuthenticated ? !isValid() : false}
-                      submitMode={variant}
-                      submitLabel={submitLabel}
-                      submitIcon={submitIcon}
-                      lockSwitch={lockSwitch}
-                      lockCard={
-                        isLockConfigured || editLock ? (
-                          <LockedPostCard
-                            priceSats={editLock ? editLockPriceSats : lockConfig?.amountSats}
-                            editableTitle={{
-                              value: activeLockTitle,
-                              onChange: editLock ? setEditLockTitle : setLockTitle,
-                              disabled: editLock ? isSubmitting : isPublishingLock,
-                              maxLength: LOCK_TITLE_MAX_CHARACTER_LENGTH,
-                            }}
-                          />
-                        ) : undefined
-                      }
-                    />
-                  </motion.div>
                 )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </motion.div>
-      </Container>
 
-      {isPostVariant && lockServerPubky && (
-        <>
-          <DialogLocksAuth
-            open={isAuthDialogOpen}
-            onOpenChange={(open) => {
-              if (!open) closeAuthDialog();
-            }}
-            onSuccess={handleAuthSuccess}
-          />
-          <DialogLockContent open={isLockDialogOpen} onOpenChange={closeLockDialog} onApplied={handleLockApplied} />
-        </>
-      )}
-    </Container>
+                {/* The article sections. Content, Title and Header stay mounted while another tab
+                    shows: the rich editor imports its markdown once and the title field is
+                    uncontrolled, so unmounting either would lose what the user typed since the
+                    last debounce. Preview mounts on demand, it is derived from state. */}
+                {isArticle ? (
+                  <>
+                    <TabsContent
+                      value={ARTICLE_COMPOSER_TAB.CONTENT}
+                      forceMount
+                      tabIndex={-1}
+                      className={articlePanelClassName}
+                      data-testid="article-composer-panel-content"
+                    >
+                      <MarkdownEditor
+                        ref={markdownEditorRef}
+                        autoFocus
+                        markdown={sanitizeCodeBlockLanguages(content)}
+                        onChange={handleArticleBodyChangeWithAuth}
+                        readOnly={isSubmitting || !isAuthenticated}
+                        inlineMedia={{ ...inlineMedia, uploadingCount }}
+                        isLoading={isEditInlineMediaLoading}
+                      />
+                    </TabsContent>
+
+                    {isMobile && (
+                      <TabsContent
+                        value={ARTICLE_COMPOSER_TAB.TITLE}
+                        forceMount
+                        tabIndex={-1}
+                        className={articlePanelClassName}
+                        data-testid="article-composer-panel-title"
+                      >
+                        {articleTitleInput}
+                      </TabsContent>
+                    )}
+
+                    <TabsContent
+                      value={ARTICLE_COMPOSER_TAB.HEADER}
+                      forceMount
+                      tabIndex={-1}
+                      className={articlePanelClassName}
+                      data-testid="article-composer-panel-header"
+                    >
+                      <PostInputAttachments
+                        ref={fileInputRef}
+                        attachments={attachments}
+                        setAttachments={setAttachmentsWithAuth}
+                        handleFilesAdded={handleFilesAddedWithAuth}
+                        isSubmitting={isSubmitting}
+                        isArticle
+                        handleFileClick={handleFileClickWithAuth}
+                        existingAttachments={isEdit ? existingAttachments : undefined}
+                        onRemoveExisting={isEdit ? removeExistingAttachmentWithAuth : undefined}
+                      />
+                    </TabsContent>
+
+                    <TabsContent
+                      value={ARTICLE_COMPOSER_TAB.PREVIEW}
+                      tabIndex={-1}
+                      data-testid="article-composer-panel-preview"
+                    >
+                      {currentUserPubky && (
+                        <ArticleComposerPreview
+                          title={articleTitle}
+                          body={content}
+                          authorPubky={currentUserPubky}
+                          userDetails={currentUserDetails}
+                          coverFile={attachments[0]}
+                          coverAttachment={
+                            existingCover && existingCoverPreviewUrl
+                              ? { src: existingCoverPreviewUrl, alt: existingCover.name, type: existingCover.type }
+                              : null
+                          }
+                          inlineMedia={inlineMedia}
+                        />
+                      )}
+                    </TabsContent>
+                  </>
+                ) : (
+                  <PostInputAttachments
+                    ref={fileInputRef}
+                    attachments={attachments}
+                    setAttachments={setAttachmentsWithAuth}
+                    handleFilesAdded={handleFilesAddedWithAuth}
+                    isSubmitting={isSubmitting}
+                    handleFileClick={handleFileClickWithAuth}
+                    existingAttachments={isEdit ? existingAttachments : undefined}
+                    onRemoveExisting={isEdit ? removeExistingAttachmentWithAuth : undefined}
+                  />
+                )}
+
+                {/* Show original post preview for reposts */}
+                {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
+                  <PostPreviewCard postId={originalPostId} className="bg-card" interactiveActions={false} />
+                )}
+
+                <AnimatePresence initial={false} mode="popLayout">
+                  {isExpanded && (
+                    <motion.div
+                      key="post-input-expanded-controls"
+                      data-testid="post-input-expanded-controls"
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      variants={dissolveVariants}
+                    >
+                      <PostInputExpandableSection
+                        content={content}
+                        tags={tags}
+                        isSubmitting={isSubmitting || isPublishingLock}
+                        isArticle={isArticle}
+                        isDisabled={!isAuthenticated}
+                        setTags={setTagsWithAuth}
+                        onSubmit={submitOrPublish}
+                        showEmojiPicker={showEmojiPicker}
+                        setShowEmojiPicker={setShowEmojiPicker}
+                        onEmojiSelect={handleEmojiSelectWithAuth}
+                        onImageClick={handleFileClickWithAuth}
+                        onArticleClick={handleArticleClickWithAuth}
+                        isPostDisabled={isAuthenticated ? !isValid() : false}
+                        submitMode={variant}
+                        submitLabel={submitLabel}
+                        submitIcon={submitIcon}
+                        lockSwitch={lockSwitch}
+                        lockCard={
+                          isLockConfigured || editLock ? (
+                            <LockedPostCard
+                              priceSats={editLock ? editLockPriceSats : lockConfig?.amountSats}
+                              editableTitle={{
+                                value: activeLockTitle,
+                                onChange: editLock ? setEditLockTitle : setLockTitle,
+                                disabled: editLock ? isSubmitting : isPublishingLock,
+                                maxLength: LOCK_TITLE_MAX_CHARACTER_LENGTH,
+                              }}
+                            />
+                          ) : undefined
+                        }
+                        // The article's byline moves into the action row (the body box has no header)
+                        leadingContent={
+                          isArticle && currentUserPubky ? (
+                            <AvatarWithFallback
+                              avatarUrl={currentUserAvatarUrl}
+                              name={currentUserDetails?.name ?? ''}
+                              fallbackSeed={currentUserPubky}
+                              size="md"
+                              data-testid="article-composer-avatar"
+                            />
+                          ) : undefined
+                        }
+                        fullscreen={
+                          isArticle && isFullscreenSupported
+                            ? { isFullscreen, onToggle: () => void toggleFullscreen() }
+                            : undefined
+                        }
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </motion.div>
+        </Container>
+
+        {isPostVariant && lockServerPubky && (
+          <>
+            <DialogLocksAuth
+              open={isAuthDialogOpen}
+              onOpenChange={(open) => {
+                if (!open) closeAuthDialog();
+              }}
+              onSuccess={handleAuthSuccess}
+            />
+            <DialogLockContent open={isLockDialogOpen} onOpenChange={closeLockDialog} onApplied={handleLockApplied} />
+          </>
+        )}
+      </Container>
+    </Tabs>
   );
 }

@@ -201,6 +201,22 @@ Helpers such as **`getIconFromUrl`** and **`getLabelFromUrl`** live in **`@/libs
 
 Component tests must use **real** `lucide-react` and `@/icons` implementations (no `vi.mock('lucide-react')` / `vi.mock('@/icons')` for icons). See `docs/component-testing.md` — _Icon components: Always Real_.
 
+## Article composer
+
+Article mode in `PostInput` is tabbed. The `Tabs` atom (Radix, underline style) hosts the row rendered by the
+`ArticleComposerTabs` molecule: **Content** (the rich-text editor), **Header** (the cover slot in
+`PostInputAttachments`) and **Preview**; below `lg` the title gets a **Title** tab of its own, and the tabs are
+icon-only. Content, Title and Header panels stay mounted while another tab shows (`forceMount` +
+`data-[state=inactive]:hidden`): the editor imports its markdown once and the title field is uncontrolled, so
+unmounting either would lose what the user typed since the last debounce. Tags and the action bar sit under every
+tab; the author's avatar and a browser fullscreen toggle (`useFullscreen`, document-level because Radix portals
+render on `body`) live in the action bar.
+
+**Preview** is `ArticleComposerPreview`, which renders the draft through the published path (`PostText` with
+`articleMedia`): the body goes through `serializeArticleBody`, and the resulting `attachment:{n}` slots are fed
+`[cover?, ...inline]` local entries built from the composer session (object URLs for this session's uploads, CDN
+URLs for files kept from the published article). It is never a second renderer, and its links are inert.
+
 ## Article inline media
 
 `PostText` renders an article body's `![alt](src)` nodes through `ArticleInlineMedia` whenever the surface passes `articleMedia` (the article detail page and unlocked content; feed previews pass nothing and strip them). `ArticleInlineMedia` routes by the resolved kind: images to `ArticleInlineImage`, videos and audio to the `Video` / `Audio` atoms, PDFs to a file card. The kind comes from file metadata, not the markdown (`docs/data-patterns.md`, _Article Inline Media_).

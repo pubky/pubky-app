@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_ATTACHMENT_ACCEPT_STRING } from '@/config/posts';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
@@ -63,37 +63,6 @@ vi.mock('@/atoms/Button/Button', () => {
       >
         {children}
       </button>
-    ),
-  };
-});
-
-vi.mock('@/atoms/Card/Card', () => {
-  return {
-    Card: ({
-      children,
-      className,
-      'data-testid': dataTestId,
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      'data-testid'?: string;
-    }) => (
-      <div data-testid={dataTestId || 'card'} className={className}>
-        {children}
-      </div>
-    ),
-    CardContent: ({
-      children,
-      className,
-      'data-testid': dataTestId,
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      'data-testid'?: string;
-    }) => (
-      <div data-testid={dataTestId || 'card-content'} className={className}>
-        {children}
-      </div>
     ),
   };
 });
@@ -293,17 +262,19 @@ describe('PostInputAttachments', () => {
   });
 
   describe('Article mode placeholder', () => {
-    it('renders placeholder card when isArticle is true and no attachments', () => {
+    it('renders the cover frame with the add control when isArticle is true and no attachments', () => {
       render(<PostInputAttachments {...defaultProps} isArticle={true} />);
 
-      expect(screen.getByTestId('card')).toBeInTheDocument();
-      expect(screen.getByTestId('card-content')).toBeInTheDocument();
+      const placeholder = screen.getByTestId('article-cover-placeholder');
+      expect(placeholder).toHaveClass('bg-card', 'h-32', 'md:h-64');
+      expect(placeholder).toContainElement(screen.getByText('Add image'));
     });
 
-    it('renders ImagePlus icon in placeholder', () => {
-      const { container } = render(<PostInputAttachments {...defaultProps} isArticle={true} />);
+    it('renders the image icon in the Add image button', () => {
+      render(<PostInputAttachments {...defaultProps} isArticle={true} />);
 
-      expect(container.querySelector('.lucide-image-plus')).toBeInTheDocument();
+      const addImageButton = screen.getAllByTestId('button').find((btn) => btn.textContent?.includes('Add image'));
+      expect(addImageButton?.querySelector('.lucide-image')).toBeInTheDocument();
     });
 
     it('renders Add image button in placeholder', () => {
@@ -346,13 +317,89 @@ describe('PostInputAttachments', () => {
       const attachments = [createMockImageFile()];
       render(<PostInputAttachments {...defaultProps} isArticle={true} attachments={attachments} />);
 
-      expect(screen.queryByTestId('card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('article-cover-placeholder')).not.toBeInTheDocument();
     });
 
     it('does not render placeholder when isArticle is false', () => {
       render(<PostInputAttachments {...defaultProps} isArticle={false} />);
 
-      expect(screen.queryByTestId('card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('article-cover-placeholder')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Article cover', () => {
+    it('renders the picked image in a 16:9 frame with a centred Remove image control', () => {
+      const attachments = [createMockImageFile('cover.jpg')];
+      render(<PostInputAttachments {...defaultProps} isArticle={true} attachments={attachments} />);
+
+      const cover = screen.getByTestId('article-cover');
+      expect(cover).toHaveClass('aspect-video', 'overflow-hidden', 'rounded-md');
+      expect(within(cover).getByTestId('image')).toHaveAttribute('src', 'blob:mock-url-cover.jpg');
+      expect(within(cover).getByTestId('image')).toHaveClass('object-cover');
+      const removeButton = within(cover).getByTestId('button');
+      expect(removeButton).toHaveTextContent('Remove image');
+      expect(removeButton).toHaveAttribute('data-variant', 'secondary');
+      expect(removeButton).toHaveAttribute('data-size', 'sm');
+      expect(removeButton.querySelector('.lucide-trash-2')).toBeInTheDocument();
+    });
+
+    it('removes the cover from the Remove image control', () => {
+      const mockSetAttachments = vi.fn();
+      const file = createMockImageFile('cover.jpg');
+      render(
+        <PostInputAttachments
+          {...defaultProps}
+          isArticle={true}
+          attachments={[file]}
+          setAttachments={mockSetAttachments}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Remove image'));
+
+      const setAttachmentsCallback = mockSetAttachments.mock.calls[0][0];
+      expect(setAttachmentsCallback([file])).toEqual([]);
+    });
+
+    it('disables the Remove image control while submitting', () => {
+      render(
+        <PostInputAttachments
+          {...defaultProps}
+          isArticle={true}
+          attachments={[createMockImageFile('cover.jpg')]}
+          isSubmitting={true}
+        />,
+      );
+
+      expect(screen.getByText('Remove image').closest('button')).toBeDisabled();
+    });
+
+    it('renders a still-resolving existing cover as a skeleton in the cover frame', () => {
+      render(
+        <PostInputAttachments
+          {...defaultProps}
+          isArticle={true}
+          existingAttachments={[createExistingAttachment({ urls: null })]}
+        />,
+      );
+
+      const cover = screen.getByTestId('article-cover');
+      expect(cover.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
+      expect(screen.queryByText('Remove image')).not.toBeInTheDocument();
+    });
+
+    it('keeps the post attachment layout for a non-image article attachment', () => {
+      render(
+        <PostInputAttachments
+          {...defaultProps}
+          isArticle={true}
+          existingAttachments={[createExistingAttachment({ urls: null, resolutionFailed: true })]}
+        />,
+      );
+
+      expect(screen.queryByTestId('article-cover')).not.toBeInTheDocument();
+      expect(document.querySelector('.lucide-file-text')).toBeInTheDocument();
+      expect(document.querySelector('.lucide-trash-2')).toBeInTheDocument();
     });
   });
 
@@ -874,7 +921,7 @@ describe('PostInputAttachments', () => {
     it('shows the article placeholder when both existing and new attachment lists are empty', () => {
       render(<PostInputAttachments {...defaultProps} isArticle={true} existingAttachments={[]} attachments={[]} />);
 
-      expect(screen.getByTestId('card')).toBeInTheDocument();
+      expect(screen.getByTestId('article-cover-placeholder')).toBeInTheDocument();
     });
 
     it('does not revoke existing attachment URLs on unmount', () => {

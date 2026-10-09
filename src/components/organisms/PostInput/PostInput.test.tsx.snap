@@ -1,8 +1,434 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`PostInput - Mobile Snapshots > matches article mode snapshot on mobile viewport 1`] = `
+<div
+  class="flex flex-col gap-3 relative max-w-full min-w-0 cursor-pointer rounded-md"
+  data-state="expanded"
+  data-testid="container"
+>
+  <div
+    aria-label="Article sections"
+    aria-orientation="horizontal"
+    class="flex w-full items-center cursor-auto"
+    data-orientation="horizontal"
+    data-slot="tabs-list"
+    data-testid="article-composer-tabs"
+    role="tablist"
+    style="outline: none;"
+    tabindex="0"
+  >
+    <button
+      aria-controls="radix-normalized-content-content"
+      aria-selected="true"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-content"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="active"
+      id="radix-normalized-trigger-content"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-text-align-start"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M21 5H3"
+        />
+        <path
+          d="M15 12H3"
+        />
+        <path
+          d="M17 19H3"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Content
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-title"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-title"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-title"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-type"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M12 4v16"
+        />
+        <path
+          d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"
+        />
+        <path
+          d="M9 20h6"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Title
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-header"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-header"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-header"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-image"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="18"
+          rx="2"
+          ry="2"
+          width="18"
+          x="3"
+          y="3"
+        />
+        <circle
+          cx="9"
+          cy="9"
+          r="2"
+        />
+        <path
+          d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Header
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-preview"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-preview"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-preview"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-eye"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Preview
+      </span>
+    </button>
+  </div>
+  <div
+    class="min-w-0 contain-inline-size rounded-md border border-dashed transition-colors duration-200 p-6 border-input [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
+    data-testid="container"
+  >
+    <div
+      class="overflow-hidden"
+      data-testid="post-input-state-height"
+      style="height: auto;"
+    >
+      <div
+        class="relative"
+      >
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            aria-labelledby="radix-normalized-trigger-content"
+            class="outline-none data-[state=inactive]:hidden"
+            data-orientation="horizontal"
+            data-slot="tabs-content"
+            data-state="active"
+            data-testid="article-composer-panel-content"
+            id="radix-normalized-content-content"
+            role="tabpanel"
+            style="animation-duration: 0s;"
+            tabindex="-1"
+          >
+            <div
+              contenteditable="true"
+              data-readonly="false"
+              data-testid="markdown-editor"
+            >
+              Mobile article body
+            </div>
+          </div>
+          <div
+            aria-labelledby="radix-normalized-trigger-title"
+            class="outline-none data-[state=inactive]:hidden"
+            data-orientation="horizontal"
+            data-slot="tabs-content"
+            data-state="inactive"
+            data-testid="article-composer-panel-title"
+            id="radix-normalized-content-title"
+            role="tabpanel"
+            tabindex="-1"
+          >
+            <input
+              class="h-auto rounded-none border-none bg-transparent p-0 text-2xl leading-none font-bold shadow-none"
+              data-testid="input"
+              placeholder="Title"
+              value="Mobile Article Title"
+            />
+          </div>
+          <div
+            aria-labelledby="radix-normalized-trigger-header"
+            class="outline-none data-[state=inactive]:hidden"
+            data-orientation="horizontal"
+            data-slot="tabs-content"
+            data-state="inactive"
+            data-testid="article-composer-panel-header"
+            id="radix-normalized-content-header"
+            role="tabpanel"
+            tabindex="-1"
+          >
+            <div
+              data-is-article="true"
+              data-submitting="false"
+              data-testid="post-input-attachments"
+            >
+              <button
+                data-testid="attachment-button"
+              >
+                Attach
+              </button>
+            </div>
+          </div>
+          <div
+            aria-labelledby="radix-normalized-trigger-preview"
+            class="outline-none"
+            data-orientation="horizontal"
+            data-slot="tabs-content"
+            data-state="inactive"
+            data-testid="article-composer-panel-preview"
+            hidden=""
+            id="radix-normalized-content-preview"
+            role="tabpanel"
+            tabindex="-1"
+          />
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
+          >
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="false"
+                data-testid="post-input-action-bar"
+              >
+                <span
+                  class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
+                  data-testid="article-composer-avatar"
+                >
+                  <span
+                    class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+                  >
+                    <div
+                      class="facehash h-full w-full rounded-full text-background"
+                      data-facehash=""
+                      data-interactive="true"
+                      style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(0, 75, 255);"
+                    >
+                      <div
+                        data-facehash-gradient=""
+                        style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                      />
+                      <div
+                        data-facehash-face=""
+                        style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(15deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          fill="none"
+                          style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                          viewBox="0 0 82 8"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g
+                            style="animation: facehash-blink 2.2s ease-in-out 0.2s infinite; transform-origin: center center;"
+                          >
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="6.9"
+                              x="0.07"
+                              y="0.16"
+                            />
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="20.7"
+                              x="7.9"
+                              y="0.16"
+                            />
+                          </g>
+                          <g
+                            style="animation: facehash-blink 2.2s ease-in-out 0.2s infinite; transform-origin: center center;"
+                          >
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="6.9"
+                              x="74.7"
+                              y="0.16"
+                            />
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="20.7"
+                              x="53.1"
+                              y="0.16"
+                            />
+                          </g>
+                        </svg>
+                        <div
+                          data-facehash-mouth=""
+                          style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                        >
+                          <span
+                            data-as="span"
+                            data-testid="avatar-fallback-initial"
+                          >
+                            C
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </span>
+                </span>
+                <button
+                  aria-label="Enter fullscreen"
+                  aria-pressed="false"
+                  data-testid="fullscreen-button"
+                >
+                  Fullscreen
+                </button>
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`PostInput - Mobile Snapshots > matches expanded snapshot on mobile viewport 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -76,7 +502,6 @@ exports[`PostInput - Mobile Snapshots > matches expanded snapshot on mobile view
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -138,7 +563,7 @@ exports[`PostInput - Mobile Snapshots > matches expanded snapshot on mobile view
 
 exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -210,7 +635,6 @@ exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] 
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -273,7 +697,7 @@ exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] 
 
 exports[`PostInput - Snapshots > matches snapshot for a collapsed post composer 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="collapsed"
   data-testid="container"
 >
@@ -334,7 +758,6 @@ exports[`PostInput - Snapshots > matches snapshot for a collapsed post composer 
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -353,7 +776,7 @@ exports[`PostInput - Snapshots > matches snapshot for a collapsed post composer 
 
 exports[`PostInput - Snapshots > matches snapshot for an expanded post composer 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -427,7 +850,6 @@ exports[`PostInput - Snapshots > matches snapshot for an expanded post composer 
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -489,12 +911,165 @@ exports[`PostInput - Snapshots > matches snapshot for an expanded post composer 
 
 exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-3 relative max-w-full min-w-0 cursor-pointer rounded-md"
   data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
+    aria-label="Article sections"
+    aria-orientation="horizontal"
+    class="flex w-full items-center cursor-auto"
+    data-orientation="horizontal"
+    data-slot="tabs-list"
+    data-testid="article-composer-tabs"
+    role="tablist"
+    style="outline: none;"
+    tabindex="0"
+  >
+    <button
+      aria-controls="radix-normalized-content-content"
+      aria-selected="true"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-content"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="active"
+      id="radix-normalized-trigger-content"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-text-align-start"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M21 5H3"
+        />
+        <path
+          d="M15 12H3"
+        />
+        <path
+          d="M17 19H3"
+        />
+      </svg>
+      <span
+        class=""
+      >
+        Content
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-header"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-header"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-header"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-image"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="18"
+          rx="2"
+          ry="2"
+          width="18"
+          x="3"
+          y="3"
+        />
+        <circle
+          cx="9"
+          cy="9"
+          r="2"
+        />
+        <path
+          d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+        />
+      </svg>
+      <span
+        class=""
+      >
+        Header
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-preview"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-preview"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-preview"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-eye"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+        />
+      </svg>
+      <span
+        class=""
+      >
+        Preview
+      </span>
+    </button>
+  </div>
+  <input
+    class="h-auto cursor-text border-dashed bg-background/20 px-6 py-4 font-medium"
+    data-testid="input"
+    placeholder="Title"
+    value="Test Article Title"
+  />
+  <div
+    class="min-w-0 contain-inline-size rounded-md border border-dashed transition-colors duration-200 p-6 border-input [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
@@ -509,37 +1084,61 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
           class="relative flex min-w-0 flex-col gap-4"
           data-testid="post-input-state-content"
         >
-          <input
-            class="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
-            data-testid="input"
-            placeholder="Article Title"
-            value="Test Article Title"
-          />
           <div
-            data-is-reply="true"
-            data-post-id="test-user-id:pubkey"
-            data-show-user-info="false"
-            data-size="normal"
-            data-testid="post-header"
-          />
-          <div
-            data-is-article="true"
-            data-submitting="false"
-            data-testid="post-input-attachments"
+            aria-labelledby="radix-normalized-trigger-content"
+            class="outline-none data-[state=inactive]:hidden"
+            data-orientation="horizontal"
+            data-slot="tabs-content"
+            data-state="active"
+            data-testid="article-composer-panel-content"
+            id="radix-normalized-content-content"
+            role="tabpanel"
+            style="animation-duration: 0s;"
+            tabindex="-1"
           >
-            <button
-              data-testid="attachment-button"
+            <div
+              contenteditable="true"
+              data-readonly="false"
+              data-testid="markdown-editor"
             >
-              Attach
-            </button>
+              Article body content
+            </div>
           </div>
           <div
-            contenteditable="true"
-            data-readonly="false"
-            data-testid="markdown-editor"
+            aria-labelledby="radix-normalized-trigger-header"
+            class="outline-none data-[state=inactive]:hidden"
+            data-orientation="horizontal"
+            data-slot="tabs-content"
+            data-state="inactive"
+            data-testid="article-composer-panel-header"
+            id="radix-normalized-content-header"
+            role="tabpanel"
+            tabindex="-1"
           >
-            Article body content
+            <div
+              data-is-article="true"
+              data-submitting="false"
+              data-testid="post-input-attachments"
+            >
+              <button
+                data-testid="attachment-button"
+              >
+                Attach
+              </button>
+            </div>
           </div>
+          <div
+            aria-labelledby="radix-normalized-trigger-preview"
+            class="outline-none"
+            data-orientation="horizontal"
+            data-slot="tabs-content"
+            data-state="inactive"
+            data-testid="article-composer-panel-preview"
+            hidden=""
+            id="radix-normalized-content-preview"
+            role="tabpanel"
+            tabindex="-1"
+          />
           <div
             data-testid="post-input-expanded-controls"
             style="opacity: 1; filter: blur(0px);"
@@ -556,6 +1155,97 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
                 data-post-disabled="false"
                 data-testid="post-input-action-bar"
               >
+                <span
+                  class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
+                  data-testid="article-composer-avatar"
+                >
+                  <span
+                    class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+                  >
+                    <div
+                      class="facehash h-full w-full rounded-full text-background"
+                      data-facehash=""
+                      data-interactive="true"
+                      style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(0, 75, 255);"
+                    >
+                      <div
+                        data-facehash-gradient=""
+                        style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                      />
+                      <div
+                        data-facehash-face=""
+                        style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(15deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          fill="none"
+                          style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                          viewBox="0 0 82 8"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g
+                            style="animation: facehash-blink 2.2s ease-in-out 0.2s infinite; transform-origin: center center;"
+                          >
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="6.9"
+                              x="0.07"
+                              y="0.16"
+                            />
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="20.7"
+                              x="7.9"
+                              y="0.16"
+                            />
+                          </g>
+                          <g
+                            style="animation: facehash-blink 2.2s ease-in-out 0.2s infinite; transform-origin: center center;"
+                          >
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="6.9"
+                              x="74.7"
+                              y="0.16"
+                            />
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="20.7"
+                              x="53.1"
+                              y="0.16"
+                            />
+                          </g>
+                        </svg>
+                        <div
+                          data-facehash-mouth=""
+                          style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                        >
+                          <span
+                            data-as="span"
+                            data-testid="avatar-fallback-initial"
+                          >
+                            C
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </span>
+                </span>
+                <button
+                  aria-label="Enter fullscreen"
+                  aria-pressed="false"
+                  data-testid="fullscreen-button"
+                >
+                  Fullscreen
+                </button>
                 <button
                   aria-label="Add emoji"
                   data-testid="emoji-button"
@@ -592,7 +1282,7 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
 
 exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -667,7 +1357,6 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
           </div>
           <div
             data-existing-count="0"
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -729,12 +1418,165 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
 
 exports[`PostInput - Snapshots > matches snapshot for edit variant with article mode 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-3 relative max-w-full min-w-0 cursor-pointer rounded-md"
   data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
+    aria-label="Article sections"
+    aria-orientation="horizontal"
+    class="flex w-full items-center cursor-auto"
+    data-orientation="horizontal"
+    data-slot="tabs-list"
+    data-testid="article-composer-tabs"
+    role="tablist"
+    style="outline: none;"
+    tabindex="0"
+  >
+    <button
+      aria-controls="radix-normalized-content-content"
+      aria-selected="true"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-content"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="active"
+      id="radix-normalized-trigger-content"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-text-align-start"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M21 5H3"
+        />
+        <path
+          d="M15 12H3"
+        />
+        <path
+          d="M17 19H3"
+        />
+      </svg>
+      <span
+        class=""
+      >
+        Content
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-header"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-header"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-header"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-image"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="18"
+          rx="2"
+          ry="2"
+          width="18"
+          x="3"
+          y="3"
+        />
+        <circle
+          cx="9"
+          cy="9"
+          r="2"
+        />
+        <path
+          d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+        />
+      </svg>
+      <span
+        class=""
+      >
+        Header
+      </span>
+    </button>
+    <button
+      aria-controls="radix-normalized-content-preview"
+      aria-selected="false"
+      class="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-b border-border px-2.5 py-3.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5"
+      data-cy="article-composer-tab-preview"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-slot="tabs-trigger"
+      data-state="inactive"
+      id="radix-normalized-trigger-preview"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-eye"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+        />
+      </svg>
+      <span
+        class=""
+      >
+        Preview
+      </span>
+    </button>
+  </div>
+  <input
+    class="h-auto cursor-text border-dashed bg-background/20 px-6 py-4 font-medium"
+    data-testid="input"
+    placeholder="Title"
+    value="Existing Article Title"
+  />
+  <div
+    class="min-w-0 contain-inline-size rounded-md border border-dashed transition-colors duration-200 p-6 border-input [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
@@ -749,38 +1591,62 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
           class="relative flex min-w-0 flex-col gap-4"
           data-testid="post-input-state-content"
         >
-          <input
-            class="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
-            data-testid="input"
-            placeholder="Article Title"
-            value="Existing Article Title"
-          />
           <div
-            data-is-reply="true"
-            data-post-id="test-user-id:pubkey"
-            data-show-user-info="false"
-            data-size="normal"
-            data-testid="post-header"
-          />
-          <div
-            data-existing-count="0"
-            data-is-article="true"
-            data-submitting="false"
-            data-testid="post-input-attachments"
+            aria-labelledby="radix-normalized-trigger-content"
+            class="outline-none data-[state=inactive]:hidden"
+            data-orientation="horizontal"
+            data-slot="tabs-content"
+            data-state="active"
+            data-testid="article-composer-panel-content"
+            id="radix-normalized-content-content"
+            role="tabpanel"
+            style="animation-duration: 0s;"
+            tabindex="-1"
           >
-            <button
-              data-testid="attachment-button"
+            <div
+              contenteditable="true"
+              data-readonly="false"
+              data-testid="markdown-editor"
             >
-              Attach
-            </button>
+              Existing article body
+            </div>
           </div>
           <div
-            contenteditable="true"
-            data-readonly="false"
-            data-testid="markdown-editor"
+            aria-labelledby="radix-normalized-trigger-header"
+            class="outline-none data-[state=inactive]:hidden"
+            data-orientation="horizontal"
+            data-slot="tabs-content"
+            data-state="inactive"
+            data-testid="article-composer-panel-header"
+            id="radix-normalized-content-header"
+            role="tabpanel"
+            tabindex="-1"
           >
-            Existing article body
+            <div
+              data-existing-count="0"
+              data-is-article="true"
+              data-submitting="false"
+              data-testid="post-input-attachments"
+            >
+              <button
+                data-testid="attachment-button"
+              >
+                Attach
+              </button>
+            </div>
           </div>
+          <div
+            aria-labelledby="radix-normalized-trigger-preview"
+            class="outline-none"
+            data-orientation="horizontal"
+            data-slot="tabs-content"
+            data-state="inactive"
+            data-testid="article-composer-panel-preview"
+            hidden=""
+            id="radix-normalized-content-preview"
+            role="tabpanel"
+            tabindex="-1"
+          />
           <div
             data-testid="post-input-expanded-controls"
             style="opacity: 1; filter: blur(0px);"
@@ -797,6 +1663,97 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
                 data-post-disabled="false"
                 data-testid="post-input-action-bar"
               >
+                <span
+                  class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
+                  data-testid="article-composer-avatar"
+                >
+                  <span
+                    class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+                  >
+                    <div
+                      class="facehash h-full w-full rounded-full text-background"
+                      data-facehash=""
+                      data-interactive="true"
+                      style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(0, 75, 255);"
+                    >
+                      <div
+                        data-facehash-gradient=""
+                        style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                      />
+                      <div
+                        data-facehash-face=""
+                        style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(15deg) rotateY(-15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          fill="none"
+                          style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                          viewBox="0 0 82 8"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g
+                            style="animation: facehash-blink 2.2s ease-in-out 0.2s infinite; transform-origin: center center;"
+                          >
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="6.9"
+                              x="0.07"
+                              y="0.16"
+                            />
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="20.7"
+                              x="7.9"
+                              y="0.16"
+                            />
+                          </g>
+                          <g
+                            style="animation: facehash-blink 2.2s ease-in-out 0.2s infinite; transform-origin: center center;"
+                          >
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="6.9"
+                              x="74.7"
+                              y="0.16"
+                            />
+                            <rect
+                              fill="currentColor"
+                              height="6.9"
+                              rx="3.5"
+                              width="20.7"
+                              x="53.1"
+                              y="0.16"
+                            />
+                          </g>
+                        </svg>
+                        <div
+                          data-facehash-mouth=""
+                          style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                        >
+                          <span
+                            data-as="span"
+                            data-testid="avatar-fallback-initial"
+                          >
+                            C
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </span>
+                </span>
+                <button
+                  aria-label="Enter fullscreen"
+                  aria-pressed="false"
+                  data-testid="fullscreen-button"
+                >
+                  Fullscreen
+                </button>
                 <button
                   aria-label="Add emoji"
                   data-testid="emoji-button"
@@ -833,7 +1790,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
 
 exports[`PostInput - Snapshots > matches snapshot for edit variant with existing attachments 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -908,7 +1865,6 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with existing
           </div>
           <div
             data-existing-count="1"
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -980,7 +1936,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with existing
 
 exports[`PostInput - Snapshots > matches snapshot for list layout 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -1052,7 +2008,6 @@ exports[`PostInput - Snapshots > matches snapshot for list layout 1`] = `
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -1115,7 +2070,7 @@ exports[`PostInput - Snapshots > matches snapshot for list layout 1`] = `
 
 exports[`PostInput - Snapshots > matches snapshot for post variant when dragging 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-brand"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-brand"
   data-state="expanded"
   data-testid="container"
 >
@@ -1199,7 +2154,6 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -1262,7 +2216,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
 
 exports[`PostInput - Snapshots > matches snapshot for post variant when submitting 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -1335,7 +2289,6 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="true"
             data-testid="post-input-attachments"
           >
@@ -1398,7 +2351,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
 
 exports[`PostInput - Snapshots > matches snapshot for post variant with attachments 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -1470,7 +2423,6 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -1537,7 +2489,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
 
 exports[`PostInput - Snapshots > matches snapshot for post variant with content 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -1611,7 +2563,6 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -1673,7 +2624,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
 
 exports[`PostInput - Snapshots > matches snapshot for post variant with custom placeholder 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -1745,7 +2696,6 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -1808,7 +2758,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
 
 exports[`PostInput - Snapshots > matches snapshot for post variant without content or attachments 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-12 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-12 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -1880,7 +2830,6 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -1943,7 +2892,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
 
 exports[`PostInput - Snapshots > matches snapshot for reply variant without content or attachments 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -2015,7 +2964,6 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -2078,7 +3026,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
 
 exports[`PostInput - Snapshots > matches snapshot for reply with thread connector 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -2154,7 +3102,6 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -2217,7 +3164,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
 
 exports[`PostInput - Snapshots > matches snapshot for repost variant without content or attachments 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 border-input"
   data-state="expanded"
   data-testid="container"
 >
@@ -2289,7 +3236,6 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >
@@ -2359,7 +3305,7 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
 
 exports[`PostInput - Snapshots > matches snapshot with a logged-out fallback avatar 1`] = `
 <div
-  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 px-6 border-input"
+  class="flex flex-col gap-0 relative max-w-full min-w-0 cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-6 px-6 border-input"
   data-state="collapsed"
   data-testid="container"
 >
@@ -2468,7 +3414,6 @@ exports[`PostInput - Snapshots > matches snapshot with a logged-out fallback ava
             </div>
           </div>
           <div
-            data-is-article="false"
             data-submitting="false"
             data-testid="post-input-attachments"
           >

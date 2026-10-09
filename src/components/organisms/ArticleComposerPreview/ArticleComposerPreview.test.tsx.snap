@@ -1,0 +1,72 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ArticleComposerPreview - Snapshots > matches snapshot with a cover and an empty body 1`] = `
+<div
+  class="mx-auto w-full flex-col flex max-h-[60dvh] cursor-auto overflow-y-auto"
+  data-testid="article-composer-preview"
+>
+  <h1
+    class="text-6xl font-bold text-foreground mb-6 wrap-anywhere"
+    data-testid="typography"
+  >
+    Snapshot title
+  </h1>
+  <div
+    data-post-id="o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo"
+    data-reply-input="true"
+    data-size="extraLarge"
+    data-testid="post-header"
+  />
+  <div
+    class="mx-auto w-full flex-col flex mt-6 gap-6"
+    data-testid="container"
+  >
+    <img
+      alt="cover.jpg"
+      class="aspect-video w-full rounded-md object-cover object-center"
+      data-testid="article-composer-preview-cover"
+      src="blob:cover"
+    />
+    <p
+      class="text-base font-medium text-muted-foreground"
+      data-testid="typography"
+    >
+      Nothing to preview yet.
+    </p>
+  </div>
+</div>
+`;
+
+exports[`ArticleComposerPreview - Snapshots > matches snapshot with a title and body 1`] = `
+<div
+  class="mx-auto w-full flex-col flex max-h-[60dvh] cursor-auto overflow-y-auto"
+  data-testid="article-composer-preview"
+>
+  <h1
+    class="text-6xl font-bold text-foreground mb-6 wrap-anywhere"
+    data-testid="typography"
+  >
+    Snapshot title
+  </h1>
+  <div
+    data-post-id="o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo"
+    data-reply-input="true"
+    data-size="extraLarge"
+    data-testid="post-header"
+    data-user-name="Satoshi Nakamoto"
+  />
+  <div
+    class="mx-auto w-full flex-col flex mt-6 gap-6"
+    data-testid="container"
+  >
+    <div
+      class="[&_a]:pointer-events-none"
+      data-content="Snapshot body"
+      data-full-article="true"
+      data-is-article="true"
+      data-local-attachments="[]"
+      data-testid="post-text"
+    />
+  </div>
+</div>
+`;
