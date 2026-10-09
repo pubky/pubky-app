@@ -50,6 +50,7 @@ export function DialogPayToUnlock({
   isStalled,
   handshakePubky,
   connectionIssue,
+  isConnectionPending,
   walletSetupNeeded,
   isSubmitting,
   onRetry,
@@ -165,6 +166,8 @@ export function DialogPayToUnlock({
                   'Finish setting up Bitkit. The payment request arrives once your wallet is ready.'
                 ) : connectionIssue === 'recovery_required' ? (
                   'Your Bitkit connection to this creator is being restored. Keep Bitkit open while we reconnect.'
+                ) : isConnectionPending ? (
+                  'Checking your Bitkit connection…'
                 ) : (
                   <>
                     <span className="hidden lg:inline">{'Awaiting payment. '}</span>
@@ -245,7 +248,8 @@ export function DialogPayToUnlock({
               className="flex shrink-0 flex-col items-center gap-3 self-center lg:size-24 lg:justify-center"
             >
               <Spinner size="md" />
-              {stage === 'waiting' && (
+              {/* Mobile moves "Awaiting payment" under the spinner; the checking copy has no such split. */}
+              {stage === 'waiting' && !isConnectionPending && (
                 <Typography className={cn(FIELD_LABEL_CLASS, 'lg:hidden')}>{'AWAITING PAYMENT'}</Typography>
               )}
             </Container>

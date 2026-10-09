@@ -57,6 +57,9 @@ export function usePayToUnlock({
   // manual way back the wait would be stuck for good.
   const [isStalled, setIsStalled] = useState(false);
   const [connectionState, setConnectionState] = useState<TPaykitConnectionState | null>(null);
+  // Not derived from a null `connectionState`: that is also what a finished payment resets to, and
+  // the content download that follows must not look like a link that was never read.
+  const [isConnectionPending, setIsConnectionPending] = useState(false);
   const [walletSetupNeeded, setWalletSetupNeeded] = useState(false);
   const readerPubky = useAuthStore((state) => state.currentUserPubky);
   // `currentUserPubky` is persisted and rehydrates first; the session is rebuilt asynchronously.
@@ -115,6 +118,7 @@ export function usePayToUnlock({
   const applyStatus = (gen: number, bundleId: string, status: TVerificationStatus): boolean => {
     if (status === 'completed') {
       setConnectionState(null);
+      setIsConnectionPending(false);
       void finish(gen, bundleId);
       return false;
     }
@@ -123,6 +127,7 @@ export function usePayToUnlock({
       deadBundleId.current = bundleId;
       checkWalletOnRetry.current = status === 'failed';
       setConnectionState(null);
+      setIsConnectionPending(false);
       toast({ variant: 'error', description: `The payment ${status}. You can try again.` });
       setStage('retry');
       return false;
@@ -147,6 +152,9 @@ export function usePayToUnlock({
     if (!lockFile) return;
     waitingBundleId.current = bundleId;
     setIsStalled(false);
+    // Pending only while this wait actually reads the link; a wait that does not (already connected,
+    // or a content re-download) has nothing to be pending about.
+    setIsConnectionPending(watchConnection);
 
     let active = true;
     let stallTimer: number | null = null;
@@ -218,6 +226,7 @@ export function usePayToUnlock({
       // A failed read invents no state: the last one stands, QR included.
       if (!state) return true;
       setConnectionState(state);
+      setIsConnectionPending(false);
       // `connected` needs no more reads; `blocked` is an operator switch this reader cannot flip.
       return state !== 'connected' && state !== 'blocked';
     });
@@ -326,6 +335,7 @@ export function usePayToUnlock({
     setStage('checking');
     setIsStalled(false);
     setConnectionState(null);
+    setIsConnectionPending(false);
     setWalletSetupNeeded(false);
     completedContent.current = null;
     deadBundleId.current = null;
@@ -426,6 +436,7 @@ export function usePayToUnlock({
     isStalled,
     handshakePubky,
     connectionIssue,
+    isConnectionPending,
     walletSetupNeeded,
     isSubmitting,
     retry,
