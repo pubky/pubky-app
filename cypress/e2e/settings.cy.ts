@@ -73,8 +73,6 @@ describe('settings', () => {
     cy.get('[data-testid="tags-of-interest-form"]').should('be.visible');
   });
 
-  it.skip('Privacy and Safety settings is displayed correctly', () => {});
-
   it('Muted users settings displays muted users and hides posts in feed', () => {
     // Create user 1
     cy.onboardAsNewUser('Mr Muted', 'I like to be muted');
@@ -224,10 +222,4 @@ describe('settings', () => {
     cy.get('#notification-switch-reply').then(checkNotificationIsDisabled);
     cy.get('#notification-switch-postEdited').then(checkNotificationIsDisabled);
   });
-
-  it.skip('Help: FAQ is displayed correctly', () => {});
-
-  it.skip('Help: User Guide can be navigated to', () => {});
-
-  it.skip('Help: Support link can be used', () => {});
 });

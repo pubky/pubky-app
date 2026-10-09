@@ -173,6 +173,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
 
   return (
     <Container
+      data-cy="feed-navigation"
       className={cn(
         // Full-bleed below lg: cancel ContentLayout's mobile gutter so the tab
         // strip runs edge-to-edge; w-auto lets the negative margins widen the

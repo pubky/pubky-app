@@ -94,9 +94,24 @@ export const clickFollowButton = () => {
 };
 
 export const clickUnfollowButton = () => {
-  cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'Following').click();
-  // Check follow button is now follow
-  cy.get('[data-cy="profile-follow-toggle-btn"]').should('be.visible').and('have.text', 'Follow');
+  // The followed state renders both "Following" and a hover "Unfollow", so the
+  // button's text is not exactly "Following".
+  cy.get('[data-cy="profile-follow-toggle-btn"]')
+    .filter(':visible')
+    .should('have.length.at.least', 1)
+    .first()
+    .should('be.visible')
+    .and(($btn) => {
+      expect($btn.text()).to.match(/Following/);
+    })
+    .click();
+
+  cy.get('[data-cy="profile-follow-toggle-btn"]')
+    .filter(':visible')
+    .should('have.length.at.least', 1)
+    .first()
+    .should('be.visible')
+    .and('have.text', 'Follow');
 };
 
 // wait for notifications to load profile names (prevents 'no longer attached to the DOM' error when checking list of notifications)
@@ -195,13 +210,8 @@ export const unfollowUserByUsername = (username: string) => {
       expect($btn.attr('aria-label')).to.match(/^Unfollow\b/);
       cy.wrap($btn).click();
     });
-  // Verify the button now shows "Follow" (unfollowed state)
-  cy.contains('[data-cy="profile-follower-item-name"]', username)
-    .closest('[data-testid^="user-list-item-"]')
-    .find('[data-cy="user-list-item-follow-toggle-btn"]')
-    .filter(':visible') // Filter to only the visible button (desktop or mobile)
-    .should('have.attr', 'aria-label')
-    .and('match', /^Follow\b/);
+  // Unfollow removes the user from the following stream, so the row leaves the list.
+  cy.contains('[data-cy="profile-follower-item-name"]', username).should('not.exist');
 };
 
 export const waitForPutLastRead = () => {
