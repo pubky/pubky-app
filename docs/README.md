@@ -22,26 +22,29 @@ Single source of truth for all project standards, conventions, and architectural
 
 ## Documentation Files
 
-| File                           | Description                                                                                                        |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `development-workflow.md`      | How to approach a change, patterns to reuse, verification ladder, code quality, failure modes, definition of done  |
-| `architecture.md`              | Core layered architecture, dependency rules, anti-patterns, high-risk areas, ADR index                             |
-| `local-first.md`               | Local-first writes, controller naming, `useLocalFirstQuery` reads and their pitfalls, deferred stream invalidation |
-| `data-patterns.md`             | Composite IDs, streams, TTL, pipes normalization, Dexie tables and schema changes                                  |
-| `error-handling.md`            | Error conventions using AppError and Err.\* factories                                                              |
-| `components.md`                | Component patterns, Shadcn, atomic design, Figma, icon imports, toasts, forms                                      |
-| `component-testing.md`         | Unit test and snapshot test rules                                                                                  |
-| `visual-regression-testing.md` | VRT tests, determinism, CI-owned baselines                                                                         |
-| `skeleton-architecture.md`     | Skeleton loader placement, naming, and testing patterns                                                            |
-| `z-index.md`                   | Z-index layering conventions                                                                                       |
-| `sentry.md`                    | What Sentry and Pulse capture, capture rule, drop rules, the Pulse consent gate, privacy scrubbing, source maps    |
-| `environment.md`               | Build-time `Env` and runtime `PUBKY_RUNTIME_*` configuration                                                       |
-| `pwa.md`                       | Service worker scope, update flow, offline fallback, precache allow-list, manifest, install banner, local testing  |
-| `commit-message.md`            | Conventional commit format, branch naming, pull request conventions                                                |
-| `release.md`                   | Cutting a production release from `dev` onto `master`                                                              |
-| `hotfix.md`                    | Cutting a production patch without taking `dev` HEAD (see `release.md` for shared steps)                           |
-| `locks.md`                     | Frontend reader for lock posts — payment-gated content (creator side: ADR 0022)                                    |
-| `adr-guidelines.md`            | When and how to write ADRs                                                                                         |
+| File                                | Description                                                                                                        |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `development-workflow.md`           | How to approach a change, patterns to reuse, verification ladder, code quality, failure modes, definition of done  |
+| `architecture.md`                   | Core layered architecture, dependency rules, anti-patterns, high-risk areas, ADR index                             |
+| `local-first.md`                    | Local-first writes, controller naming, `useLocalFirstQuery` reads and their pitfalls, deferred stream invalidation |
+| `data-patterns.md`                  | Composite IDs, streams, TTL, pipes normalization, Dexie tables and schema changes                                  |
+| `error-handling.md`                 | Error conventions using AppError and Err.\* factories                                                              |
+| `components.md`                     | Component patterns, Shadcn, atomic design, Figma, icon imports, toasts, forms                                      |
+| `component-testing.md`              | Unit test and snapshot test rules                                                                                  |
+| `visual-regression-testing.md`      | VRT tests, determinism, CI-owned baselines                                                                         |
+| `skeleton-architecture.md`          | Skeleton loader placement, naming, and testing patterns                                                            |
+| `z-index.md`                        | Z-index layering conventions                                                                                       |
+| `sentry.md`                         | What Sentry and Pulse capture, capture rule, drop rules, the Pulse consent gate, privacy scrubbing, source maps    |
+| `environment.md`                    | Build-time `Env` and runtime `PUBKY_RUNTIME_*` configuration                                                       |
+| `pwa.md`                            | Service worker scope, update flow, offline fallback, precache allow-list, manifest, install banner, local testing  |
+| `commit-message.md`                 | Conventional commit format, branch naming, pull request conventions                                                |
+| `release.md`                        | Cutting a production release from `dev` onto `master`                                                              |
+| `hotfix.md`                         | Cutting a production patch without taking `dev` HEAD (see `release.md` for shared steps)                           |
+| `locks.md`                          | Frontend reader for lock posts — payment-gated content (creator side: ADR 0022)                                    |
+| `locks/locks-local-stack/README.md` | Running pubky-app against a local Locks + Paykit stack: images, Bitkit approvals, payments, databases              |
+| `locks/creator-flow.md`             | Locks creator flow screen by screen: setup dialog states, publishing, own-post reading, test scenarios A/B/E-3/F/G |
+| `locks/reader-flow.md`              | Locks reader flow screen by screen: Pay to Unlock modal states, lock card states, Unlocked tab, scenarios C/D/E    |
+| `adr-guidelines.md`                 | When and how to write ADRs                                                                                         |
 
 ### Migrations
 

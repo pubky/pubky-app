@@ -487,12 +487,15 @@ Never commit either.
 - Tests are co-located with each file. Shared sample data (a `LockFile` + an author pubky)
   lives in `src/test-utils/locks.ts` (`mockLockFile()`, `MOCK_LOCK_AUTHOR_PUBKY`).
 - No integration test spans UI → application → SDK for the unlock flow; the local stack
-  (testnet + Lock Server + nexus) is driven manually.
+  (testnet + Lock Server + nexus) is driven manually. How to run it, approve as Bitkit and pay from
+  the terminal: [`locks/locks-local-stack/README.md`](locks/locks-local-stack/README.md).
 
 ## References
 
 - Lock server FE integration: `pubky/locks` → `docs/_front_end_integration.md` — the
   `lock.json` shape and the submit-proof → credential → proxy-read access flow.
+- User-facing walkthroughs, screen states and manual test scenarios:
+  [`locks/creator-flow.md`](locks/creator-flow.md), [`locks/reader-flow.md`](locks/reader-flow.md)
 - Creator side: [ADR 0022](adr/0022-locks-creator-publishing.md)
 - Issues: #2297 (bundle-id persistence), #2368 (reader payment), #2369 (payment-only locks),
   #2468 (multi-tab read-back), #1998 (Phase 1 epic).
