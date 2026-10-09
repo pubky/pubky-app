@@ -25,7 +25,7 @@ import type {
   TUnlockedAttachment,
   TUnlockedContent,
   TUnlockedListItem,
-  TVerificationStatus,
+  TVerificationTask,
 } from '@/services/locks/locks.types';
 import { VerifierType } from '@/services/locks/locks.types';
 import type {
@@ -109,7 +109,7 @@ export class LocksApplication {
    * Starts (or restarts) a payment: reuses the bundle id saved on the reader's homeserver, or mints
    * and saves a fresh one when there is none or the saved one is `rejectBundleId`. Then submits the
    * proof to the Lock Server, which creates the verification task (or returns the existing one on a
-   * replay of the same id) and has Paykit deliver the payment request to the reader's wallet.
+   * replay of the same id) and afterwards has Paykit deliver the payment request to the reader's wallet.
    */
   static async startPayment({
     lockFile,
@@ -157,9 +157,8 @@ export class LocksApplication {
    * One read of where the Lock Server's payment verification stands for a saved bundle id, or null
    * when the server has no task for it (the submission never reached it).
    */
-  static async fetchPaymentStatus({ lockFile, bundleId }: TPaymentBundleParams): Promise<TVerificationStatus | null> {
-    const task = await LocksService.lookupVerificationTask(lockFile.creator, bundleId);
-    return task?.status ?? null;
+  static fetchPaymentStatus({ lockFile, bundleId }: TPaymentBundleParams): Promise<TVerificationTask | null> {
+    return LocksService.lookupVerificationTask(lockFile.creator, bundleId);
   }
 
   /**
@@ -199,8 +198,8 @@ export class LocksApplication {
   }: TPaymentLockParams): Promise<TUnlockedContent | null> {
     const bundleId = await this.fetchPurchaseBundleId({ lockUrl, readerPubky });
     if (!bundleId) return null;
-    const status = await this.fetchPaymentStatus({ lockFile, bundleId });
-    if (status !== 'completed') return null;
+    const task = await this.fetchPaymentStatus({ lockFile, bundleId });
+    if (task?.status !== 'completed') return null;
     return this.fetchPaidContent({ lockFile, bundleId });
   }
 
@@ -489,8 +488,8 @@ export class LocksApplication {
     return LocksService.restoreSession();
   }
 
-  static signout(): Promise<void> {
-    return LocksService.signout();
+  static signout(session?: LocksSdkSession): Promise<void> {
+    return LocksService.signout(session);
   }
 
   static setLockServiceConfig(): Promise<void> {
