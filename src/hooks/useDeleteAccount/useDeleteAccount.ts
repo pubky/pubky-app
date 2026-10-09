@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AUTH_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { ProfileController } from '@/controllers/profile/profile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Logger } from '@/libs/logger/logger';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -24,6 +25,7 @@ interface UseDeleteAccountResult {
  */
 export function useDeleteAccount(): UseDeleteAccountResult {
   const router = useRouter();
+  const { requireAuth } = useRequireAuth();
   const [isDeleting, setIsDeleting] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -32,6 +34,8 @@ export function useDeleteAccount(): UseDeleteAccountResult {
       Logger.warn('[useDeleteAccount] Deletion already in progress, ignoring request');
       return;
     }
+
+    if (!requireAuth(() => true)) return;
 
     setIsDeleting(true);
     setProgress(0);

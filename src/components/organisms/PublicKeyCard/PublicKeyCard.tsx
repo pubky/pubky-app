@@ -6,17 +6,17 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { ProfileController } from '@/controllers/profile/profile';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
+import { Identity } from '@/libs/identity/identity';
 import { withPubkyPrefix } from '@/libs/utils/utils';
 import { ActionSection } from '@/molecules/ActionSection/ActionSection';
 import { ContentCard } from '@/molecules/Content/Content';
 import { InputField } from '@/molecules/InputField/InputField';
 import { PopoverPublicKey } from '@/molecules/PopoverPublicKey/PopoverPublicKey';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 export function PublicKeyCard() {
   const secretKey = useOnboardingStore((state) => state.secretKey);
-  const pubky = useAuthStore((state) => state.currentUserPubky);
+  const pubky = secretKey ? Identity.tryZ32FromSecret(secretKey) : null;
   const displayPubky = pubky ? withPubkyPrefix(pubky) : '';
   const { copyToClipboard } = useCopyToClipboard();
   useEffect(() => {

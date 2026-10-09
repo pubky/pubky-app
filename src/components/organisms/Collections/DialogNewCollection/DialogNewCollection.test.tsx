@@ -1,8 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Button } from '@/atoms/Button/Button';
 import { COLLECTION_LAYOUT } from '@/config/collections';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { DialogNewCollection } from './DialogNewCollection';
 
 const mocks = vi.hoisted(() => ({
@@ -26,13 +29,16 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
 
 vi.mock('@/molecules/Toaster/toast');
 
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
-    selector({ currentUserPubky: 'current-user' }),
-}));
 describe('DialogNewCollection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      ...authInitialState,
+      currentUserPubky: 'current-user',
+      session: mockSession(),
+      restoreStatus: 'ready',
+      hasHydrated: true,
+    });
     // Default to an existing collection so the onboarding intro is skipped and
     // the form opens directly; intro-gate tests override this with an empty list.
     mocks.useAuthoredCollections.mockReturnValue({ collections: [{ id: 'seed-collection' }], isLoading: false });
@@ -52,6 +58,45 @@ describe('DialogNewCollection', () => {
     expect(screen.getByLabelText('Title')).toHaveAttribute('placeholder', 'Name your collection');
     expect(screen.getByLabelText('Description')).toHaveAttribute('placeholder', 'What will people find here?');
   });
+
+  it.each(['reauth-required', 'temporary-error'] as const)(
+    'requires a ready session to open the dialog during %s',
+    (restoreStatus) => {
+      useAuthStore.setState({ restoreStatus });
+      render(
+        <DialogNewCollection>
+          <Button>Open dialog</Button>
+        </DialogNewCollection>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(useAuthStore.getState().showSignInDialog).toBe(true);
+    },
+  );
+
+  it.each(['reauth-required', 'temporary-error'] as const)(
+    'preserves an open form without submitting when the session enters %s',
+    async (restoreStatus) => {
+      render(
+        <DialogNewCollection>
+          <Button>Open dialog</Button>
+        </DialogNewCollection>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
+      fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Keep this draft' } });
+      act(() =>
+        useAuthStore.setState({
+          restoreStatus,
+          session: restoreStatus === 'temporary-error' ? mockSession() : null,
+        }),
+      );
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save collection' })));
+      expect(mocks.commitCreateCollection).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().showSignInDialog).toBe(true);
+      expect(screen.getByLabelText('Title')).toHaveValue('Keep this draft');
+      expect(mocks.push).not.toHaveBeenCalled();
+    },
+  );
 
   it('disables save until a title is entered', () => {
     render(
@@ -344,6 +389,13 @@ describe('DialogNewCollection', () => {
 describe('DialogNewCollection - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      ...authInitialState,
+      currentUserPubky: 'current-user',
+      session: mockSession(),
+      restoreStatus: 'ready',
+      hasHydrated: true,
+    });
     mocks.useAuthoredCollections.mockReturnValue({ collections: [{ id: 'seed-collection' }], isLoading: false });
   });
 

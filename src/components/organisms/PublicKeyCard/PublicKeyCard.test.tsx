@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Identity } from '@/libs/identity/identity';
 import { PublicKeyCard } from './PublicKeyCard';
 
 // Mock navigator.clipboard (not needed anymore since copy is mocked directly)
@@ -157,8 +158,7 @@ vi.mock('@/atoms/Heading/Heading', () => {
 });
 
 // Mock dependencies
-const mockSetKeypair = vi.fn();
-const mockSetMnemonic = vi.fn();
+const mockSecretKey = vi.hoisted(() => ({ value: 'saved-secret' as string | null }));
 const { mockUseOnboardingStore, mockUseAuthStore, mockProfileController } = vi.hoisted(() => ({
   mockUseOnboardingStore: vi.fn(),
   mockUseAuthStore: vi.fn(),
@@ -168,6 +168,9 @@ const { mockUseOnboardingStore, mockUseAuthStore, mockProfileController } = vi.h
 }));
 
 const mockPubky = 'pubky1234567890abcdef';
+vi.mock('@/libs/identity/identity', () => ({
+  Identity: { tryZ32FromSecret: vi.fn(() => '1234567890abcdef'), z32FromSecret: vi.fn(() => '1234567890abcdef') },
+}));
 
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: mockUseOnboardingStore,
@@ -190,18 +193,25 @@ vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
 }));
 
 describe('PublicKeyCard', () => {
+  it('renders safely when the saved key cannot be decoded', () => {
+    vi.mocked(Identity.tryZ32FromSecret).mockReturnValueOnce(null);
+    vi.mocked(Identity.z32FromSecret).mockImplementationOnce(() => {
+      throw new Error('Invalid saved key');
+    });
+    expect(() => render(<PublicKeyCard />)).not.toThrow();
+    vi.mocked(Identity.z32FromSecret).mockReset().mockReturnValue('1234567890abcdef');
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockCopyToClipboard.mockResolvedValue(true);
     mockUseCopyToClipboard.mockReturnValue({
       copyToClipboard: mockCopyToClipboard,
     });
-    mockUseOnboardingStore.mockReturnValue({
-      secretKey: 'test-secret-key',
-      setKeypair: mockSetKeypair,
-      setMnemonic: mockSetMnemonic,
-      selectPublicKey: vi.fn(() => mockPubky),
-    });
+    mockSecretKey.value = 'saved-secret';
+    mockUseOnboardingStore.mockImplementation((selector: (state: { secretKey: string | null }) => unknown) =>
+      selector({ secretKey: mockSecretKey.value }),
+    );
     // Mock useAuthStore to return a function that accepts a selector
     mockUseAuthStore.mockImplementation((selector: (state: { currentUserPubky: string | null }) => unknown) => {
       const mockState = {
@@ -300,81 +310,22 @@ describe('PublicKeyCard', () => {
     expect(copyButton).toHaveAttribute('data-variant', 'secondary');
   });
 
-  it('disables actions when pubky is empty', () => {
-    // Mock selectPublicKey to throw (triggers keypair generation)
-    // But Identity.generateKeypair is mocked to return test values
-    // So the component will set pubky from the generated keypair
-    mockUseOnboardingStore.mockReturnValueOnce({
-      setKeypair: mockSetKeypair,
-      setMnemonic: mockSetMnemonic,
-      selectPublicKey: vi.fn(() => {
-        throw new Error('No keypair');
-      }),
-    });
-
+  it('shows the saved draft public key after auth hydration drops its unauthenticated identity', () => {
+    mockUseAuthStore.mockImplementation((selector: (state: { currentUserPubky: null }) => unknown) =>
+      selector({ currentUserPubky: null }),
+    );
     render(<PublicKeyCard />);
-
-    const copyButton = screen.getByTestId('action-button-0');
-    expect(copyButton).toBeInTheDocument();
-
-    // The component generates a keypair when selectPublicKey throws,
-    // so pubky will be set from the generated keypair (via pubkyFromKeypair)
-    // and the copy button should work
-    fireEvent.click(copyButton);
-    // Note: copyToClipboard is called because pubky is generated from the mock
+    expect(screen.getByTestId('input')).toHaveValue(mockPubky);
+    expect(mockProfileController.generateSecrets).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('action-button-0'));
+    expect(mockCopyToClipboard).toHaveBeenCalledWith(mockPubky);
   });
 
-  it('shows loading state when secretKey is missing', () => {
-    // Override the default mock to return null for secretKey
-    mockUseOnboardingStore.mockReturnValueOnce({
-      secretKey: null,
-      setKeypair: mockSetKeypair,
-      setMnemonic: mockSetMnemonic,
-      selectPublicKey: vi.fn(() => mockPubky),
-    });
-    // Mock pubky to be null to show loading state
-    mockUseAuthStore.mockImplementationOnce((selector: (state: { currentUserPubky: string | null }) => unknown) => {
-      const mockState = {
-        currentUserPubky: null,
-      };
-      return selector(mockState);
-    });
-
+  it('generates a key only when the draft has none and shows the loading state', () => {
+    mockSecretKey.value = null;
     render(<PublicKeyCard />);
-
-    // The component should render and show loading state when secretKey is missing
-    expect(screen.getByTestId('loading')).toBeInTheDocument();
     expect(screen.getByText('Generating pubky...')).toBeInTheDocument();
-  });
-});
-
-describe('PublicKeyCard - Key Generation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockCopyToClipboard.mockResolvedValue(true);
-    mockUseOnboardingStore.mockReturnValue({
-      secretKey: 'test-secret-key',
-      setKeypair: mockSetKeypair,
-      setMnemonic: mockSetMnemonic,
-      selectPublicKey: vi.fn(() => mockPubky),
-    });
-    // Mock useAuthStore to return a function that accepts a selector
-    mockUseAuthStore.mockImplementation((selector: (state: { currentUserPubky: string | null }) => unknown) => {
-      const mockState = {
-        currentUserPubky: mockPubky,
-      };
-      return selector(mockState);
-    });
-  });
-
-  it('does not generate keypair when public key already exists', () => {
-    render(<PublicKeyCard />);
-
-    // Since mockPublicKey is not empty, the component should not call generateKeypair
-    // We can't easily access the mocked function here due to module hoisting,
-    // but we can verify that the store methods were not called
-    expect(mockSetKeypair).not.toHaveBeenCalled();
-    expect(mockSetMnemonic).not.toHaveBeenCalled();
+    expect(mockProfileController.generateSecrets).toHaveBeenCalledTimes(1);
   });
 });
 

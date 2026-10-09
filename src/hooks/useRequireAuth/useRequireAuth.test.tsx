@@ -1,89 +1,53 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { useRequireAuth } from './useRequireAuth';
 
-const mockCurrentUserPubky = vi.hoisted(() => ({ value: null as string | null }));
-const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
-
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: Object.assign(
-    (selector: (state: { currentUserPubky: string | null }) => unknown) =>
-      selector({ currentUserPubky: mockCurrentUserPubky.value }),
-    {
-      getState: () => ({
-        currentUserPubky: mockCurrentUserPubky.value,
-        setShowSignInDialog: mockSetShowSignInDialog,
-      }),
-    },
-  ),
-}));
-
 describe('useRequireAuth', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockCurrentUserPubky.value = null;
+  beforeEach(() => useAuthStore.setState({ ...authInitialState, hasHydrated: true }));
+
+  it('opens sign-in for a guest without executing the action', () => {
+    const action = vi.fn();
+    const { result } = renderHook(() => useRequireAuth());
+    expect(result.current.isAuthenticated).toBe(false);
+    act(() => expect(result.current.requireAuth(action)).toBeUndefined());
+    expect(action).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().showSignInDialog).toBe(true);
   });
 
-  describe('isAuthenticated', () => {
-    it('should return false when user is not authenticated', () => {
-      mockCurrentUserPubky.value = null;
+  it('executes and returns the action for a ready session', () => {
+    useAuthStore.setState({ currentUserPubky: 'account', session: mockSession(), restoreStatus: 'ready' });
+    const { result } = renderHook(() => useRequireAuth());
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.requireAuth(() => 'saved')).toBe('saved');
+    expect(useAuthStore.getState().showSignInDialog).toBe(false);
+  });
 
+  it.each(['reauth-required', 'temporary-error', 'restoring'] as const)(
+    'gates account actions while %s',
+    (restoreStatus) => {
+      useAuthStore.setState({ currentUserPubky: 'retained-account', session: null, restoreStatus });
+      const action = vi.fn();
       const { result } = renderHook(() => useRequireAuth());
-
       expect(result.current.isAuthenticated).toBe(false);
+      act(() => result.current.requireAuth(action));
+      expect(action).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().showSignInDialog).toBe(true);
+    },
+  );
+
+  it('checks live state when an older event handler runs after session loss', () => {
+    useAuthStore.setState({ currentUserPubky: 'account', session: mockSession(), restoreStatus: 'ready' });
+    const { result } = renderHook(() => useRequireAuth());
+    const requireAuth = result.current.requireAuth;
+    const action = vi.fn();
+    act(() => {
+      useAuthStore.setState({ session: null, restoreStatus: 'reauth-required' });
+      requireAuth(action);
     });
-
-    it('should return true when user is authenticated', () => {
-      mockCurrentUserPubky.value = 'test-pubky-123';
-
-      const { result } = renderHook(() => useRequireAuth());
-
-      expect(result.current.isAuthenticated).toBe(true);
-    });
-  });
-
-  describe('requireAuth', () => {
-    it('should execute action and return result when user is authenticated', () => {
-      mockCurrentUserPubky.value = 'test-pubky-123';
-      const mockAction = vi.fn(() => 'action-result');
-
-      const { result } = renderHook(() => useRequireAuth());
-
-      let returnValue: string | undefined;
-      act(() => {
-        returnValue = result.current.requireAuth(mockAction);
-      });
-
-      expect(mockAction).toHaveBeenCalledTimes(1);
-      expect(returnValue).toBe('action-result');
-      expect(mockSetShowSignInDialog).not.toHaveBeenCalled();
-    });
-
-    it('should open sign in dialog and return undefined when user is not authenticated', () => {
-      mockCurrentUserPubky.value = null;
-      const mockAction = vi.fn(() => 'action-result');
-
-      const { result } = renderHook(() => useRequireAuth());
-
-      let returnValue: string | undefined;
-      act(() => {
-        returnValue = result.current.requireAuth(mockAction);
-      });
-
-      expect(mockAction).not.toHaveBeenCalled();
-      expect(returnValue).toBeUndefined();
-      expect(mockSetShowSignInDialog).toHaveBeenCalledWith(true);
-    });
-
-    it('should be memoized and not change reference when dependencies stay the same', () => {
-      mockCurrentUserPubky.value = 'test-pubky-123';
-
-      const { result, rerender } = renderHook(() => useRequireAuth());
-      const firstRequireAuth = result.current.requireAuth;
-
-      rerender();
-
-      expect(result.current.requireAuth).toBe(firstRequireAuth);
-    });
+    expect(action).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().showSignInDialog).toBe(true);
   });
 });

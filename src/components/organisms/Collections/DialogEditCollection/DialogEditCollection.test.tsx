@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { DialogEditCollection } from './DialogEditCollection';
 
 const mocks = vi.hoisted(() => ({
@@ -49,6 +51,12 @@ const collectionContent = (overrides?: {
 describe('DialogEditCollection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      currentUserPubky: 'account',
+      session: mockSession(),
+      restoreStatus: 'ready',
+      showSignInDialog: false,
+    });
     mocks.postDetails = { content: collectionContent() };
   });
 
@@ -168,6 +176,12 @@ describe('DialogEditCollection', () => {
 describe('DialogEditCollection - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      currentUserPubky: 'account',
+      session: mockSession(),
+      restoreStatus: 'ready',
+      showSignInDialog: false,
+    });
     mocks.postDetails = { content: collectionContent() };
   });
 

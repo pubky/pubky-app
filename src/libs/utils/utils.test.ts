@@ -9,7 +9,6 @@ import { asInvalid } from '@/test-utils/type-assertions';
 import {
   canonicalizeTagLabel,
   canSubmitPost,
-  clearCookies,
   cn,
   copyToClipboard,
   daysAgo,
@@ -505,73 +504,6 @@ describe('Utils', () => {
       });
 
       await expect(readFromClipboard()).rejects.toThrow('denied');
-    });
-  });
-
-  describe('clearCookies', () => {
-    let originalCookie: string;
-
-    beforeEach(() => {
-      originalCookie = document.cookie;
-      // Clear any existing cookies
-      document.cookie.split(';').forEach((c) => {
-        const eqPos = c.indexOf('=');
-        const name = eqPos > -1 ? c.substr(0, eqPos) : c;
-        document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-      });
-    });
-
-    afterEach(() => {
-      // Restore original cookies if any
-      if (originalCookie) {
-        document.cookie = originalCookie;
-      }
-    });
-
-    it('should clear all cookies', () => {
-      // Set some test cookies
-      document.cookie = 'testCookie1=value1; path=/';
-      document.cookie = 'testCookie2=value2; path=/';
-      document.cookie = 'testCookie3=value3; path=/';
-
-      // Verify cookies are set
-      expect(document.cookie).toContain('testCookie1');
-      expect(document.cookie).toContain('testCookie2');
-      expect(document.cookie).toContain('testCookie3');
-
-      // Clear cookies
-      clearCookies();
-
-      // Note: In test environment, we can't actually verify cookies are cleared
-      // because document.cookie behavior is limited in jsdom
-      // We can only test that the function runs without errors
-      expect(() => clearCookies()).not.toThrow();
-    });
-
-    it('should handle empty cookies gracefully', () => {
-      // Ensure no cookies exist
-      expect(document.cookie).toBe('');
-
-      // Should not throw error
-      expect(() => clearCookies()).not.toThrow();
-    });
-
-    it('should handle cookies with spaces', () => {
-      // Set cookies with various formats
-      document.cookie = ' testCookie1 = value1 ; path=/';
-      document.cookie = '  testCookie2=value2; path=/';
-
-      // Should not throw error
-      expect(() => clearCookies()).not.toThrow();
-    });
-
-    it('should handle cookies with special characters in names', () => {
-      // Set cookies with special characters (that are valid)
-      document.cookie = 'test_cookie-1=value1; path=/';
-      document.cookie = 'test.cookie.2=value2; path=/';
-
-      // Should not throw error
-      expect(() => clearCookies()).not.toThrow();
     });
   });
 

@@ -1,11 +1,13 @@
+import { webcrypto } from 'node:crypto';
 import type { Keypair, PublicKey, Session } from '@synonymdev/pubky';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import {
   AuthErrorCode,
   ClientErrorCode,
   NetworkErrorCode,
   ServerErrorCode,
+  TimeoutErrorCode,
   ValidationErrorCode,
 } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -14,6 +16,7 @@ import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
 import { shouldDropAppErrorFromSentry } from '@/libs/observability/sentry.utils';
+import { mockGrantReference } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 
 // =============================================================================
@@ -22,8 +25,8 @@ import { asOpaque } from '@/test-utils/type-assertions';
 
 const mockState = vi.hoisted(() => ({
   // Signer methods
-  signupCookie: vi.fn(),
-  signinCookie: vi.fn(),
+  signup: vi.fn(),
+  signin: vi.fn(),
   publishHomeserverForce: vi.fn(),
   // Session methods
   sessionSignout: vi.fn(),
@@ -42,8 +45,13 @@ const mockState = vi.hoisted(() => ({
   publicStorageList: vi.fn(),
   // Pubky methods
   getHomeserverOf: vi.fn(),
-  restoreSession: vi.fn(),
-  startCookieAuthFlow: vi.fn(),
+  sessionStoreAvailable: vi.fn().mockResolvedValue(true),
+  saveGrant: vi.fn(),
+  restoreGrant: vi.fn(),
+  restoreLegacy: vi.fn(),
+  removeGrant: vi.fn(),
+  listGrants: vi.fn(),
+  startGrantAuthFlow: vi.fn(),
   authFlowKindSignin: vi.fn(),
   eventStreamForUser: vi.fn(),
   // Auth store session
@@ -88,9 +96,16 @@ vi.mock('@/stores/auth/auth.store', () => ({
 
 vi.mock('@synonymdev/pubky', () => {
   const createMockPubkyInstance = () => ({
+    restoreSession: (...args: unknown[]) => mockState.restoreLegacy(...args),
+    browserSessionStore: {
+      isAvailable: mockState.sessionStoreAvailable,
+      save: mockState.saveGrant,
+      restore: mockState.restoreGrant,
+      remove: mockState.removeGrant,
+      list: mockState.listGrants,
+    },
     getHomeserverOf: (...args: unknown[]) => mockState.getHomeserverOf(...args),
-    restoreSession: (...args: unknown[]) => mockState.restoreSession(...args),
-    startCookieAuthFlow: (...args: unknown[]) => mockState.startCookieAuthFlow(...args),
+    startGrantAuthFlow: (...args: unknown[]) => mockState.startGrantAuthFlow(...args),
     eventStreamForUser: (...args: unknown[]) => mockState.eventStreamForUser(...args),
     client: {
       fetch: (...args: unknown[]) => mockState.clientFetch(...args),
@@ -101,8 +116,8 @@ vi.mock('@synonymdev/pubky', () => {
       list: (...args: unknown[]) => mockState.publicStorageList(...args),
     },
     signer: () => ({
-      signupCookie: (...args: unknown[]) => mockState.signupCookie(...args),
-      signinCookie: (...args: unknown[]) => mockState.signinCookie(...args),
+      signup: (...args: unknown[]) => mockState.signup(...args),
+      signin: (...args: unknown[]) => mockState.signin(...args),
       pkdns: {
         publishHomeserverForce: (...args: unknown[]) => mockState.publishHomeserverForce(...args),
       },
@@ -126,6 +141,7 @@ vi.mock('@synonymdev/pubky', () => {
     },
     AuthFlowKind: {
       signin: () => mockState.authFlowKindSignin(),
+      signup: vi.fn(() => ({ type: 'signup' })),
     },
     resolvePubky: vi.fn((url: string) => url.replace('pubky://', 'https://')),
   };
@@ -212,9 +228,11 @@ describe('HomeserverService', () => {
     mockState.currentSession = null;
 
     // Setup default successful behaviors
-    mockState.signupCookie.mockResolvedValue(createMockSession());
-    mockState.signinCookie.mockResolvedValue(createMockSession());
-    mockState.restoreSession.mockResolvedValue(createMockSession());
+    vi.stubGlobal('crypto', webcrypto);
+    sessionStorage.clear();
+    mockState.signup.mockResolvedValue(undefined);
+    mockState.signin.mockResolvedValue(createMockSession());
+    mockState.restoreGrant.mockResolvedValue(createMockSession());
     mockState.publishHomeserverForce.mockResolvedValue(undefined);
     mockState.clientFetch.mockResolvedValue(new Response('{}', { status: 200 }));
     mockState.publicStorageGet.mockResolvedValue(new Response('{}', { status: 200 }));
@@ -228,7 +246,9 @@ describe('HomeserverService', () => {
     mockState.sessionStoragePutBytes.mockResolvedValue(undefined);
     mockState.sessionStorageDelete.mockResolvedValue(undefined);
     mockState.sessionStorageList.mockResolvedValue([]);
-    mockState.startCookieAuthFlow.mockReturnValue({
+    mockState.startGrantAuthFlow.mockReturnValue({
+      saveLocal: () => 'saved-local',
+      saveDelegated: () => 'saved-delegated',
       authorizationUrl: 'https://auth.example.com/authorize',
       tryPollOnce: vi.fn().mockResolvedValue(createMockSession()),
       free: vi.fn(),
@@ -254,11 +274,11 @@ describe('HomeserverService', () => {
       expect(HomeserverService).toBeDefined();
 
       const expectedMethods = [
-        'signUp',
+        'createAccount',
         'verifySignupToken',
         'signIn',
         'logout',
-        'generateAuthUrl',
+        'startGrantFlow',
         'request',
         'putBlob',
         'list',
@@ -267,7 +287,7 @@ describe('HomeserverService', () => {
         'get',
         'exists',
         'generateSignupToken',
-        'restoreSession',
+        'restoreReference',
         'subscribeUserEventStreamForPath',
       ] as const;
 
@@ -282,26 +302,27 @@ describe('HomeserverService', () => {
   // ===========================================================================
 
   describe('Authentication', () => {
-    describe('signUp', () => {
-      it('should return session on successful signup', async () => {
+    describe('createAccount', () => {
+      it('creates the account separately from issuing a grant', async () => {
         const keypair = createMockKeypair();
         const signupToken = 'valid-signup-token';
         const expectedSession = createMockSession();
 
-        mockState.signupCookie.mockResolvedValue(expectedSession);
+        mockState.signin.mockResolvedValue(expectedSession);
 
-        const result = await HomeserverService.signUp({ keypair, signupToken });
+        const result = await HomeserverService.createAccount({ keypair, signupToken });
 
-        expect(result).toEqual({ session: expectedSession });
+        expect(result).toBeUndefined();
+        expect(mockState.signin).not.toHaveBeenCalled();
       });
 
-      it('should call signer.signupCookie with signup token', async () => {
+      it('should call signer.signup with signup token', async () => {
         const keypair = createMockKeypair();
         const signupToken = 'test-token';
 
-        await HomeserverService.signUp({ keypair, signupToken });
+        await HomeserverService.createAccount({ keypair, signupToken });
 
-        expect(mockState.signupCookie).toHaveBeenCalledWith(
+        expect(mockState.signup).toHaveBeenCalledWith(
           expect.anything(), // homeserver public key
           signupToken,
         );
@@ -311,12 +332,12 @@ describe('HomeserverService', () => {
         const keypair = createMockKeypair();
         const signupToken = 'invalid-token';
 
-        mockState.signupCookie.mockRejectedValue(new Error('Invalid token'));
+        mockState.signup.mockRejectedValue(new Error('Invalid token'));
 
-        await expect(HomeserverService.signUp({ keypair, signupToken })).rejects.toMatchObject({
+        await expect(HomeserverService.createAccount({ keypair, signupToken })).rejects.toMatchObject({
           category: ErrorCategory.Server,
           code: ServerErrorCode.INTERNAL_ERROR,
-          operation: 'signUp',
+          operation: 'createAccount',
         });
       });
 
@@ -324,12 +345,12 @@ describe('HomeserverService', () => {
         const keypair = createMockKeypair();
         const signupToken = 'bad-token';
 
-        mockState.signupCookie.mockRejectedValue('string error');
+        mockState.signup.mockRejectedValue('string error');
 
-        await expect(HomeserverService.signUp({ keypair, signupToken })).rejects.toMatchObject({
+        await expect(HomeserverService.createAccount({ keypair, signupToken })).rejects.toMatchObject({
           category: ErrorCategory.Server,
-          code: ServerErrorCode.INTERNAL_ERROR,
-          operation: 'signUp',
+          code: ServerErrorCode.UNKNOWN_ERROR,
+          operation: 'createAccount',
         });
       });
 
@@ -338,10 +359,10 @@ describe('HomeserverService', () => {
         const signupToken = 'token';
         const originalMessage = 'Token expired';
 
-        mockState.signupCookie.mockRejectedValue(new Error(originalMessage));
+        mockState.signup.mockRejectedValue(new Error(originalMessage));
 
         try {
-          await HomeserverService.signUp({ keypair, signupToken });
+          await HomeserverService.createAccount({ keypair, signupToken });
           expect.fail('Should have thrown');
         } catch (error) {
           // Use name check instead of instanceof due to module reset
@@ -361,6 +382,7 @@ describe('HomeserverService', () => {
         expect(result).toBe('valid');
         expect(mockState.clientFetch).toHaveBeenCalledWith(expect.stringContaining('/signup_tokens/YVB2-YFRN-GDY0'), {
           method: HttpMethod.GET,
+          credentials: 'omit',
         });
       });
 
@@ -401,6 +423,7 @@ describe('HomeserverService', () => {
 
         expect(mockState.clientFetch).toHaveBeenCalledWith(expect.stringContaining('/signup_tokens/AB%20CD%2FEF'), {
           method: HttpMethod.GET,
+          credentials: 'omit',
         });
       });
     });
@@ -419,11 +442,11 @@ describe('HomeserverService', () => {
         const expectedSession = createMockSession();
 
         mockState.getHomeserverOf.mockResolvedValue('https://homeserver.example.com');
-        mockState.signinCookie.mockResolvedValue(expectedSession);
+        mockState.signin.mockResolvedValue(expectedSession);
 
         const result = await HomeserverService.signIn({ keypair });
 
-        expect(mockState.signinCookie).toHaveBeenCalled();
+        expect(mockState.signin).toHaveBeenCalled();
         expect(result).toEqual({ session: expectedSession });
       });
 
@@ -463,7 +486,7 @@ describe('HomeserverService', () => {
           category: ErrorCategory.Server,
           operation: 'resolveHomeserverRecord',
         });
-        expect(mockState.signinCookie).not.toHaveBeenCalled();
+        expect(mockState.signin).not.toHaveBeenCalled();
         expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
       });
 
@@ -486,7 +509,7 @@ describe('HomeserverService', () => {
           operation: 'resolveHomeserverRecord',
         });
         expect(isRetryable(error as AppError)).toBe(true);
-        expect(mockState.signinCookie).not.toHaveBeenCalled();
+        expect(mockState.signin).not.toHaveBeenCalled();
         expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
       });
 
@@ -515,7 +538,7 @@ describe('HomeserverService', () => {
             category: ErrorCategory.Auth,
             code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
           });
-          expect(mockState.signinCookie).not.toHaveBeenCalled();
+          expect(mockState.signin).not.toHaveBeenCalled();
           expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
         });
       });
@@ -532,7 +555,7 @@ describe('HomeserverService', () => {
             category: ErrorCategory.Auth,
             code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
           });
-          expect(mockState.signinCookie).not.toHaveBeenCalled();
+          expect(mockState.signin).not.toHaveBeenCalled();
           expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
         });
       });
@@ -546,7 +569,7 @@ describe('HomeserverService', () => {
             category: ErrorCategory.Server,
             operation: 'resolveHomeserverRecord',
           });
-          expect(mockState.signinCookie).not.toHaveBeenCalled();
+          expect(mockState.signin).not.toHaveBeenCalled();
           expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
         });
       });
@@ -573,7 +596,7 @@ describe('HomeserverService', () => {
           const signInError = await HomeserverService.signIn({ keypair }).catch((caught: unknown) => caught);
           expect(signInError).toMatchObject(expected);
           expect((signInError as AppError).code).not.toBe(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER);
-          expect(mockState.signinCookie).not.toHaveBeenCalled();
+          expect(mockState.signin).not.toHaveBeenCalled();
           expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
         });
       });
@@ -586,7 +609,7 @@ describe('HomeserverService', () => {
           mockState.getHomeserverOf.mockResolvedValue({
             z32: () => NETWORK_RUNTIME_DEFAULTS.homeserver,
           });
-          mockState.signinCookie.mockResolvedValue(expectedSession);
+          mockState.signin.mockResolvedValue(expectedSession);
 
           const result = await HomeserverService.signIn({ keypair });
 
@@ -610,7 +633,7 @@ describe('HomeserverService', () => {
               category: ErrorCategory.Auth,
               code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
             });
-            expect(mockState.signinCookie).not.toHaveBeenCalled();
+            expect(mockState.signin).not.toHaveBeenCalled();
             expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
           },
           { keepTestHomeserver: true },
@@ -618,56 +641,72 @@ describe('HomeserverService', () => {
       });
     });
 
-    describe('restoreSession', () => {
-      it('should forward the export to the SDK and return the restored session', async () => {
+    describe('restoreReference', () => {
+      it('should forward the saved record ID to the SDK and return the restored session', async () => {
         const expectedSession = createMockSession();
-        mockState.restoreSession.mockResolvedValue(expectedSession);
+        mockState.restoreGrant.mockResolvedValue(expectedSession);
 
-        const result = await HomeserverService.restoreSession({ sessionExport: 'exported-session' });
+        const result = await HomeserverService.restoreReference(mockGrantReference());
 
-        expect(mockState.restoreSession).toHaveBeenCalledWith('exported-session');
+        expect(mockState.restoreGrant).toHaveBeenCalledWith('test-grant');
         expect(result).toBe(expectedSession);
       });
 
       it('should map an SDK AuthenticationError to SESSION_EXPIRED', async () => {
-        mockState.restoreSession.mockRejectedValue({ name: 'AuthenticationError', message: 'Session expired' });
+        mockState.restoreGrant.mockRejectedValue({ name: 'AuthenticationError', message: 'Session expired' });
 
-        await expect(HomeserverService.restoreSession({ sessionExport: 'exported-session' })).rejects.toMatchObject({
+        await expect(HomeserverService.restoreReference(mockGrantReference())).rejects.toMatchObject({
           category: ErrorCategory.Auth,
           code: AuthErrorCode.SESSION_EXPIRED,
           service: ErrorService.Homeserver,
-          operation: 'restoreSession',
+          operation: 'restoreGrant',
         });
       });
 
-      it('should map an SDK PkarrError to a retryable Network error tagged restoreSession', async () => {
-        mockState.restoreSession.mockRejectedValue({ name: 'PkarrError', message: 'relay unreachable' });
+      it('should map an SDK PkarrError to a retryable Network error tagged restoreGrant', async () => {
+        mockState.restoreGrant.mockRejectedValue({ name: 'PkarrError', message: 'relay unreachable' });
 
-        const error = await HomeserverService.restoreSession({ sessionExport: 'exported-session' }).catch(
-          (caught: unknown) => caught,
-        );
+        const error = await HomeserverService.restoreReference(mockGrantReference()).catch((caught: unknown) => caught);
 
         expect(error).toMatchObject({
           category: ErrorCategory.Network,
           code: NetworkErrorCode.CONNECTION_FAILED,
           service: ErrorService.Homeserver,
-          operation: 'restoreSession',
+          operation: 'restoreGrant',
         });
         expect(isRetryable(error as AppError)).toBe(true);
       });
 
       it('should map a plain Error to a Server error', async () => {
-        mockState.restoreSession.mockRejectedValue(new Error('boom'));
+        mockState.restoreGrant.mockRejectedValue(new Error('boom'));
 
-        await expect(HomeserverService.restoreSession({ sessionExport: 'exported-session' })).rejects.toMatchObject({
+        await expect(HomeserverService.restoreReference(mockGrantReference())).rejects.toMatchObject({
           category: ErrorCategory.Server,
           code: ServerErrorCode.INTERNAL_ERROR,
-          operation: 'restoreSession',
+          operation: 'restoreGrant',
         });
       });
     });
 
     describe('logout', () => {
+      it('revokes the ambient cookie using only the public identity and no bearer', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response(null, { status: 204 }));
+        await HomeserverService.logoutLegacyCookie('public-account');
+        expect(mockState.clientFetch).toHaveBeenCalledExactlyOnceWith(
+          'https://_pubky.homeserver-public-key-z32/session',
+          { method: HttpMethod.DELETE, credentials: 'include' },
+        );
+        expect(mockState.restoreGrant).not.toHaveBeenCalled();
+        expect(mockState.sessionSignout).not.toHaveBeenCalled();
+      });
+
+      it('reports failed cookie revocation instead of treating an HTTP failure as success', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response(null, { status: 503 }));
+        await expect(HomeserverService.logoutLegacyCookie('public-account')).rejects.toMatchObject({
+          category: ErrorCategory.Server,
+        });
+      });
+
       it('should sign out using the Session object', async () => {
         const session = createMockSession();
 
@@ -689,7 +728,11 @@ describe('HomeserverService', () => {
 
     describe('generateAuthUrl', () => {
       it('should return authorizationUrl and awaitApproval promise', async () => {
-        const result = await HomeserverService.generateAuthUrl();
+        const result = await HomeserverService.startGrantFlow({
+          purpose: 'signin',
+          capabilities: '/pub/pubky.app/:rw',
+          generation: '',
+        });
 
         expect(result).toHaveProperty('authorizationUrl');
         expect(result).toHaveProperty('awaitApproval');
@@ -703,13 +746,19 @@ describe('HomeserverService', () => {
         try {
           const tryPollOnce = vi.fn().mockResolvedValue(undefined);
           const free = vi.fn();
-          mockState.startCookieAuthFlow.mockReturnValue({
+          mockState.startGrantAuthFlow.mockReturnValue({
+            saveLocal: () => 'saved-local',
+            saveDelegated: () => 'saved-delegated',
             authorizationUrl: 'https://auth.example.com/authorize',
             tryPollOnce,
             free,
           });
 
-          const result = await HomeserverService.generateAuthUrl();
+          const result = await HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw',
+            generation: '',
+          });
           const approvalPromise = result.awaitApproval;
           const rejection = expect(approvalPromise).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
 
@@ -724,22 +773,28 @@ describe('HomeserverService', () => {
         }
       });
 
-      it('should reject with SESSION_EXPIRED when tryPollOnce throws (SDK exhausted its retry budget)', async () => {
+      it('preserves a network failure when grant polling fails', async () => {
         vi.useFakeTimers();
         try {
           const relayError = { name: 'RequestError', message: 'Gateway Timeout', data: { statusCode: 504 } };
           const tryPollOnce = vi.fn().mockRejectedValue(relayError);
           const free = vi.fn();
-          mockState.startCookieAuthFlow.mockReturnValue({
+          mockState.startGrantAuthFlow.mockReturnValue({
+            saveLocal: () => 'saved-local',
+            saveDelegated: () => 'saved-delegated',
             authorizationUrl: 'https://auth.example.com/authorize',
             tryPollOnce,
             free,
           });
 
-          const result = await HomeserverService.generateAuthUrl();
+          const result = await HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw',
+            generation: '',
+          });
           const approvalPromise = result.awaitApproval;
           const rejection = expect(approvalPromise).rejects.toMatchObject({
-            code: AuthErrorCode.SESSION_EXPIRED,
+            code: TimeoutErrorCode.GATEWAY_TIMEOUT,
           });
 
           await vi.advanceTimersByTimeAsync(0);
@@ -752,41 +807,47 @@ describe('HomeserverService', () => {
         }
       });
 
-      it('should call startCookieAuthFlow with default capabilities', async () => {
-        await HomeserverService.generateAuthUrl();
+      it('should call startGrantAuthFlow with default capabilities', async () => {
+        await HomeserverService.startGrantFlow({
+          purpose: 'signin',
+          capabilities: '/pub/pubky.app/:rw',
+          generation: '',
+        });
 
-        expect(mockState.startCookieAuthFlow).toHaveBeenCalledWith(
-          '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r', // Default capabilities
+        expect(mockState.startGrantAuthFlow).toHaveBeenCalledWith(
+          '/pub/pubky.app/:rw', // Default capabilities
           'signin-kind', // AuthFlowKind.signin()
-          expect.stringContaining('/inbox'), // HTTP relay (Pubky 0.7+ inbox endpoint)
+          expect.objectContaining({ relay: expect.stringContaining('/inbox'), clientId: expect.any(String) }), // HTTP relay (Pubky 0.7+ inbox endpoint)
         );
       });
 
-      it('should call startCookieAuthFlow with custom capabilities when provided', async () => {
+      it('should call startGrantAuthFlow with custom capabilities when provided', async () => {
         const customCaps = '/custom/path/:r';
 
-        await HomeserverService.generateAuthUrl(customCaps);
+        await HomeserverService.startGrantFlow({ purpose: 'signin', capabilities: customCaps, generation: '' });
 
-        expect(mockState.startCookieAuthFlow).toHaveBeenCalledWith(
+        expect(mockState.startGrantAuthFlow).toHaveBeenCalledWith(
           customCaps,
           'signin-kind',
-          expect.stringContaining('/inbox'),
+          expect.objectContaining({ relay: expect.stringContaining('/inbox'), clientId: expect.any(String) }),
         );
       });
 
       it('should throw error when flow fails', async () => {
-        mockState.startCookieAuthFlow.mockImplementation(() => {
+        mockState.startGrantAuthFlow.mockImplementation(() => {
           throw new Error('Flow initialization failed');
         });
 
-        await expect(HomeserverService.generateAuthUrl()).rejects.toMatchObject({
+        await expect(
+          HomeserverService.startGrantFlow({ purpose: 'signin', capabilities: '/pub/pubky.app/:rw', generation: '' }),
+        ).rejects.toMatchObject({
           category: ErrorCategory.Server,
           code: ServerErrorCode.INTERNAL_ERROR,
         });
       });
     });
 
-    describe('generatePassportAuthUrl', () => {
+    describe('Passport grant flow', () => {
       const xCallback = {
         xSource: 'Pubky',
         xSuccess: 'https://app.example.com/passport/return?attempt=a&outcome=success',
@@ -794,14 +855,18 @@ describe('HomeserverService', () => {
         xCancel: 'https://app.example.com/passport/return?attempt=a&outcome=cancel',
       };
 
-      it('starts a sign-in cookie flow with the x-callback metadata and default capabilities', async () => {
-        const result = await HomeserverService.generatePassportAuthUrl({ xCallback });
+      it('starts a sign-in grant flow with the x-callback metadata and default capabilities', async () => {
+        const result = await HomeserverService.startGrantFlow({
+          purpose: 'signin',
+          capabilities: '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r',
+          generation: '',
+          xCallback,
+        });
 
-        expect(mockState.startCookieAuthFlow).toHaveBeenCalledWith(
+        expect(mockState.startGrantAuthFlow).toHaveBeenCalledWith(
           '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r',
           'signin-kind',
-          expect.stringContaining('/inbox'),
-          xCallback,
+          expect.objectContaining({ relay: expect.stringContaining('/inbox'), xCallback }),
         );
         expect(typeof result.authorizationUrl).toBe('string');
         expect(result.awaitApproval).toBeInstanceOf(Promise);
@@ -809,21 +874,29 @@ describe('HomeserverService', () => {
       });
 
       it('honors custom capabilities', async () => {
-        await HomeserverService.generatePassportAuthUrl({ xCallback, caps: '/custom/path/:r' });
+        await HomeserverService.startGrantFlow({
+          purpose: 'signin',
+          capabilities: '/custom/path/:r',
+          generation: '',
+          xCallback,
+        });
 
-        expect(mockState.startCookieAuthFlow).toHaveBeenCalledWith(
+        expect(mockState.startGrantAuthFlow).toHaveBeenCalledWith(
           '/custom/path/:r',
           'signin-kind',
-          expect.stringContaining('/inbox'),
-          xCallback,
+          expect.objectContaining({ relay: expect.stringContaining('/inbox'), xCallback }),
         );
       });
 
       it('leaves the Pubky Ring flow free of callbacks', async () => {
-        await HomeserverService.generateAuthUrl();
+        await HomeserverService.startGrantFlow({
+          purpose: 'signin',
+          capabilities: '/pub/pubky.app/:rw',
+          generation: '',
+        });
 
-        expect(mockState.startCookieAuthFlow).toHaveBeenCalledTimes(1);
-        expect(mockState.startCookieAuthFlow.mock.calls[0]).toHaveLength(3);
+        expect(mockState.startGrantAuthFlow).toHaveBeenCalledTimes(1);
+        expect(mockState.startGrantAuthFlow.mock.calls[0]?.[2].xCallback).toBeUndefined();
       });
 
       it('cancels polling when cancelAuthFlow is called', async () => {
@@ -831,13 +904,20 @@ describe('HomeserverService', () => {
         try {
           const tryPollOnce = vi.fn().mockResolvedValue(undefined);
           const free = vi.fn();
-          mockState.startCookieAuthFlow.mockReturnValue({
-            authorizationUrl: 'pubkyauth:///?caps=x',
+          mockState.startGrantAuthFlow.mockReturnValue({
+            authorizationUrl: 'pubkyauth://signin_grant?caps=x',
+            saveDelegated: () => 'saved-delegated',
+            saveLocal: () => 'saved-local',
             tryPollOnce,
             free,
           });
 
-          const result = await HomeserverService.generatePassportAuthUrl({ xCallback });
+          const result = await HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r',
+            generation: '',
+            xCallback,
+          });
           const rejection = expect(result.awaitApproval).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
 
           result.cancelAuthFlow();
@@ -851,11 +931,18 @@ describe('HomeserverService', () => {
       });
 
       it('throws an app error when the flow fails to start', async () => {
-        mockState.startCookieAuthFlow.mockImplementation(() => {
+        mockState.startGrantAuthFlow.mockImplementation(() => {
           throw new Error('Flow initialization failed');
         });
 
-        await expect(HomeserverService.generatePassportAuthUrl({ xCallback })).rejects.toMatchObject({
+        await expect(
+          HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r',
+            generation: '',
+            xCallback,
+          }),
+        ).rejects.toMatchObject({
           category: ErrorCategory.Server,
           code: ServerErrorCode.INTERNAL_ERROR,
         });
@@ -868,6 +955,144 @@ describe('HomeserverService', () => {
   // ===========================================================================
 
   describe('Data Operations', () => {
+    describe('private storage', () => {
+      beforeEach(() => {
+        mockState.currentSession = createMockSession();
+      });
+
+      it.each(['pubky://user', 'pubkyuser', 'https://_pubky.user', ''])(
+        'reads owned binary content through the session for %s URLs',
+        async (prefix) => {
+          mockState.sessionStorageGet.mockResolvedValue(new Response(new Uint8Array([255, 0])));
+          await expect(HomeserverService.getBytes(`${prefix}/priv/social/one`)).resolves.toEqual(
+            new Uint8Array([255, 0]),
+          );
+          expect(mockState.sessionStorageGet).toHaveBeenCalledWith('/priv/social/one');
+          expect(mockState.clientFetch).not.toHaveBeenCalled();
+          expect(mockState.publicStorageGet).not.toHaveBeenCalled();
+        },
+      );
+
+      it('supports binary writes, listing and deleting private resources', async () => {
+        const blob = new Uint8Array([1, 255]);
+        await HomeserverService.putBlob({ url: '/priv/social/one', blob });
+        await HomeserverService.list({ baseDirectory: 'pubky://user/priv/social' });
+        await HomeserverService.delete('/priv/social/one');
+        expect(mockState.sessionStoragePutBytes).toHaveBeenCalledWith('/priv/social/one', blob);
+        expect(mockState.sessionStorageList).toHaveBeenCalledWith('/priv/social/', null, false, 500, false);
+        expect(mockState.sessionStorageDelete).toHaveBeenCalledWith('/priv/social/one');
+      });
+
+      it.each(['pubky://other/priv/social/one', '/private/social/one', '/pubky/one'])(
+        'rejects a non-owned storage target: %s',
+        async (url) => {
+          await expect(HomeserverService.getBytesIfExists(url)).rejects.toMatchObject({
+            code: AuthErrorCode.UNAUTHORIZED,
+          });
+          await expect(HomeserverService.putBlob({ url, blob: new Uint8Array([1]) })).rejects.toMatchObject({
+            code: ValidationErrorCode.INVALID_INPUT,
+          });
+          expect(mockState.sessionStorageGet).not.toHaveBeenCalled();
+          expect(mockState.sessionStoragePutBytes).not.toHaveBeenCalled();
+        },
+      );
+
+      it('does not report a missing session as a missing file', async () => {
+        mockState.currentSession = null;
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).rejects.toMatchObject({
+          code: AuthErrorCode.UNAUTHORIZED,
+        });
+        expect(mockState.publicStorageGet).not.toHaveBeenCalled();
+      });
+
+      it('returns null for a 404 without logging an error', async () => {
+        mockState.sessionStorageGet.mockResolvedValue(new Response(null, { status: 404 }));
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).resolves.toBeNull();
+        expect(Logger.error).not.toHaveBeenCalled();
+      });
+
+      it('also handles a 404 rejected by the SDK without logging an error', async () => {
+        mockState.sessionStorageGet.mockRejectedValue({
+          name: 'RequestError',
+          message: 'Not Found',
+          data: { statusCode: 404 },
+        });
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).resolves.toBeNull();
+        expect(Logger.error).not.toHaveBeenCalled();
+      });
+
+      it.each([401, 403, 500])('rejects HTTP %i instead of treating content as absent', async (status) => {
+        mockState.sessionStorageGet.mockResolvedValue(new Response(null, { status }));
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).rejects.toMatchObject({
+          name: 'AppError',
+        });
+      });
+
+      it('preserves transport failures', async () => {
+        mockState.sessionStorageGet.mockRejectedValue(new TypeError('Failed to fetch'));
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).rejects.toMatchObject({
+          name: 'AppError',
+        });
+      });
+
+      it('normalizes a binary response interrupted while reading its body', async () => {
+        const body = new ReadableStream({
+          start(controller) {
+            controller.error(new TypeError('Connection interrupted'));
+          },
+        });
+        mockState.sessionStorageGet.mockResolvedValue(new Response(body));
+        await expect(HomeserverService.getBytes('/priv/social/one')).rejects.toMatchObject({ name: 'AppError' });
+      });
+
+      it.each([null, 'not a date'])('uses null for unavailable modification time: %s', async (lastModified) => {
+        mockState.sessionStorageGet.mockResolvedValue(
+          new Response(new Uint8Array([1]), { headers: lastModified ? { 'last-modified': lastModified } : {} }),
+        );
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).resolves.toEqual({
+          bytes: new Uint8Array([1]),
+          modifiedAt: null,
+        });
+      });
+
+      it.each([404, 403, 500])('rejects failed binary HTTP reads with status %i', async (status) => {
+        mockState.clientFetch.mockResolvedValue(new Response('error page', { status }));
+        await expect(HomeserverService.getBytes('https://example.com/file')).rejects.toMatchObject({
+          name: 'AppError',
+        });
+      });
+    });
+
+    it('reads private bytes and the server modification time', async () => {
+      mockState.currentSession = createMockSession();
+      mockState.sessionStorageGet.mockResolvedValue(
+        new Response(new Uint8Array([1, 2, 255]), {
+          headers: { 'last-modified': 'Mon, 21 Sep 2026 10:00:00 GMT' },
+        }),
+      );
+
+      await expect(HomeserverService.getBytesIfExists('/priv/social/content/one')).resolves.toEqual({
+        bytes: new Uint8Array([1, 2, 255]),
+        modifiedAt: Date.parse('2026-09-21T10:00:00Z'),
+      });
+      expect(mockState.sessionStorageGet).toHaveBeenCalledWith('/priv/social/content/one');
+    });
+
+    it('writes an owned private resource through the authenticated session', async () => {
+      mockState.currentSession = createMockSession();
+
+      await HomeserverService.request({
+        method: HttpMethod.PUT,
+        url: 'pubky://user/priv/social/purchases/one.json',
+        bodyJson: { unlocked: true },
+      });
+
+      expect(mockState.sessionStoragePutJson).toHaveBeenCalledWith('/priv/social/purchases/one.json', {
+        unlocked: true,
+      });
+      expect(mockState.clientFetch).not.toHaveBeenCalled();
+    });
+
     describe('request', () => {
       describe('GET requests', () => {
         it('should return parsed JSON for successful GET', async () => {
@@ -1446,10 +1671,12 @@ describe('HomeserverService', () => {
         expect(new TextDecoder().decode(result?.bytes)).toBe('hello');
       });
 
-      it('should return null without a session rather than fire an unauthenticated request', async () => {
+      it('should reject missing authentication without treating it as a missing file', async () => {
         mockState.currentSession = null;
 
-        await expect(HomeserverService.getBytesIfExists(OWNED_URL)).resolves.toBeNull();
+        await expect(HomeserverService.getBytesIfExists(OWNED_URL)).rejects.toMatchObject({
+          code: AuthErrorCode.UNAUTHORIZED,
+        });
         expect(mockState.sessionStorageGet).not.toHaveBeenCalled();
       });
 
@@ -1566,7 +1793,7 @@ describe('HomeserverService', () => {
 
         await expect(HomeserverService.exists(httpUrl)).resolves.toBe(true);
 
-        expect(mockState.clientFetch).toHaveBeenCalledWith(httpUrl);
+        expect(mockState.clientFetch).toHaveBeenCalledWith(httpUrl, { credentials: 'omit' });
       });
 
       it('should return false without error logging for an HTTP 404', async () => {
@@ -1609,10 +1836,10 @@ describe('HomeserverService', () => {
           service: ErrorService.Homeserver,
           operation: 'test',
         });
-        mockState.signupCookie.mockRejectedValue(appError);
+        mockState.signup.mockRejectedValue(appError);
 
         try {
-          await HomeserverService.signUp({
+          await HomeserverService.createAccount({
             keypair: createMockKeypair(),
             signupToken: 'token',
           });
@@ -1834,5 +2061,234 @@ describe('HomeserverService', () => {
         expect(mockState.sessionStorageGet).toHaveBeenCalledWith('/pub/data.json');
       });
     });
+  });
+});
+
+describe('SDK grant session persistence', () => {
+  beforeEach(() => vi.clearAllMocks());
+  it('stores a grant using the browser store and exposes only a reference and public metadata', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    const { getAuthClientId } = await import('@/config/auth');
+    const metadata = {
+      clientId: getAuthClientId(),
+      grantId: 'grant-id',
+      grantExpiresAt: 2_000_000_000,
+      tokenExpiresAt: 1_900_000_000,
+    };
+    const session = asOpaque<Session>({ grant: { sessionInfo: vi.fn().mockResolvedValue(metadata) }, export: vi.fn() });
+    mockState.saveGrant.mockResolvedValue({ id: 'sdk-record' });
+    expect(await HomeserverService.saveSession(session)).toEqual({
+      kind: 'grant',
+      sessionStoreId: 'sdk-record',
+      ...metadata,
+    });
+    expect(mockState.saveGrant).toHaveBeenCalledWith(session);
+    expect(session.export).not.toHaveBeenCalled();
+  });
+  it('does not save a grant bound to another app', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    const session = asOpaque<Session>({
+      grant: { sessionInfo: vi.fn().mockResolvedValue({ clientId: 'another-app' }) },
+    });
+    await expect(HomeserverService.saveSession(session)).rejects.toMatchObject({ code: AuthErrorCode.UNAUTHORIZED });
+    expect(mockState.saveGrant).not.toHaveBeenCalled();
+  });
+  it('signs out directly without triggering an authenticated storage request', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    const session = asOpaque<Session>({
+      grant: {},
+      storage: { get: vi.fn().mockResolvedValue(new Response(null, { status: 404 })) },
+      signout: vi.fn(),
+    });
+    await HomeserverService.logout({ session });
+    expect(session.storage.get).not.toHaveBeenCalled();
+    expect(session.signout).toHaveBeenCalledOnce();
+  });
+  it('does not falsely report signout if the SDK rejects its logout proof', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    const session = asOpaque<Session>({
+      grant: {},
+      storage: { get: vi.fn().mockResolvedValue(new Response(null, { status: 401 })) },
+      signout: vi.fn().mockRejectedValue({ name: 'AuthenticationError', message: 'Invalid proof' }),
+    });
+    await expect(HomeserverService.logout({ session })).rejects.toMatchObject({ code: AuthErrorCode.SESSION_EXPIRED });
+    expect(session.signout).toHaveBeenCalledOnce();
+    expect(session.storage.get).not.toHaveBeenCalled();
+  });
+});
+
+describe('signup-specific PKARR recovery', () => {
+  beforeEach(() => vi.clearAllMocks());
+  it('republishes a proven absent record for the original signup key before grant signin', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    const { getAuthClientId } = await import('@/config/auth');
+    mockState.getHomeserverOf.mockResolvedValue(null);
+    mockState.publishHomeserverForce.mockResolvedValue(undefined);
+    mockState.signin.mockResolvedValue(createMockSession());
+    await HomeserverService.signInCreatedAccount({ keypair: createMockKeypair() });
+    expect(mockState.publishHomeserverForce).toHaveBeenCalledOnce();
+    expect(mockState.signin).toHaveBeenCalledWith(getAuthClientId());
+    expect(mockState.publishHomeserverForce.mock.invocationCallOrder[0]).toBeLessThan(
+      mockState.signin.mock.invocationCallOrder[0],
+    );
+    expect(mockState.signup).not.toHaveBeenCalled();
+  });
+  it('does not republish an inconclusive lookup', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    mockState.getHomeserverOf.mockRejectedValue({ name: 'PkarrError', message: 'offline' });
+    await expect(HomeserverService.signInCreatedAccount({ keypair: createMockKeypair() })).rejects.toMatchObject({
+      category: ErrorCategory.Network,
+    });
+    expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
+    expect(mockState.signin).not.toHaveBeenCalled();
+  });
+});
+
+describe('missing SDK grant material', () => {
+  const reference = {
+    kind: 'grant' as const,
+    sessionStoreId: 'missing',
+    grantId: 'grant',
+    clientId: 'pubky.app',
+    grantExpiresAt: 2_000_000_000,
+    tokenExpiresAt: 1_900_000_000,
+  };
+  beforeEach(() => vi.clearAllMocks());
+  it('requires reauthorization only when IndexedDB confirms the record is absent', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    mockState.restoreGrant.mockRejectedValue({
+      name: 'ClientStateError',
+      message: 'Stored Pubky session not found: missing',
+    });
+    mockState.listGrants.mockResolvedValue([]);
+    await expect(HomeserverService.restoreReference(reference)).rejects.toMatchObject({
+      code: AuthErrorCode.SESSION_EXPIRED,
+      context: { reason: 'missing_local_grant' },
+    });
+  });
+  it('classifies unavailable IndexedDB as local recovery instead of a retryable server failure', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    mockState.restoreGrant.mockRejectedValue({ name: 'ClientStateError', message: 'Database unavailable' });
+    mockState.listGrants.mockResolvedValue([]);
+    await expect(HomeserverService.restoreReference(reference)).rejects.toMatchObject({
+      category: ErrorCategory.Database,
+      code: 'QUERY_FAILED',
+    });
+  });
+  it('tolerates already-removed owned records during interrupted cleanup', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    mockState.removeGrant.mockRejectedValue({
+      name: 'ClientStateError',
+      message: 'Stored Pubky session not found: missing',
+    });
+    mockState.listGrants.mockResolvedValue([]);
+    await expect(HomeserverService.removeSessionRecord(reference)).resolves.toBeUndefined();
+  });
+});
+
+describe('grant-only SDK boundaries', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockState.sessionStoreAvailable.mockResolvedValue(true);
+  });
+  afterEach(() => mockState.sessionStoreAvailable.mockResolvedValue(true));
+  it('rejects a cookie session without exporting or persisting it', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    const session = asOpaque<Session>({ export: vi.fn() });
+    await expect(HomeserverService.saveSession(session)).rejects.toMatchObject({ code: AuthErrorCode.UNAUTHORIZED });
+    expect(session.export).not.toHaveBeenCalled();
+    expect(mockState.saveGrant).not.toHaveBeenCalled();
+  });
+  it('does not consume a signup token when shared browser session storage is unavailable', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    mockState.sessionStoreAvailable.mockResolvedValue(false);
+    await expect(
+      HomeserverService.createAccount({ keypair: createMockKeypair(), signupToken: 'invite' }),
+    ).rejects.toMatchObject({ category: ErrorCategory.Database, code: 'INIT_FAILED' });
+    expect(mockState.signup).not.toHaveBeenCalled();
+  });
+  it('does not attempt key sign-in or grant restore without shared session storage', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    mockState.sessionStoreAvailable.mockResolvedValue(false);
+    await expect(HomeserverService.signIn({ keypair: createMockKeypair() })).rejects.toMatchObject({
+      code: 'INIT_FAILED',
+    });
+    await expect(HomeserverService.restoreReference(mockGrantReference())).rejects.toMatchObject({
+      code: 'INIT_FAILED',
+    });
+    expect(mockState.signin).not.toHaveBeenCalled();
+    expect(mockState.restoreGrant).not.toHaveBeenCalled();
+  });
+  it.each([
+    ['Browser session was signed out.', 'remote_logout_completed'],
+    ['Browser session is no longer valid.', 'invalid_grant'],
+  ])('classifies terminal SDK restore outcome %s', async (message, reason) => {
+    const { HomeserverService } = await import('./homeserver');
+    mockState.restoreGrant.mockRejectedValue({ name: 'ClientStateError', message });
+    await expect(HomeserverService.restoreReference(mockGrantReference())).rejects.toMatchObject({
+      code: AuthErrorCode.SESSION_EXPIRED,
+      context: { reason },
+    });
+    expect(mockState.removeGrant).not.toHaveBeenCalled();
+  });
+});
+
+describe('revocation-only cookie migration', () => {
+  beforeEach(() => vi.clearAllMocks());
+  it('restores old metadata only to sign out, without storage calls or adopting it', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    const session = createMockSession();
+    mockState.restoreLegacy.mockResolvedValue(session);
+    mockState.sessionSignout.mockResolvedValue(undefined);
+    await HomeserverService.revokeLegacyCookieSession('legacy-metadata');
+    expect(mockState.restoreLegacy).toHaveBeenCalledWith('legacy-metadata');
+    expect(mockState.sessionSignout).toHaveBeenCalledOnce();
+    expect(mockState.sessionStorageGet).not.toHaveBeenCalled();
+    expect(mockState.saveGrant).not.toHaveBeenCalled();
+  });
+  it('never revokes a grant found in an obsolete export field', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    const signout = vi.fn();
+    mockState.restoreLegacy.mockResolvedValue(asOpaque<Session>({ grant: {}, signout }));
+    await HomeserverService.revokeLegacyCookieSession('grant-secret');
+    expect(signout).not.toHaveBeenCalled();
+  });
+  it('clears SDK-confirmed missing legacy sessions but retries other authentication errors', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    mockState.restoreLegacy.mockRejectedValueOnce({
+      name: 'AuthenticationError',
+      message: 'Authentication error: The provided auth request has expired or was cancelled.',
+    });
+    await expect(HomeserverService.revokeLegacyCookieSession('gone')).resolves.toBeUndefined();
+    mockState.restoreLegacy.mockRejectedValueOnce({
+      name: 'AuthenticationError',
+      message: 'Other authentication failure',
+    });
+    await expect(HomeserverService.revokeLegacyCookieSession('unknown')).rejects.toThrow();
+    expect(mockState.sessionSignout).not.toHaveBeenCalled();
+  });
+  it('accepts an already rejected cookie but preserves retryable failures', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    mockState.restoreLegacy.mockResolvedValue(createMockSession());
+    mockState.sessionSignout.mockRejectedValueOnce({
+      name: 'RequestError',
+      message: 'Unauthorized',
+      data: { statusCode: 401 },
+    });
+    await expect(HomeserverService.revokeLegacyCookieSession('old')).resolves.toBeUndefined();
+    mockState.sessionSignout.mockRejectedValueOnce({ name: 'NetworkError', message: 'Offline' });
+    await expect(HomeserverService.revokeLegacyCookieSession('old')).rejects.toThrow();
+  });
+});
+
+describe('retention validation', () => {
+  beforeEach(() => vi.clearAllMocks());
+  it('does not save a rejected candidate under a different client ID', async () => {
+    const { HomeserverService } = await import('./homeserver');
+    const candidate = asOpaque<Session>({
+      grant: { sessionInfo: vi.fn().mockResolvedValue({ clientId: 'another-app' }) },
+    });
+    await HomeserverService.retainUnusedSession(candidate);
+    expect(mockState.saveGrant).not.toHaveBeenCalled();
   });
 });

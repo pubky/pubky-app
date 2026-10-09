@@ -207,3 +207,12 @@ If build-time environment validation fails, you'll see detailed error messages:
 ```
 
 If deployed runtime config is missing or invalid, the server exits at boot with the full list of required `PUBKY_RUNTIME_*` variables, including the Shop destination.
+
+### Grant authentication identity
+
+`PUBKY_RUNTIME_AUTH_CLIENT_ID` overrides the stable application identity shown to signers.
+It defaults to `pubky.app` for `PUBKY_RUNTIME_ENV=production` and `staging.pubky.app` for staging.
+Preview hostnames do not change this identity. The runtime schema injects the same value into the browser.
+Changing it requires new authorization for saved grants bound to the previous identity; it does not convert
+existing cookie sessions; their users obtain a grant by signing in again. The proof key, rather than this public label, cryptographically binds a grant.
+See [grant migration and Locks integration](migrations/2600-grant-auth-and-locks.md) for release checks.

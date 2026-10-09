@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from '@/molecules/Toaster/toast';
+import type { AuthStore } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
+import { mockAuthStore } from '@/test-utils/stores';
 import { DialogAddContent } from './DialogAddContent';
 
 const AUTHOR = 'a'.repeat(52);
@@ -12,6 +15,8 @@ const POST_URL = `https://pubky.app/post/${AUTHOR}/${POST_ID}`;
 
 const mocks = vi.hoisted(() => ({
   currentUserPubky: 'v'.repeat(52) as string | null,
+  restoreStatus: 'ready' as 'ready' | 'reauth-required',
+  showSignIn: vi.fn(),
   bookmarkExists: vi.fn(),
   commitCreateBookmark: vi.fn(),
   getOrFetchPost: vi.fn(),
@@ -44,10 +49,18 @@ vi.mock('@/controllers/post/post', () => ({
   },
 }));
 
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
-    selector({ currentUserPubky: mocks.currentUserPubky }),
-}));
+vi.mock('@/stores/auth/auth.store', () => {
+  const getState = () =>
+    mockAuthStore({
+      currentUserPubky: mocks.currentUserPubky,
+      session: mocks.restoreStatus === 'ready' ? mockSession() : null,
+      restoreStatus: mocks.restoreStatus,
+      setShowSignInDialog: mocks.showSignIn,
+    });
+  return {
+    useAuthStore: Object.assign((selector: (state: AuthStore) => unknown) => selector(getState()), { getState }),
+  };
+});
 
 vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: () => ({
@@ -141,6 +154,7 @@ describe('DialogAddContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.currentUserPubky = VIEWER;
+    mocks.restoreStatus = 'ready';
     mocks.bookmarkExists.mockResolvedValue(false);
     mocks.commitCreateBookmark.mockResolvedValue(undefined);
     mocks.getOrFetchPost.mockResolvedValue(livePost());
@@ -152,6 +166,14 @@ describe('DialogAddContent', () => {
 
   afterEach(() => {
     Reflect.deleteProperty(navigator, 'clipboard');
+  });
+
+  it('requests sign-in instead of opening Add Post for a retained recovery identity', () => {
+    mocks.restoreStatus = 'reauth-required';
+    render(<DialogAddContent />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocks.showSignIn).toHaveBeenCalledWith(true);
   });
 
   it('renders the Content trigger', () => {

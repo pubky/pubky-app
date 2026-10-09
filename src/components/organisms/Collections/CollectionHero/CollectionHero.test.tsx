@@ -46,7 +46,8 @@ vi.mock('@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs', () => ({
   usePostReplyRepostDialogs: vi.fn(),
 }));
 
-const mockRequireAuth = vi.fn(<T,>(action: () => T) => action());
+let canMutate = true;
+const mockRequireAuth = vi.fn(<T,>(action: () => T) => (canMutate ? action() : undefined));
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({ requireAuth: mockRequireAuth }),
 }));
@@ -341,6 +342,7 @@ function setPostCounts(uniqueTags = 3) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  canMutate = true;
   mockDeleteState.isDeleting = false;
   mockViewportState.isMobile = false;
   for (const key of Object.keys(mockLocalCollections)) delete mockLocalCollections[key];
@@ -606,6 +608,27 @@ describe('CollectionHero', () => {
         isCollectionShare: true,
       });
       expect(screen.getByTestId('repost-dialogs')).toBeInTheDocument();
+    });
+
+    it('gates owner edit and delete controls while authorization needs recovery', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      canMutate = false;
+      renderHero();
+      fireEvent.click(screen.getByLabelText('Edit'));
+      fireEvent.click(screen.getByLabelText('Delete'));
+      expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('dialog-confirm-delete')).not.toBeInTheDocument();
+      expect(mockRequireAuth).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not delete or navigate if authorization is lost after confirmation opens', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      renderHero();
+      fireEvent.click(screen.getByLabelText('Delete'));
+      canMutate = false;
+      fireEvent.click(screen.getByTestId('dialog-confirm-delete-btn'));
+      expect(mockDeletePost).not.toHaveBeenCalled();
+      expect(mockRouterReplace).not.toHaveBeenCalled();
     });
 
     describe('delete flow', () => {

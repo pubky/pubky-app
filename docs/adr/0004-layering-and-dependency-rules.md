@@ -24,3 +24,5 @@ Codify dependency boundaries: UI → controllers → pipes/application → servi
 ## Related Decisions
 
 - **ADR-0009: Application Layer Cross-Domain Orchestration** — Extends this ADR to allow Application-to-Application calls for cross-domain workflow orchestration while maintaining unidirectional flow principles.
+
+- **[ADR-0023: Grant-Only Authentication](0023-gradual-grant-authentication.md)** — Proposes the additional read-only Locks account-ownership check at the IO boundary.

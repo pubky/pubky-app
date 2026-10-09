@@ -5,6 +5,7 @@ import { postUriBuilder } from 'pubky-app-specs';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isAppError } from '@/libs/error/error.utils';
 import { isPostDeleted } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -63,12 +64,14 @@ async function isPostStillInCollection(collectionId: string, postId: string): Pr
 export function useRemoveDeletedPost(postId: string): UseRemoveDeletedPostResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const feed = useTimelineFeedContext();
+  const { requireAuth } = useRequireAuth();
   const target = resolveRemovalTarget(feed, currentUserPubky);
   const [isRemoving, setIsRemoving] = useState(false);
   const isRemovingRef = useRef(false);
   const remove = async (): Promise<boolean> => {
     if (!feed?.removePostsOptimistically || !target || !currentUserPubky || isRemovingRef.current) return false;
 
+    if (!requireAuth(() => true)) return false;
     isRemovingRef.current = true;
     setIsRemoving(true);
     const optimisticRemoval = feed.removePostsOptimistically(postId);

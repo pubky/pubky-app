@@ -1,4 +1,5 @@
-import { type AuthFlow } from '@synonymdev/pubky';
+import { type AuthFlow, type Session } from '@synonymdev/pubky';
+import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -8,7 +9,7 @@ import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
-import { createCanceledError, extractStatusCode, handleError } from './error.utils';
+import { handleError } from './error.utils';
 import type {
   CancelableAuthApproval,
   StoragePath,
@@ -149,12 +150,16 @@ export const parseResponseOrUndefined = async <T>({
  * Creates a cancelable auth approval wrapper around an AuthFlow.
  * Pubky rc7: awaitApproval consumes the WASM handle, so we use tryPollOnce to keep flow.free() usable.
  * @param flow - The auth flow to wrap
- * @param options - Optional configuration with poll interval in milliseconds
+ * @param options - Poll limits and disposition for a session returned after cancellation
  * @returns CancelableAuthApproval with awaitApproval promise and cancel function
  */
 export const createCancelableAuthApproval = (
-  flow: AuthFlow,
-  options?: { pollIntervalMs?: number; maxPollAttempts?: number },
+  flow: Pick<AuthFlow, 'tryPollOnce' | 'free'>,
+  options?: {
+    pollIntervalMs?: number;
+    maxPollAttempts?: number;
+    onCanceledSession?: (session: Session) => Promise<void>;
+  },
 ): CancelableAuthApproval => {
   const pollIntervalMs = options?.pollIntervalMs ?? AUTH_POLL_INTERVAL_MS;
   const maxPollAttempts = options?.maxPollAttempts ?? AUTH_POLL_MAX_ATTEMPTS;
@@ -189,22 +194,14 @@ export const createCancelableAuthApproval = (
 
       try {
         const maybeSession = await flow.tryPollOnce();
+        if (canceled) {
+          if (maybeSession) await options?.onCanceledSession?.(maybeSession);
+          throw createCanceledError();
+        }
         if (maybeSession) return maybeSession;
       } catch (error) {
         if (canceled) throw createCanceledError();
-        // From the caller's view, tryPollOnce is one-shot: one call, one outcome
-        // (pubky SDK 0.8 — it doesn't loop or retry on our behalf). If it throws,
-        // we treat the flow as dead and fail fast — showing "session expired" now
-        // is better UX than letting the user wait minutes on a flow that may already be dead.
-        throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Auth flow polling failed', {
-          service: ErrorService.Homeserver,
-          operation: 'awaitApproval',
-          context: {
-            originalError: error instanceof Error ? error.message : String(error),
-            statusCode: extractStatusCode(error),
-          },
-          cause: error,
-        });
+        return handleError({ error, additionalContext: { operation: 'awaitApproval' } });
       }
 
       await sleep(pollIntervalMs);

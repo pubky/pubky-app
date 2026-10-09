@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => {
   const setLockServicePointer = vi.fn(async () => {});
   const paykitSetupStatus = vi.fn(async (): Promise<unknown> => ({ status: 'ready' }));
   const fakeSession = {
+    creatorPubky: () => 'pubkyaccount',
     exportSecret: vi.fn(() => 'secret-abc'),
     signout: vi.fn(async () => {}),
     creator: { setLockServicePointer, paykitSetupStatus },
@@ -143,6 +145,7 @@ vi.mock('@synonymdev/locks-sdk', () => {
 describe('LocksService (auth)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ currentUserPubky: 'account' });
     mocks.getLockServer.mockReturnValue('lockserverpubky');
     useLocksAuthStore.setState(locksAuthInitialState);
     // The client is a cached singleton; tests below assert construction, so build fresh per test.
@@ -278,6 +281,7 @@ describe('LocksService (auth)', () => {
 });
 
 const session = asOpaque<LocksSdkSession>({
+  creatorPubky: () => 'pubkyaccount',
   creator: { registerGuardedResource: mocks.registerGuardedResource, createContentLock: mocks.createContentLock },
   lockServer: () => 'lockpubky',
 });
@@ -294,6 +298,7 @@ const lockParams = {
 describe('LocksService (content)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ currentUserPubky: 'account' });
     useLocksAuthStore.setState(locksAuthInitialState);
     useLocksAuthStore.getState().init({ session, secret: 'secret-abc' });
   });
@@ -396,6 +401,7 @@ describe('LocksService.isServerReady', () => {
 describe('LocksService (reader unlock)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ currentUserPubky: 'account' });
     mocks.getLockServer.mockReturnValue('lockserverpubky');
     LocksService['locksClient'] = null;
     LocksService['viewerClient'] = null;

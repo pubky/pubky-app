@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { PostController } from '@/controllers/post/post';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
@@ -33,6 +34,7 @@ import type { UseDeletePostOptions, UseDeletePostResult } from './useDeletePost.
 export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
   const timelineFeed = useTimelineFeedContext();
+  const { requireAuth } = useRequireAuth();
 
   // Resolve toast copy with caller overrides so callers like CollectionCard /
   // CollectionHero can swap in collection-specific copy without forking the hook.
@@ -55,6 +57,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
       return;
     }
 
+    if (!requireAuth(() => true)) return;
     setIsDeleting(true);
 
     // Optimistically remove the post as a transaction: the commit path also decrements

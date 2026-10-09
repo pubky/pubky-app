@@ -2,6 +2,16 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogSignIn } from './DialogSignIn';
 
+const recoveryState = vi.hoisted(() => ({
+  currentUserPubky: null as string | null,
+  restoreStatus: 'idle',
+  sessionReference: null as object | null,
+}));
+vi.mock('@/organisms/SessionRecovery/SessionRecovery', () => ({
+  SessionRecovery: ({ needsAuthorization }: { needsAuthorization: boolean }) => (
+    <div>{needsAuthorization ? 'Authorize retained account' : 'Retry retained session'}</div>
+  ),
+}));
 const mockShowSignInDialog = vi.hoisted(() => ({ value: false }));
 const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
 const mockJoinRoute = vi.hoisted(() => ({ value: '/onboarding/human' }));
@@ -15,7 +25,12 @@ vi.mock('@/hooks/useJoinRoute/useJoinRoute', () => ({
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (
     selector: (state: { showSignInDialog: boolean; setShowSignInDialog: typeof mockSetShowSignInDialog }) => unknown,
-  ) => selector({ showSignInDialog: mockShowSignInDialog.value, setShowSignInDialog: mockSetShowSignInDialog }),
+  ) =>
+    selector({
+      ...recoveryState,
+      showSignInDialog: mockShowSignInDialog.value,
+      setShowSignInDialog: mockSetShowSignInDialog,
+    }),
 }));
 
 // Mock next/link
@@ -30,10 +45,39 @@ vi.mock('next/link', () => ({
 describe('DialogSignIn', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    recoveryState.currentUserPubky = null;
+    recoveryState.restoreStatus = 'idle';
+    recoveryState.sessionReference = null;
     mockShowSignInDialog.value = false;
     mockJoinRoute.value = '/onboarding/human';
   });
 
+  it.each(['temporary-error', 'reauth-required'])('shows account recovery for %s instead of guest signup', (status) => {
+    mockShowSignInDialog.value = true;
+    recoveryState.currentUserPubky = 'retained-user';
+    recoveryState.restoreStatus = status;
+    render(<DialogSignIn />);
+    expect(
+      screen.getByText(status === 'reauth-required' ? 'Authorize retained account' : 'Retry retained session'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Join Pubky')).not.toBeInTheDocument();
+  });
+  it('offers guest sign-in after generating an unregistered onboarding key', () => {
+    mockShowSignInDialog.value = true;
+    recoveryState.currentUserPubky = 'unregistered-key';
+    render(<DialogSignIn />);
+    expect(screen.getByRole('heading', { name: 'Join Pubky' })).toBeInTheDocument();
+    expect(screen.queryByText('Retry retained session')).not.toBeInTheDocument();
+  });
+  it.each(['idle', 'restoring'])('shows progress for an active saved-session restore (%s)', (status) => {
+    mockShowSignInDialog.value = true;
+    recoveryState.currentUserPubky = 'account';
+    recoveryState.sessionReference = {};
+    recoveryState.restoreStatus = status;
+    render(<DialogSignIn />);
+    expect(screen.getByText('Restoring your session. Try your action again when it is ready.')).toBeInTheDocument();
+    expect(screen.queryByText('Retry retained session')).not.toBeInTheDocument();
+  });
   describe('rendering', () => {
     it('renders nothing when store has showSignInDialog=false', () => {
       mockShowSignInDialog.value = false;
@@ -138,6 +182,9 @@ describe('DialogSignIn', () => {
 describe('DialogSignIn - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    recoveryState.currentUserPubky = null;
+    recoveryState.restoreStatus = 'idle';
+    recoveryState.sessionReference = null;
   });
 
   it('matches snapshot when open', () => {
@@ -148,6 +195,13 @@ describe('DialogSignIn - Snapshots', () => {
     expect(dialog?.parentElement).toMatchSnapshot();
   });
 
+  it.each(['restoring', 'temporary-error', 'reauth-required'])('matches snapshot for %s', (status) => {
+    mockShowSignInDialog.value = true;
+    recoveryState.currentUserPubky = 'account';
+    recoveryState.restoreStatus = status;
+    render(<DialogSignIn />);
+    expect(document.querySelector('[role="dialog"]')?.parentElement).toMatchSnapshot();
+  });
   it('matches snapshot when closed', () => {
     mockShowSignInDialog.value = false;
     const { container } = render(<DialogSignIn />);

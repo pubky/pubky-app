@@ -31,6 +31,7 @@ import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
@@ -53,6 +54,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   // This is necessary because composite IDs may contain prefixed pubky IDs
   const postAuthorId = stripPubkyPrefix(parsedId.pubky) as Pubky;
   const { currentUserPubky } = useCurrentUserProfile();
+  const { requireAuth } = useRequireAuth();
   const { postDetails, isLoading: isPostLoading } = usePostDetails(postId);
   const { profile: authorProfile, isLoading: isAuthorLoading } = useUserProfile(postAuthorId);
   const { isFollowing, isLoading: isFollowingLoading } = useIsFollowing(postAuthorId);
@@ -86,10 +88,11 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       id: POST_MENU_ACTION_IDS.FOLLOW,
       label: isFollowing ? `Unfollow ${username}` : `Follow ${username}`,
       icon: isFollowing ? UserRoundMinus : UserRoundPlus,
-      onClick: async () => {
-        // useFollowUser handles all feedback (toast + state) and never throws.
-        await toggleFollow(postAuthorId, isFollowing);
-      },
+      onClick: () =>
+        requireAuth(async () => {
+          // useFollowUser handles all feedback (toast + state) and never throws.
+          await toggleFollow(postAuthorId, isFollowing);
+        }),
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
       disabled: isFollowLoading || isUserLoading(postAuthorId),
     });
@@ -130,19 +133,20 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       id: POST_MENU_ACTION_IDS.MUTE,
       label: isUserMuted ? `Unmute ${username}` : `Mute ${username}`,
       icon: isUserMuted ? Megaphone : MegaphoneOff,
-      onClick: async () => {
-        try {
-          await toggleMute(postAuthorId, isUserMuted);
-          toast({
-            title: isUserMuted ? 'User unmuted' : 'User muted',
-          });
-        } catch (error) {
-          toast({
-            variant: 'error',
-            description: isAppError(error) ? error.message : 'Could not update mute status',
-          });
-        }
-      },
+      onClick: () =>
+        requireAuth(async () => {
+          try {
+            await toggleMute(postAuthorId, isUserMuted);
+            toast({
+              title: isUserMuted ? 'User unmuted' : 'User muted',
+            });
+          } catch (error) {
+            toast({
+              variant: 'error',
+              description: isAppError(error) ? error.message : 'Could not update mute status',
+            });
+          }
+        }),
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
       disabled: isMuteLoading || isMuteUserLoading(postAuthorId),
     });
@@ -150,7 +154,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       id: POST_MENU_ACTION_IDS.REPORT,
       label: 'Report post',
       icon: Flag,
-      onClick: onReportClick,
+      onClick: () => requireAuth(onReportClick),
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
     });
   }
@@ -159,14 +163,14 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       id: POST_MENU_ACTION_IDS.EDIT,
       label: 'Edit post',
       icon: Edit,
-      onClick: onEditClick,
+      onClick: () => requireAuth(onEditClick),
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
     });
     menuItems.push({
       id: POST_MENU_ACTION_IDS.DELETE,
       label: 'Delete post',
       icon: Trash,
-      onClick: onDeleteClick,
+      onClick: () => requireAuth(onDeleteClick),
       variant: POST_MENU_ACTION_VARIANTS.DESTRUCTIVE,
       disabled: isDeleting,
     });

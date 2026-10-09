@@ -237,6 +237,7 @@ export type NetworkRuntimeConfig = z.infer<typeof networkConfigValueSchema>;
  * Validates `window.__PUBKY_CONFIG__`.
  */
 export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
+  authClientId: z.string().trim().min(1).optional(),
   /** Optional browser telemetry. Only a client key is needed; endpoint overrides the SDK default. */
   pulseClientKey: z.string().startsWith('pulse_client_').optional(),
   pulseEndpoint: urlValue.optional(),
@@ -321,6 +322,7 @@ export const runtimeEnvInputSchema = z
     pkarrRelays: pkarrRelaysFromString,
     testnet: testnetFromString,
     deployEnv: deployEnvValue,
+    authClientId: optionalTrimmedString,
     shopUrl: shopUrlValue,
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
@@ -407,6 +409,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     pkarrRelays: z.string().default(JSON.stringify(NETWORK_RUNTIME_DEFAULTS.pkarrRelays)).pipe(pkarrRelaysFromString),
     testnet: z.string().default(String(NETWORK_RUNTIME_DEFAULTS.testnet)).pipe(testnetFromString),
     deployEnv: deployEnvValue.default(NETWORK_RUNTIME_DEFAULTS.deployEnv),
+    authClientId: optionalTrimmedString,
     shopUrl: shopUrlValue.default(NETWORK_RUNTIME_DEFAULTS.shopUrl),
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
@@ -490,6 +493,7 @@ const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
 
 export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ...NETWORK_RUNTIME_ENV_NAMES,
+  authClientId: 'PUBKY_RUNTIME_AUTH_CLIENT_ID',
   lockServer: 'PUBKY_RUNTIME_LOCK_SERVER',
   paykitServerUrl: 'PUBKY_RUNTIME_PAYKIT_SERVER_URL',
   pulseClientKey: 'PUBKY_RUNTIME_PULSE_CLIENT_KEY',

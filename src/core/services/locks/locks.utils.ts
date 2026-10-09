@@ -4,6 +4,8 @@ import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
+import { stripPubkyPrefix } from '@/libs/utils/utils';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 
 /**
@@ -95,7 +97,7 @@ export function getPaykitServerOrigin(): string {
  */
 export function getLockSession(): LocksSdkSession {
   const session = useLocksAuthStore.getState().selectLocksSession();
-  if (!session) {
+  if (!session || stripPubkyPrefix(session.creatorPubky() ?? '') !== useAuthStore.getState().currentUserPubky) {
     throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No Locks session; sign into the Lock Server first', {
       service: ErrorService.Locks,
       operation: 'getLockSession',

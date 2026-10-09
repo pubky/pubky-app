@@ -1,0 +1,79 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Logout > Snapshots > matches the backup confirmation state 1`] = `
+<div
+  data-class="gap-0 min-h-dvh lg:min-h-[calc(100dvh-var(--header-offset-auth-pages))] px-4 lg:px-6 xl:px-0"
+  data-size="container"
+  data-testid="container"
+>
+  <div
+    data-class="gap-6"
+    data-testid="container"
+  >
+    <div
+      data-testid="page-header"
+    >
+      <h1>
+        Back up your key before signing out
+      </h1>
+      <p>
+        Your recovery key is still saved in this browser. If you already have a backup, choose Done to confirm and sign out.
+      </p>
+    </div>
+    <div>
+      Backup controls
+    </div>
+  </div>
+  <div
+    class="onboarding-nav mt-auto w-full lg:mt-0"
+  >
+    <div
+      data-class="pb-0 lg:pb-6"
+      data-testid="buttons-navigation"
+    >
+      <button>
+        Homepage
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Logout > Snapshots > matches the canceled logout state with navigation at the bottom 1`] = `
+<div
+  data-class="gap-0 min-h-dvh lg:min-h-[calc(100dvh-var(--header-offset-auth-pages))] px-4 lg:px-6 xl:px-0"
+  data-size="container"
+  data-testid="container"
+>
+  <div
+    data-class="gap-6"
+    data-testid="container"
+  >
+    <div
+      data-testid="page-header"
+    >
+      <h1>
+        Your account changed
+      </h1>
+      <p>
+        Sign-out was canceled because another tab updated your session.
+      </p>
+    </div>
+  </div>
+  <div
+    class="onboarding-nav mt-auto w-full lg:mt-0"
+  >
+    <div
+      data-class="pb-0 lg:pb-6"
+      data-testid="buttons-navigation"
+    >
+      <button>
+        Homepage
+      </button>
+      <button>
+        Sign out
+      </button>
+    </div>
+  </div>
+</div>
+`;

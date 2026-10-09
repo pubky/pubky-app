@@ -8,6 +8,7 @@ import { useForm, type UseFormReturn } from 'react-hook-form';
 import { APP_ROUTES } from '@/app/routes';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { FeedController } from '@/controllers/feed/feed';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { toast } from '@/molecules/Toaster/toast';
 import {
   CUSTOM_FEED_CONTENT_ALL,
@@ -45,6 +46,7 @@ type UseCustomFeedFormResult = {
  */
 export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFeedFormResult {
   const { mode, feed, open } = params;
+  const { requireAuth } = useRequireAuth();
   const [loading, setLoading] = useState(false);
   // Synchronous re-entrancy truth: a queued second click can run a stale
   // render's closure before React commits `loading`, so the guard cannot rely
@@ -81,6 +83,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
 
     try {
       await form.handleSubmit(async (data) => {
+        if (!requireAuth(() => true)) return;
         // `null` is the feed record's "no content filter"; the form carries a
         // sentinel instead because a Select cannot hold null as an option value.
         // Tagged as is a UI-only reach: persist as WoT + the form's domain_tags.
@@ -138,7 +141,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
   };
 
   const deleteFeed = async (): Promise<boolean> => {
-    if (inFlightRef.current || mode !== 'edit') return false;
+    if (inFlightRef.current || mode !== 'edit' || !requireAuth(() => true)) return false;
     inFlightRef.current = true;
     setLoading(true);
 

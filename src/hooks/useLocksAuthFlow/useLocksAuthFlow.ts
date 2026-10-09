@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { LocksController } from '@/controllers/locks/locks';
+import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import type { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -72,10 +73,12 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
 
     try {
       const url = await LocksController.getConnectUrl({ state: authState });
+      if (stateRef.current !== authState) return;
       lockServerOriginRef.current = new URL(url).origin;
       setConnectUrl(url);
       setStatus(LocksAuthFlowStatus.AWAITING_APPROVAL);
     } catch (caught) {
+      if (stateRef.current !== authState) return;
       setError(toAppError(caught, ErrorService.Locks, 'useLocksAuthFlow.start'));
       setStatus(LocksAuthFlowStatus.ERROR);
     }
@@ -93,6 +96,7 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
       if (!message) return; // ignore unrelated / invalid messages
       window.removeEventListener('message', handler); // one-shot: a valid callback ends the listen
 
+      const authState = stateRef.current;
       try {
         if ('error' in message) {
           throw Err.validation(ValidationErrorCode.INVALID_INPUT, `Lock auth failed: ${message.error}`, {
@@ -110,9 +114,15 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
         }
         setStatus(LocksAuthFlowStatus.EXCHANGING);
         const result = await LocksController.completeAuthFromCallback({ code, state });
+        if (stateRef.current !== authState) return;
         setSession(result.session);
         setStatus(LocksAuthFlowStatus.SUCCESS);
       } catch (caught) {
+        if (stateRef.current !== authState) return;
+        if (isAuthFlowCanceledError(caught)) {
+          setStatus(LocksAuthFlowStatus.IDLE);
+          return;
+        }
         // No Logger here: Err.validation / toAppError both log at creation (double-log otherwise).
         setError(isAppError(caught) ? caught : toAppError(caught, ErrorService.Locks, 'useLocksAuthFlow.onCallback'));
         setStatus(LocksAuthFlowStatus.ERROR);

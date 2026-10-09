@@ -175,6 +175,7 @@ function SavePickerContent({
   toggleCollection,
   createCollectionWithPost,
 }: SavePickerContentProps) {
+  const { requireAuth } = useRequireAuth();
   const [newCollectionName, setNewCollectionName] = useState('');
   const canCreate = newCollectionName.trim().length > 0 && !isCreatingCollection;
 
@@ -195,8 +196,10 @@ function SavePickerContent({
 
   const handleCreate = async () => {
     if (!canCreate) return;
-    await createCollectionWithPost(newCollectionName);
-    setNewCollectionName('');
+    await requireAuth(async () => {
+      await createCollectionWithPost(newCollectionName);
+      setNewCollectionName('');
+    });
   };
 
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -223,7 +226,7 @@ function SavePickerContent({
           layout={layout}
           disabled={isBookmarkBusy}
           dataCy="post-save-bookmarks-option"
-          onActivate={() => void toggleBookmark()}
+          onActivate={() => void requireAuth(toggleBookmark)}
         >
           <Bookmark className="size-4" />
           <Typography
@@ -249,7 +252,9 @@ function SavePickerContent({
               key={collection.id}
               layout={layout}
               collection={collection}
-              onToggleCollection={toggleCollection}
+              onToggleCollection={async (collectionId) => {
+                await requireAuth(() => toggleCollection(collectionId));
+              }}
             />
           ))
         )}

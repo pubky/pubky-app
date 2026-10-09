@@ -76,7 +76,7 @@ describe('LocksController (auth)', () => {
     mocks.signout.mockResolvedValue(undefined);
     mocks.setLockServiceConfig.mockResolvedValue(undefined);
     useLocksAuthStore.setState(locksAuthInitialState);
-    useAuthStore.setState({ currentUserPubky: MOCK_LOCK_AUTHOR_PUBKY });
+    useAuthStore.setState({ currentUserPubky: MOCK_LOCK_AUTHOR_PUBKY, generation: 'original-login' });
   });
 
   it('getConnectUrl derives returnTo from the app origin and forwards it', async () => {
@@ -279,6 +279,53 @@ describe('LocksController (auth)', () => {
       const store = useLocksAuthStore.getState();
       expect(store.selectIsLocksAuthenticated()).toBe(false);
       expect(store.selectLocksSessionSecret()).toBeNull();
+    });
+  });
+
+  describe('account changes during Locks operations', () => {
+    it('does not reinstall a restored session after logout', async () => {
+      useLocksAuthStore.getState().init({ session: null, secret: 'old-secret' });
+      const pending = Promise.withResolvers<LocksSdkSession>();
+      mocks.restoreSession.mockReturnValueOnce(pending.promise);
+      const restore = LocksController.restorePersistedLocksSession();
+      await LocksController.logout();
+      pending.resolve(fakeSession);
+      await restore;
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBeNull();
+      expect(mocks.setLockServiceConfig).not.toHaveBeenCalled();
+    });
+
+    it('keeps a newer secret when an old restore fails', async () => {
+      useLocksAuthStore.getState().init({ session: null, secret: 'old-secret' });
+      const pending = Promise.withResolvers<LocksSdkSession>();
+      mocks.restoreSession.mockReturnValueOnce(pending.promise);
+      const restore = LocksController.restorePersistedLocksSession();
+      useAuthStore.setState({ generation: 'new-account-generation' });
+      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'new-secret' });
+      pending.reject(new Error('old restore failed'));
+      await restore;
+      expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBe('new-secret');
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+    });
+
+    it('does not validate or use a saved secret belonging to another account', async () => {
+      useLocksAuthStore.getState().init({ session: null, secret: 'other-secret' });
+      mocks.restoreSession.mockResolvedValueOnce(asOpaque<LocksSdkSession>({ creatorPubky: () => 'pubkyother' }));
+      await LocksController.restorePersistedLocksSession();
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBeNull();
+      expect(mocks.setLockServiceConfig).not.toHaveBeenCalled();
+    });
+
+    it('rejects a callback completed after a same-account logout and new login', async () => {
+      const pending = Promise.withResolvers<{ session: LocksSdkSession; secret: string }>();
+      mocks.exchangeSessionCode.mockReturnValueOnce(pending.promise);
+      const outcome = LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
+      const rejected = expect(outcome).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
+      useAuthStore.setState({ generation: 'later-login' });
+      pending.resolve({ session: fakeSession, secret: 'old-secret' });
+      await rejected;
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBeNull();
+      expect(mocks.signout).toHaveBeenCalledWith(fakeSession);
     });
   });
 

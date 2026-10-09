@@ -7,6 +7,7 @@ import { Slot } from 'radix-ui';
 import { getCollectionRoute } from '@/app/routes';
 import { useAuthoredCollections } from '@/hooks/useAuthoredCollections/useAuthoredCollections';
 import { useCreateCollection } from '@/hooks/useCreateCollection/useCreateCollection';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { parseCompositeId } from '@/models/models.utils';
 import { DialogCollectionForm } from '@/organisms/Collections/DialogCollectionForm/DialogCollectionForm';
 import { DialogCollectionsIntro } from '@/organisms/Collections/DialogCollectionsIntro/DialogCollectionsIntro';
@@ -26,6 +27,7 @@ export function DialogNewCollection({
   onOpenChange: onOpenChangeProp,
 }: DialogNewCollectionProps) {
   const router = useRouter();
+  const { requireAuth } = useRequireAuth();
   const [openState, setOpenState] = useState(false);
   const isControlled = openProp !== undefined;
   const open = isControlled ? openProp : openState;
@@ -65,24 +67,25 @@ export function DialogNewCollection({
     if (!nextOpen) closeFlow();
   };
 
-  const handleSave = async () => {
-    flushSync(() => setIsSavingLocal(true));
-    try {
-      const compositeId = await submit();
-      if (!compositeId) return;
-      closeFlow();
-      const { pubky, id } = parseCompositeId(compositeId);
-      router.push(getCollectionRoute(pubky, id));
-    } finally {
-      setIsSavingLocal(false);
-    }
-  };
+  const handleSave = () =>
+    requireAuth(async () => {
+      flushSync(() => setIsSavingLocal(true));
+      try {
+        const compositeId = await submit();
+        if (!compositeId) return;
+        closeFlow();
+        const { pubky, id } = parseCompositeId(compositeId);
+        router.push(getCollectionRoute(pubky, id));
+      } finally {
+        setIsSavingLocal(false);
+      }
+    });
 
   const isSaving = isSavingLocal || form.formState.isSubmitting;
 
   return (
     <>
-      {children ? <Slot.Root onClick={() => setOpen(true)}>{children}</Slot.Root> : null}
+      {children ? <Slot.Root onClick={() => requireAuth(() => setOpen(true))}>{children}</Slot.Root> : null}
 
       <DialogCollectionsIntro open={introOpen} onOpenChange={handleDismiss} onContinue={() => setContinued(true)} />
 

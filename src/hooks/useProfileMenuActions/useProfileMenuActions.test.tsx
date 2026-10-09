@@ -2,6 +2,9 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { isAppError } from '@/libs/error/error.utils';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { useProfileMenuActions } from './useProfileMenuActions';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 
@@ -95,6 +98,13 @@ describe('useProfileMenuActions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      ...authInitialState,
+      currentUserPubky: 'currentUser123',
+      session: mockSession(),
+      restoreStatus: 'ready',
+      hasHydrated: true,
+    });
     mockIsAppError.mockReturnValue(false);
     defaultMocks.isMuted.mockReturnValue(false);
 
@@ -169,6 +179,50 @@ describe('useProfileMenuActions', () => {
     });
     mockUseShareUrl.mockReturnValue({
       shareUrl: defaultMocks.shareUrl,
+    });
+  });
+
+  describe.each([
+    { recovery: 'reauth-required', restoreStatus: 'reauth-required', session: null },
+    { recovery: 'temporary-error', restoreStatus: 'temporary-error', session: null },
+    { recovery: 'temporary-error with a live session', restoreStatus: 'temporary-error', session: mockSession() },
+    { recovery: 'restoring', restoreStatus: 'restoring', session: null },
+  ] as const)('an already-open menu during $recovery', ({ restoreStatus, session }) => {
+    it.each([PROFILE_MENU_ACTION_IDS.FOLLOW, PROFILE_MENU_ACTION_IDS.MUTE])(
+      'blocks a retained %s callback before the account action runs',
+      async (actionId) => {
+        const { result } = renderHook(() => useProfileMenuActions(mockUserId));
+        const retainedAction = result.current.menuItems.find((item) => item.id === actionId);
+        expect(retainedAction).toBeDefined();
+
+        await act(async () => {
+          useAuthStore.setState({ restoreStatus, session });
+          await retainedAction?.onClick();
+        });
+
+        expect(defaultMocks.toggleFollow).not.toHaveBeenCalled();
+        expect(defaultMocks.toggleMute).not.toHaveBeenCalled();
+        expect(vi.mocked(toast)).not.toHaveBeenCalled();
+        expect(useAuthStore.getState().currentUserPubky).toBe('currentUser123');
+        expect(useAuthStore.getState().showSignInDialog).toBe(true);
+      },
+    );
+
+    it('keeps retained public copy and share callbacks available', async () => {
+      const { result } = renderHook(() => useProfileMenuActions(mockUserId));
+      const retainedActions = result.current.menuItems.filter(
+        (item) => item.id === PROFILE_MENU_ACTION_IDS.COPY_PUBKY || item.id === PROFILE_MENU_ACTION_IDS.COPY_LINK,
+      );
+      expect(retainedActions).toHaveLength(2);
+
+      await act(async () => {
+        useAuthStore.setState({ restoreStatus, session });
+        for (const action of retainedActions) await action.onClick();
+      });
+
+      expect(defaultMocks.copyToClipboard).toHaveBeenCalledWith(`pubky${mockUserId}`);
+      expect(defaultMocks.shareUrl).toHaveBeenCalledWith(`https://example.com/profile/${mockUserId}`);
+      expect(useAuthStore.getState().showSignInDialog).toBe(false);
     });
   });
 

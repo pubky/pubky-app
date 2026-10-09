@@ -203,3 +203,32 @@ When handling errors:
 - [ ] Using `safeFetch` for HTTP requests?
 - [ ] Checking `category`/`code` instead of parsing messages?
 - [ ] Using decision helpers (`isRetryable`, `requiresLogin`, `isNotFound`)?
+
+### SDK 0.15 session-store classification exception
+
+`HomeserverService.isMissingSessionRecord` is a narrow boundary exception to message-free error classification. The pinned Pubky SDK exposes both missing records and IndexedDB failures as `ClientStateError`, without a structured reason. Its exact `Stored Pubky session not found: <id>` message is emitted only after a successful read finds no record. `browserSessionStore.list()` cannot establish absence: it catches storage failures and returns an empty list.
+
+Keep this check restricted to the SDK boundary, match the full message and requested ID, and retain the real-SDK contract tests in `session-store.contract.test.ts` when updating the SDK. Replace it with a structured discriminator when the SDK provides one. Downstream code continues to use `AppError` code/context (`SESSION_EXPIRED` with `missing_local_grant`); other storage failures remain retryable.
+
+SDK 0.15 also uses exact terminal messages `Browser session was signed out.` (restore completed pending logout) and
+`Browser session is no longer valid.` (failed revalidation). The homeserver adapter maps these to `SESSION_EXPIRED`
+with public reason codes. Keep message matching at this pinned SDK boundary, alongside focused tests; do not map
+all `ClientStateError` values to reauthorization or use `list()` to infer missing credentials.
+
+The same boundary recognizes `Delegated grant key not found: <keyId>` only for `ClientStateError`. SDK 0.15 emits
+this after successfully reading a delegated session whose signing-key record is absent. It maps to
+`missing_local_grant`, allowing same-account reauthorization. The key ID is SDK-owned and differs from the session
+record ID; do not expose it in app errors. Keep the real-SDK missing-key test alongside transient storage failures.
+
+SDK 0.15 `Unsupported stored session version.` is terminal for restoration by this build; map it to
+`unsupported_stored_session` without deleting or regenerating the record. Legacy cookie revocation separately
+recognizes the exact `AuthenticationError` message `Authentication error: The provided auth request has expired or
+was cancelled.` from `restoreSession(export)`. This means no live cookie was found; it is not a generic network-error
+exception. Keep both contracts covered by the real-SDK tests in `session-store.contract.test.ts` on SDK updates.
+
+### Expected auth control flow
+
+`auth-flow-canceled.ts` is the narrow exception for non-reporting control-flow sentinels: `AuthFlowCanceled` for
+superseded work and `AuthApprovalMismatch` for an approval using the wrong account or capabilities. These are expected
+user choices, not faults to capture with `Err.*`. Use their shared predicates; show actionable UI feedback for a
+mismatch and remain quiet for supersession. Storage, transport and unexpected failures still use the normal factories.

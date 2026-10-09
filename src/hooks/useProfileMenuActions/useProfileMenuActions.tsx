@@ -7,6 +7,7 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
@@ -26,6 +27,7 @@ import type { ProfileMenuActionItem, UseProfileMenuActionsResult } from './usePr
  * @returns Menu items array and loading state
  */
 export function useProfileMenuActions(userId: string): UseProfileMenuActionsResult {
+  const { requireAuth } = useRequireAuth();
   const { profile, isLoading: isProfileLoading } = useUserProfile(userId);
   const { isFollowing, isLoading: isFollowingLoading } = useIsFollowing(userId);
   const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = useFollowUser();
@@ -51,10 +53,11 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     id: PROFILE_MENU_ACTION_IDS.FOLLOW,
     label: isFollowing ? `Unfollow ${username}` : `Follow ${username}`,
     icon: isFollowing ? UserRoundMinus : UserRoundPlus,
-    onClick: async () => {
-      // useFollowUser handles all feedback (toast + state) and never throws.
-      await toggleFollow(userId, isFollowing);
-    },
+    onClick: () =>
+      requireAuth(async () => {
+        // useFollowUser handles all feedback (toast + state) and never throws.
+        await toggleFollow(userId, isFollowing);
+      }),
     disabled: isFollowLoading || isUserLoading(userId),
   });
 
@@ -85,19 +88,20 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     id: PROFILE_MENU_ACTION_IDS.MUTE,
     label: isUserMuted ? `Unmute ${username}` : `Mute ${username}`,
     icon: isUserMuted ? Megaphone : MegaphoneOff,
-    onClick: async () => {
-      try {
-        await toggleMute(userId, isUserMuted);
-        toast({
-          title: isUserMuted ? 'User unmuted' : 'User muted',
-        });
-      } catch (error) {
-        toast({
-          variant: 'error',
-          description: isAppError(error) ? error.message : 'Could not update mute status',
-        });
-      }
-    },
+    onClick: () =>
+      requireAuth(async () => {
+        try {
+          await toggleMute(userId, isUserMuted);
+          toast({
+            title: isUserMuted ? 'User unmuted' : 'User muted',
+          });
+        } catch (error) {
+          toast({
+            variant: 'error',
+            description: isAppError(error) ? error.message : 'Could not update mute status',
+          });
+        }
+      }),
     disabled: isMuteLoading || isMuteUserLoading(userId),
   });
   return {

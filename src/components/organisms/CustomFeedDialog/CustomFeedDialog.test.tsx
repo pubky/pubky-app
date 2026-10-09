@@ -9,6 +9,9 @@ import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { getLucideIconState, requestLucideIcon } from '@/libs/lucide/lucideIcons';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { CustomFeedDialog } from './CustomFeedDialog';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -373,6 +376,12 @@ const changeSelectValue = (testId: string, value: string | number) => {
 
 describe('CustomFeedDialog', () => {
   beforeEach(() => {
+    useAuthStore.setState({
+      ...authInitialState,
+      currentUserPubky: 'test-user',
+      session: mockSession(),
+      restoreStatus: 'ready',
+    });
     vi.clearAllMocks();
     mockUsePathname.mockReturnValue('/feed/feed-abc123');
   });
@@ -1676,6 +1685,12 @@ describe('CustomFeedDialog - Snapshots', () => {
   });
 
   beforeEach(() => {
+    useAuthStore.setState({
+      ...authInitialState,
+      currentUserPubky: 'test-user',
+      session: mockSession(),
+      restoreStatus: 'ready',
+    });
     vi.clearAllMocks();
     mockUsePathname.mockReturnValue('/feed/feed-abc123');
   });

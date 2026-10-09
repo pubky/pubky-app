@@ -1,24 +1,27 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AuthStore } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { mockClipboardEvent, mockDragEvent, mockKeyboardEvent } from '@/test-utils/react-events';
+import { mockAuthStore } from '@/test-utils/stores';
 import { usePostInputAuthHandlers } from './usePostInputAuthHandlers';
 import type { UsePostInputAuthHandlersOptions } from './usePostInputAuthHandlers.types';
 
 const mockCurrentUserPubky = vi.hoisted(() => ({ value: null as string | null }));
 const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
 
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: Object.assign(
-    (selector: (state: { currentUserPubky: string | null }) => unknown) =>
-      selector({ currentUserPubky: mockCurrentUserPubky.value }),
-    {
-      getState: () => ({
-        currentUserPubky: mockCurrentUserPubky.value,
-        setShowSignInDialog: mockSetShowSignInDialog,
-      }),
-    },
-  ),
-}));
+vi.mock('@/stores/auth/auth.store', () => {
+  const getState = () =>
+    mockAuthStore({
+      currentUserPubky: mockCurrentUserPubky.value,
+      session: mockCurrentUserPubky.value ? mockSession() : null,
+      restoreStatus: mockCurrentUserPubky.value ? 'ready' : 'idle',
+      setShowSignInDialog: mockSetShowSignInDialog,
+    });
+  return {
+    useAuthStore: Object.assign((selector: (state: AuthStore) => unknown) => selector(getState()), { getState }),
+  };
+});
 
 function createOptions(overrides: Partial<UsePostInputAuthHandlersOptions> = {}): UsePostInputAuthHandlersOptions {
   return {

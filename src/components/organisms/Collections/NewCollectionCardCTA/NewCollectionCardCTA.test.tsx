@@ -1,5 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { NewCollectionCardCTA } from './NewCollectionCardCTA';
 
 vi.mock('next/navigation', () => ({
@@ -17,16 +20,18 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
   useAuthoredCollections: () => ({ collections: [{ id: 'seed-collection' }], isLoading: false }),
 }));
 
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
-    selector({ currentUserPubky: 'current-user' }),
-}));
+beforeEach(() => {
+  vi.clearAllMocks();
+  useAuthStore.setState({
+    ...authInitialState,
+    currentUserPubky: 'current-user',
+    session: mockSession(),
+    restoreStatus: 'ready',
+    hasHydrated: true,
+  });
+});
 
 describe('NewCollectionCardCTA', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it('renders the new collection trigger', () => {
     render(<NewCollectionCardCTA />);
 
@@ -42,6 +47,14 @@ describe('NewCollectionCardCTA', () => {
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'New Collection' })).toBeInTheDocument();
+  });
+
+  it('asks for sign-in when only the previous public identity remains', () => {
+    useAuthStore.setState({ session: null, restoreStatus: 'reauth-required' });
+    render(<NewCollectionCardCTA />);
+    fireEvent.click(screen.getByRole('button', { name: 'New Collection' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(useAuthStore.getState().showSignInDialog).toBe(true);
   });
 });
 

@@ -14,6 +14,7 @@ import { AppError } from '@/libs/error/error';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { onboardingInitialState } from '@/stores/onboarding/onboarding.types';
 import { mockSession } from '@/test-utils/pubky';
@@ -143,6 +144,7 @@ describe('usePassportAuth', () => {
       attemptIds.push(id);
       return id;
     });
+    useAuthStore.setState({ currentUserPubky: null });
     useOnboardingStore.getState().reset();
   });
 
@@ -184,6 +186,37 @@ describe('usePassportAuth', () => {
     );
     // Listener registered before the popup navigated.
     expect(listeners).toHaveLength(1);
+  });
+
+  it('clears abandoned draft keys even if the draft pubky is still in auth memory', async () => {
+    useAuthStore.setState({
+      currentUserPubky: 'draft-account',
+      session: null,
+      sessionReference: null,
+      restoreStatus: 'idle',
+    });
+    useOnboardingStore.setState({ secretKey: 'draft-secret', mnemonic: 'draft words' });
+    mockGetPassportAuthUrl.mockResolvedValue(createFlow());
+    const hook = renderHook(() => usePassportAuth());
+    act(() => hook.result.current.startPassportAuth());
+    expect(useOnboardingStore.getState().secretKey).toBeNull();
+    expect(useOnboardingStore.getState().mnemonic).toBeNull();
+    await flushMicrotasks();
+  });
+
+  it('preserves pending backup material when Passport recovery fails', async () => {
+    useAuthStore.setState({ currentUserPubky: 'recovering-account', restoreStatus: 'reauth-required' });
+    useOnboardingStore.setState({ secretKey: 'saved-secret', mnemonic: 'saved words' });
+    mockGetPassportAuthUrl.mockRejectedValue(new Error('Network unavailable'));
+    const hook = renderHook(() => usePassportAuth());
+    act(() => hook.result.current.startPassportAuth());
+    await flushMicrotasks();
+    expect(useOnboardingStore.getState()).toMatchObject({
+      secretKey: 'saved-secret',
+      mnemonic: 'saved words',
+    });
+    expect(useAuthStore.getState().currentUserPubky).toBe('recovering-account');
+    expect(hook.result.current.isPending).toBe(false);
   });
 
   it('settles popup-blocked without starting a flow or touching onboarding state when the popup is blocked', async () => {
@@ -485,6 +518,22 @@ describe('usePassportAuth', () => {
     expect(onAttemptSettled).toHaveBeenCalledTimes(1);
     expect(onAttemptSettled).toHaveBeenCalledWith({ attemptId: attemptIds[0], result: 'session' });
     expect(flow.cancelAuthFlow).not.toHaveBeenCalled();
+    expect(hook.result.current.isPending).toBe(false);
+  });
+
+  it('reports superseded when a newer auth flow invalidates an already-approved grant', async () => {
+    const flow = createFlow();
+    mockGetPassportAuthUrl.mockResolvedValue(flow);
+    const initialization = deferred<void>();
+    mockInitializeAuthenticatedSession.mockReturnValue(initialization.promise);
+    const onAttemptSettled = vi.fn();
+    const hook = renderHook(() => usePassportAuth({ onAttemptSettled }));
+    await startAttempt(hook);
+    await act(async () => flow.approval.resolve(mockSession()));
+    await act(async () => initialization.reject(canceledError()));
+    expect(onAttemptSettled).toHaveBeenCalledExactlyOnceWith({ attemptId: attemptIds[0], result: 'superseded' });
+    expect(toast).not.toHaveBeenCalled();
+    expect(mockLoggerError).not.toHaveBeenCalled();
     expect(hook.result.current.isPending).toBe(false);
   });
 

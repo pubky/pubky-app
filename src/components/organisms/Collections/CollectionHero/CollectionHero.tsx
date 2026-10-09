@@ -184,7 +184,7 @@ function CollectionHeroContent({
   };
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const handleEdit = () => setIsEditDialogOpen(true);
+  const handleEdit = () => requireAuth(() => setIsEditDialogOpen(true));
 
   // Delete flow: open confirmation → on confirm, await the commit before
   // redirecting to `/collections`. Awaiting matters: the local-first delete
@@ -205,11 +205,12 @@ function CollectionHeroContent({
     },
   });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const handleDelete = () => setDeleteConfirmOpen(true);
-  const handleDeleteConfirm = async () => {
-    await deletePost(compositeId);
-    router.replace(APP_ROUTES.COLLECTIONS);
-  };
+  const handleDelete = () => requireAuth(() => setDeleteConfirmOpen(true));
+  const handleDeleteConfirm = () =>
+    requireAuth(async () => {
+      await deletePost(compositeId);
+      router.replace(APP_ROUTES.COLLECTIONS);
+    });
   // While reorder mode is active, every other owner action is disabled so the
   // hero reads as "you are reordering" — only Save order / Cancel stay live.
   const isReorderActive = reorder?.isActive ?? false;
@@ -343,7 +344,7 @@ function CollectionHeroContent({
                     <Button
                       variant="default"
                       size="icon"
-                      onClick={reorder.onSave}
+                      onClick={() => requireAuth(reorder.onSave)}
                       disabled={reorder.isSaving}
                       aria-label={'Save order'}
                       data-cy="collection-hero-save-order-btn"
@@ -376,7 +377,7 @@ function CollectionHeroContent({
                         <Button
                           variant="secondary"
                           size="icon"
-                          onClick={reorder.onEnter}
+                          onClick={() => requireAuth(reorder.onEnter)}
                           disabled={isDeleting || itemCount < 2}
                           aria-label={'Reorder'}
                           data-cy="collection-hero-reorder-btn"

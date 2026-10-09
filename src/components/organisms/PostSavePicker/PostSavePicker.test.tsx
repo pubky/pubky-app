@@ -4,6 +4,9 @@ import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { PostSavePicker } from './PostSavePicker';
 
 const mockState = vi.hoisted(() => ({
@@ -22,7 +25,6 @@ const mockState = vi.hoisted(() => ({
   createCollectionWithPost: vi.fn(),
   loadMoreCollections: vi.fn(),
   resumeAutoLoad: vi.fn(),
-  setShowSignInDialog: vi.fn(),
 }));
 vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => ({
   usePostSaveTargets: () => ({
@@ -70,26 +72,18 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockState.isMobile,
 }));
 
-vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
-  useRequireAuth: () => ({
-    isAuthenticated: true,
-    requireAuth: <T,>(action: () => T) => action(),
-  }),
-}));
-
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: {
-    getState: () => ({
-      currentUserPubky: 'current-user',
-      setShowSignInDialog: mockState.setShowSignInDialog,
-    }),
-  },
-}));
 const TEST_STREAM_ID = 'timeline:all:all' as PostStreamId;
 
 describe('PostSavePicker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      ...authInitialState,
+      currentUserPubky: 'current-user',
+      session: mockSession(),
+      restoreStatus: 'ready',
+      hasHydrated: true,
+    });
     mockState.isMobile = false;
     mockState.isBookmarked = true;
     mockState.isBookmarkLoading = false;
@@ -191,6 +185,36 @@ describe('PostSavePicker', () => {
 
     fireEvent.click(screen.getByText('Proof of Work'));
     expect(mockState.toggleCollection).toHaveBeenCalledWith('author:collection1');
+  });
+
+  describe.each([false, true])('recovery with mobile layout: %s', (isMobile) => {
+    it.each(['reauth-required', 'temporary-error'] as const)(
+      'gates all actions in an already-open picker during %s and keeps the draft',
+      async (restoreStatus) => {
+        mockState.isMobile = isMobile;
+        renderPicker();
+        openPicker();
+        const input = await screen.findByPlaceholderText('Collection name');
+        fireEvent.change(input, { target: { value: 'Keep this draft' } });
+        act(() =>
+          useAuthStore.setState({
+            restoreStatus,
+            session: restoreStatus === 'temporary-error' ? mockSession() : null,
+          }),
+        );
+
+        await act(async () => {
+          fireEvent.click(screen.getByText('Bookmarks'));
+          fireEvent.click(screen.getByText('Proof of Work'));
+          fireEvent.click(screen.getByRole('button', { name: 'Create collection' }));
+        });
+        expect(mockState.toggleBookmark).not.toHaveBeenCalled();
+        expect(mockState.toggleCollection).not.toHaveBeenCalled();
+        expect(mockState.createCollectionWithPost).not.toHaveBeenCalled();
+        expect(useAuthStore.getState().showSignInDialog).toBe(true);
+        expect(input).toHaveValue('Keep this draft');
+      },
+    );
   });
 
   it('creates a collection from the inline field', async () => {

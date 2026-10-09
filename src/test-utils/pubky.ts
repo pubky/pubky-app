@@ -1,4 +1,6 @@
 import type { Keypair, Session } from '@synonymdev/pubky';
+import { getAuthClientId } from '@/config/auth';
+import type { SessionReference } from '@/libs/auth/session.types';
 import type { Pubky } from '@/models/models.types';
 import { asOpaque } from './type-assertions';
 
@@ -50,3 +52,13 @@ export const PUBKY_INVALID_TOO_LONG = `${PUBKY_52_STAGING_FIXTURE}x`;
 
 /** 52 chars but invalid (uppercase breaks pubky identifier rules) */
 export const PUBKY_INVALID_BAD_CHAR = `${PUBKY_52_STAGING_FIXTURE.slice(0, 51)}O`;
+
+/** Public metadata for a durable app grant; contains no signing material. */
+export const mockGrantReference = (id = 'test-grant'): SessionReference => ({
+  kind: 'grant',
+  sessionStoreId: id,
+  grantId: id,
+  clientId: getAuthClientId(),
+  grantExpiresAt: 3_000_000_000,
+  tokenExpiresAt: 2_000_000_000,
+});
