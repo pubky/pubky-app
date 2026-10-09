@@ -1,7 +1,9 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`ReplyWithNested - Snapshots > matches snapshot for expanded nested replies 1`] = `
-<div>
+<div
+  data-cy="thread-reply"
+>
   <div
     data-testid="post-thread-spacer"
   />
@@ -44,7 +46,9 @@ exports[`ReplyWithNested - Snapshots > matches snapshot for expanded nested repl
         <div
           class="min-w-0 flex-1 ml-3"
         >
-          <div>
+          <div
+            data-cy="thread-reply"
+          >
             <div
               data-testid="post-thread-spacer"
             />

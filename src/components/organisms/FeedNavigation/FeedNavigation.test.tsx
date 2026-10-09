@@ -256,6 +256,7 @@ describe('FeedNavigation', () => {
 
     // The reach tab (default reach = All) should always be present
     expect(screen.getByText('All')).toBeInTheDocument();
+    expect(screen.getAllByTestId('container')[0]).toHaveAttribute('data-cy', 'feed-navigation');
     expect(screen.getByTestId('custom-feed-dialog-create')).toHaveTextContent('Feed');
   });
 

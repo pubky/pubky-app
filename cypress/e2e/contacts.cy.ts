@@ -2,6 +2,7 @@ import { slowCypressDown } from 'cypress-slow-down';
 import { BackupType, HasBackedUp } from '../support/types/enums';
 import { goToProfilePageFromHeader } from '../support/header';
 import { searchAndFollowProfile } from '../support/contacts';
+import { clickUnfollowButton, unfollowUserByUsername } from '../support/profile';
 
 // cy.visit(`/profile/${pubky}`);
 describe('contacts', () => {
@@ -10,8 +11,51 @@ describe('contacts', () => {
     cy.deleteDownloadsFolder();
   });
 
-  // todo
-  it.skip('can follow and unfollow');
+  it('can follow and unfollow', () => {
+    const targetName = 'Unfollow Target';
+    const actorName = 'Unfollow Actor';
+    const targetAlias = 'unfollowTarget';
+
+    cy.onboardAsNewUser(
+      targetName,
+      'Follow me, then stop',
+      [BackupType.RecoveryPhraseWithoutConfirmation],
+      targetAlias,
+    );
+    cy.signOut(HasBackedUp.Yes);
+
+    cy.onboardAsNewUser(actorName, 'I follow and then unfollow', [BackupType.RecoveryPhraseWithoutConfirmation]);
+
+    cy.get(`@${targetAlias}`).then((pubky) => {
+      searchAndFollowProfile(`${pubky}`, targetName);
+    });
+
+    // The actor is listed as a follower, then drops out once they unfollow.
+    cy.get('[data-cy="profile-filter-item-followers-count"]').should('have.text', '1').click();
+    cy.get('[data-cy="profile-connections-list"]').within(() => {
+      cy.get('[data-cy="profile-follower-item-name"]').should('have.text', actorName);
+    });
+
+    clickUnfollowButton();
+
+    cy.get('[data-cy="profile-filter-item-followers-count"]').should('have.text', '0');
+    cy.get('[data-cy="profile-followers-empty"]').should('be.visible');
+    cy.get('[data-cy="profile-follower-item-name"]').should('not.exist');
+
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '0').click();
+    cy.get('[data-cy="profile-following-empty"]').should('be.visible');
+    cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');
+
+    // Follow again and unfollow from the following list. The row and the count both clear.
+    cy.get(`@${targetAlias}`).then((pubky) => {
+      searchAndFollowProfile(`${pubky}`, targetName);
+    });
+    unfollowUserByUsername(targetName);
+    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '0');
+    cy.get('[data-cy="profile-following-empty"]').should('be.visible');
+    cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');
+  });
 
   it('follow, be followed, and make a friend', () => {
     const profileName1 = '#1 Friend';

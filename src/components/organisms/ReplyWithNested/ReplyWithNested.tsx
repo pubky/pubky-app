@@ -69,7 +69,7 @@ export function ReplyWithNested({
   const canShowToggle = hasNestedReplies && depth < maxDepth;
 
   return (
-    <Container overrideDefaults>
+    <Container overrideDefaults data-cy="thread-reply">
       {/* Main reply */}
       <PostThreadSpacer />
       <Container overrideDefaults className={canShowToggle ? 'relative' : undefined}>

@@ -1,4 +1,5 @@
 import { backupDownloadFilePath } from '../support/auth';
+import { applyContentFilter } from '../support/collections';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
 import 'cypress-slow-down/commands';
@@ -24,6 +25,70 @@ import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 
 const username = 'Poster';
+
+const imageFixturePath = () => `${Cypress.config('fixturesFolder')}/mustache-you.png`;
+
+const pdfAttachment = {
+  contents: Cypress.Buffer.from('e2e file attachment'),
+  fileName: 'notes.pdf',
+  mimeType: 'application/pdf',
+};
+
+const submitHomePost = (postContent: string, files?: Cypress.FileReference | Cypress.FileReference[]) => {
+  cy.get('[data-cy="home-post-input"]')
+    .should('be.visible')
+    .within(() => {
+      cy.get('textarea').click();
+      if (files) {
+        cy.get('input[type="file"]').selectFile(files, { force: true });
+        cy.get('[data-cy="post-input-attachment-remove"]').should('have.length.at.least', 1);
+      }
+      cy.get('textarea').type(postContent);
+      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
+      cy.get('[data-cy="post-input-action-bar-post"]').click();
+      cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
+      cy.get('textarea').should('have.value', '');
+    });
+};
+
+const expectPostTextOrder = (ordered: string[]) => {
+  cy.get('[data-cy="post-text"]').should(($texts) => {
+    const values = $texts.toArray().map((el) => el.textContent ?? '');
+    let previous = -1;
+    ordered.forEach((snippet) => {
+      const index = values.findIndex((value) => value.includes(snippet));
+      expect(index, snippet).to.be.greaterThan(previous);
+      previous = index;
+    });
+  });
+};
+
+const replyOnThread = (parentText: string, replyContent: string) => {
+  cy.get('[data-cy="thread-reply"]')
+    .filter((_, el) => (el.querySelector('[data-cy="post-text"]')?.textContent ?? '').includes(parentText))
+    .first()
+    .find('[data-cy="post-reply-btn"]')
+    .first()
+    .click();
+
+  cy.get('[data-cy="reply-post-input"]').should('be.visible');
+  cy.get('[data-cy="reply-post-input"]').within(() => {
+    cy.get('textarea').should('have.value', '').type(replyContent);
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('replyCreated');
+    cy.get('[data-cy="post-input-action-bar-reply"]').click();
+    cy.wait('@replyCreated').its('response.statusCode').should('eq', 201);
+  });
+  cy.get('[data-cy="reply-post-input"]').should('not.exist');
+  cy.contains('[data-cy="post-text"]', replyContent).should('be.visible');
+};
+
+const expectKindVisible = (text: string) => {
+  cy.contains('[data-cy="timeline-container"] [data-cy="post-card"]', text, { timeout: 20_000 }).should('be.visible');
+};
+
+const expectKindAbsent = (text: string) => {
+  cy.get('[data-cy="timeline-container"]', { timeout: 20_000 }).should('not.contain.text', text);
+};
 
 describe('posts', () => {
   before(() => {
@@ -829,14 +894,204 @@ describe('posts', () => {
     });
   });
 
-  // todo, covers bug https://github.com/pubky/franky/issues/993
-  it('"see new posts" button does not appear after deleting new post that has a reply');
+  it('can view and navigate a reply thread', () => {
+    const stamp = Date.now();
+    const root = `Thread root ${stamp}`;
+    const level1 = `Thread level 1 ${stamp}`;
+    const level2 = `Thread level 2 ${stamp}`;
+    const level3 = `Thread level 3 ${stamp}`;
+    const quickReply = `Thread quick reply ${stamp}`;
+
+    createQuickPost(root);
+    replyToPost({ replyContent: level1, filterText: root });
+
+    cy.findFirstPostInFeedFiltered(root, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-text"]').click();
+    });
+    cy.location('pathname').should('include', '/post/');
+    cy.get('[data-cy="single-post-card"]').should('contain.text', root);
+    cy.get('[data-testid="post-page-title"]').should('contain.text', 'Post by').and('contain.text', username);
+
+    replyOnThread(level1, level2);
+    replyOnThread(level2, level3);
+    expectPostTextOrder([root, level1, level2, level3]);
+
+    // One nested reply starts expanded. Collapse hides the chain; expand brings it back.
+    cy.get('button[aria-label="Collapse all replies"]').filter(':visible').first().click();
+    cy.contains('[data-cy="post-text"]', level2).should('not.be.visible');
+    cy.contains('[data-cy="post-text"]', level3).should('not.be.visible');
+    cy.contains('[data-cy="post-text"]', level1).should('be.visible');
+    cy.get('button[aria-label="Expand all replies"]').filter(':visible').click();
+    cy.contains('[data-cy="post-text"]', level2).should('be.visible');
+    cy.contains('[data-cy="post-text"]', level3).should('be.visible');
+
+    cy.contains('[data-cy="post-text"]', level3).click();
+    cy.location('pathname').should('include', '/post/');
+    cy.get('[data-testid="post-page-title"]').should('contain.text', 'Reply by').and('contain.text', username);
+    cy.get('[data-testid="post-breadcrumb"]').should('be.visible');
+    cy.get('[data-testid="breadcrumb-item-0"]').should('contain.text', username);
+    // Root, level 1, level 2 and level 3 is more than three ancestors, so the middle is an ellipsis.
+    cy.get('[data-testid="breadcrumb-ellipsis-trigger"]').should('be.visible').click();
+    cy.get('[data-testid="breadcrumb-dropdown-content"]').should('be.visible');
+    cy.get('[data-testid^="breadcrumb-dropdown-item-"]').should('contain.text', username).click();
+    cy.get('[data-cy="single-post-card"]').should('contain.text', level1);
+
+    cy.get('[data-testid="breadcrumb-item-0"]').click();
+    cy.get('[data-cy="single-post-card"]').should('contain.text', root);
+    cy.get('[data-testid="post-page-title"]').should('contain.text', 'Post by');
+    cy.get('[data-testid="post-breadcrumb"]').should('not.exist');
+
+    cy.get('[data-testid="quick-reply-textarea"]').filter(':visible').click().type(quickReply);
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('quickReplyCreated');
+    cy.get('[data-testid="quick-reply"]')
+      .find('[data-cy="post-input-action-bar-reply"]')
+      .should('be.visible')
+      .and('not.be.disabled')
+      .click();
+    cy.wait('@quickReplyCreated').its('response.statusCode').should('eq', 201);
+    cy.contains('[data-cy="post-text"]', quickReply).should('be.visible');
+    expectPostTextOrder([root, level1, quickReply]);
+
+    cy.get('[data-cy="header-logo"]').click();
+    cy.location('pathname').should('eq', '/home');
+  });
+
+  // Regression for https://github.com/pubky/pubky-app/issues/993
+  it('see new posts button does not appear after deleting new post that has a reply', () => {
+    const author = 'Delete Author';
+    const viewer = 'Delete Viewer';
+    const postContent = `Delete me after a reply ${Date.now()}`;
+    const replyContent = `Reply that should not resurrect the post ${Date.now()}`;
+
+    cy.onboardAsNewUser(viewer, 'I watch the feed', [BackupType.EncryptedFile]);
+    waitForFeedToLoad();
+    cy.signOut(HasBackedUp.Yes);
+
+    cy.onboardAsNewUser(author, 'I delete posts', [BackupType.EncryptedFile]);
+    createQuickPost(postContent);
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes);
+    cy.signOut(HasBackedUp.Yes);
+
+    cy.signInWithEncryptedFile(backupDownloadFilePath(viewer));
+    replyToPost({ replyContent, filterText: postContent });
+    cy.signOut(HasBackedUp.Yes);
+
+    cy.signInWithEncryptedFile(backupDownloadFilePath(author));
+    deletePost({ filterText: postContent });
+    cy.signOut(HasBackedUp.Yes);
+
+    cy.signInWithEncryptedFile(backupDownloadFilePath(viewer));
+    waitForFeedToLoad();
+    // Stay through a stream poll so a deleted parent can be offered as unread if the bug returns.
+    cy.wait(12_000);
+    cy.get('[data-cy="timeline-container"]').should('not.contain.text', postContent);
+    cy.get('[data-cy="timeline-container"]').should('not.contain.text', 'This post has been deleted by its author.');
+    cy.get('[data-cy="new-posts-button"]').should('not.exist');
+    cy.signOut(HasBackedUp.Yes);
+  });
+
+  // https://github.com/pubky/pubky-app/issues/416
+  it('can navigate back to feed from post view', () => {
+    cy.viewport(1920, 640);
+
+    const filler = `Scroll anchor ${Date.now()}`;
+    [0, 1, 2, 3].forEach((index) => {
+      createQuickPost(`${filler} ${index}`);
+    });
+    cy.findFirstPostInFeedFiltered(`${filler} 3`, CheckForNewPosts.No, WaitForNewPosts.Yes);
+
+    cy.get('[data-cy="timeline-posts"]').find('[data-cy="post-card"]').eq(3).scrollIntoView();
+    cy.window().its('scrollY').should('be.greaterThan', 80).as('feedScrollY');
+    cy.get('[data-cy="timeline-posts"]')
+      .find('[data-cy="post-card"]')
+      .eq(3)
+      .find('[data-cy="post-text"]')
+      .click({ scrollBehavior: false });
+
+    cy.location('pathname').should('include', '/post/');
+    cy.get('[data-cy="single-post-card"]').should('be.visible');
+
+    cy.go('back');
+    cy.location('pathname').should('eq', '/home');
+    cy.get('@feedScrollY').then((feedScrollY) => {
+      cy.window().its('scrollY').should('be.closeTo', Number(feedScrollY), 150);
+    });
+
+    cy.viewport(1920, 1080);
+  });
+
+  it('can filter the feed by post kind', () => {
+    cy.viewport(1920, 1080);
+    applyContentFilter('All');
+
+    const stamp = Date.now();
+    const shortPost = `Kind short ${stamp}`;
+    const articleTitle = `Kind article ${stamp}`;
+    const articleBody = `Article body mentioning https://example.com/article-${stamp}`;
+    const imagePost = `Kind image ${stamp}`;
+    const videoPost = `Kind video ${stamp} https://www.youtube.com/watch?v=dQw4w9WgXcQ`;
+    const linkPost = `Kind link ${stamp} https://example.com/e2e-${stamp}`;
+    const filePost = `Kind file ${stamp}`;
+    const mixedLinkPost = `Kind mixedlink ${stamp} https://example.com/mixed-${stamp}`;
+    const mixedImagePost = `Kind mixedimage ${stamp}`;
+
+    createQuickPost(shortPost);
+    createQuickArticle(articleTitle, articleBody);
+    createQuickPostWithImage(imagePost);
+    createQuickPost(videoPost);
+    createQuickPost(linkPost);
+    submitHomePost(filePost, pdfAttachment);
+    submitHomePost(mixedLinkPost, imageFixturePath());
+    submitHomePost(mixedImagePost, [imageFixturePath(), pdfAttachment]);
+
+    applyContentFilter('All');
+    [shortPost, articleTitle, imagePost, videoPost, linkPost, filePost, mixedLinkPost, mixedImagePost].forEach(
+      (text) => {
+        expectKindVisible(text);
+      },
+    );
+
+    applyContentFilter('Posts');
+    expectKindVisible(shortPost);
+    [articleTitle, imagePost, videoPost, linkPost, filePost, mixedLinkPost, mixedImagePost].forEach((text) => {
+      expectKindAbsent(text);
+    });
+
+    applyContentFilter('Articles');
+    expectKindVisible(articleTitle);
+    expectKindAbsent(shortPost);
+    expectKindAbsent(linkPost);
+
+    applyContentFilter('Images');
+    expectKindVisible(imagePost);
+    expectKindVisible(mixedImagePost);
+    expectKindAbsent(mixedLinkPost);
+    expectKindAbsent(filePost);
+    expectKindAbsent(shortPost);
+
+    applyContentFilter('Videos');
+    expectKindVisible(videoPost);
+    expectKindAbsent(linkPost);
+    expectKindAbsent(imagePost);
+
+    applyContentFilter('Links');
+    expectKindVisible(linkPost);
+    expectKindVisible(mixedLinkPost);
+    expectKindAbsent(videoPost);
+    expectKindAbsent(articleTitle);
+    expectKindAbsent(imagePost);
+
+    applyContentFilter('Files');
+    expectKindVisible(filePost);
+    expectKindAbsent(mixedImagePost);
+    expectKindAbsent(imagePost);
+    expectKindAbsent(shortPost);
+
+    applyContentFilter('All');
+  });
 
   // todo: check if we want this functionality
   it.skip('signout when 401 response from homeserver when creating new post');
   it.skip('signout when 401 response from homeserver when creating new article');
   it.skip('signout when 401 response from homeserver when tagging a post');
-
-  //todo: implement once retaining scroll position is implemented, see https://github.com/pubky/franky/issues/416
-  it.skip('can navigate back to feed from post view');
 });
