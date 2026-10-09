@@ -28,10 +28,10 @@ jobs:
           exit 1
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
@@ -43,7 +43,7 @@ jobs:
         run: echo "PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright" >> "$GITHUB_ENV"
 
       - name: Restore Playwright browsers cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         id: playwright-browsers-cache
         with:
           path: ~/.cache/ms-playwright
@@ -64,7 +64,7 @@ jobs:
 
       - name: Save Playwright browsers cache
         if: always() && steps.playwright-browsers-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright-browsers-cache.outputs.cache-primary-key }}
@@ -119,7 +119,7 @@ jobs:
           fi
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}

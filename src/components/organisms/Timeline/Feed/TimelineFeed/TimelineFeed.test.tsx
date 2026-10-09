@@ -22,9 +22,9 @@ import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, type ContentType, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
+import { useSearchStore } from '@/stores/search/search.store';
 import { mockSession } from '@/test-utils/pubky';
 import { asInvalid } from '@/test-utils/type-assertions';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
@@ -239,63 +239,6 @@ const defaultPaginationResult = {
   removePosts: vi.fn(),
   removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
 };
-
-const visualLayoutResolution = {
-  requestedLayout: 'visual' as const,
-  effectiveLayout: 'visual' as const,
-  isCardsActive: false,
-  isVisualRequested: true,
-  isVisualActive: true,
-  isPhoneViewport: false,
-};
-
-const phoneColumnsLayoutResolution = {
-  requestedLayout: 'visual' as const,
-  effectiveLayout: 'columns' as const,
-  isCardsActive: false,
-  isVisualRequested: true,
-  isVisualActive: false,
-  isPhoneViewport: true,
-};
-
-const columnsLayoutResolution = {
-  requestedLayout: 'columns' as const,
-  effectiveLayout: 'columns' as const,
-  isCardsActive: false,
-  isVisualRequested: false,
-  isVisualActive: false,
-  isPhoneViewport: false,
-};
-
-function setupTimelineFeedSnapshotMocks() {
-  vi.clearAllMocks();
-  useHomeStore.setState({
-    layout: LAYOUT.COLUMNS,
-    sort: SORT.TIMELINE,
-    reach: REACH.ALL,
-    content: CONTENT.ALL,
-  });
-  mockUseStreamIdFromFilters.mockReturnValue(PostStreamTypes.TIMELINE_ALL_ALL);
-  mockUseCustomFeed.mockReturnValue({
-    id: 'test-feed',
-    name: 'Test Feed',
-    tags: ['all'],
-    domain_tags: [],
-    reach: PubkyAppFeedReach.All,
-    sort: PubkyAppFeedSort.Recent,
-    content: null,
-    layout: PubkyAppFeedLayout.Columns,
-    created_at: 0,
-    updated_at: 0,
-  });
-  mockUseCustomStreamId.mockReturnValue('timeline:all:all:all' as PostStreamId);
-  mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
-  mockUseFeedLayoutResolution.mockReturnValue(columnsLayoutResolution);
-  mockUsePullToRefresh.mockReturnValue({
-    state: 'idle' as const,
-    pullDistance: 0,
-  });
-}
 
 describe('TimelineFeed', () => {
   beforeEach(() => {
@@ -598,6 +541,43 @@ describe('TimelineFeed', () => {
   });
 
   describe('Search Variant', () => {
+    beforeEach(() => {
+      vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    });
+    afterEach(() => {
+      vi.mocked(window.scrollTo).mockRestore();
+      useAuthStore.setState({ currentUserPubky: null });
+      useSearchStore.getState().reset();
+    });
+    it('renders the scoped empty action and switches only Search to All', () => {
+      useAuthStore.setState({ currentUserPubky: 'viewer' });
+      useSearchStore.getState().setReach(REACH.FOLLOWING);
+      useHomeStore.setState({ reach: REACH.NETWORK });
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: [],
+        loading: false,
+        hasMore: false,
+      });
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />);
+      expect(screen.getByRole('heading', { name: 'No posts match your search' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Search in All' }));
+      expect(useSearchStore.getState().reach).toBe(REACH.ALL);
+      expect(useHomeStore.getState().reach).toBe(REACH.NETWORK);
+      expect(screen.queryByRole('button', { name: 'Search in All' })).not.toBeInTheDocument();
+    });
+    it('renders the no-results state without Search in All at All reach', () => {
+      useAuthStore.setState({ currentUserPubky: 'viewer' });
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: [],
+        loading: false,
+        hasMore: false,
+      });
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />);
+      expect(screen.getByText('Try different search terms or filters.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Search in All' })).not.toBeInTheDocument();
+    });
     it('should disable pull-to-refresh for search variant', () => {
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />);
 
@@ -719,7 +699,7 @@ describe('TimelineFeed', () => {
         applyFilterQuery('bitcoin');
 
         expect(mockUseStreamPagination).toHaveBeenLastCalledWith({
-          streamId: buildContentSearchStreamId('bitcoin', 'all', profilePubky),
+          streamId: buildContentSearchStreamId('bitcoin', 'all', { type: 'author', author: profilePubky }),
         });
         // The bar survives the stream swap (focus preservation contract).
         expect(screen.getByRole('textbox', { name: 'Filter posts' })).toHaveValue('bitcoin');
@@ -1002,51 +982,5 @@ describe('TimelineFeed', () => {
 
       expect(contextValues[contextValues.length - 1]).toBeNull();
     });
-  });
-});
-
-describe('TimelineFeed - Snapshots', () => {
-  beforeEach(() => {
-    setupTimelineFeedSnapshotMocks();
-  });
-
-  it('matches snapshot for home visual layout', () => {
-    mockUseFeedLayoutResolution.mockReturnValue(visualLayoutResolution);
-
-    const { container } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot for home with feed children', () => {
-    const { container } = render(
-      <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME}>
-        <aside data-testid="feed-filters">Feed filters</aside>
-      </TimelineFeed>,
-    );
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot for loading state', () => {
-    mockUseStreamIdFromFilters.mockReturnValue(asInvalid<PostStreamTypes>(undefined));
-
-    const { container } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('TimelineFeed - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setupTimelineFeedSnapshotMocks();
-    mockUseFeedLayoutResolution.mockReturnValue(phoneColumnsLayoutResolution);
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
-    expect(container).toMatchSnapshot();
   });
 });

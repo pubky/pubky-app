@@ -52,6 +52,7 @@ export function DialogPayToUnlock({
   isStalled,
   handshakePubky,
   connectionIssue,
+  walletSetupNeeded,
   isSubmitting,
   onRetry,
   onRecheck,
@@ -61,7 +62,8 @@ export function DialogPayToUnlock({
   const isInstall = stage === 'install';
   const handshakeValue = handshakePubky ? withPubkyPrefix(handshakePubky) : null;
   const showQr = Boolean(handshakeValue) && stage === 'waiting';
-  const showSpinner = stage === 'checking' || (stage === 'waiting' && !showQr && !isStalled && !connectionIssue);
+  const hasNotice = Boolean(connectionIssue) || walletSetupNeeded;
+  const showSpinner = stage === 'checking' || (stage === 'waiting' && !showQr && !isStalled && !hasNotice);
   const showPrimary = stage === 'retry' || isInstall;
   const primaryLabel = isInstall ? 'I completed the steps' : 'Try again';
   // `unopened` reached this screen by a completed payment too, so it must not show a cost to pay.
@@ -158,11 +160,13 @@ export function DialogPayToUnlock({
               </Container>
             )}
 
-            {/* A parked wait shows only its Check again copy; the link notices still apply there. */}
-            {stage === 'waiting' && !showQr && (connectionIssue || !isStalled) && (
+            {/* A parked wait shows only its Check again copy; the notices still apply there. */}
+            {stage === 'waiting' && !showQr && (hasNotice || !isStalled) && (
               <Typography className="text-base text-secondary-foreground">
                 {connectionIssue === 'blocked' ? (
                   'This creator cannot receive payments from you right now. Please contact support.'
+                ) : walletSetupNeeded ? (
+                  'Finish setting up Bitkit. The payment request arrives once your wallet is ready.'
                 ) : connectionIssue === 'recovery_required' ? (
                   'Your Bitkit connection to this creator is being restored. Keep Bitkit open while we reconnect.'
                 ) : (

@@ -292,6 +292,14 @@ describe('HomeFooter', () => {
     expect(screen.getByTestId('dialog-age')).toBeInTheDocument();
   });
 
+  it('renders the Pubky Protocol link inside the legal line', () => {
+    render(<HomeFooter />);
+
+    const link = screen.getByRole('link', { name: 'Pubky Protocol' });
+    expect(link).toHaveAttribute('href', 'https://github.com/pubky/pubky-core');
+    expect(link.closest('[data-testid="footer-links"]')).toBeInTheDocument();
+  });
+
   it('renders Synonym and Tether branding below the agreement text', () => {
     render(<HomeFooter />);
 
@@ -339,32 +347,5 @@ describe('HomePageHeading', () => {
     render(<HomePageHeading />);
 
     expect(screen.getByTestId('heading-1')).toBeInTheDocument();
-  });
-});
-
-describe('Home - Snapshots', () => {
-  it('matches snapshot for HomeActions with default props', () => {
-    const { container } = render(<HomeActions />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HomeFooter with default props', () => {
-    const { container } = render(<HomeFooter />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HomeBrandFooter with default props', () => {
-    const { container } = render(<HomeBrandFooter />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HomeSectionTitle with default props', () => {
-    const { container } = render(<HomeSectionTitle />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HomePageHeading with default props', () => {
-    const { container } = render(<HomePageHeading />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

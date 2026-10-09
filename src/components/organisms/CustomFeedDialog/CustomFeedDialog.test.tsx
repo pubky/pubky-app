@@ -3,10 +3,9 @@ import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-librar
 import { within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
-import { getLucideIconState, requestLucideIcon } from '@/libs/lucide/lucideIcons';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { toast } from '@/molecules/Toaster/toast';
 import { CustomFeedDialog } from './CustomFeedDialog';
@@ -1660,63 +1659,5 @@ describe('CustomFeedDialog', () => {
         description: 'Could not delete feed. Try again.',
       });
     });
-  });
-});
-
-// --- Snapshot Tests ---
-
-describe('CustomFeedDialog - Snapshots', () => {
-  // Warm the dialog's icons so DynamicLucideIcon renders them synchronously
-  // and snapshots capture the resolved svg regardless of test order.
-  beforeAll(async () => {
-    requestLucideIcon('activity');
-    await vi.waitFor(() => {
-      if (getLucideIconState('activity')?.status !== 'loaded') throw new Error('icon not cached yet');
-    });
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUsePathname.mockReturnValue('/feed/feed-abc123');
-  });
-
-  it('matches snapshot for create mode default state', () => {
-    const { container } = render(
-      <CustomFeedDialog mode="create">
-        <button>Create Feed</button>
-      </CustomFeedDialog>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for edit mode with custom feed', () => {
-    const mockFeed = createMockFeed();
-
-    const { container } = render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
-        <button>Edit Feed</button>
-      </CustomFeedDialog>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for edit mode with null content feed', () => {
-    const mockFeed = createMockFeed({ content: null, tags: ['bitcoin'] });
-
-    const { container } = render(
-      <CustomFeedDialog mode="edit" feed={mockFeed}>
-        <button>Edit Feed</button>
-      </CustomFeedDialog>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for create mode with different trigger child', () => {
-    const { container } = render(
-      <CustomFeedDialog mode="create">
-        <span className="custom-trigger">+ New Feed</span>
-      </CustomFeedDialog>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

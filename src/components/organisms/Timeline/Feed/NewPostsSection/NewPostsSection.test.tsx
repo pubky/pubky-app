@@ -228,21 +228,3 @@ describe('NewPostsSection', () => {
     });
   });
 });
-
-describe('NewPostsSection - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
-  });
-
-  it('matches snapshot when hidden', () => {
-    const { container } = render(<NewPostsSection {...defaultProps} />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with new posts visible', () => {
-    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1', 'new2', 'new3'], unreadCount: 3 });
-    const { container } = render(<NewPostsSection {...defaultProps} />);
-    expect(container).toMatchSnapshot();
-  });
-});

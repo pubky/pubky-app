@@ -26,7 +26,7 @@ Write the diff to a temp file and keep the changed-file list. Reviewers read the
 
 ```bash
 git fetch -q origin dev
-EXCLUDE=(':!package-lock.json' ':!**/__snapshots__/**' ':!**/__screenshots__/**' ':!public/sw.js' ':!src/libs/lucide/lucideIcons.aliases.ts' ':!src/libs/lucide/lucideIcons.nodes.ts' ':!src/libs/lucide/lucideIcons.tags.ts')
+EXCLUDE=(':!package-lock.json' ':!**/__screenshots__/**' ':!public/sw.js' ':!src/libs/lucide/lucideIcons.aliases.ts' ':!src/libs/lucide/lucideIcons.nodes.ts' ':!src/libs/lucide/lucideIcons.tags.ts')
 OUT="${TMPDIR:-/tmp}/pubky-review-$(date +%s).diff"
 
 case "$SCOPE" in

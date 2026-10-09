@@ -33,15 +33,3 @@ describe('ThreadExpandToggle', () => {
     expect(svg).toBeInTheDocument();
   });
 });
-
-describe('ThreadExpandToggle - Snapshots', () => {
-  it('matches snapshot in collapsed state', () => {
-    const { container } = render(<ThreadExpandToggle expanded={false} onToggle={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot in expanded state', () => {
-    const { container } = render(<ThreadExpandToggle expanded={true} onToggle={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

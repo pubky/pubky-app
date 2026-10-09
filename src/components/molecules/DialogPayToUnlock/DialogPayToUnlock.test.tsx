@@ -32,6 +32,7 @@ type DialogOverrides = {
   isStalled?: boolean;
   handshakePubky?: string | null;
   connectionIssue?: 'recovery_required' | 'blocked' | null;
+  walletSetupNeeded?: boolean;
   onRecheck?: () => void;
   onViewContent?: () => void;
   onOpenChange?: (open: boolean) => void;
@@ -49,6 +50,7 @@ const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}
     isStalled={overrides.isStalled ?? false}
     handshakePubky={overrides.handshakePubky ?? null}
     connectionIssue={overrides.connectionIssue ?? null}
+    walletSetupNeeded={overrides.walletSetupNeeded ?? false}
     isSubmitting={overrides.isSubmitting ?? false}
     onRetry={overrides.onRetry ?? vi.fn()}
     onRecheck={overrides.onRecheck ?? vi.fn()}
@@ -192,6 +194,15 @@ describe('DialogPayToUnlock', () => {
     expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
   });
 
+  it('waiting: asks the reader to finish the wallet setup, with no QR and no spinner', () => {
+    renderDialog('waiting', { walletSetupNeeded: true });
+
+    expect(screen.getByText(/Finish setting up Bitkit/)).toBeInTheDocument();
+    expect(screen.queryByText('Please confirm in Bitkit.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
+    expect(screen.queryByText('AWAITING PAYMENT')).not.toBeInTheDocument();
+  });
+
   // Parked is not failed: a reader who never leaves the tab gets no visibility event, so the only
   // way back to a live purchase is an explicit re-check.
   it('waiting + stalled: replaces the awaiting copy with the Check again prompt', () => {
@@ -204,11 +215,14 @@ describe('DialogPayToUnlock', () => {
     expect(onRecheck).toHaveBeenCalledTimes(1);
   });
 
-  // The link notice says something the parked copy does not, so it stays.
-  it('waiting + stalled: keeps a link notice next to the Check again prompt', () => {
-    renderDialog('waiting', { isStalled: true, connectionIssue: 'blocked' });
+  // A notice says something the parked copy does not, so it stays.
+  it.each([
+    ['a link notice', { connectionIssue: 'blocked' as const }, /cannot receive payments/],
+    ['the wallet setup notice', { walletSetupNeeded: true }, /Finish setting up Bitkit/],
+  ])('waiting + stalled: keeps %s next to the Check again prompt', (_name, notice, copy) => {
+    renderDialog('waiting', { isStalled: true, ...notice });
 
-    expect(screen.getByText(/cannot receive payments/)).toBeInTheDocument();
+    expect(screen.getByText(copy)).toBeInTheDocument();
     expect(screen.getByText(/Still waiting for the payment/)).toBeInTheDocument();
   });
 
@@ -376,63 +390,5 @@ describe('DialogPayToUnlock', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(cardClick).not.toHaveBeenCalled();
-  });
-});
-
-// The dialog is portaled, so the render container is empty — snapshot the dialog node itself.
-describe('DialogPayToUnlock - Snapshots', () => {
-  it('matches snapshot for the checking stage', () => {
-    renderDialog('checking');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the install stage', () => {
-    renderDialog('install');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the retry stage', () => {
-    renderDialog('retry');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage', () => {
-    renderDialog('waiting');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage with the handshake QR and the Bitkit handoff', () => {
-    renderDialog('waiting', { handshakePubky: 'pubkylockcreator' });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage with a blocked link notice', () => {
-    renderDialog('waiting', { connectionIssue: 'blocked' });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage with a recovery_required link notice', () => {
-    renderDialog('waiting', { connectionIssue: 'recovery_required' });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the parked waiting stage', () => {
-    renderDialog('waiting', { isStalled: true });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the paid stage', () => {
-    renderDialog('paid');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the unopened stage', () => {
-    renderDialog('unopened');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the blocked stage', () => {
-    renderDialog('blocked');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
   });
 });

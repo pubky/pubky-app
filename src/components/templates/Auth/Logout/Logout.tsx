@@ -7,7 +7,7 @@ import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Spinner } from '@/atoms/Spinner/Spinner';
-import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
+import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { AuthController } from '@/controllers/auth/auth';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
@@ -129,7 +129,7 @@ export function Logout() {
       : renderSuccessState();
 
   return (
-    <Container size="container" className={cn('h-screen-without-page-header-auth-pages gap-0', PAGE_GUTTER_CLASS)}>
+    <Container size="container" className={cn('h-screen-without-page-header-auth-pages gap-0', CONTENT_GUTTER_CLASS)}>
       {content}
     </Container>
   );

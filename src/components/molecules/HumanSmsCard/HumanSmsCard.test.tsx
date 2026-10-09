@@ -89,24 +89,6 @@ describe('SmsVerificationCard', () => {
     expect(screen.getByTestId('sms-verification-card-skeleton')).toBeInTheDocument();
     expect(screen.queryByTestId('sms-verification-card')).not.toBeInTheDocument();
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<HumanSmsCard />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when geoblocked', () => {
-    mockUseSmsVerificationInfo.mockReturnValue({ available: false });
-    const { container } = render(<HumanSmsCard />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when loading', () => {
-    mockUseSmsVerificationInfo.mockReturnValue(null);
-    const { container } = render(<HumanSmsCard />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
   it('renders generic error overlay when service fails (not geoblocked)', () => {
     // Issue #919: Generic errors should NOT show "Country not available" message
     mockUseSmsVerificationInfo.mockReturnValue({ available: false, error: true });

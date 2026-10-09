@@ -98,25 +98,3 @@ describe('SessionUpgradePanel', () => {
     expect(screen.getByRole('button', { name: /Generating/ })).toBeDisabled();
   });
 });
-
-describe('SessionUpgradePanel - Snapshots', () => {
-  beforeEach(() => {
-    mocks.auth = {
-      url: 'pubkyring://authorize?token=upgrade',
-      isLoading: false,
-      isExpired: false,
-      isOpeningRing: false,
-    };
-  });
-
-  it('matches snapshot with a ready URL', () => {
-    const { container } = render(<SessionUpgradePanel />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot while generating', () => {
-    mocks.auth = { url: '', isLoading: true, isExpired: false, isOpeningRing: false };
-    const { container } = render(<SessionUpgradePanel />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

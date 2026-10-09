@@ -168,11 +168,12 @@ export class PostNormalizer {
     const builder = PubkySpecsSingleton.get(authorId);
 
     const postDetails = await PostDetailsModel.findById(compositePostId);
-    // Tombstoned posts (`content === '[DELETED]'`) are treated as not-found
-    // here. Pre-tombstone refactor `!postDetails` caught hard-deleted rows;
-    // now they stick around as tombstones and falling through would build a
-    // `PubkyAppPost` whose content is the `[DELETED]` sentinel.
-    if (!postDetails || isPostDeleted(postDetails.content)) {
+    // Tombstoned posts (the Nexus `deleted` flag, or the legacy `[DELETED]`
+    // content) are treated as not-found here. Pre-tombstone refactor
+    // `!postDetails` caught hard-deleted rows; now they stick around as
+    // tombstones and falling through would build a `PubkyAppPost` from the
+    // tombstone's content.
+    if (!postDetails || isPostDeleted(postDetails)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
         service: ErrorService.Local,
         operation: 'toEdit',

@@ -51,7 +51,7 @@ feat(auth): add recovery phrase login
 fix(posts): correct timestamp formatting in feed
 docs(adr): add ADR for local-first writes
 refactor(core): extract user validation to pipe
-test(ui): add snapshot tests for Button component
+test(ui): add variant coverage for Button component
 chore(deps): update next to 15.3.2
 perf(streams): optimize post stream caching
 ```

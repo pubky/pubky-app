@@ -1,5 +1,5 @@
 ---
-description: Writing unit tests and snapshot tests for UI component rendering
+description: Writing unit tests for UI component rendering
 globs: src/components/**/*.test.*
 alwaysApply: false
 ---

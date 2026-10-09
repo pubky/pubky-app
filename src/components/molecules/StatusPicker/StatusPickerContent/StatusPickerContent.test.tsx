@@ -469,25 +469,4 @@ describe('StatusPickerContent', () => {
       });
     });
   });
-
-  describe('Snapshots', () => {
-    it('matches snapshot with no current status', () => {
-      const { container } = render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with predefined status selected', () => {
-      const { container } = render(
-        <StatusPickerContent onStatusSelect={mockOnStatusSelect} currentStatus="available" />,
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with custom status', () => {
-      const { container } = render(
-        <StatusPickerContent onStatusSelect={mockOnStatusSelect} currentStatus="😊Working" />,
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

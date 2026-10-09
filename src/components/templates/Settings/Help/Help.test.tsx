@@ -36,10 +36,3 @@ describe('Help', () => {
     expect(screen.getByText('Support')).toBeInTheDocument();
   });
 });
-
-describe('Help - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<Help />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

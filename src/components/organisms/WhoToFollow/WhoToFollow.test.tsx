@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ElementType, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import type { Pubky } from '@/models/models.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -27,14 +26,8 @@ const mockUseUserStream = vi.fn(() => ({
   userIds: [],
   isLoading: false,
   isLoadingMore: false,
-  hasMore: false,
   error: null,
-  loadMore: vi.fn(),
   refetch: vi.fn(),
-}));
-
-const mockUseInfiniteScroll = vi.fn(() => ({
-  sentinelRef: { current: null },
 }));
 
 const mockToggleFollow = vi.fn();
@@ -48,10 +41,6 @@ const mockUseFollowUser = vi.fn(() => ({
 
 vi.mock('@/hooks/useUserStream/useUserStream', () => ({
   useUserStream: vi.fn(),
-}));
-
-vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
-  useInfiniteScroll: vi.fn(),
 }));
 
 vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
@@ -157,9 +146,7 @@ const mockLoadingResult = {
   userIds: [],
   isLoading: true,
   isLoadingMore: false,
-  hasMore: false,
   error: null,
-  loadMore: vi.fn(),
   refetch: vi.fn(),
 };
 
@@ -168,9 +155,7 @@ const mockUsersResult = {
   userIds: mockUsers.map((u) => u.id),
   isLoading: false,
   isLoadingMore: false,
-  hasMore: true,
   error: null,
-  loadMore: vi.fn(),
   refetch: vi.fn(),
 };
 
@@ -179,9 +164,6 @@ describe('WhoToFollow', () => {
     vi.clearAllMocks();
     mockToggleFollow.mockResolvedValue(undefined);
     vi.mocked(useUserStream).mockImplementation(mockUseUserStream);
-    vi.mocked(useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
-    );
     vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
   });
 
@@ -227,10 +209,10 @@ describe('WhoToFollow', () => {
       limit: 30,
       bufferSize: 30,
       refillThreshold: 30,
-      paginated: true,
       includeRelationships: true,
       includeCounts: true,
       excludeFollowing: true,
+      showAll: true,
       preserveFollowedUserIds: [],
     });
   });
@@ -250,33 +232,5 @@ describe('WhoToFollow', () => {
         }),
       );
     });
-  });
-});
-
-describe('WhoToFollow - Snapshots', () => {
-  beforeEach(() => {
-    vi.mocked(useUserStream).mockImplementation(mockUseUserStream);
-    vi.mocked(useInfiniteScroll).mockReturnValue(
-      asOpaque<ReturnType<typeof useInfiniteScroll>>(mockUseInfiniteScroll()),
-    );
-    vi.mocked(useFollowUser).mockReturnValue(asOpaque<ReturnType<typeof useFollowUser>>(mockUseFollowUser()));
-  });
-
-  it('matches snapshot with no users', () => {
-    const { container } = render(<WhoToFollow />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot when loading', () => {
-    vi.mocked(useUserStream).mockReturnValue(mockLoadingResult);
-    const { container } = render(<WhoToFollow />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with users', () => {
-    vi.mocked(useUserStream).mockReturnValue(mockUsersResult);
-
-    const { container } = render(<WhoToFollow />);
-    expect(container).toMatchSnapshot();
   });
 });

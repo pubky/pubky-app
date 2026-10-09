@@ -23,6 +23,8 @@ import { PostAttachmentsCarouselImage } from '../PostAttachmentsCarouselImage/Po
 
 const MAX_VISIBLE_MEDIA = 4;
 
+/** The default media grid; its pending skeleton shares it so the two never drift. */
+export const MEDIA_GRID_CLASS = 'gap-3 sm:grid-cols-2';
 // List media tiles follow the 16:9 design spec — spacing.48 (192px) wide, spacing.27 (108px) tall.
 const LIST_GRID_CLASS =
   'grid w-fit max-w-full grid-cols-[minmax(0,theme(spacing.48))] self-start justify-self-start sm:grid-cols-[repeat(2,theme(spacing.48))]';
@@ -141,7 +143,7 @@ export const PostAttachmentsImagesAndVideos = ({
         <Container
           display={isListVariant ? undefined : 'grid'}
           overrideDefaults={isListVariant}
-          className={cn('gap-3', isListVariant ? LIST_GRID_CLASS : 'sm:grid-cols-2')}
+          className={isListVariant ? cn('gap-3', LIST_GRID_CLASS) : MEDIA_GRID_CLASS}
         >
           {visibleMedia.map((media, i) =>
             media.type.startsWith('image') ? (

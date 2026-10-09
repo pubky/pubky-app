@@ -9,8 +9,18 @@ vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => ({
   PostLinkEmbeds: ({ content }: { content: string }) => <div data-testid="link-embeds" data-content={content} />,
 }));
 vi.mock('../PostAttachments/PostAttachments', () => ({
-  PostAttachments: ({ attachments }: { attachments: string[] | null }) => (
-    <div data-testid="attachments" data-count={attachments?.length ?? 0} />
+  PostAttachments: ({
+    attachments,
+    pendingAttachments,
+  }: {
+    attachments: string[] | null;
+    pendingAttachments?: unknown[];
+  }) => (
+    <div
+      data-testid="attachments"
+      data-count={attachments?.length ?? 0}
+      data-pending={pendingAttachments?.length ?? 0}
+    />
   ),
 }));
 
@@ -27,6 +37,22 @@ describe('PostBody', () => {
     expect(screen.getByTestId('post-text')).toHaveTextContent('hello');
     expect(screen.getByTestId('link-embeds')).toHaveAttribute('data-content', 'hello https://x.com/a');
     expect(screen.getByTestId('attachments')).toHaveAttribute('data-count', '1');
+  });
+
+  it('forwards the pending attachments to the attachments renderer', () => {
+    render(
+      <PostBody
+        content="hello"
+        attachments={null}
+        localAttachments={[]}
+        pendingAttachments={[
+          { slot: 0, type: 'image/png' },
+          { slot: 1, type: 'image/png' },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId('attachments')).toHaveAttribute('data-pending', '2');
   });
 
   it('skips text + link embeds for empty content but still renders attachments', () => {

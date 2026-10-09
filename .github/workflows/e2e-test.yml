@@ -34,7 +34,7 @@ jobs:
 
     steps:
       - name: Checkout pubky-stack
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: pubky/pubky-stack
           ref: ${{ env.pubky_stack_ref }}
@@ -137,7 +137,7 @@ jobs:
           fi
 
       - name: Checkout pubky-stack
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: pubky/pubky-stack
           ref: ${{ env.pubky_stack_ref }}
@@ -149,19 +149,19 @@ jobs:
           # see https://github.com/actions/checkout/issues/183
 
       - name: Checkout this repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: pubky-app
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: 'pubky-app/.nvmrc'
           cache: 'npm'
           cache-dependency-path: 'pubky-app/package-lock.json'
 
       - name: Cache node modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             pubky-app/node_modules
@@ -196,6 +196,7 @@ jobs:
         working-directory: pubky-stack/docker
         run: |
           cp .env-sample .env
+          printf '\nPUBKY_RUNTIME_SHOP_URL=%s\n' 'https://shop.staging.pubky.app/marketplace' >> .env
 
       - name: Run pubky-stack
         working-directory: pubky-stack/docker
@@ -221,38 +222,6 @@ jobs:
           done
 
           echo "Service is ready."
-
-      # TEMP WORKAROUND: nexusd does not create the RediSearch `postContentIdx` index at
-      # startup (only via `nexusd db migration run`), so full-text post search returns 500
-      # ("No such index postContentIdx") on a fresh stack. Run the migrations once after the
-      # stack is up. The migration CLI ignores `--config-dir` and reads
-      # ~/.pubky-nexus/migrations/config.toml, which defaults to localhost, so write a config
-      # pointing at the compose service hostnames first. Remove once Nexus creates the index
-      # on startup.
-      - name: Run Nexus DB migrations (create postContentIdx)
-        run: |
-          docker exec nexusd sh -c 'mkdir -p /root/.pubky-nexus/migrations && cat > /root/.pubky-nexus/migrations/config.toml <<EOF
-          backfill_ready = []
-
-          [stack]
-          log_level = "info"
-          files_path = "/static/files/"
-
-          [stack.otlp]
-          name = "nexusd.migration"
-
-          [stack.db]
-          redis = "redis://nexus-redis:6379"
-
-          [stack.db.neo4j]
-          uri = "bolt://nexus-neo4j:7687"
-          password = "12345678"
-          EOF'
-          docker exec nexusd nexusd db migration run
-          docker exec nexus-redis redis-cli FT._LIST | grep -q postContentIdx || {
-            echo "Error: postContentIdx was not created by Nexus migrations"
-            exit 1
-          }
 
       - name: Run e2e tests - Desktop (${{ matrix.browser }}) - Spec (${{matrix.spec}})
         id: test-desktop

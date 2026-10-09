@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { buttonVariants } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
@@ -43,7 +44,12 @@ export function QrCodeSlot({
           height={size}
           className={cn('rounded-md', QR_HOVER_OPACITY)}
         />
-        <span className="absolute top-1/2 right-0 -translate-y-1/2 bg-card py-2 pr-4 pl-7 text-sm font-bold whitespace-nowrap text-foreground [clip-path:polygon(0%_0%,100%_0%,100%_100%,16px_100%)]">
+        <span
+          className={cn(
+            buttonVariants({ variant: 'secondary', size: 'sm' }),
+            'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
+          )}
+        >
           {clickToReloadLabel}
         </span>
       </>

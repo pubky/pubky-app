@@ -123,15 +123,3 @@ describe('HeaderButtonSignIn', () => {
     expect(button).toHaveClass('custom-class');
   });
 });
-
-describe('HeaderButtonSignIn - Snapshots', () => {
-  it('matches snapshot for default HeaderButtonSignIn', () => {
-    const { container } = render(<HeaderButtonSignIn />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<HeaderButtonSignIn className="custom-class" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

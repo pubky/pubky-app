@@ -322,7 +322,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                 onChange={field.onChange}
                 onBlur={field.onBlur}
                 disabled={loading}
-                className="h-14 border-dashed"
+                className="h-14 border-dashed bg-background/20"
                 data-testid="feed-name-input"
               />
             )}

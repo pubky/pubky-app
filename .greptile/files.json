@@ -49,7 +49,7 @@
     },
     {
       "path": "docs/component-testing.md",
-      "description": "Unit test and snapshot test rules for UI components",
+      "description": "Unit test rules for UI components",
       "scope": ["src/components/**", "**/*.test.*"]
     },
     {

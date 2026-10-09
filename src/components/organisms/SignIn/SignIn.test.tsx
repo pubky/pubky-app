@@ -192,8 +192,10 @@ const { mockCopyToClipboard } = vi.hoisted(() => ({
 }));
 
 // Mock atoms
-vi.mock('@/atoms/Button/Button', () => {
+vi.mock('@/atoms/Button/Button', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/atoms/Button/Button')>();
   return {
+    ...actual,
     Button: ({
       asChild,
       children,
@@ -552,34 +554,6 @@ describe('SignInContent', () => {
     expect(mockFetchUrl).toHaveBeenCalledTimes(1);
   });
 });
-
-describe('SignInContent - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    resetMockSignInState();
-    resetMobileAuthMock();
-  });
-
-  it('matches snapshot for the QR sign-in layout', () => {
-    const { container } = render(<SignInContent />);
-
-    expect(container).toMatchSnapshot();
-  });
-
-  it('does not render Passport while eligibility is pending or disabled', () => {
-    passportMocks.eligibility = 'pending';
-    const { unmount } = render(<SignInContent />);
-    expect(screen.queryByTestId('passport-method-card')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('passport-method-section')).not.toBeInTheDocument();
-    expect(screen.getByTestId('sign-in-qr-card')).toBeInTheDocument();
-    unmount();
-
-    passportMocks.eligibility = 'disabled';
-    render(<SignInContent />);
-    expect(screen.queryByTestId('passport-method-card')).not.toBeInTheDocument();
-  });
-});
-
 describe('SignInContent - Passport enabled', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -590,7 +564,7 @@ describe('SignInContent - Passport enabled', () => {
   });
 
   it('renders the two-card desktop layout and the sectioned mobile layout', () => {
-    const { container } = render(<SignInContent />);
+    render(<SignInContent />);
 
     // Desktop: sovereign card + Passport card; mobile: labelled sections (Container mock drops test ids).
     expect(screen.getByTestId('sign-in-ring-card')).toBeInTheDocument();
@@ -599,7 +573,6 @@ describe('SignInContent - Passport enabled', () => {
     expect(screen.queryByTestId('sign-in-qr-card')).not.toBeInTheDocument();
     expect(screen.getAllByText('Choose your preferred method to sign in.')).toHaveLength(2);
     expect(screen.getAllByText('Sovereign & Secure')).toHaveLength(2);
-    expect(container).toMatchSnapshot();
   });
 
   it('starts Passport from the Google button', () => {
@@ -831,5 +804,26 @@ describe('SignInFooter', () => {
     render(<SignInFooter />);
 
     expect(screen.queryByTestId('footer-links')).not.toBeInTheDocument();
+  });
+});
+
+describe('SignInContent - Passport eligibility', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetMockSignInState();
+    resetMobileAuthMock();
+  });
+
+  it('does not render Passport while eligibility is pending or disabled', () => {
+    passportMocks.eligibility = 'pending';
+    const { unmount } = render(<SignInContent />);
+    expect(screen.queryByTestId('passport-method-card')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('passport-method-section')).not.toBeInTheDocument();
+    expect(screen.getByTestId('sign-in-qr-card')).toBeInTheDocument();
+    unmount();
+
+    passportMocks.eligibility = 'disabled';
+    render(<SignInContent />);
+    expect(screen.queryByTestId('passport-method-card')).not.toBeInTheDocument();
   });
 });

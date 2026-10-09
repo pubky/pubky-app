@@ -26,7 +26,7 @@ export function ButtonsNavigation({
           id={`${id}-back-btn`}
           size="lg"
           className={cn('rounded-full', backButtonClassName)}
-          variant={'secondary'}
+          variant={'outline'}
           onClick={onHandleBackButton}
           disabled={backButtonDisabled}
         >

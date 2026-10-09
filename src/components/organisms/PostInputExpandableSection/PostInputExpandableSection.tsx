@@ -1,6 +1,6 @@
 'use client';
 
-import { Edit, MessageCircle, Repeat } from 'lucide-react';
+import { Edit, MessageCircle, Newspaper, Repeat } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { EmojiPickerDialog } from '@/molecules/EmojiPickerDialog/EmojiPickerDialog';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
@@ -41,6 +41,8 @@ export function PostInputExpandableSection({
   const isUiDisabled = isSubmitting || isDisabled;
   // Use provided isPostDisabled or default to requiring content
   const isPostDisabled = isPostDisabledProp ?? (!hasContent || isUiDisabled);
+  // Articles always submit with the newspaper icon, in create and in edit.
+  const defaultSubmitIcon = isArticle ? Newspaper : IconsButton[submitMode];
   const postButtonLabel = submitLabel ?? getButtonLabel(submitMode, isArticle);
   const postButtonAriaLabel = postButtonLabel;
   const isEdit = submitMode === POST_INPUT_VARIANT.EDIT;
@@ -66,7 +68,7 @@ export function PostInputExpandableSection({
           postButtonAriaLabel={postButtonAriaLabel}
           hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle || !!lockCard}
           isArticle={isArticle}
-          postButtonIcon={submitIcon ?? IconsButton[submitMode]}
+          postButtonIcon={submitIcon ?? defaultSubmitIcon}
           lockSwitch={lockSwitch}
         />
       </Container>

@@ -16,11 +16,3 @@ describe('CollectionItemsEmpty', () => {
     expect(document.querySelector('[data-cy="bookmarks-items-empty"]')).toBeInTheDocument();
   });
 });
-
-describe('CollectionItemsEmpty - Snapshots', () => {
-  it('matches the snapshot', () => {
-    const { container } = render(<CollectionItemsEmpty />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

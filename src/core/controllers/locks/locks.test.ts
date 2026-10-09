@@ -5,6 +5,7 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { TUnlockedContent } from '@/services/locks/locks.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
 import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
@@ -18,8 +19,10 @@ const mocks = vi.hoisted(() => ({
   restoreSession: vi.fn(),
   signout: vi.fn(),
   setLockServiceConfig: vi.fn(),
+  fetchPaykitSetupStatus: vi.fn(),
   createLockContent: vi.fn(),
   fetchLockFile: vi.fn(),
+  getOrFetchLockFile: vi.fn(),
   hasPaykitReceiver: vi.fn(),
   fetchPurchaseBundleId: vi.fn(),
   fetchPaidContent: vi.fn(),
@@ -42,8 +45,10 @@ vi.mock('@/application/locks/locks', () => ({
     restoreSession: mocks.restoreSession,
     signout: mocks.signout,
     setLockServiceConfig: mocks.setLockServiceConfig,
+    fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
     createLockContent: mocks.createLockContent,
     fetchLockFile: mocks.fetchLockFile,
+    getOrFetchLockFile: mocks.getOrFetchLockFile,
     hasPaykitReceiver: mocks.hasPaykitReceiver,
     fetchPurchaseBundleId: mocks.fetchPurchaseBundleId,
     fetchPaidContent: mocks.fetchPaidContent,
@@ -59,7 +64,10 @@ vi.mock('@/application/locks/locks', () => ({
   },
 }));
 
-const fakeSession = asOpaque<LocksSdkSession>({ id: 'locks-session' });
+const fakeSession = asOpaque<LocksSdkSession>({
+  id: 'locks-session',
+  creatorPubky: () => `pubky${MOCK_LOCK_AUTHOR_PUBKY}`,
+});
 
 describe('LocksController (auth)', () => {
   beforeEach(() => {
@@ -70,6 +78,7 @@ describe('LocksController (auth)', () => {
     mocks.signout.mockResolvedValue(undefined);
     mocks.setLockServiceConfig.mockResolvedValue(undefined);
     useLocksAuthStore.setState(locksAuthInitialState);
+    useAuthStore.setState({ currentUserPubky: MOCK_LOCK_AUTHOR_PUBKY });
   });
 
   it('getConnectUrl derives returnTo from the app origin and forwards it', async () => {
@@ -189,6 +198,31 @@ describe('LocksController (auth)', () => {
     expect(store.selectLocksSessionSecret()).toBeNull();
   });
 
+  it('rejects a session for an account other than the signed-in one, signs it out and does not persist it', async () => {
+    const otherSession = asOpaque<LocksSdkSession>({ creatorPubky: () => 'pubkyotheraccount' });
+    mocks.exchangeSessionCode.mockResolvedValueOnce({ session: otherSession, secret: 'secret-other' });
+
+    await expect(LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' })).rejects.toMatchObject({
+      code: AuthErrorCode.FORBIDDEN,
+    });
+
+    expect(mocks.signout).toHaveBeenCalledTimes(1);
+    expect(mocks.signout).toHaveBeenCalledWith(otherSession);
+    expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+    expect(mocks.setLockServiceConfig).not.toHaveBeenCalled();
+  });
+
+  it('rejects the session when the pubky.app session is gone', async () => {
+    useAuthStore.setState({ currentUserPubky: null });
+
+    await expect(LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' })).rejects.toMatchObject({
+      code: AuthErrorCode.FORBIDDEN,
+    });
+
+    expect(mocks.signout).toHaveBeenCalledWith(fakeSession);
+    expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+  });
+
   describe('restorePersistedLocksSession', () => {
     it('rebuilds the session, validates it against the server, and keeps it on success', async () => {
       useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
@@ -249,6 +283,34 @@ describe('LocksController (auth)', () => {
       expect(store.selectLocksSessionSecret()).toBeNull();
     });
   });
+
+  describe('fetchPaykitSetupStatus', () => {
+    beforeEach(() => {
+      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+    });
+
+    it('clears the session when the Lock Server rejects it (401 → Auth)', async () => {
+      const rejected = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', {
+        service: ErrorService.Locks,
+        operation: 'test',
+      });
+      mocks.fetchPaykitSetupStatus.mockRejectedValue(rejected);
+
+      await expect(LocksController.fetchPaykitSetupStatus()).rejects.toBe(rejected);
+
+      const store = useLocksAuthStore.getState();
+      expect(store.selectIsLocksAuthenticated()).toBe(false);
+      expect(store.selectLocksSessionSecret()).toBeNull();
+    });
+
+    it('keeps the session when the check fails for a non-auth reason', async () => {
+      mocks.fetchPaykitSetupStatus.mockRejectedValue(new Error('network down'));
+
+      await expect(LocksController.fetchPaykitSetupStatus()).rejects.toThrow('network down');
+
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+    });
+  });
 });
 
 describe('LocksController (content)', () => {
@@ -291,6 +353,30 @@ describe('LocksController.fetchLockFile', () => {
     vi.mocked(LocksApplication.fetchLockFile).mockResolvedValue(null);
 
     await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
+      lockFile: null,
+      priceSats: null,
+    });
+  });
+});
+
+describe('LocksController.getOrFetchLockFile', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getOrFetchLockFile.mockResolvedValue(MOCK_LOCK_FILE);
+  });
+
+  it('delegates to the application and resolves the price', async () => {
+    await expect(LocksController.getOrFetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
+      lockFile: MOCK_LOCK_FILE,
+      priceSats: '1000',
+    });
+    expect(mocks.getOrFetchLockFile).toHaveBeenCalledWith({ lockUrl: VALID_LOCK_URL });
+  });
+
+  it('resolves a null price without a lock file', async () => {
+    mocks.getOrFetchLockFile.mockResolvedValue(null);
+
+    await expect(LocksController.getOrFetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
       lockFile: null,
       priceSats: null,
     });
@@ -355,7 +441,7 @@ describe('LocksController.fetchUnlockedList', () => {
 
 describe('LocksController.fetchOwnContent', () => {
   it("delegates loading the creator's own guarded content to the application", async () => {
-    const params = { lockFile: MOCK_LOCK_FILE };
+    const params = { lockUrl: VALID_LOCK_URL, lockFile: MOCK_LOCK_FILE };
     const content = { post: { content: 'mine', kind: 'short', attachments: null }, attachments: [] };
     mocks.fetchOwnContent.mockResolvedValue(content);
 

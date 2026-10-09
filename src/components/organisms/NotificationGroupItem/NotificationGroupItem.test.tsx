@@ -6,7 +6,6 @@ import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { NotificationType, PostChangedSource } from '@/models/notification/notification.types';
 import type { GroupableNotification } from '@/organisms/NotificationsList/NotificationsList.types';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { NotificationGroupItem } from './NotificationGroupItem';
 
 const mockUseNotificationPostContent = vi.hoisted(() =>
@@ -471,55 +470,5 @@ describe('NotificationGroupItem - shared row chrome', () => {
     render(<NotificationGroupItem notifications={buildGroup(NotificationType.PostDeleted, 2)} isUnread={false} />);
 
     expect(screen.getByText('User')).toBeInTheDocument();
-  });
-});
-
-describe('NotificationGroupItem - Snapshots', () => {
-  it('matches snapshot for a deleted group', () => {
-    const { container } = render(
-      <NotificationGroupItem notifications={buildGroup(NotificationType.PostDeleted, 8)} isUnread={true} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for a collapsed edited group', () => {
-    const { container } = render(
-      <NotificationGroupItem notifications={buildGroup(NotificationType.PostEdited, 3)} isUnread={false} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for an expanded edited group', async () => {
-    const { container } = render(
-      <NotificationGroupItem notifications={buildGroup(NotificationType.PostEdited, 3)} isUnread={false} />,
-    );
-
-    await userEvent.click(screen.getByRole('button'));
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('NotificationGroupItem - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(
-      <NotificationGroupItem notifications={buildGroup(NotificationType.PostDeleted, 8)} isUnread isMobile />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for an always-expanded edited group on mobile viewport', () => {
-    const { container } = render(
-      <NotificationGroupItem notifications={buildGroup(NotificationType.PostEdited, 3)} isUnread={false} isMobile />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

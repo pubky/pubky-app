@@ -182,39 +182,3 @@ describe('HotTagCard', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 });
-
-describe('HotTagCard - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(
-      <HotTagCard rank={1} tagName="bitcoin" postCount={371} timeframe={TIMEFRAME.THIS_MONTH} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with taggers', () => {
-    const taggers = [
-      { id: '1', name: 'Alice', avatarUrl: 'https://example.com/alice.png' },
-      { id: '2', name: 'Bob', avatarUrl: 'https://example.com/bob.png' },
-    ];
-    const { container } = render(
-      <HotTagCard rank={2} tagName="ethereum" postCount={250} taggers={taggers} timeframe={TIMEFRAME.THIS_MONTH} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with overflow taggers', () => {
-    const taggers = Array.from({ length: 10 }, (_, i) => ({
-      id: String(i),
-      name: `User ${i}`,
-    }));
-    const { container } = render(
-      <HotTagCard rank={3} tagName="defi" postCount={100} taggers={taggers} timeframe={TIMEFRAME.THIS_MONTH} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with small postCount', () => {
-    const { container } = render(<HotTagCard rank={1} tagName="nft" postCount={50} timeframe={TIMEFRAME.ALL_TIME} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -25,10 +25,3 @@ describe('DialogInstallIos', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
-
-describe('DialogInstallIos - Snapshots', () => {
-  it('matches snapshot when open', () => {
-    const { baseElement } = render(<DialogInstallIos open onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
-    expect(baseElement).toMatchSnapshot();
-  });
-});

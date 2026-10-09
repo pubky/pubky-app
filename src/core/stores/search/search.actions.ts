@@ -1,4 +1,5 @@
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
+import { toContentSearchKey } from '@/libs/search/contentSearch';
 import type { Pubky } from '@/models/models.types';
 import { ZustandSet } from '../stores.types';
 import { MAX_RECENT_SEARCHES } from './search.constants';
@@ -17,6 +18,7 @@ import { addItemToTop, addTagToArray } from './search.utils';
  * Actions/Mutators - State modification functions
  */
 export const createSearchActions = (set: ZustandSet<SearchStore>): SearchActions => ({
+  setReach: (reach) => set({ reach }, false, SearchActionTypes.SET_REACH),
   /**
    * Add a user to recent searches
    * Moves existing user to top if already present
@@ -56,7 +58,8 @@ export const createSearchActions = (set: ZustandSet<SearchStore>): SearchActions
 
   /**
    * Add a full-text query to recent searches
-   * Moves existing query to top if already present
+   * Moves existing query to top if already present, matching case-insensitively
+   * like Nexus `by_content`; the chip keeps the latest search's casing
    * Removes oldest if at max capacity
    * Note: Query should be validated (trimmed) before calling
    */
@@ -65,7 +68,13 @@ export const createSearchActions = (set: ZustandSet<SearchStore>): SearchActions
       (state) => {
         const now = Date.now();
         const newQuery: RecentQuerySearch = { query, searchedAt: now };
-        const newQueries = addItemToTop(state.recentQueries, newQuery, (q) => q.query === query, MAX_RECENT_SEARCHES);
+        const queryKey = toContentSearchKey(query);
+        const newQueries = addItemToTop(
+          state.recentQueries,
+          newQuery,
+          (q) => toContentSearchKey(q.query) === queryKey,
+          MAX_RECENT_SEARCHES,
+        );
         return { recentQueries: newQueries };
       },
       false,

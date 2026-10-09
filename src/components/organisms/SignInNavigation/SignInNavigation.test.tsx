@@ -98,14 +98,3 @@ describe('SignInNavigation', () => {
     expect(screen.queryByTestId('restore-file')).not.toBeInTheDocument();
   });
 });
-
-describe('SignInNavigation - Snapshots', () => {
-  beforeEach(() => {
-    mockSignInState = { authUrlResolved: false };
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<SignInNavigation />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
