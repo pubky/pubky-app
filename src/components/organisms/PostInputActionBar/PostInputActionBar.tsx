@@ -100,7 +100,7 @@ export function PostInputActionBar({
           data-cy={getButtonDataCy(postButtonAriaText)}
           {...COMMON_BUTTON_PROPS}
           onClick={onPostClick}
-          disabled={isPostDisabled || !onPostClick}
+          disabled={isSubmitting || isPostDisabled || !onPostClick}
           aria-label={postButtonAriaText}
           variant={'default'}
           size={isMobile ? 'default' : 'sm'}

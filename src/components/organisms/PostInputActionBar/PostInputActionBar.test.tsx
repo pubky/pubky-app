@@ -170,6 +170,17 @@ describe('PostInputActionBar', () => {
     expect(postButton).toHaveTextContent('Posting...');
   });
 
+  it('blocks repeated submit clicks while waiting even if content validation permits submission', () => {
+    const onPostClick = vi.fn();
+    render(
+      <PostInputActionBar hideArticleButton={false} onPostClick={onPostClick} isSubmitting isPostDisabled={false} />,
+    );
+    const submit = screen.getByRole('button', { name: 'Posting...' });
+    expect(submit).toBeDisabled();
+    fireEvent.click(submit);
+    expect(onPostClick).not.toHaveBeenCalled();
+  });
+
   it('disables all buttons when isSubmitting is true', () => {
     render(<PostInputActionBar hideArticleButton={false} onEmojiClick={vi.fn()} isSubmitting={true} />);
 
