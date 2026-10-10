@@ -129,15 +129,18 @@ export const createPostFromDialog = (postContent: string, expectedPostLength?: n
   cy.get('[data-cy="dialog-content"]').should('not.exist');
 };
 
-const ARTICLE_TITLE_INPUT = 'input[placeholder="Article Title"]';
+const ARTICLE_TITLE_INPUT = '[data-cy="article-title-input"]';
 const ARTICLE_MARKDOWN_TEXTAREA = '[data-testid="markdown-textarea"]';
 const ARTICLE_MARKDOWN_MODE_BUTTON = 'button[aria-label="Markdown"]';
 // Create and edit both label this control "Publish Article". The action bar
 // builds data-cy from that full label: post-input-action-bar-publish-article.
 const ARTICLE_SUBMIT_BUTTON = '[data-cy="post-input-action-bar-publish-article"]';
 const ARTICLE_ADD_BUTTON = '[data-cy="post-input-action-bar-add-article"]';
-// Cover picker only. The markdown editor has its own file input for inline images.
-const ARTICLE_COVER_FILE_INPUT = 'input[type="file"]:not([data-testid="markdown-image-input"])';
+const ARTICLE_HEADER_TAB = '[data-cy="article-composer-tab-header"]';
+// Cover picker only. The markdown toolbar mounts a separate file input per inline
+// media kind (markdown-image-input, markdown-video-input, markdown-audio-input,
+// markdown-pdf-input). Excluding only the image one still matched four inputs.
+const ARTICLE_COVER_FILE_INPUT = '[data-testid="article-cover-file-input"]';
 const ARTICLE_FIELD_DEBOUNCE_MS = 600;
 
 const switchToArticleMode = () => {
@@ -152,9 +155,16 @@ const setArticleBody = (body: string) => {
   cy.get(ARTICLE_MARKDOWN_TEXTAREA).filter(':visible').should('have.value', body);
 };
 
+const showArticleHeader = () => {
+  // The cover preview and its remove control live on the Header tab. Inactive
+  // panels stay mounted, so the file input exists while Content is showing, but
+  // opening an edit does not switch to Header on its own.
+  cy.get(ARTICLE_HEADER_TAB).should('be.visible').click();
+};
+
 const addArticleCover = (fileName = 'mustache-you.png') => {
   const imagePath = Cypress.config('fixturesFolder') + `/${fileName}`;
-  cy.get(ARTICLE_COVER_FILE_INPUT).selectFile(imagePath, { force: true });
+  cy.get(ARTICLE_COVER_FILE_INPUT).should('have.length', 1).selectFile(imagePath, { force: true });
 };
 
 const fillArticleFields = ({
@@ -179,6 +189,10 @@ const fillArticleFields = ({
   if (title !== undefined || body !== undefined) {
     // usePostInput debounces article title and body changes by 500ms
     cy.wait(ARTICLE_FIELD_DEBOUNCE_MS);
+  }
+
+  if (imageAction) {
+    showArticleHeader();
   }
 
   if (imageAction?.action === 'add') {
