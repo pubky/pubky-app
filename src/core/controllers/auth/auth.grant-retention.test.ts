@@ -21,7 +21,7 @@ vi.mock('@/coordinators/notifications/notifications', () => ({ NotificationCoord
 vi.mock('@/coordinators/streams/stream', () => ({ StreamCoordinator: { resetInstance: vi.fn() } }));
 
 const PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
-const PENDING_KEY = 'pubky-pending-grant-v1';
+const PENDING_KEY = 'pubky-app-pending-grant-v1';
 const retainedWarning =
   'Grant approval was canceled or superseded; the completed session was retained in SDK storage. Remote revocation was not confirmed.';
 const failedWarning =

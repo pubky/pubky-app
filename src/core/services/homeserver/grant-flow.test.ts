@@ -12,7 +12,7 @@ vi.mock('@/config/network', async (original) => ({
 vi.mock('./homeserver.utils', () => ({
   createCancelableAuthApproval: () => ({ awaitApproval: new Promise(() => {}), cancel: vi.fn() }),
 }));
-const savedKey = 'pubky-pending-grant-v1';
+const savedKey = 'pubky-app-pending-grant-v1';
 const request: GrantFlowRequest = { purpose: 'signin', capabilities: APP_CAPABILITIES, generation: 'generation' };
 const makeFlow = (mode: 'local' | 'delegated' = 'delegated') =>
   asOpaque<GrantAuthFlow>({

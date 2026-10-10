@@ -16,7 +16,7 @@ function parseCapabilities(entries: readonly string[]) {
  * subtree; a file scope covers only that exact path. Each action may be supplied
  * by a different covering capability. Malformed input never grants access.
  *
- * Matches pubky-common v0.11.0 capabilities.rs `scope_covers_path` and the
+ * Matches pubky-common v0.15.0 capabilities.rs `scope_covers_path` and the
  * homeserver's per-action authorization checks. This is a UI preflight only;
  * the homeserver remains responsible for enforcing authorization.
  */

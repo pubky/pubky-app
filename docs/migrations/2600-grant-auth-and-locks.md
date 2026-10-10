@@ -74,7 +74,8 @@ bearer-sharing implementation or restore-on-401 loop. Both expiry timestamps com
 The [SDK's default issued grant lifetime](https://github.com/pubky/pubky-homeserver/blob/v0.15.0/pubky-sdk/src/actors/auth/grant/constants.rs)
 is 730 days; a signer can choose another lifetime. [HS 0.15 issues bearers](https://github.com/pubky/pubky-homeserver/blob/v0.15.0/pubky-homeserver/src/client_server/auth/grant/service.rs)
 for up to one hour, capped by grant expiry. These are not app timers. Reload old app tabs during rollout: an already-running
-older SDK cannot participate in the new coordination protocol.
+older SDK cannot participate in the new coordination protocol. Apps that share a saved grant on the same origin
+must coordinate SDK upgrades and use compatible browser-record formats and lifecycle protocols.
 
 If an active, owned HS storage request still fails with a terminal authentication error after SDK recovery,
 AuthCoordinator asks AuthController to invalidate only the matching live session/generation. Protected routes return
@@ -94,7 +95,11 @@ still requires a readable durable generation; a delayed logout write cannot repl
 is skipped when the signed-out record could not be persisted.
 
 Explicit logout also attempts cookie `DELETE /session` for the retained account ID, independently of grant revocation.
-This covers ambient cookies even if an earlier app version already discarded their metadata.
+This covers ambient cookies even if an earlier app version already discarded their metadata. The cookie belongs to
+that account on the homeserver, so revoking it also ends any Shop or messaging session using the same browser cookie,
+even when the apps have different origins. This shared-cookie logout is intentional for the planned Shop integration.
+It does not revoke independent Shop grants; shared-grant access and cross-app account switching will be defined in
+the Shop integration.
 
 See the [released lifecycle contract](https://github.com/pubky/pubky-homeserver/blob/v0.15.0/docs/grant-session-lifecycle.md).
 
@@ -108,8 +113,9 @@ release blocker for this migration. App-owned raw public HTTP calls omit cookies
 
 ## Ring, Passport and signup
 
-Pending authorization is tab-scoped. A saved attempt can resume for three minutes when its purpose, account,
-generation, full scopes, app identity, environment, homeserver, relay, callback metadata and signup-invite hash match.
+Pending authorization is tab-scoped in `sessionStorage` under `pubky-app-pending-grant-v1`. A saved attempt can resume
+for three minutes when its purpose, account, generation, full scopes, app identity, environment, homeserver, relay,
+callback metadata and signup-invite hash match.
 This is the app's resume window, not a grant/bearer lifetime or a hard deadline for live approval polling.
 The SDK serialization mode selects the resume API. Explicit QR regeneration starts a new attempt; page reload can
 resume a matching saved attempt. Unmount alone preserves mobile handoff. Treat pending serializations as sensitive.

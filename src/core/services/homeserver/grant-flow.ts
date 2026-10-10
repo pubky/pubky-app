@@ -15,7 +15,7 @@ import { isPubkyErrorLike } from './error.utils';
 import type { TGenerateAuthUrlResult } from './homeserver.types';
 import { createCancelableAuthApproval } from './homeserver.utils';
 
-const PENDING_KEY = 'pubky-pending-grant-v1';
+const PENDING_KEY = 'pubky-app-pending-grant-v1';
 // App resume policy, separate from grant expiry and server bearer lifetime.
 const RESUME_WINDOW_MS = 3 * 60_000;
 const pendingSchema = z.object({
