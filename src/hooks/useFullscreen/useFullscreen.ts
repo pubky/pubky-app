@@ -36,6 +36,8 @@ export function useFullscreen({ enabled = true }: UseFullscreenOptions = {}): Us
   const [isSupported, setIsSupported] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const enteredHereRef = useRef(false);
+  // Mounted and enabled: a request that resolves after either ended must undo itself (see toggle)
+  const activeRef = useRef(true);
 
   useEffect(() => {
     setIsSupported(Boolean(document.fullscreenEnabled));
@@ -51,11 +53,13 @@ export function useFullscreen({ enabled = true }: UseFullscreenOptions = {}): Us
 
     return () => {
       document.removeEventListener('fullscreenchange', handleChange);
+      activeRef.current = false;
       leaveIfEnteredHere(enteredHereRef);
     };
   }, []);
 
   useEffect(() => {
+    activeRef.current = enabled;
     if (!enabled) leaveIfEnteredHere(enteredHereRef);
   }, [enabled]);
 
@@ -67,6 +71,9 @@ export function useFullscreen({ enabled = true }: UseFullscreenOptions = {}): Us
       } else {
         await document.documentElement.requestFullscreen();
         enteredHereRef.current = true;
+        // The browser granted it after the caller unmounted or disabled the control: the exit that
+        // ran at that moment saw nothing to leave, so leave now
+        if (!activeRef.current) leaveIfEnteredHere(enteredHereRef);
       }
     } catch {
       toast({

@@ -125,6 +125,64 @@ describe('useFullscreen', () => {
     expect(toast).not.toHaveBeenCalled();
   });
 
+  it('leaves fullscreen granted only after the caller unmounted', async () => {
+    let grant: () => void = () => undefined;
+    requestFullscreen.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          grant = () => {
+            Object.defineProperty(document, 'fullscreenElement', {
+              configurable: true,
+              value: document.documentElement,
+            });
+            resolve();
+          };
+        }),
+    );
+    const { result, unmount } = renderHook(() => useFullscreen());
+    const pending = result.current.toggle();
+
+    unmount();
+    expect(exitFullscreen).not.toHaveBeenCalled();
+
+    await act(async () => {
+      grant();
+      await pending;
+    });
+
+    expect(exitFullscreen).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves fullscreen granted only after the caller disabled it', async () => {
+    let grant: () => void = () => undefined;
+    requestFullscreen.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          grant = () => {
+            Object.defineProperty(document, 'fullscreenElement', {
+              configurable: true,
+              value: document.documentElement,
+            });
+            resolve();
+          };
+        }),
+    );
+    const { result, rerender } = renderHook(({ enabled }) => useFullscreen({ enabled }), {
+      initialProps: { enabled: true },
+    });
+    const pending = result.current.toggle();
+
+    rerender({ enabled: false });
+    expect(exitFullscreen).not.toHaveBeenCalled();
+
+    await act(async () => {
+      grant();
+      await pending;
+    });
+
+    expect(exitFullscreen).toHaveBeenCalledTimes(1);
+  });
+
   it('does not touch fullscreen it did not enter when the caller unmounts', () => {
     const { unmount } = renderHook(() => useFullscreen());
     act(() => setFullscreenElement(document.documentElement));
