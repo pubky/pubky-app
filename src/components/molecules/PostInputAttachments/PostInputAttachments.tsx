@@ -117,6 +117,9 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
           multiple={!isArticle}
           onChange={handleFileChange}
           className="hidden"
+          // Article composers also mount one file input per inline media kind.
+          // This id is the cover picker, so tests do not select those as well.
+          {...(isArticle ? { 'data-testid': 'article-cover-file-input' } : {})}
         />
 
         {/* Article cover slot, empty: the add control sits centred in the frame the cover will fill */}
