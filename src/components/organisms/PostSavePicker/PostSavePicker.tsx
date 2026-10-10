@@ -76,9 +76,6 @@ type SavePickerContentProps = {
   loadMoreCollections: () => Promise<void>;
   otherCollectionIds: string[];
   isOtherCollectionsLoading: boolean;
-  hasMoreOtherCollections: boolean;
-  isOtherCollectionsLoadingMore: boolean;
-  loadMoreOtherCollections: () => Promise<void>;
   toggleBookmark: () => Promise<void>;
   toggleCollection: (collectionId: string) => Promise<void>;
   createCollectionWithPost: (name: string) => Promise<void>;
@@ -133,27 +130,6 @@ function SavePickerLoadingRow() {
         {'Loading collections...'}
       </Typography>
     </Container>
-  );
-}
-
-function SavePickerLoadMoreRow({
-  layout,
-  isLoadingMore,
-  dataCy,
-  onActivate,
-}: {
-  layout: SavePickerLayout;
-  isLoadingMore: boolean;
-  dataCy: string;
-  onActivate: () => void;
-}) {
-  return (
-    <SavePickerRow layout={layout} disabled={isLoadingMore} dataCy={dataCy} onActivate={onActivate}>
-      {isLoadingMore && <Loader2 className="size-4 animate-spin" />}
-      <Typography as="span" overrideDefaults className={cn('min-w-0 flex-1', layout === 'sheet' && 'text-left')}>
-        {'Load more'}
-      </Typography>
-    </SavePickerRow>
   );
 }
 
@@ -310,19 +286,15 @@ function SavePickerContent({
   loadMoreCollections,
   otherCollectionIds,
   isOtherCollectionsLoading,
-  hasMoreOtherCollections,
-  isOtherCollectionsLoadingMore,
-  loadMoreOtherCollections,
   toggleBookmark,
   toggleCollection,
   createCollectionWithPost,
 }: SavePickerContentProps) {
   const [newCollectionName, setNewCollectionName] = useState('');
   const canCreate = newCollectionName.trim().length > 0 && !isCreatingCollection;
-  // "Also in collections" is informational: it shows only while there is something to show,
-  // while the first page is still on its way, or while a further page could still hold other
-  // users' collections (a first page made only of the viewer's own is filtered to nothing).
-  const showOtherCollections = isOtherCollectionsLoading || otherCollectionIds.length > 0 || hasMoreOtherCollections;
+  // "Also in collections" is an informational sample: it shows while its page is on its way
+  // or when it holds other users' collections, and stays hidden otherwise.
+  const showOtherCollections = isOtherCollectionsLoading || otherCollectionIds.length > 0;
   const separator =
     layout === 'dropdown' ? <DropdownMenuSeparator /> : <Container overrideDefaults className="h-px bg-muted" />;
 
@@ -399,12 +371,17 @@ function SavePickerContent({
         )}
 
         {hasMoreCollections && isStalled && (
-          <SavePickerLoadMoreRow
+          <SavePickerRow
             layout={layout}
-            isLoadingMore={isCollectionsLoadingMore}
+            disabled={isCollectionsLoadingMore}
             dataCy="post-save-collections-load-more"
             onActivate={() => void resumeAutoLoad()}
-          />
+          >
+            {isCollectionsLoadingMore && <Loader2 className="size-4 animate-spin" />}
+            <Typography as="span" overrideDefaults className={cn('min-w-0 flex-1', layout === 'sheet' && 'text-left')}>
+              {'Load more'}
+            </Typography>
+          </SavePickerRow>
         )}
         {hasMoreCollections && !isStalled && (
           <Container
@@ -468,14 +445,6 @@ function SavePickerContent({
                 otherCollectionIds.map((collectionId) => (
                   <OtherCollectionRow key={collectionId} layout={layout} collectionId={collectionId} />
                 ))
-              )}
-              {hasMoreOtherCollections && !isOtherCollectionsLoading && (
-                <SavePickerLoadMoreRow
-                  layout={layout}
-                  isLoadingMore={isOtherCollectionsLoadingMore}
-                  dataCy="post-save-other-collections-load-more"
-                  onActivate={() => void loadMoreOtherCollections()}
-                />
               )}
             </Container>
           </Container>

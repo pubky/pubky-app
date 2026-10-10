@@ -1,7 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
-import { COLLECTIONS_COUNT_PROTECTION_MS, COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
+import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { parseCompositeId } from '@/models/models.utils';
 import { buildPostCollectionsStreamId } from '@/models/stream/post/postStream.types';
@@ -16,84 +15,42 @@ type UsePostCollectionsOptions = {
 };
 
 type UsePostCollectionsResult = {
-  /** Composite ids of the collections that curate the post, newest first. */
+  /** Composite ids of the collections that curate the post: one page, newest first. */
   collectionIds: string[];
-  /** Whether the first page is in flight. */
+  /** Whether that page is in flight. */
   isLoading: boolean;
-  /**
-   * Whether a further page may hold more collections, as the paginator reports
-   * it: true while the first page is still in flight too, so read it beside
-   * `isLoading` before offering a "Load more" control.
-   */
-  hasMore: boolean;
-  isLoadingMore: boolean;
-  loadMore: () => Promise<void>;
-  /**
-   * Records that the viewer removed the post from one of their own collections. The raw
-   * page holds the viewer's own collections too (consumers filter them out) and the stream
-   * is skip-paginated, so once Nexus indexes the removal, at a time this hook cannot see,
-   * every later index shifts down by one. Each recorded removal widens the paginator's
-   * `skipOverlap` for the protection window and for the first request after it: every load
-   * from then on rewinds by that many rows and scans forward through the repeats, so no
-   * curator is stepped over whenever the shift lands, including under a page already in
-   * flight or while the picker sits idle. An addition lands at the top and needs nothing.
-   */
-  recordRemoval: () => void;
 };
 
 /**
- * The collections that contain `postId`, read from Nexus's `post_collections`
- * stream (pubky-nexus#1067) through the shared stream layer.
+ * A sample of the collections that contain `postId`: the first page of Nexus's
+ * `post_collections` stream (pubky-nexus#1067), read through the shared stream layer.
  *
  * The stream is skip-paginated and served from the graph, so it is never written
- * to the local stream cache: every enabled mount pages from Nexus, which is also
- * what keeps the list current when other users edit their collections. The
- * stream layer still hydrates cache-miss collections into Dexie before returning
+ * to the local stream cache: every enabled mount fetches the page from Nexus, which
+ * is also what keeps the sample current when other users edit their collections.
+ * The stream layer still hydrates cache-miss collections into Dexie before returning
  * their ids, so a row can read its envelope with `usePostDetails`. Muted users'
  * and deleted collections are filtered out like on any other stream.
  *
+ * Deliberately one page, never paginated. The raw page includes the viewer's own
+ * collections, which the picker hides, and the viewer can remove the post from one
+ * of them from the same picker; Nexus indexes that later, at a time this client
+ * cannot see, and every later offset shifts under an offset-paginated walk. The
+ * count on the save trigger carries the total; this list is a sample of it.
+ *
  * A failed page is logged by `useStreamPagination` and leaves the list empty;
- * the curators list is informational, so it does not toast.
+ * the sample is informational, so it does not toast.
  */
 export function usePostCollections(
   postId: string,
   { enabled = false }: UsePostCollectionsOptions = {},
 ): UsePostCollectionsResult {
   const { pubky: authorId, id } = parseCompositeId(postId);
-  // When the viewer removed the post from own collections. Kept for as long as the consumer
-  // stays mounted rather than per enabled lifetime (a picker reopened before Nexus indexed a
-  // removal pages the old list too) and read by the paginator. A removal counts in every
-  // request inside the protection window and once more in the first request after it: that
-  // rewind reconciles the walk with the shift after the window the app allows Nexus for
-  // indexing, and only then is the removal dropped. Only the read that issues a request may
-  // drop it (`consume`): the paginator's other reads compare counts around a page in flight,
-  // and dropping there would spend the final rewind on a read that requests nothing.
-  // A ref, not state: the count never renders.
-  const removalTimesRef = useRef<number[]>([]);
-  const readPendingRemovals = (consume: boolean) => {
-    const pending = removalTimesRef.current;
-    if (!consume) return pending.length;
-    const now = Date.now();
-    removalTimesRef.current = pending.filter((at) => now - at < COLLECTIONS_COUNT_PROTECTION_MS);
-    return pending.length;
-  };
 
-  const { postIds, loading, loadingMore, hasMore, loadMore } = useStreamPagination({
+  const { postIds, loading } = useStreamPagination({
     streamId: enabled ? buildPostCollectionsStreamId(authorId, id) : undefined,
     limit: COLLECTIONS_SECTION_PAGE_SIZE,
-    skipOverlap: readPendingRemovals,
   });
 
-  const recordRemoval = () => {
-    removalTimesRef.current = [...removalTimesRef.current, Date.now()];
-  };
-
-  return {
-    collectionIds: postIds,
-    isLoading: loading,
-    hasMore,
-    isLoadingMore: loadingMore,
-    loadMore,
-    recordRemoval,
-  };
+  return { collectionIds: postIds, isLoading: loading };
 }

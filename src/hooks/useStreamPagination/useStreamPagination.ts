@@ -60,14 +60,6 @@ function revealPostIds(
 }
 
 /**
- * The overlap a consumer asks for right now: a number as is, a getter as it answers. Only the
- * read that issues a load's first request may consume the consumer's expired history.
- */
-function resolveSkipOverlap(skipOverlap: number | ((consume: boolean) => number), consume: boolean): number {
-  return Math.max(0, typeof skipOverlap === 'function' ? skipOverlap(consume) : skipOverlap);
-}
-
-/**
  * useStreamPagination
  *
  * Shared hook for managing stream pagination state and logic.
@@ -78,7 +70,6 @@ export function useStreamPagination({
   limit = NEXUS_POSTS_PER_PAGE,
   resetOnStreamChange = true,
   preserveCachedStream = false,
-  skipOverlap = 0,
   onError,
 }: UseStreamPaginationOptions): UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);
@@ -112,12 +103,6 @@ export function useStreamPagination({
   useEffect(() => {
     activeStreamIdRef.current = streamId;
   }, [streamId]);
-  // Read when a request is issued and again when its response lands (to tell whether the
-  // overlap grew while the page was in flight), never during render.
-  const skipOverlapRef = useRef(skipOverlap);
-  useEffect(() => {
-    skipOverlapRef.current = skipOverlap;
-  }, [skipOverlap]);
 
   /**
    * Sets the appropriate loading state based on load type
@@ -181,25 +166,8 @@ export function useStreamPagination({
         // re-create `loadMore`) once per round while nothing visible changes.
         let reachedEnd = false;
         let rawScanned = 0;
-        // `skipOverlap` handling. The first round of a load rewinds the offset by the consumer's
-        // pending overlap, through the one read that may retire its expired history; the rounds
-        // then scan forward through the re-covered region like any other, so a shift wider than
-        // a page is still re-covered in full and the load still ends past where it started.
-        // After every response a non-consuming read tells whether the overlap grew while the
-        // page was in flight; the next round then rewinds by that growth alone. Score cursors
-        // are positions, not counts, so they are never rewound.
-        let overlapApplied = false;
-        let pendingRewind = 0;
         for (;;) {
           const committedRemovalsAtRequest = committedRemovalsRef.current;
-          let overlapBaseline = 0;
-          if (isSkipPaginatedStream(streamId)) {
-            const rewind = overlapApplied ? pendingRewind : resolveSkipOverlap(skipOverlapRef.current, true);
-            overlapApplied = true;
-            pendingRewind = 0;
-            if (rewind > 0) cursor = Math.max(0, cursor - rewind);
-            overlapBaseline = resolveSkipOverlap(skipOverlapRef.current, false);
-          }
           const result: TReadPostStreamChunkResponse = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId: anchor,
@@ -223,7 +191,6 @@ export function useStreamPagination({
           // post's local `indexed_at`, which Nexus bumps on edit/delete without moving the
           // post in the stream (#2523).
           let nextCursor = cursor;
-          let overlapGrew = false;
           if (result.nextCursor != null) {
             // Skip streams: `nextCursor` extends the offset this request captured
             // at start, so removals committed during the flight are not in it —
@@ -233,15 +200,7 @@ export function useStreamPagination({
             const removalsDuringFlight = isSkipPaginatedStream(streamId)
               ? Math.max(0, committedRemovalsRef.current - committedRemovalsAtRequest)
               : 0;
-            // The overlap grew while this page was in flight: the server list may already have
-            // been the shorter one when it served the page, so keep the offset this page started
-            // from; the next round rewinds it by the growth and re-covers the page.
-            const overlapGrowth = isSkipPaginatedStream(streamId)
-              ? resolveSkipOverlap(skipOverlapRef.current, false) - overlapBaseline
-              : 0;
-            overlapGrew = overlapGrowth > 0;
-            if (overlapGrew) pendingRewind = overlapGrowth;
-            nextCursor = overlapGrew ? cursor : Math.max(0, result.nextCursor - removalsDuringFlight);
+            nextCursor = Math.max(0, result.nextCursor - removalsDuringFlight);
           }
           // Never overwrite a defined anchor with undefined.
           const nextAnchor = resolveResumeAnchor(result) ?? anchor;
@@ -250,10 +209,8 @@ export function useStreamPagination({
           anchor = nextAnchor;
           cursor = nextCursor;
           // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
-          // keeps hasMore so the advanced cursors are re-requested. A page held for re-covering
-          // may have stepped over the row that shifted onto its boundary, so its end is not
-          // final either: the re-covering request confirms it.
-          reachedEnd = result.reachedEnd === true && !overlapGrew;
+          // keeps hasMore so the advanced cursors are re-requested.
+          reachedEnd = result.reachedEnd === true;
 
           // Deduplicate posts
           const existingIds = new Set(postIdsRef.current);
@@ -539,11 +496,8 @@ export function useStreamPagination({
     if (!streamId) {
       // Inert: no stream to load. `clearState` still invalidates an in-flight
       // load from a previously active stream so its late response cannot land
-      // on the next one. `loading` is re-armed like on a first mount so the
-      // render that enables the next stream reads as loading, not as the
-      // previous stream's settled flags beside `clearState`'s `hasMore: true`.
+      // on the next one.
       clearState();
-      setLoading(true);
       return;
     }
 

@@ -31,9 +31,6 @@ const mockState = vi.hoisted(() => ({
   collectionsCount: 0,
   otherCollectionIds: [] as string[],
   isOtherCollectionsLoading: false,
-  hasMoreOtherCollections: false,
-  isOtherCollectionsLoadingMore: false,
-  loadMoreOtherCollections: vi.fn(),
   toggleBookmark: vi.fn(),
   toggleCollection: vi.fn(),
   createCollectionWithPost: vi.fn(),
@@ -69,9 +66,6 @@ vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => ({
     loadMoreCollections: mockState.loadMoreCollections,
     otherCollectionIds: mockState.otherCollectionIds,
     isOtherCollectionsLoading: mockState.isOtherCollectionsLoading,
-    hasMoreOtherCollections: mockState.hasMoreOtherCollections,
-    isOtherCollectionsLoadingMore: mockState.isOtherCollectionsLoadingMore,
-    loadMoreOtherCollections: mockState.loadMoreOtherCollections,
     toggleBookmark: mockState.toggleBookmark,
     toggleCollection: mockState.toggleCollection,
     createCollectionWithPost: mockState.createCollectionWithPost,
@@ -157,8 +151,6 @@ const resetMockState = () => {
   mockState.collectionsCount = 0;
   mockState.otherCollectionIds = [];
   mockState.isOtherCollectionsLoading = false;
-  mockState.hasMoreOtherCollections = false;
-  mockState.isOtherCollectionsLoadingMore = false;
 };
 
 const renderPicker = (feedContext?: TimelineFeedContextValue) => {
@@ -321,18 +313,6 @@ describe('PostSavePicker', () => {
     expect(rows[0]).toHaveAttribute('href', `/collections/${OTHER_AUTHOR}/collection-a`);
   });
 
-  it("keeps the also-in Load more reachable when the first page held only the viewer's collections", async () => {
-    mockState.otherCollectionIds = [];
-    mockState.hasMoreOtherCollections = true;
-    renderPicker();
-
-    openPicker();
-
-    expect(await screen.findByText('Also in collections:')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('Load more'));
-    expect(mockState.loadMoreOtherCollections).toHaveBeenCalledTimes(1);
-  });
-
   it('hides the also-in section while no other collection contains the post', async () => {
     renderPicker();
 
@@ -350,18 +330,6 @@ describe('PostSavePicker', () => {
 
     expect(await screen.findByText('Also in collections:')).toBeInTheDocument();
     expect(screen.getAllByText('Loading collections...')).toHaveLength(1);
-  });
-
-  it('loads more other collections from the also-in Load more row', async () => {
-    mockState.otherCollectionIds = [OTHER_COLLECTION_1];
-    mockState.hasMoreOtherCollections = true;
-    renderPicker();
-
-    openPicker();
-    fireEvent.click(await screen.findByText('Load more'));
-
-    expect(mockState.loadMoreOtherCollections).toHaveBeenCalledTimes(1);
-    expect(mockState.loadMoreCollections).not.toHaveBeenCalled();
   });
 
   it('renders other collections as plain links in the mobile sheet', async () => {

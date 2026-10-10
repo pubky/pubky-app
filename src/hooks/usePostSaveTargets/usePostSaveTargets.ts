@@ -46,14 +46,11 @@ type UsePostSaveTargetsResult = {
   loadMoreCollections: () => Promise<void>;
   /**
    * Composite ids of other users' collections that contain the post ("Also in
-   * collections"). The viewer's own curating collections are left out: they are
-   * already listed above with a check mark.
+   * collections"), a sample of one page. The viewer's own curating collections are
+   * left out: they are already listed above with a check mark.
    */
   otherCollectionIds: string[];
   isOtherCollectionsLoading: boolean;
-  hasMoreOtherCollections: boolean;
-  isOtherCollectionsLoadingMore: boolean;
-  loadMoreOtherCollections: () => Promise<void>;
   toggleBookmark: () => Promise<void>;
   toggleCollection: (collectionId: string) => Promise<void>;
   createCollectionWithPost: (name: string) => Promise<void>;
@@ -82,14 +79,9 @@ export function usePostSaveTargets(
   // picker must not arm its scroll sentinel, or a scroll would start a second
   // concurrent load on the same stream.
   const isCollectionsLoadingMore = isCollectionsPageLoading || isCollectionsPageLoadingMore;
-  const {
-    collectionIds: postCollectionIds,
-    isLoading: isOtherCollectionsLoading,
-    hasMore: hasMoreOtherCollections,
-    isLoadingMore: isOtherCollectionsLoadingMore,
-    loadMore: loadMoreOtherCollections,
-    recordRemoval: recordCuratorRemoval,
-  } = usePostCollections(postId, { enabled: isPickerOpen });
+  const { collectionIds: postCollectionIds, isLoading: isOtherCollectionsLoading } = usePostCollections(postId, {
+    enabled: isPickerOpen,
+  });
   const otherCollectionIds = postCollectionIds.filter((collectionId) => {
     // One malformed key from Nexus must not throw out of the picker's render.
     try {
@@ -136,9 +128,6 @@ export function usePostSaveTargets(
         postId,
         shouldAdd: !target.isSaved,
       });
-      // The curators list pages by offset and its raw list includes this collection: a removal
-      // shrinks that list whenever Nexus indexes it, so the list widens its page overlap.
-      if (target.isSaved) recordCuratorRemoval();
       toast({
         title: target.isSaved ? 'Post removed from collection.' : 'Post added to collection.',
       });
@@ -191,9 +180,6 @@ export function usePostSaveTargets(
     loadMoreCollections,
     otherCollectionIds,
     isOtherCollectionsLoading,
-    hasMoreOtherCollections,
-    isOtherCollectionsLoadingMore,
-    loadMoreOtherCollections,
     toggleBookmark: bookmark.toggle,
     toggleCollection,
     createCollectionWithPost,

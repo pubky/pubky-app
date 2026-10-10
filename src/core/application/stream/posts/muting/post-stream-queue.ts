@@ -50,16 +50,11 @@ export class PostStreamQueue {
     const { limit, filter, fetch } = params;
     const maxIterations = params.maxIterations ?? MAX_FETCH_ITERATIONS;
 
-    // Load from queue and filter. The buffered rows were scanned past the caller's last page
-    // and never shown, so they are served whatever offset the caller resumes from. On a skip
-    // stream the fetch after them resumes from the caller's offset rather than the one the
-    // buffer was saved at: a caller that walked its offset back (a committed removal, an
-    // overlap re-request) moved every later raw index with it, and the saved offset would
-    // step over the rows in between. Score streams resume by the buffer's own position.
+    // Load from queue and filter
     const savedQueue = this.entries.get(streamId);
     const posts = savedQueue ? await filter(savedQueue.posts) : [];
     const seen = new Set(posts);
-    let cursor = isSkipPaginatedStream(streamId) ? params.cursor : (savedQueue?.cursor ?? params.cursor);
+    let cursor = savedQueue?.cursor ?? params.cursor;
 
     // Serve from the overflow buffer without touching the backend. The resume cursor stays
     // the raw backend position past everything already scanned into the buffer (skip offset

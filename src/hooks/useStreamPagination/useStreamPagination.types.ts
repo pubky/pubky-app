@@ -33,24 +33,6 @@ export interface UseStreamPaginationOptions {
    */
   preserveCachedStream?: boolean;
   /**
-   * Skip-paginated streams only: raw rows to re-cover before the resume offset, for a
-   * consumer whose own local mutations shrink the server list at a time it cannot observe
-   * (Nexus indexes the homeserver write later). Every load rewinds its offset by this many
-   * rows once, then scans forward through the re-covered region like any other, dropping the
-   * repeats, so an index shift of up to this many rows can never step over a row, whether it
-   * spans a page or not, and every load still advances past where it started. Growth while a
-   * page is in flight discards that page's cursor advance and its end-of-stream signal (the
-   * page may already have been served from the shorter list) and rewinds the next round by
-   * the growth, so the page is re-covered.
-   *
-   * A function is read instead of a number when the consumer keeps a history that expires on
-   * its own. It is called with `consume: true` once per load, when the first request is issued,
-   * which is the one read allowed to retire expired history (after counting it one last time);
-   * every other read passes `consume: false` and must leave the history as it is, since those
-   * reads only compare the count before and after a page to detect growth. Defaults to 0.
-   */
-  skipOverlap?: number | ((consume: boolean) => number);
-  /**
    * Optional callback invoked when a stream slice fetch fails. Fires after
    * the internal `error` state is set but before the `loading` / `loadingMore`
    * flags clear. Intended for surface-level UX (e.g. firing a toast in the
