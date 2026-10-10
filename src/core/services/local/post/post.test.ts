@@ -969,6 +969,29 @@ describe('LocalPostService', () => {
       recentCollectionCounts.reset();
     });
 
+    it('puts the marks back when the local write does not commit', async () => {
+      // itemA was protected by an earlier successful write; this edit drops A and adds B, then
+      // fails inside the transaction. Neither count changed, so B must not become protected
+      // and A must keep exactly the protection it had.
+      await setupExistingPost(collectionId, collectionEnvelope([itemA]), undefined, 'collection');
+      await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 1 } });
+      recentCollectionCounts.markWritten(itemA);
+      const spy = vi.spyOn(PostCountsModel, 'updateCounts').mockRejectedValueOnce(new Error('boom'));
+
+      try {
+        await expect(
+          LocalPostService.edit({ compositePostId: collectionId, content: collectionEnvelope([itemB]) }),
+        ).rejects.toThrow('Failed to edit post');
+      } finally {
+        spy.mockRestore();
+      }
+
+      expect(await collectionsCount(itemA)).toBe(1);
+      expect(await collectionsCount(itemB)).toBe(0);
+      expect(recentCollectionCounts.isProtected(itemA)).toBe(true);
+      expect(recentCollectionCounts.isProtected(itemB)).toBe(false);
+    });
+
     it('marks every item whose count moved as a recent local collection write', async () => {
       await setupExistingPost(collectionId, collectionEnvelope([itemA, itemC]), undefined, 'collection');
       await PostCountsModel.updateCounts({ postCompositeId: itemA, countChanges: { collections: 1 } });

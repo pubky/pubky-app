@@ -33,7 +33,7 @@ import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.un
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import type { TLocalSavePostParams, TLocalUpdatePostStreamParams } from '@/services/local/post/post.types';
-import { recentCollectionCounts } from '@/services/local/post/recentCollectionCounts';
+import { type CollectionCountWrite, recentCollectionCounts } from '@/services/local/post/recentCollectionCounts';
 
 export class LocalPostService {
   private constructor() {}
@@ -184,6 +184,8 @@ export class LocalPostService {
     attachments?: string[] | null;
     kind?: string;
   }) {
+    // Set once the transaction announces its curated-count writes; runs if it does not commit.
+    let restoreMarks: (() => void) | undefined;
     try {
       // `deleted: false` clears the tombstone flag on any write that restores
       // live content: `commitEdit` (and its rollback after a failed PUT) reuse
@@ -207,15 +209,16 @@ export class LocalPostService {
 
         // A collection edit (item added/removed, or a kind flip in either direction)
         // moves the curated posts' `collections` count, like Nexus's COLLECTED edges.
-        await Promise.all(
-          this.updateCuratedPostCounts(
-            this.curatedItemIds(existing?.kind, existing?.content),
-            this.curatedItemIds(kind ?? existing?.kind, content),
-          ),
+        const curated = this.updateCuratedPostCounts(
+          this.curatedItemIds(existing?.kind, existing?.content),
+          this.curatedItemIds(kind ?? existing?.kind, content),
         );
+        restoreMarks = curated.restoreMarks;
+        await Promise.all(curated.ops);
       });
       Logger.debug('Post edited successfully', { compositePostId });
     } catch (error) {
+      restoreMarks?.();
       // A model failure is already an AppError with its own code and context:
       // rethrow it unchanged (docs/error-handling.md); wrap only raw failures.
       if (isAppError(error)) throw error;
@@ -293,6 +296,8 @@ export class LocalPostService {
     const normalizedKind = PostNormalizer.postKindToLowerCase(kind);
 
     const { pubky: authorId, id: postId } = parseCompositeId(compositePostId);
+    // Set once the transaction announces its curated-count writes; runs if it does not commit.
+    let restoreMarks: (() => void) | undefined;
 
     try {
       const postDetails: PostDetailsModelSchema = {
@@ -376,7 +381,9 @@ export class LocalPostService {
           }
 
           // A new collection curates its items from the start: bump their `collections` count.
-          ops.push(...this.updateCuratedPostCounts(new Set(), this.curatedItemIds(normalizedKind, content)));
+          const curated = this.updateCuratedPostCounts(new Set(), this.curatedItemIds(normalizedKind, content));
+          restoreMarks = curated.restoreMarks;
+          ops.push(...curated.ops);
 
           // Touch TTL for the new post
           ops.push(PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }));
@@ -408,6 +415,7 @@ export class LocalPostService {
         },
       );
     } catch (error) {
+      restoreMarks?.();
       // A model failure is already an AppError with its own code and context:
       // rethrow it unchanged (docs/error-handling.md); wrap only raw failures.
       if (isAppError(error)) throw error;
@@ -448,6 +456,8 @@ export class LocalPostService {
 
     // TODO: There is an edge case where the post counts are not found, but the post is linked. This should be handled.
     const postCounts = await PostCountsModel.findById(compositePostId);
+    // Set once a transaction announces its curated-count writes; runs if it does not commit.
+    let restoreMarks: (() => void) | undefined;
     // If counts exist and post is linked → soft delete (tombstone, keep records)
     if (postCounts && this.isPostLinked(postCounts)) {
       try {
@@ -464,14 +474,17 @@ export class LocalPostService {
             return;
           }
           await PostDetailsModel.update(compositePostId, { content: DELETED, deleted: true });
+          // A tombstoned collection curates nothing any more (Nexus drops its COLLECTED edges too).
+          const curated = this.updateCuratedPostCounts(this.curatedItemIds(current.kind, current.content), new Set());
+          restoreMarks = curated.restoreMarks;
           await Promise.all([
             // The tombstone is a local write like any other: stamp its TTL.
             PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }),
-            // A tombstoned collection curates nothing any more (Nexus drops its COLLECTED edges too).
-            ...this.updateCuratedPostCounts(this.curatedItemIds(current.kind, current.content), new Set()),
+            ...curated.ops,
           ]);
         });
       } catch (error) {
+        restoreMarks?.();
         // A model failure is already an AppError with its own code and context:
         // rethrow it unchanged (docs/error-handling.md); wrap only raw failures.
         if (isAppError(error)) throw error;
@@ -565,7 +578,9 @@ export class LocalPostService {
           ops.push(PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }));
 
           // A deleted collection curates nothing any more: its items lose one `collections` count.
-          ops.push(...this.updateCuratedPostCounts(this.curatedItemIds(kind, postDetails?.content), new Set()));
+          const curated = this.updateCuratedPostCounts(this.curatedItemIds(kind, postDetails?.content), new Set());
+          restoreMarks = curated.restoreMarks;
+          ops.push(...curated.ops);
 
           // Update author's user counts in a single operation. Mirror the create
           // path: a collection-kind post decrements both `posts` and `collections`.
@@ -588,6 +603,7 @@ export class LocalPostService {
       );
       return false;
     } catch (error) {
+      restoreMarks?.();
       // A model failure is already an AppError with its own code and context:
       // rethrow it unchanged (docs/error-handling.md); wrap only raw failures.
       if (isAppError(error)) throw error;
@@ -683,12 +699,18 @@ export class LocalPostService {
    * marked in `recentCollectionCounts` before the write, like `recentUnbookmarks`, so a Nexus
    * count fetched before the edit is indexed does not undo the change (`persistPosts`), and its
    * TTL is stamped so the coordinator does not schedule a refresh for it right away (the
-   * reply/repost count pattern above). Returns the pending writes for the caller's transaction.
+   * reply/repost count pattern above). Returns the pending writes for the caller's transaction
+   * and `restoreMarks`, which the caller runs if that transaction does not commit: the marks
+   * then go back to what they were, so a rolled-back write never freezes a count.
    */
-  private static updateCuratedPostCounts(previousItemIds: Set<string>, nextItemIds: Set<string>): Promise<unknown>[] {
+  private static updateCuratedPostCounts(
+    previousItemIds: Set<string>,
+    nextItemIds: Set<string>,
+  ): { ops: Promise<unknown>[]; restoreMarks: () => void } {
     const ops: Promise<unknown>[] = [];
+    const replacedMarks: Array<[string, CollectionCountWrite | undefined]> = [];
     const bump = (postCompositeId: string, collections: number) => {
-      recentCollectionCounts.markWritten(postCompositeId);
+      replacedMarks.push([postCompositeId, recentCollectionCounts.markWritten(postCompositeId)]);
       ops.push(PostCountsModel.updateCounts({ postCompositeId, countChanges: { collections } }));
       ops.push(PostTtlModel.upsert({ id: postCompositeId, lastUpdatedAt: Date.now() }));
     };
@@ -699,7 +721,11 @@ export class LocalPostService {
     for (const itemId of previousItemIds) {
       if (!nextItemIds.has(itemId)) bump(itemId, -1);
     }
-    return ops;
+    const restoreMarks = () => {
+      for (const [postCompositeId, previous] of replacedMarks)
+        recentCollectionCounts.restore(postCompositeId, previous);
+    };
+    return { ops, restoreMarks };
   }
 
   /**

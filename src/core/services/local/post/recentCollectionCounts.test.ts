@@ -64,6 +64,24 @@ describe('RecentCollectionCounts', () => {
     expect(registry.isProtected(postId)).toBe(false);
   });
 
+  it('restores what a mark replaced when its write is rolled back', () => {
+    registry.markWritten(postId);
+    vi.advanceTimersByTime(1_000);
+    const previous = registry.markWritten(postId);
+    expect(previous).toBeDefined();
+
+    // The second write did not commit: the first one's mark (and its older clock) stands.
+    registry.restore(postId, previous);
+    vi.advanceTimersByTime(COLLECTIONS_COUNT_PROTECTION_MS - 1_000);
+    expect(registry.isProtected(postId)).toBe(false);
+
+    // No earlier mark: the failed write leaves nothing behind.
+    const none = registry.markWritten('author:other');
+    expect(none).toBeUndefined();
+    registry.restore('author:other', none);
+    expect(registry.isProtected('author:other')).toBe(false);
+  });
+
   it('stops protecting when the mark is cleared', () => {
     registry.markWritten(postId);
     registry.clear(postId);

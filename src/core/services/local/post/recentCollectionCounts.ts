@@ -1,7 +1,7 @@
 import { COLLECTIONS_COUNT_PROTECTION_MS } from '@/config/collections';
 import { getCacheGeneration } from '@/database/franky/franky.helpers';
 
-type CollectionCountWrite = { writtenAt: number; cacheGeneration: number };
+export type CollectionCountWrite = { writtenAt: number; cacheGeneration: number };
 
 /**
  * In-memory record of the posts whose `collections` count the viewer changed
@@ -28,13 +28,30 @@ type CollectionCountWrite = { writtenAt: number; cacheGeneration: number };
 export class RecentCollectionCounts {
   private writes = new Map<string, CollectionCountWrite>();
 
-  /** Records a local `collections` change on `postId`, dropping expired records. */
-  markWritten(postId: string): void {
+  /**
+   * Records a local `collections` change on `postId`, dropping expired records. Returns the
+   * mark it replaced (or `undefined`), for `restore` should the write it announces not commit.
+   */
+  markWritten(postId: string): CollectionCountWrite | undefined {
     const now = Date.now();
     for (const [key, write] of this.writes) {
       if (now - write.writtenAt >= COLLECTIONS_COUNT_PROTECTION_MS) this.writes.delete(key);
     }
+    const previous = this.writes.get(postId);
     this.writes.set(postId, { writtenAt: now, cacheGeneration: getCacheGeneration() });
+    return previous;
+  }
+
+  /**
+   * Puts back what `markWritten` replaced: the write it announced was rolled back, so the
+   * count still holds the value an earlier write (if any) protects, and only that one.
+   */
+  restore(postId: string, previous: CollectionCountWrite | undefined): void {
+    if (previous === undefined) {
+      this.writes.delete(postId);
+      return;
+    }
+    this.writes.set(postId, previous);
   }
 
   /**
