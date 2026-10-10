@@ -4,5 +4,4 @@ export interface ArticleComposerTabsProps {
    * viewports keep the title with the body and label every tab.
    */
   isMobile: boolean;
-  className?: string;
 }

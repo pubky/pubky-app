@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { ARTICLE_COMPOSER_TAB } from '@/molecules/ArticleComposerTabs/ArticleComposerTabs.constants';
 import { useArticleComposerTab } from './useArticleComposerTab';
 
-function renderTab(initial: { isArticle: boolean; isMobile: boolean } = { isArticle: true, isMobile: false }) {
-  return renderHook((props: { isArticle: boolean; isMobile: boolean }) => useArticleComposerTab(props), {
+type TabProps = { isArticle: boolean; isMobile: boolean; coverCount?: number };
+
+function renderTab(initial: TabProps = { isArticle: true, isMobile: false }) {
+  return renderHook(({ coverCount = 0, ...props }: TabProps) => useArticleComposerTab({ ...props, coverCount }), {
     initialProps: initial,
   });
 }
@@ -53,6 +55,31 @@ describe('useArticleComposerTab', () => {
 
     // The correction is written back: narrowing again does not resurrect the Title tab
     rerender({ isArticle: true, isMobile: true });
+    expect(result.current.value).toBe(ARTICLE_COMPOSER_TAB.CONTENT);
+  });
+
+  it('brings up the Header tab when a cover arrives while another tab shows', () => {
+    const { result, rerender } = renderTab({ isArticle: true, isMobile: false, coverCount: 0 });
+
+    rerender({ isArticle: true, isMobile: false, coverCount: 1 });
+
+    expect(result.current.value).toBe(ARTICLE_COMPOSER_TAB.HEADER);
+  });
+
+  it('stays put when the cover is removed', () => {
+    const { result, rerender } = renderTab({ isArticle: true, isMobile: false, coverCount: 1 });
+    act(() => result.current.onValueChange(ARTICLE_COMPOSER_TAB.PREVIEW));
+
+    rerender({ isArticle: true, isMobile: false, coverCount: 0 });
+
+    expect(result.current.value).toBe(ARTICLE_COMPOSER_TAB.PREVIEW);
+  });
+
+  it('starts on Content when a draft is restored together with its cover', () => {
+    const { result, rerender } = renderTab({ isArticle: false, isMobile: false, coverCount: 0 });
+
+    rerender({ isArticle: true, isMobile: false, coverCount: 1 });
+
     expect(result.current.value).toBe(ARTICLE_COMPOSER_TAB.CONTENT);
   });
 

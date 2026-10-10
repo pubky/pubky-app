@@ -1111,6 +1111,44 @@ describe('PostInput', () => {
       expect(preview).toHaveAttribute('data-cover-file', 'cover.jpg');
     });
 
+    it('previews the title as typed, ahead of the debounced composer state', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Typed just now' } });
+
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Preview' }));
+
+      expect(screen.getByTestId('article-composer-preview')).toHaveAttribute('data-title', 'Typed just now');
+    });
+
+    it('refuses a title past the character cap in the field as the composer does', () => {
+      const handleArticleTitleChange = vi.fn();
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, {
+          isArticle: true,
+          articleTitle: 'Draft title',
+          content: 'Draft body',
+          handleArticleTitleChange,
+        }),
+      );
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'x'.repeat(101) } });
+
+      expect(screen.getByPlaceholderText('Title')).toHaveValue('Draft title');
+      expect(handleArticleTitleChange).not.toHaveBeenCalled();
+    });
+
+    it('brings up the Header tab when a cover is added while another tab shows', () => {
+      const { rerender } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      expect(screen.getByRole('tab', { name: 'Content' })).toHaveAttribute('aria-selected', 'true');
+
+      mockUsePostReturn.attachments = [new File(['cover'], 'cover.jpg', { type: 'image/jpeg' })];
+      rerender(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.getByRole('tab', { name: 'Header' })).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByTestId('article-composer-panel-header')).toHaveAttribute('data-state', 'active');
+    });
+
     it('hands the preview the kept cover of an edited article', () => {
       mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
         createUsePostInputReturn(options, {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 import { toast } from '@/molecules/Toaster/toast';
 
 interface UseFullscreenOptions {
@@ -80,7 +80,7 @@ export function useFullscreen({ enabled = true }: UseFullscreenOptions = {}): Us
 }
 
 /** Leaves fullscreen only when this hook entered it: fullscreen the user chose elsewhere is theirs. */
-function leaveIfEnteredHere(enteredHereRef: React.RefObject<boolean>) {
+function leaveIfEnteredHere(enteredHereRef: RefObject<boolean>) {
   if (!enteredHereRef.current || !document.fullscreenElement) return;
   enteredHereRef.current = false;
   void document.exitFullscreen().catch(() => {

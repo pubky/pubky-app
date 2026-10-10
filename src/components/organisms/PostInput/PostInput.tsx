@@ -420,7 +420,7 @@ export function PostInput({
   }, [isLockEnabled, onLockModeChange]);
 
   // Phones have a Title tab of their own; wider viewports keep the title with the body.
-  const articleTab = useArticleComposerTab({ isArticle, isMobile });
+  const articleTab = useArticleComposerTab({ isArticle, isMobile, coverCount: attachments.length });
   // Leaving article mode takes the toggle away, so fullscreen entered from it ends with it.
   const {
     isFullscreen,
@@ -462,6 +462,8 @@ export function PostInput({
       placeholder={'Title'}
       value={articleTitleDraft}
       onChange={(event) => {
+        // The same cap the composer applies: a value it refuses must not show in the field either
+        if (event.target.value.length > ARTICLE_TITLE_MAX_CHARACTER_LENGTH) return;
         setArticleTitleDraft(event.target.value);
         handleArticleTitleChangeWithAuth?.(event);
       }}
@@ -707,7 +709,8 @@ export function PostInput({
                     >
                       {currentUserPubky && (
                         <ArticleComposerPreview
-                          title={articleTitle}
+                          // The draft, not the debounced state: the preview must show what was just typed
+                          title={articleTitleDraft}
                           body={content}
                           authorPubky={currentUserPubky}
                           userDetails={currentUserDetails}

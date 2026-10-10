@@ -30,15 +30,11 @@ const MOBILE_TABS: readonly ArticleComposerTab[] = [
  * The tab row of the article composer. Renders only the triggers: the `Tabs` root (and the
  * panels) belong to the composer, which owns the active tab.
  */
-export function ArticleComposerTabs({ isMobile, className }: ArticleComposerTabsProps) {
+export function ArticleComposerTabs({ isMobile }: ArticleComposerTabsProps) {
   const tabs = isMobile ? MOBILE_TABS : DESKTOP_TABS;
 
   return (
-    <TabsList
-      aria-label="Article sections"
-      className={cn('cursor-auto', className)}
-      data-testid="article-composer-tabs"
-    >
+    <TabsList aria-label="Article sections" className="cursor-auto" data-testid="article-composer-tabs">
       {tabs.map((tab) => {
         const { label, Icon } = TAB_UI[tab];
         return (
