@@ -21,6 +21,7 @@ vi.mock('@/atoms/Button/Button', () => {
       size,
       style,
       'aria-label': aria,
+      'aria-pressed': ariaPressed,
     }: {
       children: React.ReactNode;
       onClick?: React.MouseEventHandler;
@@ -30,6 +31,7 @@ vi.mock('@/atoms/Button/Button', () => {
       size?: string;
       style?: React.CSSProperties;
       'aria-label'?: string;
+      'aria-pressed'?: boolean;
     }) => (
       <button
         onClick={onClick}
@@ -39,6 +41,7 @@ vi.mock('@/atoms/Button/Button', () => {
         data-size={size}
         style={style}
         aria-label={aria}
+        aria-pressed={ariaPressed}
       >
         {children}
       </button>
@@ -250,5 +253,61 @@ describe('PostInputActionBar', () => {
     render(<PostInputActionBar hideArticleButton={false} lockSwitch={{ checked: false, onCheckedChange }} />);
     fireEvent.click(screen.getByRole('switch', { name: 'Lock content' }));
     expect(onCheckedChange).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('PostInputActionBar - article controls', () => {
+  it('renders leading content before the action buttons', () => {
+    render(
+      <PostInputActionBar
+        hideArticleButton
+        isArticle
+        leadingContent={<span data-testid="leading-avatar">avatar</span>}
+      />,
+    );
+
+    const leading = screen.getByTestId('leading-avatar');
+    const [leftGroup] = screen.getAllByTestId('container').slice(1);
+    expect(leftGroup.firstElementChild).toBe(leading);
+  });
+
+  it('does not render a fullscreen toggle unless one is provided', () => {
+    render(<PostInputActionBar hideArticleButton isArticle />);
+
+    expect(screen.queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
+  });
+
+  it('renders the fullscreen toggle with the expand icon and calls onToggle', () => {
+    const onToggle = vi.fn();
+    render(<PostInputActionBar hideArticleButton isArticle fullscreen={{ isFullscreen: false, onToggle }} />);
+
+    const toggle = screen.getByRole('button', { name: 'Enter fullscreen' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(toggle.querySelector('.lucide-expand')).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('labels the toggle as exit with the shrink icon while fullscreen', () => {
+    render(<PostInputActionBar hideArticleButton isArticle fullscreen={{ isFullscreen: true, onToggle: vi.fn() }} />);
+
+    const toggle = screen.getByRole('button', { name: 'Exit fullscreen' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(toggle.querySelector('.lucide-shrink')).toBeInTheDocument();
+  });
+
+  it('disables the fullscreen toggle while submitting', () => {
+    render(
+      <PostInputActionBar
+        hideArticleButton
+        isArticle
+        isSubmitting
+        fullscreen={{ isFullscreen: false, onToggle: vi.fn() }}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Enter fullscreen' })).toBeDisabled();
   });
 });

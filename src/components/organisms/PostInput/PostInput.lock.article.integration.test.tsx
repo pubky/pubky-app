@@ -199,7 +199,7 @@ const settle = () => act(() => vi.advanceTimersByTime(500));
 const writeArticle = async () => {
   render(<PostInput variant={POST_INPUT_VARIANT.POST} expanded />);
   fireEvent.click(screen.getByTestId('article-button'));
-  fireEvent.change(screen.getByPlaceholderText('Article Title'), { target: { value: 'Essay' } });
+  fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Essay' } });
 
   mocks.commitCreateFile.mockResolvedValueOnce(IMAGE_URI);
   await act(async () => {
