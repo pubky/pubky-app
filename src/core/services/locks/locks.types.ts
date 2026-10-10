@@ -175,7 +175,7 @@ interface LockAccessPolicy {
 
 /** Optional override of which lock server verifies the criteria. */
 interface LockServer {
-  override: string;
+  override: string | null;
 }
 
 /**
@@ -192,7 +192,7 @@ export interface LockFile {
   /** The entry-point post. Optional per the contract, but at least one resource is always present. */
   primary_resource?: LockPostResource;
   /** Attachments, keyed by full canonical private path. */
-  secondary_resources: Record<string, LockAttachmentResource>;
+  secondary_resources?: Record<string, LockAttachmentResource>;
   criteria: LockCriterion[];
   lock_logic: LockLogic;
   access_policy: LockAccessPolicy;
@@ -314,7 +314,7 @@ export interface TSubmittedProofBundle {
   proofs: TProof[];
 }
 
-export const verificationStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'expired']);
+const verificationStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'expired']);
 export type TVerificationStatus = z.infer<typeof verificationStatusSchema>;
 
 /**
@@ -328,8 +328,21 @@ export type TPaykitConnectionState = z.infer<typeof paykitConnectionStateSchema>
 /** Connection-state lookup response. Bound to an existing task, so it says nothing about payment. */
 export const paykitConnectionStateResponseSchema = z.object({ state: paykitConnectionStateSchema });
 
+/** Task lookup response fields the app reads. Absent on a Lock Server older than 0.1.0-rc9. */
+export const verificationTaskResponseSchema = z.object({
+  status: verificationStatusSchema,
+  status_message: z.string().nullable().default(null),
+  admission_deadline_at: z.string().nullable().default(null),
+});
+
 /** Verification lifecycle fields consumed by the app from a task lookup. */
-export type TVerificationTask = { status: TVerificationStatus };
+export type TVerificationTask = {
+  status: TVerificationStatus;
+  /** The server cannot create the invoice until the reader finishes setting up their wallet. */
+  walletSetupNeeded: boolean;
+  /** RFC 3339 time until which the server keeps trying to create the invoice; null once it exists. */
+  admissionDeadlineAt: string | null;
+};
 
 /** Proof-submission response fields used by the app. Connection state has its own lookup. */
 export const submitProofResultSchema = z.object({

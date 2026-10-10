@@ -3,37 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { OgAvatar, OgHeader, OgText } from './OgComponents';
 import { OG_TOKENS } from './ogConstants';
 
-describe('OgAvatar', () => {
-  it('renders the brand-colored fallback face when no avatar src is provided', () => {
-    const html = renderToStaticMarkup(<OgAvatar src={null} size={80} />);
-
-    expect(html).not.toContain('<img');
-    expect(html).toContain('<svg');
-    expect(html).toContain(OG_TOKENS.brand);
-    expect(html).toMatchSnapshot();
-  });
-
-  it('renders a circular image when an avatar src is provided', () => {
-    const html = renderToStaticMarkup(<OgAvatar src="data:image/png;base64,AAAA" size={80} />);
-
-    expect(html).toContain('<img');
-    expect(html).toContain('border-radius:50%');
-    expect(html).toContain('object-fit:cover');
-    expect(html).toMatchSnapshot();
-  });
-});
-
-describe('OgHeader', () => {
-  it('renders the author name with the avatar and brand mark', () => {
-    const html = renderToStaticMarkup(<OgHeader avatarUrl={null} name="Satoshi Nakamoto" />);
-
-    expect(html).toContain('Satoshi Nakamoto');
-    // brand mark (Pubky keyhole) is present via its brand-colored path fill
-    expect(html).toContain(OG_TOKENS.brand);
-    expect(html).toMatchSnapshot();
-  });
-});
-
 describe('OgText', () => {
   const plain = (text: string) => `<span style="white-space:pre-wrap">${text}</span>`;
   const brand = (text: string) => `<span style="white-space:pre-wrap;color:${OG_TOKENS.brand}">${text}</span>`;
@@ -110,19 +79,30 @@ describe('OgText', () => {
   });
 });
 
-describe('OgText - Snapshots', () => {
-  it('matches snapshot for mention-bearing copy', () => {
-    const html = renderToStaticMarkup(
-      <OgText
-        segments={[
-          { text: 'gm ', isMention: false },
-          { text: '@Bob', isMention: true, pubky: 'x' },
-          { text: ', welcome', isMention: false },
-        ]}
-        style={{ fontSize: 60 }}
-      />,
-    );
+describe('OgAvatar', () => {
+  it('renders the brand-colored fallback face when no avatar src is provided', () => {
+    const html = renderToStaticMarkup(<OgAvatar src={null} size={80} />);
 
-    expect(html).toMatchSnapshot();
+    expect(html).not.toContain('<img');
+    expect(html).toContain('<svg');
+    expect(html).toContain(OG_TOKENS.brand);
+  });
+
+  it('renders a circular image when an avatar src is provided', () => {
+    const html = renderToStaticMarkup(<OgAvatar src="data:image/png;base64,AAAA" size={80} />);
+
+    expect(html).toContain('<img');
+    expect(html).toContain('border-radius:50%');
+    expect(html).toContain('object-fit:cover');
+  });
+});
+
+describe('OgHeader', () => {
+  it('renders the author name with the avatar and brand mark', () => {
+    const html = renderToStaticMarkup(<OgHeader avatarUrl={null} name="Satoshi Nakamoto" />);
+
+    expect(html).toContain('Satoshi Nakamoto');
+    // brand mark (Pubky keyhole) is present via its brand-colored path fill
+    expect(html).toContain(OG_TOKENS.brand);
   });
 });

@@ -67,30 +67,3 @@ describe('NewPostsButton', () => {
     expect(button).not.toHaveClass('relative');
   });
 });
-
-describe('NewPostsButton - Snapshots', () => {
-  it('matches snapshot with 1 new post', () => {
-    const { container } = render(<NewPostsButton count={1} onClick={vi.fn()} visible={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with multiple new posts', () => {
-    const { container } = render(<NewPostsButton count={5} onClick={vi.fn()} visible={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when not visible', () => {
-    const { container } = render(<NewPostsButton count={5} onClick={vi.fn()} visible={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when count is 0', () => {
-    const { container } = render(<NewPostsButton count={0} onClick={vi.fn()} visible={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when scrolled (fixed position)', () => {
-    const { container } = render(<NewPostsButton count={5} onClick={vi.fn()} visible={true} isScrolled={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

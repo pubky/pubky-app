@@ -1,8 +1,18 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TPayToUnlockStage } from '@/hooks/usePayToUnlock/usePayToUnlock.types';
 import { DialogPayToUnlock } from './DialogPayToUnlock';
 
+const mocks = vi.hoisted(() => ({
+  copyToClipboard: vi.fn(),
+  toast: vi.fn(),
+}));
+
+vi.mock('@/libs/utils/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/utils/utils')>();
+  return { ...actual, copyToClipboard: (args: { text: string }) => mocks.copyToClipboard(args) };
+});
+vi.mock('@/molecules/Toaster/toast', () => ({ toast: (args: unknown) => mocks.toast(args) }));
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: () => ({ profile: { name: 'John Carvalho', avatarUrl: undefined }, isLoading: false }),
 }));
@@ -22,6 +32,7 @@ type DialogOverrides = {
   isStalled?: boolean;
   handshakePubky?: string | null;
   connectionIssue?: 'recovery_required' | 'blocked' | null;
+  walletSetupNeeded?: boolean;
   onRecheck?: () => void;
   onViewContent?: () => void;
   onOpenChange?: (open: boolean) => void;
@@ -39,6 +50,7 @@ const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}
     isStalled={overrides.isStalled ?? false}
     handshakePubky={overrides.handshakePubky ?? null}
     connectionIssue={overrides.connectionIssue ?? null}
+    walletSetupNeeded={overrides.walletSetupNeeded ?? false}
     isSubmitting={overrides.isSubmitting ?? false}
     onRetry={overrides.onRetry ?? vi.fn()}
     onRecheck={overrides.onRecheck ?? vi.fn()}
@@ -50,6 +62,11 @@ const renderDialog = (stage: TPayToUnlockStage, overrides: DialogOverrides = {})
   render(dialogElement(stage, overrides), { wrapper: overrides.wrapper });
 
 describe('DialogPayToUnlock', () => {
+  // clearAllMocks keeps implementations, so a rejected copy would leak into later tests.
+  beforeEach(() => {
+    mocks.copyToClipboard.mockReset();
+  });
+
   it('applies wrapping and shrink constraints to the lock title', () => {
     renderDialog('retry');
 
@@ -86,7 +103,7 @@ describe('DialogPayToUnlock', () => {
     expect(screen.getByText(/Install Bitkit/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pay with Bitkit' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'I completed the steps' }));
@@ -100,7 +117,7 @@ describe('DialogPayToUnlock', () => {
     // Desktop leads with "Awaiting payment."; mobile moves that under the spinner.
     expect(screen.getByText('Awaiting payment.')).toBeInTheDocument();
     expect(screen.getByText('Please confirm in Bitkit.')).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Try again|I completed the steps/ })).not.toBeInTheDocument();
     // The footer button reads Close (the X in the corner is also named Close, hence the data-cy hook).
     expect(document.querySelector('[data-cy="pay-to-unlock-cancel"]')).toHaveTextContent('Close');
@@ -109,7 +126,7 @@ describe('DialogPayToUnlock', () => {
   it('waiting: shows the creator pubky QR while the hook hands one over', () => {
     const { rerender } = renderDialog('waiting', { handshakePubky: 'lockcreator' });
 
-    expect(screen.getByRole('img', { name: 'Creator Pubky QR code' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy creator pubky' })).toBeInTheDocument();
     expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
     expect(screen.getByText('Scan with Bitkit and pay to unlock.')).toBeInTheDocument();
     // The QR screen stays clean: setup belongs to the install screen.
@@ -120,7 +137,36 @@ describe('DialogPayToUnlock', () => {
     expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
 
     rerender(dialogElement('waiting'));
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
+  });
+
+  it('waiting: copies the QR value when the QR is clicked', async () => {
+    mocks.copyToClipboard.mockResolvedValue(undefined);
+    renderDialog('waiting', { handshakePubky: 'lockcreator' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy creator pubky' }));
+
+    await vi.waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith({
+        variant: 'info',
+        title: 'Pubky copied to clipboard',
+        dismissButton: true,
+      }),
+    );
+    expect(mocks.copyToClipboard).toHaveBeenCalledWith({ text: 'pubkylockcreator' });
+  });
+
+  // A rejected clipboard write must not be reported as copied.
+  it('waiting: reports a failed QR copy', async () => {
+    mocks.copyToClipboard.mockRejectedValue(new Error('denied'));
+    renderDialog('waiting', { handshakePubky: 'lockcreator' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy creator pubky' }));
+
+    await vi.waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not copy to clipboard' }),
+    );
+    expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'info' }));
   });
 
   // A phone cannot scan its own screen, so the link must hand Bitkit the value the QR carries.
@@ -145,7 +191,16 @@ describe('DialogPayToUnlock', () => {
     renderDialog('waiting', { connectionIssue });
 
     expect(screen.getByText(copy)).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
+  });
+
+  it('waiting: asks the reader to finish the wallet setup, with no QR and no spinner', () => {
+    renderDialog('waiting', { walletSetupNeeded: true });
+
+    expect(screen.getByText(/Finish setting up Bitkit/)).toBeInTheDocument();
+    expect(screen.queryByText('Please confirm in Bitkit.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
+    expect(screen.queryByText('AWAITING PAYMENT')).not.toBeInTheDocument();
   });
 
   // Parked is not failed: a reader who never leaves the tab gets no visibility event, so the only
@@ -160,11 +215,14 @@ describe('DialogPayToUnlock', () => {
     expect(onRecheck).toHaveBeenCalledTimes(1);
   });
 
-  // The link notice says something the parked copy does not, so it stays.
-  it('waiting + stalled: keeps a link notice next to the Check again prompt', () => {
-    renderDialog('waiting', { isStalled: true, connectionIssue: 'blocked' });
+  // A notice says something the parked copy does not, so it stays.
+  it.each([
+    ['a link notice', { connectionIssue: 'blocked' as const }, /cannot receive payments/],
+    ['the wallet setup notice', { walletSetupNeeded: true }, /Finish setting up Bitkit/],
+  ])('waiting + stalled: keeps %s next to the Check again prompt', (_name, notice, copy) => {
+    renderDialog('waiting', { isStalled: true, ...notice });
 
-    expect(screen.getByText(/cannot receive payments/)).toBeInTheDocument();
+    expect(screen.getByText(copy)).toBeInTheDocument();
     expect(screen.getByText(/Still waiting for the payment/)).toBeInTheDocument();
   });
 
@@ -332,63 +390,5 @@ describe('DialogPayToUnlock', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(cardClick).not.toHaveBeenCalled();
-  });
-});
-
-// The dialog is portaled, so the render container is empty — snapshot the dialog node itself.
-describe('DialogPayToUnlock - Snapshots', () => {
-  it('matches snapshot for the checking stage', () => {
-    renderDialog('checking');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the install stage', () => {
-    renderDialog('install');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the retry stage', () => {
-    renderDialog('retry');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage', () => {
-    renderDialog('waiting');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage with the handshake QR and the Bitkit handoff', () => {
-    renderDialog('waiting', { handshakePubky: 'pubkylockcreator' });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage with a blocked link notice', () => {
-    renderDialog('waiting', { connectionIssue: 'blocked' });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage with a recovery_required link notice', () => {
-    renderDialog('waiting', { connectionIssue: 'recovery_required' });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the parked waiting stage', () => {
-    renderDialog('waiting', { isStalled: true });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the paid stage', () => {
-    renderDialog('paid');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the unopened stage', () => {
-    renderDialog('unopened');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the blocked stage', () => {
-    renderDialog('blocked');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
   });
 });

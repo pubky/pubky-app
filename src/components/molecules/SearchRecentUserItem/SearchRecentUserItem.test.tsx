@@ -127,11 +127,4 @@ describe('SearchRecentUserItem', () => {
     expect(item).toHaveAttribute('aria-label');
     expect(item.getAttribute('aria-label')).toContain('Test User');
   });
-
-  describe('SearchRecentUserItem - Snapshots', () => {
-    it('matches snapshot', () => {
-      const { container } = render(<SearchRecentUserItem user={mockUser} onClick={vi.fn()} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

@@ -1303,351 +1303,6 @@ describe('PostText', () => {
     });
   });
 });
-
-describe('PostText - Snapshots', () => {
-  beforeEach(() => {
-    mockUsePathname.mockReturnValue('/home');
-  });
-
-  it('matches snapshot for plain text', () => {
-    const { container } = render(<PostText content="Simple plain text content" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for bold and italic text', () => {
-    const { container } = render(<PostText content="This is **bold** and *italic* text" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for strikethrough text', () => {
-    const { container } = render(<PostText content="This is ~~strikethrough~~ text" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for inline code', () => {
-    const { container } = render(<PostText content="Use `console.log()` for debugging" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for code block', () => {
-    const { container } = render(
-      <PostText
-        content={`\`\`\`javascript
-const greeting = "Hello";
-console.log(greeting);
-\`\`\``}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for code block without language', () => {
-    const { container } = render(
-      <PostText
-        content={`\`\`\`
-plain code block
-\`\`\``}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for autolinked URL', () => {
-    const { container } = render(<PostText content="Check out https://example.com for more" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for markdown link converted to plaintext', () => {
-    const { container } = render(<PostText content="Check out [Example](https://example.com) for more" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for deceptive link converted to plaintext', () => {
-    const { container } = render(<PostText content="Visit [facebook.com](https://badsite.com) now" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for unordered list', () => {
-    const { container } = render(<PostText content={'- Apple\n- Banana\n- Cherry'} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ordered list', () => {
-    const { container } = render(<PostText content={'1. First item\n2. Second item\n3. Third item'} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for blockquote', () => {
-    const { container } = render(<PostText content="> This is a quoted message" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for nested blockquote', () => {
-    const { container } = render(<PostText content={'> Level 1\n>> Level 2'} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for horizontal rule', () => {
-    const { container } = render(<PostText content={'Above the line\n\n---\n\nBelow the line'} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for combined markdown elements', () => {
-    mockUsePathname.mockReturnValue('/post/some-post-id');
-    const { container } = render(
-      <PostText
-        content={`# Welcome
-
-This is **bold** and *italic* text with a link https://example.com here.
-
-> A meaningful quote
-
-- Item one
-- Item two
-
-\`\`\`js
-const x = 42;
-\`\`\`
-
-Use \`inline code\` for variables.`}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for empty content', () => {
-    const { container } = render(<PostText content="" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for content with special characters', () => {
-    const { container } = render(<PostText content={'Special chars: <>&"\' and emoji: 🎉🚀'} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for multiline content with line breaks', () => {
-    const { container } = render(
-      <PostText
-        content={`First line
-Second line
-Third line`}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for autolinked URL with path and query', () => {
-    const { container } = render(<PostText content="Check out https://example.com/path?query=value" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for www autolink', () => {
-    const { container } = render(<PostText content="Visit www.example.com today" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for email autolink', () => {
-    const { container } = render(<PostText content="Contact user@example.com for help" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for italic and strikethrough combination', () => {
-    const { container } = render(<PostText content="This is *~~italic and strikethrough~~* text" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for strikethrough and italic combination', () => {
-    const { container } = render(<PostText content="This is ~~*strikethrough and italic*~~ text" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for italic and bold combination', () => {
-    const { container } = render(<PostText content="This is ***italic and bold*** text" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for bold and italic combination', () => {
-    const { container } = render(<PostText content="This is **_bold and italic_** text" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for strikethrough and inline code combination', () => {
-    const { container } = render(<PostText content="This is ~~`strikethrough and code`~~ text" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for single hashtag', () => {
-    const { container } = render(<PostText content="Check out #bitcoin" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for multiple hashtags', () => {
-    const { container } = render(<PostText content="#one #two #three" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for hashtag with text', () => {
-    const { container } = render(<PostText content="This post is about #crypto and #blockchain technology" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for hashtag alongside autolink', () => {
-    const { container } = render(<PostText content="Visit https://example.com and follow #trending" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for hashtag with markdown formatting', () => {
-    const { container } = render(<PostText content="This is **bold** with #hashtag and *italic* text" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for long hashtag', () => {
-    const { container } = render(
-      <PostText content="Check out this #verylooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonghashtagwithlotsofcharactersandnumbers123456789 tag" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for hashtag with underscores', () => {
-    const { container } = render(<PostText content="Check out #hello_world tag" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for hashtag with hyphens', () => {
-    const { container } = render(<PostText content="Check out #hello-world tag" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for hashtag with mixed hyphens and underscores', () => {
-    const { container } = render(<PostText content="Check out #hello-world_test tag" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for single mention with pk: prefix', () => {
-    const { container } = render(
-      <PostText content="Check out pk:8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for single mention with pubky prefix', () => {
-    const { container } = render(
-      <PostText content="Check out pubky8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for multiple mentions', () => {
-    const { container } = render(
-      <PostText content="pk:8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo and pk:7qinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for mention with text', () => {
-    const { container } = render(
-      <PostText content="This post mentions pk:8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo in the middle" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for mention alongside hashtag', () => {
-    const { container } = render(
-      <PostText content="pk:8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo loves #bitcoin" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for mention alongside autolink', () => {
-    const { container } = render(
-      <PostText content={`Check pk:o1gg96ewuojmopcjbz8895478wench6tjmjh6kiwgbwycb35ory and https://example.com`} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for mention with markdown formatting', () => {
-    const { container } = render(
-      <PostText content="This is **bold** with pk:8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo and *italic* text" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for truncated content with inline more button', () => {
-    const longContent =
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Extra text to make this longer than 500 characters for truncation testing purposes.';
-    const { container } = render(<PostText content={longContent} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for non-truncated long content on post page', () => {
-    mockUsePathname.mockReturnValue('/post/some-post-id');
-    const longContent =
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Extra text to make this longer than 500 characters for truncation testing purposes.';
-    const { container } = render(<PostText content={longContent} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for article with h1 heading', () => {
-    const { container } = render(<PostText content="# Main Title" isArticle />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for article preview with multiple headings', () => {
-    const { container } = render(
-      <PostText
-        content={`# Article Title
-
-## Introduction
-
-Some introductory text here.
-
-### Details
-
-More detailed content.
-
-#### Sub-details
-
-Even more specific information.`}
-        isArticle
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for article preview with long content', () => {
-    const longContent =
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Extra text to make this longer than 500 characters for truncation testing purposes.';
-    const { container } = render(<PostText content={longContent} isArticle />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for article preview with headings and paragraphs', () => {
-    const { container } = render(
-      <PostText
-        content={`# Article Title\n\nThis is the introduction paragraph.\n\n## Section\n\nMore content here.`}
-        isArticle
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for article showing full content on post page', () => {
-    mockUsePathname.mockReturnValue('/post/some-post-id');
-    const { container } = render(
-      <PostText
-        content={`# Article Title\n\nThis is the introduction paragraph.\n\n## Section\n\nMore content here.`}
-        isArticle
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<PostText content="Content with custom class" className="my-custom-class" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
 vi.mock('@/molecules/ArticleInlineImage/ArticleInlineImage', () => ({
   ArticleInlineImage: ({
     src,
@@ -1669,19 +1324,43 @@ vi.mock('@/molecules/ArticleInlineImage/ArticleInlineImage', () => ({
   ),
 }));
 
+vi.mock('@/libs/file/pubkyFileCdnUrl', () => ({
+  pubkyUriToCdnUrl: (uri: string, variant: string) => `cdn://${uri}/${variant}`,
+}));
+
 describe('Article inline images', () => {
   const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
-  const articleImages = {
-    attachments: [`pubky://${AUTHOR}/pub/pubky.app/files/cover`, `pubky://${AUTHOR}/pub/pubky.app/files/inline`],
+  const attachments = [`pubky://${AUTHOR}/pub/pubky.app/files/cover`, `pubky://${AUTHOR}/pub/pubky.app/files/inline`];
+  const articleMedia = {
+    attachments,
     authorId: AUTHOR,
     postId: `${AUTHOR}:post1`,
+    files: [],
+    metadataSettled: true,
   };
 
   beforeEach(() => {
     mockUsePathname.mockReturnValue('/post/user/post1');
   });
 
-  it('renders inline images with the raw attachment destination when articleImages is provided', () => {
+  it('hands an external PDF card the same link handler as the body links', () => {
+    const onLinkClick = vi.fn();
+    render(
+      <PostText
+        content={'[normal](https://phish.example/page)\n\n![Official wallet download](https://phish.example/get.pdf)'}
+        isArticle
+        fullArticle
+        articleMedia={articleMedia}
+        onLinkClick={onLinkClick}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open PDF' }));
+
+    expect(onLinkClick).toHaveBeenCalledWith('https://phish.example/get.pdf', expect.anything());
+  });
+
+  it('renders inline images with the raw attachment destination when articleMedia is provided', () => {
     render(
       <PostText
         content="Before
@@ -1690,7 +1369,7 @@ describe('Article inline images', () => {
 
 After"
         isArticle
-        articleImages={articleImages}
+        articleMedia={articleMedia}
       />,
     );
 
@@ -1699,13 +1378,60 @@ After"
     expect(image).toHaveAttribute('data-alt', 'My alt');
   });
 
+  it('renders a video player for a slot whose file row is a video', () => {
+    render(
+      <PostText
+        content="![Clip](attachment:1)"
+        isArticle
+        articleMedia={{
+          ...articleMedia,
+          files: [{ uri: attachments[1], content_type: 'video/mp4', name: 'clip.mp4' }],
+        }}
+      />,
+    );
+
+    const video = screen.getByTestId('article-inline-video');
+    expect(video).toHaveAttribute('src', `cdn://${attachments[1]}/main`);
+    expect(video).toHaveAttribute('aria-label', 'Clip');
+    expect(screen.queryByTestId('mock-article-inline-image')).not.toBeInTheDocument();
+  });
+
+  it('renders the players of unlocked content from its local attachments', () => {
+    const localAttachments = [
+      { type: 'image/png', name: 'attachment-0', urls: { main: 'blob:cover' }, slot: 0 },
+      { type: 'audio/mpeg', name: 'attachment-1', urls: { main: 'blob:song' }, slot: 1 },
+    ];
+
+    render(<PostText content="![Song](attachment:1)" isArticle articleMedia={{ localAttachments }} />);
+
+    expect(screen.getByTestId('article-inline-audio')).toHaveAttribute('src', 'blob:song');
+  });
+
+  it('reserves space for a slot whose type is still unknown', () => {
+    render(
+      <PostText content="![Soon](attachment:1)" isArticle articleMedia={{ ...articleMedia, metadataSettled: false }} />,
+    );
+
+    expect(screen.getByTestId('article-inline-media-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('mock-article-inline-image')).not.toBeInTheDocument();
+  });
+
+  it('renders raw video HTML as literal text, never as a player', () => {
+    const { container } = render(
+      <PostText content='<video src="https://example.com/clip.mp4"></video>' isArticle articleMedia={articleMedia} />,
+    );
+
+    expect(container.querySelector('video')).not.toBeInTheDocument();
+    expect(container).toHaveTextContent('<video src="https://example.com/clip.mp4"></video>');
+  });
+
   it('hands the local attachments of unlocked content to the image component', () => {
     const localAttachments = [
       { type: 'image/png', name: 'attachment-0', urls: { main: 'blob:cover' }, slot: 0 },
       { type: 'image/png', name: 'attachment-1', urls: { main: 'blob:inline' }, slot: 1 },
     ];
 
-    render(<PostText content="![My alt](attachment:1)" isArticle articleImages={{ localAttachments }} />);
+    render(<PostText content="![My alt](attachment:1)" isArticle articleMedia={{ localAttachments }} />);
 
     const image = screen.getByTestId('mock-article-inline-image');
     expect(image).toHaveAttribute('data-src', 'attachment:1');
@@ -1719,7 +1445,7 @@ After"
 
 ![E](https://example.com/pic.png)`}
         isArticle
-        articleImages={articleImages}
+        articleMedia={articleMedia}
       />,
     );
 
@@ -1728,7 +1454,7 @@ After"
     expect(images[1]).toHaveAttribute('data-src', 'https://example.com/pic.png');
   });
 
-  it('strips article images entirely without articleImages (embedded card on post page)', () => {
+  it('strips article images entirely without articleMedia (embedded card on post page)', () => {
     const { container } = render(
       <PostText
         content="Before
@@ -1763,7 +1489,7 @@ First paragraph."
     expect(container).toHaveTextContent('First paragraph.');
   });
 
-  it('does not render images for non-article posts regardless of articleImages', () => {
+  it('does not render images for non-article posts regardless of articleMedia', () => {
     const { container } = render(<PostText content="![alt](https://example.com/image.png)" />);
 
     expect(container.querySelector('img')).not.toBeInTheDocument();

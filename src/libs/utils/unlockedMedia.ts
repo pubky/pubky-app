@@ -19,9 +19,9 @@ export const toUnlockedMedia = (attachments: TUnlockedAttachment[]): AttachmentC
   });
 
 /** Attachments without a recorded slot are index-aligned with the post's `attachments`. */
-export function getAttachmentAtSlot(
-  attachments: AttachmentConstructed[] | undefined,
+export function getAttachmentAtSlot<T extends { slot?: number }>(
+  attachments: T[] | undefined,
   slot: number,
-): AttachmentConstructed | undefined {
+): T | undefined {
   return attachments?.find((attachment, index) => (attachment.slot ?? index) === slot);
 }

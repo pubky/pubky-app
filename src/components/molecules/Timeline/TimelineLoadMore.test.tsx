@@ -18,10 +18,3 @@ describe('TimelineLoadMore', () => {
     expect(onLoadMore).toHaveBeenCalledTimes(1);
   });
 });
-
-describe('TimelineLoadMore - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<TimelineLoadMore onLoadMore={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

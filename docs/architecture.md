@@ -332,6 +332,8 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0019 | Dexie schema changes recreate the local database                          |
 | 0020 | Local-first tag cache and viewport lifetimes                              |
 | 0021 | Service worker scope and update policy                                    |
+| 0022 | Locks: creator-side locked content publishing                             |
+| 0023 | Article inline media as attachment slots                                  |
 
 ## Quick Checklist
 

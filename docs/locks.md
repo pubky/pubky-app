@@ -47,9 +47,8 @@ Three things break the usual pubky-app mental model:
   Lock Server session that belongs to the account signed in to pubky.app (#2758).
 - **Nexus indexes the announcement, not the lock.** The announcement is an ordinary Nexus
   post and behaves like one; the locked payload and everything about the lock itself never
-  reach Nexus. So for locks data there are no streams, no Dexie cache, no local-first
-  `commit*` writes — every read is a network `fetch*` (IndexedDB caching is planned in
-  #2296).
+  reach Nexus. Locks have no Nexus streams. Their immutable descriptors and readable posts
+  are cached in Dexie's `locks` table; purchase bundle ids remain on the reader's homeserver.
 - **Content lives under homeserver `/priv`.** Both the creator's originals and the
   reader's unlocked copies sit on `/priv` paths, readable only by their owner with a
   restored session — unlike everything under `/pub/pubky.app`.
@@ -102,8 +101,8 @@ proxy-reads the guarded bytes with it — and then **replicates** them into the 
 Details: [Reading a lock post](#reading-a-lock-post).
 
 **3. Read again.** Every later view skips the Lock Server entirely: the post renders from
-the reader's own replica, and `/profile/unlocked` lists everything ever unlocked. The
-replica also survives the creator revoking the lock. Details:
+IndexedDB when cached, otherwise from the reader's own replica; `/profile/unlocked` lists
+everything ever unlocked. The replica also survives the creator revoking the lock. Details:
 [The Unlocked screen](#the-unlocked-screen).
 
 ## Where the data lives
@@ -235,12 +234,12 @@ Three ways the content becomes readable, resolved on mount by `useUnlockedConten
 ```
 LockedPostContent
   ├─ LocksController.getLockContent(content) → { lock_title, teaser_description }
-  ├─ useLockFile(lock)                       → lock.json (LockFile | null)
-  │    └─ LocksController.fetchLockFile      → LocksApplication → LocksService.readContentLock
+  ├─ useLockFile(lock)                       → local descriptor, then lock.json on a miss
+  │    └─ LocksController.getOrFetchLockFile
   │
   ├─ useUnlockedContent(lock, lockFile, postId)
-  │    ├─ 1) already unlocked as a reader → fetchReplicatedContent  (my HS /priv copy)
-  │    ├─ 2) my own post (a == b)         → fetchOwnContent         (my HS /priv original)
+  │    ├─ 1) already unlocked as a reader → local post, then fetchReplicatedContent on a miss
+  │    ├─ 2) my own post (a == b)         → local post, then fetchOwnContent on a miss
   │    ├─ 3) valid payment price → lock card → DialogPayToUnlock (sign-in required first)
   │    └─ 4) no valid price → masked lock card with Unlock disabled
   └─ 5) saved purchase, no replica → usePurchaseResume → fetchPaidContentIfCompleted
@@ -248,6 +247,17 @@ LockedPostContent
 
 The no-price state covers legacy or unreadable lock files. Their content remains masked and
 cannot be unlocked; a separate unsupported-lock experience is outside the payment-only flow.
+
+Paths 1) and 2) load in two steps. The cached row's text renders at once and the attachment
+bytes follow, with one skeleton per attachment (`pendingAttachments`, typed by slot, down through
+`PostArticle` / `PostBody`), so a large image never holds the text back. An own lock shows its
+layout — the inert lock card and "My locked content" — from the first render in which `lock.json`
+proves the lock is mine (`isResolvingOwn`), with a text skeleton until the original is read. The
+Unlock button is never live on an own lock, even when that read fails.
+
+While `lock.json` is still loading, the card covers the whole pill with one spinner (its contents
+stay invisible to keep the width) and keeps Unlock inert without dimming it, so the pill does not
+flash as disabled before the price arrives.
 
 `a == b` is team shorthand: **a** = the announcement's author account, **b** = the account
 that owns the lock (Lock Server side). Phase 1 assumes they are the same person, and
@@ -267,21 +277,26 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    toast, and the reader stays; a wallet → the modal moves to checking, then mints, saves and
    submits. A failed check on open lands on the blocked screen; a failed check from the button, or a
    failed submission after it, shows a toast and returns to the install screen. The check reports
-   presence only, so a submission can still fail afterwards (one `502` covers both "wallet not
-   ready" and "Paykit down" — a distinct code is a pending ask on the locks side).
+   presence only, so the payment can still end `failed` afterwards (step 4).
 3. A saved id is looked up first (`fetchPaymentStatus`; SDK 404 maps to `null`). `completed` →
    credential; `failed`/`expired` → **Try again**, which mints a fresh id (those cannot be retried,
-   and doing it automatically could charge twice). `pending`/`in_progress` → the task is already
-   running, so nothing is submitted and the wait resumes. Only a saved id with **no task** is
-   submitted again: that submission never reached the server.
+   and doing it automatically could charge twice). After `failed`, **Try again** checks the wallet
+   first and goes to the install screen when there is none. `pending`/`in_progress` → the task is
+   already running, so nothing is submitted and the wait resumes. Only a saved id with **no task**
+   is submitted again: that submission never reached the server.
 4. `startPayment` reuses the saved id or mints and saves a fresh one, then submits the proof (empty
    payload, reader pubky at the bundle's top level). Replaying the same bundle is safe and creates no
-   second payment request. Paykit delivers the payment request to the reader's wallet; the app never
-   sees an address or invoice. A failed submission (for example `502`) shows **Try again**, which
-   keeps the saved id.
+   second payment request. The Lock Server answers `pending` at once and creates the Paykit invoice
+   afterwards, retrying for up to 10 minutes (its `admission_deadline_at`); Paykit then delivers the
+   payment request to the reader's wallet, and the app never sees an address or invoice. A reader
+   without a usable wallet or a Paykit outage therefore ends the task `failed`, not the submission.
+   While the server waits on the reader's wallet it says so (`status_message`), and the modal shows a
+   setup notice in place of the handoff. A failed submission (network, rate limit) shows
+   **Try again**, which keeps the saved id.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
    created; with nothing submitted, the install screen has no link state. `none` shows the handoff
-   that hands the creator's pubky to Bitkit: a QR on desktop, and below the `lg` breakpoint (1024px)
+   that hands the creator's pubky to Bitkit: a QR on desktop (clicking it copies the pubky, for a
+   wallet on a device without a camera), and below the `lg` breakpoint (1024px)
    a **Pay with Bitkit** button instead, since a phone cannot scan its own screen; it opens
    `bitkit://contact?pubky=<creator pubky>`, which routes Bitkit to the screen a scan reaches. `handshake` keeps it: that state only
    means Paykit has opened its half of the link and is waiting for the reader's wallet, which still
@@ -294,7 +309,8 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    so a link read that hangs cannot delay a finished payment. The task lookup is the only lifecycle
    truth. `connected` and `blocked` end the link loop; a terminal task status ends both. Visibility
    return and **Check again** restart the pair, and both park together after 3 wall-clock minutes
-   without failing the purchase.
+   without failing the purchase. While the invoice does not exist yet, those 3 minutes count from the
+   server's invoice deadline instead; once it exists, they start again.
 7. Turning a completed payment into content (credential → read) parks the same way when it fails,
    and **Check again** runs it again. Retrying is free — the entitlement is durable and the
    credential is minted fresh each time, which is also why an expired credential needs no detection.
@@ -333,11 +349,13 @@ screen does not re-read every marker.
 
 | Layer       | File                                 | Responsibility                                                                           |
 | ----------- | ------------------------------------ | ---------------------------------------------------------------------------------------- |
-| hook        | `hooks/useLockFile/useLockFile.ts`   | network-only fetch (`useEffect` + state; no local cache); catch → `hasError`             |
+| hook        | `hooks/useLockFile/useLockFile.ts`   | local-first descriptor read once per URL                                                 |
 | hook        | `hooks/useUnlockedContent/…`         | pick the read path (replicated / own / locked) and hold the resolved content             |
 | controller  | `core/controllers/locks/locks.ts`    | thin delegate to the application; announcement parse + price resolve (pipes)             |
 | application | `core/application/locks/locks.ts`    | orchestrate unlock, guarded reads, and replication                                       |
 | service     | `core/services/locks/locks.ts`       | Lock SDK (wasm) boundary: viewer calls, creator session, guarded-resource registration   |
+| service     | `core/services/local/locks/locks.ts` | IndexedDB descriptor, post, and unlocked-list reads and writes                           |
+| model       | `core/models/locks/locks.ts`         | Dexie persistence for cached lock rows                                                   |
 | pipe        | `core/pipes/locks/locks.parser.ts`   | `LockContentParser`, `LockFileParser`, `GuardedContentParser`, `LockProofBundler` (pure) |
 | types       | `core/services/locks/locks.types.ts` | `LockFile`, `lockPostContentSchema`, `VerifierType`, guarded-post schemas                |
 
@@ -345,8 +363,7 @@ Locks has no local-first controller write, so its server actions do not use the 
 prefix: `hasPaykitReceiver` and `fetchPaykitConnectionState` are server queries, while `startPayment`
 is a server workflow action.
 The purchase bundle id file and the purchases listing are always read from the homeserver and
-never cached: they decide whether a payment is reused, so a stale copy could cost money. (#2296
-caches lock files and replicas, which do not change; it does not cover these.)
+never cached: they decide whether a payment is reused, so a stale copy could cost money.
 
 Notes:
 
@@ -368,8 +385,8 @@ profile only — the data lives in the reader's `/priv`, so another user's profi
 
 ```
 profile/(own)/layout.tsx → ProfilePageContainer
-  ├─ useUnlockedList({ enabled: isOwnProfile })   → one read per profile visit
-  │    └─ LocksController.fetchUnlockedList
+  ├─ useUnlockedList({ enabled: isOwnProfile })   → local list immediately, HS fetch once
+  │    └─ LocksController.getUnlockedList / fetchUnlockedList
   │         └─ listAll(/priv/social/unlocked/) → completedLockIds → read each post.json
   ├─ unlockedCount → ProfilePageFilterBar (sidebar badge)
   └─ UnlockedListProvider → ProfileUnlocked (the page)
@@ -383,10 +400,11 @@ profile/(own)/layout.tsx → ProfilePageContainer
   sidebar and the screen would enumerate `/priv` twice.
 - **`completedLockIds` only counts an exact `<lockId>/post.json` entry.** Anything else under
   a lock folder is an interrupted replication, which must not appear as unlocked content.
-- **Sorted by the marker's `Last-Modified`.** The homeserver stamps `entry.modified_at` on write,
-  so the ordering key is server-authoritative rather than a number the client puts in the body.
-  It costs no extra request — the header rides along with the marker read. (Path order is no help:
-  `list` sorts by path and a lock id is a hash.)
+- **Sorted by unlock time.** Homeserver fetches use the marker's `Last-Modified`, so the
+  ordering key is server-authoritative rather than a number in the body. A just-completed unlock
+  uses the device clock in IndexedDB until the next fetch supplies the server timestamp. It costs no
+  extra request — the header rides along with the marker read. (Path order is no help: `list` sorts
+  by path and a lock id is a hash.)
 - **The announcement post is the preferred row.** It carries the author, the timestamp and the
   teaser, and swaps its own lock card for this reader's replica, so rendering it gives the whole row.
   Its id comes from the marker's `announcement` URI (see [Data shape](#data-shape)); a marker without one, a
@@ -394,20 +412,20 @@ profile/(own)/layout.tsx → ProfilePageContainer
   is deliberately not told apart from a deletion (#2432).
 - **Media loads per row, not per list.** The list holds only markers; pulling every attachment up
   front would download the reader's whole unlocked library at once. The announcement branch costs
-  more than the fallback card: `LockedPostContent` re-reads the marker and fetches the lock file for
-  each row. #2296 turns the marker read local.
+  more than the fallback card: `LockedPostContent` reads the marker and the lock file for each row,
+  both from IndexedDB once cached.
 - **An unlocked article's cover comes from the reader's own copy.** It has no Nexus attachments at
   all, so `usePostArticle` counts the caller's local attachments when deciding whether slot 0 is a
   cover; the slot-0 rule (a body that references `attachment:0` has no cover) still applies.
-- **Not cached.** Re-entering the profile re-lists the root and re-reads each marker; #2296
-  moves this to IndexedDB.
+- **Cached locally.** The list and count render from IndexedDB first. One background homeserver
+  listing per profile visit finds unlocks made on other devices and refreshes their timestamps.
 
 ## Marker tracking
 
 Locks use one `paykit-payment` criterion holding the recipient (always the lock's creator),
 the amount in sats as a string, and `BTC` as the asset. A reader unlocks it by paying from
 Bitkit (see [Reading a lock post](#reading-a-lock-post)). Creator-configurable credential
-TTLs and IndexedDB caching still come later.
+TTLs still come later. The descriptor and readable post are cached in IndexedDB; media bytes are not.
 
 Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.

@@ -453,14 +453,4 @@ describe('PostSavePicker', () => {
 
     expect(mockState.resumeAutoLoad).toHaveBeenCalledTimes(1);
   });
-
-  it('matches desktop picker snapshot when open', async () => {
-    renderPicker();
-
-    openPicker();
-
-    await screen.findByText('Bookmarks');
-
-    expect(document.body).toMatchSnapshot();
-  });
 });

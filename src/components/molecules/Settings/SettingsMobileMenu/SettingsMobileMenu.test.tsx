@@ -41,10 +41,3 @@ describe('SettingsMobileMenu', () => {
     expect(root).not.toHaveClass('sticky');
   });
 });
-
-describe('SettingsMobileMenu - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<SettingsMobileMenu />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

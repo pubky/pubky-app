@@ -30,7 +30,7 @@ import { isAppError, requiresLogin, toAppError } from '@/libs/error/error.utils'
 import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { isAuthorFileUri } from '@/libs/post/articleInlineImages';
+import { isAuthorFileUri } from '@/libs/post/articleInlineMedia';
 import { extractHashtagLabelsFromMarkdown, mergeTagLabels } from '@/libs/post/hashtags';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';

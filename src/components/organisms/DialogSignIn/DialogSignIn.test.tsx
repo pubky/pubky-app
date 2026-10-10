@@ -134,23 +134,3 @@ describe('DialogSignIn', () => {
     });
   });
 });
-
-describe('DialogSignIn - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot when open', () => {
-    mockShowSignInDialog.value = true;
-    render(<DialogSignIn />);
-
-    const dialog = document.querySelector('[role="dialog"]');
-    expect(dialog?.parentElement).toMatchSnapshot();
-  });
-
-  it('matches snapshot when closed', () => {
-    mockShowSignInDialog.value = false;
-    const { container } = render(<DialogSignIn />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

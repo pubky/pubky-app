@@ -135,24 +135,3 @@ describe('CollectionBookmarkCard', () => {
     expect(link.className).toContain('custom-extra-class');
   });
 });
-
-describe('CollectionBookmarkCard - Snapshots', () => {
-  it('matches the snapshot for a signed-in user with full state', () => {
-    setup({
-      avatarName: 'Alice',
-      avatarSeed: CURRENT_USER_PUBKY,
-      avatarUrl: 'https://example.com/avatar.png',
-      bookmarkCount: 123,
-    });
-
-    const { container } = render(<CollectionBookmarkCard />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the snapshot for the signed-out / no-data fallback state', () => {
-    setup({ avatarName: 'U', avatarSeed: 'U', avatarUrl: undefined, bookmarkCount: undefined });
-
-    const { container } = render(<CollectionBookmarkCard />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

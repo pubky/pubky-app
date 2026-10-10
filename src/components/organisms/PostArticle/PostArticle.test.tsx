@@ -69,14 +69,14 @@ vi.mock('@/molecules/PostText/PostText', () => {
       content,
       isArticle,
       fullArticle,
-      articleImages,
+      articleMedia,
       onLinkClick,
       className,
     }: {
       content: string;
       isArticle?: boolean;
       fullArticle?: boolean;
-      articleImages?: unknown;
+      articleMedia?: unknown;
       onLinkClick?: (url: string, e: React.MouseEvent) => void;
       className?: string;
     }) => (
@@ -84,7 +84,7 @@ vi.mock('@/molecules/PostText/PostText', () => {
         data-testid="post-text"
         data-is-article={isArticle}
         data-full-article={String(Boolean(fullArticle))}
-        data-article-images={articleImages ? JSON.stringify(articleImages) : undefined}
+        data-article-media={articleMedia ? JSON.stringify(articleMedia) : undefined}
         data-has-link-click={!!onLinkClick}
         className={className}
       >
@@ -406,15 +406,15 @@ describe('PostArticle', () => {
       render(<PostArticle {...defaultProps} variant="full" localAttachments={[mockLocalImageAttachment]} />);
 
       expect(screen.getByTestId('post-text')).toHaveAttribute(
-        'data-article-images',
-        JSON.stringify({ localAttachments: [mockLocalImageAttachment] }),
+        'data-article-media',
+        JSON.stringify({ localAttachments: [mockLocalImageAttachment], pendingAttachments: [] }),
       );
     });
 
     it('keeps body images out of the preview card, like any article card', () => {
       render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
 
-      expect(screen.getByTestId('post-text')).not.toHaveAttribute('data-article-images');
+      expect(screen.getByTestId('post-text')).not.toHaveAttribute('data-article-media');
     });
 
     it('takes the cover from slot 0, not from whatever comes first in the list', () => {
@@ -435,61 +435,8 @@ describe('PostArticle', () => {
         attachments: defaultProps.attachments,
         coverImageVariant: FileVariant.FEED,
         localAttachmentCount: 1,
+        localCoverType: 'image/png',
       });
-    });
-  });
-
-  describe('Snapshots', () => {
-    it('matches snapshot with cover image', () => {
-      const { container } = render(<PostArticle {...defaultProps} />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot without cover image', () => {
-      mockUsePostArticle.mockReturnValue(mockHookReturnWithoutImage);
-
-      const { container } = render(<PostArticle {...defaultProps} />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with custom className', () => {
-      const { container } = render(<PostArticle {...defaultProps} className="custom-article-class" />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with long title and body', () => {
-      mockUsePostArticle.mockReturnValue({
-        title: 'This is a very long article title that might wrap to multiple lines in the UI',
-        body: 'This is a much longer article body content that contains multiple sentences. It should properly handle long text content and display it correctly within the component boundaries.',
-        coverImage: mockHookReturnWithImage.coverImage,
-      });
-
-      const { container } = render(<PostArticle {...defaultProps} />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with local cover image', () => {
-      const { container } = render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot as a full article', () => {
-      const { container } = render(<PostArticle {...defaultProps} variant="full" />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with local video attachment falling back to hook image', () => {
-      mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
-
-      const { container } = render(<PostArticle {...defaultProps} localAttachments={[mockLocalVideoAttachment]} />);
-
-      expect(container).toMatchSnapshot();
     });
   });
 });

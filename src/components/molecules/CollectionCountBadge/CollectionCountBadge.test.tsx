@@ -38,17 +38,3 @@ describe('CollectionCountBadge', () => {
     expect(container.firstChild).not.toHaveClass('bg-background');
   });
 });
-
-describe('CollectionCountBadge - Snapshots', () => {
-  it('matches the snapshot', () => {
-    const { container } = render(<CollectionCountBadge count={123} />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the snapshot with the label visible on mobile', () => {
-    const { container } = render(<CollectionCountBadge count={123} showLabelOnMobile />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

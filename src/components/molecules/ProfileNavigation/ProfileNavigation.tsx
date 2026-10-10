@@ -35,7 +35,7 @@ export const ProfileNavigation = ({
       {!hiddenBackButton && (
         <Button
           size="lg"
-          className="rounded-full bg-foreground/4"
+          className="rounded-full"
           variant={'outline'}
           onClick={onHandleBackButton}
           disabled={backButtonDisabled}

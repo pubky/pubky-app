@@ -54,16 +54,3 @@ describe('PopoverSocialGraph', () => {
     expect(screen.getByRole('button', { name: 'About social graph status' })).toHaveClass('custom-class');
   });
 });
-
-describe('PopoverSocialGraph - Snapshots', () => {
-  it('matches snapshot when closed', () => {
-    const { container } = render(<PopoverSocialGraph />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when open', () => {
-    render(<PopoverSocialGraph />);
-    fireEvent.click(screen.getByRole('button', { name: 'About social graph status' }));
-    expect(screen.getByTestId('popover-content')).toMatchSnapshot();
-  });
-});

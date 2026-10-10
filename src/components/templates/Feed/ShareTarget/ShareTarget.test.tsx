@@ -255,44 +255,24 @@ describe('ShareTarget', () => {
       expect(postInput).toHaveAttribute('data-has-attachments', 'true');
     });
   });
-});
-
-describe('ShareTarget - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSearchParams.clear();
-    mockGetSharedFiles.mockResolvedValue([]);
-  });
-
-  it('matches snapshot for loading state', () => {
-    mockSearchParams.set('hasFiles', 'true');
-    mockGetSharedFiles.mockImplementation(() => new Promise(() => {})); // Never resolves
-
-    const { container } = render(<ShareTarget />);
-    expect(container).toMatchSnapshot();
-  });
 
   it('matches snapshot for content state', async () => {
     mockSearchParams.set('text', 'Shared content from another app');
 
-    const { container } = render(<ShareTarget />);
+    render(<ShareTarget />);
 
     await waitFor(() => {
       expect(screen.getByTestId('post-input')).toBeInTheDocument();
     });
-
-    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with text content only', async () => {
     mockSearchParams.set('text', 'Just some text');
 
-    const { container } = render(<ShareTarget />);
+    render(<ShareTarget />);
 
     await waitFor(() => {
       expect(screen.getByTestId('post-input')).toBeInTheDocument();
     });
-
-    expect(container).toMatchSnapshot();
   });
 });

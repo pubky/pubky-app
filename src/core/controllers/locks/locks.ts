@@ -22,6 +22,7 @@ import { parseCompositeId } from '@/models/models.utils';
 import { LockContentParser, LockFileParser } from '@/pipes/locks/locks.parser';
 import type {
   LockPostContent,
+  ReplicatedPost,
   TCreateContentLockResult,
   TExchangeSessionCodeParams,
   TFetchLockFileParams,
@@ -34,7 +35,7 @@ import type {
   TUnlockedAttachment,
   TUnlockedContent,
   TUnlockedListItem,
-  TVerificationStatus,
+  TVerificationTask,
 } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
@@ -203,6 +204,26 @@ export class LocksController {
     };
   }
 
+  static async getOrFetchLockFile(params: TFetchLockFileParams): Promise<TFetchLockFileResult> {
+    const lockFile = await LocksApplication.getOrFetchLockFile(params);
+    return {
+      lockFile,
+      priceSats: LockFileParser.resolvePriceSats(lockFile),
+    };
+  }
+
+  static getUnlockedPost(params: TFetchLockFileParams): Promise<ReplicatedPost | null> {
+    return LocksApplication.getUnlockedPost(params);
+  }
+
+  static getOwnPost(params: TFetchLockFileParams): Promise<ReplicatedPost | null> {
+    return LocksApplication.getOwnPost(params);
+  }
+
+  static getUnlockedList(): Promise<TUnlockedListItem[]> {
+    return LocksApplication.getUnlockedList();
+  }
+
   /** Announcement content of a lock post; null when the post's `content` isn't valid announcement JSON. */
   static getLockContent(content: string): LockPostContent | null {
     return LockContentParser.parse(content);
@@ -228,8 +249,8 @@ export class LocksController {
     return LocksApplication.fetchPaykitConnectionState(params);
   }
 
-  /** One read of the payment's verification status, or null when the submission never reached the server. */
-  static fetchPaymentStatus(params: TPaymentBundleParams): Promise<TVerificationStatus | null> {
+  /** One read of the payment's verification task, or null when the submission never reached the server. */
+  static fetchPaymentStatus(params: TPaymentBundleParams): Promise<TVerificationTask | null> {
     return LocksApplication.fetchPaymentStatus(params);
   }
 

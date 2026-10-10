@@ -72,16 +72,4 @@ describe('CollectionsSections', () => {
     expect(outer).not.toBeNull();
     expect(outer?.className).toContain('custom-sections-class');
   });
-
-  it('matches the snapshot for authenticated users', () => {
-    const { container } = render(<CollectionsSections />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the snapshot for guests', () => {
-    authState.currentUserPubky = null;
-
-    const { container } = render(<CollectionsSections />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });

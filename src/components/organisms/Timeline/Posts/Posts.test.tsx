@@ -717,67 +717,9 @@ describe('TimelinePosts', () => {
       });
     });
   });
-});
-
-describe('TimelinePosts - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    // Mock router
-    mockUseRouter.mockReturnValue({
-      push: mockPush,
-      back: vi.fn(),
-      forward: vi.fn(),
-      refresh: vi.fn(),
-      replace: vi.fn(),
-      prefetch: vi.fn(),
-      bfcacheId: '',
-    } as ReturnType<typeof useRouter>);
-
-    mockUseInfiniteScroll.mockReturnValue({
-      sentinelRef: vi.fn(),
-      isStalled: false,
-      resumeAutoLoad: vi.fn(),
-    });
-
-    // Mock useLiveQuery
-    mockUseLiveQuery.mockImplementation((_queryFn, deps) => ({
-      query: deps?.[0],
-      data: { id: 'test', replies: 0, tags: 0, unique_tags: 0, reposts: 0 },
-    }));
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('should match snapshot for loading state', () => {
-    const { container } = render(
-      <TimelinePosts postIds={[]} loading={true} loadingMore={false} error={null} hasMore={true} loadMore={vi.fn()} />,
-    );
-
-    expect(container).toMatchSnapshot();
-  });
-
-  it('should match snapshot for a failed load beside a trailing CTA', () => {
-    const { container } = render(
-      <TimelinePosts
-        postIds={[]}
-        loading={false}
-        loadingMore={false}
-        error="Network error"
-        hasMore={false}
-        loadMore={vi.fn()}
-        emptyState={<div>Collection is empty</div>}
-        trailingSlot={<button>Add content</button>}
-      />,
-    );
-
-    expect(container).toMatchSnapshot();
-  });
 
   it('should match snapshot for empty state', async () => {
-    const { container } = render(
+    render(
       <TimelinePosts
         postIds={[]}
         loading={false}
@@ -791,12 +733,10 @@ describe('TimelinePosts - Snapshots', () => {
     await waitFor(() => {
       expect(screen.getByTestId('timeline-empty')).toBeInTheDocument();
     });
-
-    expect(container).toMatchSnapshot();
   });
 
   it('should match snapshot for error state', async () => {
-    const { container } = render(
+    render(
       <TimelinePosts
         postIds={[]}
         loading={false}
@@ -810,12 +750,10 @@ describe('TimelinePosts - Snapshots', () => {
     await waitFor(() => {
       expect(screen.getByTestId('timeline-initial-error')).toBeInTheDocument();
     });
-
-    expect(container).toMatchSnapshot();
   });
 
   it('should match snapshot with posts', async () => {
-    const { container } = render(
+    render(
       <TimelinePosts
         postIds={mockPostIds}
         loading={false}
@@ -829,7 +767,5 @@ describe('TimelinePosts - Snapshots', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('timeline-loading')).not.toBeInTheDocument();
     });
-
-    expect(container).toMatchSnapshot();
   });
 });

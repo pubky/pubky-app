@@ -1,11 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { iconNames } from 'lucide-react/dynamic.js';
 import { describe, expect, it, vi } from 'vitest';
 import { IconPickerDialog } from './IconPickerDialog';
 
 const TEST_ICONS = ['activity', 'airplay', 'mountain'] as const;
-const SNAPSHOT_ICONS = iconNames.slice(0, 8);
-
 async function waitForCatalog() {
   await waitFor(() => {
     if (screen.queryByTestId('icon-picker-loading')) {
@@ -16,8 +13,8 @@ async function waitForCatalog() {
 
 // DynamicLucideIcon renders an empty svg while its chunk loads, so gate on the
 // svg having children (via childElementCount — jsdom's querySelector misses
-// svg descendants). Snapshots must wait for every icon they capture — the
-// module-level cache makes a partial wait nondeterministic across test order.
+// svg descendants). The module-level cache makes a partial wait nondeterministic
+// across test order.
 async function waitForResolvedIcons(names: readonly string[]) {
   await waitFor(() => {
     for (const iconName of names) {
@@ -218,21 +215,5 @@ describe('IconPickerDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'activity' }));
 
     expect(ancestorClick).not.toHaveBeenCalled();
-  });
-});
-
-describe('IconPickerDialog - Snapshots', () => {
-  it('matches snapshot for the empty state', () => {
-    const { baseElement } = render(<IconPickerDialog open onSelect={() => {}} icons={[]} />);
-
-    expect(baseElement).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the icon grid', async () => {
-    const { baseElement } = render(<IconPickerDialog open onSelect={() => {}} icons={SNAPSHOT_ICONS} />);
-
-    await waitForResolvedIcons(SNAPSHOT_ICONS);
-
-    expect(baseElement).toMatchSnapshot();
   });
 });

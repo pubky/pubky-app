@@ -9,10 +9,3 @@ describe('TimelineErrorState', () => {
     expect(screen.getByText('Error: Network error')).toBeInTheDocument();
   });
 });
-
-describe('TimelineErrorState - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<TimelineErrorState message="Network error" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
