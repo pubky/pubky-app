@@ -222,3 +222,29 @@ it('does not resurrect a retirement completed after the caller read its snapshot
   await LocalAuthService.commit({ ...stale, generation: 'later' }, record.generation);
   expect(LocalAuthService.read()?.pendingRetirements).toEqual([]);
 });
+
+describe('deferred grant retirement', () => {
+  it('preserves a newer account and its queue while deferring only the old grant', async () => {
+    const old = mockGrantReference('old');
+    const other = mockGrantReference('other');
+    await LocalAuthService.commit({ ...record, pendingRetirements: [old, other] }, '');
+    await LocalAuthService.deferRetirement('old', 123456);
+    expect(LocalAuthService.read()).toMatchObject({
+      generation: record.generation,
+      sessionReference: record.sessionReference,
+      pendingRetirements: [{ ...old, retirementRetryAt: 123456 }, other],
+    });
+    await LocalAuthService.commit({ ...record, generation: 'newer' }, record.generation);
+    expect(LocalAuthService.read()?.pendingRetirements).toEqual([{ ...old, retirementRetryAt: 123456 }, other]);
+  });
+
+  it('does not recreate completed cleanup or defer an active grant', async () => {
+    const old = mockGrantReference('old');
+    await LocalAuthService.commit({ ...record, pendingRetirements: [old] }, '');
+    await LocalAuthService.finishRetirement('old');
+    await LocalAuthService.deferRetirement('old', 123456);
+    await LocalAuthService.deferRetirement(record.sessionReference!.sessionStoreId, 123456);
+    expect(LocalAuthService.read()?.pendingRetirements).toEqual([]);
+    expect(LocalAuthService.read()?.sessionReference).toEqual(record.sessionReference);
+  });
+});

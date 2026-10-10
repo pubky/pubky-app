@@ -135,6 +135,44 @@ export class LocalAuthService {
     }
   }
 
+  /** Defer only an existing cleanup obligation, preserving concurrent login/logout metadata. */
+  static async deferRetirement(sessionStoreId: string, retryAt: number): Promise<void> {
+    const write = () => {
+      const raw = readDurableAuthStorage(localStorage);
+      if (!raw) return;
+      const record = persistedAuthSchema.parse(JSON.parse(raw).state);
+      const references = pendingRetirements(record);
+      if (
+        record.sessionReference?.sessionStoreId === sessionStoreId ||
+        !references.some((ref) => ref.sessionStoreId === sessionStoreId)
+      )
+        return;
+      const deferred = references.map((ref) =>
+        ref.sessionStoreId === sessionStoreId
+          ? { ...ref, retirementRetryAt: Math.max(ref.retirementRetryAt ?? 0, retryAt) }
+          : ref,
+      );
+      createAuthStorage(localStorage, true).setItem(
+        AUTH_PERSIST_KEY,
+        JSON.stringify({
+          version: AUTH_STORE_VERSION,
+          state: { ...record, retiringSession: null, pendingRetirements: deferred },
+        }),
+      );
+    };
+    try {
+      if (navigator.locks) await navigator.locks.request(AUTH_PERSIST_KEY, write);
+      else write();
+    } catch (error) {
+      if (isAppError(error)) throw error;
+      throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Could not defer session cleanup.', {
+        service: ErrorService.Local,
+        operation: 'deferRetirement',
+        cause: error,
+      });
+    }
+  }
+
   static async commit(
     record: PersistedAuth,
     expectedGeneration: string,

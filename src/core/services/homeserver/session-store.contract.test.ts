@@ -81,6 +81,18 @@ describe('pinned SDK session-store error contract', () => {
               ? 'Delegated grant key not found: absent-proof-key'
               : 'Unsupported stored session version.',
         });
+        if (outcome === 'unsupported-version') {
+          await expect(sdk.browserSessionStore.remove(id)).rejects.toMatchObject({
+            name: 'ClientStateError',
+            message: 'Unsupported stored session version.',
+          });
+          const retained = await new Promise<unknown>((resolve, reject) => {
+            const request = db.transaction('storedSessions').objectStore('storedSessions').get(id);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+          expect(retained).toMatchObject({ id, version: 'pubky-session-v999' });
+        }
         await expect(
           AuthApplication.restorePersistedSession({
             reference: { ...reference, sessionStoreId: id },

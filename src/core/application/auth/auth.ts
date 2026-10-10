@@ -115,6 +115,9 @@ export class AuthApplication {
   static prepareAccount(generation: string, isCurrent: () => boolean) {
     return LocalAuthService.prepareAccount(generation, isCurrent);
   }
+  static deferRetirement(sessionStoreId: string, retryAt: number) {
+    return LocalAuthService.deferRetirement(sessionStoreId, retryAt);
+  }
   static finishRetirement(sessionStoreId: string) {
     return LocalAuthService.finishRetirement(sessionStoreId);
   }

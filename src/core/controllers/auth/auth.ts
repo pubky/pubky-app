@@ -482,7 +482,7 @@ export class AuthController {
     const previousRestore = this.restorePromise;
     snapshot.setSession(null);
     snapshot.setRestoreStatus('restoring');
-    await previousRestore;
+    await previousRestore?.catch(() => false);
     if (this.restoreVersion !== version || !this.isCurrentGeneration(snapshot.generation)) return;
     // Recheck the SDK record: a delayed notification may refer to an earlier removal.
     await this.restorePersistedSession();
@@ -700,6 +700,13 @@ export class AuthController {
       session,
       restoreStatus: preserveContext && !needsAccountPreparation ? 'ready' : 'restoring',
     });
+    // Keep browser recovery keys until a replacement account is durably accepted.
+    // A same-account reauthorization must not erase its still-unconfirmed backup.
+    const onboarding = useOnboardingStore.getState();
+    const onboardingPubky = onboarding.secretKey
+      ? Identity.tryZ32FromSecret(onboarding.secretKey)
+      : onboarding.signupAttempt?.pubky;
+    if (onboardingPubky !== pubky) resetTabStore(useOnboardingStore, true);
     void this.retireLegacyCookieSessions();
     if (needsAccountPreparation) useAuthStore.getState().setNeedsAccountSync(true);
     if (!preserveContext || needsAccountPreparation) useAuthStore.getState().setRestoreStatus('restoring');
@@ -799,6 +806,7 @@ export class AuthController {
   private static retireSession(reference: SessionReference, livePrevious?: Session | null): Promise<void> {
     const existing = this.retirementTasks.get(reference.sessionStoreId);
     if (existing) return existing;
+    if ((reference.retirementRetryAt ?? 0) > Date.now()) return Promise.resolve();
     const task = (async () => {
       if (AuthApplication.readPersistedAuth()?.sessionReference?.sessionStoreId === reference.sessionStoreId) return;
       let session: Session | null = null;
@@ -815,7 +823,16 @@ export class AuthController {
         const terminal =
           isAppError(error) &&
           (error.context?.reason === 'missing_local_grant' || error.context?.reason === 'remote_logout_completed');
-        if (!terminal && reference.grantExpiresAt > Date.now() / 1000) throw error;
+        const reason = isAppError(error) ? error.context?.reason : undefined;
+        const expired = reference.grantExpiresAt <= Date.now() / 1000;
+        // Neither a rejected proof nor an unreadable SDK record proves remote revocation.
+        // Keep its credentials and share a one-hour retry delay across reloads and tabs.
+        // Unsupported records cannot be removed by this SDK, even after grant expiry.
+        if (reason === 'unsupported_stored_session' || (reason === 'invalid_grant' && !expired)) {
+          await AuthApplication.deferRetirement(reference.sessionStoreId, Date.now() + 60 * 60 * 1000);
+          throw error;
+        }
+        if (!terminal && !expired) throw error;
       }
       if (AuthApplication.readPersistedAuth()?.sessionReference?.sessionStoreId === reference.sessionStoreId) return;
       await AuthApplication.removeSessionRecord(reference);

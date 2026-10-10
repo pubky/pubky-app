@@ -491,7 +491,7 @@ function CollectionHeroContent({
           <DialogConfirmDelete
             open={deleteConfirmOpen}
             onOpenChange={setDeleteConfirmOpen}
-            onConfirm={() => void handleDeleteConfirm()}
+            onConfirm={handleDeleteConfirm}
             title="Delete collection?"
             description={deleteCollectionDescription}
           />

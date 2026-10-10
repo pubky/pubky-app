@@ -8,6 +8,8 @@ export const sessionReferenceSchema = z.object({
   grantId: z.string().min(1),
   grantExpiresAt: z.number().finite(),
   tokenExpiresAt: z.number().finite(),
+  /** Milliseconds; only used for queued cleanup whose SDK restore was rejected. */
+  retirementRetryAt: z.number().finite().optional(),
 });
 
 /** Grant secrets stay in the SDK's IndexedDB; this record contains only public metadata. */

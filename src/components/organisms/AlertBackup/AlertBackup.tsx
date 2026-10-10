@@ -11,12 +11,22 @@ import { useEffect, useState } from 'react';
 import { TriangleAlert } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { Identity } from '@/libs/identity/identity';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { DialogBackup } from '../DialogBackup/DialogBackup';
 import { DialogConfirmBackup } from '../DialogConfirmBackup/DialogConfirmBackup';
 
 export const AlertBackup = () => {
   const { secretKey } = useOnboardingStore();
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const restoreStatus = useAuthStore((state) => state.restoreStatus);
+  const needsSignIn = Boolean(
+    restoreStatus === 'reauth-required' &&
+    secretKey &&
+    currentUserPubky &&
+    Identity.tryZ32FromSecret(secretKey) === currentUserPubky,
+  );
   const [showAlert, setShowAlert] = useState(false);
   useEffect(() => {
     if (secretKey) {
@@ -32,7 +42,7 @@ export const AlertBackup = () => {
     return null;
   }
   return (
-    <Container className="flex-row items-center gap-3 rounded-lg bg-brand px-6 py-3">
+    <Container className="flex-row flex-wrap items-center gap-3 rounded-lg bg-brand px-6 py-3">
       <Container className="flex-1 flex-row items-center gap-3">
         <TriangleAlert className="h-4 w-4 font-bold text-primary-foreground" />
         <Typography size="sm" className="font-bold whitespace-nowrap text-primary-foreground">
@@ -42,6 +52,12 @@ export const AlertBackup = () => {
       </Container>
       <DialogBackup />
       <DialogConfirmBackup onConfirm={handleDismiss} />
+      {needsSignIn && (
+        <Typography size="sm" className="basis-full text-primary-foreground">
+          Save your recovery phrase or encrypted file using Backup, then use it on the Sign In page to access your
+          account again. If you already have a backup, you can use that instead.
+        </Typography>
+      )}
     </Container>
   );
 };

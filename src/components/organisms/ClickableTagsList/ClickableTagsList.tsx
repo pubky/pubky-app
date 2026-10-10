@@ -104,12 +104,10 @@ export function ClickableTagsList({
       e.stopPropagation();
       return;
     }
-    {
-      if (onTagClick) {
-        onTagClick(tag, index, e);
-      } else {
-        void handleTagToggle(tag);
-      }
+    if (onTagClick) {
+      onTagClick(tag, index, e);
+    } else {
+      void handleTagToggle(tag);
     }
   };
 

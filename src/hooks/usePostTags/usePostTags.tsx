@@ -201,10 +201,10 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
 
   const handleTagToggle = useCallback(
     async (tag: { label: string; relationship?: boolean }): Promise<void> => {
-      if (!postId || !viewerId) return;
+      if (!postId) return;
       const revision = viewRevision.current;
       if (!(await waitForAuth(tag.label.toLowerCase()))) return;
-      if (viewRevision.current !== revision) return;
+      if (viewRevision.current !== revision || !viewerId) return;
 
       // Use the relationship from the tag (which comes from transformTagsForViewer)
       // This is more reliable than checking the taggers array which may be truncated

@@ -164,6 +164,65 @@ afterEach(async () => {
 });
 
 describe('grant-only session lifecycle', () => {
+  it.each([true, false])(
+    'clears unrelated browser keys only after durable account adoption (same account: %s)',
+    async (sameAccount) => {
+      useOnboardingStore.setState({ secretKey: 'saved-key', mnemonic: 'saved phrase', hasHydrated: true });
+      vi.spyOn(Identity, 'tryZ32FromSecret').mockReturnValue(PUBKY);
+      const flow = startFlow();
+      const result = await AuthController.getAuthUrl();
+      expect(useOnboardingStore.getState().secretKey).toBe('saved-key');
+      flow.approval.resolve(grantSession(undefined, sameAccount ? PUBKY : OTHER_PUBKY));
+      await result.awaitApproval;
+      expect(useOnboardingStore.getState().secretKey).toBe(sameAccount ? 'saved-key' : null);
+      expect(useOnboardingStore.getState().mnemonic).toBe(sameAccount ? 'saved phrase' : null);
+    },
+  );
+
+  it('preserves browser keys if saving the approved session fails', async () => {
+    useOnboardingStore.setState({ secretKey: 'saved-key', mnemonic: 'saved phrase' });
+    const flow = startFlow();
+    const result = await AuthController.getAuthUrl();
+    vi.mocked(AuthApplication.saveSession).mockRejectedValue(offline());
+    flow.approval.resolve(grantSession(undefined, OTHER_PUBKY));
+    await expect(result.awaitApproval).rejects.toThrow();
+    expect(useOnboardingStore.getState()).toMatchObject({ secretKey: 'saved-key', mnemonic: 'saved phrase' });
+  });
+
+  it.each(['invalid_grant', 'unsupported_stored_session'])(
+    'defers %s cleanup across reloads without discarding credentials, then retries',
+    async (reason) => {
+      const old = grantReference('retired-sdk-rejection');
+      const record = AuthApplication.readPersistedAuth()!;
+      localStorage.setItem(
+        AUTH_PERSIST_KEY,
+        JSON.stringify({ version: 3, state: { ...record, pendingRetirements: [old] } }),
+      );
+      vi.mocked(AuthApplication.restoreReference).mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'SDK restore rejected', {
+          service: ErrorService.Homeserver,
+          operation: 'restoreGrant',
+          context: { reason },
+        }),
+      );
+      await AuthController.retrySessionRetirement();
+      const queued = pendingRetirements(AuthApplication.readPersistedAuth()!);
+      expect(queued).toEqual([{ ...old, retirementRetryAt: expect.any(Number) }]);
+      expect(AuthApplication.removeSessionRecord).not.toHaveBeenCalled();
+      expect(AuthApplication.logout).not.toHaveBeenCalled();
+      await useAuthStore.persist.rehydrate();
+      await AuthController.retrySessionRetirement();
+      await AuthController.retrySessionRetirement();
+      expect(AuthApplication.restoreReference).toHaveBeenCalledOnce();
+      vi.spyOn(Date, 'now').mockReturnValue(queued[0].retirementRetryAt!);
+      await AuthController.retrySessionRetirement();
+      expect(AuthApplication.restoreReference).toHaveBeenCalledTimes(2);
+      expect(AuthApplication.logout).toHaveBeenCalledOnce();
+      expect(pendingRetirements(AuthApplication.readPersistedAuth()!)).toEqual([]);
+      expect(useAuthStore.getState().currentUserPubky).toBe(PUBKY);
+    },
+  );
+
   it('restores a grant without forcing replacement or clearing account data', async () => {
     seed(null);
     vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
@@ -879,6 +938,28 @@ describe('grant-only migration and SDK removal events', () => {
     await AuthController.syncRemovedSession(null);
     expect(useAuthStore.getState()).toMatchObject({ session: narrowGrant, restoreStatus: 'ready' });
   });
+  it('rechecks removal even when the superseded restore rejects', async () => {
+    seed(null, narrowReference);
+    const oldRestore = deferred<{ status: 'restored'; session: Session }>();
+    vi.spyOn(AuthApplication, 'restorePersistedSession')
+      .mockReturnValueOnce(oldRestore.promise)
+      .mockResolvedValue({ status: 'reauth-required' });
+    const restoring = AuthController.restorePersistedSession();
+    const rejected = expect(restoring).rejects.toMatchObject({ code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER });
+    const removing = AuthController.syncRemovedSession(narrowReference.sessionStoreId);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    oldRestore.reject(
+      Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'Wrong environment', {
+        service: ErrorService.Homeserver,
+        operation: 'guard',
+      }),
+    );
+    await rejected;
+    await expect(removing).resolves.toBeUndefined();
+    expect(useAuthStore.getState()).toMatchObject({ session: null, restoreStatus: 'reauth-required' });
+    expect(AuthApplication.restorePersistedSession).toHaveBeenCalledTimes(2);
+  });
+
   it('does not resurrect a handle from a restore that was running when removal arrived', async () => {
     seed(null, narrowReference);
     const oldRestore = deferred<{ status: 'restored'; session: Session }>();

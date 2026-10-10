@@ -16,7 +16,6 @@ import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
-import { onboardingInitialState } from '@/stores/onboarding/onboarding.types';
 import { mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { usePassportAuth } from './usePassportAuth';
@@ -154,7 +153,7 @@ describe('usePassportAuth', () => {
     vi.restoreAllMocks();
   });
 
-  it('opens the popup synchronously, resets onboarding secrets, then navigates it to Passport', async () => {
+  it('opens the popup synchronously, preserves backup material, then navigates it to Passport', async () => {
     useOnboardingStore.setState({ secretKey: 'abandoned-secret', mnemonic: 'abandoned words', inviteCode: 'CODE' });
     const flow = createFlow();
     mockGetPassportAuthUrl.mockResolvedValue(flow);
@@ -164,16 +163,16 @@ describe('usePassportAuth', () => {
       hook.result.current.startPassportAuth();
     });
 
-    // Popup opened before any await; secrets from an abandoned browser-key sign-up are gone.
+    // Opening a popup is not successful account adoption and must not erase the only backup.
     expect(openSpy).toHaveBeenCalledTimes(1);
     expect(openSpy).toHaveBeenCalledWith(
       'about:blank',
       `pubky-passport-${attemptIds[0]}`,
       expect.stringContaining('popup'),
     );
-    expect(useOnboardingStore.getState().secretKey).toBe(onboardingInitialState.secretKey);
-    expect(useOnboardingStore.getState().mnemonic).toBe(onboardingInitialState.mnemonic);
-    expect(useOnboardingStore.getState().inviteCode).toBe(onboardingInitialState.inviteCode);
+    expect(useOnboardingStore.getState().secretKey).toBe('abandoned-secret');
+    expect(useOnboardingStore.getState().mnemonic).toBe('abandoned words');
+    expect(useOnboardingStore.getState().inviteCode).toBe('CODE');
 
     await flushMicrotasks();
     expect(hook.result.current.isPending).toBe(true);
@@ -188,7 +187,7 @@ describe('usePassportAuth', () => {
     expect(listeners).toHaveLength(1);
   });
 
-  it('clears abandoned draft keys even if the draft pubky is still in auth memory', async () => {
+  it('preserves draft keys until Passport actually adopts an account', async () => {
     useAuthStore.setState({
       currentUserPubky: 'draft-account',
       session: null,
@@ -199,25 +198,28 @@ describe('usePassportAuth', () => {
     mockGetPassportAuthUrl.mockResolvedValue(createFlow());
     const hook = renderHook(() => usePassportAuth());
     act(() => hook.result.current.startPassportAuth());
-    expect(useOnboardingStore.getState().secretKey).toBeNull();
-    expect(useOnboardingStore.getState().mnemonic).toBeNull();
+    expect(useOnboardingStore.getState().secretKey).toBe('draft-secret');
+    expect(useOnboardingStore.getState().mnemonic).toBe('draft words');
     await flushMicrotasks();
   });
 
-  it('preserves pending backup material when Passport recovery fails', async () => {
-    useAuthStore.setState({ currentUserPubky: 'recovering-account', restoreStatus: 'reauth-required' });
-    useOnboardingStore.setState({ secretKey: 'saved-secret', mnemonic: 'saved words' });
-    mockGetPassportAuthUrl.mockRejectedValue(new Error('Network unavailable'));
-    const hook = renderHook(() => usePassportAuth());
-    act(() => hook.result.current.startPassportAuth());
-    await flushMicrotasks();
-    expect(useOnboardingStore.getState()).toMatchObject({
-      secretKey: 'saved-secret',
-      mnemonic: 'saved words',
-    });
-    expect(useAuthStore.getState().currentUserPubky).toBe('recovering-account');
-    expect(hook.result.current.isPending).toBe(false);
-  });
+  it.each(['reauth-required', 'temporary-error', 'restoring'] as const)(
+    'preserves pending backup material when Passport fails during %s',
+    async (restoreStatus) => {
+      useAuthStore.setState({ currentUserPubky: 'recovering-account', restoreStatus });
+      useOnboardingStore.setState({ secretKey: 'saved-secret', mnemonic: 'saved words' });
+      mockGetPassportAuthUrl.mockRejectedValue(new Error('Network unavailable'));
+      const hook = renderHook(() => usePassportAuth());
+      act(() => hook.result.current.startPassportAuth());
+      await flushMicrotasks();
+      expect(useOnboardingStore.getState()).toMatchObject({
+        secretKey: 'saved-secret',
+        mnemonic: 'saved words',
+      });
+      expect(useAuthStore.getState().currentUserPubky).toBe('recovering-account');
+      expect(hook.result.current.isPending).toBe(false);
+    },
+  );
 
   it('settles popup-blocked without starting a flow or touching onboarding state when the popup is blocked', async () => {
     openSpy.mockImplementation(() => null);

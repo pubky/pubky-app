@@ -2428,3 +2428,28 @@ describe('active session failure notifications', () => {
     });
   });
 });
+
+describe('saved grant telemetry contract', () => {
+  it.each([
+    ['ClientStateError', 'Stored Pubky session not found: test-grant', true],
+    ['ClientStateError', 'Browser session was signed out.', true],
+    ['ClientStateError', 'Browser session is no longer valid.', true],
+    ['ClientStateError', 'Unsupported stored session version.', false],
+    ['ClientStateError', 'Database unavailable', false],
+    ['AuthenticationError', 'Invalid proof', false],
+  ])('filters only expected restore outcomes: %s / %s', async (name, message, expected) => {
+    const { HomeserverService } = await import('./homeserver');
+    const { AppError: CurrentAppError } = await import('@/libs/error/error');
+    mockState.sessionStoreAvailable.mockResolvedValue(true);
+    mockState.restoreGrant.mockRejectedValue({ name, message });
+    let caught: unknown;
+    try {
+      await HomeserverService.restoreReference(mockGrantReference('test-grant'));
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(CurrentAppError);
+    if (!(caught instanceof CurrentAppError)) throw caught;
+    expect(shouldDropAppErrorFromSentry(caught)).toBe(expected);
+  });
+});

@@ -1,9 +1,14 @@
 import React from 'react';
+import { Keypair } from '@synonymdev/pubky';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import type { PassportAttemptSettledEvent } from '@/hooks/usePassportAuth/usePassportAuth.types';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { ONBOARDING_PERSIST_KEY } from '@/stores/persistedKeys';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { SignInContent, SignInFooter } from './SignIn';
 
@@ -59,13 +64,6 @@ const resetMockSignInState = () => {
 };
 
 // Mock dependencies
-vi.mock('@/stores/onboarding/onboarding.store', () => ({
-  useOnboardingStore: {
-    getState: vi.fn().mockReturnValue({
-      reset: vi.fn(),
-    }),
-  },
-}));
 vi.mock('@/stores/signIn/signIn.store', () => ({
   useSignInStore: vi.fn((selector) => {
     if (typeof selector === 'function') {
@@ -299,6 +297,23 @@ vi.mock('@/atoms/Typography/Typography', () => {
 });
 
 describe('SignInContent', () => {
+  it.each(['reauth-required', 'temporary-error', 'restoring'] as const)(
+    'preserves the browser recovery key on sign-in mount during %s',
+    (restoreStatus) => {
+      const keypair = Keypair.random();
+      const secretKey = Buffer.from(keypair.secret()).toString('hex');
+      useAuthStore.setState({ ...authInitialState, currentUserPubky: keypair.publicKey.z32(), restoreStatus });
+      useOnboardingStore.setState({ secretKey, mnemonic: 'saved recovery phrase', hasHydrated: true });
+      const persisted = localStorage.getItem(ONBOARDING_PERSIST_KEY);
+      const { unmount } = render(<SignInContent />);
+      expect(useOnboardingStore.getState()).toMatchObject({ secretKey, mnemonic: 'saved recovery phrase' });
+      expect(localStorage.getItem(ONBOARDING_PERSIST_KEY)).toBe(persisted);
+      unmount();
+      useOnboardingStore.getState().reset();
+      useAuthStore.setState(authInitialState);
+    },
+  );
+
   const originalLocation = window.location;
   const clipboardMock = { writeText: vi.fn().mockResolvedValue(undefined) };
 

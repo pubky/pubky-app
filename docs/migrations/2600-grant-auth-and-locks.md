@@ -37,6 +37,10 @@ A valid older grant without the Locks scopes can be upgraded for the same accoun
   The legacy singular reference is read compatibly. Only confirmed cleanup removes a queue item; normal metadata
   updates cannot overwrite it, and a later login merges any obligations retained after tab-only logout.
   Rejection of an old grant does not block its valid replacement, but remote revocation remains unconfirmed.
+  Rejected or unsupported SDK records retain their credentials and a persisted one-hour retry delay; reloads and
+  online events respect that delay. Normal network failures remain eligible for retry when connectivity returns.
+  Unsupported records also remain queued after expiry because SDK 0.15 cannot remove them. Known missing,
+  signed-out or invalid-grant restore outcomes are excluded from error telemetry; unreadable versions still report.
 - Account switches persist a pending database-preparation marker before exposing the replacement reference. Restore,
   including another tab or a reload, completes that preparation before bootstrap. A separate shared Web Lock keeps
   retries behind all in-flight table clears; timeout does not release it. Failed preparation remains retryable, while
@@ -147,6 +151,12 @@ require explicit confirmation before replaying a payment.
 Owned `/pub/` and `/priv/` paths use `session.storage`; full Pubky URLs must identify the current account.
 `getBytesIfExists()` returns `{ bytes, modifiedAt }` or `null` only for 404. Authentication, permission and network errors
 remain visible. `modifiedAt` is milliseconds since epoch, or null.
+
+## Rollout communication
+
+Existing cookie users must sign in again. Browser-key users can save their recovery phrase or encrypted file from
+Backup, then use it to sign in; opening Sign In or starting Passport preserves that backup material.
+Whether and how to announce this change before release is a separate product decision.
 
 ## Verification before production rollout
 

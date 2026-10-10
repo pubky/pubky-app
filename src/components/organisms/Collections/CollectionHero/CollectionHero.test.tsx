@@ -72,6 +72,10 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockViewportState.isMobile,
 }));
 
+const confirmDeleteProps = vi.hoisted(() => ({
+  onConfirm: null as null | (() => void | boolean | Promise<void | boolean>),
+}));
+
 vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => ({
   DialogConfirmDelete: ({
     open,
@@ -81,17 +85,19 @@ vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => ({
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onConfirm: () => void;
+    onConfirm: () => void | boolean | Promise<void | boolean>;
     title?: string;
     description?: string;
-  }) =>
-    open ? (
+  }) => {
+    confirmDeleteProps.onConfirm = onConfirm;
+    return open ? (
       <div data-testid="dialog-confirm-delete" data-title={title} data-description={description}>
         <button data-testid="dialog-confirm-delete-btn" onClick={onConfirm}>
           confirm delete
         </button>
       </div>
-    ) : null,
+    ) : null;
+  },
 }));
 
 const mockUnBlur = vi.fn();
@@ -632,6 +638,25 @@ describe('CollectionHero', () => {
     });
 
     describe('delete flow', () => {
+      it.each([true, false])('passes the pending deletion result back to the dialog (%s)', async (success) => {
+        setAuthStore(AUTHOR_PUBKY);
+        const pending = Promise.withResolvers<boolean>();
+        mockDeletePost.mockReturnValueOnce(pending.promise);
+        renderHero();
+        fireEvent.click(screen.getByLabelText('Delete'));
+        let confirmation!: ReturnType<NonNullable<typeof confirmDeleteProps.onConfirm>>;
+        act(() => {
+          confirmation = confirmDeleteProps.onConfirm!();
+        });
+        expect(confirmation).toBeInstanceOf(Promise);
+        expect(mockRouterReplace).not.toHaveBeenCalled();
+        await act(async () => {
+          pending.resolve(success);
+          expect(await confirmation).toBe(success);
+        });
+        expect(mockRouterReplace).toHaveBeenCalledTimes(success ? 1 : 0);
+      });
+
       it('opens the confirmation dialog with the collection-specific i18n namespace on Delete click', () => {
         setAuthStore(AUTHOR_PUBKY);
         renderHero();

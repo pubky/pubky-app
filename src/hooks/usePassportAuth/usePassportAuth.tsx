@@ -23,8 +23,6 @@ import {
 } from '@/libs/passport/passport';
 import type { PassportOutcome } from '@/libs/passport/passport.types';
 import { toast } from '@/molecules/Toaster/toast';
-import { useAuthStore } from '@/stores/auth/auth.store';
-import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import type {
   PassportAttemptResult,
   PassportFailureReason,
@@ -275,11 +273,6 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
       onAttemptSettledRef.current?.({ attemptId, result: 'popup-blocked' });
       return;
     }
-
-    // Fresh sign-in discards abandoned signup keys. Recovery must preserve the current account's
-    // backup material until same-account authorization succeeds.
-    const auth = useAuthStore.getState();
-    if (auth.restoreStatus !== 'reauth-required' || !auth.currentUserPubky) useOnboardingStore.getState().reset();
 
     const attempt: PassportAttempt = {
       id: attemptId,
