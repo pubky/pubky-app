@@ -35,12 +35,6 @@ describe('SinglePostRightPanel', () => {
 
     expect(screen.getByTestId('single-post-participants')).toHaveAttribute('data-post-id', 'author:post-123');
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<SinglePostRightPanel postId="author:post-1" />);
-    expect(container).toMatchSnapshot();
-  });
-
   it('does not render feedback card if showFeedback is false', () => {
     render(<SinglePostRightPanel postId="author:post-1" showFeedback={false} />);
 

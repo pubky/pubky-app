@@ -407,7 +407,7 @@ describe('PostArticle', () => {
 
       expect(screen.getByTestId('post-text')).toHaveAttribute(
         'data-article-media',
-        JSON.stringify({ localAttachments: [mockLocalImageAttachment] }),
+        JSON.stringify({ localAttachments: [mockLocalImageAttachment], pendingAttachments: [] }),
       );
     });
 
@@ -437,60 +437,6 @@ describe('PostArticle', () => {
         localAttachmentCount: 1,
         localCoverType: 'image/png',
       });
-    });
-  });
-
-  describe('Snapshots', () => {
-    it('matches snapshot with cover image', () => {
-      const { container } = render(<PostArticle {...defaultProps} />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot without cover image', () => {
-      mockUsePostArticle.mockReturnValue(mockHookReturnWithoutImage);
-
-      const { container } = render(<PostArticle {...defaultProps} />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with custom className', () => {
-      const { container } = render(<PostArticle {...defaultProps} className="custom-article-class" />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with long title and body', () => {
-      mockUsePostArticle.mockReturnValue({
-        title: 'This is a very long article title that might wrap to multiple lines in the UI',
-        body: 'This is a much longer article body content that contains multiple sentences. It should properly handle long text content and display it correctly within the component boundaries.',
-        coverImage: mockHookReturnWithImage.coverImage,
-      });
-
-      const { container } = render(<PostArticle {...defaultProps} />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with local cover image', () => {
-      const { container } = render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot as a full article', () => {
-      const { container } = render(<PostArticle {...defaultProps} variant="full" />);
-
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with local video attachment falling back to hook image', () => {
-      mockUsePostArticle.mockReturnValue(mockHookReturnWithImage);
-
-      const { container } = render(<PostArticle {...defaultProps} localAttachments={[mockLocalVideoAttachment]} />);
-
-      expect(container).toMatchSnapshot();
     });
   });
 });

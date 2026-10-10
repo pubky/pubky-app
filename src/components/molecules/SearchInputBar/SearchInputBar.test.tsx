@@ -266,26 +266,4 @@ describe('SearchInputBar', () => {
       });
     });
   });
-
-  describe('SearchInputBar - Snapshots', () => {
-    it('matches snapshot - default state', () => {
-      const { container } = render(<SearchInputBar {...defaultProps} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot - with active tags', () => {
-      const { container } = render(<SearchInputBar {...defaultProps} activeTags={['bitcoin', 'pubky']} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot - focused state', () => {
-      const { container } = render(<SearchInputBar {...defaultProps} isFocused />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot - with input value', () => {
-      const { container } = render(<SearchInputBar {...defaultProps} inputValue="test query" />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

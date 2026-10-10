@@ -29,7 +29,8 @@ function fromEntry(type: string, url: string, name: string | undefined): Resolve
  *   a skeleton until the metadata read settles. A slot that settled with no row, an out-of-range
  *   or non-author slot, and every malformed ref go to `ArticleInlineImage`, as today; a row of a
  *   type nothing here renders is a placeholder that requests nothing.
- * - `attachment:{n}` of unlocked content: typed from the bytes the reader holds.
+ * - `attachment:{n}` of unlocked content: typed from the bytes the reader holds; a slot whose bytes
+ *   are still downloading (listed as pending) is a skeleton.
  * - A direct `pubky://` URI stays an image: its metadata is never requested (documented limit).
  * - An `https:` URL is typed by its file extension; anything unknown stays an image.
  */
@@ -44,7 +45,12 @@ export function resolveArticleMedia(
   if ('localAttachments' in params) {
     if (index === null) return resolveDirect(trimmed);
     const entry = getAttachmentAtSlot(params.localAttachments, index);
-    return entry ? fromEntry(entry.type, entry.urls.main, entry.name) : IMAGE;
+    if (entry) return fromEntry(entry.type, entry.urls.main, entry.name);
+    // Unlocked bytes still downloading: hold the slot's space rather than show it as lost. A pending
+    // image is `ArticleInlineImage`'s to hold, as every image slot is.
+    const pending = getAttachmentAtSlot(params.pendingAttachments, index);
+    if (!pending || getInlineMediaKindFromMime(pending.type) === 'image') return IMAGE;
+    return { kind: 'loading' };
   }
 
   if (index !== null) {

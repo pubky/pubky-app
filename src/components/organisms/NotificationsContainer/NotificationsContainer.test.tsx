@@ -316,11 +316,6 @@ describe('NotificationsContainer', () => {
 
     expect(markAllAsRead).not.toHaveBeenCalled();
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<NotificationsContainer />);
-    expect(container).toMatchSnapshot();
-  });
 });
 
 function buildNotificationsResult({

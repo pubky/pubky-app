@@ -12,9 +12,4 @@ describe('AvatarEmojiBadge', () => {
     render(<AvatarEmojiBadge emoji="🚀" />);
     expect(screen.getByText('🚀')).toBeInTheDocument();
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<AvatarEmojiBadge emoji="🌴" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });

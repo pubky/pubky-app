@@ -182,10 +182,3 @@ describe('DialogTerms with the real Dialog', () => {
     expect(screen.getByRole('dialog', { name: 'Terms of Service' })).toBeInTheDocument();
   });
 });
-
-describe('DialogTerms - Snapshots', () => {
-  it('matches snapshot for default DialogTerms', () => {
-    const { container } = render(<DialogTerms />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

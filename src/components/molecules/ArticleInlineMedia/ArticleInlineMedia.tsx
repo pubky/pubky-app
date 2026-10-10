@@ -55,7 +55,12 @@ export const ArticleInlineMedia = ({ src, alt, onLinkClick, ...source }: Article
 
   if (resolved.kind === 'image') {
     return 'localAttachments' in source ? (
-      <ArticleInlineImage src={src} alt={alt} localAttachments={source.localAttachments} />
+      <ArticleInlineImage
+        src={src}
+        alt={alt}
+        localAttachments={source.localAttachments}
+        pendingAttachments={source.pendingAttachments}
+      />
     ) : (
       <ArticleInlineImage
         src={src}

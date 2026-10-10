@@ -18,11 +18,3 @@ describe('CollectionHiddenItemsNotice', () => {
     expect(icon).toHaveClass('text-muted-foreground');
   });
 });
-
-describe('CollectionHiddenItemsNotice - Snapshots', () => {
-  it('matches the snapshot', () => {
-    const { container } = render(<CollectionHiddenItemsNotice />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

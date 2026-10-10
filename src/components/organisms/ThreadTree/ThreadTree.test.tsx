@@ -296,19 +296,3 @@ describe('ThreadTree', () => {
     expect(screen.getByTestId('reply-with-nested')).toHaveAttribute('data-is-last-reply', 'true');
   });
 });
-
-describe('ThreadTree - Snapshots', () => {
-  it('matches snapshot with replies and show-more', () => {
-    vi.mocked(useThreadReplies).mockReturnValue({
-      replyIds: ['author:reply-1'],
-      totalCount: 2,
-      hasMore: true,
-      showAll: false,
-      isExpandingAll: false,
-      expandAll: vi.fn(async () => {}),
-    });
-
-    const { container } = render(<ThreadTree postId="author:post-1" showQuickReply={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

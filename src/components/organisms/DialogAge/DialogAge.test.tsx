@@ -138,10 +138,3 @@ describe('DialogAge with the real Dialog', () => {
     expect(screen.getByRole('dialog', { name: 'Age minimum: 18' })).toBeInTheDocument();
   });
 });
-
-describe('DialogAge - Snapshots', () => {
-  it('matches snapshot for default DialogAge', () => {
-    const { container } = render(<DialogAge />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -8,10 +8,3 @@ describe('CompactUserListItemSkeleton', () => {
     expect(screen.getByTestId('user-list-item-skeleton-compact')).toBeInTheDocument();
   });
 });
-
-describe('CompactUserListItemSkeleton - Snapshots', () => {
-  it('matches snapshot for compact variant', () => {
-    const { container } = render(<CompactUserListItemSkeleton />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

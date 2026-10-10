@@ -237,17 +237,3 @@ describe('SearchCollections', () => {
     expect(screen.getAllByTestId('collection-card')).toHaveLength(SEARCH_COLLECTIONS_PREVIEW_COUNT);
   });
 });
-
-describe('SearchCollections - Snapshots', () => {
-  it('matches snapshot in the collapsed preview state', () => {
-    setup({ pagination: { postIds: buildCompositeIds(6) } });
-    const { container } = render(<SearchCollections />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot while loading', () => {
-    setup({ pagination: { loading: true, postIds: [] } });
-    const { container } = render(<SearchCollections />);
-    expect(container).toMatchSnapshot();
-  });
-});

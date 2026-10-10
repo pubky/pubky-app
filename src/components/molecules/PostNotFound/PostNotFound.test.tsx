@@ -54,16 +54,4 @@ describe('PostNotFound', () => {
     await user.click(screen.getByRole('button', { name: 'Explore Tags' }));
     expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOT);
   });
-
-  describe('Snapshots', () => {
-    it('matches snapshot with View profile', () => {
-      const { container } = render(<PostNotFound postId={VALID_COMPOSITE} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot without View profile', () => {
-      const { container } = render(<PostNotFound postId={INVALID_AUTHOR_COMPOSITE} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

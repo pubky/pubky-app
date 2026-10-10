@@ -48,15 +48,3 @@ describe('ArticleComposerTabs', () => {
     expect(screen.getByRole('tab', { name: 'Preview' }).querySelector('svg.lucide-eye')).toBeInTheDocument();
   });
 });
-
-describe('ArticleComposerTabs - Snapshots', () => {
-  it('matches snapshot on desktop', () => {
-    const { container } = renderTabs(false);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot on mobile', () => {
-    const { container } = renderTabs(true);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

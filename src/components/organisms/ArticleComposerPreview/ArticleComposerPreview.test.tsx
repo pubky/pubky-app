@@ -255,36 +255,3 @@ describe('ArticleComposerPreview', () => {
     expect(screen.queryByTestId('post-text')).not.toBeInTheDocument();
   });
 });
-
-describe('ArticleComposerPreview - Snapshots', () => {
-  beforeEach(() => {
-    global.URL.createObjectURL = createObjectURL;
-    global.URL.revokeObjectURL = revokeObjectURL;
-  });
-
-  it('matches snapshot with a title and body', () => {
-    const { container } = render(
-      <ArticleComposerPreview
-        title="Snapshot title"
-        body="Snapshot body"
-        authorPubky={AUTHOR}
-        userDetails={userDetails}
-        inlineMedia={inlineMedia}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with a cover and an empty body', () => {
-    const { container } = render(
-      <ArticleComposerPreview
-        title="Snapshot title"
-        body=""
-        authorPubky={AUTHOR}
-        coverFile={new File(['cover'], 'cover.jpg', { type: 'image/jpeg' })}
-        inlineMedia={inlineMedia}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

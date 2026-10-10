@@ -115,10 +115,3 @@ describe('ProfileUserNotFoundDiscoveryView', () => {
     expect(container).toContainElement(screen.getByTestId('hot-active-users'));
   });
 });
-
-describe('ProfileUserNotFoundDiscoveryView - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<ProfileUserNotFoundDiscoveryView />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

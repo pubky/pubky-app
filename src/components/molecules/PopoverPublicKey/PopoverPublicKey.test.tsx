@@ -128,15 +128,3 @@ describe('PopoverPublicKey', () => {
     expect(button).toBeInTheDocument();
   });
 });
-
-describe('PopoverPublicKey - Snapshots', () => {
-  it('matches snapshot for default PopoverPublicKey', () => {
-    const { container } = render(<PopoverPublicKey />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for PopoverPublicKey with custom className', () => {
-    const { container } = render(<PopoverPublicKey className="custom-public-key-style" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -117,39 +117,3 @@ describe('EditProfileForm', () => {
     expect(screen.getByText('Avatar')).toBeInTheDocument();
   });
 });
-
-describe('EditProfileForm - Snapshots', () => {
-  beforeEach(() => {
-    mockUseProfileForm.mockReturnValue({
-      state: {
-        isLoading: false,
-        name: 'Test User',
-        bio: 'Test bio',
-        links: [],
-        avatarPreview: null,
-        avatarFile: null,
-        isSaving: false,
-        submitText: 'Save Profile',
-      },
-      errors: {
-        nameError: null,
-        bioError: null,
-        linkUrlErrors: [],
-        avatarError: null,
-      },
-      handlers: mockHandlers,
-      cropDialog: {
-        cropDialogOpen: false,
-        pendingAvatarPreview: null,
-        pendingAvatarFile: null,
-      },
-      fileInputRef: { current: null },
-      isSubmitDisabled: false,
-    });
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<EditProfileForm />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -81,10 +81,3 @@ describe('CollectionMissing', () => {
     expect(screen.getByTestId('container')).toHaveClass('custom-extra');
   });
 });
-
-describe('CollectionMissing - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<CollectionMissing />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

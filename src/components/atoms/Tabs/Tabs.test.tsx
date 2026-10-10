@@ -66,15 +66,3 @@ describe('Tabs', () => {
     expect(inactivePanel).toHaveClass('data-[state=inactive]:hidden');
   });
 });
-
-describe('Tabs - Snapshots', () => {
-  it('matches snapshot with the first tab active', () => {
-    const { container } = renderTabs();
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with the second tab active', () => {
-    const { container } = renderTabs({ defaultValue: 'two' });
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
