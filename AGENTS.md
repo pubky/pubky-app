@@ -32,7 +32,7 @@ Hard constraints (review-enforced, not compiler-enforced; `docs/architecture.md`
 - Coordinators NEVER call Application; they go through Controllers.
 - Application NEVER accesses Stores and never calls Controllers; only Controllers manage stores.
 - Services NEVER access Stores, except session reads in `HomeserverService` / `LocksService` via `getState()`
-  (ADR-0004/0023), including auth failure metadata and the Locks creator-owner check against the current app account;
+  (ADR-0004/0024), including auth failure metadata and the Locks creator-owner check against the current app account;
   reads only, never writes.
 - Pipes are pure: NO IO, NO side effects. Services never call up. Models touch Dexie only.
 - Cross-Application calls (ADR-0009): only PostApplication, NotificationApplication, BootstrapApplication, MigrationApplication,
@@ -57,6 +57,8 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - Local-first writes: Dexie first, homeserver sync after, roll back on failure, refresh every affected `*_ttl` row, persist
   dependencies before dependents; stream cursors only from Nexus, never `indexed_at`. `docs/local-first.md`, `docs/data-patterns.md`
 - Composite post ids `author:postId` via `buildCompositeId` / `parseCompositeId`. `docs/data-patterns.md`
+- Article bodies embed every media kind as `![alt](attachment:{n})`; the kind comes from file metadata, never the
+  markdown, and the cover stays image-only. `docs/data-patterns.md`, ADR-0023
 - Shadcn first and design tokens only (`bg-primary`, not `bg-[#1a1a1a]` or `p-[13px]`); atomic tiers atoms → molecules →
   organisms → templates; z-index only `-z-10, z-10, z-30, z-40, z-50, z-60`. `docs/components.md`, `docs/z-index.md`
 - No `useCallback` / `useMemo` / `React.memo`: the React Compiler handles it. Add one only with profiler evidence.

@@ -1324,19 +1324,43 @@ vi.mock('@/molecules/ArticleInlineImage/ArticleInlineImage', () => ({
   ),
 }));
 
+vi.mock('@/libs/file/pubkyFileCdnUrl', () => ({
+  pubkyUriToCdnUrl: (uri: string, variant: string) => `cdn://${uri}/${variant}`,
+}));
+
 describe('Article inline images', () => {
   const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
-  const articleImages = {
-    attachments: [`pubky://${AUTHOR}/pub/pubky.app/files/cover`, `pubky://${AUTHOR}/pub/pubky.app/files/inline`],
+  const attachments = [`pubky://${AUTHOR}/pub/pubky.app/files/cover`, `pubky://${AUTHOR}/pub/pubky.app/files/inline`];
+  const articleMedia = {
+    attachments,
     authorId: AUTHOR,
     postId: `${AUTHOR}:post1`,
+    files: [],
+    metadataSettled: true,
   };
 
   beforeEach(() => {
     mockUsePathname.mockReturnValue('/post/user/post1');
   });
 
-  it('renders inline images with the raw attachment destination when articleImages is provided', () => {
+  it('hands an external PDF card the same link handler as the body links', () => {
+    const onLinkClick = vi.fn();
+    render(
+      <PostText
+        content={'[normal](https://phish.example/page)\n\n![Official wallet download](https://phish.example/get.pdf)'}
+        isArticle
+        fullArticle
+        articleMedia={articleMedia}
+        onLinkClick={onLinkClick}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open PDF' }));
+
+    expect(onLinkClick).toHaveBeenCalledWith('https://phish.example/get.pdf', expect.anything());
+  });
+
+  it('renders inline images with the raw attachment destination when articleMedia is provided', () => {
     render(
       <PostText
         content="Before
@@ -1345,7 +1369,7 @@ describe('Article inline images', () => {
 
 After"
         isArticle
-        articleImages={articleImages}
+        articleMedia={articleMedia}
       />,
     );
 
@@ -1354,13 +1378,60 @@ After"
     expect(image).toHaveAttribute('data-alt', 'My alt');
   });
 
+  it('renders a video player for a slot whose file row is a video', () => {
+    render(
+      <PostText
+        content="![Clip](attachment:1)"
+        isArticle
+        articleMedia={{
+          ...articleMedia,
+          files: [{ uri: attachments[1], content_type: 'video/mp4', name: 'clip.mp4' }],
+        }}
+      />,
+    );
+
+    const video = screen.getByTestId('article-inline-video');
+    expect(video).toHaveAttribute('src', `cdn://${attachments[1]}/main`);
+    expect(video).toHaveAttribute('aria-label', 'Clip');
+    expect(screen.queryByTestId('mock-article-inline-image')).not.toBeInTheDocument();
+  });
+
+  it('renders the players of unlocked content from its local attachments', () => {
+    const localAttachments = [
+      { type: 'image/png', name: 'attachment-0', urls: { main: 'blob:cover' }, slot: 0 },
+      { type: 'audio/mpeg', name: 'attachment-1', urls: { main: 'blob:song' }, slot: 1 },
+    ];
+
+    render(<PostText content="![Song](attachment:1)" isArticle articleMedia={{ localAttachments }} />);
+
+    expect(screen.getByTestId('article-inline-audio')).toHaveAttribute('src', 'blob:song');
+  });
+
+  it('reserves space for a slot whose type is still unknown', () => {
+    render(
+      <PostText content="![Soon](attachment:1)" isArticle articleMedia={{ ...articleMedia, metadataSettled: false }} />,
+    );
+
+    expect(screen.getByTestId('article-inline-media-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('mock-article-inline-image')).not.toBeInTheDocument();
+  });
+
+  it('renders raw video HTML as literal text, never as a player', () => {
+    const { container } = render(
+      <PostText content='<video src="https://example.com/clip.mp4"></video>' isArticle articleMedia={articleMedia} />,
+    );
+
+    expect(container.querySelector('video')).not.toBeInTheDocument();
+    expect(container).toHaveTextContent('<video src="https://example.com/clip.mp4"></video>');
+  });
+
   it('hands the local attachments of unlocked content to the image component', () => {
     const localAttachments = [
       { type: 'image/png', name: 'attachment-0', urls: { main: 'blob:cover' }, slot: 0 },
       { type: 'image/png', name: 'attachment-1', urls: { main: 'blob:inline' }, slot: 1 },
     ];
 
-    render(<PostText content="![My alt](attachment:1)" isArticle articleImages={{ localAttachments }} />);
+    render(<PostText content="![My alt](attachment:1)" isArticle articleMedia={{ localAttachments }} />);
 
     const image = screen.getByTestId('mock-article-inline-image');
     expect(image).toHaveAttribute('data-src', 'attachment:1');
@@ -1374,7 +1445,7 @@ After"
 
 ![E](https://example.com/pic.png)`}
         isArticle
-        articleImages={articleImages}
+        articleMedia={articleMedia}
       />,
     );
 
@@ -1383,7 +1454,7 @@ After"
     expect(images[1]).toHaveAttribute('data-src', 'https://example.com/pic.png');
   });
 
-  it('strips article images entirely without articleImages (embedded card on post page)', () => {
+  it('strips article images entirely without articleMedia (embedded card on post page)', () => {
     const { container } = render(
       <PostText
         content="Before
@@ -1418,7 +1489,7 @@ First paragraph."
     expect(container).toHaveTextContent('First paragraph.');
   });
 
-  it('does not render images for non-article posts regardless of articleImages', () => {
+  it('does not render images for non-article posts regardless of articleMedia', () => {
     const { container } = render(<PostText content="![alt](https://example.com/image.png)" />);
 
     expect(container.querySelector('img')).not.toBeInTheDocument();

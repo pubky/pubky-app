@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
+import { articleHasInlineSlotZero } from '@/libs/post/articleInlineMedia';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { toast } from '@/molecules/Toaster/toast';
 import type { FileVariant } from '@/services/nexus/file/file.types';
@@ -36,6 +36,12 @@ interface UsePostArticleParams {
    * decided again in `PostArticle`, so the two can disagree. Take the attachments here instead.
    */
   localAttachmentCount?: number;
+  /**
+   * Content type of the caller's local slot-0 entry, when it holds one (a same-session publish or
+   * unlocked content). A known non-image vetoes the provisional cover at once instead of painting a
+   * broken image until the file row says the same.
+   */
+  localCoverType?: string;
   /**
    * Second, larger source for surfaces that render the cover at full width (the article hero).
    * Left unset by feed-sized surfaces, which never want the larger file.
@@ -91,6 +97,7 @@ export function usePostArticle({
   attachments,
   coverImageVariant,
   localAttachmentCount,
+  localCoverType,
   coverImageDesktopVariant,
   coverImageDesktopFallbackVariant,
 }: UsePostArticleParams): UsePostArticleResult {
@@ -144,9 +151,11 @@ export function usePostArticle({
     coverFile && coverImageDesktopFallbackVariant
       ? pubkyUriToCdnUrl(coverFileUri, coverImageDesktopFallbackVariant)
       : null;
-  // Only the row can say slot 0 is not an image, or that Nexus no longer serves it (the lookup
-  // settles with no row). Until it lands the cover is provisional.
-  const isCoverUnavailable = coverFile ? !coverFile.content_type.startsWith('image') : !isCoverLoading;
+  // A local slot-0 entry already knows its type; otherwise only the row can say slot 0 is not an
+  // image, or that Nexus no longer serves it (the lookup settles with no row). Until it lands the
+  // cover is provisional.
+  const coverType = localCoverType || coverFile?.content_type;
+  const isCoverUnavailable = coverType ? !coverType.startsWith('image') : !isCoverLoading;
 
   const width = Number(coverFile?.metadata?.width);
   const height = Number(coverFile?.metadata?.height);

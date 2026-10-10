@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Image, Loader2, Lock, LockOpen, Newspaper, Send, Smile } from 'lucide-react';
+import { Expand, Image, Loader2, Lock, LockOpen, Newspaper, Send, Shrink, Smile } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Switch } from '@/atoms/Switch/Switch';
@@ -35,6 +35,8 @@ export function PostInputActionBar({
   hideArticleButton,
   isArticle,
   lockSwitch,
+  leadingContent,
+  fullscreen,
 }: PostInputActionBarProps) {
   const isMobile = useIsMobile();
   const getButtonDataCy = (ariaLabel: string) => `post-input-action-bar-${ariaLabel.toLowerCase().replace(' ', '-')}`;
@@ -48,6 +50,7 @@ export function PostInputActionBar({
       overrideDefaults
     >
       <Container className="flex items-center gap-2" overrideDefaults>
+        {leadingContent}
         {!isArticle ? (
           <Button
             data-cy={getButtonDataCy('Add emoji')}
@@ -79,6 +82,18 @@ export function PostInputActionBar({
             aria-label="Add article"
           >
             <ActionButtonContent Icon={Newspaper} />
+          </Button>
+        ) : null}
+        {fullscreen ? (
+          <Button
+            data-cy="post-input-action-bar-fullscreen"
+            {...COMMON_BUTTON_PROPS}
+            onClick={fullscreen.onToggle}
+            disabled={isSubmitting}
+            aria-label={fullscreen.isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            aria-pressed={fullscreen.isFullscreen}
+          >
+            <ActionButtonContent Icon={fullscreen.isFullscreen ? Shrink : Expand} />
           </Button>
         ) : null}
         {lockSwitch ? (

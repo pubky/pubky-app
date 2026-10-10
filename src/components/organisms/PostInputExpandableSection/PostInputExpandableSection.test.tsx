@@ -94,6 +94,8 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
     isArticle,
     postButtonIcon,
     postButtonLabel,
+    leadingContent,
+    fullscreen,
   }: {
     onPostClick?: () => void;
     onEmojiClick?: () => void;
@@ -104,6 +106,8 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
     isArticle?: boolean;
     postButtonIcon?: React.ComponentType;
     postButtonLabel?: string;
+    leadingContent?: React.ReactNode;
+    fullscreen?: { isFullscreen: boolean; onToggle: () => void };
   }) => (
     <div
       data-testid="post-input-action-bar"
@@ -114,7 +118,9 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
       data-has-post-button-icon={!!postButtonIcon}
       data-post-button-icon-name={postButtonIcon?.displayName ?? ''}
       data-post-button-label={postButtonLabel}
+      data-fullscreen={fullscreen ? String(fullscreen.isFullscreen) : undefined}
     >
+      {leadingContent}
       <button data-testid="action-bar-post" onClick={onPostClick} disabled={isPostDisabled}>
         Post
       </button>
@@ -397,6 +403,21 @@ describe('PostInputExpandableSection', () => {
     render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.EDIT} isArticle={false} />);
 
     expect(screen.queryByTestId('action-bar-article')).not.toBeInTheDocument();
+  });
+
+  it('passes the leading content and fullscreen toggle through to the action bar', () => {
+    render(
+      <PostInputExpandableSection
+        {...defaultProps}
+        isArticle
+        leadingContent={<span data-testid="leading-avatar">avatar</span>}
+        fullscreen={{ isFullscreen: true, onToggle: vi.fn() }}
+      />,
+    );
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).toHaveAttribute('data-fullscreen', 'true');
+    expect(actionBar).toContainElement(screen.getByTestId('leading-avatar'));
   });
 
   it('stacks tags above the action bar at all breakpoints', () => {

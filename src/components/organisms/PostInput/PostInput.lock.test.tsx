@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TLockConfig } from '@/application/locks/locks.types';
 import { LOCK_ATTACHMENT_MAX_FILES, LOCK_ATTACHMENT_MAX_SIZE, LOCK_TEASER_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import type { ComposerDraft } from '@/hooks/usePost/usePost.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -27,7 +28,7 @@ const mocks = vi.hoisted(() => ({
   // What the title and body inputs hold while the composer state still trails them. Null once it caught up.
   latestArticle: null as { title: string; body: string } | null,
   // Last options PostInput handed to usePostInput.
-  postInputOptions: {} as { keepInlineImages?: boolean },
+  postInputOptions: {} as { keepInlineMedia?: boolean },
   // Test handle into the fake composer state, refreshed on every render.
   composer: {} as {
     content: string;
@@ -77,7 +78,7 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
   return {
     // Everything starts empty on purpose: edit-mode values must arrive through PostInput's own
     // seeding effects, so deleting one of those effects fails a test instead of passing silently.
-    usePostInput: (options: { keepInlineImages?: boolean }) => {
+    usePostInput: (options: { keepInlineMedia?: boolean }) => {
       mocks.postInputOptions = options;
       const [content, setContent] = useState('');
       const [tags, setTags] = useState<string[]>([]);
@@ -111,6 +112,8 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         existingAttachments: [],
         removeExistingAttachment: vi.fn(),
         uploadingCount: mocks.uploadingCount,
+        inlineMedia: { upload: vi.fn(), getPreviewUrl: () => null, getMediaType: () => null, getMediaName: () => null },
+        isEditInlineMediaLoading: false,
         serializeArticleForLock: mocks.serializeArticleForLock,
         getLatestArticle: () => mocks.latestArticle ?? { title: articleTitle, body: content },
         isArticle,
@@ -118,6 +121,12 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         handleArticleClick: vi.fn(),
         articleTitle,
         setArticleTitle,
+        restoreComposerDraft: (draft: ComposerDraft) => {
+          setContent(draft.content);
+          setAttachments(draft.attachments);
+          setIsArticle(draft.isArticle);
+          setArticleTitle(draft.articleTitle);
+        },
         lockTitle,
         setLockTitle,
         handleArticleTitleChange: vi.fn(),
@@ -567,17 +576,17 @@ describe('PostInput lock wiring', () => {
 
     it('keeps the uploaded images for as long as the captured article is held', async () => {
       renderArticle();
-      expect(mocks.postInputOptions.keepInlineImages).toBe(false);
+      expect(mocks.postInputOptions.keepInlineMedia).toBe(false);
 
       fireEvent.click(screen.getByTestId('lock-switch'));
       fireEvent.click(screen.getByTestId('apply-lock'));
       // The composer left article mode here; without the hold the uploads would be deleted now.
-      expect(mocks.postInputOptions.keepInlineImages).toBe(true);
+      expect(mocks.postInputOptions.keepInlineMedia).toBe(true);
 
       act(() => mocks.composer.setContent('my teaser'));
       fireEvent.click(screen.getByTestId('post-button'));
 
-      await waitFor(() => expect(mocks.postInputOptions.keepInlineImages).toBe(false));
+      await waitFor(() => expect(mocks.postInputOptions.keepInlineMedia).toBe(false));
     });
 
     it('lets go of the uploaded images when the lock is abandoned', () => {
@@ -587,14 +596,14 @@ describe('PostInput lock wiring', () => {
 
       fireEvent.click(screen.getByTestId('lock-switch')); // off
 
-      expect(mocks.postInputOptions.keepInlineImages).toBe(false);
+      expect(mocks.postInputOptions.keepInlineMedia).toBe(false);
     });
 
     it('holds nothing for a locked normal post', async () => {
       renderComposer();
       await configureLock();
 
-      expect(mocks.postInputOptions.keepInlineImages).toBe(false);
+      expect(mocks.postInputOptions.keepInlineMedia).toBe(false);
     });
   });
 

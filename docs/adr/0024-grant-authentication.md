@@ -1,4 +1,4 @@
-# ADR 0023: Grant-Only Authentication
+# ADR 0024: Grant-Only Authentication
 
 ## Status
 

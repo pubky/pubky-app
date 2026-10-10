@@ -5,17 +5,17 @@ import { ARTICLE_ATTACHMENT_MAX_FILES } from '@/config/posts';
 import { FileController } from '@/controllers/file/file';
 import { PostController } from '@/controllers/post/post';
 import type { TEditPostAttachments } from '@/controllers/post/post.types';
-import { useInlineImageUpload } from '@/hooks/useInlineImageUpload/useInlineImageUpload';
-import type { InlineImageLocalEntry } from '@/hooks/useInlineImageUpload/useInlineImageUpload.types';
+import { useInlineMediaUpload } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload';
+import type { InlineMediaLocalEntry } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload.types';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import {
-  countInlineImageUris,
+  countInlineMediaUris,
   serializeArticleBody,
   type SerializeArticleBodyError,
-} from '@/libs/post/articleInlineImages';
+} from '@/libs/post/articleInlineMedia';
 import { buildLockTeaserContent } from '@/libs/post/lockTeaser';
 import { getStorageQuotaToastMessage } from '@/libs/storage/storageQuota';
 import { toast } from '@/molecules/Toaster/toast';
@@ -23,7 +23,9 @@ import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type {
+  ComposerDraft,
   ExistingAttachment,
+  LatestArticle,
   SerializedArticle,
   UsePostEditOptions,
   UsePostOptions,
@@ -37,22 +39,22 @@ import type {
 function serializeArticleErrorMessage(error: SerializeArticleBodyError): string {
   switch (error.code) {
     case 'HAND_TYPED_ATTACHMENT_REF':
-      return 'Articles cannot link images as attachment references directly. Remove them or insert the image again.';
+      return 'Articles cannot link files as attachment references directly. Remove them or insert the file again.';
     case 'BLOB_URI':
-      return 'Articles cannot reference blob URLs. Insert the image through the editor instead.';
+      return 'Articles cannot reference blob URLs. Insert the file through the editor instead.';
     case 'TOO_MANY_INLINE_IMAGES':
-      return `Too many images. Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} images including the cover.`;
+      return `Too many files. Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} attachments including the cover.`;
     case 'RAW_HTML_FILE_URI':
-      return 'Uploaded images cannot be used inside raw HTML. Use image markdown instead.';
+      return 'Uploaded files cannot be used inside raw HTML. Use the editor to insert them instead.';
     case 'REFERENCE_STYLE_FILE_URI':
-      return 'Uploaded images cannot use reference-style links. Use inline image syntax instead.';
+      return 'Uploaded files cannot use reference-style links. Use inline image syntax instead.';
     case 'UNPROCESSABLE_IMAGE':
-      return 'An image in the article could not be processed. Remove it and insert it again.';
+      return 'A file in the article could not be processed. Remove it and insert it again.';
   }
 }
 
 /** Maps a File to a local-store attachment entry backed by a fresh object URL. */
-function fileToLocalAttachment(file: File): InlineImageLocalEntry {
+function fileToLocalAttachment(file: File): InlineMediaLocalEntry {
   const url = URL.createObjectURL(file);
   const isImage = file.type.startsWith('image');
   return { type: file.type, name: file.name, urls: { main: url, feed: isImage ? url : undefined } };
@@ -92,7 +94,7 @@ const showSessionExpiredToast = () =>
     description: 'Session expired. Please sign in.',
   });
 
-export function usePost({ keepInlineImages = false, active = true }: UsePostOptions = {}): UsePostReturn {
+export function usePost({ keepInlineMedia = false, active = true }: UsePostOptions = {}): UsePostReturn {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -113,14 +115,14 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
   // body; `content` lags the editor by its 500ms debounce and in-flight
   // uploads aren't in the body yet, so `serializeArticleBody` at publish
   // remains the authoritative cap enforcement.
-  const inlineImageSession = useInlineImageUpload({
+  const inlineMediaSession = useInlineMediaUpload({
     enabled: isArticle && active,
-    keepSession: keepInlineImages,
+    keepSession: keepInlineMedia,
     authorPubky: currentUserId,
     getInlineBudget: () =>
       ARTICLE_ATTACHMENT_MAX_FILES -
       Math.min(attachments.length + existingAttachments.length, 1) -
-      (currentUserId ? countInlineImageUris(content, currentUserId) : 0),
+      (currentUserId ? countInlineMediaUris(content, currentUserId) : 0),
   });
 
   /**
@@ -164,7 +166,7 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
       body,
       coverPresent,
       authorPubky: currentUserId,
-      maxInlineImages: ARTICLE_ATTACHMENT_MAX_FILES - (coverPresent ? 1 : 0),
+      maxInlineMedia: ARTICLE_ATTACHMENT_MAX_FILES - (coverPresent ? 1 : 0),
     });
     if (serialized.errors.length > 0) {
       toast({ variant: 'error', description: serializeArticleErrorMessage(serialized.errors[0]) });
@@ -183,14 +185,14 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
   const rejectForeignInlineUris = (inlineUris: string[], originalUris: readonly string[] = []): boolean => {
     const originalSet = new Set(originalUris);
     const hasForeign = inlineUris.some(
-      (uri) => inlineImageSession.getPreviewUrl(uri) === null && !originalSet.has(uri),
+      (uri) => inlineMediaSession.getPreviewUrl(uri) === null && !originalSet.has(uri),
     );
     if (!hasForeign) return false;
 
     toast({
       variant: 'error',
       description:
-        'Some images reference files from outside this article. Remove them, or insert the images again so they upload fresh.',
+        'Some attachments reference files from outside this article. Remove them, or insert the files again so they upload fresh.',
     });
     return true;
   };
@@ -199,7 +201,7 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
     const serialized = serializeArticleForPublish(attachments.length > 0, body.trim());
     if (!serialized || rejectForeignInlineUris(serialized.inlineUris)) return null;
 
-    const inlineFiles = serialized.inlineUris.map((uri) => inlineImageSession.getSessionFile(uri));
+    const inlineFiles = serialized.inlineUris.map((uri) => inlineMediaSession.getSessionFile(uri));
     // A skipped file would shift every slot after it onto the wrong image.
     if (!inlineFiles.every((file) => file !== null)) return null;
     return { body: serialized.body, inlineFiles };
@@ -220,8 +222,8 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
    * (including a brand-new cover) of their object URLs and exposing them to
    * the CDN variant-readiness window, where fresh variants 404 for a while.
    */
-  const completeInlineSeedEntries = async (inlineUris: string[]): Promise<(InlineImageLocalEntry | null)[]> => {
-    const sessionEntries = inlineImageSession.buildLocalAttachmentEntries(inlineUris);
+  const completeInlineSeedEntries = async (inlineUris: string[]): Promise<(InlineMediaLocalEntry | null)[]> => {
+    const sessionEntries = inlineMediaSession.buildLocalAttachmentEntries(inlineUris);
     const missingUris = inlineUris.filter((_, index) => sessionEntries[index] === null);
     if (missingUris.length === 0) return sessionEntries;
 
@@ -255,9 +257,9 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
     }
   };
 
-  const seedArticleLocalFiles = (postId: string, entries: (InlineImageLocalEntry | null)[]) => {
+  const seedArticleLocalFiles = (postId: string, entries: (InlineMediaLocalEntry | null)[]) => {
     const complete = entries.every((entry) => entry !== null);
-    useLocalFilesStore.getState().setPostAttachments(postId, complete ? (entries as InlineImageLocalEntry[]) : []);
+    useLocalFilesStore.getState().setPostAttachments(postId, complete ? (entries as InlineMediaLocalEntry[]) : []);
   };
 
   const reply = async ({ postId, onSuccess }: UsePostReplyOptions) => {
@@ -294,13 +296,19 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
     }
   };
 
-  const post = async ({ onSuccess }: UsePostPostOptions) => {
+  // The inputs run ahead of the debounced state: a publish takes what the editor holds, not what
+  // the state last caught up with, or an image inserted in the last half second is dropped and its
+  // upload deleted as unreferenced. A plain post has no article and reads the state.
+  const latestOf = (article?: LatestArticle) => ({
+    title: article?.title ?? articleTitle,
+    body: article?.body ?? content,
+  });
+
+  const post = async ({ article, onSuccess }: UsePostPostOptions) => {
+    const { title: latestTitle, body: latestBody } = latestOf(article);
+    const hasBody = Boolean(latestBody.trim());
     // allow empty content and attachments if not article
-    if (
-      (!content.trim() && attachments.length === 0) ||
-      (isArticle && (!content.trim() || !articleTitle.trim())) ||
-      !currentUserId
-    )
+    if ((!hasBody && attachments.length === 0) || (isArticle && (!hasBody || !latestTitle.trim())) || !currentUserId)
       return;
 
     if (inFlight.current) return;
@@ -309,11 +317,11 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
     try {
       if (!(await waitForAuth())) return;
       // Only protect files once the commit can start; closing during restore may discard them.
-      inlineImageSession.setCommitting(true);
+      inlineMediaSession.setCommitting(true);
       let articleBody = '';
       let inlineUris: string[] = [];
       if (isArticle) {
-        const serialized = serializeArticleForPublish(attachments.length > 0);
+        const serialized = serializeArticleForPublish(attachments.length > 0, latestBody.trim());
         if (!serialized) return;
         if (rejectForeignInlineUris(serialized.inlineUris)) return;
         articleBody = serialized.body;
@@ -321,7 +329,7 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
       }
 
       const createdPostId = await PostController.commitCreate({
-        content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: articleBody }) : content.trim(),
+        content: isArticle ? JSON.stringify({ title: latestTitle.trim(), body: articleBody }) : content.trim(),
         authorId: currentUserId,
         tags: tags.length > 0 ? tags : undefined,
         attachments: attachments.length > 0 ? attachments : undefined,
@@ -336,7 +344,7 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
           ...attachments.map(fileToLocalAttachment),
           ...(await completeInlineSeedEntries(inlineUris)),
         ]);
-        void inlineImageSession.finalizeSession(inlineUris);
+        void inlineMediaSession.finalizeSession(inlineUris);
       }
 
       setContent('');
@@ -352,7 +360,7 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
       Logger.error('[usePost] Failed to create post:', err);
       showCommitErrorToast(err, 'Could not create post. Try again.');
     } finally {
-      inlineImageSession.setCommitting(false);
+      inlineMediaSession.setCommitting(false);
       inFlight.current = false;
       setIsSubmitting(false);
     }
@@ -398,13 +406,16 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
     isLockAnnouncement,
     originalAttachmentUris,
     preservedAttachmentUris,
+    article,
     onSuccess,
   }: UsePostEditOptions) => {
+    const { title: latestTitle, body: latestBody } = latestOf(article);
+    const hasBody = Boolean(latestBody.trim());
     // allow empty content when attachments remain; articles require content and title
     const totalAttachments = existingAttachments.length + attachments.length;
     if (
-      (!content.trim() && totalAttachments === 0) ||
-      (isArticle && (!content.trim() || !articleTitle.trim())) ||
+      (!hasBody && totalAttachments === 0) ||
+      (isArticle && (!hasBody || !latestTitle.trim())) ||
       !editPostId ||
       !currentUserId
     )
@@ -416,10 +427,10 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
     try {
       if (!(await waitForAuth())) return;
       // Only protect files once the commit can start; closing during restore may discard them.
-      inlineImageSession.setCommitting(true);
+      inlineMediaSession.setCommitting(true);
       let editContentPayload: string;
       let editAttachments: TEditPostAttachments | undefined;
-      let articleSeedEntries: (InlineImageLocalEntry | null)[] | undefined;
+      let articleSeedEntries: (InlineMediaLocalEntry | null)[] | undefined;
       let articleNextOrder: string[] | undefined;
 
       if (isArticle) {
@@ -431,7 +442,7 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
 
         // Validate the body before uploading a replacement cover, so a blocked
         // publish uploads nothing.
-        const serialized = serializeArticleForPublish(Boolean(newCoverFile ?? keptCover));
+        const serialized = serializeArticleForPublish(Boolean(newCoverFile ?? keptCover), latestBody.trim());
         if (!serialized) return;
 
         // Removal is diffed against the seeded snapshot, never the live row.
@@ -444,7 +455,7 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
           coverUri = await FileController.commitCreate({ file: newCoverFile, pubky: currentUserId });
           // Joining the session means a failed commit below leaves cleanup to
           // the session's discard sweep.
-          inlineImageSession.registerSessionUpload(coverUri, newCoverFile);
+          inlineMediaSession.registerSessionUpload(coverUri, newCoverFile);
         }
         const referencedOrder = [...(coverUri ? [coverUri] : []), ...serialized.inlineUris];
         // Original attachments the user was never shown (not the cover, not
@@ -472,7 +483,7 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
         const orderChanged =
           nextOrder.length !== originalUris.length || nextOrder.some((uri, index) => uri !== originalUris[index]);
 
-        editContentPayload = JSON.stringify({ title: articleTitle.trim(), body: serialized.body });
+        editContentPayload = JSON.stringify({ title: latestTitle.trim(), body: serialized.body });
         editAttachments = orderChanged ? { original: originalUris, kept, added: [], addedUris, nextOrder } : undefined;
         articleNextOrder = nextOrder;
 
@@ -512,7 +523,7 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
 
       if (isArticle && articleSeedEntries && articleNextOrder) {
         seedArticleLocalFiles(editPostId, articleSeedEntries);
-        void inlineImageSession.finalizeSession(articleNextOrder);
+        void inlineMediaSession.finalizeSession(articleNextOrder);
       }
 
       setContent('');
@@ -540,10 +551,29 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
         description: getImageUploadSizeLimitToastMessage(err) ?? 'Could not update post. Try again.',
       });
     } finally {
-      inlineImageSession.setCommitting(false);
+      inlineMediaSession.setCommitting(false);
       inFlight.current = false;
       setIsSubmitting(false);
     }
+  };
+
+  // Set when a composer draft is restored whole (an abandoned lock): the restored article mode and
+  // its cover land in the same commit, which the clearing effect below must not read as a switch.
+  const restoringDraftRef = useRef(false);
+
+  /**
+   * Puts a captured composer draft back as it was. Setting the fields one by one would trip the
+   * article-mode effect below: it sees `isArticle` flip true next to a non-empty `attachments` and
+   * clears the cover with the "one cover image" warning (the lock-abandon regression).
+   */
+  const restoreComposerDraft = (draft: ComposerDraft) => {
+    // Armed only when the restore flips the mode: a draft put back over an uncleared composer runs
+    // no effect, and a latched flag would skip the next real switch into article mode
+    restoringDraftRef.current = draft.isArticle && !isArticle && draft.attachments.length > 0;
+    setContent(draft.content);
+    setAttachments(draft.attachments);
+    setIsArticle(draft.isArticle);
+    setArticleTitle(draft.articleTitle);
   };
 
   // Clear attachments when switching to article mode.
@@ -553,6 +583,11 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
   // seeded cover on mount. The article button is hidden in edit mode, so a
   // user-initiated switch can never happen with `existingAttachments` set.
   useEffect(() => {
+    if (restoringDraftRef.current) {
+      // A restored draft brings its cover back on purpose
+      restoringDraftRef.current = false;
+      return;
+    }
     if (isArticle && attachments.length > 0) {
       toast({
         variant: 'warning',
@@ -578,16 +613,19 @@ export function usePost({ keepInlineImages = false, active = true }: UsePostOpti
     setArticleTitle,
     lockTitle,
     setLockTitle,
+    restoreComposerDraft,
     reply,
     post,
     repost,
     edit,
     isSubmitting,
-    inlineImages: {
-      upload: inlineImageSession.uploadInlineImage,
-      getPreviewUrl: inlineImageSession.getPreviewUrl,
+    inlineMedia: {
+      upload: inlineMediaSession.uploadInlineMedia,
+      getPreviewUrl: inlineMediaSession.getPreviewUrl,
+      getMediaType: inlineMediaSession.getMediaType,
+      getMediaName: inlineMediaSession.getMediaName,
     },
-    uploadingCount: inlineImageSession.uploadingCount,
+    uploadingCount: inlineMediaSession.uploadingCount,
     serializeArticleForLock,
   };
 }

@@ -69,14 +69,14 @@ vi.mock('@/molecules/PostText/PostText', () => {
       content,
       isArticle,
       fullArticle,
-      articleImages,
+      articleMedia,
       onLinkClick,
       className,
     }: {
       content: string;
       isArticle?: boolean;
       fullArticle?: boolean;
-      articleImages?: unknown;
+      articleMedia?: unknown;
       onLinkClick?: (url: string, e: React.MouseEvent) => void;
       className?: string;
     }) => (
@@ -84,7 +84,7 @@ vi.mock('@/molecules/PostText/PostText', () => {
         data-testid="post-text"
         data-is-article={isArticle}
         data-full-article={String(Boolean(fullArticle))}
-        data-article-images={articleImages ? JSON.stringify(articleImages) : undefined}
+        data-article-media={articleMedia ? JSON.stringify(articleMedia) : undefined}
         data-has-link-click={!!onLinkClick}
         className={className}
       >
@@ -406,7 +406,7 @@ describe('PostArticle', () => {
       render(<PostArticle {...defaultProps} variant="full" localAttachments={[mockLocalImageAttachment]} />);
 
       expect(screen.getByTestId('post-text')).toHaveAttribute(
-        'data-article-images',
+        'data-article-media',
         JSON.stringify({ localAttachments: [mockLocalImageAttachment], pendingAttachments: [] }),
       );
     });
@@ -414,7 +414,7 @@ describe('PostArticle', () => {
     it('keeps body images out of the preview card, like any article card', () => {
       render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} />);
 
-      expect(screen.getByTestId('post-text')).not.toHaveAttribute('data-article-images');
+      expect(screen.getByTestId('post-text')).not.toHaveAttribute('data-article-media');
     });
 
     it('takes the cover from slot 0, not from whatever comes first in the list', () => {
@@ -435,6 +435,7 @@ describe('PostArticle', () => {
         attachments: defaultProps.attachments,
         coverImageVariant: FileVariant.FEED,
         localAttachmentCount: 1,
+        localCoverType: 'image/png',
       });
     });
   });
