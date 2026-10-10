@@ -1,5 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { EditProfileForm } from './EditProfileForm';
 
 const mockHandlers = {
@@ -54,6 +57,13 @@ vi.mock('@/config/user', async (importOriginal) => {
 describe('EditProfileForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      ...authInitialState,
+      hasHydrated: true,
+      currentUserPubky: 'test-pubky-123',
+      session: mockSession(),
+      restoreStatus: 'ready',
+    });
     mockUseProfileForm.mockReturnValue({
       state: {
         isLoading: false,
@@ -115,5 +125,14 @@ describe('EditProfileForm', () => {
   it('renders avatar section', () => {
     render(<EditProfileForm />);
     expect(screen.getByText('Avatar')).toBeInTheDocument();
+  });
+
+  it('delegates saving to the profile hook, which waits for authentication', () => {
+    render(<EditProfileForm />);
+    act(() => useAuthStore.setState({ session: null, restoreStatus: 'restoring' }));
+    fireEvent.click(screen.getByTestId('save-profile-button'));
+    expect(mockHandlers.handleSubmit).toHaveBeenCalledOnce();
+    expect(useAuthStore.getState().showSignInDialog).toBe(false);
+    expect(screen.getByTestId('edit-profile-form')).toBeInTheDocument();
   });
 });

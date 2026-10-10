@@ -14,8 +14,9 @@ import { mockAuthStore } from '@/test-utils/stores';
 import { usePostTags } from './usePostTags';
 
 // Hoisted I/O and auth mocks
-const { mockGetOrFetchTags, mockAuthStoreSelector } = vi.hoisted(() => ({
+const { mockGetOrFetchTags, mockAuthStoreSelector, mockWaitForAuth } = vi.hoisted(() => ({
   mockGetOrFetchTags: vi.fn().mockResolvedValue(undefined),
+  mockWaitForAuth: vi.fn(async (_key?: string) => true),
   mockAuthStoreSelector: (currentUserPubky: string | null) => {
     return (selector: (state: AuthStore) => unknown) => selector(mockAuthStore({ currentUserPubky }));
   },
@@ -63,6 +64,16 @@ function setupLiveQueryMock(tagsValue: { tags: NexusTag[] } | undefined, countsV
 }
 
 describe('usePostTags', () => {
+  it('asks for sign-in when a guest clicks an existing tag without mutating it', async () => {
+    vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(null));
+    mockWaitForAuth.mockResolvedValueOnce(false);
+    const { result } = renderHook(() => usePostTags('author:post123'));
+    await act(async () => result.current.handleTagToggle({ label: 'Bitcoin' }));
+    expect(mockWaitForAuth).toHaveBeenCalledWith('bitcoin');
+    expect(TagController.commitCreate).not.toHaveBeenCalled();
+    expect(TagController.commitDelete).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('mock-user-id'));
@@ -120,6 +131,7 @@ describe('usePostTags', () => {
     act(() => {
       add = result.current.handleTagAdd('slow');
     });
+    await waitFor(() => expect(TagController.commitCreate).toHaveBeenCalled());
     vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('other-viewer'));
     rerender();
     await act(async () => {
@@ -144,6 +156,7 @@ describe('usePostTags', () => {
       removal = result.current.handleTagToggle({ label: 'shared', relationship: true });
     });
 
+    await waitFor(() => expect(TagController.commitDelete).toHaveBeenCalled());
     vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('new-viewer'));
     setupLiveQueryMock({ tags: tags.map((tag) => ({ ...tag, relationship: false })) }, { unique_tags: 2 });
     rerender();
@@ -172,6 +185,7 @@ describe('usePostTags', () => {
     act(() => {
       toggle = result.current.handleTagToggle({ label: 'solo', relationship: true });
     });
+    await waitFor(() => expect(TagController.commitDelete).toHaveBeenCalled());
     unmount();
     await act(async () => {
       pending.reject(new Error('offline'));
@@ -514,3 +528,8 @@ describe('usePostTags', () => {
     });
   });
 });
+
+// These tests exercise the mutation after auth readiness; restore races use the real store in auth-wait tests.
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ waitForAuth: mockWaitForAuth }),
+}));

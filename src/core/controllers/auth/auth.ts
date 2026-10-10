@@ -1,11 +1,17 @@
+import type { Capabilities, Session } from '@synonymdev/pubky';
+import { validateCapabilities } from '@synonymdev/pubky';
+import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
+import { APP_CAPABILITIES, LOCKS_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
+import { getDeployEnv, getHomeserver, HOMESERVER_CAPABILITIES } from '@/config/network';
 import type {
+  SessionReadiness,
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
   TSignUpParams,
@@ -15,18 +21,33 @@ import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { clearDatabase } from '@/database/franky/franky.helpers';
-import { createCanceledError } from '@/libs/error/auth-flow-canceled';
+import { hasCapabilities } from '@/libs/auth/capabilities';
+import {
+  type ActiveSessionFailure,
+  pendingRetirements,
+  type PersistedAuth,
+  type SessionReference,
+} from '@/libs/auth/session.types';
+import {
+  createAuthApprovalMismatchError,
+  createCanceledError,
+  isAuthApprovalMismatchError,
+  isAuthFlowCanceledError,
+} from '@/libs/error/auth-flow-canceled';
+import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { isAppError, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
+import { isAppError, isNotFound, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
-import { clearCookies, sleep } from '@/libs/utils/utils';
+import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
+import type { GrantFlowRequest } from '@/services/homeserver/grant-flow';
 import type {
   TGenerateAuthUrlResult,
   TGeneratePassportAuthUrlParams,
@@ -36,6 +57,7 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { useHotStore } from '@/stores/hot/hot.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
@@ -51,21 +73,222 @@ import { useSignInStore } from '@/stores/signIn/signIn.store';
  */
 const LOGOUT_TIMEOUT_MS = 5_000;
 
+/** Reset this tab without overwriting the new account's shared persisted stores. */
+function resetTabStore<T>(
+  store: {
+    getState(): { reset(): void };
+    persist: {
+      getOptions(): { storage?: PersistStorage<T> };
+      setOptions(options: { storage?: PersistStorage<T> }): void;
+    };
+  },
+  persist = false,
+): void {
+  if (persist) {
+    try {
+      store.getState().reset();
+      return;
+    } catch {
+      // Persistence can fail during logout; this tab must still drop its live state.
+    }
+  }
+  const { storage } = store.persist.getOptions();
+  if (!storage) {
+    store.getState().reset();
+    return;
+  }
+  store.persist.setOptions({ storage: { ...storage, setItem: () => {}, removeItem: () => {} } });
+  try {
+    store.getState().reset();
+  } finally {
+    store.persist.setOptions({ storage });
+  }
+}
+
 export class AuthController {
   private constructor() {} // Prevent instantiation
 
-  private static activeAuthFlow: { token: symbol; cancel: (() => void) | null } | null = null;
+  /** Observe the current restore; never start another SDK restore for a user action. */
+  static waitForSession(signal?: AbortSignal): Promise<SessionReadiness> {
+    const initial = useAuthStore.getState();
+    const classify = (): SessionReadiness | null => {
+      const state = useAuthStore.getState();
+      if (
+        signal?.aborted ||
+        state.isLoggingOut ||
+        state.generation !== initial.generation ||
+        state.currentUserPubky !== initial.currentUserPubky
+      )
+        return 'canceled';
+      if (!state.hasHydrated) return 'unavailable';
+      if (state.currentUserPubky && state.session && state.restoreStatus === 'ready') return 'ready';
+      if (state.restoreStatus === 'temporary-error') return 'unavailable';
+      if (
+        state.restoreStatus === 'restoring' ||
+        (state.currentUserPubky && state.sessionReference && state.restoreStatus === 'idle')
+      )
+        return null;
+      return 'sign-in';
+    };
+    const current = classify();
+    if (current) return Promise.resolve(current);
+    return new Promise((resolve) => {
+      const finish = (result: SessionReadiness) => {
+        unsubscribe();
+        clearTimeout(timeout);
+        signal?.removeEventListener('abort', abort);
+        resolve(result);
+      };
+      const abort = () => finish('canceled');
+      const unsubscribe = useAuthStore.subscribe(() => {
+        const result = classify();
+        if (result) finish(result);
+      });
+      const timeout = setTimeout(() => finish('unavailable'), 12_000);
+      signal?.addEventListener('abort', abort, { once: true });
+      const result = classify();
+      if (result) finish(result);
+    });
+  }
+
+  private static activeAuthFlow: {
+    key: string;
+    token: symbol;
+    result: Promise<TGenerateAuthUrlResult>;
+    cancel: (() => void) | null;
+  } | null = null;
+  // Passport stops popup timers after approval, before it asks us to persist/bootstrap the session.
+  // Keep the original flow ownership until that second step so a stale popup cannot adopt a session.
+  private static pendingSessionAdoptions = new WeakMap<Session, () => Promise<void>>();
+  private static epoch = 0;
+  private static restoreVersion = 0;
+  private static logoutOwner: symbol | null = null;
+  private static restorePromise: Promise<boolean> | null = null;
+  private static signupPromise: Promise<void> | null = null;
+  private static legacyRevocation: { task: Promise<void>; wait: Promise<void> } | null = null;
+  private static retirementTasks = new Map<string, Promise<void>>();
+  private static profileBootstrap: { generation: string; session: Session; task: Promise<void> } | null = null;
+  private static sessionRestore: {
+    key: string;
+    task: ReturnType<typeof AuthApplication.restorePersistedSession>;
+  } | null = null;
+  private static accountPreparation: { generation: string; task: Promise<void>; cancel: () => void } | null = null;
+
+  private static async bounded<T>(
+    task: Promise<T>,
+    operation: string,
+    milliseconds = 12_000,
+    service = ErrorService.Homeserver,
+  ): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        task,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () =>
+              reject(
+                Err.timeout(
+                  TimeoutErrorCode.REQUEST_TIMEOUT,
+                  operation === 'bootstrapProfile'
+                    ? 'Your session is saved, but account data is still loading. Try again.'
+                    : service === ErrorService.Local
+                      ? 'Could not finish saving account data. Try again.'
+                      : 'Could not reach the homeserver. Try again.',
+                  {
+                    service,
+                    operation,
+                  },
+                ),
+              ),
+            milliseconds,
+          );
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  static async retireLegacyCookieSessions(): Promise<void> {
+    if (this.legacyRevocation) return this.legacyRevocation.wait;
+    const task = AuthApplication.revokeLegacyCookieSessions();
+    const wait = this.bounded(task, 'revokeLegacyCookieSessions', LOGOUT_TIMEOUT_MS).catch(() => {});
+    this.legacyRevocation = { task, wait };
+    // One deadline per shared task; a UI timeout does not release ownership of the request.
+    void task
+      .finally(() => {
+        if (this.legacyRevocation?.task === task) this.legacyRevocation = null;
+      })
+      .catch(() => {});
+    await wait;
+  }
+
+  private static isCurrentGeneration(generation: string): boolean {
+    try {
+      return (
+        useAuthStore.getState().generation === generation &&
+        (AuthApplication.readPersistedAuth()?.generation ?? '') === generation
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  private static async prepareAccount(generation: string): Promise<void> {
+    if (!AuthApplication.readPersistedAuth()?.needsAccountPreparation) return;
+    if (!this.isCurrentGeneration(generation)) throw createCanceledError();
+    useAuthStore.getState().setNeedsAccountSync(true);
+    if (this.accountPreparation?.generation !== generation) {
+      let active = true;
+      const task = AuthApplication.prepareAccount(
+        generation,
+        () => active && this.isCurrentGeneration(generation) && useAuthStore.getState().currentUserPubky !== null,
+      );
+      this.accountPreparation = {
+        generation,
+        task,
+        cancel: () => {
+          active = false;
+        },
+      };
+      // A timeout only stops the UI wait. Keep the shared cleanup alive and reuse it on retry.
+      void task
+        .finally(() => {
+          if (this.accountPreparation?.task === task) this.accountPreparation = null;
+        })
+        .catch(() => {});
+    }
+    await this.bounded(this.accountPreparation.task, 'prepareAccount', 12_000, ErrorService.Local);
+    if (!this.isCurrentGeneration(generation)) throw createCanceledError();
+    useMigrationStore.getState().reset();
+  }
+
+  /** An unreadable reference is retryable; only proven supersession can terminate a pending adoption. */
+  private static isCurrentAdoption(epoch: number, generation: string): boolean {
+    return (
+      epoch === this.epoch &&
+      useAuthStore.getState().generation === generation &&
+      (AuthApplication.readPersistedAuth()?.generation ?? '') === generation
+    );
+  }
+
   private static moderationFollowAbortController: AbortController | null = null;
 
+  /** Controller preflight for capability upgrades; feature UI uses the same pure scope matcher. */
+  static hasCapabilities(required: readonly string[]): boolean {
+    const state = useAuthStore.getState();
+    if (state.restoreStatus !== 'ready' || state.isRestoringSession) return false;
+    const session = state.selectSession();
+    return session !== null && hasCapabilities(session.info.capabilities, required);
+  }
+
   static cancelActiveAuthFlow() {
+    this.epoch++;
     const cancel = this.activeAuthFlow?.cancel;
     this.activeAuthFlow = null;
     cancel?.();
-  }
-
-  /** True while `token` identifies the flow that currently owns auth-flow state. */
-  private static ownsAuthFlow(token: symbol): boolean {
-    return this.activeAuthFlow?.token === token;
+    AuthApplication.clearPendingAuthFlow();
   }
 
   /** Cancel detached moderation-follow work before account-local state changes ownership. */
@@ -116,76 +339,208 @@ export class AuthController {
   /**
    * Restores a persisted session from the auth store.
    * @returns true on success, false on failure
-   * @throws Wrong-environment homeserver errors after local cleanup so UI can show feedback
+   * @throws Wrong-environment homeserver errors while preserving the saved account for recovery
    */
   static async restorePersistedSession(): Promise<boolean> {
-    this.cancelModerationFollow();
-    const authStore = useAuthStore.getState();
-    let isCurrent = captureViewerSession();
+    if (this.restorePromise) return this.restorePromise;
+    void this.retireLegacyCookieSessions();
+    void this.retrySessionRetirement();
+    if (!useAuthStore.getState().sessionReference && useAuthStore.getState().restoreStatus === 'temporary-error') {
+      await useAuthStore.persist.rehydrate();
+      if (!useAuthStore.getState().sessionReference) {
+        try {
+          const saved = AuthApplication.readPersistedAuth();
+          useAuthStore.getState().setRestoreStatus(saved?.currentUserPubky ? 'reauth-required' : 'idle');
+        } catch {
+          // Still unreadable; retain recovery and the user's backup material.
+        }
+        return false;
+      }
+    }
+    // A second caller may have completed hydration while this one was awaiting it.
+    if (this.restorePromise) return this.restorePromise;
+    const snapshot = useAuthStore.getState();
+    const generation = snapshot.generation;
+    const version = this.restoreVersion;
+    const isCurrent = () => version === this.restoreVersion && this.isCurrentGeneration(generation);
+    const task = (async () => {
+      snapshot.setRestoreStatus('restoring');
+      try {
+        let result;
+        if (snapshot.session) result = { status: 'restored' as const, session: snapshot.session };
+        else {
+          const key = JSON.stringify([
+            generation,
+            version,
+            snapshot.sessionReference?.sessionStoreId,
+            snapshot.currentUserPubky,
+          ]);
+          if (this.sessionRestore?.key !== key) {
+            const exchange = AuthApplication.restorePersistedSession({
+              reference: snapshot.sessionReference,
+              expectedPubky: snapshot.currentUserPubky,
+            });
+            this.sessionRestore = { key, task: exchange };
+            // Keep a late success for the next retry; a failed exchange may be retried anew.
+            void exchange.then(
+              (outcome) => {
+                if (outcome.status !== 'restored' && this.sessionRestore?.task === exchange) this.sessionRestore = null;
+              },
+              () => {
+                if (this.sessionRestore?.task === exchange) this.sessionRestore = null;
+              },
+            );
+          }
+          const exchange = this.sessionRestore.task;
+          result = await this.bounded(exchange, 'restoreSession');
+          if (this.sessionRestore?.task === exchange) this.sessionRestore = null;
+        }
+        if (!isCurrent()) return false;
+        if (result.status !== 'restored') {
+          useAuthStore.getState().setRestoreStatus(result.status === 'none' ? 'idle' : result.status);
+          return false;
+        }
+        await this.prepareAccount(generation);
+        if (!isCurrent()) return false;
+        const current = useAuthStore.getState();
+        current.init({
+          session: result.session,
+          currentUserPubky: snapshot.currentUserPubky,
+          hasProfile: current.hasProfile,
+          sessionReference: snapshot.sessionReference,
+          generation,
+          retiringSession: current.retiringSession,
+          pendingRetirements: current.pendingRetirements,
+          restoreStatus: 'restoring',
+        });
+        useAuthStore.getState().setRestoreStatus('restoring');
+        void this.retrySessionRetirement();
+        if (!isCurrent()) return false;
+        if (useAuthStore.getState().hasProfile === null || useAuthStore.getState().needsAccountSync)
+          await this.bootstrapProfile(result.session, generation, true);
+        if (isCurrent()) useAuthStore.getState().setRestoreStatus('ready');
+        return isCurrent();
+      } catch (error) {
+        if (isCurrent())
+          useAuthStore
+            .getState()
+            .setRestoreStatus(isWrongEnvironmentHomeserverError(error) ? 'reauth-required' : 'temporary-error');
+        if (isWrongEnvironmentHomeserverError(error)) throw error;
+        return false;
+      }
+    })();
+    this.restorePromise = task;
     try {
-      const result = await AuthApplication.restorePersistedSession({ authStore });
-      if (!isCurrent() || useAuthStore.getState().isLoggingOut) return false;
-
-      if (!result) {
-        await this.cleanupLocalState();
-        return false;
+      return await task;
+    } finally {
+      if (this.restorePromise === task) this.restorePromise = null;
+      // A storage event may have happened before this tab installed its listener.
+      if (useAuthStore.getState().generation === generation) {
+        try {
+          if ((AuthApplication.readPersistedAuth()?.generation ?? '') !== generation) {
+            await this.syncSessionFromStorage();
+          }
+        } catch {
+          useAuthStore.getState().setRestoreStatus('temporary-error');
+        }
       }
-      const { session } = result;
-      const currentUserPubky = Identity.z32FromSession({ session });
-      // A session restored from a persisted export can carry an undetermined profile: reloading
-      // mid sign-in persists `hasProfile: null` before the profile check completes. Leaving it
-      // unknown read as unauthenticated, which rendered the landing page behind the signed-in
-      // header (issue #2070).
-      const hasProfile = authStore.hasProfile;
-      authStore.init({ session, currentUserPubky, hasProfile });
-      isCurrent = captureViewerSession();
-
-      if (hasProfile === null && !(await this.resolveRestoredProfileState({ pubky: currentUserPubky }))) {
-        if (isCurrent() && !useAuthStore.getState().isLoggingOut) await this.cleanupLocalState();
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      if (!isCurrent() || useAuthStore.getState().isLoggingOut) return false;
-      const appError = toAppError(error, ErrorService.Local, 'restorePersistedSession');
-      await this.cleanupLocalState();
-      if (isWrongEnvironmentHomeserverError(appError)) {
-        throw appError;
-      }
-      return false;
     }
   }
 
-  /**
-   * Resolves the profile state of a session restored from a persisted export, keeping
-   * `hasProfile` unknown until the homeserver answers and sign-in initialization completes.
-   *
-   * While this runs, useAuthStatus keeps the app loading, so no route decides on an
-   * undetermined profile. A state that stays undetermined after the retries signs the session
-   * out instead of letting the app treat the restored account as signed out (issue #2070).
-   *
-   * @param params - Parameters containing the restored session's public key
-   * @param params.pubky - The restored session's public key identifier
-   * @returns true when the store now holds a definite profile state
-   */
-  private static async resolveRestoredProfileState({ pubky }: { pubky: Pubky }): Promise<boolean> {
-    const isCurrent = captureViewerSession();
-    useAuthStore.getState().setIsResolvingProfile(true);
-    try {
-      const hasProfile = await AuthApplication.resolveUserIsSignedUp({ pubky });
-      if (!isCurrent() || useAuthStore.getState().isLoggingOut || hasProfile === null) return false;
+  static subscribeSessionFailures(listener: (failure: ActiveSessionFailure) => void): () => void {
+    return AuthApplication.subscribeSessionFailures(listener);
+  }
 
-      // Reloading during sign-in can interrupt settings sync and bootstrap after the session
-      // export was saved. Resume that work before authenticated routes become accessible.
-      if (hasProfile) await this.hydrateMeImAlive({ pubky });
-      if (!isCurrent() || useAuthStore.getState().isLoggingOut) return false;
+  /** Drop an unusable live handle without deleting account data or canceling a newer sign-in. */
+  static requireSessionReauthentication({ generation, session }: { generation: string; session?: Session }): boolean {
+    const snapshot = useAuthStore.getState();
+    if (
+      !snapshot.session ||
+      snapshot.isLoggingOut ||
+      snapshot.generation !== generation ||
+      (session && snapshot.session !== session) ||
+      !this.isCurrentGeneration(generation)
+    )
+      return false;
+    ++this.restoreVersion;
+    this.sessionRestore = null;
+    this.cancelModerationFollow();
+    // Set the status first so clearing the handle cannot trigger automatic startup restoration.
+    snapshot.setRestoreStatus('reauth-required');
+    snapshot.setSession(null);
+    return true;
+  }
 
-      useAuthStore.getState().setHasProfile(hasProfile);
-      return true;
-    } finally {
-      if (isCurrent()) useAuthStore.getState().setIsResolvingProfile(false);
+  /** SDK notifications also cover removal outside this app's localStorage transitions. */
+  static async syncRemovedSession(id: string | null): Promise<void> {
+    await this.syncSessionFromStorage();
+    const snapshot = useAuthStore.getState();
+    if (!snapshot.sessionReference || (id !== null && snapshot.sessionReference.sessionStoreId !== id)) return;
+    this.cancelActiveAuthFlow();
+    const version = ++this.restoreVersion;
+    this.sessionRestore = null;
+    const previousRestore = this.restorePromise;
+    snapshot.setSession(null);
+    snapshot.setRestoreStatus('restoring');
+    await previousRestore?.catch(() => false);
+    if (this.restoreVersion !== version || !this.isCurrentGeneration(snapshot.generation)) return;
+    // Recheck the SDK record: a delayed notification may refer to an earlier removal.
+    await this.restorePersistedSession();
+  }
+
+  static async syncSessionFromStorage(): Promise<void> {
+    const incoming = AuthApplication.readPersistedAuth();
+    const previous = useAuthStore.getState();
+    if (incoming?.generation === previous.generation) {
+      await useAuthStore.persist.rehydrate();
+      return;
     }
+    this.cancelActiveAuthFlow();
+    this.cancelModerationFollow();
+    const epoch = this.epoch;
+    const previousRestore = this.restorePromise;
+    this.sessionRestore = null;
+    await useAuthStore.persist.rehydrate();
+    if (epoch !== this.epoch) return;
+    if (!incoming) {
+      useAuthStore.getState().init({
+        session: null,
+        currentUserPubky: null,
+        hasProfile: null,
+        sessionReference: null,
+        generation: crypto.randomUUID(),
+        retiringSession: null,
+      });
+    }
+    const current = useAuthStore.getState();
+    if (previous.currentUserPubky !== current.currentUserPubky) {
+      clearAllQueryClients();
+      postStreamQueue.clear();
+      clearMuteSyncCursorSessionStorage();
+      useLocalFilesStore.getState().reset();
+      useSignInStore.getState().reset();
+      resetTabStore(useSettingsStore);
+      resetTabStore(useNotificationStore);
+      resetTabStore(useOnboardingStore);
+      resetTabStore(useHomeStore);
+      resetTabStore(useHotStore);
+      resetTabStore(useSearchStore);
+      LocksController.clearLocalSession();
+      current.setNeedsAccountSync(current.currentUserPubky !== null);
+      if (current.currentUserPubky) await useLocksAuthStore.persist.rehydrate();
+      if (epoch !== this.epoch) return;
+      // Another tab may have just signed up and still need its recovery backup.
+      await useOnboardingStore.persist.rehydrate();
+      if (epoch !== this.epoch) return;
+      const onboarding = useOnboardingStore.getState();
+      let onboardingPubky = onboarding.signupAttempt?.pubky;
+      if (!onboardingPubky && onboarding.secretKey)
+        onboardingPubky = Identity.tryZ32FromSecret(onboarding.secretKey) ?? undefined;
+      if (!current.currentUserPubky || onboardingPubky !== current.currentUserPubky) resetTabStore(useOnboardingStore);
+    }
+    if (previousRestore) await previousRestore.catch(() => false);
+    if (epoch !== this.epoch) return;
+    if (useAuthStore.getState().sessionReference) await this.restorePersistedSession();
   }
 
   /**
@@ -195,23 +550,13 @@ export class AuthController {
    * @returns Configured homeserver service instance
    */
   private static async signIn({ keypair }: TKeypairParams): Promise<boolean> {
-    this.cancelModerationFollow();
-    // Clear query clients to ensure no stale cache from previous session
-    clearAllQueryClients();
-    // Clear database before sign in to ensure clean state
-    await clearDatabase();
-    // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
-    useMigrationStore.getState().reset();
-    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
-    useSettingsStore.getState().reset();
-    const session = await AuthApplication.signIn({ keypair });
-    if (!session) {
-      Logger.error('Failed to sign in. Please try again.', { keypair });
-      return false;
-    }
-    // Environment guard already ran inside HomeserverService.signIn (before the
-    // session was created), so go straight to shared initialization.
-    await this.completeAuthenticatedSession(session);
+    this.cancelActiveAuthFlow();
+    const epoch = this.epoch;
+    void this.retrySessionRetirement();
+    const result = await AuthApplication.signIn({ keypair });
+    if (epoch !== this.epoch) throw createCanceledError();
+    if (!result) return false;
+    await this.completeAuthenticatedSession(result, { epoch });
     return true;
   }
 
@@ -273,108 +618,234 @@ export class AuthController {
   }
 
   /**
-   * Initializes the authenticated session and checks if the user is signed up (profile.json in homeserver).
-   *
-   * Runs the staging environment guard first: the session was approved externally
-   * (e.g. Pubky Ring), so this is its only checkpoint. Keypair flows skip the
-   * guard here — HomeserverService.signIn already ran it before creating the
-   * session, and re-asserting would duplicate the PKARR lookup and let a
-   * transient second lookup abort an already-verified sign-in.
-   * @param params - Object containing session data from authentication
-   * @param params.session - The user session data
-   */
-  static async initializeAuthenticatedSession({ session }: THomeserverSessionResult) {
-    try {
-      await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
-    } catch (error) {
-      // The just-approved session lives on the user's actual homeserver — sign it
-      // out instead of leaving it dangling, whether the key was rejected or the
-      // lookup failed. Best-effort: the failure must surface regardless.
-      await AuthApplication.logout({ session }).catch((logoutError) => {
-        Logger.warn('Failed to sign out session after environment check failure', { logoutError });
-      });
-      throw error;
-    }
-    await this.completeAuthenticatedSession({ session });
-  }
-
-  /**
-   * Swaps the stored session for one the user just approved with today's capability list (#2373).
-   * Not a sign-in: no profile check, bootstrap or sign-in progress, so the route guard sees no change
-   * and the user keeps their place. The old session is never signed out — the homeserver keys its
-   * cookie by pubky, so that would drop the new session as well. Guards that compare the session
-   * object (`captureViewerSession`, the TTL coordinator) see one change: reads in flight are dropped
-   * once and TTL restarts, both of which the next interaction recovers from.
-   *
-   * @returns false when the approval came from another key — a user picking the wrong identity in
-   * Pubky Ring, which the caller reports as a toast. Not an `Err.*`: it is an expected choice, and
-   * an AppError would file it in Sentry as a fault.
-   */
-  static async upgradeSession({ session }: THomeserverSessionResult): Promise<boolean> {
-    // No `cancelActiveAuthFlow` here: the flow that produced this approval already cancelled itself
-    // on settle, so the only flow left to cancel would be a newer one the user just started — whose
-    // QR would then stop polling and never register their next approval.
-    const authStore = useAuthStore.getState();
-    const pubky = Identity.z32FromSession({ session });
-
-    if (pubky !== authStore.currentUserPubky) {
-      // That session is real on its own homeserver, so end it instead of leaving it dangling.
-      // Best-effort, and silent: a failure here is already an `AppError` that logged itself.
-      await AuthApplication.logout({ session }).catch(() => undefined);
-      Logger.warn('Session upgrade approved with a different key');
-      return false;
-    }
-
-    // The same boundary sign-in and restore apply: the key may have republished to a homeserver this
-    // deployment refuses since the session was minted. Not signed out on failure — the cookie is
-    // keyed by pubky, so signing this one out would leave the user with none.
-    await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
-
-    // That check is a network round trip, so the account can change while it runs. Re-read the store
-    // instead of using the snapshot above: storing now would resurrect a session after a sign-out, or
-    // pair the new account with the previous one's session.
-    const current = useAuthStore.getState();
-    if (current.currentUserPubky !== pubky) {
-      Logger.warn('Discarded an upgraded session: the account changed while it was being checked');
-      return false;
-    }
-
-    current.setSession(session);
-    return true;
-  }
-
-  /**
    * Session initialization shared by all sign-in flows; assumes the environment
    * guard already passed for this session.
    */
-  private static async completeAuthenticatedSession({ session }: THomeserverSessionResult) {
-    this.cancelModerationFollow();
-    const signInStore = useSignInStore.getState();
-    signInStore.reset(); // Reset for fresh sign-in
-    signInStore.setAuthUrlResolved(true); // Step 1 complete (20%)
-
-    const authStore = useAuthStore.getState();
-
+  private static async completeAuthenticatedSession(
+    { session }: THomeserverSessionResult,
+    {
+      epoch = this.epoch,
+      expectedPubky,
+      required = [APP_CAPABILITIES],
+      preserveContext = false,
+    }: {
+      epoch?: number;
+      expectedPubky?: string;
+      required?: readonly string[];
+      preserveContext?: boolean;
+    } = {},
+  ) {
+    const previous = useAuthStore.getState();
+    const pubky = Identity.z32FromSession({ session });
+    if (
+      (expectedPubky && pubky !== expectedPubky) ||
+      !hasCapabilities(session.info.capabilities, required) ||
+      !session.grant
+    ) {
+      await AuthApplication.retainUnusedSession(session);
+      throw createAuthApprovalMismatchError();
+    }
+    const persistence = AuthApplication.saveSession(session);
+    let reference;
     try {
-      this.cancelActiveAuthFlow();
-      const pubky = Identity.z32FromSession({ session });
-
-      authStore.init({ session, currentUserPubky: pubky, hasProfile: null });
-
-      const isSignedUp = await AuthApplication.userIsSignedUp({ pubky });
-      signInStore.setProfileChecked(true); // Step 2 complete (40%)
-
-      if (isSignedUp) {
-        await this.hydrateMeImAlive({ pubky });
-      }
-
-      // Update hasProfile after bootstrap completes - triggers redirect via useAuthStatus
-      authStore.setHasProfile(isSignedUp);
+      reference = await persistence;
     } catch (error) {
-      authStore.reset();
-      signInStore.reset();
+      if (!this.isCurrentAdoption(epoch, previous.generation)) {
+        await AuthApplication.retainUnusedSession(session, persistence);
+        throw createCanceledError();
+      }
+      await AuthApplication.retainUnusedSession(session, persistence);
       throw error;
     }
+    if (!this.isCurrentAdoption(epoch, previous.generation)) {
+      await AuthApplication.retainUnusedSession(session, persistence);
+      throw createCanceledError();
+    }
+    const persisted = AuthApplication.readPersistedAuth();
+    // The onboarding key generator sets currentUserPubky before the account is authenticated.
+    const sameAccount =
+      previous.currentUserPubky === pubky &&
+      (previous.session !== null || previous.sessionReference !== null || persisted?.currentUserPubky === pubky);
+    const needsAccountPreparation =
+      !sameAccount || AuthApplication.readPersistedAuth()?.needsAccountPreparation === true;
+    const generation = crypto.randomUUID();
+    const record: PersistedAuth = {
+      currentUserPubky: pubky,
+      sessionReference: reference,
+      hasProfile: sameAccount ? previous.hasProfile : null,
+      generation,
+      retiringSession: null,
+      needsAccountPreparation,
+    };
+    try {
+      await AuthApplication.commitPersistedAuth(record, previous.generation, () => epoch === this.epoch);
+    } catch (error) {
+      if (isAuthFlowCanceledError(error) || !this.isCurrentAdoption(epoch, previous.generation)) {
+        await AuthApplication.retainUnusedSession(session, persistence);
+        throw createCanceledError();
+      }
+      await AuthApplication.retainUnusedSession(session, persistence);
+      throw error;
+    }
+    const committed = AuthApplication.readPersistedAuth();
+    if (!committed || committed.generation !== generation) {
+      await AuthApplication.retainUnusedSession(session, persistence);
+      await this.syncSessionFromStorage();
+      throw createCanceledError();
+    }
+    // Once the reference is durable, this tab must adopt it even if UI cancellation arrives late.
+    this.sessionRestore = null;
+    previous.init({
+      ...committed,
+      session,
+      restoreStatus: preserveContext && !needsAccountPreparation ? 'ready' : 'restoring',
+    });
+    // Keep browser recovery keys until a replacement account is durably accepted.
+    // A same-account reauthorization must not erase its still-unconfirmed backup.
+    const onboarding = useOnboardingStore.getState();
+    const onboardingPubky = onboarding.secretKey
+      ? Identity.tryZ32FromSecret(onboarding.secretKey)
+      : onboarding.signupAttempt?.pubky;
+    if (onboardingPubky !== pubky) resetTabStore(useOnboardingStore, true);
+    void this.retireLegacyCookieSessions();
+    if (needsAccountPreparation) useAuthStore.getState().setNeedsAccountSync(true);
+    if (!preserveContext || needsAccountPreparation) useAuthStore.getState().setRestoreStatus('restoring');
+    try {
+      if (!sameAccount) {
+        this.cancelModerationFollow();
+        clearAllQueryClients();
+        resetTabStore(useSettingsStore, true);
+        resetTabStore(useNotificationStore, true);
+        LocksController.clearLocalSession();
+      }
+      await this.prepareAccount(generation);
+      if (!this.isCurrentGeneration(generation)) throw createCanceledError();
+      void this.retrySessionRetirement(previous.session);
+      if (!this.isCurrentGeneration(generation)) throw createCanceledError();
+      if (
+        needsAccountPreparation ||
+        (!preserveContext && (!sameAccount || previous.hasProfile === null)) ||
+        previous.needsAccountSync
+      )
+        await this.bootstrapProfile(session, generation);
+      if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session)
+        useAuthStore.getState().setRestoreStatus('ready');
+    } catch (error) {
+      // The replacement is already durable. Never resurrect the previous session or erase this grant.
+      if (useAuthStore.getState().generation === generation && useAuthStore.getState().session === session)
+        useAuthStore.getState().setRestoreStatus('temporary-error');
+      throw error;
+    }
+  }
+
+  private static async finishProfileBootstrap(session: Session, generation: string, restoring = false): Promise<void> {
+    if (!this.isCurrentGeneration(generation) || useAuthStore.getState().session !== session)
+      throw createCanceledError();
+    const signInStore = useSignInStore.getState();
+    signInStore.reset();
+    signInStore.setAuthUrlResolved(true);
+    const pubky = Identity.z32FromSession({ session });
+    const isSignedUp = restoring
+      ? await AuthApplication.resolveUserIsSignedUp({ pubky })
+      : await AuthApplication.userIsSignedUp({ pubky });
+    if (isSignedUp === null) {
+      throw Err.timeout(TimeoutErrorCode.REQUEST_TIMEOUT, 'Could not determine the account profile. Try again.', {
+        service: ErrorService.Homeserver,
+        operation: 'restoreProfile',
+      });
+    }
+    if (!this.isCurrentGeneration(generation) || useAuthStore.getState().session !== session)
+      throw createCanceledError();
+    signInStore.setProfileChecked(true);
+    if (isSignedUp) await this.hydrateMeImAlive({ pubky });
+    if (!this.isCurrentGeneration(generation) || useAuthStore.getState().session !== session)
+      throw createCanceledError();
+    useAuthStore.getState().setHasProfile(isSignedUp);
+    useAuthStore.getState().setNeedsAccountSync(false);
+  }
+
+  /** Share bootstrap across UI deadlines and retries, retaining ownership until it really settles. */
+  private static async bootstrapProfile(session: Session, generation: string, restoring = false): Promise<void> {
+    if (this.profileBootstrap?.generation !== generation || this.profileBootstrap.session !== session) {
+      const task = this.finishProfileBootstrap(session, generation, restoring).then(() => {
+        if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session)
+          useAuthStore.getState().setRestoreStatus('ready');
+      });
+      this.profileBootstrap = { generation, session, task };
+      void task
+        .finally(() => {
+          if (this.profileBootstrap?.task === task) this.profileBootstrap = null;
+        })
+        .catch(() => {});
+    }
+    await this.bounded(this.profileBootstrap.task, 'bootstrapProfile');
+  }
+
+  /** Best-effort revocation never gates an otherwise usable grant. Failed credentials remain durable. */
+  static async retrySessionRetirement(livePrevious?: Session | null): Promise<void> {
+    let snapshot: PersistedAuth | null;
+    try {
+      snapshot = AuthApplication.readPersistedAuth();
+    } catch {
+      return;
+    }
+    const references = pendingRetirements(snapshot ?? useAuthStore.getState());
+    if (references.length === 0) return;
+    await Promise.allSettled(references.map((reference) => this.retireSession(reference, livePrevious)));
+    let latest: PersistedAuth | null;
+    try {
+      latest = AuthApplication.readPersistedAuth();
+    } catch {
+      return;
+    }
+    if (latest && this.isCurrentGeneration(latest.generation)) {
+      useAuthStore.setState({ retiringSession: latest.retiringSession, pendingRetirements: latest.pendingRetirements });
+    }
+  }
+
+  private static retireSession(reference: SessionReference, livePrevious?: Session | null): Promise<void> {
+    const existing = this.retirementTasks.get(reference.sessionStoreId);
+    if (existing) return existing;
+    if ((reference.retirementRetryAt ?? 0) > Date.now()) return Promise.resolve();
+    const task = (async () => {
+      if (AuthApplication.readPersistedAuth()?.sessionReference?.sessionStoreId === reference.sessionStoreId) return;
+      let session: Session | null = null;
+      try {
+        // A live predecessor is only reusable when it belongs to this exact grant.
+        const info = await livePrevious?.grant?.sessionInfo();
+        session =
+          info?.grantId === reference.grantId
+            ? (livePrevious ?? null)
+            : await AuthApplication.restoreReference(reference);
+        if (AuthApplication.readPersistedAuth()?.sessionReference?.sessionStoreId === reference.sessionStoreId) return;
+        if (session) await AuthApplication.logout({ session });
+      } catch (error) {
+        const terminal =
+          isAppError(error) &&
+          (error.context?.reason === 'missing_local_grant' || error.context?.reason === 'remote_logout_completed');
+        const reason = isAppError(error) ? error.context?.reason : undefined;
+        const expired = reference.grantExpiresAt <= Date.now() / 1000;
+        // Neither a rejected proof nor an unreadable SDK record proves remote revocation.
+        // Keep its credentials and share a one-hour retry delay across reloads and tabs.
+        // Unsupported records cannot be removed by this SDK, even after grant expiry.
+        if (reason === 'unsupported_stored_session' || (reason === 'invalid_grant' && !expired)) {
+          await AuthApplication.deferRetirement(reference.sessionStoreId, Date.now() + 60 * 60 * 1000);
+          throw error;
+        }
+        if (!terminal && !expired) throw error;
+      }
+      if (AuthApplication.readPersistedAuth()?.sessionReference?.sessionStoreId === reference.sessionStoreId) return;
+      await AuthApplication.removeSessionRecord(reference);
+      await AuthApplication.finishRetirement(reference.sessionStoreId);
+    })();
+    this.retirementTasks.set(reference.sessionStoreId, task);
+    void task
+      .finally(() => {
+        if (this.retirementTasks.get(reference.sessionStoreId) === task)
+          this.retirementTasks.delete(reference.sessionStoreId);
+      })
+      .catch(() => {});
+    return task;
   }
 
   /**
@@ -383,21 +854,61 @@ export class AuthController {
    * @param params.secretKey - The secret key for the user
    * @param params.signupToken - Invitation code for user registration
    */
-  static async signUp({ secretKey, signupToken }: TSignUpParams) {
-    this.cancelModerationFollow();
-    // Clear query clients to ensure no stale cache from previous session
-    clearAllQueryClients();
-    // Clear database before sign up to ensure clean state
-    await clearDatabase();
-    // Skip post-migration resync — new user has no homeserver data to resync
-    useMigrationStore.getState().reset();
-    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
-    useSettingsStore.getState().reset();
-    const keypair = Identity.keypairFromSecretKey(secretKey);
-    const { session } = await AuthApplication.signUp({ keypair, signupToken });
-    const authStore = useAuthStore.getState();
-    const initialState = { session, currentUserPubky: Identity.z32FromSession({ session }), hasProfile: false };
-    authStore.init(initialState);
+  static async signUp({ secretKey, signupToken }: TSignUpParams): Promise<void> {
+    if (this.signupPromise) return this.signupPromise;
+    this.cancelActiveAuthFlow();
+    const epoch = this.epoch;
+    const task = (async () => {
+      void this.retrySessionRetirement();
+      const keypair = Identity.keypairFromSecretKey(secretKey);
+      const pubky = keypair.publicKey.z32();
+      const onboarding = useOnboardingStore.getState();
+      const context = { pubky, homeserver: getHomeserver(), environment: getDeployEnv() };
+      const attempt = onboarding.signupAttempt;
+      const continuing =
+        attempt?.pubky === pubky &&
+        attempt.homeserver === context.homeserver &&
+        attempt.environment === context.environment;
+      let result: THomeserverSessionResult | undefined;
+      if (continuing) {
+        // The previous create response may have been lost after the invite was consumed.
+        try {
+          result = await AuthApplication.signInCreatedAccount({ keypair });
+        } catch (error) {
+          if (epoch !== this.epoch) throw createCanceledError();
+          if (attempt.phase === 'created' || !isAppError(error) || !isNotFound(error)) throw error;
+        }
+      }
+      if (!result) {
+        onboarding.setSignupAttempt({ ...context, phase: 'creating' });
+        try {
+          await AuthApplication.createAccount({ keypair, signupToken });
+        } catch (error) {
+          // A definitive invite rejection did not create the account. Keep its recovery keys,
+          // but let the user correct the invite instead of treating it as an uncertain creation.
+          if (
+            epoch === this.epoch &&
+            isAppError(error) &&
+            (error.code === AuthErrorCode.UNAUTHORIZED ||
+              error.code === AuthErrorCode.FORBIDDEN ||
+              error.code === AuthErrorCode.SESSION_EXPIRED)
+          )
+            onboarding.setSignupAttempt(null);
+          throw error;
+        }
+        if (epoch !== this.epoch) throw createCanceledError();
+        onboarding.setSignupAttempt({ ...context, phase: 'created' });
+        result = await AuthApplication.signInCreatedAccount({ keypair });
+      }
+      if (epoch !== this.epoch) throw createCanceledError();
+      await this.completeAuthenticatedSession(result, { epoch });
+    })();
+    this.signupPromise = task;
+    try {
+      await task;
+    } finally {
+      if (this.signupPromise === task) this.signupPromise = null;
+    }
   }
 
   /**
@@ -424,76 +935,97 @@ export class AuthController {
   }
 
   /**
-   * Wraps sign-in URL generation: clears the previous account's local state, then tracks the flow.
-   *
-   * Ownership is taken synchronously, before the first `await`: a start that is superseded while
-   * its database cleanup or URL generation is still in flight never becomes the active flow, never
-   * cancels the newer flow, and rejects with the canceled error instead of returning a dead URL.
-   * @param generateFn - Async function that returns the auth URL result
+   * Owns a Ring flow across UI unmounts and shares it across Strict Mode subscribers.
+   * @param request - The bound authorization purpose, identity and scopes
    * @returns Promise resolving to the generated authentication URL with wrapped approval
    */
-  private static async wrapAuthFlow(
-    generateFn: () => Promise<TGenerateAuthUrlResult>,
-  ): Promise<TGenerateAuthUrlResult> {
-    const token = this.claimAuthFlow();
-    this.cancelModerationFollow();
-
-    await clearDatabase();
-    if (!this.ownsAuthFlow(token)) throw createCanceledError();
-
-    // Skip post-migration resync — full bootstrap below covers all data
-    useMigrationStore.getState().reset();
-    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
-    useSettingsStore.getState().reset();
-    return this.trackAuthFlow(token, generateFn);
-  }
-
-  /** Synchronous on purpose: callers claim the flow before their first `await`. */
-  private static claimAuthFlow(): symbol {
-    const token = Symbol('auth-flow');
-    this.cancelActiveAuthFlow();
-    this.activeAuthFlow = { token, cancel: null };
-    return token;
-  }
-
-  /**
-   * Flow tracking only, so useAuthUrl can cancel on unmount and stale requests are detected
-   * (e.g. React StrictMode double-mount, or a Pubky Ring request started right before a Passport
-   * request). No local state is touched: the session upgrade runs this for a user who stays signed in.
-   */
-  private static async trackAuthFlow(
-    token: symbol,
-    generateFn: () => Promise<TGenerateAuthUrlResult>,
-  ): Promise<TGenerateAuthUrlResult> {
-    const { authorizationUrl, awaitApproval, cancelAuthFlow } = await generateFn();
-
-    const activeAuthFlow = this.activeAuthFlow;
-    if (!activeAuthFlow || activeAuthFlow.token !== token) {
-      cancelAuthFlow();
-      // Swallow the rejection of the now-orphaned approval so it never surfaces as unhandled.
-      awaitApproval.catch(() => undefined);
-      throw createCanceledError();
-    }
-
-    activeAuthFlow.cancel = cancelAuthFlow;
-
-    const wrappedAwaitApproval = awaitApproval.finally(() => {
-      if (this.activeAuthFlow?.token === token) {
-        this.activeAuthFlow = null;
+  private static async wrapAuthFlow(request: GrantFlowRequest, deferAdoption = false): Promise<TGenerateAuthUrlResult> {
+    const key = JSON.stringify({ ...request, fresh: false });
+    if (!request.fresh && this.activeAuthFlow?.key === key) return this.activeAuthFlow.result;
+    // Preserve the pending serialization when resuming after page reload.
+    this.activeAuthFlow?.cancel?.();
+    const epoch = ++this.epoch;
+    const token = Symbol('grant-flow');
+    const result = (async () => {
+      const flow = await AuthApplication.startGrantFlow(request);
+      if (epoch !== this.epoch) {
+        void flow.awaitApproval.then((session) => AuthApplication.retainUnusedSession(session)).catch(() => {});
+        flow.cancelAuthFlow();
+        throw createCanceledError();
       }
-      cancelAuthFlow();
+      if (this.activeAuthFlow?.token === token) this.activeAuthFlow.cancel = flow.cancelAuthFlow;
+      const awaitApproval = flow.awaitApproval
+        .then(async (session) => {
+          const assertCurrent = async () => {
+            if (!this.isCurrentAdoption(epoch, request.generation)) {
+              await AuthApplication.retainUnusedSession(session);
+              flow.completeAuthFlow?.();
+              throw createCanceledError();
+            }
+          };
+          await assertCurrent();
+          const adopt = async () => {
+            await assertCurrent();
+            try {
+              await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
+            } catch (error) {
+              await assertCurrent();
+              await AuthApplication.retainUnusedSession(session);
+              flow.completeAuthFlow?.();
+              throw error;
+            }
+            await assertCurrent();
+            let completed = false;
+            try {
+              await this.completeAuthenticatedSession(
+                { session },
+                {
+                  epoch,
+                  expectedPubky: request.expectedPubky,
+                  required: request.capabilities.split(','),
+                  preserveContext: request.purpose === 'upgrade',
+                },
+              );
+            } catch (error) {
+              completed = isAuthFlowCanceledError(error) || isAuthApprovalMismatchError(error);
+              throw error;
+            } finally {
+              if (completed || useAuthStore.getState().session === session) flow.completeAuthFlow?.();
+            }
+          };
+          if (deferAdoption) this.pendingSessionAdoptions.set(session, adopt);
+          else await adopt();
+          return session;
+        })
+        .finally(() => {
+          if (this.activeAuthFlow?.token === token) this.activeAuthFlow = null;
+        });
+      // Consumers may unmount during Ring handoff. Adoption still runs; prevent an unhandled rejection.
+      void awaitApproval.catch(() => {});
+      return {
+        ...flow,
+        awaitApproval,
+        cancelAuthFlow: () => {
+          if (this.activeAuthFlow?.token === token) this.cancelActiveAuthFlow();
+          else flow.cancelAuthFlow();
+        },
+      };
+    })();
+    this.activeAuthFlow = { key, token, result, cancel: null };
+    void result.catch(() => {
+      if (this.activeAuthFlow?.token === token) this.activeAuthFlow = null;
     });
-
-    return { authorizationUrl, awaitApproval: wrappedAwaitApproval, cancelAuthFlow };
+    return result;
   }
 
   /**
-   * Centralizes all local state cleanup: resets every Zustand store, clears cookies,
+   * Centralizes all local state cleanup: resets every Zustand store,
    * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
    * and mute-sync `sessionStorage` cursors.
-   * Used by both logout() and restorePersistedSession() on failure.
+   * Used after explicit logout. Failed restoration never clears account data.
    */
-  private static async cleanupLocalState() {
+  private static async cleanupLocalState(isCurrent: () => boolean, persist = true) {
+    if (!isCurrent()) return;
     this.cancelModerationFollow();
     // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
     clearMuteSyncCursorSessionStorage();
@@ -507,31 +1039,32 @@ export class AuthController {
     // Clear in-memory feed stream queues
     postStreamQueue.clear();
 
-    // Cancel active auth flows
-    this.cancelActiveAuthFlow();
-
     // Cancel and clear all query clients (nexus, homegate, exchangerate, and any future ones)
     clearAllQueryClients();
 
     // Reset all Zustand stores.
-    useOnboardingStore.getState().reset();
-    useAuthStore.getState().reset();
+    resetTabStore(useOnboardingStore, persist);
+    resetTabStore(useAuthStore, persist);
     useSignInStore.getState().reset();
     useLocalFilesStore.getState().reset();
-    useHomeStore.getState().reset();
-    useHotStore.getState().reset();
-    useSearchStore.getState().reset();
-    useNotificationStore.getState().reset();
-    useSettingsStore.getState().reset();
+    resetTabStore(useHomeStore, persist);
+    resetTabStore(useHotStore, persist);
+    resetTabStore(useSearchStore, persist);
+    resetTabStore(useNotificationStore, persist);
+    resetTabStore(useSettingsStore, persist);
 
     // Unified logout: tear down the Locks session (Lock Server signout + local store) alongside the
     // homeserver session, so the user can never stay logged into Locks after leaving pubky.app.
-    await LocksController.logout();
+    await LocksController.logout(persist);
 
-    // Clear cookies (also drops any stale `locale` cookie from the removed language selection)
-    clearCookies();
-
-    await clearDatabase();
+    if (!persist || !isCurrent()) return;
+    // Credential logout is already complete; cache cleanup cannot turn it into a failed sign-out.
+    await this.bounded(clearDatabase(isCurrent), 'clearAccount', LOGOUT_TIMEOUT_MS, ErrorService.Local).catch(
+      (error) => {
+        if (!isAppError(error)) toAppError(error, ErrorService.Local, 'clearAccount');
+      },
+    );
+    if (!isCurrent()) return;
     // Skip post-migration resync — full cleanup resets all state
     useMigrationStore.getState().reset();
   }
@@ -540,18 +1073,49 @@ export class AuthController {
    * Generates an authentication URL for external authentication flows.
    * @returns Promise resolving to the generated authentication URL
    */
-  static async getAuthUrl(): Promise<TGenerateAuthUrlResult> {
-    return this.wrapAuthFlow(() => AuthApplication.generateAuthUrl());
+  static async getAuthUrl(fresh = false): Promise<TGenerateAuthUrlResult> {
+    const state = useAuthStore.getState();
+    return this.wrapAuthFlow({
+      purpose: 'signin',
+      capabilities: HOMESERVER_CAPABILITIES,
+      generation: state.generation,
+      fresh,
+    });
   }
 
-  /**
-   * Generates a signup authentication URL for Pubky Ring authorization.
-   * Decorates a standard auth URL with homeserver address and invite code metadata.
-   * @param inviteCode - The invite code for signup
-   * @returns Promise resolving to the generated signup authentication URL
-   */
-  static async getSignupAuthUrl(inviteCode: string): Promise<TGenerateAuthUrlResult> {
-    return this.wrapAuthFlow(() => AuthApplication.generateSignupAuthUrl(inviteCode));
+  static async getSignupAuthUrl(inviteCode: string, fresh = false): Promise<TGenerateAuthUrlResult> {
+    return this.wrapAuthFlow({
+      purpose: 'signup',
+      capabilities: HOMESERVER_CAPABILITIES,
+      generation: useAuthStore.getState().generation,
+      inviteCode,
+      fresh,
+    });
+  }
+
+  /** Feature UI displays the returned QR/deeplink and awaits approval before resuming its action. */
+  static async requestCapabilities(
+    required: readonly string[] = LOCKS_CAPABILITIES,
+    fresh = false,
+  ): Promise<TGenerateAuthUrlResult | null> {
+    void this.retrySessionRetirement();
+    const state = useAuthStore.getState();
+    if (this.hasCapabilities(required)) return null;
+    if (!state.currentUserPubky)
+      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Sign in before requesting permissions.', {
+        service: ErrorService.Local,
+        operation: 'requestCapabilities',
+      });
+    const capabilities = validateCapabilities(
+      [APP_CAPABILITIES, ...(state.session?.info.capabilities ?? []), ...required].join(','),
+    ) as Capabilities;
+    return this.wrapAuthFlow({
+      purpose: 'upgrade',
+      capabilities,
+      fresh,
+      generation: state.generation,
+      expectedPubky: state.currentUserPubky,
+    });
   }
 
   /**
@@ -562,75 +1126,144 @@ export class AuthController {
    * @returns Promise resolving to the generated authentication URL with wrapped approval
    */
   static async getPassportAuthUrl(params: TGeneratePassportAuthUrlParams): Promise<TGenerateAuthUrlResult> {
-    return this.wrapAuthFlow(() => AuthApplication.generatePassportAuthUrl(params));
+    const state = useAuthStore.getState();
+    return this.wrapAuthFlow(
+      {
+        purpose: 'signin',
+        capabilities: params.caps || HOMESERVER_CAPABILITIES,
+        generation: state.generation,
+        xCallback: params.xCallback,
+        fresh: true,
+      },
+      true,
+    );
   }
 
-  /**
-   * Same Ring flow as sign-in (the requested list is already the current one), but for a signed-in
-   * user (#2373): the local database and settings stay as they are. Approval goes to `upgradeSession`.
-   */
-  static async getUpgradeAuthUrl(): Promise<TGenerateAuthUrlResult> {
-    return this.trackAuthFlow(this.claimAuthFlow(), () => AuthApplication.generateAuthUrl());
+  /** Completes the specific Passport approval after its hook has stopped the popup timers. */
+  static async initializeAuthenticatedSession({ session }: THomeserverSessionResult): Promise<void> {
+    const adopt = this.pendingSessionAdoptions.get(session);
+    this.pendingSessionAdoptions.delete(session);
+    if (!adopt) throw createCanceledError();
+    await adopt();
+  }
+
+  /** Uses the grant upgrade while keeping the merged Locks UI's entry point. */
+  static async getUpgradeAuthUrl(fresh = false): Promise<TGenerateAuthUrlResult | null> {
+    return this.requestCapabilities(LOCKS_CAPABILITIES, fresh);
   }
 
   /**
    * Logs out the current user from both the homeserver and local application state.
    */
-  static async logout() {
+  static async logout(): Promise<void> {
+    const owner = Symbol('logout');
+    this.logoutOwner = owner;
+    this.restoreVersion++;
+    this.sessionRestore = null;
+    this.accountPreparation?.cancel();
+    this.accountPreparation = null;
+    this.cancelActiveAuthFlow();
     this.cancelModerationFollow();
-    const authStore = useAuthStore.getState();
-
-    // Set logging out flag immediately to prevent flash of weird states in UI
-    authStore.setIsLoggingOut(true);
-
-    let session = authStore.session;
-
-    // Fresh loads can still have a persisted session export before the live session is restored.
-    // Restore credentials directly: revocation must not depend on profile or bootstrap reads.
-    if (!session && authStore.sessionExport) {
+    const epoch = this.epoch;
+    const snapshot = useAuthStore.getState();
+    snapshot.setIsLoggingOut(true);
+    const generation = crypto.randomUUID();
+    let record: PersistedAuth = {
+      currentUserPubky: null,
+      hasProfile: null,
+      sessionReference: null,
+      retiringSession: null,
+      pendingRetirements: pendingRetirements({
+        retiringSession: snapshot.sessionReference,
+        pendingRetirements: pendingRetirements(snapshot),
+      }),
+      generation,
+    };
+    let canCommit = true;
+    let persisted = false;
+    let localGeneration = generation;
+    try {
       try {
-        session = (await AuthApplication.restorePersistedSession({ authStore }))?.session ?? null;
-      } catch (error) {
-        // A wrong-environment rejection needs no toast here — the user asked to log out anyway.
-        Logger.warn('Persisted session restore during logout failed; clearing local state', { error });
-      }
-    }
-
-    if (session) {
-      // Bound the sign-out. The SDK's session.signout() takes no timeout or AbortSignal, so a
-      // homeserver that accepts the connection and then never replies would hold logout open
-      // until the OS-level TCP timeout, leaving cookies and the local database in place.
-      // Local cleanup must always run; ending the server session is best-effort.
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      try {
-        const timeoutPromise = new Promise<boolean>((resolve) => {
-          timeoutId = setTimeout(() => resolve(true), LOGOUT_TIMEOUT_MS);
-        });
-
-        const timedOut = await Promise.race([
-          AuthApplication.logout({ session }).then(
-            () => false,
-            (error) => {
-              Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
-              return false;
-            },
+        await this.bounded(
+          AuthApplication.commitPersistedAuth(
+            record,
+            snapshot.generation,
+            () => canCommit && this.epoch === epoch && useAuthStore.getState().generation === snapshot.generation,
           ),
-          timeoutPromise,
-        ]);
-
-        if (timedOut) {
-          Logger.warn('Homeserver sign-out did not answer in time, clearing local state anyway', {
-            timeoutMs: LOGOUT_TIMEOUT_MS,
-          });
+          'persistLogout',
+          LOGOUT_TIMEOUT_MS,
+          ErrorService.Local,
+        );
+        persisted = true;
+      } catch {
+        canCommit = false;
+        if (this.epoch !== epoch || useAuthStore.getState().generation !== snapshot.generation)
+          throw createCanceledError();
+        let current: PersistedAuth | null = null;
+        try {
+          current = AuthApplication.readPersistedAuth();
+        } catch {
+          // Unreadable storage must not prevent this tab from signing out.
         }
+        if (current && current.generation !== snapshot.generation) {
+          await this.syncSessionFromStorage();
+          throw createCanceledError();
+        }
+        localGeneration = snapshot.generation;
+        AuthApplication.suppressLocalAuthRestore(localGeneration);
+        Logger.warn('Local sign-out could not be saved. This tab will not restore the discarded session.');
       } finally {
-        if (timeoutId !== undefined) {
-          clearTimeout(timeoutId);
+        canCommit = false;
+      }
+      if (persisted) {
+        const committed = AuthApplication.readPersistedAuth();
+        if (
+          committed?.generation !== generation ||
+          this.epoch !== epoch ||
+          useAuthStore.getState().generation !== snapshot.generation
+        ) {
+          await this.syncSessionFromStorage();
+          throw createCanceledError();
         }
+        // The locked commit may have recovered revocation obligations hidden by a previous tab-only logout.
+        record = committed;
+      }
+      // The tab-only fallback must never enqueue metadata over the retained durable credentials.
+      const { storage } = useAuthStore.persist.getOptions();
+      if (!persisted && storage)
+        useAuthStore.persist.setOptions({ storage: { ...storage, setItem: () => {}, removeItem: () => {} } });
+      try {
+        snapshot.init({ ...record, generation: localGeneration, session: null });
+      } finally {
+        if (!persisted) useAuthStore.persist.setOptions({ storage });
+      }
+      const isCurrent = () =>
+        this.epoch === epoch &&
+        useAuthStore.getState().generation === localGeneration &&
+        (!persisted || this.isCurrentGeneration(localGeneration));
+      const remote = Promise.allSettled([
+        ...pendingRetirements(record).map((ref) => this.retireSession(ref, snapshot.session)),
+        this.retireLegacyCookieSessions(),
+        snapshot.currentUserPubky ? AuthApplication.logoutLegacyCookie(snapshot.currentUserPubky) : Promise.resolve(),
+      ]);
+      if (persisted)
+        await this.bounded(remote, 'logout', LOGOUT_TIMEOUT_MS)
+          .then((outcomes) => {
+            if (outcomes.some((outcome) => outcome.status === 'rejected'))
+              Logger.warn('Local sign-out completed; remote revocation could not be confirmed.');
+          })
+          .catch(() => {});
+      await this.cleanupLocalState(isCurrent, persisted);
+      if (!isCurrent()) {
+        await this.syncSessionFromStorage();
+        throw createCanceledError();
+      }
+    } finally {
+      if (this.logoutOwner === owner) {
+        this.logoutOwner = null;
+        useAuthStore.getState().setIsLoggingOut(false);
       }
     }
-
-    await this.cleanupLocalState();
   }
 
   /**

@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Logger } from '@/libs/logger/logger';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -10,10 +11,11 @@ export interface UseBookmarkResult {
   isBookmarked: boolean;
   isLoading: boolean;
   isToggling: boolean;
-  toggle: () => Promise<void>;
+  toggle: () => Promise<boolean>;
 }
 
 export interface UseBookmarkOptions {
+  active?: boolean;
   /**
    * Override the success-path toast copy. Useful when the bookmark represents
    * something other than a generic post (e.g. a collection "Follow"/"Unfollow").
@@ -53,6 +55,7 @@ export interface UseBookmarkOptions {
  * ```
  */
 export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBookmarkResult {
+  const { waitForAuth } = useRequireAuth(options?.active ?? true);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   // Resolve toast copy once per render so the `useCallback` dep array can track
@@ -63,6 +66,7 @@ export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBo
   const [isBookmarked, setIsBookmarked] = useState(options?.initialIsBookmarked ?? false);
   const [isLoading, setIsLoading] = useState(true);
   const [isToggling, setIsToggling] = useState(false);
+  const inFlight = useRef(false);
 
   // Check if post is bookmarked on mount and when postId changes
   useEffect(() => {
@@ -85,19 +89,18 @@ export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBo
       });
   }, [postId]);
 
-  const toggle = useCallback(async (): Promise<void> => {
+  const toggle = useCallback(async (): Promise<boolean> => {
     if (!currentUserPubky) {
-      toast({
-        variant: 'error',
-        description: 'Sign in to bookmark posts',
-      });
-      return;
+      await waitForAuth();
+      return false;
     }
 
-    if (isToggling) return; // Prevent double-clicks
+    if (inFlight.current) return false;
+    inFlight.current = true; // Prevent double-clicks
 
     setIsToggling(true);
     try {
+      if (!(await waitForAuth())) return false;
       if (isBookmarked) {
         await BookmarkController.commitDelete({ postId, userId: currentUserPubky });
         setIsBookmarked(false);
@@ -111,6 +114,7 @@ export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBo
           title: addedTitle,
         });
       }
+      return true;
     } catch (error) {
       Logger.error('[useBookmark] Failed to toggle bookmark', { error, postId, currentUserPubky });
       // BookmarkApplication writes local-first, so the local write may have
@@ -140,10 +144,12 @@ export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBo
           description: isBookmarked ? 'Could not remove bookmark' : 'Could not add bookmark',
         });
       }
+      return false;
     } finally {
+      inFlight.current = false;
       setIsToggling(false);
     }
-  }, [postId, currentUserPubky, isBookmarked, isToggling, addedTitle, removedTitle]);
+  }, [postId, currentUserPubky, isBookmarked, addedTitle, removedTitle, waitForAuth]);
 
   return {
     isBookmarked,

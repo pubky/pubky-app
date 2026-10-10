@@ -13,6 +13,7 @@ import {
   createCollectionFormSchema,
 } from '@/hooks/useCreateCollection/useCreateCollection.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
@@ -48,7 +49,11 @@ type UseEditCollectionResult = {
  * strings come from `collections.edit`; shared form labels/validation messages
  * stay in `collections.new`.
  */
-export function useEditCollection({ compositeCollectionId }: UseEditCollectionParams): UseEditCollectionResult {
+export function useEditCollection({
+  compositeCollectionId,
+  active = true,
+}: UseEditCollectionParams): UseEditCollectionResult {
+  const { waitForAuth } = useRequireAuth(active);
   const { postDetails } = usePostDetails(compositeCollectionId);
   const collection = postDetails ? parseCollectionContent(postDetails.content) : null;
 
@@ -113,6 +118,7 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
 
     let ok = false;
     await form.handleSubmit(async (data) => {
+      if (!(await waitForAuth())) return;
       const name = data[CREATE_COLLECTION_FORM_FIELDS.NAME];
       const description = data[CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION];
       const layout = data[CREATE_COLLECTION_FORM_FIELDS.LAYOUT];

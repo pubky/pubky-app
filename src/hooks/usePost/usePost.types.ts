@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 
 export interface UsePostOptions {
+  active?: boolean;
   /** A captured lock draft needs the article's uploaded images after the composer was emptied. */
   keepInlineMedia?: boolean;
 }

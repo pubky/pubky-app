@@ -74,6 +74,7 @@ vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: vi.fn(() => ({
     isAuthenticated: true,
+    waitForAuth: async () => true,
     requireAuth: vi.fn((callback) => callback()),
   })),
 }));

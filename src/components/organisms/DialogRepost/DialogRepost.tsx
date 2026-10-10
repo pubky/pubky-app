@@ -26,6 +26,7 @@ export function DialogRepost({ postId, open, onOpenChangeAction, config }: Dialo
         <Container className="gap-3">
           {/* Repost input - repost preview is rendered inside PostInput */}
           <PostInput
+            active={open}
             dataCy="repost-post-input"
             key={resetKey}
             variant={POST_INPUT_VARIANT.REPOST}

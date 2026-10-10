@@ -17,6 +17,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
+    waitForAuth: async () => true,
     requireAuth: mocks.requireAuth,
   }),
 }));

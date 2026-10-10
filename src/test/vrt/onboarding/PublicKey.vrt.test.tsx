@@ -82,6 +82,10 @@ vi.mock('@/controllers/profile/profile', () => ({
   ProfileController: { generateSecrets: vi.fn() },
 }));
 
+vi.mock('@/libs/identity/identity', () => ({
+  Identity: { tryZ32FromSecret: () => 'vrt000000000000000000000000000000000000000000alice01' },
+}));
+
 // Header reads public-route state (auth store is mocked above).
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   usePublicRoute: () => ({ isCoreExploreRoute: false, isDynamicPublicRoute: false }),

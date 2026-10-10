@@ -1,6 +1,7 @@
 import type { Pubky } from '@/models/models.types';
 
 export interface OnboardingState {
+  signupAttempt: { pubky: string; homeserver: string; environment: string; phase: 'creating' | 'created' } | null;
   secretKey: string | null;
   mnemonic: string | null;
   hasHydrated: boolean;
@@ -25,6 +26,7 @@ export interface TOnboardingSecrets {
 }
 
 export interface OnboardingActions {
+  setSignupAttempt: (attempt: OnboardingState['signupAttempt']) => void;
   reset: () => void;
   setInviteCode: (inviteCode: string) => void;
   setSecrets: (secrets: TOnboardingSecrets) => void;
@@ -44,6 +46,7 @@ export interface OnboardingSelectors {
 export type OnboardingStore = OnboardingState & OnboardingActions & OnboardingSelectors;
 
 export const onboardingInitialState: OnboardingState = {
+  signupAttempt: null,
   secretKey: null,
   mnemonic: null,
   hasHydrated: false,

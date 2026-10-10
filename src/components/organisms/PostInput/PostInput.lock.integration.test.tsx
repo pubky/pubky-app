@@ -163,6 +163,7 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
 vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
   usePostInputAuthHandlers: (params: Record<string, (...args: never[]) => unknown>) => ({
     isAuthenticated: true,
+    isWaiting: false,
     handleExpandWithAuth: params.handleExpand,
     handleSubmitWithAuth: params.handleSubmit,
     setTagsWithAuth: params.setTags,
@@ -557,3 +558,5 @@ describe('PostInput lock flow (integration)', () => {
     expect(mocks.composer.content).toBe('my teaser'); // nothing lost — the creator retries
   });
 });
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({ useRequireAuth: () => ({ waitForAuth: async () => true }) }));

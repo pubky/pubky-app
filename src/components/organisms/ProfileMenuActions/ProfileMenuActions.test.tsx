@@ -24,6 +24,7 @@ vi.mock('@/hooks/useProfileMenuActions/useProfileMenuActions', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
+    waitForAuth: async () => true,
     requireAuth: mockRequireAuth,
   }),
 }));

@@ -85,8 +85,12 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - `exchangerate/` — Exchange rate service
 - `nextjs/` — Server-only work (OG-metadata scraping for link previews, Next.js route-handler helpers)
 - **NEVER** call application or controllers
-- **NEVER** access stores — one exception (ADR 0004): session-owning services read their session
-  store via `getState()` (`homeserver` → `useAuthStore`, `locks` → `useLocksAuthStore`); reads only, never writes
+- **NEVER** access stores — the session exception in ADR 0004/0024 allows session-owning services to read
+  their session store via `getState()` (`homeserver` → `useAuthStore`, `locks` → `useLocksAuthStore`).
+  Homeserver also reads `generation`, `restoreStatus` and `sessionReference` to identify terminal failures of the
+  active session. Locks reads `useAuthStore.currentUserPubky` only to validate the creator session owner before IO.
+  These reads do not authorize service-side store changes: failure notifications reach AuthCoordinator through
+  Controller/Application subscriptions, and the controller decides whether to invalidate the session.
 
 ### Pipes (`src/core/pipes/`)
 
@@ -334,6 +338,7 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0021 | Service worker scope and update policy                                    |
 | 0022 | Locks: creator-side locked content publishing                             |
 | 0023 | Article inline media as attachment slots                                  |
+| 0024 | Grant-only authentication                                                 |
 
 ## Quick Checklist
 

@@ -6,6 +6,7 @@ import { Account } from './Account';
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({
     push: mockPush,
     replace: vi.fn(),

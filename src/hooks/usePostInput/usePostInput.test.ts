@@ -70,7 +70,7 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   })),
 }));
 
-const mockInlineImageUpload = vi.fn();
+const mockInlineMediaUpload = vi.fn();
 const mockGetMediaType = vi.fn((): string | null => null);
 const mockGetMediaName = vi.fn((): string | null => null);
 const mockUseAttachmentsMetadata = vi.fn((_params: { fileUris: readonly string[] }) => ({
@@ -101,7 +101,7 @@ vi.mock('@/hooks/usePost/usePost', () => ({
     edit: mockEdit,
     isSubmitting: mockIsSubmitting,
     inlineMedia: {
-      upload: mockInlineImageUpload,
+      upload: mockInlineMediaUpload,
       getPreviewUrl: vi.fn(() => null),
       getMediaType: mockGetMediaType,
       getMediaName: mockGetMediaName,
@@ -2512,7 +2512,7 @@ describe('usePostInput', () => {
     it('tells usePost to keep the uploaded images while a lock draft holds them', () => {
       renderHook(() => usePostInput({ variant: 'post', keepInlineMedia: true }));
 
-      expect(usePost).toHaveBeenLastCalledWith({ keepInlineMedia: true });
+      expect(usePost).toHaveBeenLastCalledWith({ keepInlineMedia: true, active: true });
     });
   });
 
@@ -3054,7 +3054,7 @@ describe('usePostInput', () => {
 
       it('routes a video dropped inside the rich-text editor to inline insertion too', async () => {
         mockIsArticle = true;
-        mockInlineImageUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/clip1');
+        mockInlineMediaUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/clip1');
 
         const { result } = renderHook(() => usePostInput({ variant: 'post' }));
 
@@ -3086,7 +3086,7 @@ describe('usePostInput', () => {
           await waitFor(() => {
             expect(insertMarkdown).toHaveBeenCalledWith('![](pubky://author/pub/pubky.app/files/clip1)');
           });
-          expect(mockInlineImageUpload).toHaveBeenCalledWith(clip);
+          expect(mockInlineMediaUpload).toHaveBeenCalledWith(clip);
           expect(mockSetAttachments).not.toHaveBeenCalled();
         } finally {
           document.body.removeChild(editorRoot);
@@ -3095,7 +3095,7 @@ describe('usePostInput', () => {
 
       it('routes article drops landing inside the rich-text editor to inline insertion', async () => {
         mockIsArticle = true;
-        mockInlineImageUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/img1');
+        mockInlineMediaUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/img1');
 
         const { result } = renderHook(() =>
           usePostInput({
@@ -3141,7 +3141,7 @@ describe('usePostInput', () => {
           await waitFor(() => {
             expect(insertMarkdown).toHaveBeenCalledWith('![](pubky://author/pub/pubky.app/files/img1)');
           });
-          expect(mockInlineImageUpload).toHaveBeenCalledWith(mockFile);
+          expect(mockInlineMediaUpload).toHaveBeenCalledWith(mockFile);
           expect(mockSetAttachments).not.toHaveBeenCalled();
         } finally {
           editorRoot.remove();

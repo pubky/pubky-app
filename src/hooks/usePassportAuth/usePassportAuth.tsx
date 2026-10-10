@@ -10,7 +10,7 @@ import {
   PASSPORT_POPUP_NAME_PREFIX,
 } from '@/config/passport';
 import { AuthController } from '@/controllers/auth/auth';
-import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
+import { isAuthApprovalMismatchError, isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import { isAppError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import {
@@ -23,7 +23,6 @@ import {
 } from '@/libs/passport/passport';
 import type { PassportOutcome } from '@/libs/passport/passport.types';
 import { toast } from '@/molecules/Toaster/toast';
-import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import type {
   PassportAttemptResult,
   PassportFailureReason,
@@ -68,7 +67,7 @@ const FAILURE_TOAST_COPY: Record<PassportFailureReason, string> = {
 /**
  * Drive one Pubky Passport ("Continue with Google") attempt.
  *
- * Passport is a signer for the same `pubkyauth://` cookie flow Pubky Ring uses: the hook opens
+ * Passport is a signer for the same `pubkyauth://` grant flow Pubky Ring uses: the hook opens
  * Passport in a popup and waits for the HTTP relay. Only the SDK `Session` returned by the relay
  * authenticates; every popup message or callback is a UI signal that can at most end the attempt
  * early. See `docs/environment.md` (Passport) and `pubky-passport/docs/integration.md`.
@@ -207,15 +206,22 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
       try {
         await AuthController.initializeAuthenticatedSession({ session });
       } catch (error) {
+        if (isAuthFlowCanceledError(error)) {
+          // A newer login owns the session. Do not trigger callers' failure/retry handling.
+          settle(attempt, 'superseded');
+          return;
+        }
         const isWrongEnvironment = isWrongEnvironmentHomeserverError(error);
-        if (!isWrongEnvironment && !isAppError(error)) {
+        if (!isWrongEnvironment && !isAppError(error) && !isAuthApprovalMismatchError(error)) {
           Logger.error('Failed to persist Passport session and check profile:', error);
         }
         toast({
           variant: 'error',
           description: isWrongEnvironment
             ? 'This account is linked to a different homeserver. Use a staging account on this site.'
-            : 'Sign in failed. Try again.',
+            : isAuthApprovalMismatchError(error)
+              ? 'Approve with the account you are signed in with.'
+              : 'Sign in failed. Try again.',
         });
         settle(attempt, 'failed');
         return;
@@ -267,9 +273,6 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
       onAttemptSettledRef.current?.({ attemptId, result: 'popup-blocked' });
       return;
     }
-
-    // Abandoned browser-generated keys must never survive into a Passport identity.
-    useOnboardingStore.getState().reset();
 
     const attempt: PassportAttempt = {
       id: attemptId,

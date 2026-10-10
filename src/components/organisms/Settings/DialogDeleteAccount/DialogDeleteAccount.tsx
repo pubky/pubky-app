@@ -10,7 +10,7 @@ interface DialogDeleteAccountProps {
   onOpenChangeAction: (open: boolean) => void;
 }
 export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDeleteAccountProps) {
-  const { handleDeleteAccount, isDeleting, progress } = useDeleteAccount();
+  const { handleDeleteAccount, isDeleting, isWaiting, progress } = useDeleteAccount(isOpen);
 
   // Deletion cannot be interrupted, so block dismissal (cancel, X, overlay, Escape) while it runs
   const handleOpenChange = (open: boolean) => {
@@ -34,7 +34,7 @@ export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDelete
             variant="destructive"
             size="lg"
             onClick={handleDeleteAccount}
-            disabled={isDeleting}
+            disabled={isDeleting || isWaiting}
             className="order-1 sm:order-2"
           >
             <Trash2 className="h-4 w-4" />

@@ -164,6 +164,7 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
 vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
   usePostInputAuthHandlers: (params: Record<string, (...args: never[]) => unknown>) => ({
     isAuthenticated: true,
+    isWaiting: false,
     handleExpandWithAuth: params.handleExpand,
     handleSubmitWithAuth: params.handleSubmit,
     setTagsWithAuth: params.setTags,
@@ -818,3 +819,5 @@ describe('PostInput lock wiring', () => {
     expect(screen.getByTestId('lock-card')).toBeInTheDocument(); // still configured for a retry
   });
 });
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({ useRequireAuth: () => ({ waitForAuth: async () => true }) }));

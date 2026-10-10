@@ -3,17 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProfileController } from '@/controllers/profile/profile';
 import { AppError } from '@/libs/error/error';
 import { ClientErrorCode } from '@/libs/error/error.codes';
-import { ErrorMessages } from '@/libs/error/error.messages';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { useProfileActions } from './useProfileActions';
 
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({
     push: mockPush,
   }),
@@ -23,11 +25,10 @@ vi.mock('@/molecules/Toaster/toast');
 
 // Mock AuthController.logout
 const mockLogout = vi.fn();
-vi.mock('@/controllers/auth/auth', () => ({
-  AuthController: {
-    logout: () => mockLogout(),
-  },
-}));
+vi.mock('@/controllers/auth/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/controllers/auth/auth')>();
+  return { AuthController: { logout: () => mockLogout(), waitForSession: actual.AuthController.waitForSession } };
+});
 
 // Mock useCopyToClipboard hook
 const mockCopyToClipboard = vi.fn();
@@ -51,7 +52,7 @@ describe('useProfileActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(Logger, 'error').mockImplementation(() => {});
-    useAuthStore.setState({ currentUserPubky: null });
+    useAuthStore.setState({ ...authInitialState, hasHydrated: true, session: mockSession(), restoreStatus: 'ready' });
   });
 
   describe('Action handlers', () => {
@@ -204,10 +205,10 @@ describe('useProfileActions', () => {
         await result.current.onSignOut();
       });
 
-      expect(Logger.error).toHaveBeenCalledWith('Failed to logout:', expect.any(Error));
+      expect(Logger.error).toHaveBeenCalledWith('Failed to sign out:', { error: expect.any(Error) });
       expect(toast).toHaveBeenCalledWith({
         variant: 'error',
-        description: ErrorMessages.LOGOUT_FAILED,
+        description: 'Could not sign out. Try again.',
       });
       expect(mockPush).not.toHaveBeenCalled();
     });
@@ -225,6 +226,17 @@ describe('useProfileActions', () => {
   });
 
   describe('onStatusChange', () => {
+    it('gates a status change when the account enters recovery after render', async () => {
+      useAuthStore.setState({ currentUserPubky: 'user' });
+      const commit = vi.spyOn(ProfileController, 'commitUpdateStatus').mockResolvedValue(undefined);
+      const { result } = renderHook(() => useProfileActions(defaultProps));
+      act(() => useAuthStore.setState({ restoreStatus: 'temporary-error' }));
+      await act(() => result.current.onStatusChange('available'));
+      expect(commit).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().showSignInDialog).toBe(false);
+      commit.mockRestore();
+    });
+
     it('calls ProfileController.commitUpdateStatus with status', async () => {
       const mockUpdateStatus = vi.spyOn(ProfileController, 'commitUpdateStatus').mockResolvedValue(undefined);
       useAuthStore.setState({ currentUserPubky: 'test-user' as Pubky });

@@ -299,3 +299,5 @@ describe('useCreateLockContent', () => {
     expect(mocks.clearSession).not.toHaveBeenCalled();
   });
 });
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({ useRequireAuth: () => ({ waitForAuth: async () => true }) }));

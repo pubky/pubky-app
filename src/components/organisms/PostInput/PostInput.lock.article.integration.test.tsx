@@ -5,6 +5,15 @@ import type { TGuardedResource } from '@/services/locks/locks.types';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    isAuthenticated: true,
+    isWaiting: false,
+    requireAuth: <T,>(action: () => T) => action(),
+    waitForAuth: async () => true,
+  }),
+}));
+
 /**
  * A locked article with body images, through the real composer hooks: `usePostInput`, `usePost`, the
  * inline image session, `usePostInputLock` and `useCreateLockContent`. Only the IO boundary
@@ -98,6 +107,7 @@ vi.mock('pubky-app-specs', () => ({
 vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
   usePostInputAuthHandlers: (params: Record<string, (...args: never[]) => unknown>) => ({
     isAuthenticated: true,
+    isWaiting: false,
     handleExpandWithAuth: params.handleExpand,
     handleSubmitWithAuth: params.handleSubmit,
     setTagsWithAuth: params.setTags,

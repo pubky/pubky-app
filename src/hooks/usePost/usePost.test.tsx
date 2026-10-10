@@ -2716,3 +2716,8 @@ describe('usePost — article inline images', () => {
     });
   });
 });
+
+// These tests exercise the mutation after auth readiness; restore races use the real store in auth-wait tests.
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ waitForAuth: async () => true }),
+}));

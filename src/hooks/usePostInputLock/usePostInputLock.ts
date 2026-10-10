@@ -37,6 +37,7 @@ const filesToLocalAttachments = (files: File[]) =>
  * *configures* it; the composer's Post button is what publishes.
  */
 export function usePostInputLock({
+  active = true,
   isEnabled,
   canEnable,
   lockDraft,
@@ -107,6 +108,7 @@ export function usePostInputLock({
   // one JSON content — `PostArticle` can only render the unlocked copy back from that shape.
   // Its body images follow the cover, in the order their `attachment:{n}` slots count them.
   const { publish, isPublishing } = useCreateLockContent({
+    active,
     lockedPost: {
       content: lockDraft?.isArticle
         ? buildArticleContent(lockDraft.articleTitle, lockDraft.serializedArticle.body)
@@ -214,6 +216,7 @@ export function usePostInputLock({
     if (!isLockConfigured) return; // switch on, price never applied — publish nothing
 
     const result = await publish();
+    if (result.status === 'canceled') return;
     if (result.status === 'auth-expired') {
       handleAuthExpired(); // recoverable: reopen sign-in, keep the configured lock
       return;

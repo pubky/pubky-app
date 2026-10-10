@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { getLockServer } from '@/config/network';
 import { LocksController } from '@/controllers/locks/locks';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 
 /**
@@ -13,9 +14,13 @@ import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
  */
 export function useRestoreLocksAuth(): void {
   const hasHydrated = useLocksAuthStore((state) => state.hasHydrated);
+  const secret = useLocksAuthStore((state) => state.locksSessionSecret);
+  const authHasHydrated = useAuthStore((state) => state.hasHydrated);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const generation = useAuthStore((state) => state.generation);
 
   useEffect(() => {
-    if (!hasHydrated || !getLockServer()) return;
+    if (!hasHydrated || !authHasHydrated || !currentUserPubky || !getLockServer()) return;
     void LocksController.restorePersistedLocksSession();
-  }, [hasHydrated]);
+  }, [hasHydrated, authHasHydrated, currentUserPubky, generation, secret]);
 }

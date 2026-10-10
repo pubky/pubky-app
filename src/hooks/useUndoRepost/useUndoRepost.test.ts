@@ -2,6 +2,8 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { useUndoRepost } from './useUndoRepost';
 
 // Exercise the real useDeletePost so the assertions cover the resulting action,
@@ -22,6 +24,7 @@ describe('useUndoRepost', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ currentUserPubky: 'viewer', session: mockSession(), restoreStatus: 'ready' });
     vi.mocked(PostController.commitDelete).mockResolvedValue(undefined);
     vi.mocked(PostController.getDetails).mockResolvedValue(null);
   });
@@ -64,7 +67,7 @@ describe('useUndoRepost', () => {
     const deletion = Promise.withResolvers<void>();
     vi.mocked(PostController.commitDelete).mockReturnValueOnce(deletion.promise);
     const { result } = renderHook(() => useUndoRepost());
-    let undo: Promise<void>;
+    let undo: Promise<boolean>;
 
     act(() => {
       undo = result.current.undoRepost(repostId);

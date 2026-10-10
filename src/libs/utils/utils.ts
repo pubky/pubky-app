@@ -306,16 +306,6 @@ export function formatInviteCode(code: string) {
   }
 }
 
-export function clearCookies() {
-  if (typeof document !== 'undefined') {
-    document.cookie.split(';').forEach((cookie) => {
-      const eqPos = cookie.indexOf('=');
-      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-      document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-    });
-  }
-}
-
 /**
  * Pauses execution for the specified duration.
  * Useful for adding delays in async operations.

@@ -28,7 +28,7 @@ export const LogoutHeader = () => {
         {'See you '}
         <span className="text-brand">{'soon!'}</span>
       </PageTitle>
-      <PageSubtitle>{'You have securely signed out.'}</PageSubtitle>
+      <PageSubtitle>{'You have signed out.'}</PageSubtitle>
     </PageHeader>
   );
 };

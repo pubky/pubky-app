@@ -136,6 +136,7 @@ vi.mock('@/stores/auth/auth.store', async () => {
     useAuthStore: createZustandLikeHook({
       currentUserPubky: f.viewerPubky,
       session: mockRingSession(['/:rw'], f.viewerPubky),
+      restoreStatus: 'ready',
       sessionExport: null,
       hasProfile: true,
       hasHydrated: true,

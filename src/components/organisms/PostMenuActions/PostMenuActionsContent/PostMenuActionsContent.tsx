@@ -12,6 +12,7 @@ import type { PostMenuActionsContentProps } from './PostMenuActionsContent.types
 
 export function PostMenuActionsContent({
   postId,
+  active = true,
   variant,
   onActionComplete,
   onReportClick,
@@ -20,6 +21,7 @@ export function PostMenuActionsContent({
   isDeleting,
 }: PostMenuActionsContentProps) {
   const { menuItems, isLoading } = usePostMenuActions(postId, {
+    active,
     onReportClick,
     onEditClick,
     onDeleteClick,
@@ -59,6 +61,7 @@ export function PostMenuActionsContent({
           </Button>
         ) : (
           <DropdownMenuItem
+            onSelect={(event) => event.preventDefault()}
             key={item.id}
             data-cy={`post-menu-action-${item.id}`}
             onClick={() => handleItemClick(item)}

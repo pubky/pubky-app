@@ -433,42 +433,32 @@ Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
 
 ## Sessions from before locks
 
-A Pubky Ring session carries exactly the capability list approved at sign-in, for its whole life,
-and the app rebuilds the same session on every page load from `localStorage`. Locks added two
+A grant carries the capability list approved at sign-in for its whole life, and the app restores its SDK record on
+each page load. Legacy cookie users sign in again during the grant-only migration. Locks added two
 entries to that list (`HOMESERVER_CAPABILITIES` in `@/config/network`: `/priv/social/:rw` for the
-reader's replicas and purchases, `/priv/app.locks/content/:r` for a creator's own originals). A user who
-signed in through Ring before those entries shipped keeps a session without them: `/pub` keeps
+reader's replicas and purchases, `/priv/app.locks/content/:r` for a creator's own originals). A user
+with a valid saved Ring grant issued before those entries shipped keeps a session without them: `/pub/pubky.app/` keeps
 working, so the feed, posting and profiles are unaffected, but the homeserver answers every read
-or write under `/priv` with **403** (a session that lacks the capability; 401 is only "no session").
+or write under the missing private scopes with **403** (insufficient permission; 401 means authentication failed).
 Keypair sign-in is unaffected: the SDK mints it with the root capability, `/:rw` — confirmed against
 the local stack, and root covers every required entry with no special case.
 
-The app does not sign such a user out. Instead (#2373):
+The app does not sign out a user merely because a valid grant lacks Locks scopes. Instead (#2373):
 
 - **Detection is derived, not stored.** `sessionNeedsUpgrade` (`@/libs/capabilities/capabilities`)
   compares `session.info.capabilities` against the required list by coverage, with the homeserver's
   own rule: a scope covers a path when it is equal, or when it ends in `/` and is a prefix. `/:rw`
   therefore covers everything with no special case, and `/pub/app` covers only that one path.
   `useSessionNeedsUpgrade` reads it off the auth store, so it updates the moment the session changes.
-- **The upgrade is a swap, not a sign-in.** `useAuthUrl({ type: 'upgrade' })` starts the same Ring
-  flow as sign-in (the requested list is already the current one); on approval
-  `AuthController.upgradeSession` replaces the stored session and does nothing else. The sign-in
-  routine would re-init the auth store with the profile unknown, which the route guard reads as
-  "signed out" for a moment and redirects. A session approved with a different key is refused and
-  signed out on its own homeserver so it is not left dangling, and the same homeserver boundary as
-  sign-in is applied before the swap, in case the key republished to a homeserver this deployment
-  refuses.
-  The URL comes from `getUpgradeAuthUrl`, which only tracks the flow: the sign-in URL path also
-  clears the local database and resets the settings store for the previous account, which must
-  not happen to a user who stays signed in. An approval from another key is reported back as a
-  plain `false` and surfaced as a toast, not an `Err.*`: picking the wrong identity in Ring is a
-  choice to correct, and an AppError would file every mis-tap in Sentry. Guards that compare the
-  session object
-  (`captureViewerSession`, the TTL coordinator) see the swap as one change: reads in flight are
-  dropped once and TTL restarts, and the next interaction recovers both.
-- **The old session is never signed out.** The homeserver keys its cookie by pubky, so the new
-  sign-in already overwrote it; a sign-out request would answer with a removal cookie under that
-  same name and drop the new session too. The stale server-side row expires on its own.
+- **Upgrade preserves the current account and screen.** `useAuthUrl({ type: 'upgrade' })` calls
+  `AuthController.getUpgradeAuthUrl()`, which delegates to the shared grant capability request.
+  Approval validates the account, environment and required scopes, saves the grant, then retires
+  the previous credential. It preserves the profile, database and composer state. A rejected or
+  canceled approval leaves the existing session intact; a retirement failure keeps the new grant
+  active and queues the previous grant for cleanup retry. See [the grant migration contract](migrations/2600-grant-auth-and-locks.md).
+
+- **Retire the previous grant after adoption.** The replacement is saved before SDK signout and local removal of the
+  previous grant. A failed retirement remains retryable; it never restores the previous session over the replacement.
 - **Where it is asked for.** The creator setup dialog inserts the step between the Lock Server
   authorization and Bitkit, numbered `(1/2)` / `(2/2)` only when both were pending when the dialog
   opened. On the reader side, a locked post (`LockedPostContent`) and the Unlocked screen
@@ -484,10 +474,11 @@ The app does not sign such a user out. Instead (#2373):
   for it with a 403 per render. A creator whose Lock Server and Bitkit are already connected in this tab
   still meets the step: `usePostInputLock` gates the lock dialog on the session as well.
 
-Release note: after the deploy, users already signed in through Ring are not logged out, and
-nothing under `/pub` changes behaviour. Every locked post they scroll past shows the notice with
-its Unlock parked (the app cannot tell which locks they unlocked before), and so does their
-Unlocked page; a creator meets the extra step the next time they lock a post.
+Release note: the grant-only migration requires existing cookie users, including Ring users, to sign in again.
+New Ring/Passport grants request the Locks scopes upfront. Existing valid grants are preserved; only those missing
+the scopes need the permission notice and upgrade flow described above. For those users, every locked post shows
+the notice with Unlock paused (the app cannot read which locks they unlocked before), as does their Unlocked page;
+a creator meets the extra step when they next lock a post.
 
 ## Testing & local demo
 

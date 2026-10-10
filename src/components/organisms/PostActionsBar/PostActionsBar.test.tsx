@@ -22,6 +22,7 @@ vi.mock('@/hooks/useBookmark/useBookmark', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
+    waitForAuth: async () => true,
     requireAuth: <T,>(action: () => T) => action(),
   }),
 }));

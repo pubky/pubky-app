@@ -57,6 +57,8 @@ import { ArticleComposerPreview } from '@/organisms/ArticleComposerPreview/Artic
 import { DialogLocksAuth } from '@/organisms/DialogLocksAuth/DialogLocksAuth';
 import { POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainLayoutRules';
 import { BODY_TEXT_CLASS_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainTypography';
+import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
@@ -72,6 +74,7 @@ const LOCK_LIMITS_MESSAGE = `Locked content supports up to ${LOCK_ATTACHMENT_MAX
 const PERSISTENT_PANEL_PROPS = { forceMount: true, tabIndex: -1, className: 'data-[state=inactive]:hidden' } as const;
 
 export function PostInput({
+  active = true,
   dataCy,
   id,
   variant,
@@ -126,7 +129,7 @@ export function PostInput({
     handleArticleBodyChange,
     isDragging,
     isExpanded,
-    isSubmitting,
+    isSubmitting: isWriting,
     showEmojiPicker,
     setShowEmojiPicker,
     displayPlaceholder,
@@ -157,6 +160,7 @@ export function PostInput({
     handleMentionKeyDown,
     handleSelectionChange,
   } = usePostInput({
+    active,
     variant,
     postId,
     originalPostId,
@@ -179,6 +183,7 @@ export function PostInput({
   });
 
   const {
+    isWaiting,
     isAuthenticated,
     handleExpandWithAuth,
     handleSubmitWithAuth,
@@ -196,6 +201,7 @@ export function PostInput({
     handleArticleClickWithAuth,
     removeExistingAttachmentWithAuth,
   } = usePostInputAuthHandlers({
+    active,
     handleExpand,
     handleSubmit,
     setTags,
@@ -210,6 +216,9 @@ export function PostInput({
     handleArticleClick,
     removeExistingAttachment,
   });
+  const isSubmitting = isWriting || isWaiting;
+  const restoreStatus = useAuthStore((state) => state.restoreStatus);
+  const displayUserPubky = selectDisplayUserPubky({ currentUserPubky, restoreStatus });
 
   const isPostVariant = variant === POST_INPUT_VARIANT.POST;
 
@@ -254,6 +263,7 @@ export function PostInput({
     submitOrPublish,
     isPublishing: isPublishingLock,
   } = usePostInputLock({
+    active,
     isEnabled: isPostVariant,
     // Something to lock: any body text or at least one attachment. An article needs a title and a
     // body, as it does to be published.
@@ -560,10 +570,10 @@ export function PostInput({
             onAnimationComplete={skipHeightMotion ? undefined : onHeightAnimationComplete}
           >
             <div ref={stateContentMeasureRef} className="relative">
-              {!isArticle && currentUserPubky && (
+              {!isArticle && displayUserPubky && (
                 <div data-testid="post-input-stable-avatar" className="absolute top-0 left-0 z-10">
                   <PostHeader
-                    postId={currentUserPubky}
+                    postId={displayUserPubky}
                     isReplyInput={true}
                     userDetails={currentUserDetails}
                     showPopover={false}
@@ -577,7 +587,7 @@ export function PostInput({
                 {!isArticle && (
                   <Container overrideDefaults className="relative flex min-w-0 flex-col gap-4">
                     <AnimatePresence initial={false} mode="popLayout">
-                      {isExpanded && currentUserPubky && (
+                      {isExpanded && displayUserPubky && (
                         <motion.div
                           key="post-input-expanded-header"
                           data-testid="post-input-expanded-header"
@@ -587,7 +597,7 @@ export function PostInput({
                           variants={dissolveVariants}
                         >
                           <PostHeader
-                            postId={currentUserPubky}
+                            postId={displayUserPubky}
                             isReplyInput={true}
                             userDetails={currentUserDetails}
                             characterLimit={characterLimit}
@@ -604,14 +614,14 @@ export function PostInput({
                       overrideDefaults
                       className={cn('flex w-full min-w-0 items-stretch', GAP_CLASS_BY_HEADER_SIZE[headerSize])}
                     >
-                      {!isExpanded && currentUserPubky && (
+                      {!isExpanded && displayUserPubky && (
                         <div
                           data-testid="post-input-collapsed-avatar-placeholder"
                           className={cn('shrink-0 self-start', AVATAR_CLASS_BY_HEADER_SIZE[headerSize])}
                           aria-hidden="true"
                         />
                       )}
-                      {!currentUserPubky && (
+                      {!displayUserPubky && (
                         <div className="shrink-0 self-start">
                           <AvatarWithFallback
                             name=""
@@ -707,12 +717,12 @@ export function PostInput({
                       tabIndex={-1}
                       data-testid="article-composer-panel-preview"
                     >
-                      {currentUserPubky && (
+                      {displayUserPubky && (
                         <ArticleComposerPreview
                           // The draft, not the debounced state: the preview must show what was just typed
                           title={articleTitleDraft}
                           body={content}
-                          authorPubky={currentUserPubky}
+                          authorPubky={displayUserPubky}
                           userDetails={currentUserDetails}
                           coverFile={attachments[0]}
                           // Only the edit variant has a persisted cover; a new one picked this session wins
@@ -774,13 +784,20 @@ export function PostInput({
                         }
                         // The article's byline moves into the action row (the body box has no header)
                         leadingContent={
-                          isArticle && currentUserPubky ? (
+                          isArticle && displayUserPubky ? (
                             <AvatarWithFallback
                               avatarUrl={currentUserAvatarUrl}
                               name={resolveUserDisplayName(currentUserDetails)}
-                              fallbackSeed={currentUserPubky}
+                              fallbackSeed={displayUserPubky}
                               size="md"
                               data-testid="article-composer-avatar"
+                            />
+                          ) : isArticle ? (
+                            <AvatarWithFallback
+                              name=""
+                              fallbackSeed="user"
+                              size="md"
+                              data-testid="post-input-fallback-avatar"
                             />
                           ) : undefined
                         }

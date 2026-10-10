@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { useLocksAuthFlow } from './useLocksAuthFlow';
 import { LocksAuthFlowStatus } from './useLocksAuthFlow.types';
 
@@ -65,6 +66,52 @@ describe('useLocksAuthFlow', () => {
     );
   });
 
+  it('treats a superseded account callback as quiet cancellation', async () => {
+    mocks.completeAuthFromCallback.mockRejectedValueOnce(createCanceledError());
+    const { result } = renderHook(() => useLocksAuthFlow());
+    attachIframeSource(result);
+    const state = await startFlow(result);
+    await postCallback({ type: LOCKS_AUTH_MESSAGE_TYPE, code: 'CODE', state });
+    expect(result.current.status).toBe(LocksAuthFlowStatus.IDLE);
+    expect(result.current.error).toBeNull();
+  });
+  it.each(['success', 'canceled', 'failed'])(
+    'ignores an old exchange completing with %s after reset and restart',
+    async (outcome) => {
+      const pending = Promise.withResolvers<{ session: typeof mocks.fakeSession; secret: string }>();
+      mocks.completeAuthFromCallback.mockReturnValueOnce(pending.promise);
+      const { result } = renderHook(() => useLocksAuthFlow());
+      attachIframeSource(result);
+      const state = await startFlow(result);
+      await postCallback({ type: LOCKS_AUTH_MESSAGE_TYPE, code: 'CODE', state });
+      act(() => result.current.reset());
+      await act(() => result.current.start());
+      await act(async () => {
+        if (outcome === 'success') pending.resolve({ session: mocks.fakeSession, secret: 'old' });
+        else pending.reject(outcome === 'canceled' ? createCanceledError() : new Error('old failure'));
+      });
+      expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
+      expect(result.current.session).toBeNull();
+      expect(result.current.error).toBeNull();
+    },
+  );
+  it('ignores a connect URL that arrives after reset and a newer start', async () => {
+    const old = Promise.withResolvers<string>();
+    mocks.getConnectUrl.mockReturnValueOnce(old.promise);
+    const { result } = renderHook(() => useLocksAuthFlow());
+    let first!: Promise<void>;
+    act(() => {
+      first = result.current.start();
+    });
+    act(() => result.current.reset());
+    await act(() => result.current.start());
+    await act(async () => {
+      old.resolve('https://old.lock.server/connect');
+      await first;
+    });
+    expect(result.current.connectUrl).toBe('https://lock.server/connect?delivery=postmessage');
+    expect(result.current.status).toBe(LocksAuthFlowStatus.AWAITING_APPROVAL);
+  });
   it('starts idle', () => {
     const { result } = renderHook(() => useLocksAuthFlow());
     expect(result.current.status).toBe(LocksAuthFlowStatus.IDLE);

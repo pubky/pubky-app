@@ -7,6 +7,7 @@ import { PostController } from '@/controllers/post/post';
 import type { TEditPostAttachments } from '@/controllers/post/post.types';
 import { useInlineMediaUpload } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload';
 import type { InlineMediaLocalEntry } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload.types';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
@@ -93,7 +94,7 @@ const showSessionExpiredToast = () =>
     description: 'Session expired. Please sign in.',
   });
 
-export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePostReturn {
+export function usePost({ keepInlineMedia = false, active = true }: UsePostOptions = {}): UsePostReturn {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -102,6 +103,8 @@ export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePo
   const [articleTitle, setArticleTitle] = useState('');
   const [lockTitle, setLockTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const inFlight = useRef(false);
+  const { waitForAuth } = useRequireAuth(active);
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
@@ -113,7 +116,7 @@ export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePo
   // uploads aren't in the body yet, so `serializeArticleBody` at publish
   // remains the authoritative cap enforcement.
   const inlineMediaSession = useInlineMediaUpload({
-    enabled: isArticle,
+    enabled: isArticle && active,
     keepSession: keepInlineMedia,
     authorPubky: currentUserId,
     getInlineBudget: () =>
@@ -263,9 +266,12 @@ export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePo
     // allow empty content and attachments
     if ((!content.trim() && attachments.length === 0) || !postId || !currentUserId) return;
 
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsSubmitting(true);
 
     try {
+      if (!(await waitForAuth())) return;
       const createdPostId = await PostController.commitCreate({
         parentPostId: postId,
         content: content.trim(),
@@ -285,6 +291,7 @@ export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePo
       Logger.error('[usePost] Failed to submit reply:', err);
       showCommitErrorToast(err, 'Could not post reply. Try again.');
     } finally {
+      inFlight.current = false;
       setIsSubmitting(false);
     }
   };
@@ -304,12 +311,13 @@ export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePo
     if ((!hasBody && attachments.length === 0) || (isArticle && (!hasBody || !latestTitle.trim())) || !currentUserId)
       return;
 
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsSubmitting(true);
-    // From here until finally, discarding the session must not delete files:
-    // the commit may succeed and the published article would reference them
-    inlineMediaSession.setCommitting(true);
-
     try {
+      if (!(await waitForAuth())) return;
+      // Only protect files once the commit can start; closing during restore may discard them.
+      inlineMediaSession.setCommitting(true);
       let articleBody = '';
       let inlineUris: string[] = [];
       if (isArticle) {
@@ -353,6 +361,7 @@ export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePo
       showCommitErrorToast(err, 'Could not create post. Try again.');
     } finally {
       inlineMediaSession.setCommitting(false);
+      inFlight.current = false;
       setIsSubmitting(false);
     }
   };
@@ -360,9 +369,12 @@ export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePo
   const repost = async ({ originalPostId, successToastTitle, onSuccess, onUndo }: UsePostRepostOptions) => {
     if (!originalPostId || !currentUserId) return;
 
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsSubmitting(true);
 
     try {
+      if (!(await waitForAuth())) return;
       const createdPostId = await PostController.commitCreate({
         originalPostId,
         content: content.trim(),
@@ -384,6 +396,7 @@ export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePo
       Logger.error('[usePost] Failed to repost:', err);
       showCommitErrorToast(err, 'Could not repost. Try again.');
     } finally {
+      inFlight.current = false;
       setIsSubmitting(false);
     }
   };
@@ -408,12 +421,13 @@ export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePo
     )
       return;
 
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsSubmitting(true);
-    // From here until finally, discarding the session must not delete files:
-    // the commit may succeed and the edited article would reference them
-    inlineMediaSession.setCommitting(true);
-
     try {
+      if (!(await waitForAuth())) return;
+      // Only protect files once the commit can start; closing during restore may discard them.
+      inlineMediaSession.setCommitting(true);
       let editContentPayload: string;
       let editAttachments: TEditPostAttachments | undefined;
       let articleSeedEntries: (InlineMediaLocalEntry | null)[] | undefined;
@@ -538,6 +552,7 @@ export function usePost({ keepInlineMedia = false }: UsePostOptions = {}): UsePo
       });
     } finally {
       inlineMediaSession.setCommitting(false);
+      inFlight.current = false;
       setIsSubmitting(false);
     }
   };

@@ -5,7 +5,6 @@ import { Container } from '@/atoms/Container/Container';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSocialGraphStatus } from '@/hooks/useSocialGraphStatus/useSocialGraphStatus';
 import { useTagged } from '@/hooks/useTagged/useTagged';
 import { AvatarZoomModal } from '@/molecules/AvatarZoomModal/AvatarZoomModal';
@@ -35,7 +34,6 @@ export function ProfileProfile() {
   const { profile, stats, actions, isProfileLoading } = useProfileHeader(pubky ?? '');
 
   // Handle follow/unfollow for other users' profiles (with auth check)
-  const { requireAuth } = useRequireAuth();
   const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = useFollowUser();
   const { isFollowing } = useIsFollowing(pubky ?? '');
 
@@ -61,9 +59,7 @@ export function ProfileProfile() {
 
   const handleFollowToggle = () => {
     if (!pubky) return;
-    requireAuth(async () => {
-      await toggleFollow(pubky, isFollowing);
-    });
+    void toggleFollow(pubky, isFollowing);
   };
 
   const handleAvatarClick = () => {

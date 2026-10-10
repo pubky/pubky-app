@@ -9,6 +9,7 @@ import { toast } from '@/molecules/Toaster/toast';
 import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { mockAuthStore } from '@/test-utils/stores';
 import { useRemoveDeletedPost } from './useRemoveDeletedPost';
 
@@ -27,7 +28,7 @@ vi.mock('@/controllers/post/post', () => ({
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: vi.fn(),
+  useAuthStore: Object.assign(vi.fn(), { getState: vi.fn() }),
 }));
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
@@ -65,14 +66,33 @@ describe('useRemoveDeletedPost', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useAuthStore).mockImplementation((selector) =>
-      selector(mockAuthStore({ currentUserPubky: currentUserPubky })),
-    );
+    const auth = mockAuthStore({ hasHydrated: true, currentUserPubky, session: mockSession(), restoreStatus: 'ready' });
+    vi.mocked(useAuthStore).mockImplementation((selector) => selector(auth));
+    vi.mocked(useAuthStore.getState).mockReturnValue(auth);
     vi.mocked(useTimelineFeedContext).mockReturnValue(bookmarksFeed);
     vi.mocked(BookmarkController.exists).mockResolvedValue(true);
     vi.mocked(PostController.getDetails).mockResolvedValue({
       content: JSON.stringify({ name: 'Collection', description: '', items: [postUri] }),
     } as never);
+  });
+
+  it('blocks optimistic removal without sign-in on a temporary restore failure', async () => {
+    const showRecovery = vi.fn();
+    vi.mocked(useAuthStore.getState).mockReturnValue(
+      mockAuthStore({
+        hasHydrated: true,
+        currentUserPubky,
+        restoreStatus: 'temporary-error',
+        session: null,
+        setShowSignInDialog: showRecovery,
+      }),
+    );
+    vi.mocked(useTimelineFeedContext).mockReturnValue(collectionFeed);
+    const { result } = renderHook(() => useRemoveDeletedPost(postId));
+    await act(async () => expect(await result.current.remove()).toBe(false));
+    expect(showRecovery).not.toHaveBeenCalled();
+    expect(removePostsOptimistically).not.toHaveBeenCalled();
+    expect(PostController.commitUpdateCollectionItem).not.toHaveBeenCalled();
   });
 
   it('allows removal from the signed-in user bookmarks', () => {
@@ -96,7 +116,7 @@ describe('useRemoveDeletedPost', () => {
       removePromise = result.current.remove();
     });
 
-    expect(removePostsOptimistically).toHaveBeenCalledWith(postId);
+    await waitFor(() => expect(removePostsOptimistically).toHaveBeenCalledWith(postId));
     expect(removePostsOptimistically.mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(BookmarkController.commitDelete).mock.invocationCallOrder[0],
     );
@@ -265,7 +285,7 @@ describe('useRemoveDeletedPost', () => {
       void result.current.remove();
     });
 
-    expect(removePostsOptimistically).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(removePostsOptimistically).toHaveBeenCalledTimes(1));
     expect(BookmarkController.commitDelete).toHaveBeenCalledTimes(1);
 
     await act(async () => {
@@ -302,7 +322,9 @@ describe('useRemoveDeletedPost', () => {
   });
 
   it('does not allow removal without an authenticated user', () => {
-    vi.mocked(useAuthStore).mockImplementation((selector) => selector(mockAuthStore({ currentUserPubky: null })));
+    vi.mocked(useAuthStore).mockImplementation((selector) =>
+      selector(mockAuthStore({ hasHydrated: true, currentUserPubky: null })),
+    );
 
     const { result } = renderHook(() => useRemoveDeletedPost(postId));
 

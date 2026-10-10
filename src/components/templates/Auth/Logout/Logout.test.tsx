@@ -1,13 +1,20 @@
 import React from 'react';
+import { Keypair } from '@synonymdev/pubky';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SessionReference } from '@/libs/auth/session.types';
+import { createCanceledError } from '@/libs/error/auth-flow-canceled';
+import { mockGrantReference } from '@/test-utils/pubky';
 import { Logout } from './Logout';
 
 const mocks = vi.hoisted(() => {
   const authState = {
     hasHydrated: true,
+    generation: 'original',
+    restoreStatus: 'idle',
     session: {} as object | null,
-    sessionExport: null as string | null,
+    currentUserPubky: 'account' as string | null,
+    sessionReference: null as SessionReference | null,
     isLoggingOut: false,
     setIsLoggingOut: vi.fn((value: boolean) => {
       authState.isLoggingOut = value;
@@ -15,6 +22,7 @@ const mocks = vi.hoisted(() => {
   };
 
   const onboardingState = {
+    secretKey: '',
     hasHydrated: true,
   };
 
@@ -26,6 +34,8 @@ const mocks = vi.hoisted(() => {
     mockLoggerError: vi.fn(),
   };
 });
+
+vi.mock('@/organisms/AlertBackup/AlertBackup', () => ({ AlertBackup: () => <div>Backup controls</div> }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -78,7 +88,9 @@ vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
       onHandleBackButton,
       onHandleContinueButton,
       className,
+      hiddenContinueButton,
     }: {
+      hiddenContinueButton?: boolean;
       backText: string;
       continueText: string;
       onHandleBackButton: () => void;
@@ -87,7 +99,7 @@ vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
     }) => (
       <div data-testid="buttons-navigation" data-class={className}>
         <button onClick={onHandleBackButton}>{backText}</button>
-        <button onClick={onHandleContinueButton}>{continueText}</button>
+        {!hiddenContinueButton && <button onClick={onHandleContinueButton}>{continueText}</button>}
       </div>
     ),
   };
@@ -140,19 +152,96 @@ vi.mock('@/controllers/auth/auth', () => ({
 }));
 
 describe('Logout', () => {
+  it('waits for backup confirmation before direct-route signout', async () => {
+    const key = Keypair.random();
+    mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
+    mocks.authState.currentUserPubky = key.publicKey.z32();
+    mocks.mockLogout.mockResolvedValue(undefined);
+    const { rerender } = render(<Logout />);
+    expect(screen.getByText('Back up your key before signing out')).toBeInTheDocument();
+    expect(screen.getByText('Backup controls')).toBeInTheDocument();
+    expect(mocks.mockLogout).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Homepage' }));
+    expect(mocks.mockPush).toHaveBeenCalledWith('/');
+    expect(mocks.onboardingState.secretKey).not.toBe('');
+    expect(mocks.mockLogout).not.toHaveBeenCalled();
+    mocks.onboardingState.secretKey = '';
+    rerender(<Logout />);
+    expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
+    expect(mocks.mockLogout).toHaveBeenCalledOnce();
+  });
+  it.each(['different account', 'new grant'])('does not transfer a pending backup logout to a %s', async (change) => {
+    const key = Keypair.random();
+    mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
+    mocks.authState.currentUserPubky = key.publicKey.z32();
+    mocks.mockLogout.mockResolvedValue(undefined);
+    const { rerender } = render(<Logout />);
+    expect(screen.getByText('Back up your key before signing out')).toBeInTheDocument();
+    mocks.authState.generation = 'incoming';
+    if (change === 'different account') mocks.authState.currentUserPubky = Keypair.random().publicKey.z32();
+    mocks.onboardingState.secretKey = '';
+    rerender(<Logout />);
+    expect(await screen.findByText('Your account changed')).toBeInTheDocument();
+    expect(mocks.mockLogout).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
+    expect(mocks.mockLogout).toHaveBeenCalledOnce();
+  });
+
+  it('does not ask for a backup of an unrelated onboarding key', async () => {
+    mocks.onboardingState.secretKey = Buffer.from(Keypair.random().secret()).toString('hex');
+    mocks.mockLogout.mockResolvedValue(undefined);
+    render(<Logout />);
+    expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
+    expect(screen.queryByText('Backup controls')).not.toBeInTheDocument();
+    expect(mocks.mockLogout).toHaveBeenCalledOnce();
+  });
+  it('waits for a controller-owned logout even after the account fields are cleared', () => {
+    mocks.authState.currentUserPubky = null;
+    mocks.authState.session = null;
+    mocks.authState.isLoggingOut = true;
+    render(<Logout />);
+    expect(screen.getByText('Signing you out...')).toBeInTheDocument();
+    expect(mocks.authState.setIsLoggingOut).not.toHaveBeenCalled();
+    expect(mocks.mockLogout).not.toHaveBeenCalled();
+  });
+  it('shows cancellation when a newer account supersedes logout', async () => {
+    mocks.mockLogout.mockRejectedValue(createCanceledError());
+    render(<Logout />);
+    expect(await screen.findByText('Your account changed')).toBeInTheDocument();
+    expect(screen.getByTestId('buttons-navigation').parentElement).toHaveClass('onboarding-nav');
+    expect(screen.queryByTestId('logout-content')).not.toBeInTheDocument();
+    expect(mocks.mockLoggerError).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.onboardingState.hasHydrated = true;
+    mocks.onboardingState.secretKey = '';
     mocks.authState.hasHydrated = true;
+    mocks.authState.generation = 'original';
+    mocks.authState.restoreStatus = 'idle';
     mocks.authState.session = {};
-    mocks.authState.sessionExport = null;
+    mocks.authState.currentUserPubky = 'account';
+    mocks.authState.sessionReference = null;
     mocks.authState.isLoggingOut = false;
+  });
+
+  it('runs explicit cleanup when corrupt metadata left no readable account fields', async () => {
+    mocks.authState.session = null;
+    mocks.authState.sessionReference = null;
+    mocks.authState.currentUserPubky = null;
+    mocks.authState.restoreStatus = 'temporary-error';
+    mocks.mockLogout.mockResolvedValue(undefined);
+    render(<Logout />);
+    expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
+    expect(mocks.mockLogout).toHaveBeenCalledTimes(1);
   });
 
   it('shows a loading state first and then the success state for authenticated visits', async () => {
     mocks.mockLogout.mockImplementation(async () => {
       mocks.authState.session = null;
-      mocks.authState.sessionExport = null;
+      mocks.authState.sessionReference = null;
     });
 
     render(<Logout />);
@@ -168,13 +257,14 @@ describe('Logout', () => {
       expect(screen.getByTestId('logout-content')).toBeInTheDocument();
     });
 
-    expect(mocks.authState.setIsLoggingOut).toHaveBeenCalledWith(false);
+    expect(mocks.authState.setIsLoggingOut).not.toHaveBeenCalled();
   });
 
   it('shows the success state immediately when the user is already signed out', async () => {
+    mocks.authState.currentUserPubky = null;
     mocks.authState.session = null;
-    mocks.authState.sessionExport = null;
-    mocks.authState.isLoggingOut = true;
+    mocks.authState.sessionReference = null;
+    mocks.authState.isLoggingOut = false;
 
     render(<Logout />);
 
@@ -182,20 +272,20 @@ describe('Logout', () => {
     expect(mocks.mockLogout).not.toHaveBeenCalled();
 
     await waitFor(() => {
-      expect(mocks.authState.setIsLoggingOut).toHaveBeenCalledWith(false);
+      expect(mocks.authState.setIsLoggingOut).not.toHaveBeenCalled();
     });
   });
 
   it('does not show the success state before a persisted-session logout finishes', async () => {
     let resolveLogout: (() => void) | undefined;
     mocks.authState.session = null;
-    mocks.authState.sessionExport = 'session-export';
+    mocks.authState.sessionReference = mockGrantReference();
     mocks.mockLogout.mockImplementation(
       () =>
         new Promise<void>((resolve) => {
           resolveLogout = () => {
             mocks.authState.session = null;
-            mocks.authState.sessionExport = null;
+            mocks.authState.sessionReference = null;
             resolve();
           };
         }),
@@ -238,7 +328,7 @@ describe('Logout', () => {
   it('retries logout from the inline error state and can reach success', async () => {
     mocks.mockLogout.mockRejectedValueOnce(new Error('clear failed')).mockImplementationOnce(async () => {
       mocks.authState.session = null;
-      mocks.authState.sessionExport = null;
+      mocks.authState.sessionReference = null;
     });
 
     render(<Logout />);
@@ -273,8 +363,9 @@ describe('Logout', () => {
   });
 
   it('drops the doubled mobile bottom inset on the signed-out navigation', () => {
+    mocks.authState.currentUserPubky = null;
     mocks.authState.session = null;
-    mocks.authState.sessionExport = null;
+    mocks.authState.sessionReference = null;
 
     render(<Logout />);
 
@@ -291,5 +382,24 @@ describe('Logout', () => {
     });
 
     expect(screen.getByTestId('buttons-navigation')).toHaveAttribute('data-class', 'pb-0 lg:pb-6');
+  });
+});
+
+describe('Logout after cookie migration', () => {
+  it('runs cleanup for a retained account even though its cookie reference was discarded', async () => {
+    mocks.authState.hasHydrated = true;
+    mocks.onboardingState.hasHydrated = true;
+    mocks.onboardingState.secretKey = '';
+    mocks.authState.session = null;
+    mocks.authState.sessionReference = null;
+    mocks.authState.currentUserPubky = 'legacy-account';
+    mocks.authState.isLoggingOut = false;
+    mocks.mockLogout.mockReset().mockImplementation(async () => {
+      mocks.authState.currentUserPubky = null;
+    });
+    render(<Logout />);
+    expect(await screen.findByTestId('logout-content')).toBeInTheDocument();
+    expect(mocks.mockLogout).toHaveBeenCalledOnce();
+    expect(mocks.authState.currentUserPubky).toBeNull();
   });
 });

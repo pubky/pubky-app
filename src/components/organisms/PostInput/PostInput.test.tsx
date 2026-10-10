@@ -18,6 +18,7 @@ import { toast } from '@/molecules/Toaster/toast';
 import { PostHeader } from '@/organisms/PostHeader/PostHeader';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { PostInputActionBar } from '../PostInputActionBar/PostInputActionBar';
 import { PostInput } from './PostInput';
@@ -332,6 +333,8 @@ function getStablePostHeader() {
   return within(screen.getByTestId('post-input-stable-avatar')).getByTestId('post-header');
 }
 
+beforeEach(() => useAuthStore.getState().setRestoreStatus('ready'));
+
 afterEach(() => {
   vi.mocked(useReducedMotion).mockReturnValue(false);
 });
@@ -643,6 +646,8 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: mockIsAuthenticated,
     requireAuth: mockRequireAuth,
+    isWaiting: false,
+    waitForAuth: async () => mockRequireAuth(() => true) === true,
   }),
 }));
 
@@ -692,6 +697,56 @@ describe('PostInput', () => {
 
     mockUseEnterSubmit.mockImplementation(() => mockEnterSubmitHandler);
     mockUsePostInput.mockImplementation((options: UsePostInputOptions) => createUsePostInputReturn(options));
+  });
+
+  it.each([
+    ['reauth-required', 'collapsed'],
+    ['reauth-required', 'expanded'],
+    ['reauth-required', 'article'],
+    ['temporary-error', 'collapsed'],
+    ['temporary-error', 'expanded'],
+    ['temporary-error', 'article'],
+  ] as const)('shows guest identity after %s in the %s composer without losing its draft', async (status, mode) => {
+    mockUsePostReturn.isExpanded = mode !== 'collapsed';
+    mockUsePostReturn.isArticle = mode === 'article';
+    mockUsePostReturn.content = 'Keep this draft';
+    mockUsePostReturn.articleTitle = 'Keep this title';
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    // A pending restore must not flicker to the guest avatar.
+    mockIsAuthenticated = false;
+    mockRequireAuth.mockReturnValue(undefined);
+    act(() => useAuthStore.getState().setRestoreStatus('restoring'));
+    if (mode === 'article') {
+      expect(screen.getByTestId('article-composer-avatar')).toBeInTheDocument();
+    } else {
+      expect(screen.getAllByTestId('post-header').length).toBeGreaterThan(0);
+    }
+    expect(screen.queryByTestId('post-input-fallback-avatar')).not.toBeInTheDocument();
+
+    act(() => useAuthStore.getState().setRestoreStatus(status));
+    expect(screen.getByTestId('post-input-fallback-avatar')).toBeInTheDocument();
+    expect(screen.queryByTestId('article-composer-avatar')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('post-header')).not.toBeInTheDocument());
+    expect(screen.queryByTestId('post-input-collapsed-avatar-placeholder')).not.toBeInTheDocument();
+    if (mode === 'article') {
+      expect(screen.getByTestId('markdown-editor')).toHaveTextContent('Keep this draft');
+      expect(screen.getByTestId('markdown-editor')).toHaveAttribute('data-readonly', 'true');
+      expect(screen.getByPlaceholderText('Title')).toHaveValue('Keep this title');
+    } else {
+      expect(screen.getByTestId('textarea')).toHaveValue('Keep this draft');
+      expect(screen.getByTestId('textarea')).toHaveAttribute('readonly');
+    }
+    expect(mockSetContent).not.toHaveBeenCalled();
+
+    mockIsAuthenticated = true;
+    act(() => useAuthStore.getState().setRestoreStatus('ready'));
+    expect(screen.queryByTestId('post-input-fallback-avatar')).not.toBeInTheDocument();
+    if (mode === 'article') {
+      expect(screen.getByTestId('article-composer-avatar')).toBeInTheDocument();
+    } else {
+      expect(screen.getAllByTestId('post-header').length).toBeGreaterThan(0);
+    }
   });
 
   it('renders with post variant', () => {

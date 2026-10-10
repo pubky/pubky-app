@@ -1,7 +1,8 @@
 import type { Session } from '@synonymdev/pubky';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { mockSession as buildSession } from '@/test-utils/pubky';
+import type { SessionReference } from '@/libs/auth/session.types';
+import { mockGrantReference, mockSession as buildSession } from '@/test-utils/pubky';
 import { useAuthStatus } from './useAuthStatus';
 
 const mockSession = buildSession();
@@ -17,9 +18,9 @@ const mockOnboardingStore = {
 
 const mockAuthStore = {
   session: null as Session | null,
-  sessionExport: null as string | null,
+  sessionReference: null as SessionReference | null,
+  restoreStatus: 'idle',
   isRestoringSession: false,
-  isResolvingProfile: false,
   hasProfile: null as boolean | null,
   hasHydrated: true,
   selectIsAuthenticated: vi.fn(() => false),
@@ -44,13 +45,26 @@ describe('useAuthStatus', () => {
     mockOnboardingStore.pubky = '';
     mockOnboardingStore.secretKey = '';
     mockAuthStore.session = null;
-    mockAuthStore.sessionExport = null;
+    mockAuthStore.sessionReference = null;
+    mockAuthStore.restoreStatus = 'idle';
     mockAuthStore.isRestoringSession = false;
-    mockAuthStore.isResolvingProfile = false;
     mockAuthStore.hasProfile = null;
     mockAuthStore.hasHydrated = true;
     mockAuthStore.selectIsAuthenticated = vi.fn(() => false);
   });
+
+  it.each(['temporary-error', 'reauth-required'])(
+    'requires normal sign-in after %s even with a retained handle and known profile',
+    (status) => {
+      mockAuthStore.session = mockSession;
+      mockAuthStore.hasProfile = true;
+      mockAuthStore.restoreStatus = status;
+      const { result } = renderHook(() => useAuthStatus());
+      expect(result.current.status).toBe('UNAUTHENTICATED');
+      expect(result.current.isFullyAuthenticated).toBe(false);
+      expect(result.current.isLoading).toBe(false);
+    },
+  );
 
   it('should return loading state when onboarding store not hydrated', () => {
     mockOnboardingStore.hasHydrated = false;
@@ -91,10 +105,10 @@ describe('useAuthStatus', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('should return loading state when sessionExport exists but session is null (pending restoration)', () => {
+  it('should return loading state when a grant reference exists but session is null (pending restoration)', () => {
     mockOnboardingStore.hasHydrated = true;
     mockAuthStore.hasHydrated = true;
-    mockAuthStore.sessionExport = 'some-exported-session';
+    mockAuthStore.sessionReference = mockGrantReference();
     mockAuthStore.session = null;
 
     const { result } = renderHook(() => useAuthStatus());
@@ -120,7 +134,7 @@ describe('useAuthStatus', () => {
     mockOnboardingStore.hasHydrated = true;
     mockAuthStore.session = mockSession;
     mockAuthStore.hasProfile = null; // Still determining profile status
-    mockAuthStore.isResolvingProfile = false; // The sign-in flow owns the screen, not a restore
+    mockAuthStore.restoreStatus = 'idle'; // The sign-in flow owns the screen, not a restore
 
     const { result } = renderHook(() => useAuthStatus());
 
@@ -135,9 +149,8 @@ describe('useAuthStatus', () => {
   it('should return loading while a restored session profile is undetermined', () => {
     mockOnboardingStore.hasHydrated = true;
     mockAuthStore.session = mockSession;
-    mockAuthStore.sessionExport = 'some-exported-session';
     mockAuthStore.hasProfile = null; // Undetermined profile restored from localStorage
-    mockAuthStore.isResolvingProfile = true; // The controller is resolving it
+    mockAuthStore.restoreStatus = 'restoring'; // The controller is resolving it
 
     const { result } = renderHook(() => useAuthStatus());
 
@@ -152,15 +165,14 @@ describe('useAuthStatus', () => {
   it('should stop loading once the restored profile state is resolved', () => {
     mockOnboardingStore.hasHydrated = true;
     mockAuthStore.session = mockSession;
-    mockAuthStore.sessionExport = 'some-exported-session';
     mockAuthStore.hasProfile = null;
-    mockAuthStore.isResolvingProfile = true;
+    mockAuthStore.restoreStatus = 'restoring';
 
     const { result, rerender } = renderHook(() => useAuthStatus());
     expect(result.current.isLoading).toBe(true);
 
     // The controller resolved the profile: the session is now fully authenticated
-    mockAuthStore.isResolvingProfile = false;
+    mockAuthStore.restoreStatus = 'idle';
     mockAuthStore.hasProfile = true;
     rerender();
 

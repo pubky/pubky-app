@@ -11,6 +11,12 @@ describe('hasRequiredCapabilities', () => {
     ).toBe(true);
   });
 
+  it('recognizes split read/write coverage so Locks does not ask for an unnecessary upgrade', () => {
+    const capabilities = ['/pub/pubky.app/:rw', '/priv/:r', '/priv/social/:w'];
+    expect(hasRequiredCapabilities(capabilities, REQUIRED)).toBe(true);
+    expect(sessionNeedsUpgrade(mockRingSession(capabilities))).toBe(false);
+  });
+
   it('accepts the root capability without a special case', () => {
     expect(hasRequiredCapabilities(['/:rw'], REQUIRED)).toBe(true);
   });
@@ -35,9 +41,9 @@ describe('hasRequiredCapabilities', () => {
     expect(hasRequiredCapabilities(['/pub/app:rw'], '/pub/apple:rw')).toBe(false);
   });
 
-  it('rejects an empty grant and ignores malformed granted entries', () => {
+  it('rejects empty or malformed grants', () => {
     expect(hasRequiredCapabilities([], REQUIRED)).toBe(false);
-    expect(hasRequiredCapabilities(['garbage', '/:rw'], REQUIRED)).toBe(true);
+    expect(hasRequiredCapabilities(['garbage', '/:rw'], REQUIRED)).toBe(false);
   });
 
   it('tolerates spaces around required entries and either action order', () => {

@@ -1,24 +1,28 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AuthStore } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { mockClipboardEvent, mockDragEvent, mockKeyboardEvent } from '@/test-utils/react-events';
+import { mockAuthStore } from '@/test-utils/stores';
 import { usePostInputAuthHandlers } from './usePostInputAuthHandlers';
 import type { UsePostInputAuthHandlersOptions } from './usePostInputAuthHandlers.types';
 
 const mockCurrentUserPubky = vi.hoisted(() => ({ value: null as string | null }));
 const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
 
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: Object.assign(
-    (selector: (state: { currentUserPubky: string | null }) => unknown) =>
-      selector({ currentUserPubky: mockCurrentUserPubky.value }),
-    {
-      getState: () => ({
-        currentUserPubky: mockCurrentUserPubky.value,
-        setShowSignInDialog: mockSetShowSignInDialog,
-      }),
-    },
-  ),
-}));
+vi.mock('@/stores/auth/auth.store', () => {
+  const getState = () =>
+    mockAuthStore({
+      hasHydrated: true,
+      currentUserPubky: mockCurrentUserPubky.value,
+      session: mockCurrentUserPubky.value ? mockSession() : null,
+      restoreStatus: mockCurrentUserPubky.value ? 'ready' : 'idle',
+      setShowSignInDialog: mockSetShowSignInDialog,
+    });
+  return {
+    useAuthStore: Object.assign((selector: (state: AuthStore) => unknown) => selector(getState()), { getState }),
+  };
+});
 
 function createOptions(overrides: Partial<UsePostInputAuthHandlersOptions> = {}): UsePostInputAuthHandlersOptions {
   return {
@@ -69,25 +73,25 @@ describe('usePostInputAuthHandlers', () => {
   });
 
   describe('void actions (requireAuth)', () => {
-    it('runs the underlying action when authenticated', () => {
+    it('runs the underlying action when authenticated', async () => {
       mockCurrentUserPubky.value = 'test-pubky-123';
       const options = createOptions();
       const { result } = renderHook(() => usePostInputAuthHandlers(options));
 
-      act(() => {
-        result.current.handleSubmitWithAuth();
+      await act(async () => {
+        await result.current.handleSubmitWithAuth();
       });
 
       expect(options.handleSubmit).toHaveBeenCalledTimes(1);
       expect(mockSetShowSignInDialog).not.toHaveBeenCalled();
     });
 
-    it('opens the sign-in dialog for guests', () => {
+    it('opens the sign-in dialog for guests', async () => {
       const options = createOptions();
       const { result } = renderHook(() => usePostInputAuthHandlers(options));
 
-      act(() => {
-        result.current.handleSubmitWithAuth();
+      await act(async () => {
+        await result.current.handleSubmitWithAuth();
       });
 
       expect(options.handleSubmit).not.toHaveBeenCalled();

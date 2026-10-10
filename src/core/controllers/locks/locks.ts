@@ -13,6 +13,7 @@ import type {
   TStartPaymentParams,
   TStartPaymentResult,
 } from '@/application/locks/locks.types';
+import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -49,6 +50,21 @@ const SIGNOUT_TIMEOUT_MS = 3000;
  */
 export class LocksController {
   private constructor() {} // Prevent instantiation
+  private static sessionEpoch = 0;
+
+  /** An awaited Locks operation belongs to both its app account and its original Locks session. */
+  private static captureSessionOwner(): () => boolean {
+    const { generation, currentUserPubky } = useAuthStore.getState();
+    const epoch = this.sessionEpoch;
+    return () => {
+      const current = useAuthStore.getState();
+      return (
+        epoch === this.sessionEpoch &&
+        current.generation === generation &&
+        current.currentUserPubky === currentUserPubky
+      );
+    };
+  }
 
   /**
    * Builds the `/connect` URL to load in the iframe auth modal.
@@ -86,18 +102,21 @@ export class LocksController {
    * persists it (bearer secret) to the store.
    */
   static async completeAuthFromCallback(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {
+    const isCurrent = this.captureSessionOwner();
     const result = await LocksApplication.exchangeSessionCode(params);
     // TODO:[Locks] #2283 — for now the Locks account must be the signed-in pubky.app account (a == b).
     // The final plan allows a different account (a != b); remove this check then.
     const creator = stripPubkyPrefix(result.session.creatorPubky() ?? '');
-    if (creator !== useAuthStore.getState().currentUserPubky) {
+    if (!isCurrent() || creator !== useAuthStore.getState().currentUserPubky) {
       // The secret is dropped here, so close the session now instead of leaving it open until it expires.
       void LocksApplication.signout(result.session).catch(() => {});
+      if (!isCurrent()) throw createCanceledError();
       throw Err.auth(AuthErrorCode.FORBIDDEN, 'Approve with the account you are signed in with.', {
         service: ErrorService.Locks,
         operation: 'LocksController.completeAuthFromCallback',
       });
     }
+    this.sessionEpoch++;
     useLocksAuthStore.getState().init({ session: result.session, secret: result.secret });
     // Register the creator's default Lock Server pointer in the background on every auth, mirroring
     // the homeserver's post-auth write. Fire-and-forget: a failure (already reported to Sentry by the
@@ -109,21 +128,47 @@ export class LocksController {
 
   /**
    * Tears down the Locks session as part of unified pubky.app logout: revokes the frontend session on
-   * the Lock Server (best-effort) then clears the local store. Invoked from `AuthController` cleanup so
+   * the Lock Server (best-effort) after detaching the local session. Invoked from `AuthController` cleanup so
    * one logout drops both the homeserver and Locks sessions.
    */
-  static async logout(): Promise<void> {
+  static async logout(persist = true): Promise<void> {
     const store = useLocksAuthStore.getState();
-    if (store.selectLocksSession()) {
+    const session = store.selectLocksSession();
+    // Detach before awaiting the server, so completion cannot erase a later login.
+    this.clearLocalSession(persist);
+    if (session) {
       try {
         // A server that accepts the connection but never answers would otherwise hold logout for as
         // long as the OS takes to give up, leaving cookies and the local database in place.
-        await Promise.race([LocksApplication.signout(), sleep(SIGNOUT_TIMEOUT_MS)]);
+        await Promise.race([LocksApplication.signout(session), sleep(SIGNOUT_TIMEOUT_MS)]);
       } catch {
         // Already reported to Sentry by the service Err factory; swallow so local teardown runs.
       }
     }
-    store.reset();
+  }
+
+  /** Detach this tab without overwriting another account's shared secret. */
+  static clearLocalSession(persist = false): void {
+    this.sessionEpoch++;
+    if (persist) {
+      try {
+        useLocksAuthStore.getState().reset();
+        return;
+      } catch {
+        // Continue with an in-memory reset if localStorage is blocked.
+      }
+    }
+    const { storage } = useLocksAuthStore.persist.getOptions();
+    if (!storage) {
+      useLocksAuthStore.getState().reset();
+      return;
+    }
+    useLocksAuthStore.persist.setOptions({ storage: { ...storage, setItem: () => {}, removeItem: () => {} } });
+    try {
+      useLocksAuthStore.getState().reset();
+    } finally {
+      useLocksAuthStore.persist.setOptions({ storage });
+    }
   }
 
   /**
@@ -134,7 +179,7 @@ export class LocksController {
    * the next creator call fails.
    */
   static clearSession(): void {
-    useLocksAuthStore.getState().reset();
+    this.clearLocalSession(true);
   }
 
   static markPaykitConnected(): void {
@@ -146,10 +191,11 @@ export class LocksController {
    * session (401 → Auth) is cleared, as on restore, so the creator signs in again instead of retrying.
    */
   static async fetchPaykitSetupStatus(): Promise<TPaykitSetupStatus> {
+    const isCurrent = this.captureSessionOwner();
     try {
       return await LocksApplication.fetchPaykitSetupStatus();
     } catch (error) {
-      if (isAppError(error) && isAuthError(error)) this.clearSession();
+      if (isCurrent() && isAppError(error) && isAuthError(error)) this.clearSession();
       throw error;
     }
   }
@@ -166,21 +212,31 @@ export class LocksController {
    */
   static async restorePersistedLocksSession(): Promise<void> {
     const store = useLocksAuthStore.getState();
-    if (!store.selectLocksSessionSecret() || store.selectLocksSession() !== null) return;
+    const { currentUserPubky } = useAuthStore.getState();
+    const secret = store.selectLocksSessionSecret();
+    if (!currentUserPubky || !secret || store.selectLocksSession() !== null) return;
+    const ownsAccount = this.captureSessionOwner();
+    const isCurrent = () => ownsAccount() && useLocksAuthStore.getState().selectLocksSessionSecret() === secret;
 
     try {
-      store.setSession(await LocksApplication.restoreSession());
+      const session = await LocksApplication.restoreSession();
+      if (!isCurrent()) return;
+      if (stripPubkyPrefix(session.creatorPubky() ?? '') !== currentUserPubky) {
+        this.clearLocalSession();
+        return;
+      }
+      store.setSession(session);
     } catch {
       // Malformed/stale secret — already reported by the service Err factory; clear it so the UI
       // shows unauthenticated rather than a broken session.
-      this.clearSession();
+      if (isCurrent()) this.clearSession();
       return;
     }
 
     try {
       await LocksApplication.setLockServiceConfig();
     } catch (error) {
-      if (isAppError(error) && isAuthError(error)) this.clearSession();
+      if (isCurrent() && isAppError(error) && isAuthError(error)) this.clearSession();
     }
   }
 

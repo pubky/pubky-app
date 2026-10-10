@@ -28,7 +28,7 @@ export function MutedUsersList() {
   const isLoading = isMutedLoading || isUsersLoading;
   const handleUnmute = async (userId: string) => {
     try {
-      await toggleMute(userId, true);
+      if (!(await toggleMute(userId, true))) return;
       toast({
         title: 'User unmuted',
       });
@@ -48,7 +48,7 @@ export function MutedUsersList() {
     try {
       // Use Promise.allSettled for parallel execution with graceful error handling
       const results = await Promise.allSettled(idsToUnmute.map((userId) => toggleMute(userId, true)));
-      const failedCount = results.filter((r) => r.status === 'rejected').length;
+      const failedCount = results.filter((r) => r.status === 'rejected' || !r.value).length;
       if (failedCount > 0) {
         toast({
           variant: 'warning',
