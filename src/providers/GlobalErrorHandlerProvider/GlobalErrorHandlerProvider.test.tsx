@@ -1,6 +1,6 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { INLINE_IMAGE_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineImageUpload/useInlineImageUpload.types';
+import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload.types';
 import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { toast } from '@/molecules/Toaster/toast';
@@ -90,7 +90,7 @@ describe('GlobalErrorHandlerProvider', () => {
     act(() => {
       const event = new Event('unhandledrejection', { cancelable: true }) as PromiseRejectionEvent;
       const rejection = new Error('Inline image upload rejected: over the cap');
-      rejection.name = INLINE_IMAGE_UPLOAD_REJECTION_NAME;
+      rejection.name = INLINE_MEDIA_UPLOAD_REJECTION_NAME;
       Object.defineProperty(event, 'reason', { value: rejection });
       window.dispatchEvent(event);
 

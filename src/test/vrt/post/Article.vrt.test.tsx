@@ -456,6 +456,7 @@ vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', async () => {
         const metadata = f.articleCoverByUri.get(uri);
         return metadata ? [metadata] : [];
       }),
+      isLoading: false,
     }),
   };
 });
