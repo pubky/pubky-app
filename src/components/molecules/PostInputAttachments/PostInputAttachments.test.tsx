@@ -229,7 +229,7 @@ describe('PostInputAttachments', () => {
     it('renders file input with correct accept attribute for articles', () => {
       render(<PostInputAttachments {...defaultProps} isArticle={true} />);
 
-      const fileInput = screen.getByTestId('file-input');
+      const fileInput = screen.getByTestId('article-cover-file-input');
       expect(fileInput).toHaveAttribute('accept', 'image/gif,image/jpeg,image/png,image/svg+xml,image/webp');
     });
 
@@ -243,7 +243,7 @@ describe('PostInputAttachments', () => {
     it('renders file input without multiple attribute for articles', () => {
       render(<PostInputAttachments {...defaultProps} isArticle={true} />);
 
-      const fileInput = screen.getByTestId('file-input');
+      const fileInput = screen.getByTestId('article-cover-file-input');
       expect(fileInput).not.toHaveAttribute('multiple');
     });
 
