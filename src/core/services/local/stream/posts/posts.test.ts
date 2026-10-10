@@ -304,6 +304,38 @@ describe('LocalStreamPostsService', () => {
       await verifyPostPersisted(buildCompositeId({ pubky: 'user-2', id: 'post-2' }), 'Post post-2 content');
     });
 
+    it('preserves the collection local-write timestamp without extending it on Nexus reads', async () => {
+      const post = createMockNexusPost('collection');
+      post.details.kind = 'collection';
+      const compositeId = postId('collection');
+      const localUpdatedAt = Date.now() - 120_000;
+      await PostDetailsModel.table.put({
+        ...post.details,
+        id: compositeId,
+        content: 'Local collection',
+        localUpdatedAt,
+      });
+
+      await LocalStreamPostsService.persistPosts({ posts: [post] });
+      await LocalStreamPostsService.persistPosts({ posts: [post] });
+
+      expect(await PostDetailsModel.findById(compositeId)).toMatchObject({
+        content: post.details.content,
+        localUpdatedAt,
+      });
+      expect((await PostTtlModel.findById(compositeId))?.lastUpdatedAt).toBeGreaterThan(localUpdatedAt);
+    });
+
+    it.each(['collection', 'short'])('does not mark Nexus %s reads as local writes', async (kind) => {
+      const post = createMockNexusPost('remote');
+      post.details.kind = kind;
+
+      await LocalStreamPostsService.persistPosts({ posts: [post] });
+      await LocalStreamPostsService.persistPosts({ posts: [post] });
+
+      expect((await PostDetailsModel.findById(postId('remote')))?.localUpdatedAt).toBeUndefined();
+    });
+
     it('should handle posts with tags', async () => {
       const mockTag: NexusTag = {
         label: 'tech',

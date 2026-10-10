@@ -186,6 +186,21 @@ describe('TimelineCardsPosts', () => {
     expect(screen.getByRole('button', { name: 'Add Post' })).toBeInTheDocument();
   });
 
+  it('reports a failed load beside the Add Post tile instead of the empty copy', () => {
+    render(
+      <TimelineCardsPosts
+        {...props}
+        postIds={[]}
+        error="Network error"
+        emptyState={<p>No saved posts</p>}
+        trailingSlot={<button>Add Post</button>}
+      />,
+    );
+    expect(screen.getByText('Error: Network error')).toBeInTheDocument();
+    expect(screen.queryByText('No saved posts')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Post' })).toBeInTheDocument();
+  });
+
   it('places loading and stalled-pagination controls outside the measured feed', () => {
     vi.mocked(useInfiniteScroll).mockReturnValue({ sentinelRef: vi.fn(), isStalled: true, resumeAutoLoad: resume });
     render(<TimelineCardsPosts {...props} hasMore error="Could not load more posts" />);

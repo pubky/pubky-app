@@ -27,6 +27,7 @@ import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
+import { TimelineErrorState } from '@/molecules/Timeline/TimelineErrorState';
 import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { ClickableTagsList } from '../../../ClickableTagsList/ClickableTagsList';
@@ -439,7 +440,11 @@ export function VisualTimelinePosts({
   const displayRows = trailingSlot != null ? appendVisualTrailingCell(rows) : rows;
   const showHiddenNotice = hiddenItemsNotice != null && hiddenPostCount > 0;
   const hasExtras = trailingSlot != null || showHiddenNotice;
-  const showEmptyStateWithTrailingSlot = postIds.length === 0 && trailingSlot != null && emptyState != null;
+  // Beside a trailing slot an empty mosaic still renders, so a failed load is
+  // reported there instead of the empty state.
+  const trailingSlotError = postIds.length === 0 && trailingSlot != null ? error : null;
+  const showEmptyStateWithTrailingSlot =
+    postIds.length === 0 && trailingSlot != null && emptyState != null && !trailingSlotError;
 
   return (
     <TimelineStateWrapper
@@ -458,6 +463,7 @@ export function VisualTimelinePosts({
             className="mx-auto flex w-full flex-col gap-6"
             style={{ maxWidth: `${VISUAL_GRID_MAX_WIDTH_PX}px` }}
           >
+            {trailingSlotError ? <TimelineErrorState message={trailingSlotError} /> : null}
             {showEmptyStateWithTrailingSlot ? emptyState : null}
 
             {showHiddenNotice ? hiddenItemsNotice : null}

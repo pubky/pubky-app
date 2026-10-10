@@ -435,6 +435,11 @@ export class LocalStreamPostsService {
         const locallyNewerIds = new Set<string>();
         existingDetails.forEach((existing, index) => {
           const incoming = postDetails[index];
+          // Cache freshness and a local write have different meanings to collection
+          // refresh. A Nexus read must not erase or extend the last local write.
+          if (incoming.kind === 'collection' && existing?.localUpdatedAt !== undefined) {
+            incoming.localUpdatedAt = existing.localUpdatedAt;
+          }
           if (isPostDeleted(existing)) {
             tombstonedIds.add(incoming.id);
             return;

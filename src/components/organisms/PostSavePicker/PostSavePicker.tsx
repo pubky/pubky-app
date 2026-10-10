@@ -322,6 +322,7 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
   const feedVariant = feed?.variant;
   const feedCollectionId = feed?.collectionId;
   const removePosts = feed?.removePosts;
+  const retainPost = feed?.retainPost;
   const [open, setOpen] = useState(false);
   const saveTargets = usePostSaveTargets(postId, { isPickerOpen: open });
   const isBookmarkBusy = saveTargets.isBookmarkLoading || saveTargets.isBookmarkToggling;
@@ -334,22 +335,29 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
       : undefined;
   const isSavedToLibrary = saveTargets.isBookmarked || saveTargets.collections.some((collection) => collection.isSaved);
   const triggerIconState: SaveTriggerIconState = isSavedToLibrary ? 'saved' : 'default';
-  const shouldRemoveFromCollectionFeed =
-    feedVariant === TIMELINE_FEED_VARIANT.COLLECTION &&
-    !open &&
-    !saveTargets.isCollectionsLoading &&
-    currentCollectionTarget !== undefined &&
-    !currentCollectionTarget.isUpdating &&
-    !currentCollectionTarget.isSaved;
 
-  // Closing the picker commits the save session. On finite library feeds, a post
-  // that no longer belongs to the current target should leave the grid so the
-  // visible list matches the live membership. While the picker stays open, the
-  // user can freely toggle targets without the card shifting under them.
+  // A collection feed renders its live membership, so a card the current target no
+  // longer lists leaves the grid once this retention ends. While the picker is open or
+  // its save is pending, the user can toggle targets without the card shifting under them.
+  const shouldRetainCollectionCard =
+    currentCollectionTarget !== undefined &&
+    (open ||
+      currentCollectionTarget.isUpdating ||
+      // The picker's and feed's live queries can observe a rollback in separate
+      // renders. Release only after the feed has also observed the restored item.
+      (currentCollectionTarget.isSaved && feed?.collectionMembershipPostIds?.includes(postId) === false));
   useEffect(() => {
-    if ((!shouldRemoveFromBookmarksFeed && !shouldRemoveFromCollectionFeed) || !removePosts) return;
+    if (!shouldRetainCollectionCard || !retainPost) return;
+    return retainPost(postId);
+  }, [postId, retainPost, shouldRetainCollectionCard]);
+
+  // Closing the picker commits the save session. On the bookmarks feed, a post that
+  // is no longer bookmarked leaves the list so it matches the live bookmarks. While
+  // the picker stays open, the user can freely toggle without the card shifting.
+  useEffect(() => {
+    if (!shouldRemoveFromBookmarksFeed || !removePosts) return;
     removePosts(postId);
-  }, [postId, removePosts, shouldRemoveFromBookmarksFeed, shouldRemoveFromCollectionFeed]);
+  }, [postId, removePosts, shouldRemoveFromBookmarksFeed]);
 
   const trigger = (
     <Button

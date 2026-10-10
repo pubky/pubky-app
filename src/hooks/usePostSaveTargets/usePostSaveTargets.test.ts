@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   toggleBookmark: vi.fn(),
   loadMoreCollections: vi.fn(),
   paginationEnabled: null as boolean | null,
+  collection1Saved: true,
+  completionReadPending: false,
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
@@ -40,14 +42,14 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
       loadMore: mocks.loadMoreCollections,
     };
   },
-  useAuthoredCollections: () => ({
+  useAuthoredCollections: (_enabled: boolean, version: number) => ({
     collections: [
       {
         details: { id: 'author:collection1' },
         content: {
           name: 'Proof of Work',
           description: 'Bitcoin writing',
-          items: ['pubky://author/pub/pubky.app/posts/post1'],
+          items: mocks.collection1Saved ? ['pubky://author/pub/pubky.app/posts/post1'] : [],
         },
       },
       {
@@ -59,7 +61,9 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
         },
       },
     ],
-    isLoading: false,
+    isLoading: version > 0 && mocks.completionReadPending,
+    // A pending forced read still shows the rows of the previous version.
+    readVersion: version > 0 && mocks.completionReadPending ? version - 1 : version,
   }),
 }));
 
@@ -73,6 +77,9 @@ describe('usePostSaveTargets', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.paginationEnabled = null;
+    mocks.collection1Saved = true;
+    mocks.completionReadPending = false;
+    mocks.commitUpdateCollectionItem.mockReset().mockResolvedValue(undefined);
   });
 
   it('paginates authored collections only while the picker is open', async () => {
@@ -156,6 +163,64 @@ describe('usePostSaveTargets', () => {
       variant: 'error',
       description: 'Collection has too many items',
     });
+  });
+
+  it('stays busy until the live query acknowledges a rollback, then accepts subsequent membership changes', async () => {
+    const pending = Promise.withResolvers<void>();
+    mocks.commitUpdateCollectionItem.mockReturnValueOnce(pending.promise);
+    const { result, rerender } = renderHook(() => usePostSaveTargets('author:post1'));
+    let update: Promise<void>;
+    act(() => {
+      update = result.current.toggleCollection('author:collection1');
+    });
+    mocks.collection1Saved = false;
+    rerender();
+    expect(result.current.collections[0]).toMatchObject({ isSaved: false, isUpdating: true });
+    mocks.completionReadPending = true;
+    await act(async () => {
+      pending.reject(
+        new AppError({
+          category: ErrorCategory.Validation,
+          code: ValidationErrorCode.INVALID_INPUT,
+          message: 'Save rejected',
+          service: ErrorService.Local,
+          operation: 'test-rollback',
+        }),
+      );
+      await update;
+    });
+    expect(result.current.collections[0].isUpdating).toBe(true);
+    expect(result.current.collections[1].isUpdating).toBe(false);
+    mocks.collection1Saved = true;
+    mocks.completionReadPending = false;
+    rerender();
+    expect(result.current.collections[0]).toMatchObject({ isSaved: true, isUpdating: false });
+    mocks.collection1Saved = false;
+    rerender();
+    expect(result.current.collections[0]).toMatchObject({ isSaved: false, isUpdating: false });
+  });
+
+  it('keeps the other collections interactive while a completed toggle waits for its fresh read', async () => {
+    const { result, rerender } = renderHook(() => usePostSaveTargets('author:post1'));
+    mocks.completionReadPending = true;
+    await act(async () => {
+      await result.current.toggleCollection('author:collection1');
+    });
+    expect(result.current.collections.map((collection) => collection.isUpdating)).toEqual([true, false]);
+
+    await act(async () => {
+      await result.current.toggleCollection('author:collection2');
+    });
+    expect(mocks.commitUpdateCollectionItem).toHaveBeenLastCalledWith({
+      collectionId: 'author:collection2',
+      postId: 'author:post1',
+      shouldAdd: true,
+    });
+    // The mocked list now reflects the first toggle's read; only the second waits.
+    expect(result.current.collections.map((collection) => collection.isUpdating)).toEqual([false, true]);
+    mocks.completionReadPending = false;
+    rerender();
+    expect(result.current.collections.map((collection) => collection.isUpdating)).toEqual([false, false]);
   });
 
   it('creates a collection with the current post URI as first item', async () => {

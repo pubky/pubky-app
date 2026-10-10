@@ -15,6 +15,7 @@ import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
+import { TimelineErrorState } from '@/molecules/Timeline/TimelineErrorState';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
@@ -109,7 +110,12 @@ export function TimelineCardsPosts({
   const cardsRef = useCardsLayout(postIds, trailingSlot != null);
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
   const hasGridContent = postIds.length > 0 || trailingSlot != null;
-  const showEmptyMessageWithTrailingSlot = postIds.length === 0 && trailingSlot != null && emptyState != null;
+  // Beside a trailing slot an empty grid still renders, so a failed load is
+  // reported there instead of the empty state.
+  const trailingSlotError = postIds.length === 0 && trailingSlot != null ? error : null;
+  const showEmptyMessageWithTrailingSlot =
+    postIds.length === 0 && trailingSlot != null && emptyState != null && !trailingSlotError;
+  const showMessageWithTrailingSlot = showEmptyMessageWithTrailingSlot || Boolean(trailingSlotError);
 
   return (
     <TimelineStateWrapper
@@ -123,9 +129,10 @@ export function TimelineCardsPosts({
     >
       <Container
         data-cy="timeline-container"
-        overrideDefaults={showEmptyMessageWithTrailingSlot}
-        className={showEmptyMessageWithTrailingSlot ? 'flex w-full flex-col gap-4' : undefined}
+        overrideDefaults={showMessageWithTrailingSlot}
+        className={showMessageWithTrailingSlot ? 'flex w-full flex-col gap-4' : undefined}
       >
+        {trailingSlotError ? <TimelineErrorState message={trailingSlotError} /> : null}
         {showEmptyMessageWithTrailingSlot ? emptyState : null}
         <Container
           data-cy="timeline-posts-cards"

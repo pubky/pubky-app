@@ -66,6 +66,16 @@ describe('PostDetailsModel', () => {
 
       expect(postDetails.deleted).toBe(true);
     });
+
+    it('preserves a collection local-write timestamp when constructing a model', () => {
+      const details = {
+        ...createPostDetailsData(testPostId1, MOCK_NEXUS_POST_DETAILS),
+        kind: 'collection',
+        localUpdatedAt: 123_456,
+      };
+
+      expect(new PostDetailsModel(details)).toMatchObject({ localUpdatedAt: 123_456 });
+    });
   });
 
   describe('Static Methods', () => {

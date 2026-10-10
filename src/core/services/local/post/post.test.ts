@@ -1,6 +1,9 @@
 import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { getTtlPostMs } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
@@ -193,6 +196,7 @@ describe('LocalPostService', () => {
       expect(details).toBeTruthy();
       expect(details!.content).toBe('Hello, world!');
       expect(details!.kind).toBe('short');
+      expect(details!.localUpdatedAt).toBeUndefined();
 
       expect(counts).toBeTruthy();
       expect(counts!.tags).toBe(0);
@@ -268,6 +272,18 @@ describe('LocalPostService', () => {
       });
 
       userCountsSpy.mockRestore();
+    });
+
+    it('stamps a new collection local write with the same time as its TTL', async () => {
+      await setupUserCounts(testData.authorPubky);
+      const before = Date.now();
+
+      await LocalPostService.create(createSaveParams('My collection', undefined, PubkyAppPostKind.Collection));
+
+      const details = await LocalPostService.readDetails({ postId: testData.fullPostId1 });
+      const ttl = await getPostTtl(testData.fullPostId1);
+      expect(details?.localUpdatedAt).toBeGreaterThanOrEqual(before);
+      expect(details?.localUpdatedAt).toBe(ttl?.lastUpdatedAt);
     });
 
     it('should handle reply creation when parent post does not exist', async () => {
@@ -939,6 +955,59 @@ describe('LocalPostService', () => {
       expect(details!.content).toBe('Edited content');
       expect(details!.attachments).toEqual(existingAttachments);
       expect(details!.kind).toBe('image');
+      expect(details!.localUpdatedAt).toBeUndefined();
+    });
+
+    it('stamps collection edits and compensating writes without changing indexed_at', async () => {
+      await setupExistingPost(testData.fullPostId1, 'Original collection', undefined, 'collection');
+      const original = await getSavedPost(testData.fullPostId1);
+      const editedAt = Date.now() + 1_000;
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(editedAt);
+
+      try {
+        await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'Edited collection' });
+        expect(await LocalPostService.readDetails({ postId: testData.fullPostId1 })).toMatchObject({
+          content: 'Edited collection',
+          indexed_at: original!.indexed_at,
+          localUpdatedAt: editedAt,
+        });
+        expect((await getPostTtl(testData.fullPostId1))?.lastUpdatedAt).toBe(editedAt);
+
+        const rollbackAt = editedAt + 1_000;
+        clock.mockReturnValue(rollbackAt);
+        await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'Original collection' });
+
+        expect(await LocalPostService.readDetails({ postId: testData.fullPostId1 })).toMatchObject({
+          content: 'Original collection',
+          indexed_at: original!.indexed_at,
+          localUpdatedAt: rollbackAt,
+        });
+        expect((await getPostTtl(testData.fullPostId1))?.lastUpdatedAt).toBe(rollbackAt);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+
+    it('rolls back collection content and its local-write timestamp if the TTL write fails', async () => {
+      await setupExistingPost(testData.fullPostId1, 'Original collection', undefined, 'collection');
+      const original = await getSavedPost(testData.fullPostId1);
+      const ttlWrite = vi.spyOn(PostTtlModel, 'upsert').mockRejectedValueOnce(
+        Err.database(DatabaseErrorCode.WRITE_FAILED, 'TTL write failed', {
+          service: ErrorService.Local,
+          operation: 'test',
+        }),
+      );
+
+      try {
+        await expect(
+          LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'Edited collection' }),
+        ).rejects.toMatchObject({ code: DatabaseErrorCode.WRITE_FAILED });
+
+        expect(await getSavedPost(testData.fullPostId1)).toEqual(original);
+        expect(await getPostTtl(testData.fullPostId1)).toBeNull();
+      } finally {
+        ttlWrite.mockRestore();
+      }
     });
 
     it('clears the deleted flag when an edit restores live content', async () => {
