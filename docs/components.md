@@ -201,6 +201,12 @@ Helpers such as **`getIconFromUrl`** and **`getLabelFromUrl`** live in **`@/libs
 
 Component tests must use **real** `lucide-react` and `@/icons` implementations (no `vi.mock('lucide-react')` / `vi.mock('@/icons')` for icons). See `docs/component-testing.md` — _Icon components: Always Real_.
 
+## Article inline media
+
+`PostText` renders an article body's `![alt](src)` nodes through `ArticleInlineMedia` whenever the surface passes `articleMedia` (the article detail page and unlocked content; feed previews pass nothing and strip them). `ArticleInlineMedia` routes by the resolved kind: images to `ArticleInlineImage`, videos and audio to the `Video` / `Audio` atoms, PDFs to a file card. The kind comes from file metadata, not the markdown (`docs/data-patterns.md`, _Article Inline Media_).
+
+Everything these render sits inside a markdown `<p>`, so it is phrasing content only: `span`, `img`, `video`, `audio`, `a` — never `div`, `Container` or `Typography`'s default `<p>`. External sources use `preload="none"`; media elements have no referrer policy.
+
 ## Toasts
 
 Stack: atom [`Toast`](src/components/atoms/Toast/Toast.tsx) + [`Toast.variants.ts`](src/components/atoms/Toast/Toast.variants.ts) + [`Toast.icons.tsx`](src/components/atoms/Toast/Toast.icons.tsx), molecule [`Toaster`](src/components/molecules/Toaster/Toaster.tsx), public API [`toast()`](src/components/molecules/Toaster/toast.ts). `<Toaster />` is mounted in the app layout.

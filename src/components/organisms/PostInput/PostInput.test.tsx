@@ -284,16 +284,20 @@ vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
 
 vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', () => {
   return {
-    MarkdownEditor: vi.fn(({ markdown, onChange, readOnly }) => (
-      <div
-        data-testid="markdown-editor"
-        data-readonly={readOnly}
-        contentEditable={!readOnly}
-        onInput={(e) => onChange?.((e.target as HTMLDivElement).textContent || '')}
-      >
-        {markdown}
-      </div>
-    )),
+    MarkdownEditor: vi.fn(({ markdown, onChange, readOnly, isLoading }) =>
+      isLoading ? (
+        <div data-testid="markdown-editor-loading" />
+      ) : (
+        <div
+          data-testid="markdown-editor"
+          data-readonly={readOnly}
+          contentEditable={!readOnly}
+          onInput={(e) => onChange?.((e.target as HTMLDivElement).textContent || '')}
+        >
+          {markdown}
+        </div>
+      ),
+    ),
   };
 });
 
@@ -489,6 +493,7 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     setArticleTitle: mockSetArticleTitle,
     lockTitle: mockUsePostReturn.lockTitle,
     setLockTitle: vi.fn(),
+    restoreComposerDraft: vi.fn(),
     handleArticleTitleChange: vi.fn(),
     handleArticleBodyChange: vi.fn(),
     isDragging: mockUsePostReturn.isDragging,
@@ -527,7 +532,13 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handleDragOver: vi.fn(),
     handleDrop: vi.fn(),
     handlePaste: vi.fn(),
-    inlineImages: { upload: vi.fn(), getPreviewUrl: vi.fn(() => null) },
+    inlineMedia: {
+      upload: vi.fn(),
+      getPreviewUrl: vi.fn(() => null),
+      getMediaType: vi.fn(() => null),
+      getMediaName: vi.fn(() => null),
+    },
+    isEditInlineMediaLoading: false,
     uploadingCount: 0,
     serializeArticleForLock: vi.fn(() => null),
     getLatestArticle: vi.fn(() => ({ title: '', body: '' })),
@@ -1128,6 +1139,38 @@ describe('PostInput', () => {
     expect(mockSetIsArticle).toHaveBeenCalledWith(true);
     expect(mockSetArticleTitle).toHaveBeenCalledWith('Parsed title');
     expect(mockSetContent).toHaveBeenCalledWith('Parsed body');
+  });
+
+  it('holds the article editor behind its skeleton until the inline attachment types resolve', () => {
+    mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+      createUsePostInputReturn(options, { isArticle: true, isEditInlineMediaLoading: true }),
+    );
+
+    const { rerender } = render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent='{"title":"T","body":"Text ![a](attachment:1)"}'
+        editIsArticle={true}
+        editAttachments={['pubky://u/pub/pubky.app/files/cover', 'pubky://u/pub/pubky.app/files/clip']}
+      />,
+    );
+    expect(screen.getByTestId('markdown-editor-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('markdown-editor')).not.toBeInTheDocument();
+
+    mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+      createUsePostInputReturn(options, { isArticle: true, isEditInlineMediaLoading: false }),
+    );
+    rerender(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent='{"title":"T","body":"Text ![a](attachment:1)"}'
+        editIsArticle={true}
+        editAttachments={['pubky://u/pub/pubky.app/files/cover', 'pubky://u/pub/pubky.app/files/clip']}
+      />,
+    );
+    expect(screen.getByTestId('markdown-editor')).toBeInTheDocument();
   });
 
   it('shows toast when edit article content cannot be parsed', () => {

@@ -71,6 +71,12 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
 }));
 
 const mockInlineImageUpload = vi.fn();
+const mockGetMediaType = vi.fn((): string | null => null);
+const mockGetMediaName = vi.fn((): string | null => null);
+const mockUseAttachmentsMetadata = vi.fn((_params: { fileUris: readonly string[] }) => ({
+  files: [] as { uri: string; content_type: string; name?: string }[],
+  isLoading: false,
+}));
 
 vi.mock('@/hooks/usePost/usePost', () => ({
   usePost: vi.fn(() => ({
@@ -88,15 +94,26 @@ vi.mock('@/hooks/usePost/usePost', () => ({
     setArticleTitle: mockSetArticleTitle,
     lockTitle: mockLockTitle,
     setLockTitle: mockSetLockTitle,
+    restoreComposerDraft: vi.fn(),
     reply: mockReply,
     post: mockPost,
     repost: mockRepost,
     edit: mockEdit,
     isSubmitting: mockIsSubmitting,
-    inlineImages: { upload: mockInlineImageUpload, getPreviewUrl: vi.fn(() => null) },
+    inlineMedia: {
+      upload: mockInlineImageUpload,
+      getPreviewUrl: vi.fn(() => null),
+      getMediaType: mockGetMediaType,
+      getMediaName: mockGetMediaName,
+    },
     uploadingCount: 0,
     serializeArticleForLock: vi.fn(() => null),
   })),
+}));
+
+// The inline slots of an edited article are typed through this hook; its own tests cover the read.
+vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', () => ({
+  useAttachmentsMetadata: (params: { fileUris: readonly string[] }) => mockUseAttachmentsMetadata(params),
 }));
 
 // Seeding/resolution of existing attachments is covered by useEditAttachments' own tests.
@@ -764,6 +781,138 @@ describe('usePostInput', () => {
       expect(mockPost).not.toHaveBeenCalled();
     });
 
+    it('publishes the article title and body the inputs hold, ahead of the debounced state', async () => {
+      mockContent = 'Stale body';
+      mockIsArticle = true;
+      mockArticleTitle = 'Stale title';
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      // Neither debounce has fired: the state still holds the stale values
+      act(() => {
+        result.current.handleArticleTitleChange({
+          target: { value: 'Fresh title' },
+        } as React.ChangeEvent<HTMLInputElement>);
+        result.current.handleArticleBodyChange('Fresh body ![a](pubky://user/pub/pubky.app/files/NEW)', false);
+      });
+      expect(mockSetContent).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockPost).toHaveBeenCalledWith(
+        expect.objectContaining({
+          article: { title: 'Fresh title', body: 'Fresh body ![a](pubky://user/pub/pubky.app/files/NEW)' },
+        }),
+      );
+    });
+
+    it('consumes the pending article values on submit, so a trailing debounce commit cannot refill the composer', async () => {
+      vi.useFakeTimers();
+      try {
+        mockContent = '';
+        mockIsArticle = true;
+        mockArticleTitle = 'Title';
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        act(() => {
+          result.current.handleArticleBodyChange('Typed just now', false);
+        });
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        // The state catches up with the editor at submit, not half a second later
+        expect(mockSetContent).toHaveBeenCalledTimes(1);
+        expect(mockSetContent).toHaveBeenCalledWith('Typed just now');
+        mockSetContent.mockClear();
+
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+
+        // The publish has emptied the composer by now: the timer must not write the old body back
+        expect(mockSetContent).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('drops a pending commit when the composer leaves article mode, as after a lock capture', () => {
+      vi.useFakeTimers();
+      try {
+        mockContent = '';
+        mockIsArticle = true;
+        mockArticleTitle = 'Title';
+
+        const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+        act(() => {
+          result.current.handleArticleBodyChange('Locked body', false);
+        });
+        expect(result.current.getLatestArticle().body).toBe('Locked body');
+
+        // The lock applied and emptied the composer before the debounce fired
+        mockIsArticle = false;
+        rerender();
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+
+        expect(mockSetContent).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('submits an article whose body only the editor holds yet', async () => {
+      // The first keystrokes have not reached `content` through the debounce
+      mockContent = '';
+      mockIsArticle = true;
+      mockArticleTitle = 'Test Title';
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+      act(() => {
+        result.current.handleArticleBodyChange('Typed just now', false);
+      });
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockPost).toHaveBeenCalledWith(
+        expect.objectContaining({ article: { title: 'Test Title', body: 'Typed just now' } }),
+      );
+    });
+
+    it('passes the latest article values to an edit as well', async () => {
+      mockContent = 'Stale body';
+      mockIsArticle = true;
+      mockArticleTitle = 'Title';
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+          editAttachmentUris: [],
+          editIsArticle: true,
+          editContent: JSON.stringify({ title: 'Title', body: 'Stale body' }),
+        }),
+      );
+      act(() => {
+        result.current.handleArticleBodyChange('Edited body', false);
+      });
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockEdit).toHaveBeenCalledWith(
+        expect.objectContaining({ article: { title: 'Title', body: 'Edited body' } }),
+      );
+    });
+
     it('does not submit article when content is empty', async () => {
       mockContent = '';
       mockIsArticle = true;
@@ -836,6 +985,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockPost).toHaveBeenCalledWith({
+        article: { title: 'Test Title', body: 'Test content' },
         onSuccess: expect.any(Function),
       });
     });
@@ -1534,6 +1684,34 @@ describe('usePostInput', () => {
   });
 
   describe('click outside collapse behavior', () => {
+    it('keeps a new article open while its first keystrokes are still pending in the debounce', () => {
+      vi.useFakeTimers();
+      try {
+        mockContent = '';
+        mockArticleTitle = '';
+        mockIsArticle = true;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post', expanded: false }));
+        act(() => {
+          result.current.handleArticleBodyChange('First words', false);
+        });
+
+        // Outside click before the debounce fired: the state is still empty, the editor is not
+        act(() => {
+          document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        });
+
+        expect(mockSetIsArticle).not.toHaveBeenCalledWith(false);
+
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+        expect(mockSetContent).toHaveBeenCalledWith('First words');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('adds event listener when expanded prop is false', () => {
       const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 
@@ -2272,7 +2450,7 @@ describe('usePostInput', () => {
       expect(result.current.getLatestArticle().body).toBe('first, then more');
     });
 
-    it('keeps the latest value when a debounce from an earlier render fires first', () => {
+    it('skips a stale commit from an earlier render and lands the latest value', () => {
       const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
       act(() => {
         result.current.handleArticleBodyChange('first', false);
@@ -2290,8 +2468,16 @@ describe('usePostInput', () => {
         vi.advanceTimersByTime(300);
       });
 
-      expect(mockSetContent).toHaveBeenLastCalledWith('first');
+      // The first timer found a newer pending value and did nothing
+      expect(mockSetContent).not.toHaveBeenCalled();
       expect(result.current.getLatestArticle().body).toBe('first, then more');
+
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+
+      expect(mockSetContent).toHaveBeenCalledTimes(1);
+      expect(mockSetContent).toHaveBeenLastCalledWith('first, then more');
     });
 
     it('goes back to the composer state once the debounce has fired', () => {
@@ -2324,9 +2510,9 @@ describe('usePostInput', () => {
 
   describe('inline image session', () => {
     it('tells usePost to keep the uploaded images while a lock draft holds them', () => {
-      renderHook(() => usePostInput({ variant: 'post', keepInlineImages: true }));
+      renderHook(() => usePostInput({ variant: 'post', keepInlineMedia: true }));
 
-      expect(usePost).toHaveBeenLastCalledWith({ keepInlineImages: true });
+      expect(usePost).toHaveBeenLastCalledWith({ keepInlineMedia: true });
     });
   });
 
@@ -2866,6 +3052,47 @@ describe('usePostInput', () => {
         expect(mockSetAttachments).toHaveBeenCalled();
       });
 
+      it('routes a video dropped inside the rich-text editor to inline insertion too', async () => {
+        mockIsArticle = true;
+        mockInlineImageUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/clip1');
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        const insertMarkdown = vi.fn();
+        const focus = vi.fn();
+        result.current.markdownEditorRef.current = asOpaque<
+          NonNullable<(typeof result.current.markdownEditorRef)['current']>
+        >({ insertMarkdown, focus });
+
+        const editorRoot = document.createElement('div');
+        editorRoot.className = 'mdxeditor dark-theme';
+        const island = document.createElement('video');
+        editorRoot.appendChild(island);
+        document.body.appendChild(editorRoot);
+
+        const clip = new File(['test'], 'clip.mp4', { type: 'video/mp4' });
+        const dropEvent = mockDragEvent({
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+          target: island,
+          dataTransfer: asOpaque<DataTransfer>({ items: [{ kind: 'file', getAsFile: () => clip }] }),
+        });
+
+        try {
+          act(() => {
+            result.current.handleDrop(dropEvent);
+          });
+
+          await waitFor(() => {
+            expect(insertMarkdown).toHaveBeenCalledWith('![](pubky://author/pub/pubky.app/files/clip1)');
+          });
+          expect(mockInlineImageUpload).toHaveBeenCalledWith(clip);
+          expect(mockSetAttachments).not.toHaveBeenCalled();
+        } finally {
+          document.body.removeChild(editorRoot);
+        }
+      });
+
       it('routes article drops landing inside the rich-text editor to inline insertion', async () => {
         mockIsArticle = true;
         mockInlineImageUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/img1');
@@ -3315,6 +3542,107 @@ describe('usePostInput', () => {
 
       expect(mockSetContent).not.toHaveBeenCalled();
       textarea.remove();
+    });
+  });
+
+  describe('inline media types for the editor', () => {
+    const COVER = 'pubky://user/pub/pubky.app/files/COVER';
+    const CLIP = 'pubky://user/pub/pubky.app/files/CLIP';
+    const editArticle = () =>
+      renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+          editAttachmentUris: [COVER, CLIP],
+          editIsArticle: true,
+          editContent: JSON.stringify({ title: 'Title', body: 'Text with ![a](attachment:1)' }),
+        }),
+      );
+
+    beforeEach(() => {
+      mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
+      mockGetMediaType.mockReturnValue(null);
+      mockGetMediaName.mockReturnValue(null);
+    });
+
+    it('types the inline slots of an edited article from their file rows, not the cover', () => {
+      mockUseAttachmentsMetadata.mockReturnValue({
+        files: [{ uri: CLIP, content_type: 'video/mp4' }],
+        isLoading: false,
+      });
+
+      const { result } = editArticle();
+
+      expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [CLIP] });
+      expect(result.current.inlineMedia.getMediaType(CLIP)).toBe('video/mp4');
+      expect(result.current.inlineMedia.getMediaType(` ${CLIP} `)).toBe('video/mp4');
+      expect(result.current.inlineMedia.getMediaType(COVER)).toBeNull();
+      expect(result.current.isEditInlineMediaLoading).toBe(false);
+    });
+
+    it('names an inline slot from its row, with a same-session upload answering first', () => {
+      mockUseAttachmentsMetadata.mockReturnValue({
+        files: [{ uri: CLIP, content_type: 'video/mp4', name: 'clip.mp4' }],
+        isLoading: false,
+      });
+
+      const { result } = editArticle();
+      expect(result.current.inlineMedia.getMediaName(CLIP)).toBe('clip.mp4');
+      expect(result.current.inlineMedia.getMediaName(COVER)).toBeNull();
+
+      mockGetMediaName.mockReturnValue('fresh.mp4');
+      expect(result.current.inlineMedia.getMediaName(CLIP)).toBe('fresh.mp4');
+    });
+
+    it('lets a same-session upload answer before the edited post rows', () => {
+      mockUseAttachmentsMetadata.mockReturnValue({
+        files: [{ uri: CLIP, content_type: 'video/mp4' }],
+        isLoading: false,
+      });
+      mockGetMediaType.mockReturnValue('audio/wav');
+
+      const { result } = editArticle();
+
+      expect(result.current.inlineMedia.getMediaType(CLIP)).toBe('audio/wav');
+    });
+
+    it('reports the editor as loading while the rows are still resolving', () => {
+      mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: true });
+
+      const { result } = editArticle();
+
+      expect(result.current.isEditInlineMediaLoading).toBe(true);
+    });
+
+    it('opens the editor after the wait cap even when the rows never settle', () => {
+      vi.useFakeTimers();
+      try {
+        mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: true });
+
+        const { result } = editArticle();
+        expect(result.current.isEditInlineMediaLoading).toBe(true);
+
+        act(() => {
+          vi.advanceTimersByTime(4999);
+        });
+        expect(result.current.isEditInlineMediaLoading).toBe(true);
+
+        act(() => {
+          vi.advanceTimersByTime(1);
+        });
+        expect(result.current.isEditInlineMediaLoading).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('never gates a new article: nothing is requested, so nothing is pending', () => {
+      mockIsArticle = true;
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [] });
+      expect(result.current.isEditInlineMediaLoading).toBe(false);
     });
   });
 });

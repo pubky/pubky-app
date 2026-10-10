@@ -1,6 +1,6 @@
 'use client';
 import { type ReactNode, useEffect, useRef } from 'react';
-import { INLINE_IMAGE_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineImageUpload/useInlineImageUpload.types';
+import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload.types';
 import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { toast } from '@/molecules/Toaster/toast';
@@ -58,7 +58,7 @@ export function GlobalErrorHandlerProvider({ children }: GlobalErrorHandlerProvi
       // user was already toasted at the source, but MDXEditor's built-in
       // paste/drop handling rethrows them inside its own .catch, producing a
       // promise nobody can attach a handler to. Not an error condition.
-      if (event.reason instanceof Error && event.reason.name === INLINE_IMAGE_UPLOAD_REJECTION_NAME) {
+      if (event.reason instanceof Error && event.reason.name === INLINE_MEDIA_UPLOAD_REJECTION_NAME) {
         event.preventDefault();
         return;
       }

@@ -400,6 +400,40 @@ body {
   }
 
   /**
+   * MDXEditor rich-text toolbar: its controls have to fit the feed composer's width on one row.
+   * The block-type select is sized to its label instead of MDXEditor's fixed 9rem, and the toolbar
+   * groups drop their outer margins (the toolbar's own gap already separates them).
+   */
+  .mdxeditor-toolbar [class*='toolbarGroupOfGroups'],
+  .mdxeditor-toolbar > button {
+    margin: 0 !important;
+  }
+  .mdxeditor-toolbar [class*='selectTrigger'] {
+    width: auto !important;
+  }
+
+  /**
+   * The inline media node's delete/settings toolbar is the image node's toolbar: same MDXEditor
+   * variables for the card and toolbar background, the radius and the icon colours, so the two
+   * never drift apart.
+   */
+  .mdxeditor [data-inline-media-node],
+  .mdxeditor [data-inline-media-toolbar] {
+    background-color: var(--baseBase);
+  }
+  .mdxeditor [data-inline-media-toolbar] {
+    border-bottom-left-radius: var(--radius-base);
+  }
+  .mdxeditor [data-inline-media-toolbar] button {
+    color: var(--baseText);
+  }
+  @media (hover: hover) {
+    .mdxeditor [data-inline-media-toolbar] button:hover {
+      color: var(--baseTextContrast);
+    }
+  }
+
+  /**
    * MDXEditor code block dark mode fixes
    * Organized from outermost container to innermost elements:
    * 1. Wrapper container (outer border)

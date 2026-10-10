@@ -28,7 +28,7 @@ import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
 import type { TLockDraft } from '@/hooks/usePostInputLock/usePostInputLock.types';
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { deserializeArticleBody } from '@/libs/post/articleInlineImages';
+import { deserializeArticleBody } from '@/libs/post/articleInlineMedia';
 import { areLockAttachmentsWithinLimit, hasSvgAttachment } from '@/libs/post/lockAttachments';
 import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';
@@ -106,6 +106,7 @@ export function PostInput({
     handleArticleClick,
     articleTitle,
     setArticleTitle,
+    restoreComposerDraft,
     lockTitle: editLockTitle,
     setLockTitle: setEditLockTitle,
     handleArticleTitleChange,
@@ -129,7 +130,8 @@ export function PostInput({
     handleDragOver,
     handleDrop,
     handlePaste,
-    inlineImages,
+    inlineMedia,
+    isEditInlineMediaLoading,
     uploadingCount,
     serializeArticleForLock,
     getLatestArticle,
@@ -160,7 +162,7 @@ export function PostInput({
     hasExternalContent: () => isLockEnabled,
     // TODO:[Locks] #2684 — once this goes false the public copies are deleted best-effort; a failed
     // deletion leaves paid images public and nobody is told.
-    keepInlineImages: lockDraft?.isArticle === true,
+    keepInlineMedia: lockDraft?.isArticle === true,
   });
 
   const {
@@ -267,12 +269,9 @@ export function PostInput({
 
       return { content: body, attachments, isArticle: true, articleTitle: title, serializedArticle };
     },
-    restoreComposer: (draft) => {
-      setContent(draft.content);
-      setAttachments(draft.attachments);
-      setIsArticle(draft.isArticle);
-      setArticleTitle(draft.articleTitle);
-    },
+    // One commit through `usePost`, which knows to keep the restored cover: setting the fields here
+    // would make article mode flip next to a non-empty attachment list and clear it as a switch.
+    restoreComposer: restoreComposerDraft,
     clearComposer: clearComposerForLock,
     // Announcement (public teaser) = the current composer state once the switch is on.
     announcementContent: content,
@@ -361,8 +360,8 @@ export function PostInput({
               variant: 'warning',
               description:
                 deserialized.warnings.length === 1
-                  ? 'An image with a broken attachment reference was removed from the article.'
-                  : `${deserialized.warnings.length} images with broken attachment references were removed from the article.`,
+                  ? 'An attachment with a broken reference was removed from the article.'
+                  : `${deserialized.warnings.length} attachments with broken references were removed from the article.`,
             });
           }
         } else {
@@ -608,7 +607,8 @@ export function PostInput({
                   markdown={sanitizeCodeBlockLanguages(content)}
                   onChange={handleArticleBodyChangeWithAuth}
                   readOnly={isSubmitting || !isAuthenticated}
-                  inlineImages={{ ...inlineImages, uploadingCount }}
+                  inlineMedia={{ ...inlineMedia, uploadingCount }}
+                  isLoading={isEditInlineMediaLoading}
                 />
               )}
 
