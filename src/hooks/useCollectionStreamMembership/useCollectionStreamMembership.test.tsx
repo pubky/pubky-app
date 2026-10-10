@@ -12,6 +12,7 @@ import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { buildCollectionItemsStreamId } from '@/models/stream/post/postStream.types';
@@ -426,9 +427,9 @@ describe('useCollectionStreamMembership', () => {
 
   it('skips the owner’s envelope refresh right after a local write, so Nexus cannot revert an unindexed save', async () => {
     const forceRefresh = vi.spyOn(TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
-    await PostTtlModel.upsert({ id: `${AUTHOR}:collection-a`, lastUpdatedAt: Date.now() });
+    const collectionId = await PostController.commitCreateCollection({ authorId: AUTHOR, name: 'Reading list' });
     const pagination = settledPagination();
-    const { result } = mountEnvelopeFeed(`${AUTHOR}:collection-a`, pagination);
+    const { result } = mountEnvelopeFeed(collectionId, pagination);
     await act(async () => {
       await result.current.refresh();
     });
@@ -436,14 +437,36 @@ describe('useCollectionStreamMembership', () => {
     expect(forceRefresh).not.toHaveBeenCalled();
   });
 
+  it('refreshes the owner’s envelope after a recent remote read with no local write', async () => {
+    const forceRefresh = vi.spyOn(TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
+    await PostTtlModel.upsert({ id: `${AUTHOR}:collection-a`, lastUpdatedAt: Date.now() });
+    const { result } = mountEnvelopeFeed(`${AUTHOR}:collection-a`, settledPagination());
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(forceRefresh).toHaveBeenCalledWith({ postIds: [`${AUTHOR}:collection-a`], viewerId: AUTHOR });
+  });
+
+  it('does not extend the local-write window when a later read freshens TTL', async () => {
+    const forceRefresh = vi.spyOn(TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
+    const collectionId = await PostController.commitCreateCollection({ authorId: AUTHOR, name: 'Reading list' });
+    await PostDetailsModel.update(collectionId, { localUpdatedAt: Date.now() - 120_000 });
+    await PostTtlModel.upsert({ id: collectionId, lastUpdatedAt: Date.now() });
+    const { result } = mountEnvelopeFeed(collectionId, settledPagination());
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(forceRefresh).toHaveBeenCalledWith({ postIds: [collectionId], viewerId: AUTHOR });
+  });
+
   it('skips the owner’s envelope refresh when its freshness cannot be read', async () => {
     const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
     const forceRefresh = vi.spyOn(TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
-    vi.spyOn(TtlController, 'findStalePostsByIds').mockRejectedValue(
+    vi.spyOn(PostController, 'getDetailsByIds').mockRejectedValue(
       new AppError({
         category: ErrorCategory.Database,
         code: DatabaseErrorCode.QUERY_FAILED,
-        message: 'Failed to read post TTL',
+        message: 'Failed to read collection details',
         service: ErrorService.Local,
         operation: 'test-envelope-freshness',
       }),

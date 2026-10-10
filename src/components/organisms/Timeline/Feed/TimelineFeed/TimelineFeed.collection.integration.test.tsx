@@ -11,12 +11,13 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import type { Pubky } from '@/models/models.types';
-import { parseCompositeId } from '@/models/models.utils';
+import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { PostSavePicker } from '@/organisms/PostSavePicker/PostSavePicker';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
@@ -314,13 +315,27 @@ describe('collection feed with local membership', () => {
     expect(screen.queryByTestId(`${AUTHOR}:0000000000001`)).not.toBeInTheDocument();
   });
 
-  it('shows an item added on another device once pull-to-refresh refetches an envelope past the indexing window', async () => {
+  it('shows an item added on another device when refreshing an envelope just read from Nexus', async () => {
     const refresh = observeRefresh();
-    const { collectionId, postId } = await seed();
+    const postId = await PostController.commitCreate({ authorId: AUTHOR, content: 'Saved from home' });
+    const collectionId = buildCompositeId({ pubky: AUTHOR, id: '0000000000003' });
+    const local: PostDetailsModelSchema = {
+      id: collectionId,
+      content: JSON.stringify({ name: 'Reading list', items: [toUri(postId)], layout: 'list' }),
+      kind: 'collection',
+      uri: toUri(collectionId),
+      attachments: null,
+      indexed_at: Date.now(),
+    };
+    await LocalStreamPostsService.persistPosts({
+      posts: [nexusEnvelope(collectionId, local, [postId], local.indexed_at)],
+    });
+    route.userId = AUTHOR;
+    route.postId = parseCompositeId(collectionId).id;
     await nextTimestamp();
     const addedElsewhere = await PostController.commitCreate({ authorId: AUTHOR, content: 'Saved on my phone' });
-    // The envelope was read two minutes ago: fresh for its TTL, but older than Nexus.
-    await PostTtlModel.upsert({ id: collectionId, lastUpdatedAt: Date.now() - 120_000 });
+    // A recent Nexus read freshens TTL, but must not be mistaken for a local save.
+    expect((await PostTtlModel.findById(collectionId))?.lastUpdatedAt).toBeGreaterThan(Date.now() - 5_000);
     vi.mocked(NexusPostStreamService.fetch).mockResolvedValue({
       post_keys: [postId, addedElsewhere],
       last_post_score: null,
@@ -329,7 +344,6 @@ describe('collection feed with local membership', () => {
     expect(await screen.findByTestId(postId)).toBeInTheDocument();
     expect(screen.queryByTestId(addedElsewhere)).not.toBeInTheDocument();
 
-    const local = (await PostController.getDetails({ compositeId: collectionId }))!;
     const byIds = vi
       .spyOn(NexusPostStreamService, 'fetchByIds')
       .mockImplementation(async ({ post_ids }) =>

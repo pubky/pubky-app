@@ -97,19 +97,18 @@ function withoutRetention(retained: Map<object, string>, ids: string[]) {
   return new Map([...retained].filter(([, id]) => !ids.includes(id)));
 }
 
-// Pull-to-refresh is how a viewer gets past the envelope's TTL, so it refetches the
-// envelope with the stream. Only the owner writes the envelope locally, and a local
-// save stamps its TTL row but leaves `indexed_at` unchanged: Nexus can still serve the
-// pre-save envelope with a newer `indexed_at`, which the refresh guard would let
-// through (and the next save would push to the homeserver). The owner's refetch
-// therefore waits out the window the TTL coordinator already allows Nexus to index a
-// post (`ttlRetryDelayMs`) after any write to that row. A save Nexus indexes later
-// than that stays exposed until posts track pending local edits like profiles do.
+// Refresh the envelope with its stream so cross-device membership changes appear.
+// Only a recent local collection write skips this request: Nexus can still return
+// the pre-save envelope with a newer indexed_at. Remote reads also freshen TTL, so
+// use the separate local-write timestamp. This bounded indexing window is a
+// heuristic; it neither confirms indexing nor schedules a delayed refresh.
 async function refreshEnvelope(collectionId: string, viewerId: Pubky | null) {
   try {
     if (parseCompositeId(collectionId).pubky === viewerId) {
-      const stale = await TtlController.findStalePostsByIds({ postIds: [collectionId], ttlMs: getTtlRetryDelayMs() });
-      if (stale.length === 0) return;
+      const [collection] = await PostController.getDetailsByIds({ compositeIds: [collectionId] });
+      if (collection?.localUpdatedAt !== undefined && Date.now() - collection.localUpdatedAt < getTtlRetryDelayMs()) {
+        return;
+      }
     }
     await TtlController.forceRefreshPostsByIds({ postIds: [collectionId], viewerId: viewerId ?? undefined });
   } catch (error) {

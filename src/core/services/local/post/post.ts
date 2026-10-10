@@ -195,10 +195,15 @@ export class LocalPostService {
       }
 
       await db.transaction('rw', [PostDetailsModel.table, PostTtlModel.table], async () => {
+        const now = Date.now();
+        const postKind = kind ?? (await PostDetailsModel.findById(compositePostId))?.kind;
+        if (postKind === 'collection') {
+          changes.localUpdatedAt = now;
+        }
         await PostDetailsModel.update(compositePostId, changes);
         // Touch TTL so the coordinator considers the edited post fresh and
         // doesn't overwrite the local edit with stale (pre-edit) Nexus data
-        await PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() });
+        await PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: now });
       });
       Logger.debug('Post edited successfully', { compositePostId });
     } catch (error) {
@@ -287,6 +292,9 @@ export class LocalPostService {
         attachments: attachments ?? null,
         lock: lock ?? null,
       };
+      if (normalizedKind === 'collection') {
+        postDetails.localUpdatedAt = postDetails.indexed_at;
+      }
 
       const postRelationships: PostRelationshipsModelSchema = {
         id: compositePostId,
@@ -358,7 +366,9 @@ export class LocalPostService {
           }
 
           // Touch TTL for the new post
-          ops.push(PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }));
+          ops.push(
+            PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: postDetails.localUpdatedAt ?? Date.now() }),
+          );
 
           // Update author's user counts in a single operation.
           // A collection is a collection-kind post, so it bumps both the total
