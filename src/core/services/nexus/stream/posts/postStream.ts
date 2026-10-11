@@ -13,6 +13,7 @@ import {
   type TPostStreamFetchParams,
   type TStreamAuthorParams,
   type TStreamCollectionParams,
+  type TStreamPostCollectionsParams,
   type TStreamPostRepliesParams,
   type TStreamPostsByIdsParams,
 } from '@/services/nexus/stream/posts/postStream.types';
@@ -84,6 +85,9 @@ export class NexusPostStreamService {
         break;
       case StreamSource.COLLECTION:
         nexusEndpoint = postStreamApi.collection({ ...params, ...extraParams } as TStreamCollectionParams);
+        break;
+      case StreamSource.POST_COLLECTIONS:
+        nexusEndpoint = postStreamApi.post_collections({ ...params, ...extraParams } as TStreamPostCollectionsParams);
         break;
       case StreamSource.CONTENT_SEARCH: {
         if (!extraParams.q) {

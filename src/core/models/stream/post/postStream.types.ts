@@ -133,11 +133,15 @@ export type SortedAuthorStreamCompositeId =
 //     `total_engagement:all:collection`
 // - Single-collection items (posts inside one collection):
 //     `collection:<authorPubky>:<postId>` (source-first composite, mirrors REPLIES).
+// - Collections containing one post (the save picker's "Also in collections" list):
+//     `post_collections:<authorPubky>:<postId>` (source-first composite, skip-paginated,
+//     served from Nexus's COLLECTED edges — pubky-nexus#1067).
 export type AuthorCollectionsStreamId = `${string}:${StreamSource.AUTHOR}:${StreamKind.COLLECTION}`;
 export type FollowedCollectionsStreamId =
   `${StreamSorting.TIMELINE}:${StreamSource.BOOKMARKS}:${StreamKind.COLLECTION}`;
 export type DiscoverCollectionsStreamId = `${StreamSorting.ENGAGEMENT}:${StreamSource.ALL}:${StreamKind.COLLECTION}`;
 export type CollectionItemsStreamCompositeId = `${StreamSource.COLLECTION}:${string}:${string}`;
+export type PostCollectionsStreamCompositeId = `${StreamSource.POST_COLLECTIONS}:${string}:${string}`;
 export const CONTENT_SEARCH_STREAM_PREFIX = 'content_search' as const;
 // The marker plus encodeURIComponent (which escapes ':') guarantees the query segment can never
 // satisfy any legacy segment-based classifier (reserved words like 'bookmarks'/'author'/'wot').
@@ -214,6 +218,10 @@ export function buildCollectionItemsStreamId(authorPubky: Pubky, postId: string)
   return `${StreamSource.COLLECTION}:${authorPubky}:${postId}`;
 }
 
+export function buildPostCollectionsStreamId(authorPubky: Pubky, postId: string): PostCollectionsStreamCompositeId {
+  return `${StreamSource.POST_COLLECTIONS}:${authorPubky}:${postId}`;
+}
+
 export function buildContentSearchStreamId(
   query: string,
   kind: PostStreamKindSegment = 'all',
@@ -282,6 +290,11 @@ export function isCollectionItemsStream(streamId: string): streamId is Collectio
   return streamId.startsWith(`${StreamSource.COLLECTION}:`);
 }
 
+/** Collections-containing-a-post streams (`post_collections:<author>:<postId>`); every post in them is a collection. */
+export function isPostCollectionsStream(streamId: string): streamId is PostCollectionsStreamCompositeId {
+  return streamId.startsWith(`${StreamSource.POST_COLLECTIONS}:`);
+}
+
 export function isWotDomainStream(streamId: string): streamId is WotDomainStreamCompositeId {
   return streamId.split(':')[1] === StreamSource.WOT_DOMAIN;
 }
@@ -312,7 +325,8 @@ function toPostStreamKindSegment(segment: string | undefined): PostStreamKindSeg
 /**
  * Extracts the post kind segment from any known stream id shape, or `undefined`
  * for shapes that encode no kind (`author:<pubky>`, `author_replies:<pubky>`,
- * `post_replies:<pubky>:<postId>`, `collection:<pubky>:<postId>`).
+ * `post_replies:<pubky>:<postId>`, `collection:<pubky>:<postId>`,
+ * `post_collections:<pubky>:<postId>`).
  *
  * This is the canonical kind parser: consumers gating posts by kind (e.g.
  * `postKindBelongsToStream`) must use it instead of splitting the id themselves.
@@ -435,6 +449,7 @@ export type PostStreamId =
   | FollowedCollectionsStreamId
   | DiscoverCollectionsStreamId
   | CollectionItemsStreamCompositeId
+  | PostCollectionsStreamCompositeId
   | ContentSearchStreamId;
 
 /**
@@ -445,11 +460,18 @@ export type PostStreamId =
  * - Engagement streams (`total_engagement:…`) — popularity-ranked, no stable score cursor.
  * - Single-collection item streams (`collection:…`) — returned in the collection's own
  *   item order, paginated by index.
+ * - Post-collections streams (`post_collections:…`) — served from the graph, newest first,
+ *   paginated by `skip`/`limit` (pubky-nexus#1067).
  * - Full-text content search (`content_search:…`) — relevance-ranked and paginated by offset.
  */
 export function isSkipPaginatedStream(streamId: string): boolean {
   const head = streamId.split(':')[0];
-  return head === StreamSorting.ENGAGEMENT || isCollectionItemsStream(streamId) || isContentSearchStream(streamId);
+  return (
+    head === StreamSorting.ENGAGEMENT ||
+    isCollectionItemsStream(streamId) ||
+    isPostCollectionsStream(streamId) ||
+    isContentSearchStream(streamId)
+  );
 }
 
 /**

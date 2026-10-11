@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { COLLECTIONS_COUNT_PROTECTION_MS } from '@/config/collections';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -16,6 +17,8 @@ import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStr
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
+import { LocalPostService } from '@/services/local/post/post';
+import { recentCollectionCounts, recentCollectionEnvelopes } from '@/services/local/post/recentCollectionCounts';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type { NexusPost, NexusPostDetails, NexusTag } from '@/services/nexus/nexus.types';
 import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
@@ -622,6 +625,186 @@ describe('LocalStreamPostsService', () => {
       await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP)] });
 
       expect((await PostDetailsModel.findById(compositeId))!.content).toBe('nexus copy');
+    });
+
+    describe('collections count protection', () => {
+      // `recentCollectionCounts` is the only signal: an ordinary persist renews the TTL too, so
+      // the TTL cannot tell a local collection write from an overlapping response.
+      const localCounts = { id: compositeId, tags: 0, unique_tags: 0, replies: 1, reposts: 0, collections: 3 };
+
+      afterEach(() => {
+        recentCollectionCounts.reset();
+        recentCollectionEnvelopes.reset();
+      });
+
+      it('keeps a collections count the viewer changed locally, on the TTL refresh path', async () => {
+        // The save landed before the refresh request started; Nexus has not indexed it yet.
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+        await PostCountsModel.table.put(localCounts);
+        recentCollectionCounts.markWritten(compositeId);
+
+        await LocalStreamPostsService.persistPosts({
+          posts: [nexusCopy(BASE_TIMESTAMP + 20_000)],
+          refreshGuard: { fetchStartedAt: Date.now() },
+        });
+
+        const counts = (await PostCountsModel.findById(compositeId))!;
+        expect(counts.collections).toBe(3);
+        // Every other count still refreshes from the response.
+        expect(counts.replies).toBe(7);
+      });
+
+      it('keeps it on forced hydration and cache-miss fills too (no refresh guard)', async () => {
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+        await PostCountsModel.table.put(localCounts);
+        recentCollectionCounts.markWritten(compositeId);
+
+        await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
+
+        const counts = (await PostCountsModel.findById(compositeId))!;
+        expect(counts.collections).toBe(3);
+        expect(counts.replies).toBe(7);
+        // Only the count is guarded here: details still follow the response.
+        expect((await PostDetailsModel.findById(compositeId))!.content).toBe('nexus copy');
+      });
+
+      it('samples protection behind a local save already queued ahead of the response', async () => {
+        // The save's transaction has started but has not marked the post yet when the response
+        // arrives: persistence serializes behind it and must see the mark by then.
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+        await PostCountsModel.table.put({ ...localCounts, collections: 0 });
+        const curatorId = buildCompositeId({ pubky: 'author-1', id: 'curator' });
+        const envelope = (items: string[]) => JSON.stringify({ name: 'Curated', items });
+        await PostDetailsModel.table.put({
+          id: curatorId,
+          content: envelope([]),
+          indexed_at: BASE_TIMESTAMP,
+          kind: 'collection',
+          uri: 'pubky://author-1/pub/pubky.app/posts/curator',
+          attachments: null,
+        });
+
+        const save = LocalPostService.edit({
+          compositePostId: curatorId,
+          content: envelope(['pubky://author-1/pub/pubky.app/posts/edited']),
+        });
+        await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
+        await save;
+
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(1);
+      });
+
+      it('keeps the envelope of a collection the viewer wrote recently, on every path', async () => {
+        // A tag notification on the collection forces a hydration with no refresh guard before
+        // Nexus indexed the viewer's save: the copy carries the pre-save envelope.
+        const curatorId = buildCompositeId({ pubky: 'author-1', id: 'curator' });
+        const curatorEnvelope = (items: string[]) => JSON.stringify({ name: 'Curated', items });
+        await PostDetailsModel.table.put({
+          id: curatorId,
+          content: curatorEnvelope(['pubky://author-1/pub/pubky.app/posts/edited']),
+          indexed_at: BASE_TIMESTAMP,
+          kind: 'collection',
+          uri: 'pubky://author-1/pub/pubky.app/posts/curator',
+          attachments: null,
+        });
+        recentCollectionEnvelopes.markWritten(curatorId);
+        const staleCopy = createMockNexusPost('curator', 'author-1', BASE_TIMESTAMP + 20_000, {
+          counts: { replies: 7 } as NexusPost['counts'],
+        });
+        staleCopy.details.kind = 'collection';
+        staleCopy.details.content = curatorEnvelope([]);
+
+        await LocalStreamPostsService.persistPosts({ posts: [staleCopy] });
+
+        const details = (await PostDetailsModel.findById(curatorId))!;
+        expect(details.content).toBe(curatorEnvelope(['pubky://author-1/pub/pubky.app/posts/edited']));
+        // Everything else in the response still lands.
+        expect((await PostCountsModel.findById(curatorId))!.replies).toBe(7);
+      });
+
+      it('does not count a membership twice when a stale hydration lands between two saves', async () => {
+        // Save P into the empty collection C, let a stale copy of C arrive, save P again as the
+        // picker would after seeing C unchecked: one membership, one increment.
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+        await PostCountsModel.table.put({ ...localCounts, collections: 0 });
+        const curatorId = buildCompositeId({ pubky: 'author-1', id: 'curator' });
+        const curatorEnvelope = (items: string[]) => JSON.stringify({ name: 'Curated', items });
+        const itemUri = 'pubky://author-1/pub/pubky.app/posts/edited';
+        await PostDetailsModel.table.put({
+          id: curatorId,
+          content: curatorEnvelope([]),
+          indexed_at: BASE_TIMESTAMP,
+          kind: 'collection',
+          uri: 'pubky://author-1/pub/pubky.app/posts/curator',
+          attachments: null,
+        });
+
+        await LocalPostService.edit({ compositePostId: curatorId, content: curatorEnvelope([itemUri]) });
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(1);
+
+        const staleCopy = createMockNexusPost('curator', 'author-1', BASE_TIMESTAMP + 20_000);
+        staleCopy.details.kind = 'collection';
+        staleCopy.details.content = curatorEnvelope([]);
+        await LocalStreamPostsService.persistPosts({ posts: [staleCopy] });
+        expect((await PostDetailsModel.findById(curatorId))!.content).toBe(curatorEnvelope([itemUri]));
+
+        await LocalPostService.edit({ compositePostId: curatorId, content: curatorEnvelope([itemUri]) });
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(1);
+      });
+
+      it('takes the response count from an overlapping response that only renewed the TTL', async () => {
+        // A TTL batch and a notification batch overlapped: the older response persisted first
+        // and stamped the TTL after this request started. No local write happened, so the
+        // newer response's total is the truth.
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt + 1 });
+        await PostCountsModel.table.put(localCounts);
+
+        await LocalStreamPostsService.persistPosts({
+          posts: [nexusCopy(BASE_TIMESTAMP + 20_000)],
+          refreshGuard: { fetchStartedAt },
+        });
+
+        const counts = (await PostCountsModel.findById(compositeId))!;
+        expect(counts.collections).toBe(0);
+        expect(counts.replies).toBe(7);
+        // The details guard is still TTL-based and keeps the local row.
+        expect((await PostDetailsModel.findById(compositeId))!.content).toBe('local edit');
+      });
+
+      it('takes the response count once the protection window has passed', async () => {
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+        await PostCountsModel.table.put(localCounts);
+        recentCollectionCounts.markWritten(compositeId);
+        const later = Date.now() + COLLECTIONS_COUNT_PROTECTION_MS;
+        const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(later);
+
+        try {
+          await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
+        } finally {
+          nowSpy.mockRestore();
+        }
+
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
+      });
+
+      it('retires a mark with no local counts row behind it, so the next response lands too', async () => {
+        // A deleted collection marked a member that was never hydrated: the first response
+        // after that is the only count there is, and a later one must still replace it.
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+        recentCollectionCounts.markWritten(compositeId);
+        const withCollections = (collections: number) => {
+          const post = nexusCopy(BASE_TIMESTAMP + 20_000);
+          post.counts = { ...post.counts, collections };
+          return post;
+        };
+
+        await LocalStreamPostsService.persistPosts({ posts: [withCollections(1)] });
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(1);
+        expect(recentCollectionCounts.isProtected(compositeId)).toBe(false);
+
+        await LocalStreamPostsService.persistPosts({ posts: [withCollections(0)] });
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(0);
+      });
     });
   });
 

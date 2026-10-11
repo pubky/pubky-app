@@ -1,6 +1,5 @@
 'use client';
 
-import { cva } from 'class-variance-authority';
 import { Ellipsis, MessageCircle, Repeat, Tag } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -13,29 +12,8 @@ import { PostMenuActions } from '../PostMenuActions/PostMenuActions';
 import { PostSavePicker } from '../PostSavePicker/PostSavePicker';
 import { PostActionsBarSkeleton } from './PostActionsBar.skeleton';
 import type { ActionButtonConfig, PostActionsBarProps } from './PostActionsBar.types';
+import { postActionsButtonVariants, postActionsCountVariants } from './PostActionsBar.variants';
 
-const postActionsButtonVariants = cva('', {
-  variants: {
-    variant: {
-      default: 'border-none shadow-xs',
-      visual: 'border-white/10 bg-black/40 text-white shadow-none hover:border-white/30 hover:bg-black/70',
-    },
-  },
-  defaultVariants: {
-    variant: 'default',
-  },
-});
-const postActionsCountVariants = cva('text-xs leading-4 font-bold', {
-  variants: {
-    variant: {
-      default: 'text-muted-foreground',
-      visual: 'text-white/80',
-    },
-  },
-  defaultVariants: {
-    variant: 'default',
-  },
-});
 export function PostActionsBar({
   postId,
   savePostId = postId,
@@ -114,7 +92,9 @@ export function PostActionsBar({
           </Button>
         ),
       )}
-      {!isCollection && <PostSavePicker postId={savePostId} buttonClassName={buttonClassName} />}
+      {!isCollection && (
+        <PostSavePicker postId={savePostId} buttonClassName={buttonClassName} countClassName={countClassName} />
+      )}
       <PostMenuActions postId={postId} trigger={moreButton} />
     </Container>
   );

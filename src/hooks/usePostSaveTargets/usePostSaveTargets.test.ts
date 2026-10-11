@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   toggleBookmark: vi.fn(),
   loadMoreCollections: vi.fn(),
   paginationEnabled: null as boolean | null,
+  postCollectionsEnabled: null as boolean | null,
+  postCollectionIds: [] as string[],
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
@@ -63,6 +65,13 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
   }),
 }));
 
+vi.mock('@/hooks/usePostCollections/usePostCollections', () => ({
+  usePostCollections: (_postId: string, { enabled }: { enabled?: boolean }) => {
+    mocks.postCollectionsEnabled = enabled ?? null;
+    return { collectionIds: mocks.postCollectionIds, isLoading: false };
+  },
+}));
+
 vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -73,6 +82,27 @@ describe('usePostSaveTargets', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.paginationEnabled = null;
+    mocks.postCollectionsEnabled = null;
+    mocks.postCollectionIds = [];
+  });
+
+  it("lists other users' curating collections only while the picker is open, without the viewer's own", async () => {
+    // A malformed key from Nexus is dropped instead of throwing out of the render.
+    mocks.postCollectionIds = [
+      'other-user:collection9',
+      'current-user:collection1',
+      'malformed',
+      'another-user:collection3',
+    ];
+
+    const open = renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: true }));
+
+    expect(mocks.postCollectionsEnabled).toBe(true);
+    expect(open.result.current.otherCollectionIds).toEqual(['other-user:collection9', 'another-user:collection3']);
+    expect(open.result.current.isOtherCollectionsLoading).toBe(false);
+
+    renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: false }));
+    expect(mocks.postCollectionsEnabled).toBe(false);
   });
 
   it('paginates authored collections only while the picker is open', async () => {

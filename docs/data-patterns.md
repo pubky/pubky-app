@@ -149,6 +149,7 @@ Post and user subscriptions are both reference counted, so nested surfaces that 
 | `CollectionCard` (`landing`)        | the collection id                                    | Profile Collections tab, `/collections` sections, search                                                            |
 | `CollectionCard` (`embed`)          | —                                                    | Always inside `PostPreviewCard` or `PostMain` → `PostContentBase`, which subscribe                                  |
 | `CollectionHero`                    | the collection id                                    | The single-collection page's subscriber for its envelope                                                            |
+| `PostSavePicker` ("Also in" rows)   | each other-user collection id                        | The save picker's list of collections that curate the post; the post reference also holds the curator               |
 | `ProfilePageHeader`, `UserListItem` | the user pubky                                       | Profile header and user lists                                                                                       |
 | `useIsFollowing`                    | the follow target                                    | Not viewport-gated: data hook without a DOM node; relationship rows are viewer-relative and only TTL refreshes them |
 
@@ -275,7 +276,7 @@ notifications      — Notification records
 
 ```
 post_details       — Post content, kind, attachments, timestamps
-post_counts        — Reply/repost/tag counts
+post_counts        — Reply/repost/tag counts, plus `collections` (how many collections curate the post; bumped locally when the viewer's own collections change)
 post_relationships — Author, parent, repost relationships
 post_tags          — Tag collections per post
 post_ttl           — Cache staleness (id, lastUpdatedAt)

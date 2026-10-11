@@ -239,20 +239,9 @@ vi.mock('@/hooks/usePostCounts/usePostCounts', async () => {
   };
 });
 
-vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => {
-  const noop = async () => {};
-  const result = {
-    isBookmarked: false,
-    isBookmarkLoading: false,
-    isBookmarkToggling: false,
-    collections: [],
-    isCollectionsLoading: false,
-    isCreatingCollection: false,
-    toggleBookmark: noop,
-    toggleCollection: noop,
-    createCollectionWithPost: noop,
-  };
-  return { usePostSaveTargets: () => result };
+vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', async () => {
+  const { idlePostSaveTargets } = await import('@/test/mocks/usePostSaveTargets');
+  return { usePostSaveTargets: () => idlePostSaveTargets };
 });
 
 vi.mock('@/hooks/useUserDetails/useUserDetails', async () => {

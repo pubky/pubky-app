@@ -21,6 +21,7 @@ describe('PostCountsModel', () => {
     unique_tags: 3,
     replies: 12,
     reposts: 8,
+    collections: 2,
   };
 
   describe('Constructor', () => {
@@ -33,6 +34,14 @@ describe('PostCountsModel', () => {
       expect(postCounts.unique_tags).toBe(3);
       expect(postCounts.replies).toBe(12);
       expect(postCounts.reposts).toBe(8);
+      expect(postCounts.collections).toBe(2);
+    });
+
+    it('should default a missing collections count to zero', () => {
+      const { collections: _collections, ...legacyCounts } = MOCK_NEXUS_POST_COUNTS;
+      const postCounts = new PostCountsModel({ id: testPostId1, ...legacyCounts });
+
+      expect(postCounts.collections).toBe(0);
     });
   });
 
@@ -108,6 +117,7 @@ describe('PostCountsModel', () => {
           unique_tags: MOCK_NEXUS_POST_COUNTS.unique_tags,
           replies: MOCK_NEXUS_POST_COUNTS.replies,
           reposts: MOCK_NEXUS_POST_COUNTS.reposts,
+          collections: MOCK_NEXUS_POST_COUNTS.collections,
         });
       });
 
@@ -130,6 +140,7 @@ describe('PostCountsModel', () => {
         ['reposts', { reposts: -2 }, 6],
         ['tags', { tags: 3 }, 8],
         ['unique_tags', { unique_tags: -1 }, 2],
+        ['collections', { collections: 1 }, 3],
       ])('should update %s field', async (field, countChanges, expected) => {
         await PostCountsModel.updateCounts({
           postCompositeId: testPostId1,
@@ -138,6 +149,29 @@ describe('PostCountsModel', () => {
 
         const updated = await PostCountsModel.findById(testPostId1);
         expect(updated![field as keyof PostCountsModelSchema]).toBe(expected);
+      });
+
+      it('leaves an unknown collections baseline unknown (rows persisted before the field existed)', async () => {
+        // A delta cannot turn "unknown" into a number: that number would be wrong and, as a
+        // local write, would be guarded against the hydration that knows the real total.
+        const { collections: _collections, ...legacyCounts } = MOCK_NEXUS_POST_COUNTS;
+        await PostCountsModel.create({ id: testPostId2, ...legacyCounts });
+
+        await PostCountsModel.updateCounts({
+          postCompositeId: testPostId2,
+          countChanges: { collections: -1, replies: 1 },
+        });
+
+        const [raw] = await PostCountsModel.findByIds([testPostId2]);
+        expect(raw.collections).toBeUndefined();
+        expect(raw.replies).toBe(legacyCounts.replies + 1);
+        // The model still reads it as zero for display.
+        expect((await PostCountsModel.findById(testPostId2))!.collections).toBe(0);
+      });
+
+      it('clamps a known collections count at zero', async () => {
+        await PostCountsModel.updateCounts({ postCompositeId: testPostId1, countChanges: { collections: -5 } });
+        expect((await PostCountsModel.findById(testPostId1))!.collections).toBe(0);
       });
 
       it('should update multiple count fields at once', async () => {
@@ -238,14 +272,14 @@ describe('PostCountsModel', () => {
           countChanges: { replies: 5 },
         };
 
-        it('should propagate database errors from findById', async () => {
+        it('should propagate database errors from findByIds', async () => {
           const error = Err.database(DatabaseErrorCode.QUERY_FAILED, 'Failed to find record in post_counts', {
             service: ErrorService.Local,
-            operation: 'findById',
+            operation: 'findByIds',
             context: { id: testPostId1 },
           });
 
-          vi.spyOn(PostCountsModel, 'findById').mockRejectedValueOnce(error);
+          vi.spyOn(PostCountsModel, 'findByIds').mockRejectedValueOnce(error);
 
           await expect(PostCountsModel.updateCounts(updateParams)).rejects.toMatchObject({
             category: ErrorCategory.Database,
@@ -268,8 +302,8 @@ describe('PostCountsModel', () => {
           });
         });
 
-        it('should propagate generic errors from findById', async () => {
-          vi.spyOn(PostCountsModel, 'findById').mockRejectedValueOnce(new Error('Database error'));
+        it('should propagate generic errors from findByIds', async () => {
+          vi.spyOn(PostCountsModel, 'findByIds').mockRejectedValueOnce(new Error('Database error'));
 
           await expect(PostCountsModel.updateCounts(updateParams)).rejects.toThrow('Database error');
         });

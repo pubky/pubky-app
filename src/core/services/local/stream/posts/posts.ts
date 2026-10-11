@@ -29,6 +29,7 @@ import {
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
+import { recentCollectionCounts, recentCollectionEnvelopes } from '@/services/local/post/recentCollectionCounts';
 import type {
   TAddReplyToStreamParams,
   TAlignPageParams,
@@ -415,6 +416,12 @@ export class LocalStreamPostsService {
     // is not indexed after the local one (Nexus has not caught up yet).
     // Counts, tags, relationships and the TTL still refresh for those rows.
     const detailIds = postDetails.map((d) => d.id);
+    // One count is guarded on every path, not only the TTL refresh: `collections`, which the
+    // viewer's own collection writes bump locally while Nexus still has to index the edit
+    // (`recentCollectionCounts`). A response that overlapped the write, or started after it
+    // but before indexing, carries the old total and would undo the bump; the TTL cannot tell
+    // such a write from an ordinary persist, which renews the TTL too, so the registry is the
+    // only signal. Rows the viewer did not touch recently take the Nexus count.
     await db.transaction(
       'rw',
       [
@@ -428,8 +435,21 @@ export class LocalStreamPostsService {
       ],
       async () => {
         const existingDetails = await PostDetailsModel.findByIdsPreserveOrder(detailIds);
+        // Sampled only now, behind that first read: the transaction is active, so every local
+        // collection write queued ahead of it has committed, and each marked its posts before
+        // doing so. A sample taken before the transaction could miss the mark of an edit still
+        // in flight, and this response would then overwrite the increment that edit committed.
+        const protectedCountIds = new Set(detailIds.filter((id) => recentCollectionCounts.isProtected(id)));
+        // Same window, same reason, for the collections the viewer wrote: their local envelope is
+        // kept on every path, since a copy fetched before the write is indexed would uncheck the
+        // picker and hand the next edit a pre-write baseline that counts a membership twice.
+        const protectedEnvelopeIds = new Set(detailIds.filter((id) => recentCollectionEnvelopes.isProtected(id)));
         const existingTtl = refreshGuard ? await PostTtlModel.findByIds(detailIds) : [];
         const ttlById = new Map(existingTtl.map((record) => [record.id, record.lastUpdatedAt]));
+        const protectedCounts =
+          protectedCountIds.size > 0 ? await PostCountsModel.findByIds(Array.from(protectedCountIds)) : [];
+        // Rows persisted before the field existed carry no local value to keep.
+        const localCollectionsById = new Map(protectedCounts.map((record) => [record.id, record.collections]));
 
         const tombstonedIds = new Set<string>();
         const locallyNewerIds = new Set<string>();
@@ -439,20 +459,38 @@ export class LocalStreamPostsService {
             tombstonedIds.add(incoming.id);
             return;
           }
-          if (!refreshGuard || !existing) return;
+          if (!existing) return;
+          if (protectedEnvelopeIds.has(incoming.id)) {
+            locallyNewerIds.add(incoming.id);
+            return;
+          }
+          if (!refreshGuard) return;
           const writtenSinceFetch = (ttlById.get(incoming.id) ?? 0) >= refreshGuard.fetchStartedAt;
           const notIndexedAfterLocal = incoming.indexed_at <= existing.indexed_at;
           if (writtenSinceFetch || notIndexedAfterLocal) locallyNewerIds.add(incoming.id);
         });
         if (locallyNewerIds.size > 0) {
-          Logger.debug('LocalStreamPostsService: Kept locally newer post details during refresh', {
+          Logger.debug('LocalStreamPostsService: Kept locally newer post details', {
             ids: Array.from(locallyNewerIds).slice(0, 5),
             count: locallyNewerIds.size,
           });
         }
 
         const liveDetails = postDetails.filter((d) => !tombstonedIds.has(d.id) && !locallyNewerIds.has(d.id));
-        const liveCounts = postCounts.filter(([id]) => !tombstonedIds.has(id));
+        const liveCounts = postCounts
+          .filter(([id]) => !tombstonedIds.has(id))
+          .map(([id, counts]): NexusModelTuple<NexusPostCounts> => {
+            const localCollections = localCollectionsById.get(id);
+            if (localCollections === undefined) {
+              // A mark with no local value behind it (the member was never hydrated when its
+              // collection was deleted, or the row predates the field) stands for nothing:
+              // this response's count is the only one there is, and the next response must
+              // be free to replace it.
+              if (protectedCountIds.has(id)) recentCollectionCounts.clear(id);
+              return [id, counts];
+            }
+            return [id, { ...counts, collections: localCollections }];
+          });
         const liveRelationships = postRelationships.filter(([id]) => !tombstonedIds.has(id));
         const liveTags = postTags.filter(([id]) => !tombstonedIds.has(id));
         // The freshness record is the one row a tombstone still refreshes:
