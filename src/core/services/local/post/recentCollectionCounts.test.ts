@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTIONS_COUNT_PROTECTION_MS } from '@/config/collections';
 import { clearDatabase } from '@/database/franky/franky.helpers';
-import { RecentCollectionCounts } from './recentCollectionCounts';
+import { RecentCollectionWrites } from './recentCollectionCounts';
 
 const postId = 'author:post';
 
-describe('RecentCollectionCounts', () => {
-  let registry: RecentCollectionCounts;
+describe('RecentCollectionWrites', () => {
+  let registry: RecentCollectionWrites;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    registry = new RecentCollectionCounts();
+    registry = new RecentCollectionWrites();
   });
 
   afterEach(() => {

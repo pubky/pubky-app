@@ -18,7 +18,7 @@ import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
 import { LocalPostService } from '@/services/local/post/post';
-import { recentCollectionCounts } from '@/services/local/post/recentCollectionCounts';
+import { recentCollectionCounts, recentCollectionEnvelopes } from '@/services/local/post/recentCollectionCounts';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type { NexusPost, NexusPostDetails, NexusTag } from '@/services/nexus/nexus.types';
 import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
@@ -634,6 +634,7 @@ describe('LocalStreamPostsService', () => {
 
       afterEach(() => {
         recentCollectionCounts.reset();
+        recentCollectionEnvelopes.reset();
       });
 
       it('keeps a collections count the viewer changed locally, on the TTL refresh path', async () => {
@@ -690,6 +691,64 @@ describe('LocalStreamPostsService', () => {
         await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP + 20_000)] });
         await save;
 
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(1);
+      });
+
+      it('keeps the envelope of a collection the viewer wrote recently, on every path', async () => {
+        // A tag notification on the collection forces a hydration with no refresh guard before
+        // Nexus indexed the viewer's save: the copy carries the pre-save envelope.
+        const curatorId = buildCompositeId({ pubky: 'author-1', id: 'curator' });
+        const curatorEnvelope = (items: string[]) => JSON.stringify({ name: 'Curated', items });
+        await PostDetailsModel.table.put({
+          id: curatorId,
+          content: curatorEnvelope(['pubky://author-1/pub/pubky.app/posts/edited']),
+          indexed_at: BASE_TIMESTAMP,
+          kind: 'collection',
+          uri: 'pubky://author-1/pub/pubky.app/posts/curator',
+          attachments: null,
+        });
+        recentCollectionEnvelopes.markWritten(curatorId);
+        const staleCopy = createMockNexusPost('curator', 'author-1', BASE_TIMESTAMP + 20_000, {
+          counts: { replies: 7 } as NexusPost['counts'],
+        });
+        staleCopy.details.kind = 'collection';
+        staleCopy.details.content = curatorEnvelope([]);
+
+        await LocalStreamPostsService.persistPosts({ posts: [staleCopy] });
+
+        const details = (await PostDetailsModel.findById(curatorId))!;
+        expect(details.content).toBe(curatorEnvelope(['pubky://author-1/pub/pubky.app/posts/edited']));
+        // Everything else in the response still lands.
+        expect((await PostCountsModel.findById(curatorId))!.replies).toBe(7);
+      });
+
+      it('does not count a membership twice when a stale hydration lands between two saves', async () => {
+        // Save P into the empty collection C, let a stale copy of C arrive, save P again as the
+        // picker would after seeing C unchecked: one membership, one increment.
+        await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+        await PostCountsModel.table.put({ ...localCounts, collections: 0 });
+        const curatorId = buildCompositeId({ pubky: 'author-1', id: 'curator' });
+        const curatorEnvelope = (items: string[]) => JSON.stringify({ name: 'Curated', items });
+        const itemUri = 'pubky://author-1/pub/pubky.app/posts/edited';
+        await PostDetailsModel.table.put({
+          id: curatorId,
+          content: curatorEnvelope([]),
+          indexed_at: BASE_TIMESTAMP,
+          kind: 'collection',
+          uri: 'pubky://author-1/pub/pubky.app/posts/curator',
+          attachments: null,
+        });
+
+        await LocalPostService.edit({ compositePostId: curatorId, content: curatorEnvelope([itemUri]) });
+        expect((await PostCountsModel.findById(compositeId))!.collections).toBe(1);
+
+        const staleCopy = createMockNexusPost('curator', 'author-1', BASE_TIMESTAMP + 20_000);
+        staleCopy.details.kind = 'collection';
+        staleCopy.details.content = curatorEnvelope([]);
+        await LocalStreamPostsService.persistPosts({ posts: [staleCopy] });
+        expect((await PostDetailsModel.findById(curatorId))!.content).toBe(curatorEnvelope([itemUri]));
+
+        await LocalPostService.edit({ compositePostId: curatorId, content: curatorEnvelope([itemUri]) });
         expect((await PostCountsModel.findById(compositeId))!.collections).toBe(1);
       });
 

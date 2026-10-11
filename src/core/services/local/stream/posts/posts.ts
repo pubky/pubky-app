@@ -29,7 +29,7 @@ import {
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
-import { recentCollectionCounts } from '@/services/local/post/recentCollectionCounts';
+import { recentCollectionCounts, recentCollectionEnvelopes } from '@/services/local/post/recentCollectionCounts';
 import type {
   TAddReplyToStreamParams,
   TAlignPageParams,
@@ -440,6 +440,10 @@ export class LocalStreamPostsService {
         // doing so. A sample taken before the transaction could miss the mark of an edit still
         // in flight, and this response would then overwrite the increment that edit committed.
         const protectedCountIds = new Set(detailIds.filter((id) => recentCollectionCounts.isProtected(id)));
+        // Same window, same reason, for the collections the viewer wrote: their local envelope is
+        // kept on every path, since a copy fetched before the write is indexed would uncheck the
+        // picker and hand the next edit a pre-write baseline that counts a membership twice.
+        const protectedEnvelopeIds = new Set(detailIds.filter((id) => recentCollectionEnvelopes.isProtected(id)));
         const existingTtl = refreshGuard ? await PostTtlModel.findByIds(detailIds) : [];
         const ttlById = new Map(existingTtl.map((record) => [record.id, record.lastUpdatedAt]));
         const protectedCounts =
@@ -455,13 +459,18 @@ export class LocalStreamPostsService {
             tombstonedIds.add(incoming.id);
             return;
           }
-          if (!refreshGuard || !existing) return;
+          if (!existing) return;
+          if (protectedEnvelopeIds.has(incoming.id)) {
+            locallyNewerIds.add(incoming.id);
+            return;
+          }
+          if (!refreshGuard) return;
           const writtenSinceFetch = (ttlById.get(incoming.id) ?? 0) >= refreshGuard.fetchStartedAt;
           const notIndexedAfterLocal = incoming.indexed_at <= existing.indexed_at;
           if (writtenSinceFetch || notIndexedAfterLocal) locallyNewerIds.add(incoming.id);
         });
         if (locallyNewerIds.size > 0) {
-          Logger.debug('LocalStreamPostsService: Kept locally newer post details during refresh', {
+          Logger.debug('LocalStreamPostsService: Kept locally newer post details', {
             ids: Array.from(locallyNewerIds).slice(0, 5),
             count: locallyNewerIds.size,
           });

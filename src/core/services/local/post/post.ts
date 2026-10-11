@@ -33,7 +33,12 @@ import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.un
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import type { TLocalSavePostParams, TLocalUpdatePostStreamParams } from '@/services/local/post/post.types';
-import { type CollectionCountWrite, recentCollectionCounts } from '@/services/local/post/recentCollectionCounts';
+import {
+  type CollectionCountWrite,
+  recentCollectionCounts,
+  recentCollectionEnvelopes,
+  type RecentCollectionWrites,
+} from '@/services/local/post/recentCollectionCounts';
 
 export class LocalPostService {
   private constructor() {}
@@ -209,9 +214,11 @@ export class LocalPostService {
 
         // A collection edit (item added/removed, or a kind flip in either direction)
         // moves the curated posts' `collections` count, like Nexus's COLLECTED edges.
+        const nextKind = kind ?? existing?.kind;
         const curated = this.updateCuratedPostCounts(
           this.curatedItemIds(existing?.kind, existing?.content),
-          this.curatedItemIds(kind ?? existing?.kind, content),
+          this.curatedItemIds(nextKind, content),
+          existing?.kind === 'collection' || nextKind === 'collection' ? compositePostId : undefined,
         );
         restoreMarks = curated.restoreMarks;
         await Promise.all(curated.ops);
@@ -381,7 +388,11 @@ export class LocalPostService {
           }
 
           // A new collection curates its items from the start: bump their `collections` count.
-          const curated = this.updateCuratedPostCounts(new Set(), this.curatedItemIds(normalizedKind, content));
+          const curated = this.updateCuratedPostCounts(
+            new Set(),
+            this.curatedItemIds(normalizedKind, content),
+            normalizedKind === 'collection' ? compositePostId : undefined,
+          );
           restoreMarks = curated.restoreMarks;
           ops.push(...curated.ops);
 
@@ -699,18 +710,27 @@ export class LocalPostService {
    * marked in `recentCollectionCounts` before the write, like `recentUnbookmarks`, so a Nexus
    * count fetched before the edit is indexed does not undo the change (`persistPosts`), and its
    * TTL is stamped so the coordinator does not schedule a refresh for it right away (the
-   * reply/repost count pattern above). Returns the pending writes for the caller's transaction
-   * and `restoreMarks`, which the caller runs if that transaction does not commit: the marks
-   * then go back to what they were, so a rolled-back write never freezes a count.
+   * reply/repost count pattern above). With `envelopeId`, the collection being written is
+   * marked in `recentCollectionEnvelopes` as well: its local envelope is the baseline the next
+   * diff reads, and a copy fetched before this write is indexed would otherwise replace it,
+   * uncheck the picker, and let the next save count the same membership a second time.
+   * Returns the pending writes for the caller's transaction and `restoreMarks`, which the
+   * caller runs if that transaction does not commit: the marks then go back to what they
+   * were, so a rolled-back write never freezes a count or an envelope.
    */
   private static updateCuratedPostCounts(
     previousItemIds: Set<string>,
     nextItemIds: Set<string>,
+    envelopeId?: string,
   ): { ops: Promise<unknown>[]; restoreMarks: () => void } {
     const ops: Promise<unknown>[] = [];
-    const replacedMarks: Array<[string, CollectionCountWrite | undefined]> = [];
+    const replacedMarks: Array<[RecentCollectionWrites, string, CollectionCountWrite | undefined]> = [];
     const bump = (postCompositeId: string, collections: number) => {
-      replacedMarks.push([postCompositeId, recentCollectionCounts.markWritten(postCompositeId)]);
+      replacedMarks.push([
+        recentCollectionCounts,
+        postCompositeId,
+        recentCollectionCounts.markWritten(postCompositeId),
+      ]);
       ops.push(PostCountsModel.updateCounts({ postCompositeId, countChanges: { collections } }));
       ops.push(PostTtlModel.upsert({ id: postCompositeId, lastUpdatedAt: Date.now() }));
     };
@@ -721,9 +741,11 @@ export class LocalPostService {
     for (const itemId of previousItemIds) {
       if (!nextItemIds.has(itemId)) bump(itemId, -1);
     }
+    if (envelopeId !== undefined) {
+      replacedMarks.push([recentCollectionEnvelopes, envelopeId, recentCollectionEnvelopes.markWritten(envelopeId)]);
+    }
     const restoreMarks = () => {
-      for (const [postCompositeId, previous] of replacedMarks)
-        recentCollectionCounts.restore(postCompositeId, previous);
+      for (const [registry, postCompositeId, previous] of replacedMarks) registry.restore(postCompositeId, previous);
     };
     return { ops, restoreMarks };
   }

@@ -28,7 +28,7 @@ import { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
 import { LocalPostService } from '@/services/local/post/post';
 import type { TLocalSavePostParams } from '@/services/local/post/post.types';
-import { recentCollectionCounts } from '@/services/local/post/recentCollectionCounts';
+import { recentCollectionCounts, recentCollectionEnvelopes } from '@/services/local/post/recentCollectionCounts';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 
@@ -967,6 +967,7 @@ describe('LocalPostService', () => {
 
     afterEach(() => {
       recentCollectionCounts.reset();
+      recentCollectionEnvelopes.reset();
     });
 
     it('puts the marks back when the local write does not commit', async () => {
@@ -990,6 +991,7 @@ describe('LocalPostService', () => {
       expect(await collectionsCount(itemB)).toBe(0);
       expect(recentCollectionCounts.isProtected(itemA)).toBe(true);
       expect(recentCollectionCounts.isProtected(itemB)).toBe(false);
+      expect(recentCollectionEnvelopes.isProtected(collectionId)).toBe(false);
     });
 
     it('marks every item whose count moved as a recent local collection write', async () => {
@@ -1003,6 +1005,8 @@ describe('LocalPostService', () => {
       expect(recentCollectionCounts.isProtected(itemA)).toBe(true);
       expect(recentCollectionCounts.isProtected(itemB)).toBe(true);
       expect(recentCollectionCounts.isProtected(itemC)).toBe(false);
+      // The collection's own envelope is the next diff's baseline: protected alongside.
+      expect(recentCollectionEnvelopes.isProtected(collectionId)).toBe(true);
     });
 
     it('bumps every curated post when a collection is created, and stamps their TTL', async () => {
