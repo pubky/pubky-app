@@ -294,15 +294,19 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    setup notice in place of the handoff. A failed submission (network, rate limit) shows
    **Try again**, which keeps the saved id.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
-   created; with nothing submitted, the install screen has no link state. `none` shows the handoff
-   that hands the creator's pubky to Bitkit: a QR on desktop, and below the `lg` breakpoint (1024px)
-   a **Pay with Bitkit** button instead, since a phone cannot scan its own screen; it opens
-   `bitkit://contact?pubky=<creator pubky>`, which routes Bitkit to the screen a scan reaches. `handshake` keeps it: that state only
-   means Paykit has opened its half of the link and is waiting for the reader's wallet, which still
-   needs the creator's pubky to answer. `connected` removes it; `recovery_required` and `blocked`
-   replace it with a notice, because the reader cannot clear either from here (`blocked` is a policy
-   switch a fresh bundle id does not reset). A failed read keeps the last state and the handoff — it
-   never invents one, and never stops the task polling.
+   created; with nothing submitted, the install screen has no link state. Until the first read
+   answers, the modal says it is checking the connection. With wallet setup complete, `none`,
+   `handshake` and `recovery_required` keep the creator's contact handoff available: a QR on desktop,
+   and below the `lg` breakpoint (1024px) an **Open in Bitkit** button instead, since a phone cannot
+   scan its own screen. It opens `bitkit://contact?pubky=<creator pubky>`, the same contact screen
+   as a scan. The instructions ask the reader to add the creator only if needed; none of these
+   states proves whether the reader has already scanned. `handshake` says the link is connecting;
+   `recovery_required` shows a restoration-needed notice alongside the retained handoff, without
+   promising automatic recovery. `connected` removes the handoff and asks the reader to check
+   Bitkit for a payment request and confirm when it appears. It does not acknowledge request delivery.
+   `blocked` replaces the handoff with a support notice: it is a policy switch a fresh bundle id
+   does not reset. A failed read keeps the last state and the handoff — it never invents one, and
+   never stops the task polling. Wallet setup still hides the handoff as described in step 4.
 6. Waiting runs two loops on their own timers, and neither waits on the other: the task lookup every
    **3 seconds**, the link read every **1 second**. Each skips a tick while its own call is still out,
    so a link read that hangs cannot delay a finished payment. The task lookup is the only lifecycle

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { TPayToUnlockStage } from '@/hooks/usePayToUnlock/usePayToUnlock.types';
+import type { TPaykitConnectionState } from '@/services/locks/locks.types';
 import { DialogPayToUnlock } from './DialogPayToUnlock';
 
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
@@ -21,7 +22,7 @@ type DialogOverrides = {
   onRetry?: () => void;
   isStalled?: boolean;
   handshakePubky?: string | null;
-  connectionIssue?: 'recovery_required' | 'blocked' | null;
+  connectionState?: TPaykitConnectionState | null;
   isConnectionPending?: boolean;
   walletSetupNeeded?: boolean;
   onRecheck?: () => void;
@@ -40,7 +41,7 @@ const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}
     stage={stage}
     isStalled={overrides.isStalled ?? false}
     handshakePubky={overrides.handshakePubky ?? null}
-    connectionIssue={overrides.connectionIssue ?? null}
+    connectionState={overrides.connectionState ?? null}
     isConnectionPending={overrides.isConnectionPending ?? false}
     walletSetupNeeded={overrides.walletSetupNeeded ?? false}
     isSubmitting={overrides.isSubmitting ?? false}
@@ -54,6 +55,32 @@ const renderDialog = (stage: TPayToUnlockStage, overrides: DialogOverrides = {})
   render(dialogElement(stage, overrides), { wrapper: overrides.wrapper });
 
 describe('DialogPayToUnlock', () => {
+  it('keeps connection instructions conditional through recovery and subsequent handshakes', () => {
+    const { rerender } = renderDialog('waiting', { isConnectionPending: true });
+
+    for (const [connectionState, copy] of [
+      ['none', /is not ready yet/],
+      ['handshake', /Connecting to this creator/],
+      ['recovery_required', /needs to be restored/],
+      ['handshake', /Connecting to this creator/],
+    ] as const) {
+      rerender(dialogElement('waiting', { connectionState, handshakePubky: 'lockcreator' }));
+      expect(screen.getByText(copy)).toBeInTheDocument();
+      expect(screen.getByText(/If this creator is not in your Bitkit contacts/)).toBeInTheDocument();
+      expect(screen.queryByText('Scan with Bitkit and pay to unlock.')).not.toBeInTheDocument();
+      expect(screen.queryByText('AWAITING PAYMENT')).not.toBeInTheDocument();
+      expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
+      expect(screen.getByRole('link', { name: 'Open in Bitkit' })).toHaveAttribute(
+        'href',
+        'bitkit://contact?pubky=pubkylockcreator',
+      );
+    }
+
+    rerender(dialogElement('waiting', { connectionState: 'connected' }));
+    expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
+    expect(screen.getByText(/Review and confirm it there when it appears/)).toBeInTheDocument();
+  });
+
   it('applies wrapping and shrink constraints to the lock title', () => {
     renderDialog('retry');
 
@@ -91,43 +118,42 @@ describe('DialogPayToUnlock', () => {
     expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Pay with Bitkit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open in Bitkit' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'I completed the steps' }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
   // Nothing to cancel past submission — the purchase continues server-side, so the button only closes.
-  it('waiting: asks the reader to confirm in Bitkit, with no primary button and Close instead of Cancel', () => {
-    renderDialog('waiting');
+  it('waiting: asks the reader to check for a request, with no primary button and Close instead of Cancel', () => {
+    renderDialog('waiting', { connectionState: 'connected' });
 
-    // Desktop leads with "Awaiting payment."; mobile moves that under the spinner.
-    expect(screen.getByText('Awaiting payment.')).toBeInTheDocument();
-    expect(screen.getByText('Please confirm in Bitkit.')).toBeInTheDocument();
+    expect(screen.getByText(/Review and confirm it there when it appears/)).toBeInTheDocument();
+    expect(screen.queryByText('AWAITING PAYMENT')).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Try again|I completed the steps/ })).not.toBeInTheDocument();
     // The footer button reads Close (the X in the corner is also named Close, hence the data-cy hook).
     expect(document.querySelector('[data-cy="pay-to-unlock-cancel"]')).toHaveTextContent('Close');
   });
 
-  // Nothing has reached Bitkit before the first link read answers, so there is nothing to confirm yet.
+  // An unknown link says nothing about payment-request delivery.
   it('waiting: says it is checking the connection until the link state is known', () => {
     const { rerender } = renderDialog('waiting', { isConnectionPending: true });
 
     expect(screen.getByText('Checking your Bitkit connection…')).toBeInTheDocument();
-    expect(screen.queryByText('Please confirm in Bitkit.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Check Bitkit for a payment request/)).not.toBeInTheDocument();
     expect(screen.queryByText('AWAITING PAYMENT')).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
 
-    rerender(dialogElement('waiting'));
-    expect(screen.getByText('Please confirm in Bitkit.')).toBeInTheDocument();
-    expect(screen.getByText('AWAITING PAYMENT')).toBeInTheDocument();
+    rerender(dialogElement('waiting', { connectionState: 'connected' }));
+    expect(screen.getByText(/Review and confirm it there when it appears/)).toBeInTheDocument();
+    expect(screen.queryByText('Checking your Bitkit connection…')).not.toBeInTheDocument();
   });
 
   // The notices say something the checking copy does not, so they win while the link is unknown.
   it.each([
     ['the wallet setup notice', { walletSetupNeeded: true }, /Finish setting up Bitkit/],
-    ['the parked copy', { isStalled: true }, /Still waiting for the payment/],
+    ['the parked copy', { isStalled: true }, /This purchase is still pending/],
   ])('waiting + unknown link: shows %s instead of the checking copy', (_name, state, copy) => {
     renderDialog('waiting', { isConnectionPending: true, ...state });
 
@@ -140,7 +166,6 @@ describe('DialogPayToUnlock', () => {
 
     expect(screen.getByRole('img', { name: 'Creator Pubky QR code' })).toBeInTheDocument();
     expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
-    expect(screen.getByText('Scan with Bitkit and pay to unlock.')).toBeInTheDocument();
     // The QR screen stays clean: setup belongs to the install screen.
     expect(screen.queryByText(/Install Bitkit/)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'App Store' })).not.toBeInTheDocument();
@@ -157,21 +182,21 @@ describe('DialogPayToUnlock', () => {
     const { rerender } = renderDialog('waiting', { handshakePubky: 'lockcreator' });
     const href = 'bitkit://contact?pubky=pubkylockcreator';
 
-    expect(screen.getByRole('link', { name: 'Pay with Bitkit' })).toHaveAttribute('href', href);
+    expect(screen.getByRole('link', { name: 'Open in Bitkit' })).toHaveAttribute('href', href);
 
     rerender(dialogElement('waiting', { handshakePubky: 'pubkylockcreator' }));
-    expect(screen.getByRole('link', { name: 'Pay with Bitkit' })).toHaveAttribute('href', href);
+    expect(screen.getByRole('link', { name: 'Open in Bitkit' })).toHaveAttribute('href', href);
 
     // The handoff leaves with the QR: with no pubky there is nothing to hand over.
     rerender(dialogElement('waiting'));
-    expect(screen.queryByRole('link', { name: 'Pay with Bitkit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open in Bitkit' })).not.toBeInTheDocument();
   });
 
   it.each([
     ['blocked', /cannot receive payments/],
-    ['recovery_required', /is being restored/],
-  ] as const)('waiting: replaces the QR with a notice for %s', (connectionIssue, copy) => {
-    renderDialog('waiting', { connectionIssue });
+    ['recovery_required', /needs to be restored/],
+  ] as const)('waiting: shows a notice for %s', (connectionState, copy) => {
+    renderDialog('waiting', { connectionState });
 
     expect(screen.getByText(copy)).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
@@ -181,32 +206,32 @@ describe('DialogPayToUnlock', () => {
     renderDialog('waiting', { walletSetupNeeded: true });
 
     expect(screen.getByText(/Finish setting up Bitkit/)).toBeInTheDocument();
-    expect(screen.queryByText('Please confirm in Bitkit.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Check Bitkit for a payment request/)).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
     expect(screen.queryByText('AWAITING PAYMENT')).not.toBeInTheDocument();
   });
 
   // Parked is not failed: a reader who never leaves the tab gets no visibility event, so the only
   // way back to a live purchase is an explicit re-check.
-  it('waiting + stalled: replaces the awaiting copy with the Check again prompt', () => {
+  it('waiting + stalled: replaces the request copy with the Check again prompt', () => {
     const onRecheck = vi.fn();
     renderDialog('waiting', { isStalled: true, onRecheck });
 
-    expect(screen.queryByText('Please confirm in Bitkit.')).not.toBeInTheDocument();
-    expect(screen.getByText(/Still waiting for the payment/)).toBeInTheDocument();
+    expect(screen.queryByText(/Check Bitkit for a payment request/)).not.toBeInTheDocument();
+    expect(screen.getByText(/This purchase is still pending/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
     expect(onRecheck).toHaveBeenCalledTimes(1);
   });
 
   // A notice says something the parked copy does not, so it stays.
   it.each([
-    ['a link notice', { connectionIssue: 'blocked' as const }, /cannot receive payments/],
+    ['a link notice', { connectionState: 'blocked' as const }, /cannot receive payments/],
     ['the wallet setup notice', { walletSetupNeeded: true }, /Finish setting up Bitkit/],
   ])('waiting + stalled: keeps %s next to the Check again prompt', (_name, notice, copy) => {
     renderDialog('waiting', { isStalled: true, ...notice });
 
     expect(screen.getByText(copy)).toBeInTheDocument();
-    expect(screen.getByText(/Still waiting for the payment/)).toBeInTheDocument();
+    expect(screen.getByText(/This purchase is still pending/)).toBeInTheDocument();
   });
 
   it('checking: renders no primary button while the purchase state resolves', () => {
@@ -247,8 +272,7 @@ describe('DialogPayToUnlock', () => {
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
-  // The payment went through here, so the waiting copy ("pay in Bitkit, then check again") would
-  // be telling a reader who already paid to pay again.
+  // A completed purchase must not ask the reader to make another payment.
   it('unopened: says the payment landed and offers the retry, with no cost to pay', () => {
     const onRecheck = vi.fn();
     renderDialog('unopened', { onRecheck });
@@ -404,17 +428,17 @@ describe('DialogPayToUnlock - Snapshots', () => {
   });
 
   it('matches snapshot for the waiting stage with the handshake QR and the Bitkit handoff', () => {
-    renderDialog('waiting', { handshakePubky: 'pubkylockcreator' });
+    renderDialog('waiting', { connectionState: 'handshake', handshakePubky: 'pubkylockcreator' });
     expect(screen.getByRole('dialog')).toMatchSnapshot();
   });
 
   it('matches snapshot for the waiting stage with a blocked link notice', () => {
-    renderDialog('waiting', { connectionIssue: 'blocked' });
+    renderDialog('waiting', { connectionState: 'blocked' });
     expect(screen.getByRole('dialog')).toMatchSnapshot();
   });
 
   it('matches snapshot for the waiting stage with a recovery_required link notice', () => {
-    renderDialog('waiting', { connectionIssue: 'recovery_required' });
+    renderDialog('waiting', { connectionState: 'recovery_required', handshakePubky: 'pubkylockcreator' });
     expect(screen.getByRole('dialog')).toMatchSnapshot();
   });
 

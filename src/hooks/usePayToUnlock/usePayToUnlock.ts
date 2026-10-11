@@ -421,21 +421,18 @@ export function usePayToUnlock({
     onCompleted(content);
   };
 
-  // `handshake` is the server's half only: Paykit has opened the link and waits for the reader's
-  // wallet, which still needs the creator pubky to answer. So the QR stays up until `connected`.
-  // Wallet setup comes first: scanning cannot help before it is done.
+  // Link state does not acknowledge a QR scan. Keep the contact handoff available through
+  // recovery as well: a stale link can need recovery before the reader has added the creator.
   const handshakePubky =
-    !walletSetupNeeded && (connectionState === 'none' || connectionState === 'handshake')
+    !walletSetupNeeded &&
+    (connectionState === 'none' || connectionState === 'handshake' || connectionState === 'recovery_required')
       ? (lockFile?.creator ?? null)
       : null;
-  // Neither state is something the reader can act on from here, so they are surfaced as notices.
-  const connectionIssue =
-    connectionState === 'recovery_required' || connectionState === 'blocked' ? connectionState : null;
   return {
     stage,
     isStalled,
     handshakePubky,
-    connectionIssue,
+    connectionState,
     isConnectionPending,
     walletSetupNeeded,
     isSubmitting,
