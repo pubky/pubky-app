@@ -229,7 +229,7 @@ export type NexusPostDetails = {
   author: Pubky;
   /**
    * Post kind/type as a string.
-   * Note: Using string instead of PubkyAppPostKind enum to avoid indexing issues.
+   * Note: Using string instead of KnownPostKind enum to avoid indexing issues.
    * @see https://github.com/pubky/pubky-app-specs/issues/74
    */
   kind: string;

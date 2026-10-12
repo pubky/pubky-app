@@ -11,7 +11,8 @@ import type { SettingsState } from '@/stores/settings/settings.types';
  * Settings application service.
  *
  * Handles synchronization of user settings between the local store and homeserver.
- * Settings are stored at: pubky://{pubky}/pub/pubky.app/settings.json
+ * Settings are stored at: pubky://{pubky}/priv/app.pubky/v1/settings.json; an account whose only
+ * settings are the 0.x ones (`/pub/pubky.app/settings.json`) reads those until its first write.
  */
 export class SettingsApplication {
   private static pendingCommits = new Map<Pubky, Promise<void>>();
@@ -105,8 +106,13 @@ export class SettingsApplication {
    * @returns The settings state from homeserver, or null if not found
    */
   static async fetchFromHomeserver(pubky: Pubky): Promise<SettingsState | null> {
-    const url = SettingsNormalizer.buildUrl(pubky);
+    return (
+      (await this.fetchSettingsAt(SettingsNormalizer.buildUrl(pubky))) ??
+      (await this.fetchSettingsAt(SettingsNormalizer.buildLegacyUrl(pubky)))
+    );
+  }
 
+  private static async fetchSettingsAt(url: string): Promise<SettingsState | null> {
     Logger.info('[Settings] Pulling from homeserver', { url });
 
     try {

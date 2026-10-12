@@ -1,4 +1,4 @@
-import type { PubkyAppUser } from 'pubky-app-specs';
+import { PubkyAppUser } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';

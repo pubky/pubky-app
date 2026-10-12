@@ -63,17 +63,26 @@ export function isStagingHomeserverDeploy(): boolean {
 // - /pub/pubky.app/:rw         — the app's public data
 // - /priv/social/:rw           — where unlocked lock content is copied (reader replication)
 // - /priv/app.locks/content/:r — read-only: a creator reads their OWN guarded original here (Ring sessions)
-export const HOMESERVER_CAPABILITIES = [APP_CAPABILITIES, ...LOCKS_CAPABILITIES].join(',') as Capabilities;
+// The social v1 data model adds:
+// - /pub/social/v1/:rw          - the app's public social data
+// - /priv/app.pubky/v1/:rw      - the app's own files (settings, last read)
+// /priv/social/:rw also holds the private social tree (feeds, bookmarks, mutes under `v1/`), and
+// /pub/pubky.app/:rw stays for the legacy tree, still read and reachable for deletions of migrated objects.
+const SOCIAL_V1_APP_CAPABILITIES = ['/pub/social/v1/:rw', '/priv/app.pubky/v1/:rw'] as const;
+export const HOMESERVER_CAPABILITIES = [...SOCIAL_V1_APP_CAPABILITIES, APP_CAPABILITIES, ...LOCKS_CAPABILITIES].join(
+  ',',
+) as Capabilities;
 
 /** One approval requests the App, Locks and embedded Shop storage scopes. */
 export function getHomeserverCapabilities(): Capabilities {
-  return [...new Set([APP_CAPABILITIES, ...LOCKS_CAPABILITIES, ...SHOP_CAPABILITIES])].join(',') as Capabilities;
+  return [
+    ...new Set([...SOCIAL_V1_APP_CAPABILITIES, APP_CAPABILITIES, ...LOCKS_CAPABILITIES, ...SHOP_CAPABILITIES]),
+  ].join(',') as Capabilities;
 }
 
-// The grant a social v1 migration runs under, asked for through Ring when the user starts one;
-// not part of `HOMESERVER_CAPABILITIES` yet, so no existing session is prompted before the
-// migration ships. Spelled as the `pubky-social-specs` package spells `MIGRATION_CAPS`, which a
-// test asserts once the package is a dependency.
+// The grant a social v1 migration runs under, spelled as `MIGRATION_CAPS` of
+// `pubky-social-specs` (a test asserts it). The constant is not imported from there so the
+// base bundle never pulls the migration code. `HOMESERVER_CAPABILITIES` covers it.
 // - /pub/social/v1/:rw      - the public v1 tree the migration writes
 // - /priv/social/v1/:rw     - feeds, bookmarks, mutes and the migration flag
 // - /priv/app.pubky/v1/:rw  - the app's own files (settings, last read) imported after a run

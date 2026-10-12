@@ -1,33 +1,35 @@
-import { baseUriBuilder, feedUriBuilder } from 'pubky-app-specs';
+import {
+  buildUri,
+  decodeObject,
+  encodeObject,
+  type Feed,
+  feedId,
+  listPrefix,
+  parsePubkyUrl,
+  tryDecodeObject,
+} from 'pubky-social-specs';
 import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/application/feed/feed.types';
 import { DEFAULT_CUSTOM_FEED_ICON, isProfileTagReachSupported } from '@/config/feed';
 import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
-import { DatabaseErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { FeedModel } from '@/models/feed/feed';
-import { buildFeedStreamId, reachToString } from '@/models/feed/feed.helpers';
+import { buildFeedStreamId } from '@/models/feed/feed.helpers';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { FeedValidators } from '@/pipes/feed/feed.validators';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import { isKnownPostKind } from '@/pipes/post/post.kind';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFeedService } from '@/services/local/feed/feed';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
-import type {
-  FeedDeleteParams,
-  FeedPutParams,
-  HomeserverFeedJson,
-  LocalFeedMigrationParams,
-  PersistAndSyncParams,
-  RemoteFeedParams,
-} from './feed.types';
+import type { FeedDeleteParams, FeedPutParams, LocalFeedMigrationParams, PersistAndSyncParams } from './feed.types';
 
 export class FeedApplication {
   private constructor() {}
@@ -42,9 +44,18 @@ export class FeedApplication {
   }
 
   static async persist({ userId, params }: FeedPutParams): Promise<FeedModelSchema> {
-    const { feed: normalizedFeed, existingId } = params as TFeedPersistCreateParams;
-    const { feed, meta } = normalizedFeed;
-    const newId = meta.id;
+    const { feed: builtFeed, existingId } = params as TFeedPersistCreateParams;
+    // An edit starts from the stored feed so the members another client added survive it.
+    const stored = existingId ? await this.readRemoteFeed(userId, existingId) : null;
+    const feed: Feed = stored
+      ? {
+          ...stored,
+          name: builtFeed.object.name,
+          icon: builtFeed.object.icon,
+          feed: { ...stored.feed, ...builtFeed.object.feed },
+        }
+      : builtFeed.object;
+    const newId = feedId(feed);
     const idChanged = existingId != null && existingId !== newId;
 
     const now = Date.now();
@@ -53,7 +64,7 @@ export class FeedApplication {
       ? ((await LocalFeedService.read({ feedId: existingId }).catch(() => null)) ?? { created_at: now }).created_at
       : now;
 
-    const { tags, domain_tags, reach, sort, content, layout } = feed.feed;
+    const { tags, domain_tags, reach, sort, content, layout } = builtFeed.object.feed;
 
     const feedSchema: FeedModelSchema = {
       id: newId,
@@ -63,28 +74,29 @@ export class FeedApplication {
       domain_tags: domain_tags ?? [],
       reach,
       sort,
-      content: content ?? null,
+      // Built from this client's input, so always a kind it knows; the type stays open for reads.
+      content: content !== null && isKnownPostKind(content) ? content : null,
       layout,
       created_at: createdAt,
       updated_at: now,
     };
+    const newFeedUrl = buildUri(userId, 'feed', newId);
+    const body = encodeObject(newFeedUrl, feed);
 
-    // When config fields (tags, domain_tags, reach, layout, sort, content) change, the HashId-derived
-    // ID changes too. Migration flow is:
+    // When config fields (tags, domain_tags, reach, layout, sort, content) change, the feed id changes
+    // too. Migration flow is:
     // 1) create new homeserver resource, 2) atomically swap local feed records,
     // 3) best-effort delete old homeserver resource.
     if (idChanged) {
       // Model errors are already logged; migration can proceed without the old stream cache.
       const oldFeed = await LocalFeedService.read({ feedId: existingId }).catch(() => null);
-      const newFeedUrl = feedUriBuilder(userId, newId);
-      const newFeedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
 
-      await HomeserverService.request({ method: HttpMethod.PUT, url: newFeedUrl, bodyJson: newFeedJson });
+      await HomeserverService.putBlob({ url: newFeedUrl, blob: body });
 
       const persistedNewFeed = await this.migrateLocalFeedAtomically({ userId, existingId, feedSchema, oldFeed });
 
       // Best-effort cleanup of old homeserver feed. Keep local new feed as source of truth if cleanup fails.
-      const oldFeedUrl = feedUriBuilder(userId, existingId);
+      const oldFeedUrl = buildUri(userId, 'feed', existingId);
       await HomeserverService.request({ method: HttpMethod.DELETE, url: oldFeedUrl }).catch((cleanupError) => {
         Logger.warn('Failed to cleanup old homeserver feed after successful migration to new feed ID', {
           oldFeedId: existingId,
@@ -96,12 +108,23 @@ export class FeedApplication {
       return persistedNewFeed;
     }
 
-    return this.commit({ userId, feedSchema, normalizedFeed });
+    return this.commit({ feedSchema, feedUrl: newFeedUrl, body });
+  }
+
+  /** The stored feed at `feedId`, or null when it is absent or unreadable (then the edit starts fresh). */
+  private static async readRemoteFeed(userId: Pubky, id: string): Promise<Feed | null> {
+    const url = buildUri(userId, 'feed', id);
+    const stored = await HomeserverService.getBytesIfExists(url);
+    if (!stored) return null;
+    const read = tryDecodeObject(url, stored.bytes, 'feed');
+    if (read.ok) return read.value;
+    Logger.warn('Stored feed does not decode; editing from local state', { feedId: id, error: read.error.message });
+    return null;
   }
 
   static async commitDelete({ userId, params }: FeedDeleteParams): Promise<void> {
     const feedId = (params as TFeedPersistDeleteParams).feedId;
-    const feedUrl = feedUriBuilder(userId, feedId);
+    const feedUrl = buildUri(userId, 'feed', feedId);
 
     // Model errors are already logged; cache cleanup must not block the delete itself.
     const feed = await LocalFeedService.read({ feedId }).catch(() => null);
@@ -159,9 +182,12 @@ export class FeedApplication {
   /**
    * Fetch all feeds from the homeserver and persist them locally.
    * Used during bootstrap to hydrate the local feed cache.
+   *
+   * Feeds a 0.x client wrote under `/pub/pubky.app/feeds/` are not read: the package has no 0.x
+   * reader, so they appear once the account is migrated.
    */
   static async fetchFeeds(userId: Pubky): Promise<FeedModelSchema[]> {
-    const feedsDirectory = `${baseUriBuilder(userId)}feeds/`;
+    const feedsDirectory = `${listPrefix(userId, 'private')}feeds/`;
     const feedUris = await HomeserverService.list({ baseDirectory: feedsDirectory });
 
     const validFeeds: FeedModelSchema[] = [];
@@ -170,12 +196,8 @@ export class FeedApplication {
       const batch = feedUris.slice(index, index + this.FETCH_FEEDS_BATCH_SIZE);
       const batchResults = await Promise.allSettled(
         batch.map(async (feedUri) => {
-          const remoteFeed = await HomeserverService.request<HomeserverFeedJson>({
-            method: HttpMethod.GET,
-            url: feedUri,
-          });
-
-          return this.normalizeRemoteFeed({ userId, remoteFeed });
+          const bytes = await HomeserverService.getBytes(feedUri);
+          return this.normalizeRemoteFeed(feedUri, bytes);
         }),
       );
 
@@ -200,71 +222,47 @@ export class FeedApplication {
   }
 
   /**
-   * Validates and transforms a single remote feed into a FeedModelSchema.
+   * Decodes one stored feed into a FeedModelSchema.
    * Returns null if the feed is invalid, logging a warning instead of throwing.
    */
-  private static normalizeRemoteFeed({ userId, remoteFeed }: RemoteFeedParams): FeedModelSchema | null {
+  private static normalizeRemoteFeed(feedUri: string, bytes: Uint8Array): FeedModelSchema | null {
     try {
-      const { feed, meta: feedMeta } = this.validateRemoteFeedWithSpecs({ userId, remoteFeed });
+      const feed = decodeObject(parsePubkyUrl(feedUri), bytes, 'feed');
       const { tags, domain_tags, reach, sort, layout, content } = feed.feed;
 
-      if (domain_tags && domain_tags.length > 0 && !isProfileTagReachSupported(reachToString(reach))) {
+      // A content kind from a newer data model has no stream here.
+      if (content !== null && !isKnownPostKind(content)) {
+        Logger.warn('Skipping feed with an unknown content kind during bootstrap fetch', { content });
+        return null;
+      }
+
+      if (domain_tags && domain_tags.length > 0 && !isProfileTagReachSupported(reach)) {
         Logger.warn('Skipping unsupported profile-tag feed during bootstrap fetch', {
-          reach: reachToString(reach),
+          reach,
           domainTags: domain_tags,
         });
         return null;
       }
 
+      // `created_at` is microseconds; the local row keeps milliseconds.
+      const createdAt = Math.floor(feed.created_at / 1000);
       return {
-        id: feedMeta.id,
+        id: feedId(feed),
         name: feed.name,
-        icon: feed.icon ?? DEFAULT_CUSTOM_FEED_ICON,
+        icon: FeedValidators.sanitizeIcon(feed.icon),
         tags: tags ?? [],
         domain_tags: domain_tags ?? [],
         reach,
         sort,
         content: content ?? null,
         layout,
-        created_at: Number(remoteFeed.created_at),
-        updated_at: Number(remoteFeed.created_at),
+        created_at: createdAt,
+        updated_at: createdAt,
       };
     } catch (error) {
       Logger.warn('Skipping invalid feed during bootstrap fetch', error);
       return null;
     }
-  }
-
-  /**
-   * Guards required fields on a remote feed payload and delegates to
-   * PubkySpecsBuilder.createFeed to produce a validated FeedResult
-   * with the correct HashId.
-   */
-  private static validateRemoteFeedWithSpecs({ userId, remoteFeed }: RemoteFeedParams) {
-    if (!remoteFeed?.name || !remoteFeed?.feed) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid remote feed payload', {
-        service: ErrorService.Homeserver,
-        operation: 'validateRemoteFeedWithSpecs',
-        context: { userId, remoteFeed },
-      });
-    }
-
-    const builder = PubkySpecsSingleton.get(userId);
-
-    const { tags, domain_tags, reach, layout, sort, content } = remoteFeed.feed;
-    // Replay absent tags as `undefined` (not `[]`) so foreign HashIds stay stable.
-    const normalizedTags = Array.isArray(tags) ? tags : undefined;
-    const normalizedDomainTags = Array.isArray(domain_tags) ? domain_tags : undefined;
-    return builder.createFeed({
-      tags: normalizedTags,
-      reach,
-      layout,
-      sort,
-      content: content ?? undefined,
-      name: remoteFeed.name,
-      domainTags: normalizedDomainTags,
-      icon: FeedValidators.sanitizeIcon(remoteFeed.icon),
-    });
   }
 
   /**
@@ -279,14 +277,11 @@ export class FeedApplication {
    * undoes this commit's own write (matched by `updated_at`), never a newer one that landed
    * while the PUT was in flight.
    */
-  private static async commit({ userId, feedSchema, normalizedFeed }: PersistAndSyncParams): Promise<FeedModelSchema> {
+  private static async commit({ feedSchema, feedUrl, body }: PersistAndSyncParams): Promise<FeedModelSchema> {
     const { persisted: persistedFeed, prior: priorFeed } = await LocalFeedService.createOrUpdate(feedSchema);
 
-    const feedUrl = feedUriBuilder(userId, persistedFeed.id);
-    const feedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
-
     try {
-      await HomeserverService.request({ method: HttpMethod.PUT, url: feedUrl, bodyJson: feedJson });
+      await HomeserverService.putBlob({ url: feedUrl, blob: body });
     } catch (error) {
       try {
         await LocalFeedService.rollback({

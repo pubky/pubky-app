@@ -25,7 +25,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     taggerId: 'viewer',
     label: 'bitcoin',
     tagUrl: 'pubky://viewer/pub/pubky.app/tags/tag',
-    tagJson: { label: 'bitcoin' },
+    tagBody: { label: 'bitcoin' },
   };
   beforeEach(() => {
     vi.resetAllMocks();

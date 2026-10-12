@@ -73,9 +73,8 @@ export class FeedController {
 
     FeedValidators.validateTagScope(mergedParams.tags, mergedParams.domain_tags, mergedParams.reach);
 
-    // Normalizing produces a new FeedResult whose ID is derived from the feed config
-    // (tags, domain_tags, reach, layout, sort, content) via HashId — a blake3 hash of the serialized
-    // PubkyAppFeedConfig. Changing any of those fields yields a different ID, which means
+    // Normalizing produces a new built feed whose ID is derived from the feed config
+    // (tags, domain_tags, reach, layout, sort, content). Changing any of those fields yields a different ID, which means
     // the homeserver path changes. The `name`, `icon`, and `created_at` fields are NOT
     // part of the hash, so presentation-only changes keep the same ID.
     const normalizedFeed = FeedNormalizer.to({ params: mergedParams, userId });

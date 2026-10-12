@@ -71,7 +71,6 @@ const nextConfig: NextConfig = {
   turbopack: {
     resolveAlias: {
       '@synonymdev/pubky': '@synonymdev/pubky/index.js',
-      'pubky-app-specs': 'pubky-app-specs/index.js',
     },
   },
 };

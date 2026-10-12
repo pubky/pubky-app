@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PubkyAppFeedReach } from 'pubky-app-specs';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { APP_ROUTES } from '@/app/routes';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
@@ -90,7 +89,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
         const { reach: formReach, content: formContent, ...rest } = data;
         const changes = {
           ...rest,
-          reach: formReach === TAGGED_AS_FILTER_KEY ? PubkyAppFeedReach.Wot : formReach,
+          reach: formReach === TAGGED_AS_FILTER_KEY ? 'wot' : formReach,
           content: formContent === CUSTOM_FEED_CONTENT_ALL ? null : formContent,
         };
 

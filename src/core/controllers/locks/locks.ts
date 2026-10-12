@@ -1,4 +1,4 @@
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { LocksApplication } from '@/application/locks/locks';
 import type {
   TCreateLockContentParams,
@@ -363,7 +363,7 @@ export class LocksController {
     const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
     return LocksApplication.replicateUnlockedContent({
       ...params,
-      announcementUri: postUriBuilder(authorId, rawPostId),
+      announcementUri: buildUri(authorId, 'post', rawPostId),
     });
   }
 

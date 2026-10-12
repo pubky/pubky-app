@@ -1,4 +1,4 @@
-import { type FileResult, PostResult, PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
+import { FileResult, PostResult, PubkyAppPost, PubkyAppPostEmbed } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTION_LAYOUT } from '@/config/collections';
 import { Logger } from '@/libs/logger/logger';
@@ -27,7 +27,7 @@ describe('PostNormalizer', () => {
   // Test data factories
   const createBasicPost = (overrides?: Partial<PostValidatorData>): PostValidatorData => ({
     content: 'Hello, world!',
-    kind: PubkyAppPostKind.Short,
+    kind: 'note',
     ...overrides,
   });
 
@@ -106,27 +106,27 @@ describe('PostNormalizer', () => {
   });
 
   /**
-   * Tests for `mapKindToEnum` - Maps stored string kind to PubkyAppPostKind enum
+   * Tests for `mapKindToEnum` - Maps stored string kind to KnownPostKind enum
    */
   describe('mapKindToEnum', () => {
     it.each([
-      ['short', PubkyAppPostKind.Short],
-      ['SHORT', PubkyAppPostKind.Short],
-      ['0', PubkyAppPostKind.Short],
-      ['long', PubkyAppPostKind.Long],
-      ['LONG', PubkyAppPostKind.Long],
-      ['1', PubkyAppPostKind.Long],
-      ['collection', PubkyAppPostKind.Collection],
-      ['6', PubkyAppPostKind.Collection],
-      ['image', PubkyAppPostKind.Image],
-      ['IMAGE', PubkyAppPostKind.Image],
-      ['2', PubkyAppPostKind.Image],
-      ['video', PubkyAppPostKind.Video],
-      ['3', PubkyAppPostKind.Video],
-      ['link', PubkyAppPostKind.Link],
-      ['4', PubkyAppPostKind.Link],
-      ['file', PubkyAppPostKind.File],
-      ['5', PubkyAppPostKind.File],
+      ['short', 'note'],
+      ['SHORT', 'note'],
+      ['0', 'note'],
+      ['long', 'article'],
+      ['LONG', 'article'],
+      ['1', 'article'],
+      ['collection', 'collection'],
+      ['6', 'collection'],
+      ['image', 'image'],
+      ['IMAGE', 'image'],
+      ['2', 'image'],
+      ['video', 'video'],
+      ['3', 'video'],
+      ['link', 'link'],
+      ['4', 'link'],
+      ['file', 'file'],
+      ['5', 'file'],
     ])('should map "%s" to correct enum', (input, expected) => {
       expect(PostNormalizer.mapKindToEnum(input)).toBe(expected);
     });
@@ -189,8 +189,8 @@ describe('PostNormalizer', () => {
 
       describe('different post kinds', () => {
         it.each([
-          ['Short', PubkyAppPostKind.Short],
-          ['Long', PubkyAppPostKind.Long],
+          ['Short', 'note'],
+          ['Long', 'article'],
         ])('should handle %s post kind', async (_, kind) => {
           const post = createBasicPost({ kind });
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
@@ -368,8 +368,8 @@ describe('PostNormalizer', () => {
         });
 
         it.each([
-          ['Short', PubkyAppPostKind.Short],
-          ['Long', PubkyAppPostKind.Long],
+          ['Short', 'note'],
+          ['Long', 'article'],
         ])('should handle %s post kind', async (_, kind) => {
           const post = createBasicPost({ kind });
           const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
@@ -420,7 +420,7 @@ describe('PostNormalizer', () => {
       describe('content length stress tests', () => {
         it('should handle moderate length Short post (2000 characters)', async () => {
           const moderateContent = 'A'.repeat(2000);
-          const post = createBasicPost({ content: moderateContent, kind: PubkyAppPostKind.Short });
+          const post = createBasicPost({ content: moderateContent, kind: 'note' });
           const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
           expect(result).toBeDefined();
@@ -433,7 +433,7 @@ describe('PostNormalizer', () => {
          */
         it('should reject Short post exceeding max length (2000 characters)', async () => {
           const longContent = 'B'.repeat(10_000);
-          const post = createBasicPost({ content: longContent, kind: PubkyAppPostKind.Short });
+          const post = createBasicPost({ content: longContent, kind: 'note' });
 
           await expect(PostNormalizer.to(post, TEST_PUBKY.USER_1)).rejects.toThrow(
             'Post content exceeds maximum length for Short kind',
@@ -445,7 +445,7 @@ describe('PostNormalizer', () => {
          */
         it('should accept Short post with unicode characters at the limit', async () => {
           const unicodeContent = '🎉'.repeat(2000); // 4,000 string length but 2,000 emoji units
-          const post = createBasicPost({ content: unicodeContent, kind: PubkyAppPostKind.Short });
+          const post = createBasicPost({ content: unicodeContent, kind: 'note' });
           const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
           expect(result).toBeDefined();
@@ -456,7 +456,7 @@ describe('PostNormalizer', () => {
 
         it('should handle very long Long post (10,000 characters)', async () => {
           const longContent = 'E'.repeat(10_000);
-          const post = createBasicPost({ content: longContent, kind: PubkyAppPostKind.Long });
+          const post = createBasicPost({ content: longContent, kind: 'article' });
           const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
           expect(result).toBeDefined();
@@ -469,7 +469,7 @@ describe('PostNormalizer', () => {
          */
         it('should reject Long post exceeding max length (50,000 characters)', async () => {
           const extremelyLongContent = 'F'.repeat(100_000);
-          const post = createBasicPost({ content: extremelyLongContent, kind: PubkyAppPostKind.Long });
+          const post = createBasicPost({ content: extremelyLongContent, kind: 'article' });
 
           await expect(PostNormalizer.to(post, TEST_PUBKY.USER_1)).rejects.toThrow(
             'Post content exceeds maximum length for Long kind',
@@ -481,7 +481,7 @@ describe('PostNormalizer', () => {
          */
         it('should accept Long post with unicode characters within limit', async () => {
           const unicodeContent = '🚀'.repeat(30_000); // 60,000 string length but 30,000 emoji units
-          const post = createBasicPost({ content: unicodeContent, kind: PubkyAppPostKind.Long });
+          const post = createBasicPost({ content: unicodeContent, kind: 'article' });
           const result = await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
           expect(result).toBeDefined();
@@ -723,7 +723,7 @@ describe('PostNormalizer', () => {
             content: 'Updated content',
             currentUserPubky: TEST_PUBKY.USER_1,
             attachments: ['pubky://next1'],
-            kind: PubkyAppPostKind.Image,
+            kind: 'image',
           });
 
           const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
@@ -892,7 +892,7 @@ describe('PostNormalizer', () => {
           content: 'Updated announcement',
           currentUserPubky: TEST_PUBKY.USER_1,
           attachments: nextAttachments,
-          kind: PubkyAppPostKind.Image,
+          kind: 'image',
         });
 
         expect(result.post.toJson()).toEqual(

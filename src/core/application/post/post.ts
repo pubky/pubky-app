@@ -1,4 +1,15 @@
-import { postUriBuilder } from 'pubky-app-specs';
+import {
+  decodeObject,
+  listPrefix,
+  parseOwnerPath,
+  parseUri,
+  planDelete,
+  type Post,
+  type StoredCopy,
+  toPath,
+  tryDecodeObject,
+  type UrlArg,
+} from 'pubky-social-specs';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import type {
@@ -18,7 +29,6 @@ import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
-import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
@@ -29,8 +39,11 @@ import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.s
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import { ownerPathToUrl } from '@/pipes/pipes.utils';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
-import { PostNormalizer } from '@/pipes/post/post.normalizer';
+import { toLocalPostKind } from '@/pipes/post/post.kind';
+import { PostNormalizer, type TPostHead } from '@/pipes/post/post.normalizer';
+import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostService } from '@/services/local/post/post';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
@@ -98,8 +111,7 @@ export class PostApplication {
    */
   static async getReplies({ compositeId }: TCompositeId): Promise<PostRelationshipsModelSchema[]> {
     const { pubky, id } = parseCompositeId(compositeId);
-    const parentPostUri = postUriBuilder(pubky, id);
-    return await LocalPostService.readReplies(parentPostUri);
+    return await LocalPostService.readReplies(postReferenceSpellings(pubky, id));
   }
 
   /**
@@ -235,7 +247,7 @@ export class PostApplication {
     });
   }
 
-  static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags, isCurrent }: TCreatePostInput) {
+  static async commitCreate({ compositePostId, post, fileAttachments, tags, isCurrent }: TCreatePostInput) {
     const hasFiles = fileAttachments != null && fileAttachments.length > 0;
     const rollbackUploadedFiles = () =>
       this.rollbackUploadedFiles({
@@ -264,7 +276,7 @@ export class PostApplication {
     }
 
     try {
-      await HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
+      await HomeserverService.putBlob({ url: post.url, blob: post.body });
     } catch (error) {
       try {
         await LocalPostService.delete({ compositePostId });
@@ -316,14 +328,13 @@ export class PostApplication {
 
     // Always delete from homeserver, even if the post had connections (soft delete).
     // Nexus will determine the definitive state based on graph state.
-    const postUrl = post.uri;
-    await HomeserverService.request({ method: HttpMethod.DELETE, url: postUrl });
+    await this.deleteEveryCopy(compositePostId);
 
     // Best-effort: the post delete already succeeded on the homeserver, so a
     // file-cleanup failure (e.g. files already deleted by an earlier edit whose
     // Nexus state was reverted locally) must not surface as a delete failure.
     if (!hadConnections && post.attachments && post.attachments.length > 0) {
-      await FileApplication.commitDelete(post.attachments).catch((cleanupError) => {
+      await FileApplication.commitDelete(post.attachments, compositePostId).catch((cleanupError) => {
         Logger.warn('[PostApplication.commitDelete] Failed to cleanup post attachments', {
           compositePostId,
           cleanupError,
@@ -334,7 +345,7 @@ export class PostApplication {
     // Cover is no longer referenced after delete; if this delete fails, the post
     // delete still stands (old cover may remain on the homeserver).
     if (isHomeserverFileUri(collectionCoverUri)) {
-      await FileApplication.commitDelete([collectionCoverUri]).catch((cleanupError) => {
+      await FileApplication.commitDelete([collectionCoverUri], compositePostId).catch((cleanupError) => {
         Logger.warn('[PostApplication.commitDelete] Failed to cleanup collection cover', {
           compositePostId,
           collectionCoverUri,
@@ -357,8 +368,14 @@ export class PostApplication {
    * attachments, and kind), so content-only callers are no-op writes for the
    * attachment/kind columns.
    */
-  static async commitEdit({ compositePostId, post, postUrl, fileAttachments, removedUris }: TEditPostInput) {
+  static async commitEdit({ compositePostId, edit, fileAttachments, removedUris }: TEditPostInput) {
+    const { pubky: authorId, id: postId } = parseCompositeId(compositePostId);
     const originalPost = await LocalPostService.readDetails({ postId: compositePostId });
+    // The edit applies to the newest stored version, never to the local copy, so members this
+    // client does not hold (a lock, alt text, another client's additions) survive it.
+    const head = await this.readHead(authorId, postId);
+    const built = PostNormalizer.toEdit({ owner: authorId, head, edit });
+    const post = built.object;
 
     const hasNewFiles = fileAttachments != null && fileAttachments.length > 0;
     const rollbackUploadedFiles = () =>
@@ -379,12 +396,13 @@ export class PostApplication {
       }
     }
 
+    const nextKind = toLocalPostKind(post.kind);
     try {
       await LocalPostService.edit({
         compositePostId,
         content: post.content,
-        attachments: post.attachments ?? null,
-        kind: PostNormalizer.postKindToLowerCase(post.kind),
+        attachments: post.attachments.length > 0 ? post.attachments.map((attachment) => attachment.uri) : null,
+        kind: nextKind,
       });
     } catch (error) {
       // Local write failed after the uploads — remove them or they orphan
@@ -393,7 +411,7 @@ export class PostApplication {
     }
 
     try {
-      await HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
+      await HomeserverService.putBlob({ url: built.url, blob: built.body });
     } catch (error) {
       if (originalPost) {
         try {
@@ -421,7 +439,6 @@ export class PostApplication {
     // Remove it from every cached old-kind stream after the edit is fully
     // committed (best-effort); runs after the PUT so a failed edit never
     // touches stream membership.
-    const nextKind = PostNormalizer.postKindToLowerCase(post.kind);
     if (originalPost && originalPost.kind !== nextKind) {
       await LocalPostService.removeFromKindStreams({ compositePostId, kind: originalPost.kind }).catch(
         (cleanupError) => {
@@ -436,7 +453,7 @@ export class PostApplication {
 
     const deletableRemovedUris = removedUris?.filter(isHomeserverFileUri) ?? [];
     if (deletableRemovedUris.length > 0) {
-      await FileApplication.commitDelete(deletableRemovedUris).catch((cleanupError) => {
+      await FileApplication.commitDelete(deletableRemovedUris, compositePostId).catch((cleanupError) => {
         Logger.warn('[PostApplication.commitEdit] Failed to cleanup removed attachments', {
           compositePostId,
           removedUris: deletableRemovedUris,
@@ -445,4 +462,85 @@ export class PostApplication {
       });
     }
   }
+
+  /** The URLs of every stored version of the author's post under both v1 roots, as a LIST gives them. */
+  private static async listVersions(
+    authorId: string,
+    postId: string,
+  ): Promise<{ url: UrlArg<'post'>; editId: string; copy: StoredCopy }[]> {
+    const [publicUrls, privateUrls] = await Promise.all(
+      (['public', 'private'] as const).map((root) =>
+        HomeserverService.listAll({ baseDirectory: `${listPrefix(authorId, root)}posts/${postId}/` }),
+      ),
+    );
+    return [
+      ...publicUrls.map((url) => ({ url, root: 'public' as const })),
+      ...privateUrls.map((url) => ({ url, root: 'private' as const })),
+    ].flatMap(({ url, root }) => {
+      // A file name that is no canonical version URL is skipped
+      if (!isPubkyUrlString(url)) return [];
+      let parsed: ReturnType<typeof parseUri>;
+      try {
+        parsed = parseUri(url);
+      } catch {
+        return [];
+      }
+      if (parsed.kind !== 'post' || parsed.editId === undefined) return [];
+      return [{ url, editId: parsed.editId, copy: { root, path: toPath(url) } }];
+    });
+  }
+
+  /**
+   * The newest public version of the author's post, read and decoded. A post that only has its 0.x
+   * copy (an account that has not migrated) cannot be edited here: the package has no 0.x reader
+   * to carry that copy forward.
+   */
+  private static async readHead(authorId: string, postId: string): Promise<TPostHead> {
+    const versions = (await this.listVersions(authorId, postId)).filter(({ copy }) => copy.root === 'public');
+    // Edit ids sort by the time they were minted, as plain strings.
+    const head = versions.reduce<(typeof versions)[number] | null>(
+      (newest, version) => (newest && newest.editId > version.editId ? newest : version),
+      null,
+    );
+    if (!head) {
+      throw Err.client(ClientErrorCode.NOT_FOUND, 'Post has no v1 version to edit', {
+        service: ErrorService.Homeserver,
+        operation: 'readHead',
+        context: { authorId, postId },
+      });
+    }
+    const post = decodeObject(head.url, await HomeserverService.getBytes(head.url), 'post');
+    return { url: head.url, post };
+  }
+
+  /**
+   * Deletes every copy of the author's post: the 0.x file when there is one, then each v1 version,
+   * in the order `planDelete` gives so a reader never meets a dangling post.
+   */
+  private static async deleteEveryCopy(compositePostId: string): Promise<void> {
+    const { pubky: authorId, id: postId } = parseCompositeId(compositePostId);
+    const legacyUrl = `${listPrefix(authorId, 'legacy')}posts/${postId}`;
+    const [versions, hasLegacy] = await Promise.all([
+      this.listVersions(authorId, postId),
+      HomeserverService.exists(legacyUrl),
+    ]);
+    const readable = await Promise.all(
+      versions.map(async ({ url }): Promise<Post | null> => {
+        const read = tryDecodeObject(url, await HomeserverService.getBytes(url), 'post');
+        return read.ok ? read.value : null;
+      }),
+    );
+    const plan = planDelete(authorId, {
+      id: postId,
+      legacyPaths: hasLegacy ? [parseOwnerPath(`/pub/pubky.app/posts/${postId}`)] : null,
+      copies: versions.map(({ copy }) => copy),
+      versions: readable.filter((version): version is Post => version !== null),
+    });
+    for (const path of plan.deletes) await HomeserverService.deleteIdempotent(ownerPathToUrl(authorId, path));
+  }
+}
+
+/** A LIST entry spelled as a URL, typed so the package takes it as one. */
+function isPubkyUrlString(url: string): url is `pubky://${string}` {
+  return url.startsWith('pubky://');
 }

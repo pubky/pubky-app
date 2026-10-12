@@ -136,25 +136,30 @@ export class BootstrapApplication {
    * @returns Promise resolving to notification list and last read timestamp
    */
   private static async fetchOrPutLastRead({ pubky, lastReadUrl }: TBootstrapParams): Promise<number> {
+    const stored =
+      (await this.fetchLastReadAt(lastReadUrl)) ??
+      (await this.fetchLastReadAt(LastReadNormalizer.buildLegacyUrl(pubky)));
+    if (stored !== null) return stored;
+
+    Logger.info('Last read file not found, creating new one...', { pubky });
+    const { url, lastRead } = LastReadNormalizer.to(pubky);
+    void this.createMissingLastRead(url, lastRead);
+    return lastRead.timestamp;
+  }
+
+  /** The cursor stored at `url`, or null when the file is absent. Other failures reject. */
+  private static async fetchLastReadAt(url: string): Promise<number | null> {
     try {
-      const { timestamp } = await HomeserverService.request<{ timestamp: number }>({
+      const stored = await HomeserverService.request<{ timestamp: number } | undefined>({
         method: HttpMethod.GET,
-        url: lastReadUrl,
+        url,
       });
-      return timestamp;
+      return typeof stored?.timestamp === 'number' ? stored.timestamp : null;
     } catch (error) {
-      // Only handle 404 errors (resource not found), rethrow everything else
-      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
-        Logger.info('Last read file not found, creating new one...', { pubky });
-        const lastRead = LastReadNormalizer.to(pubky);
-        void this.createMissingLastRead(lastRead.meta.url, lastRead.last_read.toJson());
-        return Number(lastRead.last_read.timestamp);
-      } else {
-        // Network errors, timeouts, server errors, etc. should bubble up
-        Logger.error('Failed to fetch last read timestamp', error);
-        // TODO: TO harsh, we should handle this error better
-        throw error;
-      }
+      // Only a 404 (resource not found) means absent; network errors, timeouts and server errors bubble up
+      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return null;
+      Logger.error('Failed to fetch last read timestamp', error);
+      throw error;
     }
   }
 

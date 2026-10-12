@@ -1,4 +1,4 @@
-import type { BlobResult, FileResult } from 'pubky-app-specs';
+import { BlobResult, FileResult } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';

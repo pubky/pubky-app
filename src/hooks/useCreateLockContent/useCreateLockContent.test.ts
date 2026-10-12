@@ -1,5 +1,4 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   LOCK_TEASER_MAX_CHARACTER_LENGTH,
@@ -36,7 +35,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 vi.mock('pubky-app-specs', () => ({
-  PubkyAppPostKind: { Short: 0, Long: 1 },
+  KnownPostKind: { Short: 0, Long: 1 },
   PubkyAppPost: class {
     constructor(
       public content: string,
@@ -60,7 +59,7 @@ const descriptor = (path: string): TGuardedResource => ({ path, hash: 'HASH', co
 const teaser = { lock_title: 'My quote', teaser_description: 'a public teaser' };
 
 const params = (lockedAttachments: File[] = [], announcementAttachments: File[] = []) => ({
-  lockedPost: { content: 'locked body', kind: PubkyAppPostKind.Short, attachments: lockedAttachments },
+  lockedPost: { content: 'locked body', kind: 'note', attachments: lockedAttachments },
   announcement: { teaser, attachments: announcementAttachments, tags: ['bitcoin'] },
   lockConfig: { amount: '1000', asset: 'BTC' as const },
 });

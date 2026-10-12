@@ -1,5 +1,4 @@
 import { iconNames } from 'lucide-react/dynamic.js';
-import { PubkyAppFeedReach } from 'pubky-app-specs';
 import validationLimits from 'pubky-app-specs/validationLimits.json';
 import { describe, expect, it } from 'vitest';
 import { INTERESTS_FEED_ICON, INTERESTS_FEED_NAME } from '@/config/feed';
@@ -21,8 +20,8 @@ describe('buildInterestsFeedParams', () => {
   it('keeps the reach at the create-dialog default', () => {
     // Reach is the one default typed out by hand (the form type carries the Tagged-as sentinel),
     // so pin it to the dialog default explicitly; sort and layout are read from it directly.
-    expect(buildInterestsFeedParams(['bitcoin']).reach).toBe(PubkyAppFeedReach.All);
-    expect(customFeedFormDefaults.reach).toBe(PubkyAppFeedReach.All);
+    expect(buildInterestsFeedParams(['bitcoin']).reach).toBe('all');
+    expect(customFeedFormDefaults.reach).toBe('all');
   });
 
   it('uses an icon that exists in the Lucide catalog', () => {

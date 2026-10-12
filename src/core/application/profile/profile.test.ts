@@ -1,4 +1,4 @@
-import type { PubkyAppUser } from 'pubky-app-specs';
+import { PubkyAppUser } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorService } from '@/libs/error/error.types';

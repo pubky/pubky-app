@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { fileUriBuilder } from 'pubky-app-specs';
+import { listPrefix } from 'pubky-social-specs';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
@@ -43,7 +43,7 @@ const STAGED_ID_RANDOM_LENGTH = 7;
 
 function createStagedUri(pubky: Pubky): string {
   const random = crypto.randomUUID().slice(0, STAGED_ID_RANDOM_LENGTH);
-  return fileUriBuilder(pubky, `${STAGED_ID_PREFIX}${random}`);
+  return `${listPrefix(pubky, 'legacy')}files/${STAGED_ID_PREFIX}${random}`;
 }
 
 /**

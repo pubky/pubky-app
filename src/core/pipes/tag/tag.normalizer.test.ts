@@ -158,9 +158,9 @@ describe('TagNormalizer', () => {
           const result = TagNormalizer.to(uri, 'label', TEST_PUBKY.USER_1);
 
           expect(typeof result.tag.toJson).toBe('function');
-          const tagJson = result.tag.toJson();
-          expect(tagJson).toHaveProperty('uri', uri);
-          expect(tagJson).toHaveProperty('label', 'label');
+          const tagBody = result.tag.toJson();
+          expect(tagBody).toHaveProperty('uri', uri);
+          expect(tagBody).toHaveProperty('label', 'label');
         });
       });
 
@@ -320,7 +320,7 @@ describe('TagNormalizer', () => {
           expect(result.taggedId).toBe(compositePostId);
           expect(result.taggedKind).toBe(TagKind.POST);
           expect(result.tagUrl).toContain('pubky://');
-          expect(result.tagJson).toBeDefined();
+          expect(result.tagBody).toBeDefined();
         });
       });
 
@@ -423,7 +423,7 @@ describe('TagNormalizer', () => {
 
           expect(result.tagUrl).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/tags\/.+/);
           expect(result.label).toBe('technology');
-          expect(result.tagJson).toBeDefined();
+          expect(result.tagBody).toBeDefined();
         });
       });
 

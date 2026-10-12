@@ -1,4 +1,4 @@
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri, listPrefix } from 'pubky-social-specs';
 import { isValidPostCompositeId } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
@@ -23,7 +23,7 @@ export function parsePostReference(value: string): ParsedPostReference | null {
     compositeId,
     pubky,
     postId: id,
-    postUri: postUriBuilder(pubky, id),
+    postUri: buildUri(pubky, 'post', id),
   };
 }
 
@@ -48,4 +48,13 @@ function resolveAppPostUrl(value: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Both spellings of a reference to one post. Nexus serves the 0.x spelling
+ * (`/pub/pubky.app/posts/{id}`) for posts of an account that has not migrated, and a v1 write
+ * references the post as `buildUri` spells it, so a lookup by URI has to match either.
+ */
+export function postReferenceSpellings(pubky: Pubky, postId: string): string[] {
+  return [buildUri(pubky, 'post', postId), `${listPrefix(pubky, 'legacy')}posts/${postId}`];
 }

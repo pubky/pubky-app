@@ -1,8 +1,10 @@
+import { buildUri } from 'pubky-social-specs';
 import { PostController } from '@/controllers/post/post';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isPostDeleted } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 
 export type TValidatePostIdParams = {
   postId: string;
@@ -26,6 +28,8 @@ export class PostValidators {
         context: { postId },
       });
     }
-    return parentPost.uri;
+    // The v1 reference, whatever spelling Nexus serves: Nexus resolves both to one post.
+    const { pubky, id } = parseCompositeId(postId);
+    return buildUri(pubky, 'post', id);
   }
 }

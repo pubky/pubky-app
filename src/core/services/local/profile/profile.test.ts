@@ -1,4 +1,4 @@
-import type { PubkyAppUser } from 'pubky-app-specs';
+import { PubkyAppUser } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getProfileLocalEditTtlMs } from '@/config/user';
 import type { Pubky } from '@/models/models.types';

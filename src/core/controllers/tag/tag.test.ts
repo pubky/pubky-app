@@ -22,7 +22,7 @@ describe('TagController', () => {
     label: 'bitcoin',
     taggedKind: TagKind.POST,
     tagUrl: 'pubky://viewer/pub/pubky.app/tags/tag',
-    tagJson: { label: 'bitcoin' },
+    tagBody: { label: 'bitcoin' },
   };
   beforeEach(() => {
     vi.resetAllMocks();
@@ -43,7 +43,7 @@ describe('TagController', () => {
 
   it('passes normalized deletion data without the JSON body', async () => {
     await TagController.commitDelete(normalized);
-    const { tagJson: _tagJson, ...deleted } = normalized;
+    const { tagBody: _tagBody, ...deleted } = normalized;
     expect(TagApplication.commitDelete).toHaveBeenCalledWith({ ...deleted, isCurrent: expect.any(Function) });
   });
 

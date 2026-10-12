@@ -1,4 +1,3 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { FeedModel } from '@/models/feed/feed';
@@ -12,10 +11,10 @@ describe('LocalFeedService', () => {
     icon: 'activity',
     tags: ['bitcoin', 'lightning'],
     domain_tags: [],
-    reach: PubkyAppFeedReach.All,
-    sort: PubkyAppFeedSort.Recent,
+    reach: 'all',
+    sort: 'recent',
     content: null,
-    layout: PubkyAppFeedLayout.Columns,
+    layout: 'columns',
     created_at: Date.now(),
     updated_at: Date.now(),
     ...overrides,

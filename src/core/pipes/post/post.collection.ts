@@ -1,3 +1,4 @@
+import type { CollectionContent as StoredCollectionContent, NewCollection } from 'pubky-social-specs';
 import { DEFAULT_COLLECTION_LAYOUT, isCollectionLayout } from '@/config/collections';
 import {
   COLLECTION_CONTENT_MAX_LENGTH,
@@ -11,6 +12,7 @@ import {
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { collectionItemUris } from '@/libs/post/collectionContent';
 import type { CollectionContent, CollectionContentInput } from '@/models/post/collection/collectionPost.types';
 
 const ALLOWED_COLLECTION_URL_PROTOCOLS = new Set(
@@ -99,14 +101,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isOptionalString(value: unknown): value is string | undefined {
-  return value === undefined || typeof value === 'string';
-}
-
-function isOptionalStringArray(value: unknown): value is string[] | undefined {
-  return value === undefined || (Array.isArray(value) && value.every((item) => typeof item === 'string'));
-}
-
 function isNullableString(value: unknown): value is string | null | undefined {
   return value == null || typeof value === 'string';
 }
@@ -163,12 +157,9 @@ export class CollectionPostContent {
   }
 
   /**
-   * Parse a `PubkyAppPost::content` envelope for a `kind = Collection` post.
-   *
-   * Read-side type-safety comes from `PubkyAppCollectionContent` (re-exported by
-   * `pubky-app-specs`); we never construct that envelope manually — the write
-   * side goes through `PubkySpecsBuilder.createCollectionPost(...)` which builds
-   * and serializes the envelope itself.
+   * Parse the `content` envelope of a collection post, in either spelling (v1 `{ uri, note }`
+   * items or 0.x URI strings), into the shape this client shows. The write side never spells the
+   * envelope: `buildPost` does on create, and `toStored` + `encodeContent` on edit.
    */
   static parse(content: string): CollectionContent | null {
     let parsed: unknown;
@@ -183,15 +174,15 @@ export class CollectionPostContent {
     const { name, description, items, cover_image, layout } = parsed;
 
     if (typeof name !== 'string') return null;
-    if (!isOptionalString(description)) return null;
-    if (!isOptionalStringArray(items)) return null;
+    if (!isNullableString(description)) return null;
+    if (items != null && !Array.isArray(items)) return null;
     if (!isNullableString(cover_image)) return null;
 
     try {
       return this.normalize({
         name,
         description: description ?? '',
-        items: items ?? [],
+        items: items ? collectionItemUris(items) : [],
         coverImage: cover_image ?? undefined,
         layout: isCollectionLayout(layout) ? layout : DEFAULT_COLLECTION_LAYOUT,
       });
@@ -258,5 +249,33 @@ export class CollectionPostContent {
       items: merged,
       coverImage: collection.cover_image,
     });
+  }
+
+  /** The `buildPost` input of a new collection. */
+  static toNewInput(collection: CollectionContent): NewCollection {
+    return {
+      kind: 'collection',
+      name: collection.name,
+      description: collection.description || null,
+      items: (collection.items ?? []).map((uri) => ({ uri })),
+      cover_image: collection.cover_image ?? null,
+      layout: collection.layout,
+    };
+  }
+
+  /**
+   * `next` merged onto the stored envelope: each kept item keeps its note and unknown members, and
+   * the envelope keeps the members this client does not know.
+   */
+  static toStored(stored: StoredCollectionContent, next: CollectionContent): StoredCollectionContent {
+    const storedItems = new Map(stored.items.map((item) => [item.uri, item]));
+    return {
+      ...stored,
+      name: next.name,
+      description: next.description || null,
+      cover_image: next.cover_image ?? null,
+      layout: next.layout,
+      items: (next.items ?? []).map((uri) => storedItems.get(uri) ?? { uri, note: null }),
+    };
   }
 }

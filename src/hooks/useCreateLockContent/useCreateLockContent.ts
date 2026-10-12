@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { PubkyAppPost } from 'pubky-app-specs';
 import { LocksController } from '@/controllers/locks/locks';
 import { PostController } from '@/controllers/post/post';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
@@ -12,6 +11,7 @@ import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { buildLockTeaserContent, isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
+import { toLocalPostKind } from '@/pipes/post/post.kind';
 import { lockPriceSchema, type TGuardedResource } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type {
@@ -23,7 +23,7 @@ import type {
 // The homeserver detects each file's type from its bytes: real media (image/webp, video/mp4, …) is
 // recognized, but JSON is not, so it falls back to `octet-stream`. createContentLock() fails unless our
 // declared type matches what the homeserver detected, so the JSON primary must be declared
-// `octet-stream`. pubky-app still knows the primary is a `PubkyAppPost` — by convention, it always is.
+// `octet-stream`. pubky-app still knows the primary is a post — by convention, it always is.
 const POST_CONTENT_TYPE = 'application/octet-stream';
 
 /**
@@ -104,8 +104,17 @@ export function useCreateLockContent({
           });
         const host = ownerPubky ? stripPubkyPrefix(ownerPubky) : '';
         const uris = attachmentResources.map((resource) => `pubky://${host}${resource.path}`);
-        const post = new PubkyAppPost(lockedPost.content, lockedPost.kind, null, null, uris.length > 0 ? uris : null);
-        return { contentType: POST_CONTENT_TYPE, bytes: new TextEncoder().encode(JSON.stringify(post.toJson())) };
+        // The primary keeps the 0.x post shape every released reader parses (`guardedPostSchema`): it
+        // lives in the Locks namespace, where no data-model URL names it, and the package decodes a
+        // post only at such a URL.
+        const post = {
+          content: lockedPost.content,
+          kind: toLocalPostKind(lockedPost.kind),
+          parent: null,
+          embed: null,
+          attachments: uris.length > 0 ? uris : null,
+        };
+        return { contentType: POST_CONTENT_TYPE, bytes: new TextEncoder().encode(JSON.stringify(post)) };
       };
 
       // TODO:[Locks] #2685 — the files go up as the author picked them. A normal upload first removes

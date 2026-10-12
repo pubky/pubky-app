@@ -14,5 +14,5 @@ export interface TTagFromResponse {
   label: string;
   taggedKind: TagKind;
   tagUrl: string;
-  tagJson: Record<string, unknown>;
+  tagBody: Uint8Array;
 }

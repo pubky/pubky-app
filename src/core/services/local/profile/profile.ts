@@ -1,4 +1,4 @@
-import { PubkyAppUser } from 'pubky-app-specs';
+import type { User } from 'pubky-social-specs';
 import { getProfileLocalEditTtlMs } from '@/config/user';
 import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
@@ -91,7 +91,7 @@ export class LocalProfileService {
    * @param pubky - The profile owner
    * @returns Promise resolving to void
    */
-  static async updateDetails(user: PubkyAppUser, pubky: Pubky): Promise<void> {
+  static async updateDetails(user: User, pubky: Pubky): Promise<void> {
     await db.transaction('rw', [UserDetailsModel.table, UserTtlModel.table], async () => {
       const now = Date.now();
       const existing = await UserDetailsModel.findById(pubky);

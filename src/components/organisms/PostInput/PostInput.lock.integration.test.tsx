@@ -75,7 +75,7 @@ vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => moc
 // Minimal specs stand-in: a kind enum (consumed by the real `inferPostKindForCreate`) and a
 // constructor spy so the locked post's content/kind can be asserted.
 vi.mock('pubky-app-specs', () => ({
-  PubkyAppPostKind: { Short: 0, Long: 1, Image: 2, Video: 3, Link: 4, File: 5, Collection: 6 },
+  KnownPostKind: { Short: 0, Long: 1, Image: 2, Video: 3, Link: 4, File: 5, Collection: 6 },
   PubkyAppPost: class {
     constructor(
       public content: string,

@@ -31,7 +31,7 @@ export class FileController {
     const fileAttachment = await FileApplication.toFileAttachment({ file, pubky });
     // 2. Upload to homeserver
     await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
-    return fileAttachment.fileResult.meta.url;
+    return fileAttachment.media.url;
   }
 
   /**

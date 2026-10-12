@@ -1,4 +1,4 @@
-import type { BlobResult, FileResult } from 'pubky-app-specs';
+import { BlobResult, FileResult } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetDatabase } from '@/database/franky/franky.helpers';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';

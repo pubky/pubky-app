@@ -1,5 +1,5 @@
 import type { Session } from '@synonymdev/pubky';
-import { userUriBuilder } from 'pubky-app-specs';
+import { buildUri, listPrefix } from 'pubky-social-specs';
 import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
 import { getAuthClientId } from '@/config/auth';
 import type { ActiveSessionFailure, PersistedAuth, SessionReference } from '@/libs/auth/session.types';
@@ -203,8 +203,14 @@ export class AuthApplication {
    * @returns Promise resolving to the user profile or undefined if not found
    */
   static async userIsSignedUp({ pubky }: { pubky: Pubky }): Promise<boolean> {
+    // An account that has not migrated yet only has the 0.x profile.
+    const legacyProfileUrl = `${listPrefix(pubky, 'legacy')}profile.json`;
+    return (await this.profileExists(buildUri(pubky, 'user'))) || (await this.profileExists(legacyProfileUrl));
+  }
+
+  private static async profileExists(url: string): Promise<boolean> {
     try {
-      await HomeserverService.request({ method: HttpMethod.GET, url: userUriBuilder(pubky) });
+      await HomeserverService.request({ method: HttpMethod.GET, url });
       return true;
     } catch (error) {
       const appError = isAppError(error) ? error : toAppError(error, ErrorService.Homeserver, 'userIsSignedUp');

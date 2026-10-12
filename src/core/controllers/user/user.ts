@@ -174,14 +174,12 @@ export class UserController {
     // Normalize pubky IDs to ensure consistent format for storage and comparison
     // This strips any prefix (pubky or pk:) to get the raw 52-character key
     const normalizedFollowee = stripPubkyPrefix(followee) as Pubky;
-    const { meta, follow } = FollowNormalizer.to({ follower, followee: normalizedFollowee });
-
-    await UserApplication.commitFollow({
-      eventType,
-      followUrl: meta.url,
-      followJson: follow.toJson(),
-      follower,
-      followee: normalizedFollowee,
-    });
+    const params = { follower, followee: normalizedFollowee };
+    if (eventType === HttpMethod.DELETE) {
+      await UserApplication.commitFollow({ ...params, eventType, deleteUrls: FollowNormalizer.toDeleteUrls(params) });
+      return;
+    }
+    const { url, body } = FollowNormalizer.to(params);
+    await UserApplication.commitFollow({ ...params, eventType: HttpMethod.PUT, followUrl: url, followBody: body });
   }
 }

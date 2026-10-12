@@ -986,6 +986,23 @@ export class HomeserverService {
   }
 
   /**
+   * Bytes of a resource read past the browser HTTP cache, or null when it is absent (404). For a
+   * read-modify-write, where a heuristically fresh cached copy would undo another device's write.
+   *
+   * @param url - Pubky URL to read.
+   */
+  static async getFreshBytes(url: string): Promise<Uint8Array | null> {
+    try {
+      const response = await this.fetch({ url, options: { method: HttpMethod.GET, cache: 'no-store' } });
+      if (response.status === HttpStatusCode.NOT_FOUND) return null;
+      await assertOk({ response, url, operation: 'getFreshBytes' });
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      throw toAppError(error, ErrorService.Homeserver, 'getFreshBytes');
+    }
+  }
+
+  /**
    * Checks whether a homeserver resource exists without treating an expected 404 as an error.
    * Storage SDK probes return a boolean; plain HTTP URLs retain explicit response handling.
    */

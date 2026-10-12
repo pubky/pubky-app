@@ -50,9 +50,13 @@ export class BookmarkApplication {
     // Get current user ID for user counts update
     const userId = useAuthStore.getState().selectCurrentUserPubky();
 
-    const { postId, bookmarkUrl, bookmarkJson } = params;
+    const { postId, bookmarkUrl, bookmarkBody } = params;
 
     await LocalBookmarkService.persist(action, { userId, postId });
-    await HomeserverService.request({ method: action, url: bookmarkUrl, bodyJson: bookmarkJson });
+    if (action === HttpMethod.PUT && bookmarkBody) {
+      await HomeserverService.putBlob({ url: bookmarkUrl, blob: bookmarkBody });
+    } else {
+      await HomeserverService.request({ method: action, url: bookmarkUrl });
+    }
   }
 }

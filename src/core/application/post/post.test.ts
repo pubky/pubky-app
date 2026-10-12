@@ -1,4 +1,4 @@
-import { type BlobResult, type FileResult, PubkyAppPost, PubkyAppPostKind } from 'pubky-app-specs';
+import { BlobResult, FileResult, PubkyAppPost } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostApplication } from '@/application/post/post';
@@ -78,7 +78,7 @@ vi.mock('@/application/tag/tag', () => ({
 describe('Post Application', () => {
   // Test data factories
   const createMockPostData = (): TCreatePostInput => {
-    const mockPost = new PubkyAppPost('Hello, world!', PubkyAppPostKind.Short, undefined, undefined, undefined);
+    const mockPost = new PubkyAppPost('Hello, world!', 'note', undefined, undefined, undefined);
 
     return {
       compositePostId: 'author:post123',
@@ -118,7 +118,7 @@ describe('Post Application', () => {
     label,
     taggedKind: TagKind.POST,
     tagUrl: `pubky://author/pub/pubky.app/tags/${label}`,
-    tagJson: { uri: `pubky://author/pub/pubky.app/posts/${id}`, label },
+    tagBody: { uri: `pubky://author/pub/pubky.app/posts/${id}`, label },
   });
 
   // Spy setup helpers
@@ -200,7 +200,7 @@ describe('Post Application', () => {
     });
 
     it('should handle posts with Long kind', async () => {
-      const longPost = new PubkyAppPost('Long post content', PubkyAppPostKind.Long, undefined, undefined, undefined);
+      const longPost = new PubkyAppPost('Long post content', 'article', undefined, undefined, undefined);
       const mockData: TCreatePostInput = {
         compositePostId: 'author:post456',
         post: longPost,
@@ -227,7 +227,7 @@ describe('Post Application', () => {
     it('should handle posts with parent URI (reply)', async () => {
       const replyPost = new PubkyAppPost(
         'Reply content',
-        PubkyAppPostKind.Short,
+        'note',
         'pubky://parent-author/pub/pubky.app/posts/parent-post',
         undefined,
         undefined,
@@ -260,7 +260,7 @@ describe('Post Application', () => {
       it('should upload files before saving post locally', async () => {
         const mockFileAttachments = [createMockFileAttachment('file1')];
 
-        const mockPost = new PubkyAppPost('Post with image', PubkyAppPostKind.Short, undefined, undefined, undefined);
+        const mockPost = new PubkyAppPost('Post with image', 'note', undefined, undefined, undefined);
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-with-files',
           post: mockPost,
@@ -291,7 +291,7 @@ describe('Post Application', () => {
       it('should fail fast on file upload error', async () => {
         const mockFileAttachments = [createMockFileAttachment('file2')];
 
-        const mockPost = new PubkyAppPost('Post with video', PubkyAppPostKind.Short, undefined, undefined, undefined);
+        const mockPost = new PubkyAppPost('Post with video', 'note', undefined, undefined, undefined);
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-with-video',
           post: mockPost,
@@ -391,7 +391,7 @@ describe('Post Application', () => {
       it('should create tags after homeserver sync', async () => {
         const mockTags = [createMockTag('author:post-with-tags', 'technology')];
 
-        const mockPost = new PubkyAppPost('Post with tags', PubkyAppPostKind.Short, undefined, undefined, undefined);
+        const mockPost = new PubkyAppPost('Post with tags', 'note', undefined, undefined, undefined);
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-with-tags',
           post: mockPost,
@@ -422,13 +422,7 @@ describe('Post Application', () => {
       it('should propagate tag creation error after post sync', async () => {
         const mockTags = [createMockTag('author:post-with-tags-fail', 'science')];
 
-        const mockPost = new PubkyAppPost(
-          'Post with failing tags',
-          PubkyAppPostKind.Short,
-          undefined,
-          undefined,
-          undefined,
-        );
+        const mockPost = new PubkyAppPost('Post with failing tags', 'note', undefined, undefined, undefined);
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-with-tags-fail',
           post: mockPost,
@@ -463,13 +457,7 @@ describe('Post Application', () => {
         const mockFileAttachments = [createMockFileAttachment('file-combo')];
         const mockTags = [createMockTag('author:post-combo', 'photography')];
 
-        const mockPost = new PubkyAppPost(
-          'Post with files and tags',
-          PubkyAppPostKind.Short,
-          undefined,
-          undefined,
-          undefined,
-        );
+        const mockPost = new PubkyAppPost('Post with files and tags', 'note', undefined, undefined, undefined);
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-combo',
           post: mockPost,
@@ -505,13 +493,7 @@ describe('Post Application', () => {
         const mockFileAttachments = [createMockFileAttachment('file-fail')];
         const mockTags = [createMockTag('author:post-fail', 'art')];
 
-        const mockPost = new PubkyAppPost(
-          'Post with homeserver failure',
-          PubkyAppPostKind.Short,
-          undefined,
-          undefined,
-          undefined,
-        );
+        const mockPost = new PubkyAppPost('Post with homeserver failure', 'note', undefined, undefined, undefined);
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-fail',
           post: mockPost,
@@ -551,13 +533,7 @@ describe('Post Application', () => {
       it('should propagate original error when file rollback also fails', async () => {
         const mockFileAttachments = [createMockFileAttachment('file-rollback-fail')];
 
-        const mockPost = new PubkyAppPost(
-          'Post with file rollback failure',
-          PubkyAppPostKind.Short,
-          undefined,
-          undefined,
-          undefined,
-        );
+        const mockPost = new PubkyAppPost('Post with file rollback failure', 'note', undefined, undefined, undefined);
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-file-rollback-fail',
           post: mockPost,
@@ -590,7 +566,7 @@ describe('Post Application', () => {
     const mockPostDetails = {
       id: 'author:post123',
       content: 'Test post',
-      kind: PubkyAppPostKind.Short,
+      kind: 'note',
       uri: 'pubky://author/pub/pubky.app/posts/post123',
       indexed_at: Date.now(),
       attachments: null,
@@ -599,7 +575,7 @@ describe('Post Application', () => {
     const mockPostDetailsWithAttachments = {
       id: 'author:post-with-files',
       content: 'Post with files',
-      kind: PubkyAppPostKind.Short,
+      kind: 'note',
       uri: 'pubky://author/pub/pubky.app/posts/post-with-files',
       indexed_at: Date.now(),
       attachments: ['pubky://author/pub/pubky.app/files/file1', 'pubky://author/pub/pubky.app/files/file2'],
@@ -727,7 +703,7 @@ describe('Post Application', () => {
         const postWithFiles = {
           id: 'author:post-with-files-delete',
           content: 'Post with files to delete',
-          kind: PubkyAppPostKind.Short,
+          kind: 'note',
           uri: 'pubky://author/pub/pubky.app/posts/post-with-files-delete',
           indexed_at: Date.now(),
           attachments: ['pubky://author/pub/pubky.app/files/file1', 'pubky://author/pub/pubky.app/files/file2'],
@@ -751,7 +727,7 @@ describe('Post Application', () => {
         const postWithoutFiles = {
           id: 'author:post-no-files',
           content: 'Post without files',
-          kind: PubkyAppPostKind.Short,
+          kind: 'note',
           uri: 'pubky://author/pub/pubky.app/posts/post-no-files',
           indexed_at: Date.now(),
           attachments: null,
@@ -774,7 +750,7 @@ describe('Post Application', () => {
         const postWithFiles = {
           id: 'author:post-file-delete-fail',
           content: 'Post with file deletion failure',
-          kind: PubkyAppPostKind.Short,
+          kind: 'note',
           uri: 'pubky://author/pub/pubky.app/posts/post-file-delete-fail',
           indexed_at: Date.now(),
           attachments: ['pubky://author/pub/pubky.app/files/stubborn-file'],
@@ -932,13 +908,7 @@ describe('Post Application', () => {
     // --- Edge Cases ---
     describe('edge cases with empty arrays', () => {
       it('should skip tag creation with empty array', async () => {
-        const mockPost = new PubkyAppPost(
-          'Post with empty tags',
-          PubkyAppPostKind.Short,
-          undefined,
-          undefined,
-          undefined,
-        );
+        const mockPost = new PubkyAppPost('Post with empty tags', 'note', undefined, undefined, undefined);
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-empty-tags',
           post: mockPost,
@@ -966,13 +936,7 @@ describe('Post Application', () => {
       });
 
       it('should skip file upload with empty array', async () => {
-        const mockPost = new PubkyAppPost(
-          'Post with empty files',
-          PubkyAppPostKind.Short,
-          undefined,
-          undefined,
-          undefined,
-        );
+        const mockPost = new PubkyAppPost('Post with empty files', 'note', undefined, undefined, undefined);
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-empty-files',
           post: mockPost,
@@ -1000,13 +964,7 @@ describe('Post Application', () => {
       });
 
       it('should handle empty files and tags', async () => {
-        const mockPost = new PubkyAppPost(
-          'Post with all empty arrays',
-          PubkyAppPostKind.Short,
-          undefined,
-          undefined,
-          undefined,
-        );
+        const mockPost = new PubkyAppPost('Post with all empty arrays', 'note', undefined, undefined, undefined);
         const mockData: TCreatePostInput = {
           compositePostId: 'author:post-all-empty',
           post: mockPost,
@@ -1040,7 +998,7 @@ describe('Post Application', () => {
         const postWithEmptyAttachments = {
           id: 'author:post-empty-attachments',
           content: 'Post with empty attachments array',
-          kind: PubkyAppPostKind.Short,
+          kind: 'note',
           uri: 'pubky://author/pub/pubky.app/posts/post-empty-attachments',
           indexed_at: Date.now(),
           attachments: [],
@@ -1407,7 +1365,7 @@ describe('Post Application', () => {
     };
 
     const createMockEditInput = (): TEditPostInput => {
-      const mockPost = new PubkyAppPost('Edited content', PubkyAppPostKind.Short, undefined, undefined, undefined);
+      const mockPost = new PubkyAppPost('Edited content', 'note', undefined, undefined, undefined);
       return {
         compositePostId: 'author:post123',
         post: mockPost,
@@ -1498,7 +1456,7 @@ describe('Post Application', () => {
       };
 
       const createEditInputWithFiles = (): TEditPostInput => {
-        const mockPost = new PubkyAppPost('Edited content', PubkyAppPostKind.Image, undefined, undefined, [newFileUri]);
+        const mockPost = new PubkyAppPost('Edited content', 'image', undefined, undefined, [newFileUri]);
         return {
           compositePostId: 'author:post123',
           post: mockPost,

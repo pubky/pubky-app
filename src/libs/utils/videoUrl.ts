@@ -1,7 +1,7 @@
 /**
  * Video link classification, shared by post kind inference and the link embed providers.
  *
- * `isVideoUrl` decides whether a link post is stored as `PubkyAppPostKind.Video`
+ * `isVideoUrl` decides whether a link post is stored as `'video'`
  * instead of `Link`, which is what the Content filters select on. It has to agree
  * with what the embed actually plays, so the provider domains and the video id
  * extraction live here and the YouTube/Vimeo providers import them. Adding a

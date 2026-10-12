@@ -1,4 +1,3 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedApplication } from '@/application/feed/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -16,10 +15,10 @@ const createFeedParams = (overrides: Partial<TFeedCreateParams> = {}): TFeedCrea
   icon: 'activity',
   tags: ['bitcoin', 'lightning'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.All,
-  sort: PubkyAppFeedSort.Recent,
+  reach: 'all',
+  sort: 'recent',
   content: null,
-  layout: PubkyAppFeedLayout.Columns,
+  layout: 'columns',
   ...overrides,
 });
 
@@ -28,10 +27,10 @@ const createMockFeedSchema = (overrides: Partial<FeedModelSchema> = {}): FeedMod
   name: 'Bitcoin News',
   tags: ['bitcoin', 'lightning'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.All,
-  sort: PubkyAppFeedSort.Recent,
+  reach: 'all',
+  sort: 'recent',
   content: null,
-  layout: PubkyAppFeedLayout.Columns,
+  layout: 'columns',
   created_at: Date.now(),
   updated_at: Date.now(),
   ...overrides,
@@ -100,7 +99,7 @@ describe('FeedController', () => {
       const params = createFeedParams({
         tags: [],
         domain_tags: ['🔥', 'bitcoiner'],
-        reach: PubkyAppFeedReach.Wot,
+        reach: 'wot',
       });
 
       await expect(FeedController.commitCreate(params)).resolves.toBeTruthy();
@@ -114,7 +113,7 @@ describe('FeedController', () => {
       const params = createFeedParams({
         tags: ['post1', 'post2', 'post3', 'post4', 'post5'],
         domain_tags: ['profile1', 'profile2', 'profile3', 'profile4', 'profile5', 'profile6'],
-        reach: PubkyAppFeedReach.Wot,
+        reach: 'wot',
       });
 
       await expect(FeedController.commitCreate(params)).rejects.toThrow('Maximum 5 tags allowed');
@@ -124,7 +123,7 @@ describe('FeedController', () => {
       const params = createFeedParams({
         tags: ['post1', 'post2', 'post3', 'post4', 'post5'],
         domain_tags: ['profile1', 'profile2', 'profile3', 'profile4', 'profile5'],
-        reach: PubkyAppFeedReach.Wot,
+        reach: 'wot',
       });
 
       await expect(FeedController.commitCreate(params)).resolves.toBeTruthy();
@@ -134,7 +133,7 @@ describe('FeedController', () => {
       const params = createFeedParams({
         tags: [],
         domain_tags: ['bitcoiner'],
-        reach: PubkyAppFeedReach.Me,
+        reach: 'me',
       });
 
       await expect(FeedController.commitCreate(params)).resolves.toBeTruthy();
@@ -144,16 +143,13 @@ describe('FeedController', () => {
       });
     });
 
-    it.each([PubkyAppFeedReach.All, PubkyAppFeedReach.Followers])(
-      'should reject profile tags for unsupported reach %s',
-      async (reach) => {
-        const params = createFeedParams({ domain_tags: ['bitcoiner'], reach });
+    it.each(['all', 'followers'])('should reject profile tags for unsupported reach %s', async (reach) => {
+      const params = createFeedParams({ domain_tags: ['bitcoiner'], reach });
 
-        await expect(FeedController.commitCreate(params)).rejects.toThrow(
-          'Profile tags are not supported for this feed reach',
-        );
-      },
-    );
+      await expect(FeedController.commitCreate(params)).rejects.toThrow(
+        'Profile tags are not supported for this feed reach',
+      );
+    });
   });
 
   describe('update', () => {
@@ -234,14 +230,14 @@ describe('FeedController', () => {
     it('should validate the fully merged feed configuration', async () => {
       vi.spyOn(FeedApplication, 'prepareUpdateParams').mockResolvedValue(
         createFeedParams({
-          reach: PubkyAppFeedReach.Followers,
+          reach: 'followers',
           tags: [],
           domain_tags: ['bitcoiner'],
         }),
       );
 
       await expect(
-        FeedController.commitUpdate({ feedId: 'feed-abc123', changes: { reach: PubkyAppFeedReach.Followers } }),
+        FeedController.commitUpdate({ feedId: 'feed-abc123', changes: { reach: 'followers' } }),
       ).rejects.toThrow('Profile tags are not supported for this feed reach');
       expect(FeedApplication.persist).not.toHaveBeenCalled();
     });

@@ -119,13 +119,13 @@ describe('Stream API URL Generation', () => {
       {
         name: 'friends',
         endpoint: 'friends' as const,
-        params: { observer_id: mockObserverId, tags: 'dev,opensource', kind: StreamKind.SHORT },
+        params: { observer_id: mockObserverId, tags: 'dev,opensource', kind: StreamKind.NOTE },
         expectedInUrl: ['source=friends', `observer_id=${mockObserverId}`, 'tags=dev%2Copensource', 'kind=short'],
       },
       {
         name: 'wot',
         endpoint: 'wot' as const,
-        params: { observer_id: mockObserverId, depth: 2, kind: StreamKind.LONG },
+        params: { observer_id: mockObserverId, depth: 2, kind: StreamKind.ARTICLE },
         expectedInUrl: ['source=wot', `observer_id=${mockObserverId}`, 'depth=2', 'kind=long'],
       },
       {
@@ -266,7 +266,7 @@ describe('Stream API URL Generation', () => {
         sorting: StreamSorting.TIMELINE,
         order: StreamOrder.DESCENDING,
         tags: 'dev,test',
-        kind: StreamKind.SHORT,
+        kind: StreamKind.NOTE,
         skip: 0,
         limit: 10,
         start: 1000,
@@ -826,8 +826,8 @@ describe('createPostStreamParams', () => {
 
   describe('Tags with different content types', () => {
     test.each([
-      { kind: 'short', tags: 'tech,dev', expectedKind: StreamKind.SHORT },
-      { kind: 'long', tags: 'essays,articles', expectedKind: StreamKind.LONG },
+      { kind: 'short', tags: 'tech,dev', expectedKind: StreamKind.NOTE },
+      { kind: 'long', tags: 'essays,articles', expectedKind: StreamKind.ARTICLE },
       { kind: 'image', tags: 'photos,art', expectedKind: StreamKind.IMAGE },
       { kind: 'video', tags: 'tutorials,vlogs', expectedKind: StreamKind.VIDEO },
       { kind: 'link', tags: 'resources,refs', expectedKind: StreamKind.LINK },

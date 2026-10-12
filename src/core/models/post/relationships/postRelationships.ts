@@ -32,14 +32,14 @@ export class PostRelationshipsModel
   }
 
   // Query methods
-  static async getReplies(postId: string): Promise<PostRelationshipsModelSchema[]> {
+  static async getReplies(parentUris: string[]): Promise<PostRelationshipsModelSchema[]> {
     try {
-      return await this.table.where('replied').equals(postId).toArray();
+      return await this.table.where('replied').anyOf(parentUris).toArray();
     } catch (error) {
       throw Err.database(DatabaseErrorCode.QUERY_FAILED, 'Failed to get replies', {
         service: ErrorService.Local,
         operation: 'getReplies',
-        context: { table: this.table.name, postId },
+        context: { table: this.table.name, parentUris },
         cause: error,
       });
     }

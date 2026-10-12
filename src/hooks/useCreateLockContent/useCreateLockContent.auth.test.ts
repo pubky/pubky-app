@@ -1,6 +1,5 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { act, renderHook } from '@testing-library/react';
-import { PubkyAppPostKind } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
 import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
@@ -36,7 +35,7 @@ vi.mock('@/controllers/post/post', () => ({ PostController: { commitCreate: vi.f
 vi.mock('next/navigation', () => ({ usePathname: () => '/home' }));
 
 const params = {
-  lockedPost: { content: 'locked body', kind: PubkyAppPostKind.Short, attachments: [] },
+  lockedPost: { content: 'locked body', kind: 'note', attachments: [] },
   announcement: { teaser: { lock_title: 'Title', teaser_description: 'Teaser' }, attachments: [], tags: [] },
   lockConfig: { amount: '1000', asset: 'BTC' as const },
 };

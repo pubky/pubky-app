@@ -1,4 +1,3 @@
-import { PubkyAppPostKind } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostApplication } from '@/application/post/post';
@@ -105,7 +104,7 @@ vi.mock('pubky-app-specs', () => ({
       };
     }
   },
-  PubkyAppPostKind: {
+  KnownPostKind: {
     Short: 0,
     Long: 1,
     Image: 2,
@@ -143,7 +142,7 @@ const setupExistingPost = async () => {
     id: testData.fullPostId,
     content: 'Test post content',
     indexed_at: Date.now(),
-    kind: 'short', // PubkyAppPostKind.Short
+    kind: 'short', // 'note'
     uri: `pubky://${testData.authorPubky}/pub/pubky.app/posts/${testData.postId}`,
     attachments: null,
   };
@@ -381,7 +380,7 @@ describe('PostController', () => {
 
       const savedPost = allPosts[0];
       expect(savedPost.content).toBe('Hello, world!');
-      expect(savedPost.kind).toBe('short'); // PubkyAppPostKind.Short
+      expect(savedPost.kind).toBe('short'); // 'note'
 
       // Verify homeserver sync was called
       expect(HomeserverService.request).toHaveBeenCalledWith({
@@ -401,7 +400,7 @@ describe('PostController', () => {
       const replyPost = allPosts.find((p) => p.content === 'This is a reply');
 
       expect(replyPost).toBeTruthy();
-      expect(replyPost!.kind).toBe('short'); // PubkyAppPostKind.Short
+      expect(replyPost!.kind).toBe('short'); // 'note'
 
       // Verify homeserver sync was called
       expect(HomeserverService.request).toHaveBeenCalledWith({
@@ -986,7 +985,7 @@ describe('PostController', () => {
           content: 'Updated content',
           currentUserPubky: testData.authorPubky,
           attachments: [keptUri, newFileUri('photo.png')],
-          kind: PubkyAppPostKind.Image,
+          kind: 'image',
         });
         expect(commitEditSpy).toHaveBeenCalledWith({
           compositePostId: testData.fullPostId,
@@ -1204,7 +1203,7 @@ describe('PostController', () => {
             attachments: { original: [], kept: [], added: [new File(['x'], 'photo.png', { type: 'image/png' })] },
           });
 
-          expect(toEditSpy).toHaveBeenCalledWith(expect.objectContaining({ kind: PubkyAppPostKind.Image }));
+          expect(toEditSpy).toHaveBeenCalledWith(expect.objectContaining({ kind: 'image' }));
         } finally {
           cleanupAuthUser();
         }
@@ -1226,9 +1225,7 @@ describe('PostController', () => {
             attachments: { original: [keptUri], kept: [], added: [] },
           });
 
-          expect(toEditSpy).toHaveBeenCalledWith(
-            expect.objectContaining({ attachments: null, kind: PubkyAppPostKind.Short }),
-          );
+          expect(toEditSpy).toHaveBeenCalledWith(expect.objectContaining({ attachments: null, kind: 'note' }));
           expect(commitEditSpy).toHaveBeenCalledWith(expect.objectContaining({ removedUris: [keptUri] }));
           // No new uploads → the application layer must not receive file attachments
           expect(commitEditSpy.mock.calls[0][0].fileAttachments).toBeUndefined();
@@ -1254,7 +1251,7 @@ describe('PostController', () => {
             attachments: { original: [keptUri], kept: [keptUri], added: [] },
           });
 
-          expect(toEditSpy).toHaveBeenCalledWith(expect.objectContaining({ kind: PubkyAppPostKind.Long }));
+          expect(toEditSpy).toHaveBeenCalledWith(expect.objectContaining({ kind: 'article' }));
           expect(getMetadataSpy).not.toHaveBeenCalled();
         } finally {
           cleanupAuthUser();
@@ -1276,7 +1273,7 @@ describe('PostController', () => {
             attachments: { original: [], kept: [], added: [new File(['x'], 'photo.png', { type: 'image/png' })] },
           });
 
-          expect(toEditSpy).toHaveBeenCalledWith(expect.objectContaining({ kind: PubkyAppPostKind.Link }));
+          expect(toEditSpy).toHaveBeenCalledWith(expect.objectContaining({ kind: 'link' }));
         } finally {
           cleanupAuthUser();
         }
@@ -1299,7 +1296,7 @@ describe('PostController', () => {
             attachments: { original: [keptUri], kept: [keptUri], added: [] },
           });
 
-          expect(toEditSpy).toHaveBeenCalledWith(expect.objectContaining({ kind: PubkyAppPostKind.Video }));
+          expect(toEditSpy).toHaveBeenCalledWith(expect.objectContaining({ kind: 'video' }));
         } finally {
           cleanupAuthUser();
         }
@@ -2479,7 +2476,7 @@ describe('PostController', () => {
         expect(toEditSpy).toHaveBeenCalledWith(
           expect.objectContaining({
             attachments: [coverUri, inlineA, inlineNew],
-            kind: PubkyAppPostKind.Long,
+            kind: 'article',
           }),
         );
         expect(commitEditSpy).toHaveBeenCalledWith({

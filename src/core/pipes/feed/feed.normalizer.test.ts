@@ -1,11 +1,4 @@
-import {
-  FeedResult,
-  PubkyAppFeedLayout,
-  PubkyAppFeedReach,
-  PubkyAppFeedSort,
-  PubkyAppPostKind,
-  PubkySpecsBuilder,
-} from 'pubky-app-specs';
+import { FeedResult, PubkySpecsBuilder } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
 import { AppError } from '@/libs/error/error';
@@ -42,10 +35,10 @@ describe('FeedNormalizer', () => {
           feed: {
             tags: input.tags,
             domain_tags: input.domainTags,
-            reach: PubkyAppFeedReach.All,
+            reach: 'all',
             layout: 0,
-            sort: PubkyAppFeedSort.Recent,
-            content: input.content ? PubkyAppPostKind.Short : null,
+            sort: 'recent',
+            content: input.content ? 'note' : null,
           },
           toJson: vi.fn(() => input),
         };
@@ -79,10 +72,10 @@ describe('FeedNormalizer', () => {
       icon: 'activity',
       tags: testData.tags,
       domain_tags: [],
-      reach: PubkyAppFeedReach.All,
-      sort: PubkyAppFeedSort.Recent,
+      reach: 'all',
+      sort: 'recent',
       content: null,
-      layout: PubkyAppFeedLayout.Columns,
+      layout: 'columns',
     });
 
     it('should create feed using builder with correct parameters', () => {
@@ -156,7 +149,7 @@ describe('FeedNormalizer', () => {
 
     it('should convert reach enum to string', () => {
       const params = createValidParams();
-      params.reach = PubkyAppFeedReach.Following;
+      params.reach = 'following';
 
       FeedNormalizer.to({ params, userId: testData.userPubky });
 
@@ -165,7 +158,7 @@ describe('FeedNormalizer', () => {
 
     it('should convert sort enum to string', () => {
       const params = createValidParams();
-      params.sort = PubkyAppFeedSort.Popularity;
+      params.sort = 'popularity';
 
       FeedNormalizer.to({ params, userId: testData.userPubky });
 
@@ -174,7 +167,7 @@ describe('FeedNormalizer', () => {
 
     it('should convert content enum to string when specified', () => {
       const params = createValidParams();
-      params.content = PubkyAppPostKind.Image;
+      params.content = 'image';
 
       FeedNormalizer.to({ params, userId: testData.userPubky });
 
@@ -267,7 +260,7 @@ describe('FeedNormalizer', () => {
         const builder = new PubkySpecsBuilder(testData.userPubky);
         vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(builder);
         const params = createValidParams();
-        params.reach = PubkyAppFeedReach.Wot;
+        params.reach = 'wot';
         params.domain_tags = ['🔥', 'Bitcoiner'];
 
         const created = FeedNormalizer.to({ params, userId: testData.userPubky });
@@ -313,7 +306,7 @@ describe('FeedNormalizer', () => {
         const canonicalParams = createValidParams();
         canonicalParams.tags = [];
         canonicalParams.domain_tags = ['bitcoiner'];
-        canonicalParams.reach = PubkyAppFeedReach.Wot;
+        canonicalParams.reach = 'wot';
 
         const firstEdit = FeedNormalizer.to({ params: canonicalParams, userId: testData.userPubky });
         const secondRename = FeedNormalizer.to({
@@ -331,7 +324,7 @@ describe('FeedNormalizer', () => {
         const params = createValidParams();
         params.tags = [];
         params.domain_tags = ['🔥'];
-        params.reach = PubkyAppFeedReach.Wot;
+        params.reach = 'wot';
 
         expect(() => FeedNormalizer.to({ params, userId: testData.userPubky })).not.toThrow();
         expect(() =>

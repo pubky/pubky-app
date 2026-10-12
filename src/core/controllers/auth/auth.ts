@@ -44,8 +44,8 @@ import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
+import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import type { GrantFlowRequest } from '@/services/homeserver/grant-flow';
 import type {
@@ -577,9 +577,7 @@ export class AuthController {
   private static async hydrateMeImAlive({ pubky }: { pubky: Pubky }) {
     const isCurrent = captureViewerSession();
     const signInStore = useSignInStore.getState();
-    const {
-      meta: { url },
-    } = NotificationNormalizer.to(pubky);
+    const url = LastReadNormalizer.buildUrl(pubky);
 
     // Progress callback to update signInStore from Controller layer (respecting architecture rules)
     const onProgress: BootstrapProgressCallback = (step) => {
@@ -1046,7 +1044,6 @@ export class AuthController {
     clearMuteSyncCursorSessionStorage();
 
     // Reset singletons
-    PubkySpecsSingleton.reset();
     // CoordinatorManager owns TTL lifetime; its auth listener clears session work.
     StreamCoordinator.resetInstance();
     NotificationCoordinator.resetInstance();

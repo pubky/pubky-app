@@ -1,10 +1,5 @@
-import {
-  FeedResult,
-  PubkyAppFeedLayout,
-  PubkyAppFeedReach,
-  PubkyAppFeedSort,
-  PubkySpecsBuilder,
-} from 'pubky-app-specs';
+import { FeedResult, PubkySpecsBuilder } from 'pubky-app-specs';
+import type { KnownFeedReach } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   HomeserverFeedJson,
@@ -78,13 +73,13 @@ describe('FeedApplication', () => {
       name?: string;
       tags?: string[];
       domainTags?: string[];
-      reach?: PubkyAppFeedReach;
+      reach?: KnownFeedReach;
     } = {},
   ): FeedResult => {
     const name = overrides.name ?? 'Bitcoin News';
     const tags = overrides.tags ?? ['bitcoin', 'lightning'];
     const domainTags = overrides.domainTags;
-    const reach = overrides.reach ?? PubkyAppFeedReach.All;
+    const reach = overrides.reach ?? 'all';
 
     return asOpaque<FeedResult>({
       feed: {
@@ -94,8 +89,8 @@ describe('FeedApplication', () => {
           tags,
           domain_tags: domainTags,
           reach,
-          sort: PubkyAppFeedSort.Recent,
-          layout: PubkyAppFeedLayout.Columns,
+          sort: 'recent',
+          layout: 'columns',
           content: null,
         },
         toJson: () => ({
@@ -104,7 +99,7 @@ describe('FeedApplication', () => {
           feed: {
             tags,
             ...(domainTags ? { domain_tags: domainTags } : {}),
-            reach: reach === PubkyAppFeedReach.Wot ? 'wot' : 'all',
+            reach: reach === 'wot' ? 'wot' : 'all',
             sort: 'recent',
             layout: 'columns',
             content: null,
@@ -133,10 +128,10 @@ describe('FeedApplication', () => {
     icon: 'activity',
     tags: ['bitcoin', 'lightning'],
     domain_tags: [],
-    reach: PubkyAppFeedReach.All,
-    sort: PubkyAppFeedSort.Recent,
+    reach: 'all',
+    sort: 'recent',
     content: null,
-    layout: PubkyAppFeedLayout.Columns,
+    layout: 'columns',
     created_at: Date.now(),
     updated_at: Date.now(),
     ...overrides,
@@ -199,10 +194,10 @@ describe('FeedApplication', () => {
         name: 'Bitcoin News',
         tags: ['bitcoin', 'lightning'],
         domain_tags: [],
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'all',
+        sort: 'recent',
         content: null,
-        layout: PubkyAppFeedLayout.Columns,
+        layout: 'columns',
         created_at: Date.now(),
         updated_at: Date.now(),
       };
@@ -230,7 +225,7 @@ describe('FeedApplication', () => {
 
     it('should persist profile tags locally and in homeserver JSON', async () => {
       const mockParams: TFeedPersistCreateParams = {
-        feed: createMockFeedResult({ tags: [], domainTags: ['bitcoiner', '🔥'], reach: PubkyAppFeedReach.Wot }),
+        feed: createMockFeedResult({ tags: [], domainTags: ['bitcoiner', '🔥'], reach: 'wot' }),
       };
       const { createOrUpdateSpy, requestSpy } = setupMocks();
       createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: null }));
@@ -239,7 +234,7 @@ describe('FeedApplication', () => {
       const result = await FeedApplication.persist({ userId: testUserId, params: mockParams });
 
       expect(createOrUpdateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ tags: [], domain_tags: ['bitcoiner', '🔥'], reach: PubkyAppFeedReach.Wot }),
+        expect.objectContaining({ tags: [], domain_tags: ['bitcoiner', '🔥'], reach: 'wot' }),
       );
       expect(requestSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -273,10 +268,10 @@ describe('FeedApplication', () => {
         name: 'Existing Feed',
         tags: ['bitcoin'],
         domain_tags: [],
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'all',
+        sort: 'recent',
         content: null,
-        layout: PubkyAppFeedLayout.Columns,
+        layout: 'columns',
         created_at: 1000000,
         updated_at: 1000000,
       };
@@ -370,7 +365,7 @@ describe('FeedApplication', () => {
       } = setupMocks();
       const malformedFeed = createMockFeedSchema({
         id: 'feed-existing',
-        reach: PubkyAppFeedReach.All,
+        reach: 'all',
         tags: [],
         domain_tags: ['bitcoiner'],
         created_at: 1000000,
@@ -711,7 +706,7 @@ describe('FeedApplication', () => {
     it('should delete a malformed feed even when its stream ID cannot be built', async () => {
       const mockParams = createMockDeleteParams();
       const malformedFeed = createMockFeedSchema({
-        reach: PubkyAppFeedReach.All,
+        reach: 'all',
         tags: [],
         domain_tags: ['bitcoiner'],
       });
@@ -812,10 +807,10 @@ describe('FeedApplication', () => {
           icon: 'layout-dashboard',
           tags: ['bitcoin'],
           domain_tags: [],
-          reach: PubkyAppFeedReach.All,
-          sort: PubkyAppFeedSort.Recent,
+          reach: 'all',
+          sort: 'recent',
           content: null,
-          layout: PubkyAppFeedLayout.Cards,
+          layout: 'cards',
         },
       });
       createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: null }));
@@ -824,7 +819,7 @@ describe('FeedApplication', () => {
       const saved = await FeedApplication.persist({ userId: testUserId, params: { feed: normalized } });
       const json = normalized.feed.toJson();
 
-      expect(saved.layout).toBe(PubkyAppFeedLayout.Cards);
+      expect(saved.layout).toBe('cards');
       expect(json.feed.layout).toBe('cards');
       expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: normalized.meta.url, bodyJson: json });
 
@@ -835,7 +830,7 @@ describe('FeedApplication', () => {
       const restored = await FeedApplication.fetchFeeds(testUserId);
 
       expect(restored).toHaveLength(1);
-      expect(restored[0]).toMatchObject({ id: saved.id, layout: PubkyAppFeedLayout.Cards, tags: ['bitcoin'] });
+      expect(restored[0]).toMatchObject({ id: saved.id, layout: 'cards', tags: ['bitcoin'] });
       expect(buildFeedStreamId(restored[0], testUserId)).toBe(buildFeedStreamId(saved, testUserId));
     });
 
@@ -1061,7 +1056,7 @@ describe('FeedApplication', () => {
     it('should skip gated remote profile-tag feeds without persisting or rewriting them', async () => {
       const { listSpy, requestSpy, createOrUpdateManySpy, mockBuilder, loggerWarnSpy } = setupFetchMocks();
       mockBuilder.createFeed.mockReturnValue(
-        createMockFeedResult({ tags: [], domainTags: ['bitcoiner'], reach: PubkyAppFeedReach.All }),
+        createMockFeedResult({ tags: [], domainTags: ['bitcoiner'], reach: 'all' }),
       );
       listSpy.mockResolvedValue([feedUri1]);
       requestSpy.mockResolvedValue({
