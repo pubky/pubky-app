@@ -1084,8 +1084,11 @@ export class HomeserverService {
     try {
       const pubkySdk = this.getPubkySdk();
       const pk = PublicKey.from(params.userZ32);
-      const stream = (await pubkySdk
-        .eventStreamForUser(pk, params.cursor)
+      let builder = pubkySdk.eventStreamForUser(pk, params.cursor);
+      // Events under `/priv/` are served only to a session of their owner.
+      const session = params.pathPrefix.startsWith('/priv/') ? useAuthStore.getState().selectSession() : null;
+      if (session) builder = builder.session(session);
+      const stream = (await builder
         .path(params.pathPrefix)
         .live()
         .subscribe()) as ReadableStream<HomeserverSdkUserEvent>;
