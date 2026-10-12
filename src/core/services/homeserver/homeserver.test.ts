@@ -44,6 +44,7 @@ const mockState = vi.hoisted(() => ({
   getHomeserverOf: vi.fn(),
   restoreSession: vi.fn(),
   startCookieAuthFlow: vi.fn(),
+  resumeCookieAuthFlow: vi.fn(),
   authFlowKindSignin: vi.fn(),
   eventStreamForUser: vi.fn(),
   // Auth store session
@@ -91,6 +92,7 @@ vi.mock('@synonymdev/pubky', () => {
     getHomeserverOf: (...args: unknown[]) => mockState.getHomeserverOf(...args),
     restoreSession: (...args: unknown[]) => mockState.restoreSession(...args),
     startCookieAuthFlow: (...args: unknown[]) => mockState.startCookieAuthFlow(...args),
+    resumeCookieAuthFlow: (...args: unknown[]) => mockState.resumeCookieAuthFlow(...args),
     eventStreamForUser: (...args: unknown[]) => mockState.eventStreamForUser(...args),
     client: {
       fetch: (...args: unknown[]) => mockState.clientFetch(...args),
@@ -720,6 +722,158 @@ describe('HomeserverService', () => {
           expect(tryPollOnce).not.toHaveBeenCalled();
           expect(free).toHaveBeenCalledTimes(1);
         } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('resumes the flow on the same relay channel when the page is visible again after the relay poll dropped', async () => {
+        vi.useFakeTimers();
+        const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+        try {
+          const session = createMockSession();
+          // The SDK gives up on a flow after a few failed relay requests; polling that flow again never recovers it.
+          const transportError = new Error('Request failed: HTTP transport error: error sending request');
+          transportError.name = 'RequestError';
+          const deadFlow = {
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockRejectedValueOnce(transportError).mockResolvedValue(undefined),
+            free: vi.fn(),
+          };
+          const resumedFlow = { tryPollOnce: vi.fn().mockResolvedValue(session), free: vi.fn() };
+          mockState.startCookieAuthFlow.mockReturnValue(deadFlow);
+          mockState.resumeCookieAuthFlow.mockReturnValue(resumedFlow);
+
+          const result = await HomeserverService.generateAuthUrl();
+          await vi.advanceTimersByTimeAsync(0);
+          expect(deadFlow.tryPollOnce).toHaveBeenCalledTimes(1);
+          // Still in the background: nothing resumes yet.
+          await vi.advanceTimersByTimeAsync(5_000);
+          expect(mockState.resumeCookieAuthFlow).not.toHaveBeenCalled();
+
+          // Back from Pubky Ring: the page becomes visible and reconnects to the same channel.
+          visibility.mockReturnValue('visible');
+          document.dispatchEvent(new Event('visibilitychange'));
+          await vi.advanceTimersByTimeAsync(0);
+
+          await expect(result.awaitApproval).resolves.toBe(session);
+          expect(mockState.resumeCookieAuthFlow).toHaveBeenCalledWith('https://auth.example.com/authorize');
+          expect(deadFlow.free).toHaveBeenCalled();
+        } finally {
+          visibility.mockRestore();
+          vi.useRealTimers();
+        }
+      });
+
+      it('settles a cancelled approval at once when the relay poll dropped while the page is hidden', async () => {
+        vi.useFakeTimers();
+        const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+        try {
+          const transportError = new Error('Request failed: HTTP transport error: error sending request');
+          transportError.name = 'RequestError';
+          mockState.startCookieAuthFlow.mockReturnValue({
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockRejectedValue(transportError),
+            free: vi.fn(),
+          });
+
+          const result = await HomeserverService.generateAuthUrl();
+          let settled = false;
+          const outcome = result.awaitApproval.then(
+            () => 'resolved',
+            (error: Error) => {
+              settled = true;
+              return error.name;
+            },
+          );
+          await vi.advanceTimersByTimeAsync(0);
+
+          // The page stays in the background: cancelling must not wait for it to become visible.
+          result.cancelAuthFlow();
+          await vi.advanceTimersByTimeAsync(0);
+
+          expect(settled).toBe(true);
+          await expect(outcome).resolves.toBe('AuthFlowCanceled');
+          expect(mockState.resumeCookieAuthFlow).not.toHaveBeenCalled();
+        } finally {
+          visibility.mockRestore();
+          vi.useRealTimers();
+        }
+      });
+
+      it('gives up after the resume cap while the page stays visible', async () => {
+        vi.useFakeTimers();
+        try {
+          const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
+          const deadFlow = () => ({ tryPollOnce: vi.fn().mockRejectedValue(transportError), free: vi.fn() });
+          mockState.startCookieAuthFlow.mockReturnValue({
+            authorizationUrl: 'https://auth.example.com/authorize',
+            ...deadFlow(),
+          });
+          mockState.resumeCookieAuthFlow.mockImplementation(deadFlow);
+
+          const result = await HomeserverService.generateAuthUrl();
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({ code: AuthErrorCode.SESSION_EXPIRED });
+          await vi.advanceTimersByTimeAsync(61_000);
+
+          await rejection;
+          expect(mockState.resumeCookieAuthFlow).toHaveBeenCalledTimes(60);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('rejects with SESSION_EXPIRED when the relay channel cannot be resumed', async () => {
+        vi.useFakeTimers();
+        try {
+          const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
+          const deadFlow = {
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockRejectedValue(transportError),
+            free: vi.fn(),
+          };
+          mockState.startCookieAuthFlow.mockReturnValue(deadFlow);
+          mockState.resumeCookieAuthFlow.mockImplementation(() => {
+            throw Object.assign(new Error('invalid url'), { name: 'AuthenticationError' });
+          });
+
+          const result = await HomeserverService.generateAuthUrl();
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({
+            code: AuthErrorCode.SESSION_EXPIRED,
+            context: { resumeError: 'invalid url' },
+          });
+          await vi.advanceTimersByTimeAsync(1_000);
+
+          await rejection;
+          expect(mockState.resumeCookieAuthFlow).toHaveBeenCalledTimes(1);
+          expect(deadFlow.free).toHaveBeenCalled();
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('does not resume once the relay no longer holds the approval when the page is visible again', async () => {
+        vi.useFakeTimers();
+        const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+        try {
+          const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
+          mockState.startCookieAuthFlow.mockReturnValue({
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockRejectedValue(transportError),
+            free: vi.fn(),
+          });
+
+          const result = await HomeserverService.generateAuthUrl();
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({ code: AuthErrorCode.SESSION_EXPIRED });
+          // Away for longer than the relay keeps an approval.
+          await vi.advanceTimersByTimeAsync(6 * 60 * 1000);
+          visibility.mockReturnValue('visible');
+          document.dispatchEvent(new Event('visibilitychange'));
+          await vi.advanceTimersByTimeAsync(0);
+
+          await rejection;
+          expect(mockState.resumeCookieAuthFlow).not.toHaveBeenCalled();
+        } finally {
+          visibility.mockRestore();
           vi.useRealTimers();
         }
       });
