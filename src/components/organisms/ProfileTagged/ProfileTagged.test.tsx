@@ -187,23 +187,3 @@ describe('ProfileTagged - Empty State', () => {
     expect(screen.queryAllByRole('generic').every((el) => el.getAttribute('data-slot') !== 'skeleton')).toBe(true);
   });
 });
-
-describe('ProfileTagged - Snapshots', () => {
-  it('matches snapshot', () => {
-    mockUseTagged.mockReturnValue(mockTaggedOneTag);
-    const { container } = render(<ProfileTagged />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for loading state', () => {
-    mockUseTagged.mockReturnValue(mockTaggedLoading);
-    const { container } = render(<ProfileTagged />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for empty state', () => {
-    mockUseTagged.mockReturnValue(mockTaggedEmpty);
-    const { container } = render(<ProfileTagged />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

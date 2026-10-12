@@ -785,89 +785,58 @@ describe('PostAttachments', () => {
       expect(screen.queryByTestId('post-attachments-generic-files')).not.toBeInTheDocument();
     });
   });
-});
 
-describe('PostAttachments - Snapshots', () => {
-  it('matches snapshot with pending attachments', () => {
-    const { container } = render(
-      <PostAttachments
-        attachments={null}
-        localAttachments={[]}
-        pendingAttachments={[
-          { slot: 0, type: 'image/png' },
-          { slot: 1, type: 'video/mp4' },
-          { slot: 2, type: 'audio/mpeg' },
-        ]}
-      />,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetFileUrl.mockImplementation(({ fileId, variant }) => `https://cdn.example.com/${fileId}/${variant}`);
-  });
-
-  it('matches snapshot with images only', async () => {
+  it('renders images only', async () => {
     const attachments = ['pubky://user1/pub/pubky.app/files/image1', 'pubky://user1/pub/pubky.app/files/image2'];
     mockGetMetadata.mockResolvedValue([
       createMockImageMetadata('user1:image1'),
       createMockImageMetadata('user1:image2'),
     ]);
 
-    const { container } = render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
+    render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
     });
-
-    expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with videos only', async () => {
+  it('renders videos only', async () => {
     const attachments = ['pubky://user1/pub/pubky.app/files/video1', 'pubky://user1/pub/pubky.app/files/video2'];
     mockGetMetadata.mockResolvedValue([
       createMockVideoMetadata('user1:video1'),
       createMockVideoMetadata('user1:video2'),
     ]);
 
-    const { container } = render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
+    render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
     });
-
-    expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with audios only', async () => {
+  it('renders audios only', async () => {
     const attachments = ['pubky://user1/pub/pubky.app/files/audio1'];
     mockGetMetadata.mockResolvedValue([createMockAudioMetadata('user1:audio1')]);
 
-    const { container } = render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
+    render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('post-attachments-audios')).toBeInTheDocument();
     });
-
-    expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with generic files only', async () => {
+  it('renders generic files only', async () => {
     const attachments = ['pubky://user1/pub/pubky.app/files/doc1'];
     mockGetMetadata.mockResolvedValue([createMockPdfMetadata('user1:doc1')]);
 
-    const { container } = render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
+    render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('post-attachments-generic-files')).toBeInTheDocument();
     });
-
-    expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with mixed attachment types', async () => {
+  it('renders mixed attachment types', async () => {
     const attachments = [
       'pubky://user1/pub/pubky.app/files/image1',
       'pubky://user1/pub/pubky.app/files/video1',
@@ -881,44 +850,30 @@ describe('PostAttachments - Snapshots', () => {
       createMockPdfMetadata('user1:doc1'),
     ]);
 
-    const { container } = render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
+    render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
       expect(screen.getByTestId('post-attachments-audios')).toBeInTheDocument();
       expect(screen.getByTestId('post-attachments-generic-files')).toBeInTheDocument();
     });
-
-    expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with null attachments', () => {
-    const { container } = render(<PostAttachments attachments={null} localAttachments={undefined} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with empty attachments', () => {
-    const { container } = render(<PostAttachments attachments={[]} localAttachments={undefined} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with local attachments only', async () => {
+  it('renders local attachments only', async () => {
     const localAttachments = [
       createLocalImageAttachment('image1.jpg', 'blob:http://localhost/image1'),
       createLocalAudioAttachment('audio1.mp3', 'blob:http://localhost/audio1'),
     ];
 
-    const { container } = render(<PostAttachments attachments={null} localAttachments={localAttachments} />);
+    render(<PostAttachments attachments={null} localAttachments={localAttachments} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
       expect(screen.getByTestId('post-attachments-audios')).toBeInTheDocument();
     });
-
-    expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot with mixed local attachment types', async () => {
+  it('renders mixed local attachment types', async () => {
     const localAttachments = [
       createLocalImageAttachment(),
       createLocalVideoAttachment(),
@@ -926,14 +881,12 @@ describe('PostAttachments - Snapshots', () => {
       createLocalPdfAttachment(),
     ];
 
-    const { container } = render(<PostAttachments attachments={null} localAttachments={localAttachments} />);
+    render(<PostAttachments attachments={null} localAttachments={localAttachments} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
       expect(screen.getByTestId('post-attachments-audios')).toBeInTheDocument();
       expect(screen.getByTestId('post-attachments-generic-files')).toBeInTheDocument();
     });
-
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

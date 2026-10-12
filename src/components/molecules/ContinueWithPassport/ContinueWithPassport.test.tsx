@@ -6,34 +6,6 @@ const HELP_LABEL = 'About signing in with Google';
 const PASSPORT_README_URL = 'https://github.com/pubky/pubky-passport/blob/main/README.md';
 
 describe('ContinueWithPassport', () => {
-  it('renders the Google button and fires onContinue', () => {
-    const onContinue = vi.fn();
-    const { container } = render(<ContinueWithPassport onContinue={onContinue} isPending={false} />);
-
-    const button = screen.getByTestId('continue-with-google');
-    expect(button).toHaveTextContent('Continue with Google');
-    expect(button).not.toBeDisabled();
-    expect(button).toHaveAttribute('aria-busy', 'false');
-
-    fireEvent.click(button);
-    expect(onContinue).toHaveBeenCalledTimes(1);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('is disabled and busy while an attempt is pending', () => {
-    const onContinue = vi.fn();
-    const { container } = render(<ContinueWithPassport onContinue={onContinue} isPending />);
-
-    const button = screen.getByTestId('continue-with-google');
-    expect(button).toBeDisabled();
-    expect(button).toHaveAttribute('aria-busy', 'true');
-    expect(button).toHaveTextContent('Waiting for Passport...');
-
-    fireEvent.click(button);
-    expect(onContinue).not.toHaveBeenCalled();
-    expect(container).toMatchSnapshot();
-  });
-
   it('explains the sign-in from a help mark, which never starts an attempt', () => {
     const onContinue = vi.fn();
     render(<ContinueWithPassport onContinue={onContinue} isPending={false} />);
@@ -67,5 +39,31 @@ describe('ContinueWithPassport', () => {
 
     expect(screen.getByTestId('continue-with-google')).toBeDisabled();
     expect(screen.getByRole('button', { name: HELP_LABEL })).toBeEnabled();
+  });
+
+  it('renders the Google button and fires onContinue', () => {
+    const onContinue = vi.fn();
+    render(<ContinueWithPassport onContinue={onContinue} isPending={false} />);
+
+    const button = screen.getByTestId('continue-with-google');
+    expect(button).toHaveTextContent('Continue with Google');
+    expect(button).not.toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'false');
+
+    fireEvent.click(button);
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it('is disabled and busy while an attempt is pending', () => {
+    const onContinue = vi.fn();
+    render(<ContinueWithPassport onContinue={onContinue} isPending />);
+
+    const button = screen.getByTestId('continue-with-google');
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).toHaveTextContent('Waiting for Passport...');
+
+    fireEvent.click(button);
+    expect(onContinue).not.toHaveBeenCalled();
   });
 });

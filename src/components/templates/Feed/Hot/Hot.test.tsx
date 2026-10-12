@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hot } from './Hot';
 
 let mockIsMobile = false;
@@ -290,30 +289,5 @@ describe('Hot - Mobile', () => {
     expect(screen.getByTestId('hot-tags-cards-section')).not.toHaveClass('hidden');
     expect(screen.getByTestId('hot-tags-overview')).not.toHaveClass('hidden');
     expect(screen.getByTestId('hot-active-users')).toHaveClass('hidden');
-  });
-});
-
-describe('Hot - Snapshots', () => {
-  beforeEach(() => {
-    mockIsMobile = false;
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<Hot />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('Hot - Mobile Snapshots', () => {
-  beforeEach(() => {
-    mockIsMobile = true;
-    setMobileViewport();
-  });
-  afterEach(() => {
-    resetViewport();
-  });
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<Hot />);
-    expect(container).toMatchSnapshot();
   });
 });

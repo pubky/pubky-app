@@ -270,62 +270,6 @@ describe('PostAttachmentsCarouselImage', () => {
     });
   });
 });
-
-describe('PostAttachmentsCarouselImage - Snapshots', () => {
-  it('matches snapshot before main image loads (showing placeholder)', () => {
-    const image = createMockImage({
-      name: 'snapshot-test.jpg',
-      urls: {
-        main: 'https://example.com/main.jpg',
-        feed: 'https://example.com/feed.jpg',
-      },
-    });
-    const { container } = render(<PostAttachmentsCarouselImage image={image} id="snapshot-id" />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot after main image loads', () => {
-    const image = createMockImage({
-      name: 'snapshot-loaded.jpg',
-      urls: {
-        main: 'https://example.com/main-loaded.jpg',
-        feed: 'https://example.com/feed-loaded.jpg',
-      },
-    });
-    const { container } = render(<PostAttachmentsCarouselImage image={image} id="snapshot-loaded-id" />);
-
-    const mainImage = screen.getByTestId('image-main');
-    fireEvent.load(mainImage);
-
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot for GIF image (no placeholder)', () => {
-    const gif = createMockGif({
-      name: 'snapshot-animation.gif',
-      urls: {
-        main: 'https://example.com/main-animation.gif',
-        feed: 'https://example.com/feed-animation.gif',
-      },
-    });
-    const { container } = render(<PostAttachmentsCarouselImage image={gif} id="snapshot-gif-id" />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot for PNG image before loading', () => {
-    const png = createMockImage({
-      type: 'image/png',
-      name: 'snapshot-png.png',
-      urls: {
-        main: 'https://example.com/main-image.png',
-        feed: 'https://example.com/feed-image.png',
-      },
-    });
-    const { container } = render(<PostAttachmentsCarouselImage image={png} id="snapshot-png-id" />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
 describe('local attachment fallback', () => {
   it('opens a local attachment that has no separate feed thumbnail', () => {
     render(

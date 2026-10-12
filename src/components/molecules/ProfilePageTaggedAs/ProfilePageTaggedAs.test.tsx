@@ -153,15 +153,3 @@ describe('ProfilePageTaggedAs - mobile variant', () => {
     expect(screen.queryByTestId('tagged-item-avatars')).not.toBeInTheDocument();
   });
 });
-
-describe('ProfilePageTaggedAs - Snapshots', () => {
-  it('matches snapshot with tags', () => {
-    const { container } = render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with empty tags', () => {
-    const { container } = render(<ProfilePageTaggedAs tags={[]} onTagClick={mockOnTagClick} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

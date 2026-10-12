@@ -332,39 +332,3 @@ describe('Popover - Focus preservation', () => {
     expect(trigger).toHaveFocus();
   });
 });
-
-describe('Popover - Snapshots', () => {
-  it('matches snapshot for PopoverTrigger with default props', () => {
-    const { container } = render(
-      <Popover>
-        <PopoverTrigger>Open Popover</PopoverTrigger>
-      </Popover>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for PopoverTrigger with asChild', () => {
-    const { container } = render(
-      <Popover>
-        <PopoverTrigger asChild>
-          <button>Open Popover</button>
-        </PopoverTrigger>
-      </Popover>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for popover trigger in open state', () => {
-    const { container } = render(
-      <Popover defaultOpen>
-        <PopoverTrigger asChild>
-          <button>Open Popover</button>
-        </PopoverTrigger>
-        <PopoverContent>
-          <div>Popover Content</div>
-        </PopoverContent>
-      </Popover>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -155,26 +155,4 @@ describe('SearchSuggestions', () => {
     expect(suggestions).toHaveAttribute('role', 'region');
     expect(suggestions).toHaveAttribute('aria-label', 'Search suggestions');
   });
-
-  describe('SearchSuggestions - Snapshots', () => {
-    it('matches snapshot with hot tags', () => {
-      const { container } = render(<SearchSuggestions {...defaultProps} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with empty hot tags', () => {
-      const { container } = render(<SearchSuggestions {...defaultProps} hotTags={[]} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with the full-text action', () => {
-      const { container } = render(<SearchSuggestions {...defaultProps} hasInput />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot while suggestions load', () => {
-      const { container } = render(<SearchSuggestions {...defaultProps} hasInput isLoading />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

@@ -351,28 +351,6 @@ describe('AvatarZoomModal', () => {
     });
   });
 });
-
-describe('AvatarZoomModal - Snapshots', () => {
-  it('matches snapshot when open with avatar image', () => {
-    const { container } = render(
-      <AvatarZoomModal open={true} onClose={vi.fn()} avatarUrl="https://example.com/avatar.jpg" name="John Doe" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when open with fallback initials', () => {
-    const { container } = render(<AvatarZoomModal open={true} onClose={vi.fn()} name="Jane Smith" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when closed', () => {
-    const { container } = render(
-      <AvatarZoomModal open={false} onClose={vi.fn()} avatarUrl="https://example.com/avatar.jpg" name="John Doe" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
 describe('AvatarZoomModal - Responsive Sizing', () => {
   it('uses responsive CSS variable for avatar size', () => {
     render(

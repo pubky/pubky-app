@@ -273,6 +273,12 @@ export async function waitForMarkdownEditorReady(root: ParentNode = document) {
   );
 }
 
+/** Opens one of the article composer's tabs; the panels stay mounted, so the switch is immediate. */
+export async function selectArticleComposerTab(name: 'Content' | 'Title' | 'Header' | 'Preview') {
+  await page.getByRole('tab', { name }).click();
+  await expect.element(page.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true');
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number, message: () => string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(message())), ms);

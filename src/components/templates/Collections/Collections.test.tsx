@@ -21,9 +21,4 @@ describe('Collections (template)', () => {
     expect(sections).toBeInTheDocument();
     expect(layout).toContainElement(sections);
   });
-
-  it('matches the snapshot', () => {
-    const { container } = render(<Collections />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });

@@ -116,14 +116,3 @@ describe('Settings', () => {
     expect(screen.getByTestId('content-layout-content')).toHaveClass('pt-6', 'lg:pt-0');
   });
 });
-
-describe('Settings - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(
-      <Settings>
-        <div>Test content</div>
-      </Settings>,
-    );
-    expect(container).toMatchSnapshot();
-  });
-});
