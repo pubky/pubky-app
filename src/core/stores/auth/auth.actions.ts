@@ -3,26 +3,29 @@ import type { Pubky } from '@/models/models.types';
 import { ZustandSet } from '../stores.types';
 import { AuthActions, AuthActionTypes, authInitialState, AuthInitParams, AuthStore } from './auth.types';
 
-const safeSessionExport = (session: Session | null): string | null => {
-  if (!session) return null;
-  try {
-    if (typeof session.export === 'function') {
-      return session.export();
-    }
-  } catch {
-    // ignore export errors; session persistence is best-effort here
-  }
-  return null;
-};
-
 // Actions/Mutators - State modification functions
 export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
-  init: ({ session, currentUserPubky, hasProfile }: AuthInitParams) => {
+  init: ({
+    session,
+    currentUserPubky,
+    hasProfile,
+    sessionReference = null,
+    generation,
+    retiringSession = null,
+    pendingRetirements = [],
+    restoreStatus = session ? 'ready' : currentUserPubky && !sessionReference ? 'reauth-required' : 'idle',
+  }: AuthInitParams) => {
     set(
       (state) => ({
         ...state,
         session,
-        sessionExport: safeSessionExport(session),
+        sessionReference,
+        generation: generation ?? crypto.randomUUID(),
+        retiringSession,
+        pendingRetirements,
+        restoreStatus,
+        isRestoringSession: restoreStatus === 'restoring',
+        showSignInDialog: restoreStatus === 'ready' ? false : state.showSignInDialog,
         currentUserPubky,
         hasProfile,
       }),
@@ -35,8 +38,11 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
     set(
       (state) => ({
         ...authInitialState,
+        generation: state.generation,
         hasHydrated: state.hasHydrated, // Preserve hydration state
         isLoggingOut: state.isLoggingOut, // Preserve logout state to prevent UI flash
+        pendingRetirements: state.pendingRetirements,
+        retiringSession: state.retiringSession,
       }),
       false,
       AuthActionTypes.RESET,
@@ -48,15 +54,20 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
   },
 
   setSession: (session: Session | null) => {
-    set({ session, sessionExport: safeSessionExport(session) }, false, AuthActionTypes.SET_SESSION);
+    set({ session }, false, AuthActionTypes.SET_SESSION);
   },
+
+  setNeedsAccountSync: (needsAccountSync) => set({ needsAccountSync }),
+  setRestoreStatus: (restoreStatus) =>
+    set((state) => ({
+      restoreStatus,
+      isRestoringSession: restoreStatus === 'restoring',
+      showSignInDialog: restoreStatus === 'ready' ? false : state.showSignInDialog,
+    })),
+  setRetiringSession: (retiringSession) => set({ retiringSession }),
 
   setIsRestoringSession: (isRestoringSession: boolean) => {
     set({ isRestoringSession }, false, AuthActionTypes.SET_IS_RESTORING_SESSION);
-  },
-
-  setIsResolvingProfile: (isResolvingProfile: boolean) => {
-    set({ isResolvingProfile }, false, AuthActionTypes.SET_IS_RESOLVING_PROFILE);
   },
 
   setHasProfile: (hasProfile: boolean) => {

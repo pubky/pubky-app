@@ -136,6 +136,7 @@ vi.mock('@/stores/auth/auth.store', async () => {
     useAuthStore: createZustandLikeHook({
       currentUserPubky: f.viewerPubky,
       session: mockRingSession(['/:rw'], f.viewerPubky),
+      restoreStatus: 'ready',
       sessionExport: null,
       hasProfile: true,
       hasHydrated: true,
@@ -565,7 +566,14 @@ async function renderEditArticle(viewport: { width: number; height: number }) {
   await waitForMarkdownEditorReady(dialog);
 }
 
-describe('Article — editing — visual regression', () => {
+// The dialog mounts the `next/dynamic` markdown editor, and the first test in
+// this file also pays the cold chunk load. On macOS CI the desktop capture has
+// passed at 20-28s and timed out at 33s, the mobile one at up to 17s, so the
+// default 30s budget is too tight for legitimately slow runners. Each wait
+// inside is already bounded; this only raises the sum they may add up to.
+const ARTICLE_EDITOR_TEST_TIMEOUT_MS = 60_000;
+
+describe('Article — editing — visual regression', { timeout: ARTICLE_EDITOR_TEST_TIMEOUT_MS }, () => {
   it('renders the edit article dialog at desktop viewport', async () => {
     await renderEditArticle(VRT_VIEWPORT_DESKTOP);
     await matchVrtFrameScreenshot('article-editing-desktop');

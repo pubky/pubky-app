@@ -1,11 +1,18 @@
 'use client';
 
-import { type ReactNode, useEffect, useMemo, useRef } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { isDynamicPublicRoute, matchesAllowedRoute, PUBLIC_ROUTES } from '@/app/routes';
+import {
+  AUTH_ROUTES,
+  isCoreExploreRoute,
+  isDynamicPublicRoute,
+  matchesAllowedRoute,
+  ONBOARDING_ROUTES,
+  PUBLIC_ROUTES,
+} from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
-import { AuthController } from '@/controllers/auth/auth';
 import { MigrationController } from '@/controllers/migration/migration';
+import { AuthCoordinator } from '@/coordinators/auth/auth';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
 import { useRestoreLocksAuth } from '@/hooks/useRestoreLocksAuth/useRestoreLocksAuth';
@@ -47,29 +54,43 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const { status, isLoading } = useAuthStatus();
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const session = useAuthStore((state) => state.session);
-  const sessionExport = useAuthStore((state) => state.sessionExport);
+  const sessionReference = useAuthStore((state) => state.sessionReference);
+  const restoreStatus = useAuthStore((state) => state.restoreStatus);
+  const needsSignIn = restoreStatus === 'temporary-error' || restoreStatus === 'reauth-required';
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const wasDbReset = useMigrationStore((state) => state.wasDbReset);
+  const isPublic = PUBLIC_ROUTES.includes(pathname) || isDynamicPublicRoute(pathname);
+  const [lastReadyPage, setLastReadyPage] = useState<{ pubky: string; pathname: string } | null>(null);
+  useEffect(() => {
+    if (!currentUserPubky) setLastReadyPage(null);
+    else if (restoreStatus === 'ready' && session && !wasDbReset && !isLoading)
+      setLastReadyPage({ pubky: currentUserPubky, pathname });
+  }, [currentUserPubky, pathname, restoreStatus, session, wasDbReset, isLoading]);
+  const preserveMountedPage =
+    currentUserPubky !== null && lastReadyPage?.pubky === currentUserPubky && lastReadyPage.pathname === pathname;
+  const interactiveAuth = Boolean(
+    session &&
+    restoreStatus === 'restoring' &&
+    (pathname === AUTH_ROUTES.SIGN_IN ||
+      Object.values(ONBOARDING_ROUTES).some((route) => matchesAllowedRoute(pathname, route))),
+  );
+  const canBrowseWithoutSession =
+    hasHydrated && (needsSignIn || restoreStatus === 'restoring') && (isPublic || isCoreExploreRoute(pathname));
 
   // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)
   const isMigrationResyncRunningRef = useRef(false);
 
-  // Attempt to restore an existing session snapshot on fresh loads.
   useEffect(() => {
-    if (!hasHydrated) return;
-    if (session) return;
-    if (!sessionExport) return;
-    AuthController.restorePersistedSession().catch((error) => {
-      if (isWrongEnvironmentHomeserverError(error)) {
+    const coordinator = AuthCoordinator.getInstance();
+    coordinator.start((error) => {
+      if (isWrongEnvironmentHomeserverError(error))
         toast({
           variant: 'error',
           description: 'This key is linked to a different homeserver. Use a staging account on this site.',
         });
-        return;
-      }
-      Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
     });
-  }, [hasHydrated, session, sessionExport]);
+    return () => coordinator.stop();
+  }, []);
 
   // Post-migration re-sync: fetch critical homeserver data after DB recreation
   // TODO: Consider using BroadcastChannel to notify other browser tabs when DB was recreated / resync completed
@@ -78,10 +99,12 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (!hasHydrated) return; // No need to resync if the app has NOT hydrated
     if (isMigrationResyncRunningRef.current) return; // No need to resync if the resync is ALREADY running
     if (!currentUserPubky) {
+      if (needsSignIn || sessionReference) return;
       // No need to resync if the user is NOT logged in
       useMigrationStore.getState().reset();
       return;
     }
+    if (restoreStatus !== 'ready' || !session) return;
 
     isMigrationResyncRunningRef.current = true;
 
@@ -120,18 +143,21 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     };
 
     runResync();
-  }, [wasDbReset, hasHydrated, currentUserPubky]);
+  }, [wasDbReset, hasHydrated, currentUserPubky, needsSignIn, restoreStatus, session, sessionReference]);
 
   // Determine if the current route is accessible based on authentication status
-  const isRouteAccessible = useMemo(() => {
+  const isRouteAccessible = (() => {
     // Static public routes are ALWAYS accessible, even during loading
     if (PUBLIC_ROUTES.includes(pathname)) return true;
 
     // Dynamic public routes (e.g., /post/[x]/[y], /profile/[pubky]) are also always accessible
     if (isDynamicPublicRoute(pathname)) return true;
 
-    // Wait for authentication status to be determined before allowing access to protected routes
-    if (isLoading) return false;
+    // Core explore pages still wait for hydration, but a failed restore cannot block public reads.
+    if (canBrowseWithoutSession) return true;
+
+    // An already-mounted private page may survive a healthy same-account exchange, never reauthorization.
+    if (isLoading) return (restoreStatus === 'restoring' && preserveMountedPage) || interactiveAuth;
 
     // Get the allowed routes for the current authentication status
     const routeAccess = ROUTE_ACCESS_MAP[status];
@@ -142,7 +168,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     return routeAccess.allowedRoutes.some((route) =>
       matchesAllowedRoute(pathname, route, { restrictExploreSubRoutes }),
     );
-  }, [isLoading, pathname, status]);
+  })();
 
   // Handle automatic redirects when user tries to access unauthorized routes
   useEffect(() => {
@@ -183,7 +209,10 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // 1. Authentication status is being determined (isLoading = true)
   // 2. Route access check has completed but user doesn't have access (will trigger redirect)
   // 3. Migration re-sync is in progress (wasDbReset = true)
-  if (!isRouteAccessible || wasDbReset) {
+  if (
+    !isRouteAccessible ||
+    (wasDbReset && !needsSignIn && !canBrowseWithoutSession && !preserveMountedPage && !interactiveAuth)
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">

@@ -6,15 +6,16 @@ import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
-import { formatSats } from '@/libs/utils/formatSats';
+import { formatLockPrice } from '@/libs/utils/lockPrice';
 import { cn } from '@/libs/utils/utils';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import type { TLockPrice } from '@/services/locks/locks.types';
 
 interface LockedPostCardProps {
   /** Creator-typed lock title for the reader/preview view. Ignored when `editableTitle` is set. */
   title?: string;
   /** The lock price shown beside Unlock. Nullish → the masked dots, unless `isLoading` shows the spinner instead. */
-  priceSats?: string | null;
+  price?: TLockPrice | null;
   onUnlock?: () => void;
   /** Whether the unlock modal is open. Keeps the slid-over button parked until the modal closes. */
   unlockOpen?: boolean;
@@ -46,7 +47,7 @@ export const SLIDE_MS = 200;
 /** The shared lock card. */
 export function LockedPostCard({
   title,
-  priceSats,
+  price,
   onUnlock,
   unlockOpen,
   slideOnUnlock = true,
@@ -58,7 +59,7 @@ export function LockedPostCard({
   // Loading is inert but undimmed: a dimmed pill would flash as disabled right before the price arrives.
   const isDimmed = !isLoading && (disabled ?? !onUnlock);
   const isDisabled = isLoading || isDimmed;
-  const priceLabel = priceSats ? formatSats(priceSats) : HIDDEN_REQUIREMENT_MASK;
+  const priceLabel = price ? formatLockPrice(price) : HIDDEN_REQUIREMENT_MASK;
 
   const isNested = useIsNestedPostPreview();
   const buttonRef = useRef<HTMLButtonElement>(null);

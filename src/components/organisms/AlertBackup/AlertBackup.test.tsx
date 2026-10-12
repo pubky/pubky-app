@@ -1,5 +1,9 @@
+import { Keypair } from '@synonymdev/pubky';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { AlertBackup } from './AlertBackup';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -27,12 +31,6 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
 });
 
 // Mock dependencies
-vi.mock('@/stores/onboarding/onboarding.store', () => ({
-  useOnboardingStore: vi.fn(() => ({
-    secretKey: 'test-secret-key-value',
-  })),
-}));
-
 // Mock atoms
 vi.mock('@/atoms/Button/Button', () => {
   return {
@@ -157,6 +155,27 @@ vi.mock('@/organisms/DialogConfirmBackup/DialogConfirmBackup', () => {
 });
 
 describe('AlertBackup', () => {
+  beforeEach(() => {
+    useAuthStore.setState(authInitialState);
+    useOnboardingStore.getState().reset();
+    useOnboardingStore.setState({ secretKey: Buffer.from(Keypair.random().secret()).toString('hex') });
+  });
+
+  it.each([true, false])('shows sign-in instructions only for the matching saved key (%s)', (matches) => {
+    const keypair = Keypair.random();
+    useOnboardingStore.setState({ secretKey: Buffer.from(keypair.secret()).toString('hex'), mnemonic: 'saved phrase' });
+    useAuthStore.setState({
+      currentUserPubky: matches ? keypair.publicKey.z32() : Keypair.random().publicKey.z32(),
+      restoreStatus: 'reauth-required',
+    });
+    render(<AlertBackup />);
+    const instruction = screen.queryByText(/then use it on the Sign In page/);
+    if (matches) expect(instruction).toBeInTheDocument();
+    else expect(instruction).not.toBeInTheDocument();
+    expect(screen.getByTestId('dialog-confirm-backup')).toBeInTheDocument();
+    expect(useOnboardingStore.getState().mnemonic).toBe('saved phrase');
+  });
+
   it('renders all required elements', () => {
     render(<AlertBackup />);
 

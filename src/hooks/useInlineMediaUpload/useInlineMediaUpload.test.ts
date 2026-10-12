@@ -18,6 +18,8 @@ vi.mock('@/controllers/file/file', () => ({
 
 vi.mock('@/molecules/Toaster/toast');
 
+const mockWaitForAuth = vi.hoisted(() => vi.fn<() => Promise<boolean>>());
+
 const mockCreateObjectURL = vi.fn(() => `blob:mock-${mockCreateObjectURL.mock.calls.length}`);
 const mockRevokeObjectURL = vi.fn();
 global.URL.createObjectURL = mockCreateObjectURL;
@@ -40,6 +42,7 @@ const setup = (overrides?: Partial<Parameters<typeof useInlineMediaUpload>[0]>) 
 describe('useInlineMediaUpload', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockWaitForAuth.mockResolvedValue(true);
   });
 
   describe('uploadInlineMedia', () => {
@@ -56,6 +59,43 @@ describe('useInlineMediaUpload', () => {
       expect(FileController.commitCreate).toHaveBeenCalledWith({ file: expect.any(File), pubky: PUBKY });
       expect(result.current.getPreviewUrl(fileUri('a'))).toMatch(/^blob:mock-/);
       expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    });
+
+    it('waits for authentication before uploading inline video', async () => {
+      let authorize!: (authorized: boolean) => void;
+      mockWaitForAuth.mockReturnValueOnce(new Promise((resolve) => (authorize = resolve)));
+      vi.mocked(FileController.commitCreate).mockResolvedValue(fileUri('video'));
+      const { result } = setup();
+      const video = imageFile('clip.mp4', 'video/mp4');
+
+      const pending = result.current.uploadInlineMedia(video);
+      await waitFor(() => expect(result.current.uploadingCount).toBe(1));
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
+
+      await act(async () => {
+        authorize(true);
+        await expect(pending).resolves.toBe(fileUri('video'));
+      });
+      expect(FileController.commitCreate).toHaveBeenCalledWith({ file: video, pubky: PUBKY });
+      expect(result.current.uploadingCount).toBe(0);
+    });
+
+    it.each(['denied', 'discarded'] as const)('cancels a %s upload without a retry toast', async (reason) => {
+      let authorize!: (authorized: boolean) => void;
+      mockWaitForAuth.mockReturnValueOnce(new Promise((resolve) => (authorize = resolve)));
+      const { result } = setup();
+
+      const pending = result.current.uploadInlineMedia(imageFile('clip.mp4', 'video/mp4'));
+      await waitFor(() => expect(result.current.uploadingCount).toBe(1));
+      await act(async () => {
+        if (reason === 'discarded') await result.current.discardSession();
+        authorize(reason !== 'denied');
+        await expect(pending).rejects.toMatchObject({ name: INLINE_MEDIA_UPLOAD_REJECTION_NAME });
+      });
+
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+      expect(result.current.uploadingCount).toBe(0);
     });
 
     it('rejects when disabled or unauthenticated', async () => {
@@ -557,3 +597,7 @@ describe('useInlineMediaUpload', () => {
     });
   });
 });
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ waitForAuth: mockWaitForAuth }),
+}));

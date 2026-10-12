@@ -6,6 +6,9 @@ import { APP_ROUTES } from '@/app/routes';
 import { DEFAULT_CUSTOM_FEED_ICON } from '@/config/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { useCustomFeedForm } from './useCustomFeedForm';
 import { CUSTOM_FEED_CONTENT_ALL, CUSTOM_FEED_FORM_FIELDS, type CustomFeedFormData } from './useCustomFeedForm.types';
 
@@ -58,9 +61,31 @@ const fillValidForm = async (form: UseFormReturn<CustomFeedFormData>) => {
 };
 
 describe('useCustomFeedForm', () => {
+  it('preserves an open feed draft and blocks writes during account recovery', async () => {
+    const { result } = renderHook(() => useCustomFeedForm({ mode: 'edit', feed: createFeed(), open: true }));
+    await fillValidForm(result.current.form);
+    act(() => useAuthStore.setState({ restoreStatus: 'restoring' }));
+    await act(async () => {
+      expect(await result.current.submit()).toBe(false);
+    });
+    await act(async () => {
+      expect(await result.current.deleteFeed()).toBe(false);
+    });
+    expect(mocks.commitUpdate).not.toHaveBeenCalled();
+    expect(mocks.commitDelete).not.toHaveBeenCalled();
+    expect(result.current.form.getValues('name')).toBe('My Feed');
+    expect(useAuthStore.getState().showSignInDialog).toBe(false);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.pathname = APP_ROUTES.HOME;
+    useAuthStore.setState({
+      ...authInitialState,
+      currentUserPubky: 'user',
+      session: mockSession(),
+      restoreStatus: 'ready',
+    });
   });
 
   describe('form seeding', () => {
@@ -255,6 +280,12 @@ describe('useCustomFeedForm', () => {
     it('round-trips a foreign icon through an unrelated edit unchanged', async () => {
       const feed = createFeed({ icon: 'another-clients-icon' });
       mocks.pathname = APP_ROUTES.HOME;
+      useAuthStore.setState({
+        ...authInitialState,
+        currentUserPubky: 'user',
+        session: mockSession(),
+        restoreStatus: 'ready',
+      });
       mocks.commitUpdate.mockResolvedValue({ id: 'feed-abc123', name: 'Renamed' });
 
       const { result } = renderHook(() => useCustomFeedForm({ mode: 'edit', feed, open: true }));
