@@ -23,6 +23,7 @@ import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { LAYOUT } from '@/stores/home/home.types';
+import { mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelineFeed } from './TimelineFeed';
@@ -61,7 +62,7 @@ function ItemCount({ collectionId }: { collectionId: string }) {
 describe('collection feed with local membership', () => {
   beforeEach(() => {
     postStreamQueue.clear();
-    useAuthStore.setState({ currentUserPubky: AUTHOR });
+    useAuthStore.setState({ currentUserPubky: AUTHOR, session: null });
     vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
     vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
     vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({ post_keys: [], last_post_score: null });
@@ -313,6 +314,49 @@ describe('collection feed with local membership', () => {
     expect(screen.getByRole('button', { name: 'Add content' })).toBeInTheDocument();
     expect(screen.queryByText('No saved posts')).not.toBeInTheDocument();
     expect(screen.queryByTestId(`${AUTHOR}:0000000000001`)).not.toBeInTheDocument();
+  });
+
+  it('shows the stream error instead of releasing members whose batch hydration failed', async () => {
+    const missing = `${AUTHOR}:0000000000001`;
+    const collectionId = await PostController.commitCreateCollection({
+      authorId: AUTHOR,
+      name: 'Reading list',
+      items: [toUri(missing)],
+    });
+    route.userId = AUTHOR;
+    route.postId = parseCompositeId(collectionId).id;
+    // The stream page succeeds, but the batch that would hydrate its cold member fails.
+    vi.mocked(NexusPostStreamService.fetch).mockResolvedValue({ post_keys: [missing], last_post_score: null });
+    const byIds = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockRejectedValue(new TypeError('Failed to fetch'));
+    showFeed(collectionId);
+    expect(await screen.findByText('Error: Failed to fetch')).toBeInTheDocument();
+    expect(byIds).toHaveBeenCalledWith(expect.objectContaining({ post_ids: [missing] }));
+    expect(screen.queryByTestId(missing)).not.toBeInTheDocument();
+    expect(screen.queryByText('No saved posts')).not.toBeInTheDocument();
+  });
+
+  it('retries instead of erroring when a restored session cuts the batch hydration short', async () => {
+    const cold = `${AUTHOR}:0000000000001`;
+    const collectionId = await PostController.commitCreateCollection({
+      authorId: AUTHOR,
+      name: 'Reading list',
+      items: [toUri(cold)],
+    });
+    route.userId = AUTHOR;
+    route.postId = parseCompositeId(collectionId).id;
+    vi.mocked(NexusPostStreamService.fetch).mockResolvedValue({ post_keys: [cold], last_post_score: null });
+    // A fresh tab restores the same viewer's session while the first batch is in flight.
+    const byIds = vi
+      .spyOn(NexusPostStreamService, 'fetchByIds')
+      .mockImplementationOnce(async () => {
+        useAuthStore.setState({ session: mockSession() });
+        return [];
+      })
+      .mockResolvedValue([]);
+    showFeed(collectionId);
+    expect(await screen.findByTestId(cold)).toBeInTheDocument();
+    expect(byIds).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText(/^Error:/)).not.toBeInTheDocument();
   });
 
   it('shows an item added on another device when refreshing an envelope just read from Nexus', async () => {

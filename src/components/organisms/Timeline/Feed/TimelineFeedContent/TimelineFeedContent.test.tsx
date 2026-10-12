@@ -787,6 +787,21 @@ describe('TimelineFeedContent', () => {
       expect(mockRemovePosts).not.toHaveBeenCalled();
       expect(mockRefresh).not.toHaveBeenCalled();
     });
+
+    it('keeps loading, not empty, while the only ready members are muted and the stream hydrates', () => {
+      // The stream already delivered the muted member; the other one still hydrates.
+      const members = ['muted-user:post1', 'other-user:post2'];
+      mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, mutedUserIdSet: new Set(['muted-user']) });
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, loading: true, postIds: [members[0]] });
+      const { rerender } = render(collectionFeed(members));
+      expect(screen.getByTestId('loading')).toHaveTextContent('true');
+      expect(screen.getByTestId('post-count')).toHaveTextContent('0');
+
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: false, postIds: members });
+      rerender(collectionFeed(members));
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'other-user:post2');
+    });
   });
 
   describe('Mute set changes', () => {

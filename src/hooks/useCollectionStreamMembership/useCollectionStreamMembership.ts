@@ -260,7 +260,7 @@ export function useCollectionStreamMembership({
     const update = (identity: object, change: (current: MembershipState) => MembershipState) => {
       setState((current) => (current.identity === identity ? change(current) : current));
     };
-    const prepend = (ids: string | string[]) => {
+    const prepend = (ids: string | string[], explicit: boolean) => {
       const added = Array.isArray(ids) ? ids : [ids];
       const { state: snapshot, pagination: raw } = latest.current;
       update(snapshot.identity, (current) => {
@@ -270,7 +270,7 @@ export function useCollectionStreamMembership({
         for (const id of added) {
           hidden.delete(id);
           dismissed.delete(id);
-          if (!current.members?.includes(id)) explicitAdds.add(id);
+          if (explicit && !current.members?.includes(id)) explicitAdds.add(id);
         }
         return { ...current, hidden, dismissed, explicitAdds, order: [...new Set([...added, ...current.order])] };
       });
@@ -299,8 +299,11 @@ export function useCollectionStreamMembership({
         const { pagination: raw, collectionId: envelopeId, viewerId: viewer } = latest.current;
         await Promise.all([raw.refresh(), envelopeId ? refreshEnvelope(envelopeId, viewer) : undefined]);
       },
-      prependOptimisticPosts: prepend,
-      prependPosts: async (ids: string | string[]) => prepend(ids),
+      // Optimistic inserts follow a confirmed save (Add Content, the FAB), so they may show a
+      // card before its membership read lands. The generic entry point also serves the
+      // composer, which inserts before its collection save can fail: membership decides there.
+      prependOptimisticPosts: (ids: string | string[]) => prepend(ids, true),
+      prependPosts: async (ids: string | string[]) => prepend(ids, false),
       removePosts: (ids: string | string[]) => {
         const { state: snapshot, pagination: raw } = latest.current;
         const removed = (Array.isArray(ids) ? ids : [ids]).filter((id) => !snapshot.dismissed.has(id));

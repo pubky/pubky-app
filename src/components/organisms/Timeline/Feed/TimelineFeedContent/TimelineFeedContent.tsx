@@ -226,7 +226,11 @@ function TimelineFeedContent({
       ? []
       : MuteFilter.filterPostsSafe(orderedPostIds, mutedUserIdSet)
     : orderedPostIds;
-  const displayLoading = feedDisplayLoading || (isCollectionFeed && mutedUsersLoading);
+  // Muting filters after the projection: members that are all muted while the stream
+  // still hydrates are not yet an empty collection.
+  const displayLoading =
+    feedDisplayLoading ||
+    (isCollectionFeed && (mutedUsersLoading || (isHydrating && postIds.length === 0 && orderedPostIds.length > 0)));
   // A collection can show its membership while its stream still loads. Until the
   // stream settles the feed stays in its loading-more state, which keeps
   // scroll-to-load disarmed, so no page request races the initial or eager loads.

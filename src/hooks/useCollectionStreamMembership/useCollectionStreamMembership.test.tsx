@@ -233,9 +233,7 @@ describe('useCollectionStreamMembership', () => {
     );
     await waitFor(() => expect(result.current.loading).toBe(false));
     await waitFor(() => expect(result.current.postIds).toEqual([localOnly, indexed]));
-    await act(async () => {
-      await result.current.prependPosts(explicitlyAdded);
-    });
+    act(() => result.current.prependOptimisticPosts(explicitlyAdded));
     act(() => result.current.removePostsOptimistically([localOnly, explicitlyAdded]).commit());
     await act(async () => {
       await result.current.loadMore();
@@ -276,7 +274,7 @@ describe('useCollectionStreamMembership', () => {
       });
       await waitFor(() => expect(result.current.loading).toBe(false));
       await waitFor(() => expect(result.current.postIds).toEqual(members));
-      await act(async () => result.current.prependPosts(explicitlyAdded));
+      act(() => result.current.prependOptimisticPosts(explicitlyAdded));
 
       const pending = Promise.withResolvers<Awaited<ReturnType<typeof NexusPostStreamService.fetch>>>();
       let loadingPage: Promise<void> | undefined;
@@ -382,6 +380,20 @@ describe('useCollectionStreamMembership', () => {
     rerender({ members: [], streamId: STREAM });
     expect(result.current.postIds).toEqual([]);
   });
+
+  it('leaves a generic insert to membership, so a post whose collection save fails never shows', async () => {
+    // The composer inserts its new post before saving it to the collection.
+    const { result, rerender } = mount(['author:a']);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => result.current.prependPosts('created'));
+    expect(result.current.postIds).toEqual(['author:a']);
+    await act(async () => result.current.refresh());
+    expect(result.current.postIds).toEqual(['author:a']);
+    // A successful save lands in membership, which shows the post.
+    rerender({ members: ['author:a', 'created'], streamId: STREAM });
+    expect(result.current.postIds).toEqual(['author:a', 'created']);
+  });
+
   it('passes the pagination through untouched when disabled', () => {
     const pagination = settledPagination({ postIds: ['author:a'], loading: true });
     const { result } = renderHook(() =>
