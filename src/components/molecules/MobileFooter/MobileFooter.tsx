@@ -16,6 +16,7 @@ import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
@@ -32,7 +33,7 @@ export interface MobileFooterProps {
  */
 export function MobileFooter({ className }: MobileFooterProps) {
   const pathname = usePathname();
-  const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
+  const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
   const { isPublicExploreRoute } = usePublicRoute();
   const { userDetails, currentUserPubky } = useCurrentUserProfile();

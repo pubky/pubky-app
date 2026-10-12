@@ -12,6 +12,7 @@ const mockLoadMoreTaggers = vi.fn();
 let mockTaggerStates = new Map<string, TaggersState>();
 
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({ push: mockRouterPush }),
 }));
 

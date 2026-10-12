@@ -169,7 +169,7 @@ describe('usePostSaveTargets', () => {
     const pending = Promise.withResolvers<void>();
     mocks.commitUpdateCollectionItem.mockReturnValueOnce(pending.promise);
     const { result, rerender } = renderHook(() => usePostSaveTargets('author:post1'));
-    let update: Promise<void>;
+    let update: Promise<boolean>;
     act(() => {
       update = result.current.toggleCollection('author:collection1');
     });
@@ -209,6 +209,11 @@ describe('usePostSaveTargets', () => {
     expect(result.current.collections.map((collection) => collection.isUpdating)).toEqual([true, false]);
 
     await act(async () => {
+      expect(await result.current.toggleCollection('author:collection1')).toBe(false);
+    });
+    expect(mocks.commitUpdateCollectionItem).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
       await result.current.toggleCollection('author:collection2');
     });
     expect(mocks.commitUpdateCollectionItem).toHaveBeenLastCalledWith({
@@ -238,3 +243,8 @@ describe('usePostSaveTargets', () => {
     });
   });
 });
+
+// These tests exercise the mutation after auth readiness; restore races use the real store in auth-wait tests.
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ waitForAuth: async () => true }),
+}));

@@ -7,6 +7,7 @@ import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 
 vi.mock('@/molecules/Toaster/toast');
 
@@ -14,7 +15,7 @@ const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
 
 describe('concurrent picker regression', () => {
   beforeEach(() => {
-    useAuthStore.setState({ currentUserPubky: AUTHOR });
+    useAuthStore.setState({ currentUserPubky: AUTHOR, session: mockSession(), restoreStatus: 'ready' });
     vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
   });
 
@@ -38,7 +39,7 @@ describe('concurrent picker regression', () => {
 
       const pendingFirstRequest = Promise.withResolvers<void>();
       vi.mocked(HomeserverService.request).mockReturnValueOnce(pendingFirstRequest.promise);
-      let firstUpdate!: Promise<void>;
+      let firstUpdate!: Promise<boolean>;
       act(() => {
         firstUpdate = first.result.current.toggleCollection(collectionId);
       });

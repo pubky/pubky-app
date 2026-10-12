@@ -1,7 +1,9 @@
 'use client';
 import { AuthController } from '@/controllers/auth/auth';
+import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import type { UseInviteCodeSignUpResult } from './useInviteCodeSignUp.types';
 
@@ -17,7 +19,7 @@ const SIGN_UP_RETRY_MAX_DELAY_MS = 5000;
  * during the pubky step). The auth store is updated only when AuthController.signUp succeeds.
  *
  * On success the keys in the onboarding store become the user's real keys.
- * On non-retryable failure clears onboarding secrets; on retryable failure keeps secrets so users can retry safely.
+ * Keeps the original onboarding secrets after any failure so a consumed invite remains recoverable.
  * In both failure paths it shows a toast and throws so the caller can keep the user on the form.
  *
  * @example
@@ -53,23 +55,28 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
         await AuthController.signUp({ secretKey, signupToken: inviteCode });
         return;
       } catch (error) {
+        if (isAuthFlowCanceledError(error)) throw error;
         lastError = error;
 
-        const canRetry = isAppError(error) && isRetryable(error) && attempt < SIGN_UP_MAX_ATTEMPTS - 1;
+        // Once adopted, recovery owns the saved session and bootstrap; don't mint a new root grant.
+        const canRetry =
+          !useAuthStore.getState().sessionReference &&
+          isAppError(error) &&
+          isRetryable(error) &&
+          attempt < SIGN_UP_MAX_ATTEMPTS - 1;
         if (canRetry) {
           const retryAfter = getRetryAfter(error);
           await sleep(getRetryDelayMs(attempt, retryAfter));
           continue;
         }
 
-        // Keep secrets for retryable failures to avoid losing a paid signup when transport fails.
-        if (!(isAppError(error) && isRetryable(error))) {
-          useOnboardingStore.getState().clearSecrets();
-        }
+        // Retain the original keys: account creation may have succeeded before the response was lost.
 
         if (isAppError(error)) {
           if (isAuthError(error)) {
-            description = 'Invite code is invalid or expired.';
+            description = useOnboardingStore.getState().signupAttempt
+              ? 'Could not finish signing in. Your recovery keys are still saved. Try again.'
+              : 'Invite code is invalid or expired.';
           } else if (error.message) {
             description = error.message;
           }
@@ -83,7 +90,7 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
       }
     }
 
-    throw lastError ?? new Error('[useInviteCodeSignUp] Sign-up failed after retries');
+    throw lastError;
   }
 
   return { validateAndSignUp };

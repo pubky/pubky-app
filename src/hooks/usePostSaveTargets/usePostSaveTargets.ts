@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { postUriBuilder } from 'pubky-app-specs';
 import { DEFAULT_COLLECTION_LAYOUT } from '@/config/collections';
 import { PostController } from '@/controllers/post/post';
@@ -9,6 +9,7 @@ import {
   useAuthoredCollectionsPagination,
 } from '@/hooks/useAuthoredCollections/useAuthoredCollections';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { parseCompositeId } from '@/models/models.utils';
@@ -42,17 +43,17 @@ type UsePostSaveTargetsResult = {
   hasMoreCollections: boolean;
   isCollectionsLoadingMore: boolean;
   loadMoreCollections: () => Promise<void>;
-  toggleBookmark: () => Promise<void>;
-  toggleCollection: (collectionId: string) => Promise<void>;
-  createCollectionWithPost: (name: string) => Promise<void>;
+  toggleBookmark: () => Promise<boolean>;
+  toggleCollection: (collectionId: string) => Promise<boolean>;
+  createCollectionWithPost: (name: string) => Promise<boolean>;
 };
 
-export function usePostSaveTargets(
-  postId: string,
-  { isPickerOpen = false }: UsePostSaveTargetsOptions = {},
-): UsePostSaveTargetsResult {
+export function usePostSaveTargets(postId: string, options: UsePostSaveTargetsOptions = {}): UsePostSaveTargetsResult {
+  const isPickerOpen = options.isPickerOpen ?? false;
+  const { waitForAuth } = useRequireAuth(options.isPickerOpen ?? true);
+  const pending = useRef(new Set<string>());
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const bookmark = useBookmark(postId);
+  const bookmark = useBookmark(postId, { active: options.isPickerOpen ?? true });
   // Each completed toggle forces a fresh local read and stays busy until that read lands.
   // `pendingReads` maps a collection to the read version its last toggle waits for.
   const [localReads, setLocalReads] = useState({ version: 0, pendingReads: new Map<string, number>() });
@@ -109,11 +110,13 @@ export function usePostSaveTargets(
 
   const toggleCollection = async (collectionId: string) => {
     const target = saveTargets.find((collection) => collection.id === collectionId);
-    if (!target || target.isUpdating) return;
+    if (!target || target.isUpdating || pending.current.has(collectionId)) return false;
+    pending.current.add(collectionId);
 
     setCollectionUpdating(collectionId, true);
 
     try {
+      if (!(await waitForAuth(collectionId))) return false;
       await PostController.commitUpdateCollectionItem({
         collectionId,
         postId,
@@ -122,12 +125,14 @@ export function usePostSaveTargets(
       toast({
         title: target.isSaved ? 'Post removed from collection.' : 'Post added to collection.',
       });
+      return true;
     } catch (error) {
       Logger.error('[usePostSaveTargets] Failed to update collection membership', { error, collectionId, postId });
       toast({
         variant: 'error',
         description: isAppError(error) ? error.message : 'Failed to update collection.',
       });
+      return false;
     } finally {
       // Observe the current database after success/rollback, including writes
       // from other pickers. Waiting for an expected boolean can never settle
@@ -137,16 +142,19 @@ export function usePostSaveTargets(
         version: version + 1,
         pendingReads: new Map(pendingReads).set(collectionId, version + 1),
       }));
+      pending.current.delete(collectionId);
       setCollectionUpdating(collectionId, false);
     }
   };
 
   const createCollectionWithPost = async (name: string) => {
-    if (!currentUserPubky || isCreatingCollection) return;
+    if (!currentUserPubky || pending.current.has('create')) return false;
+    pending.current.add('create');
 
     setIsCreatingCollection(true);
 
     try {
+      if (!(await waitForAuth('create'))) return false;
       await PostController.commitCreateCollection({
         authorId: currentUserPubky,
         name,
@@ -156,13 +164,16 @@ export function usePostSaveTargets(
       toast({
         title: 'Collection created and post saved.',
       });
+      return true;
     } catch (error) {
       Logger.error('[usePostSaveTargets] Failed to create collection', { error, postId });
       toast({
         variant: 'error',
         description: isAppError(error) ? error.message : 'Failed to create collection.',
       });
+      return false;
     } finally {
+      pending.current.delete('create');
       setIsCreatingCollection(false);
     }
   };

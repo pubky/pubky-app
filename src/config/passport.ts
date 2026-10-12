@@ -1,7 +1,7 @@
 /**
  * Pubky Passport ("Continue with Google") integration constants.
  *
- * Passport is a hosted signer: franky starts a normal `pubkyauth://` cookie flow, opens
+ * Passport is a hosted signer: franky starts a `pubkyauth://` grant flow, opens
  * `<passportUrl>/authorize#d=<encoded authorization URL>` in a popup and keeps polling the HTTP
  * relay. Only the SDK `Session` returned by the relay authenticates the user; every message or
  * callback described here is a UI signal.

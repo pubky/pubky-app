@@ -62,7 +62,7 @@ function ItemCount({ collectionId }: { collectionId: string }) {
 describe('collection feed with local membership', () => {
   beforeEach(() => {
     postStreamQueue.clear();
-    useAuthStore.setState({ currentUserPubky: AUTHOR, session: null });
+    useAuthStore.setState({ currentUserPubky: AUTHOR, session: mockSession(), restoreStatus: 'ready' });
     vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
     vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
     vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({ post_keys: [], last_post_score: null });
@@ -336,6 +336,7 @@ describe('collection feed with local membership', () => {
   });
 
   it('retries instead of erroring when a restored session cuts the batch hydration short', async () => {
+    useAuthStore.setState({ session: null, restoreStatus: 'restoring' });
     const cold = `${AUTHOR}:0000000000001`;
     const collectionId = await PostController.commitCreateCollection({
       authorId: AUTHOR,
@@ -349,7 +350,7 @@ describe('collection feed with local membership', () => {
     const byIds = vi
       .spyOn(NexusPostStreamService, 'fetchByIds')
       .mockImplementationOnce(async () => {
-        useAuthStore.setState({ session: mockSession() });
+        useAuthStore.setState({ session: mockSession(), restoreStatus: 'ready' });
         return [];
       })
       .mockResolvedValue([]);
