@@ -233,7 +233,7 @@ export const reloadUntilOwnFollowingIsEmpty = (attempts = 10) => {
 };
 
 export const waitForPutLastRead = () => {
-  cy.intercept('PUT', '**/pub/pubky.app/last_read*').as('putLastRead');
+  cy.intercept('PUT', '**/priv/app.pubky/v1/last_read.json*').as('putLastRead');
   cy.wait('@putLastRead').should('have.property', 'response').its('statusCode').should('eq', 201);
 };
 

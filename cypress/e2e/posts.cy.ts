@@ -469,11 +469,11 @@ describe('posts', () => {
       [tag1, tag2, tag3].forEach((tag) => {
         cy.contains('button', tag).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
       });
-      cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
+      cy.intercept('DELETE', '**/pub/social/v1/tags/**').as('deleteTag');
       cy.contains('button', tag2).click();
       cy.wait('@deleteTag').its('response.statusCode').should('eq', 204);
       cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '0');
-      cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
+      cy.intercept('PUT', '**/pub/social/v1/tags/**').as('putTag');
       cy.contains('button', tag2).click();
       cy.wait('@putTag').its('response.statusCode').should('eq', 201);
       cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
@@ -503,7 +503,7 @@ describe('posts', () => {
     cy.location('pathname').should('contain', '/post/');
 
     // add three tags to post
-    cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
+    cy.intercept('PUT', '**/pub/social/v1/tags/**').as('putTag');
     cy.get('[data-cy="single-post-card"]').within(() => {
       cy.get('[data-cy="post-tag-add-button"]').click();
       [tag1, tag2, tag3].forEach((tag) => {
@@ -524,7 +524,7 @@ describe('posts', () => {
     });
 
     // check tags are added to post with count of 1
-    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
+    cy.intercept('DELETE', '**/pub/social/v1/tags/**').as('deleteTag');
     cy.get('[data-cy="single-post-card"]').within(() => {
       cy.get('[data-cy="clickable-tags-list"]')
         .filter(':visible')
@@ -552,7 +552,7 @@ describe('posts', () => {
     });
 
     // untag tag 1 after page reload to cover bug https://github.com/pubky/pubky-app/issues/1721
-    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag1');
+    cy.intercept('DELETE', '**/pub/social/v1/tags/**').as('deleteTag1');
     cy.get('[data-cy="clickable-tags-list"]').within(() => {
       cy.contains('button', tag1).click();
       cy.wait('@deleteTag1').its('response.statusCode').should('eq', 204);
@@ -577,7 +577,7 @@ describe('posts', () => {
     cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').click();
 
     // add three tags to post
-    cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
+    cy.intercept('PUT', '**/pub/social/v1/tags/**').as('putTag');
     cy.get('[data-cy="single-post-card"]').within(() => {
       [tag1, tag2, tag3].forEach((tag) => {
         cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
@@ -597,7 +597,7 @@ describe('posts', () => {
     });
 
     // check tags are added to post with count of 1
-    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
+    cy.intercept('DELETE', '**/pub/social/v1/tags/**').as('deleteTag');
     cy.get('[data-cy="single-post-card"]').within(() => {
       cy.get('[data-cy="post-tags-panel"]')
         .filter(':visible')
@@ -625,7 +625,7 @@ describe('posts', () => {
     });
 
     // untag tag 1 after page reload to cover bug https://github.com/pubky/pubky-app/issues/1721
-    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag1');
+    cy.intercept('DELETE', '**/pub/social/v1/tags/**').as('deleteTag1');
     cy.get('[data-cy="single-post-card"]').within(() => {
       cy.get('[data-cy="post-tags-panel"]')
         .filter(':visible')
@@ -645,7 +645,7 @@ describe('posts', () => {
         cy.get('[data-cy="post-bookmark-btn"]').click();
       });
       cy.get('[data-cy="post-save-bookmarks-option"]').should('be.visible');
-      cy.intercept('PUT', '**/pub/pubky.app/bookmarks/**').as('createBookmark');
+      cy.intercept('PUT', '**/priv/social/v1/bookmarks/**').as('createBookmark');
       cy.get('[data-cy="post-save-bookmarks-option"]').click();
       cy.wait('@createBookmark').its('response.statusCode').should('eq', 201);
       // click away to dismiss collections popover list
@@ -674,7 +674,7 @@ describe('posts', () => {
       .then(($posts) => {
         $posts.each((_idx, element) => {
           cy.wrap(element).find('[data-cy="post-bookmark-btn"]').click();
-          cy.intercept('DELETE', '**/pub/pubky.app/bookmarks/**').as('deleteBookmark');
+          cy.intercept('DELETE', '**/priv/social/v1/bookmarks/**').as('deleteBookmark');
           cy.get('[data-cy="post-save-bookmarks-option"]').click();
           cy.wait('@deleteBookmark').its('response.statusCode').should('eq', 204);
           // click away to dismiss collections popover list
@@ -716,7 +716,7 @@ describe('posts', () => {
 
     repostPost({ filterText: postContent });
 
-    cy.intercept('DELETE', '**/pub/pubky.app/posts/**').as('postDeleted');
+    cy.intercept('DELETE', '**/pub/social/v1/posts/**').as('postDeleted');
 
     // After repost, success toast has clickable Undo button
     cy.get('[data-cy="toast"]')

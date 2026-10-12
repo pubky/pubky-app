@@ -89,8 +89,8 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
     // Match the homeserver transport URL the same way as the other writes.
-    // An exact `/pub/pubky.app/last_read` url does not.
-    cy.intercept('PUT', '**/pub/pubky.app/last_read*').as('putLastRead');
+    // An exact `/priv/app.pubky/v1/last_read.json` url does not.
+    cy.intercept('PUT', '**/priv/app.pubky/v1/last_read.json*').as('putLastRead');
     goToProfilePageFromHeader();
     cy.wait('@putLastRead').should('have.property', 'response').its('statusCode').should('eq', 201);
     verifyNotificationCounter(0);
@@ -500,7 +500,7 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     goToCollectionsPage();
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible');
-    cy.intercept('PUT', '**/pub/pubky.app/bookmarks/**').as('followCollection');
+    cy.intercept('PUT', '**/priv/social/v1/bookmarks/**').as('followCollection');
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).click();
     cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
     cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Follow').click();

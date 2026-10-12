@@ -48,7 +48,7 @@ export const createCollection = (
   }
   cy.get(`[data-cy="collection-layout-${layout}"]`).click();
 
-  cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('collectionCreated');
+  cy.intercept('PUT', '**/pub/social/v1/posts/**').as('collectionCreated');
   cy.get('[data-cy="collection-form-save-btn"]').should('not.be.disabled').click();
   cy.wait('@collectionCreated').its('response.statusCode').should('eq', 201);
 
@@ -70,7 +70,7 @@ export const editCollectionFromHero = (newName: string, newDescription: string) 
   cy.get('[data-cy="collection-form-name-input"]').should('be.visible').clear().type(newName);
   cy.get('[data-cy="collection-form-description-input"]').clear().type(newDescription);
 
-  cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('collectionUpdated');
+  cy.intercept('PUT', '**/pub/social/v1/posts/**').as('collectionUpdated');
   cy.get('[data-cy="collection-form-save-btn"]').click();
   cy.wait('@collectionUpdated').its('response.statusCode').should('be.oneOf', [200, 201, 204]);
 
@@ -103,7 +103,7 @@ export const togglePostInCollectionViaSavePicker = (postContent: string, collect
   });
 
   // adding/removing a collection item rewrites the collection post on the homeserver
-  cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('collectionItemToggled');
+  cy.intercept('PUT', '**/pub/social/v1/posts/**').as('collectionItemToggled');
   cy.contains('[data-cy="post-save-collection-option"]', collectionName).should('be.visible').click();
   cy.wait('@collectionItemToggled').its('response.statusCode').should('be.oneOf', [200, 201, 204]);
 
@@ -119,7 +119,7 @@ export const createCollectionFromSavePicker = (postContent: string, collectionNa
   });
 
   cy.get('[data-cy="post-save-new-collection-input"]').should('be.visible').type(collectionName);
-  cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('collectionCreatedFromPicker');
+  cy.intercept('PUT', '**/pub/social/v1/posts/**').as('collectionCreatedFromPicker');
   cy.get('[data-cy="post-save-new-collection-create-btn"]').click();
   cy.wait('@collectionCreatedFromPicker').its('response.statusCode').should('eq', 201);
 
@@ -136,7 +136,7 @@ export const addPostToCollectionByUrl = (postUrl: string) => {
   cy.get('[data-cy="collection-add-content"]').click();
   cy.get('[data-cy="add-content-url-input"]').should('be.visible');
 
-  cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postAddedByUrl');
+  cy.intercept('PUT', '**/pub/social/v1/posts/**').as('postAddedByUrl');
   cy.get('[data-cy="add-content-url-input"]').type(`${postUrl}{enter}`);
   cy.wait('@postAddedByUrl').its('response.statusCode').should('be.oneOf', [200, 201, 204]);
 
@@ -165,7 +165,7 @@ export const createPostInCollection = (postContent: string) => {
     .should('be.visible')
     .within(() => {
       cy.get('textarea').should('have.value', '').type(postContent);
-      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreatedInCollection');
+      cy.intercept('PUT', '**/pub/social/v1/posts/**').as('postCreatedInCollection');
       cy.get('[data-cy="post-input-action-bar-post"]').click();
       // first PUT creates the post itself
       cy.wait('@postCreatedInCollection').its('response.statusCode').should('eq', 201);
