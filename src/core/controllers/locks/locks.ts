@@ -145,9 +145,8 @@ export class LocksController {
   /**
    * Clears the Locks session locally. Does not call the Lock Server.
    *
-   * Call this when the server rejects the session (HTTP 401) — `signout` would be rejected too.
-   * Restoring a session makes no network call, so a stale secret keeps the UI looking signed in until
-   * the next creator call fails.
+   * Invalidates pending sign-ins too. Request failures must check their captured generation first,
+   * so a late rejection of an old session cannot discard its replacement.
    */
   static clearSession(): void {
     this.sessionGeneration++;
@@ -163,10 +162,11 @@ export class LocksController {
    * session (401 → Auth) is cleared, as on restore, so the creator signs in again instead of retrying.
    */
   static async fetchPaykitSetupStatus(): Promise<TPaykitSetupStatus> {
+    const isCurrent = this.captureSession();
     try {
       return await LocksApplication.fetchPaykitSetupStatus();
     } catch (error) {
-      if (isAppError(error) && isAuthError(error)) this.clearSession();
+      if (isCurrent() && isAppError(error) && isAuthError(error)) this.clearSession();
       throw error;
     }
   }
@@ -208,10 +208,20 @@ export class LocksController {
 
   /**
    * Publishes one content lock from the composer's files. The upload/bundle workflow lives in
-   * `LocksApplication.createLockContent`.
+   * `LocksApplication.createLockContent`. A rejected session is cleared only if no logout or newer
+   * sign-in has superseded the request; the caller still receives the original error.
    */
-  static createLockContent(params: TCreateLockContentParams): Promise<TCreateContentLockResult> {
-    return LocksApplication.createLockContent(params);
+  static async createLockContent(params: TCreateLockContentParams): Promise<TCreateContentLockResult> {
+    const isCurrent = this.captureSession();
+    try {
+      return await LocksApplication.createLockContent(params);
+    } catch (error) {
+      // A homeserver auth failure cannot be fixed by signing in to the Lock Server.
+      if (isCurrent() && isAppError(error) && isAuthError(error) && error.service === ErrorService.Locks) {
+        this.clearSession();
+      }
+      throw error;
+    }
   }
 
   /**

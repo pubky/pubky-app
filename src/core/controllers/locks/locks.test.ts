@@ -399,6 +399,34 @@ describe('LocksController (auth)', () => {
 
       expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
     });
+
+    it.each(['before', 'after'] as const)(
+      'keeps a newer sign-in when an old setup check rejects %s its exchange resolves',
+      async (rejectionTiming) => {
+        const check = Promise.withResolvers<never>();
+        const exchange = Promise.withResolvers<{ session: LocksSdkSession; secret: string }>();
+        mocks.fetchPaykitSetupStatus.mockReturnValueOnce(check.promise);
+        mocks.exchangeSessionCode.mockReturnValueOnce(exchange.promise);
+        const rejected = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', {
+          service: ErrorService.Locks,
+          operation: 'test',
+        });
+        const checked = expect(LocksController.fetchPaykitSetupStatus()).rejects.toBe(rejected);
+        const signingIn = LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
+        if (rejectionTiming === 'after') {
+          exchange.resolve({ session: fakeSession, secret: 'new-secret' });
+          await signingIn;
+        }
+
+        check.reject(rejected);
+        await checked;
+        exchange.resolve({ session: fakeSession, secret: 'new-secret' });
+        await expect(signingIn).resolves.toEqual({ session: fakeSession, secret: 'new-secret' });
+
+        expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+        expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBe('new-secret');
+      },
+    );
   });
 });
 
@@ -419,6 +447,27 @@ describe('LocksController (content)', () => {
     await expect(LocksController.createLockContent(params)).resolves.toBe(lock);
     expect(mocks.createLockContent).toHaveBeenCalledWith(params);
   });
+
+  it.each([ErrorService.Locks, ErrorService.Homeserver])(
+    'only clears the current Locks session for a Locks auth error: %s',
+    async (service) => {
+      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+      const rejected = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service, operation: 'test' });
+      mocks.createLockContent.mockRejectedValueOnce(rejected);
+
+      await expect(
+        LocksController.createLockContent({
+          attachments: [],
+          buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }),
+          lockConfig: { amountSats: '1000' },
+        }),
+      ).rejects.toBe(rejected);
+
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(
+        service === ErrorService.Locks ? null : fakeSession,
+      );
+    },
+  );
 });
 
 const MOCK_LOCK_FILE = mockLockFile();
