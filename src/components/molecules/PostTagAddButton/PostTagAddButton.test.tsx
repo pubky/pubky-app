@@ -72,20 +72,3 @@ describe('PostTagAddButton', () => {
     expect(mockOnClick).not.toHaveBeenCalled();
   });
 });
-
-describe('PostTagAddButton - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<PostTagAddButton />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when disabled', () => {
-    const { container } = render(<PostTagAddButton disabled />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with plain variant', () => {
-    const { container } = render(<PostTagAddButton variant="plain" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

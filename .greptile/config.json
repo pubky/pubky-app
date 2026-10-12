@@ -2,7 +2,7 @@
   "strictness": 2,
   "commentTypes": ["logic", "syntax", "style"],
   "triggerOnUpdates": false,
-  "ignorePatterns": "**/__snapshots__/**\n**/*.generated.*\ndist/**\nnode_modules/**\npublic/sw.js\npublic/sw.js.map\n**/*.snap",
+  "ignorePatterns": "**/*.generated.*\ndist/**\nnode_modules/**\npublic/sw.js\npublic/sw.js.map",
   "excludeAuthors": ["dependabot[bot]"],
   "instructions": "Local-first decentralized social app (Next.js 16, React 19 with the React Compiler, Dexie/IndexedDB, Zustand, TanStack Query, Tailwind v4, Shadcn UI). AGENTS.md (attached for every file via files.json) is the agent entry point and lists the hard constraints and non-negotiables; docs/ is canonical and the per-path docs are attached via files.json. Architecture enforcement is critical: check layer boundary violations (controllers -> application -> services -> models), the ADR-0009 cross-application allow-list, local-first read/write rules and TTL updates. Imports go through the tsconfig path aliases to concrete modules (no index.ts barrels, no src/config/index.ts, @/config/<module>, @/app/routes). Apply the code-quality rules in docs/development-workflow.md (suppressed lints need a reason, no dead code, no unused exports, no manual memoization, scrutinize optional parameters). Verify every finding in source before commenting.",
   "rules": [

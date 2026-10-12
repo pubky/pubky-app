@@ -7,6 +7,4 @@ export interface UseLockFileResult {
   priceSats: string | null;
   /** True until the lock file for a set URL arrives or fails. `priceSats` alone can't tell this from a lock with no price. */
   isLoading: boolean;
-  /** True when the `lock` URL is invalid or the fetch failed (already sent to Sentry). */
-  hasError: boolean;
 }

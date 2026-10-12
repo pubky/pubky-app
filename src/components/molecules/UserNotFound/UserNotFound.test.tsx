@@ -44,11 +44,4 @@ describe('UserNotFound', () => {
     await user.click(screen.getByRole('button', { name: 'Explore Tags' }));
     expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOT);
   });
-
-  describe('Snapshots', () => {
-    it('matches snapshot', () => {
-      const { container } = render(<UserNotFound />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

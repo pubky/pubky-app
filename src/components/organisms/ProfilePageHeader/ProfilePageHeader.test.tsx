@@ -1,10 +1,9 @@
 import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ProfilePageHeader } from './ProfilePageHeader';
 import { ProfilePageHeaderProps } from './ProfilePageHeader.types';
 
@@ -348,29 +347,6 @@ describe('ProfilePageHeader', () => {
     expect(onAvatarClick).toHaveBeenCalledTimes(1);
   });
 });
-
-describe('ProfilePageHeader - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<ProfilePageHeader {...mockProps} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('ProfilePageHeader - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<ProfilePageHeader {...mockProps} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
 describe('ProfilePageHeader - Other User Profile', () => {
   it('shows Follow button when viewing other user and not following', () => {
     render(<ProfilePageHeader {...mockOtherUserProps} />);

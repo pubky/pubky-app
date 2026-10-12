@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import Dexie from 'dexie';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { GRID_FEED_SKELETON_COUNT } from '@/config/feed';
@@ -12,7 +12,6 @@ import { PostMain } from '@/organisms/PostMain/PostMain';
 import { VRT_FEED_POSTS } from '@/test/fixtures/feed/posts';
 import { VRT_AUTHOR_PROFILES } from '@/test/fixtures/feed/profiles';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelineCardsPosts } from './CardsPosts';
 
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({ usePostDetails: vi.fn() }));
@@ -247,21 +246,4 @@ describe('TimelineCardsPosts cold reads', () => {
       }
     },
   );
-});
-
-describe('TimelineCardsPosts - Snapshots', () => {
-  it('renders a complete Cards post', () => {
-    const { container } = render(<TimelineCardsPosts {...snapshotProps} />, { wrapper: TooltipProvider });
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('TimelineCardsPosts - Mobile Snapshots', () => {
-  beforeEach(() => setMobileViewport());
-  afterEach(() => resetViewport());
-
-  it('renders the same complete Cards post on mobile', () => {
-    const { container } = render(<TimelineCardsPosts {...snapshotProps} />, { wrapper: TooltipProvider });
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });

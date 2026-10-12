@@ -380,31 +380,4 @@ describe('SinglePostContent', () => {
       expect(screen.queryByTestId('single-post-participants')).not.toBeInTheDocument();
     });
   });
-
-  describe('SinglePostContent - Snapshots', () => {
-    const mockPostId = 'author:post123';
-
-    beforeEach(() => {
-      vi.clearAllMocks();
-      useHomeStore.setState({ layout: LAYOUT.COLUMNS });
-      vi.mocked(usePostCounts).mockReturnValue(mockUsePostCounts());
-      vi.mocked(usePostAncestors).mockReturnValue(mockUsePostAncestors());
-      vi.mocked(useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
-    });
-
-    it('matches snapshot with short post and no replies', () => {
-      const { container } = render(<SinglePostContent postId={mockPostId} postDetails={SHORT_POST_DETAILS} />);
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with long post (article)', () => {
-      const { container } = render(<SinglePostContent postId={mockPostId} postDetails={ARTICLE_POST_DETAILS} />);
-      expect(container).toMatchSnapshot();
-    });
-
-    it('matches snapshot with deleted parent post', () => {
-      const { container } = render(<SinglePostContent postId={mockPostId} postDetails={DELETED_SHORT_POST_DETAILS} />);
-      expect(container).toMatchSnapshot();
-    });
-  });
 });

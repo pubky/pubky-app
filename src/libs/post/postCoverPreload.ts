@@ -1,6 +1,6 @@
 import type { NexusPostDetails } from '@/services/nexus/nexus.types';
 import { isArticleContent, parseArticleContent } from './articleContent';
-import { articleHasInlineSlotZero } from './articleInlineImages';
+import { articleHasInlineSlotZero } from './articleInlineMedia';
 import { resolvePostAttachmentUrl } from './postAttachmentUrl';
 import { POST_COVER_DESKTOP_VARIANT, POST_COVER_MOBILE_VARIANT } from './postCoverVariant';
 

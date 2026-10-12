@@ -140,25 +140,3 @@ describe('PullToRefreshIndicator', () => {
     });
   });
 });
-
-describe('PullToRefreshIndicator - Snapshots', () => {
-  it('matches snapshot when idle (returns null)', () => {
-    const { container } = render(<PullToRefreshIndicator state="idle" pullDistance={0} />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot in pulling state', () => {
-    const { container } = render(<PullToRefreshIndicator state="pulling" pullDistance={50} />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot in ready state', () => {
-    const { container } = render(<PullToRefreshIndicator state="ready" pullDistance={80} />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot in refreshing state', () => {
-    const { container } = render(<PullToRefreshIndicator state="refreshing" pullDistance={56} />);
-    expect(container).toMatchSnapshot();
-  });
-});

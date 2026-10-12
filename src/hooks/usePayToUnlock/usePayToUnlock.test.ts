@@ -138,19 +138,19 @@ describe('usePayToUnlock (opening)', () => {
   });
 
   it.each([
-    ['none', 'pubkybob', null],
-    ['handshake', 'pubkybob', null],
-    ['connected', null, null],
-    ['recovery_required', null, 'recovery_required'],
-    ['blocked', null, 'blocked'],
-  ] as const)('connection state %s: QR %s, notice %s', async (connectionState, qr, issue) => {
+    ['none', 'pubkybob'],
+    ['handshake', 'pubkybob'],
+    ['connected', null],
+    ['recovery_required', 'pubkybob'],
+    ['blocked', null],
+  ] as const)('connection state %s: QR %s', async (connectionState, qr) => {
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('stored-1');
     vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('pending'));
     vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue(connectionState);
 
     const { result } = renderPay();
     await waitFor(() => expect(connectionCalls()).toBeGreaterThan(0));
-    await waitFor(() => expect(result.current.connectionIssue).toBe(issue));
+    await waitFor(() => expect(result.current.connectionState).toBe(connectionState));
     expect(result.current.handshakePubky).toBe(qr);
   });
 
@@ -193,13 +193,16 @@ describe('usePayToUnlock (opening)', () => {
   it('re-checks on reopen', async () => {
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue(null);
     vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(true);
+    vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('recovery_required');
 
     const { result, rerender } = renderPayWith({ open: true });
-    await waitFor(() => expect(result.current.stage).toBe('waiting'));
+    await waitFor(() => expect(result.current.connectionState).toBe('recovery_required'));
 
     rerender({ open: false });
     rerender({ open: true });
     expect(result.current.stage).toBe('checking');
+    expect(result.current.connectionState).toBeNull();
+    expect(result.current.handshakePubky).toBeNull();
     expect(LocksController.fetchPurchaseBundleId).toHaveBeenCalledTimes(2);
   });
 
@@ -546,6 +549,8 @@ describe('usePayToUnlock (finishing)', () => {
     act(() => result.current.recheck());
 
     expect(result.current.stage).toBe('waiting');
+    // This wait re-reads the content, never the link, so there is no link state to be waiting on.
+    expect(result.current.isConnectionPending).toBe(false);
   });
 });
 
@@ -629,10 +634,11 @@ describe('usePayToUnlock (waiting)', () => {
     expect(statusCalls()).toBe(lookupsWhenConnected + 2);
   });
 
-  // `handshake` is only Paykit's half of the link; the wallet still needs the creator pubky to answer.
-  it('keeps the QR through handshake and drops it on connected', async () => {
+  it('keeps the contact handoff through recovery and handshake, then drops it on connected', async () => {
     vi.mocked(LocksController.fetchPaykitConnectionState)
       .mockResolvedValueOnce('none')
+      .mockResolvedValueOnce('handshake')
+      .mockResolvedValueOnce('recovery_required')
       .mockResolvedValueOnce('handshake')
       .mockResolvedValue('connected');
 
@@ -640,13 +646,16 @@ describe('usePayToUnlock (waiting)', () => {
     await advance(0);
     expect(result.current.handshakePubky).toBe('pubkybob');
 
-    await advance(CONNECTION_POLL_INTERVAL_MS);
-    expect(result.current.handshakePubky).toBe('pubkybob');
-    expect(connectionCalls()).toBe(2);
+    for (const state of ['handshake', 'recovery_required', 'handshake']) {
+      await advance(CONNECTION_POLL_INTERVAL_MS);
+      expect(result.current.connectionState).toBe(state);
+      expect(result.current.handshakePubky).toBe('pubkybob');
+    }
 
     await advance(CONNECTION_POLL_INTERVAL_MS);
     expect(result.current.handshakePubky).toBeNull();
-    expect(connectionCalls()).toBe(3);
+    expect(result.current.connectionState).toBe('connected');
+    expect(LocksController.startPayment).not.toHaveBeenCalled();
   });
 
   // An operator switch this reader cannot flip: reading it again would never say anything new.
@@ -655,7 +664,7 @@ describe('usePayToUnlock (waiting)', () => {
 
     const { result } = renderPay();
     await advance(0);
-    expect(result.current.connectionIssue).toBe('blocked');
+    expect(result.current.connectionState).toBe('blocked');
 
     const lookupsWhenBlocked = statusCalls();
     await advance(POLL_INTERVAL_MS);
@@ -669,7 +678,7 @@ describe('usePayToUnlock (waiting)', () => {
 
     const { result } = renderPay();
     await advance(0);
-    expect(result.current.connectionIssue).toBe('recovery_required');
+    expect(result.current.connectionState).toBe('recovery_required');
 
     await advance(CONNECTION_POLL_INTERVAL_MS * 2);
     expect(connectionCalls()).toBe(3);
@@ -689,6 +698,44 @@ describe('usePayToUnlock (waiting)', () => {
     await advance(POLL_INTERVAL_MS);
     expect(result.current.stage).toBe('paid');
     expect(LocksController.fetchPaidContent).toHaveBeenCalledWith({ lockFile, bundleId: 'stored-1' });
+  });
+
+  // The submission reports no link state, so the wait is "checking" until the first read answers;
+  // a failed read keeps it there rather than claiming a connection nobody has seen.
+  it('reports the link as pending until the first read answers, through a failed one', async () => {
+    vi.mocked(LocksController.fetchPaykitConnectionState)
+      .mockRejectedValueOnce(new Error('Paykit unavailable'))
+      .mockResolvedValue('none');
+
+    const { result } = renderPay();
+    await advance(0);
+    expect(result.current.stage).toBe('waiting');
+    expect(connectionCalls()).toBe(1);
+    expect(result.current.isConnectionPending).toBe(true);
+
+    await advance(CONNECTION_POLL_INTERVAL_MS);
+    expect(connectionCalls()).toBe(2);
+    expect(result.current.isConnectionPending).toBe(false);
+    expect(result.current.handshakePubky).toBe('pubkybob');
+  });
+
+  // The download after a completed payment keeps the waiting stage; a link read still out by then
+  // must not leave the screen saying it is checking the connection.
+  it('drops the pending link once the payment completes, even with the link read still out', async () => {
+    vi.mocked(LocksController.fetchPaykitConnectionState).mockImplementation(hangForever);
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce(task('pending'))
+      .mockResolvedValue(task('completed'));
+    vi.mocked(LocksController.fetchPaidContent).mockReturnValue(new Promise<TUnlockedContent>(() => {}));
+
+    const { result } = renderPay();
+    await advance(0);
+    expect(result.current.isConnectionPending).toBe(true);
+
+    await advance(POLL_INTERVAL_MS);
+    expect(result.current.stage).toBe('waiting');
+    expect(LocksController.fetchPaidContent).toHaveBeenCalledWith({ lockFile, bundleId: 'stored-1' });
+    expect(result.current.isConnectionPending).toBe(false);
   });
 
   it('keeps the last QR and keeps polling the task when the link read fails', async () => {
@@ -891,21 +938,25 @@ describe('usePayToUnlock (waiting)', () => {
   });
 
   // Scanning cannot help before the wallet is set up.
-  it('swaps the QR for the wallet setup notice while the server reports it', async () => {
-    vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('none');
-    vi.mocked(LocksController.fetchPaymentStatus)
-      .mockResolvedValueOnce(task('pending', { walletSetupNeeded: true }))
-      .mockResolvedValue(task('pending'));
+  it.each(['none', 'recovery_required'] as const)(
+    'hides the %s handoff until wallet setup finishes',
+    async (connectionState) => {
+      vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue(connectionState);
+      vi.mocked(LocksController.fetchPaymentStatus)
+        .mockResolvedValueOnce(task('pending', { walletSetupNeeded: true }))
+        .mockResolvedValue(task('pending'));
 
-    const { result } = renderPay();
-    await advance(0);
-    expect(result.current.walletSetupNeeded).toBe(true);
-    expect(result.current.handshakePubky).toBeNull();
+      const { result } = renderPay();
+      await advance(0);
+      expect(result.current.connectionState).toBe(connectionState);
+      expect(result.current.walletSetupNeeded).toBe(true);
+      expect(result.current.handshakePubky).toBeNull();
 
-    await advance(POLL_INTERVAL_MS);
-    expect(result.current.walletSetupNeeded).toBe(false);
-    expect(result.current.handshakePubky).toBe('pubkybob');
-  });
+      await advance(POLL_INTERVAL_MS);
+      expect(result.current.walletSetupNeeded).toBe(false);
+      expect(result.current.handshakePubky).toBe('pubkybob');
+    },
+  );
 
   // The reader cannot pay before the invoice exists, so the server's time to create it does not count.
   it('parks no sooner than three minutes after the invoice deadline', async () => {

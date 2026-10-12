@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Edit, FileText, Flag, Key, Link, MegaphoneOff, Trash, UserRoundPlus } from 'lucide-react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MENU_VARIANT } from '@/config/ui';
@@ -313,192 +313,107 @@ describe('PostMenuActionsContent', () => {
 
     expect(screen.queryByText('Copy text of post')).not.toBeInTheDocument();
   });
-});
 
-describe('PostMenuActionsContent - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  const callbackProps = {
+    onReportClick: vi.fn(),
+    onEditClick: vi.fn(),
+    onDeleteClick: vi.fn(),
+    isDeleting: false,
+  };
 
-  it('matches snapshot for all menu items visible (other user post)', async () => {
-    mockUsePostMenuActions.mockReturnValue({
-      menuItems: [
-        {
-          id: POST_MENU_ACTION_IDS.FOLLOW,
-          label: 'Follow Test User',
-          icon: UserRoundPlus,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.COPY_PUBKY,
-          label: 'Copy pubky',
-          icon: Key,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.COPY_LINK,
-          label: 'Copy link to post',
-          icon: Link,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.COPY_TEXT,
-          label: 'Copy text of post',
-          icon: FileText,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.MUTE,
-          label: 'Mute Test User',
-          icon: MegaphoneOff,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.REPORT,
-          label: 'Report post',
-          icon: Flag,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-      ],
-      isLoading: false,
-    });
+  const twoItems = () => [
+    {
+      id: POST_MENU_ACTION_IDS.COPY_LINK,
+      label: 'Copy link to post',
+      icon: Link,
+      onClick: vi.fn(),
+      variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
+    },
+    {
+      id: POST_MENU_ACTION_IDS.DELETE,
+      label: 'Delete post',
+      icon: Trash,
+      onClick: vi.fn(),
+      variant: POST_MENU_ACTION_VARIANTS.DESTRUCTIVE,
+      disabled: true,
+    },
+  ];
 
-    const { container } = render(
+  it('renders dropdown menu items for the dropdown variant', () => {
+    mockUsePostMenuActions.mockReturnValue({ menuItems: twoItems(), isLoading: false });
+
+    render(
       <PostMenuActionsContent
         postId="pk:test123:post456"
         variant={MENU_VARIANT.DROPDOWN}
         onActionComplete={vi.fn()}
-        onReportClick={vi.fn()}
-        onEditClick={vi.fn()}
-        onDeleteClick={vi.fn()}
-        isDeleting={false}
+        {...callbackProps}
       />,
     );
-    expect(container.firstChild).toMatchSnapshot();
+
+    const items = screen.getAllByTestId('dropdown-menu-item');
+    expect(items).toHaveLength(2);
+    expect(screen.queryByTestId('menu-button')).not.toBeInTheDocument();
+    expect(items[1]).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByText('Delete post')).toHaveClass('text-destructive');
+    expect(screen.getByText('Copy link to post')).toHaveClass('text-muted-foreground');
   });
 
-  it('matches snapshot for own post menu items', async () => {
-    mockUsePostMenuActions.mockReturnValue({
-      menuItems: [
-        {
-          id: POST_MENU_ACTION_IDS.COPY_PUBKY,
-          label: 'Copy pubky',
-          icon: Key,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.COPY_LINK,
-          label: 'Copy link to post',
-          icon: Link,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.COPY_TEXT,
-          label: 'Copy text of post',
-          icon: FileText,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.EDIT,
-          label: 'Edit post',
-          icon: Edit,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.DELETE,
-          label: 'Delete post',
-          icon: Trash,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DESTRUCTIVE,
-        },
-      ],
-      isLoading: false,
-    });
+  it('renders ghost buttons for the sheet variant', () => {
+    mockUsePostMenuActions.mockReturnValue({ menuItems: twoItems(), isLoading: false });
 
-    const { container } = render(
-      <PostMenuActionsContent
-        postId="pk:test123:post456"
-        variant={MENU_VARIANT.DROPDOWN}
-        onActionComplete={vi.fn()}
-        onReportClick={vi.fn()}
-        onEditClick={vi.fn()}
-        onDeleteClick={vi.fn()}
-        isDeleting={false}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for mobile sheet variant', async () => {
-    mockUsePostMenuActions.mockReturnValue({
-      menuItems: [
-        {
-          id: POST_MENU_ACTION_IDS.FOLLOW,
-          label: 'Follow Test User',
-          icon: UserRoundPlus,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.COPY_PUBKY,
-          label: 'Copy pubky',
-          icon: Key,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.COPY_LINK,
-          label: 'Copy link to post',
-          icon: Link,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.COPY_TEXT,
-          label: 'Copy text of post',
-          icon: FileText,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.MUTE,
-          label: 'Mute Test User',
-          icon: MegaphoneOff,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-        {
-          id: POST_MENU_ACTION_IDS.REPORT,
-          label: 'Report post',
-          icon: Flag,
-          onClick: vi.fn(),
-          variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
-        },
-      ],
-      isLoading: false,
-    });
-
-    const { container } = render(
+    render(
       <PostMenuActionsContent
         postId="pk:test123:post456"
         variant={MENU_VARIANT.SHEET}
         onActionComplete={vi.fn()}
-        onReportClick={vi.fn()}
-        onEditClick={vi.fn()}
-        onDeleteClick={vi.fn()}
-        isDeleting={false}
+        {...callbackProps}
       />,
     );
-    expect(container.firstChild).toMatchSnapshot();
+
+    const buttons = screen.getAllByTestId('menu-button');
+    expect(buttons).toHaveLength(2);
+    expect(screen.queryByTestId('dropdown-menu-item')).not.toBeInTheDocument();
+    expect(buttons[0]).toHaveClass('justify-start');
+    expect(buttons[1]).toBeDisabled();
+    expect(screen.getByText('Delete post')).toHaveClass('text-destructive');
+  });
+
+  it('runs the item action then calls onActionComplete', async () => {
+    const items = twoItems();
+    const onActionComplete = vi.fn();
+    mockUsePostMenuActions.mockReturnValue({ menuItems: items, isLoading: false });
+
+    render(
+      <PostMenuActionsContent
+        postId="pk:test123:post456"
+        variant={MENU_VARIANT.SHEET}
+        onActionComplete={onActionComplete}
+        {...callbackProps}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Copy link to post'));
+
+    await waitFor(() => {
+      expect(onActionComplete).toHaveBeenCalledTimes(1);
+    });
+    expect(items[0].onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the skeleton while loading', () => {
+    mockUsePostMenuActions.mockReturnValue({ menuItems: [], isLoading: true });
+
+    render(
+      <PostMenuActionsContent
+        postId="pk:test123:post456"
+        variant={MENU_VARIANT.DROPDOWN}
+        onActionComplete={vi.fn()}
+        {...callbackProps}
+      />,
+    );
+
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('dropdown-menu-item')).not.toBeInTheDocument();
   });
 });

@@ -3,10 +3,12 @@
 import { type SyntheticEvent, useRef, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { collectAttachmentRefIndexes, isAuthorFileUri } from '@/libs/post/articleInlineMedia';
 import {
   POST_COVER_DESKTOP_FALLBACK_VARIANT,
   POST_COVER_DESKTOP_MEDIA,
@@ -61,6 +63,8 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     desktopTagsPanelRef.current?.focus();
   };
 
+  const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
+
   const { title, body, coverImage, hasCover, isCoverLoading } = usePostArticle({
     content,
     attachments,
@@ -69,11 +73,33 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     coverImageVariant: POST_COVER_MOBILE_VARIANT,
     coverImageDesktopVariant: POST_COVER_DESKTOP_VARIANT,
     coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
+    // Read only while the store is index-aligned with the attachments: right after an edit it already
+    // holds the new order while this render still shows the old post, and a non-image in the new
+    // slot 0 must not veto the cover the old post still has
+    localCoverType:
+      localAttachments && localAttachments.length === (attachments?.length ?? 0)
+        ? localAttachments[0]?.type
+        : undefined,
   });
 
-  const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
+  // Inline slots are typed from their file rows (the markdown never says video or image). Only the
+  // slots the body references and the author owns are read: anything else never renders, and a row
+  // request for it would only add a fetch and hold the loading state. The cover slot is
+  // `usePostArticle`'s; a body that references slot 0 has no cover, so it is included exactly then.
+  const articleAuthorId = (() => {
+    try {
+      return parseCompositeId(postId).pubky;
+    } catch {
+      return '';
+    }
+  })();
+  const inlineSlotIndexes = collectAttachmentRefIndexes(body);
+  const inlineSlotUris = (attachments ?? []).filter(
+    (uri, index) => inlineSlotIndexes.has(index) && isAuthorFileUri(uri, articleAuthorId),
+  );
+  const { files: inlineFiles, isLoading: inlineFilesLoading } = useAttachmentsMetadata({ fileUris: inlineSlotUris });
 
-  const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
+  const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
   // Local entries are index-aligned with attachments; slot 0 is the cover
   // only when the slot-0 rule says so (otherwise it's an inline image).
@@ -127,14 +153,6 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   const desktopCoverSrc = desktopCoverFailed
     ? (finalCoverImage?.desktopFallbackSrc ?? finalCoverImage?.desktopSrc)
     : finalCoverImage?.desktopSrc;
-
-  const articleAuthorId = (() => {
-    try {
-      return parseCompositeId(postId).pubky;
-    } catch {
-      return '';
-    }
-  })();
 
   const articleHeader = (
     <>
@@ -195,7 +213,13 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
         content={body}
         isArticle
         fullArticle
-        articleImages={{ attachments: attachments ?? [], authorId: articleAuthorId, postId }}
+        articleMedia={{
+          attachments: attachments ?? [],
+          authorId: articleAuthorId,
+          postId,
+          files: inlineFiles,
+          metadataSettled: !inlineFilesLoading,
+        }}
         onLinkClick={handleLinkClick}
       />
     </>

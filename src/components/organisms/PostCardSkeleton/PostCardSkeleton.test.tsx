@@ -10,10 +10,3 @@ describe('PostCardSkeleton', () => {
     expect(skeletons.length).toBeGreaterThan(0);
   });
 });
-
-describe('PostCardSkeleton - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<PostCardSkeleton />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

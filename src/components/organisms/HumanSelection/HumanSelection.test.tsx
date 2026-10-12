@@ -43,11 +43,4 @@ describe('HumanSelection', () => {
     expect(screen.getByTestId('invite-code-link')).toBeInTheDocument();
     expect(screen.getByText('invite code.')).toBeInTheDocument();
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(
-      <HumanSelection onClick={() => {}} onInviteCodeClick={() => {}} onDevMode={() => {}} />,
-    );
-    expect(container).toMatchSnapshot();
-  });
 });

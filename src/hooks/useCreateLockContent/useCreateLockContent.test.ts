@@ -16,11 +16,10 @@ const mocks = vi.hoisted(() => ({
   createLockContent: vi.fn(),
   commitCreate: vi.fn(),
   post: vi.fn(),
-  clearSession: vi.fn(),
 }));
 
 vi.mock('@/controllers/locks/locks', () => ({
-  LocksController: { createLockContent: mocks.createLockContent, clearSession: mocks.clearSession },
+  LocksController: { createLockContent: mocks.createLockContent },
 }));
 
 vi.mock('@/controllers/post/post', () => ({
@@ -173,7 +172,7 @@ describe('useCreateLockContent', () => {
     expect(result.current.isPublishing).toBe(false);
   });
 
-  it('drops the Locks session and returns auth-expired when the Lock Server rejects it', async () => {
+  it('returns auth-expired when the Lock Server rejects the session', async () => {
     mocks.createLockContent.mockRejectedValue(
       Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Locks session rejected by the Lock Server', {
         service: ErrorService.Locks,
@@ -185,7 +184,6 @@ describe('useCreateLockContent', () => {
     const outcome = await act(() => result.current.publish());
 
     expect(outcome).toEqual({ status: 'auth-expired' });
-    expect(mocks.clearSession).toHaveBeenCalledTimes(1);
   });
 
   describe('price guard', () => {
@@ -286,7 +284,6 @@ describe('useCreateLockContent', () => {
     const outcome = await act(() => result.current.publish());
 
     expect(outcome).toEqual({ status: 'failed' });
-    expect(mocks.clearSession).not.toHaveBeenCalled();
   });
 
   it('keeps the session and does not flag re-auth on a non-auth failure', async () => {
@@ -296,6 +293,5 @@ describe('useCreateLockContent', () => {
     const outcome = await act(() => result.current.publish());
 
     expect(outcome).toEqual({ status: 'failed' });
-    expect(mocks.clearSession).not.toHaveBeenCalled();
   });
 });

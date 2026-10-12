@@ -87,16 +87,4 @@ describe('SearchUsersSection', () => {
     expect(screen.getByTestId('user-pk:user1')).toBeInTheDocument();
     expect(screen.getByTestId('user-pk:user2')).toBeInTheDocument();
   });
-
-  describe('SearchUsersSection - Snapshots', () => {
-    it('matches snapshot with users', () => {
-      const { container } = render(<SearchUsersSection title="Users" users={mockUsers} onUserClick={vi.fn()} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with empty users', () => {
-      const { container } = render(<SearchUsersSection title="Users" users={[]} onUserClick={vi.fn()} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

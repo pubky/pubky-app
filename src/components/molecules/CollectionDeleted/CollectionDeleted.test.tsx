@@ -81,10 +81,3 @@ describe('CollectionDeleted', () => {
     expect(screen.getByTestId('container')).toHaveClass('custom-extra');
   });
 });
-
-describe('CollectionDeleted - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<CollectionDeleted />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

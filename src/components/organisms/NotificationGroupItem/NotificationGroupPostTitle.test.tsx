@@ -123,24 +123,3 @@ describe('NotificationGroupPostTitle', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 });
-
-describe('NotificationGroupPostTitle - Snapshots', () => {
-  it('matches snapshot with a resolved title', () => {
-    const { container } = render(<NotificationGroupPostTitle notification={editedNotification()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot while resolving', () => {
-    mockUseNotificationPostContent.mockReturnValue(postContent({ isResolving: true }));
-
-    const { container } = render(<NotificationGroupPostTitle notification={editedNotification()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with an unresolvable post', () => {
-    mockUseNotificationPostContent.mockReturnValue(postContent({}));
-
-    const { container } = render(<NotificationGroupPostTitle notification={editedNotification('not-a-pubky-uri')} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

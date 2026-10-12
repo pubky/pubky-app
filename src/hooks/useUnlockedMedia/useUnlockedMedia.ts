@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
 import { toUnlockedMedia } from '@/libs/utils/unlockedMedia';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
-import type { ReplicatedPost } from '@/services/locks/locks.types';
+import type { ReplicatedPost, TUnlockedAttachment } from '@/services/locks/locks.types';
 
 /**
  * Object-URL media for one already-replicated post. Read per card rather than per list: pulling
@@ -12,21 +12,41 @@ import type { ReplicatedPost } from '@/services/locks/locks.types';
  */
 export function useUnlockedMedia(post: ReplicatedPost): AttachmentConstructed[] {
   const [media, setMedia] = useState<AttachmentConstructed[]>([]);
+  const loadedAttachments = useRef<string | null>(null);
+  const pending = useRef<{ key: string; promise: Promise<TUnlockedAttachment[]> } | null>(null);
+  const attachmentKey = JSON.stringify(post.attachments ?? []);
 
   useEffect(() => {
-    if (!post.attachments?.length) return;
+    if (loadedAttachments.current === attachmentKey) return;
+    if (!post.attachments?.length) {
+      loadedAttachments.current = attachmentKey;
+      setMedia((current) => (current.length ? [] : current));
+      return;
+    }
 
+    const request =
+      pending.current?.key === attachmentKey
+        ? pending.current
+        : { key: attachmentKey, promise: LocksController.fetchReplicatedAttachments({ post }) };
+    pending.current = request;
     let cancelled = false;
     // TODO:[Locks] #2686 — loads every attachment, but the card shows only an article's cover.
-    LocksController.fetchReplicatedAttachments({ post })
+    request.promise
       .then((attachments) => {
-        if (!cancelled) setMedia(toUnlockedMedia(attachments));
+        if (!cancelled) {
+          loadedAttachments.current = attachmentKey;
+          if (pending.current === request) pending.current = null;
+          setMedia(toUnlockedMedia(attachments));
+        }
       })
-      .catch(() => undefined); // already reported by the Err factory; the text still renders
+      .catch(() => {
+        // Allow a later refresh to retry failed media without retrying successful reads.
+        if (pending.current === request) pending.current = null;
+      });
     return () => {
       cancelled = true;
     };
-  }, [post]);
+  }, [post, attachmentKey]);
 
   // Revoke after commit, so the DOM has already swapped away from these URLs.
   useEffect(() => {

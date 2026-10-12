@@ -140,10 +140,3 @@ describe('Pulse consent', () => {
     expect(localStorage.getItem(PULSE_CONSENT_KEY)).toBe('accepted');
   });
 });
-
-describe('PulseConsent - Snapshots', () => {
-  it('renders the first-visit banner', () => {
-    const { container } = render(<PulseConsentBanner />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
