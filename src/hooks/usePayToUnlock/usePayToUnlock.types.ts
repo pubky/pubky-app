@@ -6,8 +6,10 @@ import type { LockFile, TPaykitConnectionState, TUnlockedContent } from '@/servi
  * can never look payable again, and `blocked` is where an unreadable saved bundle id lands — paying again
  * could mean paying twice, so it is not offered. `unopened` is its own stage because the payment
  * succeeded there and only the content download failed: the reader must never be told to go pay.
+ * `finishing` acknowledges that payment while the credential and content are being fetched.
  */
-export type TPayToUnlockStage = 'checking' | 'retry' | 'install' | 'waiting' | 'paid' | 'unopened' | 'blocked';
+export type TPayToUnlockStage =
+  'checking' | 'retry' | 'install' | 'waiting' | 'finishing' | 'paid' | 'unopened' | 'blocked';
 
 export interface UsePayToUnlockParams {
   /** The modal's open state; closed keeps the hook idle (no requests, no polling). */
