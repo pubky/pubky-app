@@ -149,7 +149,30 @@ const switchToArticleMode = () => {
   cy.get('.mdxeditor-root-contenteditable').should('exist');
 };
 
+// The inline composer's editor focuses itself and Lexical scrolls the caret
+// toward the top of the window. That can leave the formatting toolbar — which
+// sits above the caret — inside the sticky header's hit target. Dialog
+// composers are not covered by the page header, so this is a no-op there.
+const revealArticleMarkdownButton = () => {
+  cy.get(ARTICLE_MARKDOWN_MODE_BUTTON).then(($button) => {
+    const button = $button[0];
+    const rect = button.getBoundingClientRect();
+    const centerX = Math.min(window.innerWidth - 1, Math.max(0, rect.left + rect.width / 2));
+    const centerY = rect.top + rect.height / 2;
+    const header = document.querySelector('header');
+    const headerBottom = header?.getBoundingClientRect().bottom ?? 0;
+    const onScreen = centerY >= 0 && centerY <= window.innerHeight;
+    const hit = onScreen ? document.elementFromPoint(centerX, centerY) : null;
+    const coveredByHeader = Boolean(header && hit && header.contains(hit));
+
+    if (!onScreen || coveredByHeader) {
+      window.scrollBy(0, rect.top - headerBottom - 16);
+    }
+  });
+};
+
 const setArticleBody = (body: string) => {
+  revealArticleMarkdownButton();
   cy.get(ARTICLE_MARKDOWN_MODE_BUTTON).should('be.visible').click();
   cy.get(ARTICLE_MARKDOWN_TEXTAREA).filter(':visible').should('be.visible').clear().type(body, { delay: 0 });
   cy.get(ARTICLE_MARKDOWN_TEXTAREA).filter(':visible').should('have.value', body);

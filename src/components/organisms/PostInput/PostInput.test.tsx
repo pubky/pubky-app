@@ -84,6 +84,7 @@ vi.mock('@/atoms/Container/Container', () => {
       onDragOver,
       onDrop,
       'data-state': dataState,
+      'data-article-composer-inline': articleComposerInline,
     }: {
       children: React.ReactNode;
       className?: string;
@@ -95,11 +96,13 @@ vi.mock('@/atoms/Container/Container', () => {
       onDragOver?: (e: React.DragEvent) => void;
       onDrop?: (e: React.DragEvent) => void;
       'data-state'?: 'collapsed' | 'expanded';
+      'data-article-composer-inline'?: string;
     }) => (
       <div
         ref={ref}
         data-testid="container"
         data-state={dataState}
+        data-article-composer-inline={articleComposerInline}
         className={className}
         data-override-defaults={overrideDefaults}
         onClick={onClick}
@@ -1027,9 +1030,17 @@ describe('PostInput', () => {
       expect(title).toHaveValue('Draft title');
       expect(title).toHaveClass('border-dashed');
       expect(screen.getByTestId('article-composer-tabs').nextElementSibling).toBe(titleWrapper);
+      // Inline composer: caret scroll must clear the sticky page header.
+      expect(document.querySelector('[data-article-composer-inline]')).toBeInTheDocument();
       // The dashed frame moved to the body box
       expect(titleWrapper.nextElementSibling).toHaveClass('border-dashed');
       expect(screen.queryByTestId('article-composer-panel-title')).not.toBeInTheDocument();
+    });
+
+    it('does not offset caret scroll for a dialog article composer', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} expanded />);
+
+      expect(document.querySelector('[data-article-composer-inline]')).not.toBeInTheDocument();
     });
 
     it('keeps the title field with the Content tab on desktop, hidden but mounted on the other tabs', () => {

@@ -508,6 +508,11 @@ export function PostInput({
         id={id}
         ref={containerRef}
         data-state={isExpanded ? 'expanded' : 'collapsed'}
+        // Inline articles only. Lexical's caret scroll reads this via
+        // `html:has([data-article-composer-inline])` in globals.css so the
+        // toolbar does not land under the sticky page header. Dialog
+        // composers (`expanded`) scroll inside the dialog instead.
+        {...(isArticle && !expanded ? { 'data-article-composer-inline': '' } : {})}
         className={cn('relative max-w-full min-w-0 cursor-pointer rounded-md', !isArticle && dashedFrameClassName)}
         onClick={handleExpandWithAuth}
         onDragEnter={(event) => handleDragEventWithAuth(event, handleDragEnter)}
