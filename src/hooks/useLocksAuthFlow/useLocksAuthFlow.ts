@@ -115,6 +115,11 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
         setStatus(LocksAuthFlowStatus.EXCHANGING);
         const result = await LocksController.completeAuthFromCallback({ code, state });
         if (stateRef.current !== authState) return;
+        // A discarded exchange is a quiet cancellation, not a session or a pending request.
+        if (!result) {
+          setStatus(LocksAuthFlowStatus.IDLE);
+          return;
+        }
         setSession(result.session);
         setStatus(LocksAuthFlowStatus.SUCCESS);
       } catch (caught) {

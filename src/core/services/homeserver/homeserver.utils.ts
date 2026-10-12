@@ -9,7 +9,7 @@ import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
-import { handleError } from './error.utils';
+import { extractStatusCode, handleError } from './error.utils';
 import type {
   CancelableAuthApproval,
   StoragePath,
@@ -30,7 +30,7 @@ const PUBKY_HOSTNAME_PREFIX = '_pubky.';
 // Auth polling defaults
 /** Default interval between auth flow polls in milliseconds */
 const AUTH_POLL_INTERVAL_MS = 100;
-/** Maximum auth poll attempts (3000 × 100ms = 5 minutes max wait) */
+/** Maximum auth poll attempts (3000 × 100ms = 5 minutes of polling; time parked on a hidden page does not count) */
 const AUTH_POLL_MAX_ATTEMPTS = 3_000;
 
 /**
@@ -147,28 +147,78 @@ export const parseResponseOrUndefined = async <T>({
 };
 
 /**
- * Creates a cancelable auth approval wrapper around an AuthFlow.
- * Pubky rc7: awaitApproval consumes the WASM handle, so we use tryPollOnce to keep flow.free() usable.
- * @param flow - The auth flow to wrap
- * @param options - Poll limits and disposition for a session returned after cancellation
- * @returns CancelableAuthApproval with awaitApproval promise and cancel function
+ * Times a flow is resumed after the relay could not be reached before the flow counts as dead. Each resume waits
+ * until the page is visible (a second when it already is).
+ */
+const AUTH_POLL_MAX_RESUMES = 60;
+
+/**
+ * How long the relay keeps an approval (per the SDK docs). A flow older than this when the page is visible again
+ * cannot find its approval, so it fails at once instead of resuming.
+ */
+const AUTH_RELAY_RETENTION_MS = 5 * 60 * 1000;
+
+/**
+ * A transport failure with no HTTP status (aborted, refused or offline fetch).
+ * The SDK reports it as a `RequestError` without `data.statusCode`; an HTTP error response carries one.
+ * A failure during bearer exchange can have the same shape after the relay approval was consumed;
+ * resuming cannot guarantee recovery in that case.
+ */
+const isTransientPollError = (error: unknown): boolean => {
+  if (extractStatusCode(error) !== undefined) return false;
+  return error instanceof Error && error.name === 'RequestError';
+};
+
+/**
+ * Resolves at once when the page is visible (after a second), else on the next `visibilitychange` to visible.
+ * Aborting the signal resolves it early and drops the listener.
+ */
+const waitUntilVisible = (signal?: AbortSignal): Promise<void> =>
+  new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const done = () => {
+      clearTimeout(timer);
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onChange);
+      signal?.removeEventListener('abort', done);
+      resolve();
+    };
+    const onChange = () => {
+      if (document.visibilityState !== 'hidden') done();
+    };
+    signal?.addEventListener('abort', done);
+    if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+      timer = setTimeout(done, 1000);
+      return;
+    }
+    document.addEventListener('visibilitychange', onChange);
+  });
+
+/**
+ * Polls approval without consuming the WASM handle. A resumable flow reconnects to the same relay
+ * channel after a transport failure; late sessions returned after cancellation are handed to cleanup.
  */
 export const createCancelableAuthApproval = (
-  flow: Pick<AuthFlow, 'tryPollOnce' | 'free'>,
+  initialFlow: Pick<AuthFlow, 'tryPollOnce' | 'free'>,
   options?: {
     pollIntervalMs?: number;
     maxPollAttempts?: number;
+    resume?: () => Pick<AuthFlow, 'tryPollOnce' | 'free'> | Promise<Pick<AuthFlow, 'tryPollOnce' | 'free'>>;
     onCanceledSession?: (session: Session) => Promise<void>;
   },
 ): CancelableAuthApproval => {
+  let flow = initialFlow;
   const pollIntervalMs = options?.pollIntervalMs ?? AUTH_POLL_INTERVAL_MS;
   const maxPollAttempts = options?.maxPollAttempts ?? AUTH_POLL_MAX_ATTEMPTS;
 
   let canceled = false;
   let freed = false;
+  const waiting = new AbortController();
 
-  const cancel = () => {
-    canceled = true;
+  const freeFlow = () => {
     if (freed) return;
     freed = true;
     try {
@@ -178,10 +228,18 @@ export const createCancelableAuthApproval = (
     }
   };
 
+  const cancel = () => {
+    canceled = true;
+    waiting.abort();
+    freeFlow();
+  };
+
   const awaitApproval = (async () => {
     await sleep(0);
 
+    const startedAt = Date.now();
     let attempts = 0;
+    let resumes = 0;
     for (;;) {
       if (canceled) throw createCanceledError();
       if (++attempts > maxPollAttempts) {
@@ -201,6 +259,28 @@ export const createCancelableAuthApproval = (
         if (maybeSession) return maybeSession;
       } catch (error) {
         if (canceled) throw createCanceledError();
+        // Mobile browsers can abort the relay poll while the user approves in Ring.
+        // Reconnect on the original channel once the page returns, within the relay retention window.
+        if (options?.resume && isTransientPollError(error) && ++resumes <= AUTH_POLL_MAX_RESUMES) {
+          await waitUntilVisible(waiting.signal);
+          if (canceled) throw createCanceledError();
+          if (Date.now() - startedAt <= AUTH_RELAY_RETENTION_MS) {
+            freeFlow();
+            try {
+              flow = await options.resume();
+              freed = false;
+              if (canceled) {
+                freeFlow();
+                throw createCanceledError();
+              }
+              continue;
+            } catch (resumeError) {
+              if (canceled) throw createCanceledError();
+              return handleError({ error: resumeError, additionalContext: { operation: 'awaitApproval' } });
+            }
+          }
+        }
+        // Keep transport, permission and authentication failures distinct for the grant flow.
         return handleError({ error, additionalContext: { operation: 'awaitApproval' } });
       }
 

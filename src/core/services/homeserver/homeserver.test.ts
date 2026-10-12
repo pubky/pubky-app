@@ -53,6 +53,8 @@ const mockState = vi.hoisted(() => ({
   removeGrant: vi.fn(),
   listGrants: vi.fn(),
   startGrantAuthFlow: vi.fn(),
+  resumeGrantAuthFlow: vi.fn(),
+  resumeDelegatedGrantAuthFlow: vi.fn(),
   authFlowKindSignin: vi.fn(),
   eventStreamForUser: vi.fn(),
   // Auth store session
@@ -113,6 +115,8 @@ vi.mock('@synonymdev/pubky', () => {
     },
     getHomeserverOf: (...args: unknown[]) => mockState.getHomeserverOf(...args),
     startGrantAuthFlow: (...args: unknown[]) => mockState.startGrantAuthFlow(...args),
+    resumeGrantAuthFlow: (...args: unknown[]) => mockState.resumeGrantAuthFlow(...args),
+    resumeDelegatedGrantAuthFlow: (...args: unknown[]) => mockState.resumeDelegatedGrantAuthFlow(...args),
     eventStreamForUser: (...args: unknown[]) => mockState.eventStreamForUser(...args),
     client: {
       fetch: (...args: unknown[]) => mockState.clientFetch(...args),
@@ -733,7 +737,7 @@ describe('HomeserverService', () => {
       });
     });
 
-    describe('generateAuthUrl', () => {
+    describe('startGrantFlow', () => {
       it('should return authorizationUrl and awaitApproval promise', async () => {
         const result = await HomeserverService.startGrantFlow({
           purpose: 'signin',
@@ -776,6 +780,298 @@ describe('HomeserverService', () => {
           expect(tryPollOnce).not.toHaveBeenCalled();
           expect(free).toHaveBeenCalledTimes(1);
         } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it.each(['local', 'delegated'] as const)(
+        'resumes the %s grant on the same relay channel after returning from Ring',
+        async (mode) => {
+          vi.useFakeTimers();
+          const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+          try {
+            const session = createMockSession();
+            // The SDK gives up on a flow after a few failed relay requests; polling that flow again never recovers it.
+            const transportError = new Error('Request failed: HTTP transport error: error sending request');
+            transportError.name = 'RequestError';
+            const deadFlow = {
+              saveLocal: () => 'saved-local',
+              saveDelegated: () => {
+                if (mode === 'local') throw new Error('Local flow');
+                return 'saved-delegated';
+              },
+              authorizationUrl: 'https://auth.example.com/authorize',
+              tryPollOnce: vi.fn().mockRejectedValueOnce(transportError).mockResolvedValue(undefined),
+              free: vi.fn(),
+            };
+            const resumedFlow = { tryPollOnce: vi.fn().mockResolvedValue(session), free: vi.fn() };
+            mockState.startGrantAuthFlow.mockReturnValue(deadFlow);
+            const resume =
+              mode === 'delegated' ? mockState.resumeDelegatedGrantAuthFlow : mockState.resumeGrantAuthFlow;
+            resume.mockReturnValue(resumedFlow);
+
+            const result = await HomeserverService.startGrantFlow({
+              purpose: 'signin',
+              capabilities: '/pub/pubky.app/:rw',
+              generation: '',
+            });
+            await vi.advanceTimersByTimeAsync(0);
+            expect(deadFlow.tryPollOnce).toHaveBeenCalledTimes(1);
+            // Still in the background: nothing resumes yet.
+            await vi.advanceTimersByTimeAsync(5_000);
+            expect(resume).not.toHaveBeenCalled();
+
+            // Back from Pubky Ring: the page becomes visible and reconnects to the same channel.
+            visibility.mockReturnValue('visible');
+            document.dispatchEvent(new Event('visibilitychange'));
+            await vi.advanceTimersByTimeAsync(0);
+
+            await expect(result.awaitApproval).resolves.toBe(session);
+            expect(resume).toHaveBeenCalledExactlyOnceWith(`saved-${mode}`);
+            expect(deadFlow.free).toHaveBeenCalledOnce();
+            expect(resumedFlow.free).toHaveBeenCalledOnce();
+          } finally {
+            visibility.mockRestore();
+            vi.useRealTimers();
+          }
+        },
+      );
+
+      it('settles a cancelled approval at once when the relay poll dropped while the page is hidden', async () => {
+        vi.useFakeTimers();
+        const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+        try {
+          const transportError = new Error('Request failed: HTTP transport error: error sending request');
+          transportError.name = 'RequestError';
+          mockState.startGrantAuthFlow.mockReturnValue({
+            saveLocal: () => 'saved-local',
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockRejectedValue(transportError),
+            free: vi.fn(),
+          });
+
+          const result = await HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw',
+            generation: '',
+          });
+          let settled = false;
+          const outcome = result.awaitApproval.then(
+            () => 'resolved',
+            (error: Error) => {
+              settled = true;
+              return error.name;
+            },
+          );
+          await vi.advanceTimersByTimeAsync(0);
+
+          // The page stays in the background: cancelling must not wait for it to become visible.
+          result.cancelAuthFlow();
+          await vi.advanceTimersByTimeAsync(0);
+
+          expect(settled).toBe(true);
+          await expect(outcome).resolves.toBe('AuthFlowCanceled');
+          expect(mockState.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+        } finally {
+          visibility.mockRestore();
+          vi.useRealTimers();
+        }
+      });
+
+      it('does not resume an abandoned grant when the page becomes visible again', async () => {
+        vi.useFakeTimers();
+        const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+        try {
+          const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
+          const free = vi.fn();
+          mockState.startGrantAuthFlow.mockReturnValue({
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'pubkyauth://abandoned',
+            tryPollOnce: vi.fn().mockRejectedValue(transportError),
+            free,
+          });
+          const result = await HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw',
+            generation: '',
+          });
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
+          await vi.advanceTimersByTimeAsync(0);
+          const { GrantFlowService } = await import('./grant-flow');
+          GrantFlowService.clear();
+          visibility.mockReturnValue('visible');
+          document.dispatchEvent(new Event('visibilitychange'));
+          await vi.advanceTimersByTimeAsync(0);
+          await rejection;
+          expect(mockState.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+          expect(free).toHaveBeenCalledOnce();
+        } finally {
+          visibility.mockRestore();
+          vi.useRealTimers();
+        }
+      });
+
+      it.each(['cancel', 'clear', 'replace'] as const)(
+        'frees a delegated resume that finishes after %s without polling or clearing a newer flow',
+        async (action) => {
+          vi.useFakeTimers();
+          try {
+            const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
+            const deadFlow = {
+              saveDelegated: () => 'saved-delegated',
+              authorizationUrl: 'pubkyauth://original',
+              tryPollOnce: vi.fn().mockRejectedValue(transportError),
+              free: vi.fn(),
+            };
+            const resumedFlow = { tryPollOnce: vi.fn(), free: vi.fn() };
+            let finishResume!: (flow: typeof resumedFlow) => void;
+            mockState.startGrantAuthFlow.mockReturnValue(deadFlow);
+            mockState.resumeDelegatedGrantAuthFlow.mockImplementationOnce(
+              () =>
+                new Promise((resolve) => {
+                  finishResume = resolve;
+                }),
+            );
+            const result = await HomeserverService.startGrantFlow({
+              purpose: 'signin',
+              capabilities: '/pub/pubky.app/:rw',
+              generation: '',
+            });
+            const rejection = expect(result.awaitApproval).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
+            await vi.advanceTimersByTimeAsync(1_000);
+            expect(mockState.resumeDelegatedGrantAuthFlow).toHaveBeenCalledOnce();
+
+            let pending: string | null = null;
+            if (action === 'cancel') result.cancelAuthFlow();
+            else {
+              const { GrantFlowService } = await import('./grant-flow');
+              if (action === 'clear') GrantFlowService.clear();
+              else {
+                mockState.startGrantAuthFlow.mockReturnValue({
+                  ...deadFlow,
+                  tryPollOnce: vi.fn().mockResolvedValue(createMockSession()),
+                  free: vi.fn(),
+                });
+                const replacement = await HomeserverService.startGrantFlow({
+                  purpose: 'signin',
+                  capabilities: '/pub/pubky.app/:rw',
+                  generation: 'new',
+                  fresh: true,
+                });
+                pending = sessionStorage.getItem('pubky-app-pending-grant-v1');
+                await vi.advanceTimersByTimeAsync(0);
+                await replacement.awaitApproval;
+              }
+            }
+            finishResume(resumedFlow);
+            await rejection;
+            expect(resumedFlow.tryPollOnce).not.toHaveBeenCalled();
+            expect(resumedFlow.free).toHaveBeenCalledOnce();
+            expect(deadFlow.free).toHaveBeenCalledOnce();
+            expect(sessionStorage.getItem('pubky-app-pending-grant-v1')).toBe(pending);
+          } finally {
+            vi.useRealTimers();
+          }
+        },
+      );
+
+      it('gives up after the resume cap while the page stays visible', async () => {
+        vi.useFakeTimers();
+        try {
+          const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
+          const deadFlow = () => ({ tryPollOnce: vi.fn().mockRejectedValue(transportError), free: vi.fn() });
+          mockState.startGrantAuthFlow.mockReturnValue({
+            saveLocal: () => 'saved-local',
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            ...deadFlow(),
+          });
+          mockState.resumeDelegatedGrantAuthFlow.mockImplementation(deadFlow);
+
+          const result = await HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw',
+            generation: '',
+          });
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({
+            code: ServerErrorCode.INTERNAL_ERROR,
+          });
+          await vi.advanceTimersByTimeAsync(61_000);
+
+          await rejection;
+          expect(mockState.resumeDelegatedGrantAuthFlow).toHaveBeenCalledTimes(60);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('rejects with SESSION_EXPIRED when the relay channel cannot be resumed', async () => {
+        vi.useFakeTimers();
+        try {
+          const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
+          const deadFlow = {
+            saveLocal: () => 'saved-local',
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockRejectedValue(transportError),
+            free: vi.fn(),
+          };
+          mockState.startGrantAuthFlow.mockReturnValue(deadFlow);
+          mockState.resumeDelegatedGrantAuthFlow.mockRejectedValueOnce(
+            Object.assign(new Error('invalid url'), { name: 'AuthenticationError' }),
+          );
+
+          const result = await HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw',
+            generation: '',
+          });
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({
+            code: AuthErrorCode.SESSION_EXPIRED,
+            context: { originalError: 'invalid url' },
+          });
+          await vi.advanceTimersByTimeAsync(1_000);
+
+          await rejection;
+          expect(mockState.resumeDelegatedGrantAuthFlow).toHaveBeenCalledTimes(1);
+          expect(deadFlow.free).toHaveBeenCalledOnce();
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('does not resume once the relay no longer holds the approval when the page is visible again', async () => {
+        vi.useFakeTimers();
+        const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+        try {
+          const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
+          mockState.startGrantAuthFlow.mockReturnValue({
+            saveLocal: () => 'saved-local',
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockRejectedValue(transportError),
+            free: vi.fn(),
+          });
+
+          const result = await HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw',
+            generation: '',
+          });
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({
+            code: ServerErrorCode.INTERNAL_ERROR,
+          });
+          // Away for longer than the relay keeps an approval.
+          await vi.advanceTimersByTimeAsync(6 * 60 * 1000);
+          visibility.mockReturnValue('visible');
+          document.dispatchEvent(new Event('visibilitychange'));
+          await vi.advanceTimersByTimeAsync(0);
+
+          await rejection;
+          expect(mockState.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+        } finally {
+          visibility.mockRestore();
           vi.useRealTimers();
         }
       });

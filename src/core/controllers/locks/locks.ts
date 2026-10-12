@@ -13,7 +13,6 @@ import type {
   TStartPaymentParams,
   TStartPaymentResult,
 } from '@/application/locks/locks.types';
-import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -50,6 +49,7 @@ const SIGNOUT_TIMEOUT_MS = 3000;
  */
 export class LocksController {
   private constructor() {} // Prevent instantiation
+  /** Bumped before sign-in and when cleared, so older awaits cannot overwrite the latest attempt. */
   private static sessionEpoch = 0;
 
   /** An awaited Locks operation belongs to both its app account and its original Locks session. */
@@ -99,9 +99,10 @@ export class LocksController {
 
   /**
    * Completes auth from a validated callback: exchanges the one-time code for a session and
-   * persists it (bearer secret) to the store.
+   * persists it (bearer secret) to the store. Null when a logout or a later sign-in discarded it.
    */
-  static async completeAuthFromCallback(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult> {
+  static async completeAuthFromCallback(params: TExchangeSessionCodeParams): Promise<TLocksSessionResult | null> {
+    this.sessionEpoch++;
     const isCurrent = this.captureSessionOwner();
     const result = await LocksApplication.exchangeSessionCode(params);
     // TODO:[Locks] #2283 — for now the Locks account must be the signed-in pubky.app account (a == b).
@@ -110,12 +111,13 @@ export class LocksController {
     if (!isCurrent() || creator !== useAuthStore.getState().currentUserPubky) {
       // The secret is dropped here, so close the session now instead of leaving it open until it expires.
       void LocksApplication.signout(result.session).catch(() => {});
-      if (!isCurrent()) throw createCanceledError();
+      if (!isCurrent()) return null;
       throw Err.auth(AuthErrorCode.FORBIDDEN, 'Approve with the account you are signed in with.', {
         service: ErrorService.Locks,
         operation: 'LocksController.completeAuthFromCallback',
       });
     }
+    // Also invalidate requests that began on the old session while this exchange was in flight.
     this.sessionEpoch++;
     useLocksAuthStore.getState().init({ session: result.session, secret: result.secret });
     // Register the creator's default Lock Server pointer in the background on every auth, mirroring
@@ -132,6 +134,7 @@ export class LocksController {
    * one logout drops both the homeserver and Locks sessions.
    */
   static async logout(persist = true): Promise<void> {
+    const { generation, currentUserPubky } = useAuthStore.getState();
     const store = useLocksAuthStore.getState();
     const session = store.selectLocksSession();
     // Detach before awaiting the server, so completion cannot erase a later login.
@@ -144,6 +147,11 @@ export class LocksController {
       } catch {
         // Already reported to Sentry by the service Err factory; swallow so local teardown runs.
       }
+    }
+    // Invalidate a Locks sign-in started during signout, but preserve a newer pubky.app login.
+    const current = useAuthStore.getState();
+    if (current.generation === generation && current.currentUserPubky === currentUserPubky) {
+      this.clearLocalSession(persist);
     }
   }
 
@@ -174,9 +182,8 @@ export class LocksController {
   /**
    * Clears the Locks session locally. Does not call the Lock Server.
    *
-   * Call this when the server rejects the session (HTTP 401) — `signout` would be rejected too.
-   * Restoring a session makes no network call, so a stale secret keeps the UI looking signed in until
-   * the next creator call fails.
+   * Invalidates pending sign-ins too. Request failures must check their captured owner first,
+   * so a late rejection of an old session cannot discard its replacement.
    */
   static clearSession(): void {
     this.clearLocalSession(true);
@@ -242,10 +249,20 @@ export class LocksController {
 
   /**
    * Publishes one content lock from the composer's files. The upload/bundle workflow lives in
-   * `LocksApplication.createLockContent`.
+   * `LocksApplication.createLockContent`. A rejected session is cleared only if no logout or newer
+   * sign-in has superseded the request; the caller still receives the original error.
    */
-  static createLockContent(params: TCreateLockContentParams): Promise<TCreateContentLockResult> {
-    return LocksApplication.createLockContent(params);
+  static async createLockContent(params: TCreateLockContentParams): Promise<TCreateContentLockResult> {
+    const isCurrent = this.captureSessionOwner();
+    try {
+      return await LocksApplication.createLockContent(params);
+    } catch (error) {
+      // A homeserver auth failure cannot be fixed by signing in to the Lock Server.
+      if (isCurrent() && isAppError(error) && isAuthError(error) && error.service === ErrorService.Locks) {
+        this.clearSession();
+      }
+      throw error;
+    }
   }
 
   /**

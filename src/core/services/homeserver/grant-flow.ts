@@ -78,6 +78,8 @@ export class GrantFlowService {
     const saved = this.read();
     let flow: GrantAuthFlow | undefined;
     let id = saved?.id ?? '';
+    let mode = saved?.mode ?? 'local';
+    let serialized = saved?.saved ?? '';
     if (
       !request.fresh &&
       saved &&
@@ -118,8 +120,6 @@ export class GrantFlowService {
         flow.free();
         throw createCanceledError();
       }
-      let mode: 'local' | 'delegated';
-      let serialized: string;
       try {
         serialized = flow.saveDelegated();
         mode = 'delegated';
@@ -141,7 +141,25 @@ export class GrantFlowService {
       flow.free();
       throw createCanceledError();
     }
-    const approval = createCancelableAuthApproval(flow, { onCanceledSession });
+    const approval = createCancelableAuthApproval(flow, {
+      onCanceledSession,
+      // Ring can suspend this page while approving. Resume the same relay and PoP key,
+      // using the serialization already saved before the link was displayed.
+      resume: request.xCallback
+        ? undefined
+        : async () => {
+            if (version !== this.version) throw createCanceledError();
+            const resumed =
+              mode === 'delegated'
+                ? await sdk.resumeDelegatedGrantAuthFlow(serialized)
+                : sdk.resumeGrantAuthFlow(serialized);
+            if (version !== this.version) {
+              resumed.free();
+              throw createCanceledError();
+            }
+            return resumed;
+          },
+    });
     return {
       authorizationUrl: flow.authorizationUrl,
       awaitApproval: approval.awaitApproval,
