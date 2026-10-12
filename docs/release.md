@@ -196,7 +196,7 @@ Then publish the GitHub Release for the tag. Every release has one, and it is wh
 only publishes the image:
 
 1. Releases → **Draft a new release**.
-2. Choose the tag you just pushed (`v1.8.0`, target `master`) and use the same string as the title.
+2. Choose the tag you just pushed (`v1.8.0`) and use the same string as the title.
 3. **Generate release notes**, then **Publish release** (not a pre-release).
 
 ## 8. Back-merge `master` into `dev`
