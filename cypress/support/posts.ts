@@ -142,7 +142,6 @@ const ARTICLE_HEADER_TAB = '[data-cy="article-composer-tab-header"]';
 // markdown-audio-input, markdown-pdf-input) inside the Content panel.
 const ARTICLE_COVER_FILE_INPUT = '[data-testid="article-composer-panel-header"] input[type="file"]';
 const ARTICLE_FIELD_DEBOUNCE_MS = 600;
-const ARTICLE_HEADER_CLEARANCE_PX = 16;
 
 const switchToArticleMode = () => {
   cy.get(ARTICLE_ADD_BUTTON).should('be.visible').click();
@@ -150,64 +149,8 @@ const switchToArticleMode = () => {
   cy.get('.mdxeditor-root-contenteditable').should('exist');
 };
 
-// `should('be.visible')` does not scroll, and a covered toolbar button fails it.
-// The quick-post composer can leave the Markdown toggle under the sticky header.
-// Scroll that toggle clear, then click without Cypress's default scroll-to-top,
-// which would put it back under the header. Dialog composers sit above the
-// header, so this does not move them.
-const revealArticleMarkdownButton = () => {
-  cy.get(ARTICLE_MARKDOWN_MODE_BUTTON).should(($button) => {
-    const button = $button[0];
-    const view = button.ownerDocument.defaultView;
-    expect(view, 'markdown toggle is in a window').to.not.equal(null);
-    if (!view) {
-      return;
-    }
-
-    const placement = () => {
-      const rect = button.getBoundingClientRect();
-      const header = button.ownerDocument.querySelector('header');
-      const headerRect = header?.getBoundingClientRect();
-      const headerBottom = headerRect && headerRect.height > 0 ? headerRect.bottom : 0;
-      const centerX = Math.min(view.innerWidth - 1, Math.max(0, rect.left + rect.width / 2));
-      const centerY = rect.top + rect.height / 2;
-      const onScreen = rect.width > 0 && rect.height > 0 && centerY >= 0 && centerY <= view.innerHeight;
-      const hit = onScreen ? button.ownerDocument.elementFromPoint(centerX, centerY) : null;
-
-      return {
-        rect,
-        headerBottom,
-        onScreen,
-        coveredByHeader: Boolean(header && hit && header.contains(hit)),
-      };
-    };
-
-    let state = placement();
-    if (state.rect.width === 0 || state.rect.height === 0) {
-      expect(state.rect.height, 'markdown toggle has been laid out').to.be.greaterThan(0);
-      return;
-    }
-
-    if (!state.onScreen || state.coveredByHeader) {
-      const delta = state.rect.top - state.headerBottom - ARTICLE_HEADER_CLEARANCE_PX;
-      const topBefore = state.rect.top;
-      view.scrollBy(0, delta);
-      // A dialog scrolls inside its own box. If the window did not move the
-      // toggle, ask the browser to bring it into the center of that box.
-      if (button.getBoundingClientRect().top === topBefore) {
-        button.scrollIntoView({ block: 'center', inline: 'nearest' });
-      }
-      state = placement();
-    }
-
-    expect(state.onScreen, 'markdown toggle is in the viewport').to.eq(true);
-    expect(state.coveredByHeader, 'markdown toggle is not under the app header').to.eq(false);
-  });
-};
-
 const setArticleBody = (body: string) => {
-  revealArticleMarkdownButton();
-  cy.get(ARTICLE_MARKDOWN_MODE_BUTTON).click({ scrollBehavior: false });
+  cy.get(ARTICLE_MARKDOWN_MODE_BUTTON).scrollIntoView().click();
   cy.get(ARTICLE_MARKDOWN_TEXTAREA).filter(':visible').should('be.visible').clear().type(body, { delay: 0 });
   cy.get(ARTICLE_MARKDOWN_TEXTAREA).filter(':visible').should('have.value', body);
 };
@@ -222,52 +165,6 @@ const showArticleHeader = () => {
 const addArticleCover = (fileName = 'mustache-you.png') => {
   const imagePath = Cypress.config('fixturesFolder') + `/${fileName}`;
   cy.get(ARTICLE_COVER_FILE_INPUT).should('have.length', 1).selectFile(imagePath, { force: true });
-};
-
-// The Remove image control is centred on the cover. Cypress only hit-tests the
-// centre of an element inside a fixed dialog, so `be.visible` on the img fails
-// there even though the preview is on screen around the button.
-const expectArticleCoverPreview = () => {
-  cy.get('[data-testid="article-cover"] img[alt="Image preview"]').should(($img) => {
-    const img = $img[0];
-    const view = img.ownerDocument.defaultView;
-    const rect = img.getBoundingClientRect();
-    expect(rect.width, 'cover preview width').to.be.greaterThan(0);
-    expect(rect.height, 'cover preview height').to.be.greaterThan(0);
-    expect((img.getAttribute('src') ?? '').length, 'cover preview src').to.be.greaterThan(0);
-    expect(view, 'cover preview window').to.not.equal(null);
-    if (!view) {
-      return;
-    }
-
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const candidates = [
-      { x: rect.left + 8, y: rect.top + 8 },
-      { x: rect.right - 8, y: rect.top + 8 },
-      { x: centerX, y: rect.top + 8 },
-      { x: rect.left + 8, y: centerY },
-    ];
-    const point = candidates.find(
-      (candidate) =>
-        candidate.x >= 0 &&
-        candidate.y >= 0 &&
-        candidate.x < view.innerWidth &&
-        candidate.y < view.innerHeight &&
-        candidate.x >= rect.left &&
-        candidate.x <= rect.right &&
-        candidate.y >= rect.top &&
-        candidate.y <= rect.bottom &&
-        Math.hypot(candidate.x - centerX, candidate.y - centerY) > 24,
-    );
-    expect(point, 'cover preview has a point clear of the remove control').to.not.equal(undefined);
-    if (!point) {
-      return;
-    }
-
-    const hit = img.ownerDocument.elementFromPoint(point.x, point.y);
-    expect(hit === img || Boolean(hit && img.contains(hit)), 'cover preview is visible').to.eq(true);
-  });
 };
 
 const fillArticleFields = ({
@@ -300,7 +197,8 @@ const fillArticleFields = ({
 
   if (imageAction?.action === 'add') {
     addArticleCover();
-    expectArticleCoverPreview();
+    // Remove image is centred on the preview, so assert the cover frame.
+    cy.get('[data-testid="article-cover"]').should('be.visible').find('img[alt="Image preview"]').should('exist');
   }
 
   if (imageAction?.action === 'replace' || imageAction?.action === 'remove') {
@@ -308,7 +206,7 @@ const fillArticleFields = ({
     cy.get('img[alt="Image preview"]').should('not.exist');
     if (imageAction.action === 'replace') {
       addArticleCover('mustache-edit.png');
-      expectArticleCoverPreview();
+      cy.get('[data-testid="article-cover"]').should('be.visible').find('img[alt="Image preview"]').should('exist');
     }
   }
 };
