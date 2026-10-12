@@ -47,6 +47,15 @@ jobs:
         browser: [chromium, firefox, webkit]
 
     steps:
+      # Container steps run as root but inherit HOME=/github/home, owned by the
+      # image's pwuser; Firefox refuses to launch as root from a home it does not
+      # own. Exporting here (not in the container block, which the runner overrides)
+      # reaches every later step. Linux browsers live in /ms-playwright, so no
+      # cache path depends on HOME.
+      - name: Use root home in the container
+        if: runner.os == 'Linux'
+        run: echo "HOME=/root" >> "$GITHUB_ENV"
+
       - name: Checkout code
         uses: actions/checkout@v7
 
