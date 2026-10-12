@@ -223,12 +223,19 @@ describe('LocalFileService', () => {
       });
     });
 
+    it('replaces the row when the same bytes are uploaded again', async () => {
+      await LocalFileService.create({ media, bytes, name: 'cat.png', contentType: 'image/png' });
+      await LocalFileService.create({ media, bytes, name: 'same-cat.png', contentType: 'image/png' });
+
+      expect(await FileDetailsModel.findById(compositeId)).toMatchObject({ name: 'same-cat.png' });
+    });
+
     it('propagates database error when create fails', async () => {
       const dbError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to create file', {
         service: ErrorService.Local,
         operation: 'create',
       });
-      vi.spyOn(FileDetailsModel, 'create').mockRejectedValueOnce(dbError);
+      vi.spyOn(FileDetailsModel, 'upsert').mockRejectedValueOnce(dbError);
 
       await expect(
         LocalFileService.create({ media, bytes, name: 'cat.png', contentType: 'image/png' }),

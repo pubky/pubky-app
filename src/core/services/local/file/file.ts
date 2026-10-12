@@ -45,8 +45,9 @@ export class LocalFileService {
   }
 
   /**
-   * Creates the media record in the local database right away instead of waiting for Nexus,
+   * Stores the media record in the local database right away instead of waiting for Nexus,
    * hardcoding the urls. v1 media has no metadata object: the name and type come from the upload.
+   * Media is content addressed, so uploading bytes already cached replaces their row.
    */
   static async create({ media, bytes, name, contentType }: TFileAttachmentResult) {
     const uri = media.url;
@@ -67,7 +68,7 @@ export class LocalFileService {
         owner_id: fileCompositeId.split(':')[0],
         urls: buildUrls(fileCompositeId),
       };
-      await FileDetailsModel.create(file);
+      await FileDetailsModel.upsert(file);
     }
   }
 }
