@@ -77,7 +77,7 @@ npm run typecheck      # tsc --noEmit (includes tests)
 npm test               # vitest --project unit (jsdom); ~13k tests, several minutes
 npm test -- src/components/atoms/Button/Button.test.tsx   # one file
 npm test -- -t "handles click events"                     # one name pattern
-npm run test:vrt                       # vitest --project vrt (chromium+firefox+webkit; needs npm run test:vrt:setup once)
+npm run test:vrt                       # vitest --project vrt (chromium+firefox, plus webkit on macOS; needs npm run test:vrt:setup once)
 npm run test:vrt:check-baselines       # every __screenshots__ folder has a sibling test
 npm run build                          # next build --webpack (CI also smoke-tests `next start`)
 npm run start:e2e                      # cypress open, interactive

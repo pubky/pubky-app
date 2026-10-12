@@ -45,6 +45,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         browser: [chromium, firefox, webkit]
+        # Nobody browses with WebKit on Linux; Safari's engine is covered on macOS.
+        exclude:
+          - os: ubuntu-latest
+            browser: webkit
 
     steps:
       # Container steps run as root but inherit HOME=/github/home, owned by the

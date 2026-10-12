@@ -7,11 +7,16 @@ interaction tests for those).
 
 - Test files: `*.vrt.test.tsx` (the `vrt` Vitest project in `vitest.config.ts`).
 - Setup (once per machine, and after a Playwright bump): `npm run test:vrt:setup`
-  downloads the browsers; on Linux it also installs apt libraries via `sudo`.
+  downloads the browsers; on Linux it also installs apt libraries via `sudo`
+  (`npx playwright install --with-deps chromium firefox` is enough there, see
+  below).
 - Run: `npm run test:vrt`. Update baselines: `npm run test:vrt:regenerate-baseline`.
 - Orphan check: `npm run test:vrt:check-baselines` (also in Code Quality CI).
 - Baselines: `__screenshots__/<file>/<name>-<browser>-<platform>.png`, one per
-  browser (chromium/firefox/webkit) × platform (darwin/linux).
+  browser × platform: chromium and firefox on darwin and linux, webkit on darwin
+  only. Nobody browses with WebKit on Linux, so `vitest.config.ts` omits the
+  webkit instance when `process.platform === 'linux'` and there are no
+  `*-webkit-linux.png` files; do not add them.
 - Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `matchVrtFrameScreenshot`),
   `vrt.setup.ts` (global mocks), `vrt.clock.ts`, `vrt.viewports.ts`.
 - Reference example: `src/test/vrt/feed/Home.vrt.test.tsx`.
@@ -208,9 +213,10 @@ baselined.
 | `master`       | —                                                | Workflow fails (do not use)     |
 
 The workflow never commits directly to `dev` or `master`. It regenerates in one
-job per OS × browser (`ubuntu-latest` and `macos-latest` × chromium, firefox,
-webkit), merges every job's `*-<browser>-<platform>.png` artifact, then commits
-the combined result. `vrt.yml` uses the same matrix for the checks.
+job per OS × browser (`ubuntu-latest` × chromium, firefox; `macos-latest` ×
+chromium, firefox, webkit), merges every job's `*-<browser>-<platform>.png`
+artifact, then commits the combined result. `vrt.yml` uses the same matrix for
+the checks.
 
 Linux jobs run inside the official Playwright image
 (`mcr.microsoft.com/playwright:v<version>-noble`, resolved from the `playwright`
