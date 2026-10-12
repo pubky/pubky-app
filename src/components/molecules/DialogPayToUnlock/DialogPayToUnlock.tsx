@@ -43,12 +43,12 @@ function WaitingMessage({
     return 'This creator cannot receive payments from you right now. Please contact support.';
   }
   if (walletSetupNeeded) {
-    return 'Finish setting up Bitkit, then keep it open to connect to this creator.';
+    return 'Finish setting up Bitkit, then keep it open.';
   }
   if (connectionState === 'recovery_required') {
     return 'Your connection to this creator needs to be restored. Keep Bitkit open.';
   }
-  if (isConnectionPending) {
+  if (isConnectionPending && connectionState === null) {
     return 'Checking your Bitkit connection…';
   }
   if (connectionState === 'handshake') {
@@ -186,7 +186,7 @@ export function DialogPayToUnlock({
                   <span className="hidden lg:inline">
                     {'If this creator is not in your Bitkit contacts, scan this code to add them.'}
                   </span>
-                  <span className="lg:hidden">{'If needed, add this creator to your Bitkit contacts.'}</span>
+                  <span className="lg:hidden">{'If this creator is not in your Bitkit contacts, add them.'}</span>
                 </Typography>
                 {/* A phone cannot scan its own screen, so mobile hands the same pubky over by deeplink. */}
                 <Button

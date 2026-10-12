@@ -938,21 +938,25 @@ describe('usePayToUnlock (waiting)', () => {
   });
 
   // Scanning cannot help before the wallet is set up.
-  it('swaps the QR for the wallet setup notice while the server reports it', async () => {
-    vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('none');
-    vi.mocked(LocksController.fetchPaymentStatus)
-      .mockResolvedValueOnce(task('pending', { walletSetupNeeded: true }))
-      .mockResolvedValue(task('pending'));
+  it.each(['none', 'recovery_required'] as const)(
+    'hides the %s handoff until wallet setup finishes',
+    async (connectionState) => {
+      vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue(connectionState);
+      vi.mocked(LocksController.fetchPaymentStatus)
+        .mockResolvedValueOnce(task('pending', { walletSetupNeeded: true }))
+        .mockResolvedValue(task('pending'));
 
-    const { result } = renderPay();
-    await advance(0);
-    expect(result.current.walletSetupNeeded).toBe(true);
-    expect(result.current.handshakePubky).toBeNull();
+      const { result } = renderPay();
+      await advance(0);
+      expect(result.current.connectionState).toBe(connectionState);
+      expect(result.current.walletSetupNeeded).toBe(true);
+      expect(result.current.handshakePubky).toBeNull();
 
-    await advance(POLL_INTERVAL_MS);
-    expect(result.current.walletSetupNeeded).toBe(false);
-    expect(result.current.handshakePubky).toBe('pubkybob');
-  });
+      await advance(POLL_INTERVAL_MS);
+      expect(result.current.walletSetupNeeded).toBe(false);
+      expect(result.current.handshakePubky).toBe('pubkybob');
+    },
+  );
 
   // The reader cannot pay before the invoice exists, so the server's time to create it does not count.
   it('parks no sooner than three minutes after the invoice deadline', async () => {
