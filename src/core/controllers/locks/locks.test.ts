@@ -104,7 +104,7 @@ describe('LocksController (auth)', () => {
   it('completeAuthFromCallback exchanges the code and persists the session to the store', async () => {
     const result = await LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
 
-    expect(result.session).toBe(fakeSession);
+    expect(result?.session).toBe(fakeSession);
     expect(mocks.exchangeSessionCode).toHaveBeenCalledWith({ code: 'CODE', state: 'STATE' });
     const store = useLocksAuthStore.getState();
     expect(store.selectIsLocksAuthenticated()).toBe(true);
@@ -125,13 +125,49 @@ describe('LocksController (auth)', () => {
     expect(mocks.setLockServiceConfig).toHaveBeenCalledTimes(1);
   });
 
+  it('completeAuthFromCallback does not store a session whose exchange finishes after logout', async () => {
+    const exchange = Promise.withResolvers<{ session: LocksSdkSession; secret: string }>();
+    mocks.exchangeSessionCode.mockReturnValue(exchange.promise);
+
+    const pending = LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
+    await LocksController.logout();
+    exchange.resolve({ session: fakeSession, secret: 'secret-abc' });
+    await expect(pending).resolves.toBeNull();
+
+    const store = useLocksAuthStore.getState();
+    expect(store.selectLocksSession()).toBeNull();
+    expect(store.selectLocksSessionSecret()).toBeNull();
+    expect(mocks.setLockServiceConfig).not.toHaveBeenCalled();
+  });
+
+  it('completeAuthFromCallback keeps the later sign-in when an earlier one finishes first', async () => {
+    const laterSession = asOpaque<LocksSdkSession>({
+      id: 'later-session',
+      creatorPubky: () => `pubky${MOCK_LOCK_AUTHOR_PUBKY}`,
+    });
+    const earlier = Promise.withResolvers<{ session: LocksSdkSession; secret: string }>();
+    const later = Promise.withResolvers<{ session: LocksSdkSession; secret: string }>();
+    mocks.exchangeSessionCode.mockReturnValueOnce(earlier.promise).mockReturnValueOnce(later.promise);
+
+    const pendingEarlier = LocksController.completeAuthFromCallback({ code: 'CODE-1', state: 'STATE-1' });
+    const pendingLater = LocksController.completeAuthFromCallback({ code: 'CODE-2', state: 'STATE-2' });
+    earlier.resolve({ session: fakeSession, secret: 'secret-1' });
+    await expect(pendingEarlier).resolves.toBeNull();
+    later.resolve({ session: laterSession, secret: 'secret-2' });
+    await pendingLater;
+
+    const store = useLocksAuthStore.getState();
+    expect(store.selectLocksSession()).toBe(laterSession);
+    expect(store.selectLocksSessionSecret()).toBe('secret-2');
+  });
+
   it('completeAuthFromCallback keeps the session when the background config write fails', async () => {
     mocks.setLockServiceConfig.mockRejectedValue(new Error('config write failed'));
 
     const result = await LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
     await Promise.resolve();
 
-    expect(result.session).toBe(fakeSession);
+    expect(result?.session).toBe(fakeSession);
     expect(mocks.setLockServiceConfig).toHaveBeenCalledTimes(1);
     expect(useLocksAuthStore.getState().selectIsLocksAuthenticated()).toBe(true);
   });
@@ -173,6 +209,25 @@ describe('LocksController (auth)', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    it('does not keep a sign-in that started while the Lock Server signout was pending', async () => {
+      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+      const signout = Promise.withResolvers<void>();
+      mocks.signout.mockReturnValue(signout.promise);
+      const exchange = Promise.withResolvers<{ session: LocksSdkSession; secret: string }>();
+      mocks.exchangeSessionCode.mockReturnValue(exchange.promise);
+
+      const pendingLogout = LocksController.logout();
+      const pendingSignIn = LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
+      signout.resolve();
+      await pendingLogout;
+      exchange.resolve({ session: fakeSession, secret: 'secret-new' });
+      await pendingSignIn;
+
+      const store = useLocksAuthStore.getState();
+      expect(store.selectLocksSession()).toBeNull();
+      expect(store.selectLocksSessionSecret()).toBeNull();
     });
 
     it('clears the persisted secret without a network call when no live session exists', async () => {
@@ -259,6 +314,40 @@ describe('LocksController (auth)', () => {
       expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
     });
 
+    it('does not bring the session back when the restore finishes after logout', async () => {
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
+      const restore = Promise.withResolvers<LocksSdkSession>();
+      mocks.restoreSession.mockReturnValue(restore.promise);
+
+      const pending = LocksController.restorePersistedLocksSession();
+      await LocksController.logout();
+      restore.resolve(fakeSession);
+      await pending;
+
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBeNull();
+      expect(mocks.setLockServiceConfig).not.toHaveBeenCalled();
+    });
+
+    it('keeps a newer sign-in when the restored session is rejected after it', async () => {
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-old' });
+      mocks.restoreSession.mockReturnValue(asOpaque<LocksSdkSession>({ id: 'restored-session' }));
+      const configWrite = Promise.withResolvers<void>();
+      mocks.setLockServiceConfig.mockReturnValueOnce(configWrite.promise);
+
+      const pending = LocksController.restorePersistedLocksSession();
+      await vi.waitFor(() => expect(mocks.setLockServiceConfig).toHaveBeenCalled());
+      await LocksController.logout();
+      await LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
+      configWrite.reject(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' }),
+      );
+      await pending;
+
+      const store = useLocksAuthStore.getState();
+      expect(store.selectLocksSession()).toBe(fakeSession);
+      expect(store.selectLocksSessionSecret()).toBe('secret-abc');
+    });
+
     it('no-ops when there is no persisted secret', async () => {
       await LocksController.restorePersistedLocksSession();
       expect(mocks.restoreSession).not.toHaveBeenCalled();
@@ -310,6 +399,34 @@ describe('LocksController (auth)', () => {
 
       expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
     });
+
+    it.each(['before', 'after'] as const)(
+      'keeps a newer sign-in when an old setup check rejects %s its exchange resolves',
+      async (rejectionTiming) => {
+        const check = Promise.withResolvers<never>();
+        const exchange = Promise.withResolvers<{ session: LocksSdkSession; secret: string }>();
+        mocks.fetchPaykitSetupStatus.mockReturnValueOnce(check.promise);
+        mocks.exchangeSessionCode.mockReturnValueOnce(exchange.promise);
+        const rejected = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', {
+          service: ErrorService.Locks,
+          operation: 'test',
+        });
+        const checked = expect(LocksController.fetchPaykitSetupStatus()).rejects.toBe(rejected);
+        const signingIn = LocksController.completeAuthFromCallback({ code: 'CODE', state: 'STATE' });
+        if (rejectionTiming === 'after') {
+          exchange.resolve({ session: fakeSession, secret: 'new-secret' });
+          await signingIn;
+        }
+
+        check.reject(rejected);
+        await checked;
+        exchange.resolve({ session: fakeSession, secret: 'new-secret' });
+        await expect(signingIn).resolves.toEqual({ session: fakeSession, secret: 'new-secret' });
+
+        expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+        expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBe('new-secret');
+      },
+    );
   });
 });
 
@@ -330,6 +447,27 @@ describe('LocksController (content)', () => {
     await expect(LocksController.createLockContent(params)).resolves.toBe(lock);
     expect(mocks.createLockContent).toHaveBeenCalledWith(params);
   });
+
+  it.each([ErrorService.Locks, ErrorService.Homeserver])(
+    'only clears the current Locks session for a Locks auth error: %s',
+    async (service) => {
+      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+      const rejected = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service, operation: 'test' });
+      mocks.createLockContent.mockRejectedValueOnce(rejected);
+
+      await expect(
+        LocksController.createLockContent({
+          attachments: [],
+          buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }),
+          lockConfig: { amountSats: '1000' },
+        }),
+      ).rejects.toBe(rejected);
+
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(
+        service === ErrorService.Locks ? null : fakeSession,
+      );
+    },
+  );
 });
 
 const MOCK_LOCK_FILE = mockLockFile();

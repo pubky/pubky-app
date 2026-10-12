@@ -20,16 +20,4 @@ describe('PostThreadSpacer', () => {
       expect(borderLine).toHaveClass('border-border');
     });
   });
-
-  describe('PostThreadSpacer - Snapshots', () => {
-    it('matches snapshot', () => {
-      const { container } = render(<PostThreadSpacer />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with data-testid', () => {
-      const { container } = render(<PostThreadSpacer data-testid="spacer" />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

@@ -48,6 +48,8 @@ export const PostArticle = ({
     coverImageVariant: FileVariant.FEED,
     // While the bytes download the local list is still empty; the pending list says what it will hold.
     localAttachmentCount: pendingAttachments.length || localAttachments?.length,
+    // A pending slot 0 already knows its type too: a video there vetoes the cover before its bytes land
+    localCoverType: (getAttachmentAtSlot(localAttachments, 0) ?? getAttachmentAtSlot(pendingAttachments, 0))?.type,
   });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
@@ -102,7 +104,7 @@ export const PostArticle = ({
             isArticle
             fullArticle={isFull}
             // Only unlocked content is read in full here.
-            articleImages={isFull && localAttachments ? { localAttachments, pendingAttachments } : undefined}
+            articleMedia={isFull && localAttachments ? { localAttachments, pendingAttachments } : undefined}
             onLinkClick={handleLinkClick}
             className={isFull ? undefined : 'line-clamp-3'}
           />

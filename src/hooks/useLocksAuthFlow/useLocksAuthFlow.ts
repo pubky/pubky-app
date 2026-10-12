@@ -110,6 +110,8 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
         }
         setStatus(LocksAuthFlowStatus.EXCHANGING);
         const result = await LocksController.completeAuthFromCallback({ code, state });
+        // Discarded by a logout or a newer sign-in, which owns the flow state now.
+        if (!result) return;
         setSession(result.session);
         setStatus(LocksAuthFlowStatus.SUCCESS);
       } catch (caught) {

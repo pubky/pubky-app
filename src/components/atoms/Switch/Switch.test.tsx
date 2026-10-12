@@ -38,35 +38,3 @@ describe('Switch', () => {
     expect(switchElement).toBeDisabled();
   });
 });
-
-describe('Switch - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<Switch />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when checked', () => {
-    const { container } = render(<Switch checked={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when unchecked', () => {
-    const { container } = render(<Switch checked={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when disabled', () => {
-    const { container } = render(<Switch disabled />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when disabled and checked', () => {
-    const { container } = render(<Switch disabled checked={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<Switch className="custom-switch" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

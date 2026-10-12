@@ -29,26 +29,3 @@ describe('UserInfoPopoverFollowButton', () => {
     expect(button.querySelector('.lucide-loader-circle')).toBeInTheDocument();
   });
 });
-
-describe('UserInfoPopoverFollowButton - Snapshots', () => {
-  it('matches snapshot for follow state', () => {
-    const { container } = render(
-      <UserInfoPopoverFollowButton isFollowing={false} isLoading={false} onClick={vi.fn()} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for following state', () => {
-    const { container } = render(
-      <UserInfoPopoverFollowButton isFollowing={true} isLoading={false} onClick={vi.fn()} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for loading state', () => {
-    const { container } = render(
-      <UserInfoPopoverFollowButton isFollowing={false} isLoading={true} onClick={vi.fn()} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

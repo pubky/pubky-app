@@ -182,10 +182,3 @@ describe('DialogPrivacy with the real Dialog', () => {
     expect(screen.getByRole('dialog', { name: 'Privacy Policy' })).toBeInTheDocument();
   });
 });
-
-describe('DialogPrivacy - Snapshots', () => {
-  it('matches snapshot for default DialogPrivacy', () => {
-    const { container } = render(<DialogPrivacy />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

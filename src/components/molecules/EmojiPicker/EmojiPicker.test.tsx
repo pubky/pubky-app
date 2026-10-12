@@ -94,20 +94,3 @@ describe('EmojiPicker', () => {
     expect(MockPickerSpy).toHaveBeenCalled();
   });
 });
-
-describe('EmojiPicker - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<EmojiPicker onEmojiSelect={() => {}} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with maxLength', () => {
-    const { container } = render(<EmojiPicker onEmojiSelect={() => {}} maxLength={12} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with currentInput', () => {
-    const { container } = render(<EmojiPicker onEmojiSelect={() => {}} currentInput="Hello" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

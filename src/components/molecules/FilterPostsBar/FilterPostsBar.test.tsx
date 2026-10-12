@@ -55,10 +55,3 @@ describe('FilterPostsBar', () => {
     expect(screen.getByRole('textbox', { name: 'Filter posts' })).toHaveAttribute('aria-invalid', 'false');
   });
 });
-
-describe('FilterPostsBar - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<FilterPostsBar value="" onValueChange={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

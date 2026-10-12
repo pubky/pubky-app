@@ -163,6 +163,19 @@ describe('useLocksAuthFlow', () => {
     expect(result.current.session).toBe(mocks.fakeSession);
   });
 
+  it('does not report success for an exchange the controller discarded', async () => {
+    mocks.completeAuthFromCallback.mockResolvedValue(null);
+    const { result } = renderHook(() => useLocksAuthFlow());
+    const state = await startFlow(result);
+    attachIframeSource(result);
+
+    await postCallback({ type: LOCKS_AUTH_MESSAGE_TYPE, code: 'CODE', state });
+
+    await waitFor(() => expect(mocks.completeAuthFromCallback).toHaveBeenCalled());
+    expect(result.current.status).toBe(LocksAuthFlowStatus.EXCHANGING);
+    expect(result.current.session).toBeNull();
+  });
+
   it('passes the lock server origin (from the connect URL) to the bridge validator', async () => {
     const { result } = renderHook(() => useLocksAuthFlow());
     const state = await startFlow(result);

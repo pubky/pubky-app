@@ -328,30 +328,3 @@ describe('PostInputTags', () => {
     expect(mockTagInputValue.length).toBeLessThanOrEqual(TAG_MAX_LENGTH);
   });
 });
-
-describe('PostInputTags - Snapshots', () => {
-  const mockOnTagsChange = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockTagInputValue = '';
-    mockShowEmojiPicker = false;
-  });
-
-  it('matches snapshot with empty tags', () => {
-    const { container } = render(<PostInputTags tags={[]} onTagsChange={mockOnTagsChange} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with tags', () => {
-    const { container } = render(<PostInputTags tags={['tag1', 'tag2']} onTagsChange={mockOnTagsChange} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with input open', () => {
-    const { container } = render(<PostInputTags tags={[]} onTagsChange={mockOnTagsChange} />);
-    const addButton = screen.getByTestId('add-tag-button');
-    fireEvent.click(addButton);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

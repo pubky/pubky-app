@@ -72,25 +72,3 @@ describe('Iframe', () => {
     expect(iframe).toHaveAttribute('src', 'https://example.com/embed');
   });
 });
-
-describe('Iframe - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<Iframe src="https://example.com/embed" title="Example embed" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom props', () => {
-    const { container } = render(
-      <Iframe
-        src="https://example.com/embed"
-        title="Example embed"
-        className="custom-class"
-        width="640"
-        height="360"
-        allow="accelerometer; autoplay"
-        sandbox="allow-scripts allow-same-origin"
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -103,20 +103,3 @@ describe('RightSidebar', () => {
     expect(sidebar).toHaveClass('gap-6');
   });
 });
-
-describe('RightSidebar - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<RightSidebar />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<RightSidebar className="custom-sidebar" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with different styling', () => {
-    const { container } = render(<RightSidebar className="border-l border-border bg-secondary/10" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

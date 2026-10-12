@@ -295,10 +295,13 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    **Try again**, which keeps the saved id.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
    created; with nothing submitted, the install screen has no link state. Until the first read
-   answers, the modal says it is checking the connection. With wallet setup complete, `none`,
-   `handshake` and `recovery_required` keep the creator's contact handoff available: a QR on desktop,
-   and below the `lg` breakpoint (1024px) an **Open in Bitkit** button instead, since a phone cannot
-   scan its own screen. It opens `bitkit://contact?pubky=<creator pubky>`, the same contact screen
+   answers, the modal says "Checking your Bitkit connection…". A failed first read keeps it there
+   until a read succeeds, the purchase ends or polling parks. Wallet setup, connection notices and
+   the parked copy take precedence over this checking copy. With wallet setup complete, `none`,
+   `handshake` and `recovery_required` keep the creator's contact handoff available: a QR on desktop
+   (clicking it copies the creator pubky for a wallet on a device without a camera), and below the
+   `lg` breakpoint (1024px) an **Open in Bitkit** button instead, since a phone cannot scan its own
+   screen. It opens `bitkit://contact?pubky=<creator pubky>`, the same contact screen
    as a scan. The instructions ask the reader to add the creator only if needed; none of these
    states proves whether the reader has already scanned. `handshake` says the link is connecting;
    `recovery_required` shows a restoration-needed notice alongside the retained handoff, without

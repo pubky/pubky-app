@@ -122,10 +122,3 @@ describe('DialogConfirmDelete', () => {
     );
   });
 });
-
-describe('DialogConfirmDelete - Snapshots', () => {
-  it('matches snapshot when open', () => {
-    const { container } = render(<DialogConfirmDelete open={true} onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

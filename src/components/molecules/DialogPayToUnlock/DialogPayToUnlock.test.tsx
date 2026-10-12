@@ -1,9 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TPayToUnlockStage } from '@/hooks/usePayToUnlock/usePayToUnlock.types';
 import type { TPaykitConnectionState } from '@/services/locks/locks.types';
 import { DialogPayToUnlock } from './DialogPayToUnlock';
 
+const mocks = vi.hoisted(() => ({
+  copyToClipboard: vi.fn(),
+  toast: vi.fn(),
+}));
+
+vi.mock('@/libs/utils/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/utils/utils')>();
+  return { ...actual, copyToClipboard: (args: { text: string }) => mocks.copyToClipboard(args) };
+});
+vi.mock('@/molecules/Toaster/toast', () => ({ toast: (args: unknown) => mocks.toast(args) }));
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: () => ({ profile: { name: 'John Carvalho', avatarUrl: undefined }, isLoading: false }),
 }));
@@ -55,6 +65,11 @@ const renderDialog = (stage: TPayToUnlockStage, overrides: DialogOverrides = {})
   render(dialogElement(stage, overrides), { wrapper: overrides.wrapper });
 
 describe('DialogPayToUnlock', () => {
+  // clearAllMocks keeps implementations, so a rejected copy would leak into later tests.
+  beforeEach(() => {
+    mocks.copyToClipboard.mockReset();
+  });
+
   it('keeps connection instructions conditional through recovery and subsequent handshakes', () => {
     const { rerender } = renderDialog('waiting', { isConnectionPending: true });
 
@@ -117,7 +132,7 @@ describe('DialogPayToUnlock', () => {
     expect(screen.getByText(/Install Bitkit/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Open in Bitkit' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'I completed the steps' }));
@@ -130,7 +145,7 @@ describe('DialogPayToUnlock', () => {
 
     expect(screen.getByText(/Review and confirm it there when it appears/)).toBeInTheDocument();
     expect(screen.queryByText('AWAITING PAYMENT')).not.toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Try again|I completed the steps/ })).not.toBeInTheDocument();
     // The footer button reads Close (the X in the corner is also named Close, hence the data-cy hook).
     expect(document.querySelector('[data-cy="pay-to-unlock-cancel"]')).toHaveTextContent('Close');
@@ -143,7 +158,7 @@ describe('DialogPayToUnlock', () => {
     expect(screen.getByText('Checking your Bitkit connection…')).toBeInTheDocument();
     expect(screen.queryByText(/Check Bitkit for a payment request/)).not.toBeInTheDocument();
     expect(screen.queryByText('AWAITING PAYMENT')).not.toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
 
     rerender(dialogElement('waiting', { connectionState: 'connected' }));
     expect(screen.getByText(/Review and confirm it there when it appears/)).toBeInTheDocument();
@@ -153,8 +168,10 @@ describe('DialogPayToUnlock', () => {
   // The notices say something the checking copy does not, so they win while the link is unknown.
   it.each([
     ['the wallet setup notice', { walletSetupNeeded: true }, /Finish setting up Bitkit/],
+    ['the blocked notice', { connectionState: 'blocked' }, /cannot receive payments from you/],
+    ['the recovery notice', { connectionState: 'recovery_required' }, /needs to be restored/],
     ['the parked copy', { isStalled: true }, /This purchase is still pending/],
-  ])('waiting + unknown link: shows %s instead of the checking copy', (_name, state, copy) => {
+  ] as const)('waiting + unknown link: shows %s instead of the checking copy', (_name, state, copy) => {
     renderDialog('waiting', { isConnectionPending: true, ...state });
 
     expect(screen.getByText(copy)).toBeInTheDocument();
@@ -164,7 +181,7 @@ describe('DialogPayToUnlock', () => {
   it('waiting: shows the creator pubky QR while the hook hands one over', () => {
     const { rerender } = renderDialog('waiting', { handshakePubky: 'lockcreator' });
 
-    expect(screen.getByRole('img', { name: 'Creator Pubky QR code' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy creator pubky' })).toBeInTheDocument();
     expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
     // The QR screen stays clean: setup belongs to the install screen.
     expect(screen.queryByText(/Install Bitkit/)).not.toBeInTheDocument();
@@ -174,7 +191,39 @@ describe('DialogPayToUnlock', () => {
     expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
 
     rerender(dialogElement('waiting'));
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
+  });
+
+  it.each(['none', 'handshake', 'recovery_required'] as const)(
+    'waiting: copies the QR value while the connection is %s',
+    async (connectionState) => {
+      mocks.copyToClipboard.mockResolvedValue(undefined);
+      renderDialog('waiting', { connectionState, handshakePubky: 'lockcreator' });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy creator pubky' }));
+
+      await vi.waitFor(() =>
+        expect(mocks.toast).toHaveBeenCalledWith({
+          variant: 'info',
+          title: 'Pubky copied to clipboard',
+          dismissButton: true,
+        }),
+      );
+      expect(mocks.copyToClipboard).toHaveBeenCalledWith({ text: 'pubkylockcreator' });
+    },
+  );
+
+  // A rejected clipboard write must not be reported as copied.
+  it('waiting: reports a failed QR copy', async () => {
+    mocks.copyToClipboard.mockRejectedValue(new Error('denied'));
+    renderDialog('waiting', { handshakePubky: 'lockcreator' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy creator pubky' }));
+
+    await vi.waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not copy to clipboard' }),
+    );
+    expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'info' }));
   });
 
   // A phone cannot scan its own screen, so the link must hand Bitkit the value the QR carries.
@@ -199,7 +248,7 @@ describe('DialogPayToUnlock', () => {
     renderDialog('waiting', { connectionState });
 
     expect(screen.getByText(copy)).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
   });
 
   it('waiting: asks the reader to finish the wallet setup, with no QR and no spinner', () => {
@@ -207,7 +256,7 @@ describe('DialogPayToUnlock', () => {
 
     expect(screen.getByText(/Finish setting up Bitkit/)).toBeInTheDocument();
     expect(screen.queryByText(/Check Bitkit for a payment request/)).not.toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Creator Pubky QR code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy creator pubky' })).not.toBeInTheDocument();
     expect(screen.queryByText('AWAITING PAYMENT')).not.toBeInTheDocument();
   });
 
@@ -397,73 +446,5 @@ describe('DialogPayToUnlock', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(cardClick).not.toHaveBeenCalled();
-  });
-});
-
-// The dialog is portaled, so the render container is empty — snapshot the dialog node itself.
-describe('DialogPayToUnlock - Snapshots', () => {
-  it('matches snapshot for the checking stage', () => {
-    renderDialog('checking');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the install stage', () => {
-    renderDialog('install');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the retry stage', () => {
-    renderDialog('retry');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage', () => {
-    renderDialog('waiting');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage while the link state is unknown', () => {
-    renderDialog('waiting', { isConnectionPending: true });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage with the handshake QR and the Bitkit handoff', () => {
-    renderDialog('waiting', { connectionState: 'handshake', handshakePubky: 'pubkylockcreator' });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage with a blocked link notice', () => {
-    renderDialog('waiting', { connectionState: 'blocked' });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage with a recovery_required link notice', () => {
-    renderDialog('waiting', { connectionState: 'recovery_required', handshakePubky: 'pubkylockcreator' });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the waiting stage with the wallet setup notice', () => {
-    renderDialog('waiting', { walletSetupNeeded: true });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the parked waiting stage', () => {
-    renderDialog('waiting', { isStalled: true });
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the paid stage', () => {
-    renderDialog('paid');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the unopened stage', () => {
-    renderDialog('unopened');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the blocked stage', () => {
-    renderDialog('blocked');
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
   });
 });

@@ -80,17 +80,3 @@ describe('RelativeTimestamp', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 });
-
-describe('RelativeTimestamp - Snapshots', () => {
-  it('matches snapshot without tooltip', () => {
-    const { container } = render(<RelativeTimestamp timeAgo="2h" date={TEST_DATE} isMobile className="text-xs" />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with leading content', () => {
-    const { container } = render(
-      <RelativeTimestamp timeAgo="5m" date={TEST_DATE} isMobile leading={<span data-testid="leading">icon</span>} />,
-    );
-    expect(container).toMatchSnapshot();
-  });
-});

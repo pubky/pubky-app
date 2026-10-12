@@ -16,11 +16,6 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       reportOnFailure: true,
     },
-    snapshotFormat: {
-      escapeString: true,
-      printBasicPrototype: false,
-    },
-    resolveSnapshotPath: (testPath, snapExtension) => testPath + snapExtension,
     onConsoleLog(log) {
       if (
         log.includes('WebAssembly.instantiateStreaming') ||

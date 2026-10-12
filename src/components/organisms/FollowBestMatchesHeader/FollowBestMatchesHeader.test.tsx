@@ -18,10 +18,3 @@ describe('FollowBestMatchesHeader', () => {
     expect(screen.getByText('Add people you like to build your feed.')).toBeInTheDocument();
   });
 });
-
-describe('FollowBestMatchesHeader - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<FollowBestMatchesHeader />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

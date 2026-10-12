@@ -126,12 +126,11 @@ export function useCreateLockContent({
         ? caught
         : toAppError(caught, ErrorService.Locks, 'useCreateLockContent.publish');
       setError(appError);
-      // The Lock Server rejected the session. Restore is offline, so a stale secret would keep the UI
-      // looking authenticated — drop it here and tell the caller to reopen the sign-in modal.
+      // The controller clears the rejected Locks session only while this request still owns it.
+      // Tell the caller to reopen sign-in without invalidating a newer exchange here.
       // `service` too — an expired homeserver session also throws Auth here, and Lock Server sign-in
       // cannot fix that.
       if (appError.category === ErrorCategory.Auth && appError.service === ErrorService.Locks) {
-        LocksController.clearSession();
         return { status: 'auth-expired' };
       }
       return { status: 'failed' };
