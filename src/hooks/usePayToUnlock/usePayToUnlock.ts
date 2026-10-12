@@ -390,6 +390,13 @@ export function usePayToUnlock({
 
   const retry = () => void attemptPayment(generation.current, stage === 'install');
 
+  /**
+   * A failed submission answers the same way whether the reader's wallet cannot pay or Paykit is down,
+   * so the retry screen offers the setup steps rather than only replaying the same submission. This
+   * submits nothing: the install screen's own button re-checks the wallet before it does.
+   */
+  const setupWallet = () => setStage('install');
+
   const recheck = () => {
     const bundleId = waitingBundleId.current;
     if (!bundleId) return;
@@ -429,6 +436,7 @@ export function usePayToUnlock({
     walletSetupNeeded,
     isSubmitting,
     retry,
+    setupWallet,
     recheck,
     viewContent,
   };

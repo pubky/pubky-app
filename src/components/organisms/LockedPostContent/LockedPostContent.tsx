@@ -112,6 +112,7 @@ export function LockedPostContent({
     walletSetupNeeded,
     isSubmitting,
     retry,
+    setupWallet,
     recheck,
     viewContent,
   } = usePayToUnlock({
@@ -207,6 +208,7 @@ export function LockedPostContent({
           walletSetupNeeded={walletSetupNeeded}
           isSubmitting={isSubmitting}
           onRetry={retry}
+          onSetupWallet={setupWallet}
           onRecheck={recheck}
           onViewContent={viewContent}
         />

@@ -29,6 +29,7 @@ vi.mock('qrcode.react', () => ({
 type DialogOverrides = {
   isSubmitting?: boolean;
   onRetry?: () => void;
+  onSetupWallet?: () => void;
   isStalled?: boolean;
   handshakePubky?: string | null;
   connectionIssue?: 'recovery_required' | 'blocked' | null;
@@ -53,6 +54,7 @@ const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}
     walletSetupNeeded={overrides.walletSetupNeeded ?? false}
     isSubmitting={overrides.isSubmitting ?? false}
     onRetry={overrides.onRetry ?? vi.fn()}
+    onSetupWallet={overrides.onSetupWallet ?? vi.fn()}
     onRecheck={overrides.onRecheck ?? vi.fn()}
     onViewContent={overrides.onViewContent ?? vi.fn()}
   />
@@ -94,6 +96,17 @@ describe('DialogPayToUnlock', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  // A wallet that cannot pay fails the same way a Paykit outage does, so the retry screen has to name
+  // the wallet as a possible cause and hand the reader a way into the setup steps.
+  it('retry: names the wallet as a possible cause and offers the setup screen', () => {
+    const onSetupWallet = vi.fn();
+    renderDialog('retry', { onSetupWallet });
+
+    expect(screen.getByText(/Check that Bitkit is set up/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Set up Bitkit' }));
+    expect(onSetupWallet).toHaveBeenCalledTimes(1);
   });
 
   it('install: shows the setup steps, the store links and the I completed the steps button, and no QR', () => {
@@ -371,6 +384,9 @@ describe('DialogPayToUnlock', () => {
   it('locks the primary button while a submission is in flight', () => {
     renderDialog('retry', { isSubmitting: true });
     expect(document.querySelector('[data-cy="pay-to-unlock-retry"]')).toBeDisabled();
+    // The setup route stays locked with it: leaving mid-submission would drop the reader on the install
+    // screen while the submission it started is still out.
+    expect(document.querySelector('[data-cy="pay-to-unlock-setup-wallet"]')).toBeDisabled();
   });
 
   // Escape goes through Radix, not the footer button, so the confirm prompt has to catch that path too.

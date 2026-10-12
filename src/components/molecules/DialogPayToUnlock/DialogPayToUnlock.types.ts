@@ -26,6 +26,8 @@ export interface DialogPayToUnlockProps {
    * payment), checking the wallet first after `failed`.
    */
   onRetry: () => void;
+  /** Retry screen: moves to the install screen, whose steps the reader can work through before retrying. */
+  onSetupWallet: () => void;
   /** Restarts a parked wait. */
   onRecheck: () => void;
   /** Reveals the downloaded content from the paid confirmation screen. */
