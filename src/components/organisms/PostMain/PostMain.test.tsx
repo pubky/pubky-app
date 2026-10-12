@@ -91,6 +91,7 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
   return {
     ClickableTagsList: ({
       taggedId,
+      mergeTaggedId,
       taggedKind,
       showCount: _showCount,
       showInput: _showInput,
@@ -98,6 +99,7 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
       addMode: _addMode,
     }: {
       taggedId: string;
+      mergeTaggedId?: string;
       taggedKind: unknown;
       showCount?: boolean;
       showInput?: boolean;
@@ -108,6 +110,7 @@ vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => {
       <div
         data-testid="clickable-tags-list"
         data-tagged-id={taggedId}
+        data-merge-tagged-id={mergeTaggedId}
         data-tagged-kind={String(taggedKind)}
         data-show-add-button={String(_showAddButton)}
       >
@@ -236,8 +239,21 @@ vi.mock('@/organisms/PostHeader/PostHeader', () => {
 
 vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', () => {
   return {
-    PostTagsPanel: ({ postId, className }: { postId: string; className?: string }) => (
-      <div data-testid="post-tags-panel" data-post-id={postId} data-class-name={className}>
+    PostTagsPanel: ({
+      postId,
+      mergePostId,
+      className,
+    }: {
+      postId: string;
+      mergePostId?: string;
+      className?: string;
+    }) => (
+      <div
+        data-testid="post-tags-panel"
+        data-post-id={postId}
+        data-merge-post-id={mergePostId}
+        data-class-name={className}
+      >
         PostTagsPanel {postId}
       </div>
     ),
@@ -355,6 +371,7 @@ vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => ({
     showRepostHeader: false,
     shouldShowPostHeader: true,
     originalPostId: null,
+    isContentlessRepost: false,
   })),
 }));
 
@@ -435,6 +452,7 @@ describe('PostMain', () => {
       showRepostHeader: false,
       shouldShowPostHeader: true,
       originalPostId: null,
+      isContentlessRepost: false,
     });
     vi.mocked(useDeletePost).mockReturnValue({
       isDeleting: false,
@@ -685,6 +703,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: true,
       originalPostId: null,
+      isContentlessRepost: true,
     });
 
     render(<PostMain postId="me:repost-1" />);
@@ -698,6 +717,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: false,
       originalPostId: null,
+      isContentlessRepost: true,
     });
 
     render(<PostMain postId="me:simple-repost-1" />);
@@ -713,6 +733,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: true,
       originalPostId: null,
+      isContentlessRepost: true,
     });
 
     render(<PostMain postId="me:quote-repost-1" />);
@@ -728,6 +749,7 @@ describe('PostMain', () => {
       showRepostHeader: false,
       shouldShowPostHeader: true,
       originalPostId: null,
+      isContentlessRepost: false,
     });
 
     render(<PostMain postId="other-user:repost-1" />);
@@ -758,6 +780,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: true,
       originalPostId: null,
+      isContentlessRepost: true,
     });
 
     render(<PostMain postId="me:repost-with-attachments-1" />);
@@ -773,6 +796,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: true,
       originalPostId: null,
+      isContentlessRepost: true,
     });
 
     render(<PostMain postId="me:loading-repost-1" />);
@@ -789,6 +813,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: true,
       originalPostId: null,
+      isContentlessRepost: true,
     });
 
     render(<PostMain postId="me:null-repost-1" />);
@@ -804,6 +829,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: false,
       originalPostId: null,
+      isContentlessRepost: true,
     });
 
     render(<PostMain postId="me:simple-repost-1" />);
@@ -819,6 +845,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: false,
       originalPostId: null,
+      isContentlessRepost: true,
     });
 
     render(<PostMain postId="me:simple-repost-1" />);
@@ -836,6 +863,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: false,
       originalPostId: 'author:collection-post-1',
+      isContentlessRepost: true,
     });
     vi.mocked(usePostDetails).mockImplementation((compositeId) => ({
       postDetails: {
@@ -869,6 +897,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: false,
       originalPostId: 'author:collection-post-1',
+      isContentlessRepost: true,
     });
     vi.mocked(usePostDetails).mockImplementation((compositeId) =>
       compositeId === 'author:collection-post-1'
@@ -899,6 +928,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: false,
       originalPostId: null,
+      isContentlessRepost: true,
     });
     vi.mocked(useDeletePost).mockReturnValue({
       isDeleting: true,
@@ -915,6 +945,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: false,
       originalPostId: null,
+      isContentlessRepost: true,
     });
 
     render(<PostMain postId="me:simple-repost-1" />);
@@ -968,6 +999,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: false,
       originalPostId: 'author:original-1',
+      isContentlessRepost: true,
     });
   };
 
@@ -1075,6 +1107,7 @@ describe('PostMain', () => {
       showRepostHeader: flattened,
       shouldShowPostHeader: !flattened,
       originalPostId: 'author:original-1',
+      isContentlessRepost: flattened,
     });
     const details = vi.mocked(usePostDetails)('me:simple-repost-1').postDetails!;
     const targetId = flattened ? 'author:original-1' : 'me:simple-repost-1';
@@ -1197,6 +1230,7 @@ describe('PostMain', () => {
       showRepostHeader: false,
       shouldShowPostHeader: true,
       originalPostId: 'author:original-1',
+      isContentlessRepost: false,
     });
     render(<PostMain postId="me:quote-1" />);
 
@@ -1204,6 +1238,53 @@ describe('PostMain', () => {
     expect(screen.getByTestId('post-header')).toHaveTextContent('PostHeader me:quote-1');
     expect(screen.getByTestId('post-content')).toHaveTextContent('PostContent me:quote-1');
     expect(screen.getByTestId('post-actions')).toHaveTextContent('Actions me:quote-1');
+  });
+
+  it('targets the original for tags and replies on a contentless repost by another user', () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: false,
+      shouldShowPostHeader: true,
+      originalPostId: 'author:original-1',
+      isContentlessRepost: true,
+    });
+    render(<PostMain postId="other-user:repost-1" />);
+
+    // The card keeps the repost's identity: no "You reposted" bar, the reposter's header.
+    expect(screen.queryByTestId('repost-header')).not.toBeInTheDocument();
+    expect(screen.getByTestId('post-header')).toHaveTextContent('PostHeader other-user:repost-1');
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-tagged-id', 'author:original-1');
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-merge-tagged-id', 'other-user:repost-1');
+    expect(screen.getByTestId('post-actions')).toHaveTextContent('Actions author:original-1');
+
+    fireEvent.click(screen.getByTestId('tag-button'));
+    expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-post-id', 'author:original-1');
+    expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-merge-post-id', 'other-user:repost-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
+    expect(screen.getByTestId('dialog-reply')).toHaveAttribute('data-post-id', 'author:original-1');
+    expect(screen.getByTestId('dialog-reply')).toHaveAttribute('data-open', 'true');
+  });
+
+  it('targets the original tag panels in the wide layout for a contentless repost by another user', () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: false,
+      shouldShowPostHeader: true,
+      originalPostId: 'author:original-1',
+      isContentlessRepost: true,
+    });
+    render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="other-user:repost-1" />
+      </PostMainLayoutProvider>,
+    );
+
+    const panels = screen.getAllByTestId('post-tags-panel');
+    expect(panels).toHaveLength(2);
+    for (const panel of panels) {
+      expect(panel).toHaveAttribute('data-post-id', 'author:original-1');
+      expect(panel).toHaveAttribute('data-merge-post-id', 'other-user:repost-1');
+    }
+    expect(screen.getByTestId('post-actions')).toHaveTextContent('Actions author:original-1');
   });
 
   it('passes extraLarge size and bottom-left timestamp placement for side tags layout', () => {
@@ -1258,6 +1339,7 @@ describe('PostMain', () => {
       showRepostHeader: true,
       shouldShowPostHeader: true,
       originalPostId: null,
+      isContentlessRepost: true,
     });
 
     render(

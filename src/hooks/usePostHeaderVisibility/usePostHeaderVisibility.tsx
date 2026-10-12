@@ -47,8 +47,8 @@ export function usePostHeaderVisibility(postId: string): UsePostHeaderVisibility
   // Replies with an embed retain their own identity and thread, even without text or attachments.
   // A "simple repost" has no content or parent relationship and belongs to the current user.
   // When postDetails is undefined/null, we can't determine content, so treat as not simple repost
-  const isSimpleRepostByCurrentUser =
-    isRepost && !isReply && isCurrentUserRepost && postDetails !== undefined && postDetails !== null && !hasContent;
+  const isContentlessRepost = isRepost && !isReply && postDetails !== undefined && postDetails !== null && !hasContent;
+  const isSimpleRepostByCurrentUser = isContentlessRepost && isCurrentUserRepost;
 
   // Show repost header only for simple reposts (no content) by current user
   // Quote reposts (with text) should not show the "You reposted" header
@@ -62,5 +62,6 @@ export function usePostHeaderVisibility(postId: string): UsePostHeaderVisibility
     showRepostHeader,
     shouldShowPostHeader,
     originalPostId,
+    isContentlessRepost,
   };
 }
