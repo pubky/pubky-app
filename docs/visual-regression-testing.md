@@ -15,6 +15,13 @@ interaction tests for those).
 - Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `matchVrtFrameScreenshot`),
   `vrt.setup.ts` (global mocks), `vrt.clock.ts`, `vrt.viewports.ts`.
 - Reference example: `src/test/vrt/feed/Home.vrt.test.tsx`.
+- Run one browser only: `npx vitest run --project "vrt (chromium)"` (CI runs one
+  job per browser this way).
+- `patches/@vitest+browser+*.patch` (applied by `patch-package` on install) clears
+  the `toMatchScreenshot` stability timer once a capture settles. Upstream leaves
+  it running, so the last capture in a run kept the Node process alive and every
+  `npm run test:vrt` ended with a 10s `close timed out` wait. Drop the patch once
+  `@vitest/browser` ships the fix.
 
 ## Writing a test
 

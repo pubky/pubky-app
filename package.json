@@ -26,6 +26,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\" --ignore-path .prettierignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\" --ignore-path .prettierignore",
     "precommit": "lint-staged && npm run typecheck",
+    "postinstall": "patch-package",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -131,6 +132,7 @@
     "husky": "9.1.7",
     "jsdom": "30.0.1",
     "lint-staged": "17.4.1",
+    "patch-package": "8.0.1",
     "playwright": "^1.62.1",
     "prettier": "3.9.6",
     "prettier-plugin-tailwindcss": "0.8.1",
