@@ -318,6 +318,10 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    return and **Check again** restart the pair, and both park together after 3 wall-clock minutes
    without failing the purchase. While the invoice does not exist yet, those 3 minutes count from the
    server's invoice deadline instead; once it exists, they start again.
+   An `expired` task stops waiting and shows "The payment was not completed. You can try again."
+   in both the dialog and toast. This covers rejected, canceled and timed-out requests without
+   interpreting `terminal_reason`. **Try again** starts a new payment with a fresh bundle id;
+   `failed` keeps its existing wallet-related guidance and retry handling.
 7. Turning a completed payment into content (credential → read) parks the same way when it fails,
    and **Check again** runs it again. Retrying is free — the entitlement is durable and the
    credential is minted fresh each time, which is also why an expired credential needs no detection.

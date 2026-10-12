@@ -292,7 +292,14 @@ describe('usePayToUnlock (retry)', () => {
     vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task(status));
 
     const { result } = renderPay();
-    await waitFor(() => expect(result.current.stage).toBe('retry'));
+    await waitFor(() => expect(result.current.stage).toBe(status === 'expired' ? 'expired' : 'retry'));
+    expect(toastMock).toHaveBeenCalledWith({
+      variant: 'error',
+      description:
+        status === 'expired'
+          ? 'The payment was not completed. You can try again.'
+          : 'The payment failed. You can try again.',
+    });
     expect(LocksController.startPayment).not.toHaveBeenCalled();
     result.current.retry();
 
@@ -300,6 +307,28 @@ describe('usePayToUnlock (retry)', () => {
     expect(LocksController.startPayment).toHaveBeenCalledWith(expect.objectContaining({ rejectBundleId: 'dead-1' }));
     // `expired` comes after an invoice reached the wallet, so only `failed` re-checks it.
     expect(LocksController.hasPaykitReceiver).toHaveBeenCalledTimes(status === 'failed' ? 1 : 0);
+  });
+
+  it('shows the generic message when the submission immediately reports an expired request', async () => {
+    vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue(null);
+    vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(true);
+    vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('ended-1', 'expired'));
+
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('expired'));
+    expect(toastMock).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'The payment was not completed. You can try again.',
+    });
+    expect(result.current.isSubmitting).toBe(false);
+    expect(LocksController.fetchPaykitConnectionState).not.toHaveBeenCalled();
+
+    vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('fresh-2'));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.stage).toBe('waiting'));
+    expect(LocksController.startPayment).toHaveBeenLastCalledWith(
+      expect.objectContaining({ rejectBundleId: 'ended-1' }),
+    );
   });
 
   // A reader without a wallet ends `failed`: another id would fail the same way after the same wait.
@@ -840,8 +869,14 @@ describe('usePayToUnlock (waiting)', () => {
       expect(result.current.stage).toBe('waiting');
 
       await advance(POLL_INTERVAL_MS);
-      expect(result.current.stage).toBe('retry');
-      expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ description: expect.stringContaining(status) }));
+      expect(result.current.stage).toBe(status === 'expired' ? 'expired' : 'retry');
+      expect(toastMock).toHaveBeenCalledWith({
+        variant: 'error',
+        description:
+          status === 'expired'
+            ? 'The payment was not completed. You can try again.'
+            : 'The payment failed. You can try again.',
+      });
 
       const callsWhenDead = { status: statusCalls(), connection: connectionCalls() };
       await advance(POLL_INTERVAL_MS);

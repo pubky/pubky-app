@@ -137,8 +137,33 @@ describe('DialogPayToUnlock', () => {
     const onRetry = vi.fn();
     renderDialog('retry', { onRetry });
 
+    expect(screen.getByText('The payment could not continue. Try again when Bitkit is ready.')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('expired: offers a new attempt without blaming Bitkit or showing a payment spinner', () => {
+    const onRetry = vi.fn();
+    const onOpenChange = vi.fn();
+    renderDialog('expired', { onRetry, onOpenChange });
+
+    expect(screen.getByText('The payment was not completed. You can try again.')).toBeInTheDocument();
+    expect(screen.queryByText(/when Bitkit is ready/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.queryByText('The payment is still running')).not.toBeInTheDocument();
+  });
+
+  it('expired: disables the new attempt while its submission is in flight', () => {
+    renderDialog('expired', { isSubmitting: true });
+    expect(document.querySelector('[data-cy="pay-to-unlock-retry"]')).toBeDisabled();
   });
 
   it('install: shows the setup steps, the store links and the I completed the steps button, and no QR', () => {

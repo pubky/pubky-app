@@ -91,7 +91,7 @@ export function DialogPayToUnlock({
   const showQr = Boolean(handshakeValue) && stage === 'waiting';
   const hasNotice = connectionState === 'blocked' || connectionState === 'recovery_required' || walletSetupNeeded;
   const showSpinner = stage === 'checking' || (stage === 'waiting' && !showQr && !isStalled && !hasNotice);
-  const showPrimary = stage === 'retry' || isInstall;
+  const showPrimary = stage === 'retry' || stage === 'expired' || isInstall;
   const primaryLabel = isInstall ? 'I completed the steps' : 'Try again';
   // `unopened` reached this screen by a completed payment too, so it must not show a cost to pay.
   const isPaid = stage === 'paid' || stage === 'unopened';
@@ -217,6 +217,12 @@ export function DialogPayToUnlock({
             {stage === 'retry' && (
               <Typography className="text-base text-secondary-foreground">
                 {'The payment could not continue. Try again when Bitkit is ready.'}
+              </Typography>
+            )}
+
+            {stage === 'expired' && (
+              <Typography className="text-base text-secondary-foreground">
+                {'The payment was not completed. You can try again.'}
               </Typography>
             )}
 
