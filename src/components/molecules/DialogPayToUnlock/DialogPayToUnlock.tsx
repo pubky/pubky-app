@@ -34,6 +34,32 @@ function CreatorAvatar({ authorId }: { authorId: string }) {
   );
 }
 
+function WaitingMessage({
+  connectionState,
+  walletSetupNeeded,
+  isConnectionPending,
+}: Pick<DialogPayToUnlockProps, 'connectionState' | 'walletSetupNeeded' | 'isConnectionPending'>) {
+  if (connectionState === 'blocked') {
+    return 'This creator cannot receive payments from you right now. Please contact support.';
+  }
+  if (walletSetupNeeded) {
+    return 'Finish setting up Bitkit, then keep it open to connect to this creator.';
+  }
+  if (connectionState === 'recovery_required') {
+    return 'Your connection to this creator needs to be restored. Keep Bitkit open.';
+  }
+  if (isConnectionPending) {
+    return 'Checking your Bitkit connection…';
+  }
+  if (connectionState === 'handshake') {
+    return 'Connecting to this creator. Keep Bitkit open.';
+  }
+  if (connectionState === 'none') {
+    return 'Your Bitkit connection to this creator is not ready yet. Keep Bitkit open.';
+  }
+  return 'Check Bitkit for a payment request. Review and confirm it there when it appears.';
+}
+
 /**
  * Pay to Unlock modal. Purely presentational — `usePayToUnlock` owns the state machine.
  *
@@ -146,19 +172,11 @@ export function DialogPayToUnlock({
             {/* A parked wait shows only its Check again copy; the notices still apply there. */}
             {stage === 'waiting' && (hasNotice || !isStalled) && (
               <Typography className="text-base text-secondary-foreground">
-                {connectionState === 'blocked'
-                  ? 'This creator cannot receive payments from you right now. Please contact support.'
-                  : walletSetupNeeded
-                    ? 'Finish setting up Bitkit, then keep it open to connect to this creator.'
-                    : connectionState === 'recovery_required'
-                      ? 'Your connection to this creator needs to be restored. Keep Bitkit open.'
-                      : isConnectionPending
-                        ? 'Checking your Bitkit connection…'
-                        : connectionState === 'handshake'
-                          ? 'Connecting to this creator. Keep Bitkit open.'
-                          : connectionState === 'none'
-                            ? 'Your Bitkit connection to this creator is not ready yet. Keep Bitkit open.'
-                            : 'Check Bitkit for a payment request. Review and confirm it there when it appears.'}
+                <WaitingMessage
+                  connectionState={connectionState}
+                  walletSetupNeeded={walletSetupNeeded}
+                  isConnectionPending={isConnectionPending}
+                />
               </Typography>
             )}
 
