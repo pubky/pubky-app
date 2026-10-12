@@ -53,7 +53,7 @@ From here, follow [release.md](./release.md):
 1. [Open a draft PR into `master`](./release.md#3-open-a-draft-pr-into-master) (`release-1.7.1` → `master`).
 2. [Make the pipelines green](./release.md#4-make-the-pipelines-green). The latest `dev` [VRT and e2e](./release.md#vrt-and-e2e) run is **not** enough: it includes unreleased `dev` work. Trigger VRT and e2e on this candidate, or confirm they pass for this set of commits.
 3. [Bump `package.json` `version`](./release.md#bump-packagejson-version) to the patch (for example `1.7.1`), then [merge with a merge commit](./release.md#merge-with-a-merge-commit). Never squash, never rebase-and-merge.
-4. [Tag `master`](./release.md#7-tag-master-and-push) as `v1.7.1` and push. That publishes the image as in [What the tag publishes](./release.md#what-the-tag-publishes).
+4. [Tag `master`](./release.md#7-tag-master-and-push) as `v1.7.1` and push. That publishes the image as in [What the tag publishes](./release.md#what-the-tag-publishes). Then publish the GitHub Release from the tag, as in that step.
 5. [Back-merge `master` into `dev`](./release.md#8-back-merge-master-into-dev).
 
 The back-merge diff depends on where the fix came from:
@@ -72,5 +72,6 @@ The back-merge diff depends on where the fix came from:
 - [ ] PR marked ready; merged with **Create a merge commit** (not squash, not rebase-and-merge)
 - [ ] Annotated tag `v<patch>` created on `master` and pushed
 - [ ] Docker Hub image build for the tag succeeded
+- [ ] GitHub Release `v<patch>` published from the tag with generated notes
 - [ ] PR `master` → `dev` opened and merged with a merge commit
 - [ ] Hotfix / release branch deleted

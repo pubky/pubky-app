@@ -10,6 +10,7 @@ import { useProfileForm } from './useProfileForm';
 const routerPush = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({ push: routerPush, back: vi.fn() }),
 }));
 
@@ -409,3 +410,5 @@ describe('useProfileForm effective link changes', () => {
     });
   });
 });
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({ useRequireAuth: () => ({ waitForAuth: async () => true }) }));

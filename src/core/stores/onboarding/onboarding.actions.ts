@@ -9,6 +9,7 @@ import {
 } from './onboarding.types';
 
 export const createOnboardingActions = (set: ZustandSet<OnboardingStore>): OnboardingActions => ({
+  setSignupAttempt: (signupAttempt) => set({ signupAttempt }),
   reset: () => {
     set(
       (state) => ({
@@ -24,11 +25,11 @@ export const createOnboardingActions = (set: ZustandSet<OnboardingStore>): Onboa
   },
 
   setSecrets: (secrets: TOnboardingSecrets) => {
-    set({ ...secrets }, false, OnboardingActionTypes.SET_SECRETS);
+    set({ ...secrets, signupAttempt: null }, false, OnboardingActionTypes.SET_SECRETS);
   },
 
   clearSecrets: () => {
-    set({ secretKey: null, mnemonic: null }, false, OnboardingActionTypes.CLEAR_SECRETS);
+    set({ secretKey: null, mnemonic: null, signupAttempt: null }, false, OnboardingActionTypes.CLEAR_SECRETS);
   },
 
   setHydrated: (hasHydrated: boolean) => {

@@ -1,10 +1,9 @@
 export interface UseRequireAuthResult {
-  /** Whether the current user is authenticated */
+  /** Whether this account has a ready session. */
   isAuthenticated: boolean;
-  /**
-   * Wrap an action to require authentication.
-   * If authenticated, executes the action and returns its result.
-   * If not authenticated, opens sign-in dialog and returns undefined.
-   */
+  isWaiting: boolean;
+  /** Synchronous UI interaction; never opens sign-in while restoration is pending. */
   requireAuth: <T>(action: () => T) => T | undefined;
+  /** Wait for this account's existing restore before a mutation. Separate targets may use distinct keys. */
+  waitForAuth: (actionKey?: string) => Promise<boolean>;
 }

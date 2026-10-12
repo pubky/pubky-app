@@ -28,6 +28,7 @@ vi.mock('qrcode.react', () => ({
 }));
 
 type DialogOverrides = {
+  price?: React.ComponentProps<typeof DialogPayToUnlock>['price'];
   isSubmitting?: boolean;
   onRetry?: () => void;
   isStalled?: boolean;
@@ -47,7 +48,7 @@ const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}
     onOpenChange={overrides.onOpenChange ?? vi.fn()}
     lockTitle="My locked post"
     authorId="pubkycreator"
-    priceSats="1000"
+    price={overrides.price ?? { amount: '1000', asset: 'BTC' }}
     stage={stage}
     isStalled={overrides.isStalled ?? false}
     handshakePubky={overrides.handshakePubky ?? null}
@@ -65,6 +66,16 @@ const renderDialog = (stage: TPayToUnlockStage, overrides: DialogOverrides = {})
   render(dialogElement(stage, overrides), { wrapper: overrides.wrapper });
 
 describe('DialogPayToUnlock', () => {
+  it.each([
+    ['waiting', 'COST TO UNLOCK'],
+    ['paid', 'PAYMENT RECEIVED'],
+    ['unopened', 'PAYMENT RECEIVED'],
+  ] as const)('keeps USD denomination in the %s checkout state', (stage, label) => {
+    renderDialog(stage, { price: { amount: '500', asset: 'USD' } });
+    expect(screen.getByText('$5.00')).toBeInTheDocument();
+    expect(screen.getByText(label)).toBeInTheDocument();
+  });
+
   // clearAllMocks keeps implementations, so a rejected copy would leak into later tests.
   beforeEach(() => {
     mocks.copyToClipboard.mockReset();

@@ -15,6 +15,7 @@ export type EditLock = {
 };
 
 interface PostInputBaseProps {
+  active?: boolean;
   /** Callback after successful post, receives the created post ID */
   onSuccess?: (createdPostId: string) => void;
   /** Custom placeholder text (default depends on variant) */

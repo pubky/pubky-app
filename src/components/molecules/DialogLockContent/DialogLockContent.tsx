@@ -1,15 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { Controller, useWatch } from 'react-hook-form';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useLockContentForm } from '@/hooks/useLockContentForm/useLockContentForm';
+import { LOCK_CONTENT_FORM_FIELDS } from '@/hooks/useLockContentForm/useLockContentForm.types';
 import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
-import { formatSats } from '@/libs/utils/formatSats';
-import { cn, isPositiveIntegerString } from '@/libs/utils/utils';
+import { parseLockPrice } from '@/libs/utils/lockPrice';
+import { cn } from '@/libs/utils/utils';
 import type { DialogLockContentProps } from './DialogLockContent.types';
 
 const FIELD_LABEL_CLASS = 'text-xs font-medium tracking-widest text-muted-foreground uppercase';
@@ -26,29 +29,26 @@ const toSats = (value: string) =>
     .replace(/^0+(?=\d)/, '');
 
 export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockContentProps) {
-  // Bare digits — sats are whole units, and the value travels to the Lock Server as a string.
-  const [amount, setAmount] = useState('');
+  const { form, submit, reset, changeAsset } = useLockContentForm(onApplied);
+  const [amount, asset] = useWatch({
+    control: form.control,
+    name: [LOCK_CONTENT_FORM_FIELDS.AMOUNT, LOCK_CONTENT_FORM_FIELDS.ASSET],
+  });
   // The rate is only for pricing a lock, but every post composer mounts this dialog — fetching
   // before it opens would cost a `/api/btc-rate` call on the home feed, Locks users or not.
-  const { rate: btcRate, status: rateStatus } = useBtcRate(open);
+  const { rate: btcRate, status: rateStatus } = useBtcRate(open && asset === 'BTC');
 
-  const amountSats = Number(amount);
-  const isValidAmount = isPositiveIntegerString(amount);
-  const usdValue = btcRate && isValidAmount ? amountSats * btcRate.satUsd : null;
-
-  const resetFields = () => setAmount('');
+  const price = parseLockPrice(amount, asset);
+  const { isValid, isSubmitting } = form.formState;
+  const usdValue = asset === 'BTC' && btcRate && price ? Number(price.amount) * btcRate.satUsd : null;
 
   const handleOpenChange = (next: boolean) => {
-    if (!next) resetFields();
+    if (!next) reset();
     onOpenChange(next);
   };
 
-  // Applying a lock only records the price. Publishing — guarded resources, the content lock
-  // and the announcement — belongs to the composer's Post button, so never add a network call here.
-  const handleApply = () => {
-    if (!isValidAmount) return;
-    onApplied({ amountSats: amount });
-    resetFields();
+  const handleApply = async () => {
+    if (await submit()) reset();
   };
 
   return (
@@ -67,8 +67,29 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
           </Typography>
 
           <Container overrideDefaults className="flex flex-col gap-2">
+            <Label htmlFor="lock-currency" className={FIELD_LABEL_CLASS}>
+              {'Price currency'}
+            </Label>
+            <Controller
+              name={LOCK_CONTENT_FORM_FIELDS.ASSET}
+              control={form.control}
+              render={({ field }) => (
+                <Select name={field.name} value={field.value} onValueChange={changeAsset}>
+                  <SelectTrigger id="lock-currency" ref={field.ref} onBlur={field.onBlur}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BTC">{'Bitcoin'}</SelectItem>
+                    <SelectItem value="USD">{'USD'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Container>
+
+          <Container overrideDefaults className="flex flex-col gap-2">
             <Label htmlFor="lock-amount" className={FIELD_LABEL_CLASS}>
-              {'Bitcoin Amount'}
+              {asset === 'BTC' ? 'Bitcoin Amount' : `${asset} Amount`}
             </Label>
             <Container
               overrideDefaults
@@ -78,16 +99,30 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
               )}
             >
               <span aria-hidden className="shrink-0 text-base text-foreground">
-                {'₿'}
+                {asset === 'BTC' ? '₿' : '$'}
               </span>
-              <Input
-                id="lock-amount"
-                inputMode="numeric"
-                value={amount ? (formatSats(amountSats, { symbol: false }) ?? '') : ''}
-                onChange={(event) => setAmount(toSats(event.target.value))}
-                placeholder="0"
-                className="h-auto flex-1 border-0 bg-transparent p-0 text-base shadow-none"
-                autoComplete="off"
+              <Controller
+                name={LOCK_CONTENT_FORM_FIELDS.AMOUNT}
+                control={form.control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="lock-amount"
+                    inputMode={asset === 'BTC' ? 'numeric' : 'decimal'}
+                    value={
+                      asset === 'BTC' && field.value
+                        ? new Intl.NumberFormat('en-US').format(BigInt(field.value))
+                        : field.value
+                    }
+                    onChange={(event) =>
+                      field.onChange(asset === 'BTC' ? toSats(event.target.value) : event.target.value)
+                    }
+                    maxLength={27}
+                    placeholder="0"
+                    className="h-auto flex-1 border-0 bg-transparent p-0 text-base shadow-none"
+                    autoComplete="off"
+                  />
+                )}
               />
               {usdValue !== null && (
                 <Typography className="shrink-0 text-sm text-muted-foreground">
@@ -96,9 +131,9 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
               )}
             </Container>
 
-            {rateStatus === 'failed' && (
+            {asset === 'BTC' && rateStatus === 'failed' && (
               <Typography className="pt-1 text-xs text-destructive">
-                {"The dollar value can't be shown right now. Your price in sats is unaffected."}
+                {"The dollar value can't be shown right now. Your Bitcoin price is unaffected."}
               </Typography>
             )}
           </Container>
@@ -117,7 +152,7 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
             variant={ButtonVariant.DEFAULT}
             size="lg"
             onClick={handleApply}
-            disabled={!isValidAmount}
+            disabled={!isValid || isSubmitting}
             // The Button base sets disabled:pointer-events-none, which would swallow the hover and
             // leave the default arrow cursor. A disabled button still cannot fire a click.
             className="disabled:pointer-events-auto disabled:cursor-not-allowed"

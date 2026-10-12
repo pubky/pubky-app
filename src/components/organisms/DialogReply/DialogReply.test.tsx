@@ -222,6 +222,7 @@ describe('DialogReply', () => {
 
     expect(PostInput).toHaveBeenCalledWith(
       {
+        active: false,
         dataCy: 'reply-post-input',
         id: 'reply-post-input',
         variant: POST_INPUT_VARIANT.REPLY,

@@ -1,9 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useReducedMotion } from 'motion/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { QuickReply } from './QuickReply';
 import { QUICK_REPLY_PROMPTS_COUNT } from './QuickReply.constants';
 
@@ -215,6 +216,8 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: mockIsAuthenticated,
     requireAuth: mockRequireAuth,
+    isWaiting: false,
+    waitForAuth: async () => mockRequireAuth(() => true) === true,
   }),
 }));
 
@@ -230,6 +233,8 @@ function getExpandedPostHeader() {
   return within(screen.getByTestId('quick-reply-expanded-header')).getByTestId('post-header');
 }
 
+beforeEach(() => useAuthStore.getState().setRestoreStatus('ready'));
+
 afterEach(() => {
   vi.mocked(useReducedMotion).mockReturnValue(false);
 });
@@ -244,6 +249,45 @@ describe('QuickReply', () => {
     mockUseEnterSubmit.mockReturnValue(() => undefined);
     mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options));
   });
+
+  it.each([
+    ['reauth-required', false],
+    ['reauth-required', true],
+    ['temporary-error', false],
+    ['temporary-error', true],
+  ] as const)(
+    'hides retained reply identity after %s, expanded=%s, preserving the draft',
+    async (status, isExpanded) => {
+      const handleChange = vi.fn();
+      mockUsePostInput.mockImplementation((options: unknown) =>
+        createUsePostInputReturn(options, {
+          content: 'Keep this reply',
+          isExpanded,
+          handleChange,
+        }),
+      );
+      render(<QuickReply parentPostId="author:post1" />);
+      mockIsAuthenticated = false;
+      mockRequireAuth.mockReturnValue(undefined);
+      act(() => useAuthStore.getState().setRestoreStatus('restoring'));
+      expect(screen.getByTestId('quick-reply-stable-avatar')).toBeInTheDocument();
+
+      act(() => useAuthStore.getState().setRestoreStatus(status));
+      expect(screen.getByTestId('quick-reply-fallback-avatar')).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByTestId('post-header')).not.toBeInTheDocument());
+      expect(screen.queryByTestId('quick-reply-collapsed-avatar-placeholder')).not.toBeInTheDocument();
+      const textarea = screen.getByTestId('quick-reply-textarea');
+      expect(textarea).toHaveValue('Keep this reply');
+      expect(textarea).toHaveAttribute('readonly');
+      fireEvent.change(textarea, { target: { value: 'Unauthorized change' } });
+      expect(handleChange).not.toHaveBeenCalled();
+
+      mockIsAuthenticated = true;
+      act(() => useAuthStore.getState().setRestoreStatus('ready'));
+      expect(screen.getByTestId('quick-reply-stable-avatar')).toBeInTheDocument();
+      expect(textarea).toHaveValue('Keep this reply');
+    },
+  );
 
   it('picks a placeholder from the prompt list on mount', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0); // first prompt

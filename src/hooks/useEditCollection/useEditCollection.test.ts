@@ -6,6 +6,8 @@ import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { useEditCollection } from './useEditCollection';
 
 const mocks = vi.hoisted(() => ({
@@ -73,11 +75,28 @@ const COMPOSITE_ID = 'pk:author/posts/c1';
 describe('useEditCollection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      currentUserPubky: 'account',
+      session: mockSession(),
+      restoreStatus: 'ready',
+      showSignInDialog: false,
+    });
     mocks.cover.file = null;
     mocks.cover.isCleared = false;
     mocks.cover.reset.mockClear();
     mocks.postDetails = { content: collectionContent() };
     for (const key of Object.keys(mocks.localCollections)) delete mocks.localCollections[key];
+  });
+
+  it('requires authorization again if an open collection editor loses its session', async () => {
+    const { result } = renderHook(() => useEditCollection({ compositeCollectionId: COMPOSITE_ID }));
+    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+    useAuthStore.setState({ session: null, restoreStatus: 'reauth-required' });
+    await act(async () => {
+      expect(await result.current.submit()).toBe(false);
+    });
+    expect(mocks.commitEditCollection).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().showSignInDialog).toBe(true);
   });
 
   it('prefills the form once the collection envelope loads', async () => {

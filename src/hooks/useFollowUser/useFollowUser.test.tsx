@@ -139,6 +139,7 @@ describe('useFollowUser', () => {
 
     // Settling the second click must not clear the first one that is still in flight
     await act(async () => {
+      await vi.waitFor(() => expect(resolvers).toHaveLength(2));
       resolvers[1]();
     });
     expect(result.current.isLoading).toBe(true);
@@ -173,3 +174,8 @@ describe('useFollowUser', () => {
     });
   });
 });
+
+// These tests exercise the mutation after auth readiness; restore races use the real store in auth-wait tests.
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ waitForAuth: async () => true }),
+}));

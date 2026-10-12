@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthController } from '@/controllers/auth/auth';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, DatabaseErrorCode, NetworkErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { DialogRestoreEncryptedFile } from './DialogRestoreEncryptedFile';
@@ -441,8 +441,16 @@ describe('DialogRestoreEncryptedFile', () => {
     resolveRestore!(true);
   });
 
-  it('handles aead errors gracefully', async () => {
-    mockLoginWithEncryptedFile.mockRejectedValue(new Error('aead error'));
+  it('handles typed recovery file decryption errors', async () => {
+    mockLoginWithEncryptedFile.mockRejectedValue(
+      new AppError({
+        category: ErrorCategory.Validation,
+        code: ValidationErrorCode.INVALID_INPUT,
+        service: ErrorService.Local,
+        operation: 'decryptRecoveryFile',
+        message: 'Invalid recovery file or passphrase',
+      }),
+    );
 
     render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
 
@@ -463,7 +471,7 @@ describe('DialogRestoreEncryptedFile', () => {
     });
   });
 
-  it('handles restore errors gracefully', async () => {
+  it('does not infer a password failure from an unrelated error message', async () => {
     mockLoginWithEncryptedFile.mockRejectedValue(new Error('password failed'));
 
     render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
@@ -479,9 +487,7 @@ describe('DialogRestoreEncryptedFile', () => {
     fireEvent.click(restoreButton!);
 
     await waitFor(() => {
-      expect(
-        screen.getByText('Invalid password or corrupted file. Please check your password and try again.'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Could not sign in. Please try again.')).toBeInTheDocument();
     });
   });
 
@@ -533,10 +539,57 @@ describe('DialogRestoreEncryptedFile', () => {
     fireEvent.click(restoreButton!);
 
     await waitFor(() => {
-      expect(
-        screen.getByText('Invalid password or corrupted file. Please check your password and try again.'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Could not sign in. Please try again.')).toBeInTheDocument();
     });
+  });
+
+  it.each([
+    [DatabaseErrorCode.WRITE_FAILED, 'commitAuthReference'],
+    [DatabaseErrorCode.INIT_FAILED, 'commitAuthReference'],
+    [DatabaseErrorCode.INIT_FAILED, 'checkSessionStore'],
+    [DatabaseErrorCode.WRITE_FAILED, 'saveSession'],
+  ])('explains session storage failure %s/%s and allows retry', async (code, operation) => {
+    mockLoginWithEncryptedFile.mockRejectedValueOnce(
+      new AppError({
+        category: ErrorCategory.Database,
+        code,
+        service: ErrorService.Local,
+        operation,
+        message: 'Could not save the authenticated session.',
+      }),
+    );
+    render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
+    const file = mockFile('valid.pkarr');
+    fireEvent.change(screen.getByLabelText('Select file'), { target: { files: [file] } });
+    fireEvent.change(screen.getByTestId('input'), { target: { value: 'correct-password' } });
+    fireEvent.click(screen.getByText('Restore').closest('button')!);
+    expect(
+      await screen.findByText(
+        "Your browser couldn't save your session. Check your browser's storage settings and try again.",
+      ),
+    ).toBeInTheDocument();
+    expect(mockOnRestore).not.toHaveBeenCalled();
+    expect(screen.getByTestId('input')).toHaveValue('correct-password');
+    mockLoginWithEncryptedFile.mockResolvedValueOnce(true);
+    fireEvent.click(screen.getByText('Restore').closest('button')!);
+    await waitFor(() => expect(mockOnRestore).toHaveBeenCalledOnce());
+  });
+
+  it('shows a connection error without blaming the recovery file', async () => {
+    mockLoginWithEncryptedFile.mockRejectedValueOnce(
+      new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        service: ErrorService.Homeserver,
+        operation: 'signIn',
+        message: 'Offline',
+      }),
+    );
+    render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
+    fireEvent.change(screen.getByLabelText('Select file'), { target: { files: [mockFile('valid.pkarr')] } });
+    fireEvent.click(screen.getByText('Restore').closest('button')!);
+    expect(await screen.findByText('Could not connect. Check your connection and try again.')).toBeInTheDocument();
+    expect(mockOnRestore).not.toHaveBeenCalled();
   });
 
   it('resets state when cancel is clicked', async () => {

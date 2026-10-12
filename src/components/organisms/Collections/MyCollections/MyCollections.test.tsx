@@ -20,6 +20,7 @@ import { MyCollections } from './MyCollections';
 
 let mockLocalAvatarUrl: string | null | undefined = null;
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({ push: vi.fn() }),
 }));
 
