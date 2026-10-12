@@ -109,7 +109,7 @@ export function parseFileUriOwner(uri: string | null | undefined): string | null
     const parsed = parseUri(trimmed);
     if (parsed.kind === 'file') return parsed.root === 'public' ? parsed.owner : null;
   } catch {
-    return null;
+    // Not a canonical URI: only the 0.x prefix check below can still accept it
   }
 
   const legacy = parsePubkyUri(trimmed);
