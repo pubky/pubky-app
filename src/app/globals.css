@@ -413,22 +413,6 @@ body {
   }
 
   /**
-   * Lexical scrolls the article caret with the window and only honours
-   * scroll-padding-top on the document element (not scroll-margin on the
-   * editor). With no padding it parks the caret at the top of the viewport,
-   * which pulls the formatting toolbar — the row above the caret — up into
-   * the sticky header. The header nav stays pointer-events: auto across its
-   * full height, including where the header background has faded out, so the
-   * toolbar looks reachable and is not (the Markdown toggle included).
-   * 8rem covers the contenteditable's top padding plus a wrapped toolbar.
-   * Dialog composers scroll inside the dialog, above the page header, and do
-   * not set data-article-composer-inline.
-   */
-  html:has([data-article-composer-inline]) {
-    scroll-padding-top: calc(var(--header-offset-main) + 8rem);
-  }
-
-  /**
    * The inline media node's delete/settings toolbar is the image node's toolbar: same MDXEditor
    * variables for the card and toolbar background, the radius and the icon colours, so the two
    * never drift apart.

@@ -137,11 +137,12 @@ const ARTICLE_MARKDOWN_MODE_BUTTON = 'button[aria-label="Markdown"]';
 const ARTICLE_SUBMIT_BUTTON = '[data-cy="post-input-action-bar-publish-article"]';
 const ARTICLE_ADD_BUTTON = '[data-cy="post-input-action-bar-add-article"]';
 const ARTICLE_HEADER_TAB = '[data-cy="article-composer-tab-header"]';
-// Cover picker only. The markdown toolbar mounts a separate file input per inline
-// media kind (markdown-image-input, markdown-video-input, markdown-audio-input,
-// markdown-pdf-input). Excluding only the image one still matched four inputs.
-const ARTICLE_COVER_FILE_INPUT = '[data-testid="article-cover-file-input"]';
+// Cover picker only. It is the file input in the Header tab. The markdown toolbar
+// mounts its own inputs (markdown-image-input, markdown-video-input,
+// markdown-audio-input, markdown-pdf-input) inside the Content panel.
+const ARTICLE_COVER_FILE_INPUT = '[data-testid="article-composer-panel-header"] input[type="file"]';
 const ARTICLE_FIELD_DEBOUNCE_MS = 600;
+const ARTICLE_HEADER_CLEARANCE_PX = 16;
 
 const switchToArticleMode = () => {
   cy.get(ARTICLE_ADD_BUTTON).should('be.visible').click();
@@ -149,31 +150,64 @@ const switchToArticleMode = () => {
   cy.get('.mdxeditor-root-contenteditable').should('exist');
 };
 
-// The inline composer's editor focuses itself and Lexical scrolls the caret
-// toward the top of the window. That can leave the formatting toolbar — which
-// sits above the caret — inside the sticky header's hit target. Dialog
-// composers are not covered by the page header, so this is a no-op there.
+// `should('be.visible')` does not scroll, and a covered toolbar button fails it.
+// The quick-post composer can leave the Markdown toggle under the sticky header.
+// Scroll that toggle clear, then click without Cypress's default scroll-to-top,
+// which would put it back under the header. Dialog composers sit above the
+// header, so this does not move them.
 const revealArticleMarkdownButton = () => {
-  cy.get(ARTICLE_MARKDOWN_MODE_BUTTON).then(($button) => {
+  cy.get(ARTICLE_MARKDOWN_MODE_BUTTON).should(($button) => {
     const button = $button[0];
-    const rect = button.getBoundingClientRect();
-    const centerX = Math.min(window.innerWidth - 1, Math.max(0, rect.left + rect.width / 2));
-    const centerY = rect.top + rect.height / 2;
-    const header = document.querySelector('header');
-    const headerBottom = header?.getBoundingClientRect().bottom ?? 0;
-    const onScreen = centerY >= 0 && centerY <= window.innerHeight;
-    const hit = onScreen ? document.elementFromPoint(centerX, centerY) : null;
-    const coveredByHeader = Boolean(header && hit && header.contains(hit));
-
-    if (!onScreen || coveredByHeader) {
-      window.scrollBy(0, rect.top - headerBottom - 16);
+    const view = button.ownerDocument.defaultView;
+    expect(view, 'markdown toggle is in a window').to.not.equal(null);
+    if (!view) {
+      return;
     }
+
+    const placement = () => {
+      const rect = button.getBoundingClientRect();
+      const header = button.ownerDocument.querySelector('header');
+      const headerRect = header?.getBoundingClientRect();
+      const headerBottom = headerRect && headerRect.height > 0 ? headerRect.bottom : 0;
+      const centerX = Math.min(view.innerWidth - 1, Math.max(0, rect.left + rect.width / 2));
+      const centerY = rect.top + rect.height / 2;
+      const onScreen = rect.width > 0 && rect.height > 0 && centerY >= 0 && centerY <= view.innerHeight;
+      const hit = onScreen ? button.ownerDocument.elementFromPoint(centerX, centerY) : null;
+
+      return {
+        rect,
+        headerBottom,
+        onScreen,
+        coveredByHeader: Boolean(header && hit && header.contains(hit)),
+      };
+    };
+
+    let state = placement();
+    if (state.rect.width === 0 || state.rect.height === 0) {
+      expect(state.rect.height, 'markdown toggle has been laid out').to.be.greaterThan(0);
+      return;
+    }
+
+    if (!state.onScreen || state.coveredByHeader) {
+      const delta = state.rect.top - state.headerBottom - ARTICLE_HEADER_CLEARANCE_PX;
+      const topBefore = state.rect.top;
+      view.scrollBy(0, delta);
+      // A dialog scrolls inside its own box. If the window did not move the
+      // toggle, ask the browser to bring it into the center of that box.
+      if (button.getBoundingClientRect().top === topBefore) {
+        button.scrollIntoView({ block: 'center', inline: 'nearest' });
+      }
+      state = placement();
+    }
+
+    expect(state.onScreen, 'markdown toggle is in the viewport').to.eq(true);
+    expect(state.coveredByHeader, 'markdown toggle is not under the app header').to.eq(false);
   });
 };
 
 const setArticleBody = (body: string) => {
   revealArticleMarkdownButton();
-  cy.get(ARTICLE_MARKDOWN_MODE_BUTTON).should('be.visible').click();
+  cy.get(ARTICLE_MARKDOWN_MODE_BUTTON).click({ scrollBehavior: false });
   cy.get(ARTICLE_MARKDOWN_TEXTAREA).filter(':visible').should('be.visible').clear().type(body, { delay: 0 });
   cy.get(ARTICLE_MARKDOWN_TEXTAREA).filter(':visible').should('have.value', body);
 };
