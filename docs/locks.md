@@ -304,7 +304,9 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    `lg` breakpoint (1024px) an **Open in Bitkit** button instead, since a phone cannot scan its own
    screen. It opens `bitkit://contact?pubky=<creator pubky>`, the same contact screen
    as a scan. The instructions ask the reader to add the creator only if needed; none of these
-   states proves whether the reader has already scanned. `handshake` says the link is connecting;
+   states proves whether the reader has already scanned. `handshake` says the link is connecting,
+   with a small spinner beside the message while polling is active. The contact handoff stays
+   available; the spinner stops when polling parks or wallet setup takes precedence.
    `recovery_required` shows a restoration-needed notice alongside the retained handoff, without
    promising automatic recovery. `connected` removes the handoff and asks the reader to check
    Bitkit for a payment request and confirm when it appears. It does not acknowledge request delivery.

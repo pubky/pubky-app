@@ -98,7 +98,9 @@ describe('DialogPayToUnlock', () => {
         screen.getByText('If this creator is not in your Bitkit contacts, scan this code to add them.'),
       ).toBeInTheDocument();
       expect(screen.getByText('If this creator is not in your Bitkit contacts, add them.')).toBeInTheDocument();
-      expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+      expect(screen.queryAllByRole('status', { name: 'Loading' })).toHaveLength(
+        connectionState === 'handshake' ? 1 : 0,
+      );
       expect(screen.getByTestId('qr-code')).toHaveAttribute('data-value', 'pubkylockcreator');
       expect(screen.getByRole('link', { name: 'Open in Bitkit' })).toHaveAttribute(
         'href',
@@ -213,13 +215,32 @@ describe('DialogPayToUnlock', () => {
     const state = { connectionState, handshakePubky: 'lockcreator' };
     const { rerender } = renderDialog('waiting', { ...state, isStalled: true });
 
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Check again' })).toBeInTheDocument();
+
     rerender(dialogElement('waiting', { ...state, isConnectionPending: true }));
 
     expect(screen.getByText(copy)).toBeInTheDocument();
     expect(screen.queryByText('Checking your Bitkit connection…')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy creator pubky' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open in Bitkit' })).toBeInTheDocument();
+    expect(screen.queryAllByRole('status', { name: 'Loading' })).toHaveLength(connectionState === 'handshake' ? 1 : 0);
+  });
+
+  it('waiting: stops the handshake loader when polling parks and keeps the contact handoff', () => {
+    const onRecheck = vi.fn();
+    const state = { connectionState: 'handshake', handshakePubky: 'lockcreator', onRecheck } as const;
+    const { rerender } = renderDialog('waiting', state);
+
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    rerender(dialogElement('waiting', { ...state, isStalled: true }));
+
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Connecting to this creator/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy creator pubky' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open in Bitkit' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+    expect(onRecheck).toHaveBeenCalledTimes(1);
   });
 
   // Notices and the parked prompt take precedence over a pending connection read.
@@ -311,7 +332,7 @@ describe('DialogPayToUnlock', () => {
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
   });
 
-  it.each(['none', 'recovery_required', 'connected'] as const)(
+  it.each(['none', 'handshake', 'recovery_required', 'connected'] as const)(
     'waiting: asks for wallet setup while %s, with no handoff or spinner',
     (connectionState) => {
       renderDialog('waiting', { connectionState, walletSetupNeeded: true });
