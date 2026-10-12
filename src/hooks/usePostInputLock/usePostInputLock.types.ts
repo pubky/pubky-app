@@ -25,6 +25,7 @@ export type TLockDraft = {
 );
 
 export interface UsePostInputLockOptions {
+  active?: boolean;
   isEnabled: boolean;
   /** Whether the composer has something to lock. The switch is disabled while it is empty, so a lock
    * can never wrap an empty body. */

@@ -6,6 +6,7 @@ import type { EditLock, PostInputVariant } from '@/organisms/PostInput/PostInput
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 
 export interface UsePostInputOptions {
+  active?: boolean;
   /** Variant determines if this is a reply, repost, or a new post */
   variant: PostInputVariant;
   /** Optional parent post ID (required if variant is 'reply') */

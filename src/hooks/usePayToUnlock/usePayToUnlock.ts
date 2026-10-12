@@ -128,8 +128,14 @@ export function usePayToUnlock({
       checkWalletOnRetry.current = status === 'failed';
       setConnectionState(null);
       setIsConnectionPending(false);
-      toast({ variant: 'error', description: `The payment ${status}. You can try again.` });
-      setStage('retry');
+      toast({
+        variant: 'error',
+        description:
+          status === 'expired'
+            ? 'The payment was not completed. You can try again.'
+            : 'The payment failed. You can try again.',
+      });
+      setStage(status === 'expired' ? 'expired' : 'retry');
       return false;
     }
     setStage('waiting');

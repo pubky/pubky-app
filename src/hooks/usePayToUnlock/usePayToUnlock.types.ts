@@ -9,7 +9,7 @@ import type { LockFile, TPaykitConnectionState, TUnlockedContent } from '@/servi
  * `finishing` acknowledges that payment while the credential and content are being fetched.
  */
 export type TPayToUnlockStage =
-  'checking' | 'retry' | 'install' | 'waiting' | 'finishing' | 'paid' | 'unopened' | 'blocked';
+  'checking' | 'retry' | 'expired' | 'install' | 'waiting' | 'finishing' | 'paid' | 'unopened' | 'blocked';
 
 export interface UsePayToUnlockParams {
   /** The modal's open state; closed keeps the hook idle (no requests, no polling). */

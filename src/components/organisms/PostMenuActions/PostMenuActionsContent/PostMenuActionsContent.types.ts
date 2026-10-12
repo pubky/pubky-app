@@ -1,6 +1,7 @@
 import type { MenuVariant } from '@/config/ui';
 
 export interface PostMenuActionsContentProps {
+  active?: boolean;
   postId: string;
   variant: MenuVariant;
   /** Callback when any action completes (used to close menu) */

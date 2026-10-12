@@ -1,4 +1,5 @@
 import { Session } from '@synonymdev/pubky';
+import type { SessionReference, SessionRestoreStatus } from '@/libs/auth/session.types';
 import type { Pubky } from '@/models/models.types';
 
 export interface AuthInitParams {
@@ -6,14 +7,22 @@ export interface AuthInitParams {
   session: Session | null;
   /** null = unknown/undetermined, false = no profile, true = has profile */
   hasProfile: boolean | null;
+  sessionReference?: SessionReference | null;
+  generation?: string;
+  retiringSession?: SessionReference | null;
+  pendingRetirements?: SessionReference[];
+  restoreStatus?: SessionRestoreStatus;
 }
 
 export interface AuthState extends AuthInitParams {
-  sessionExport: string | null;
+  sessionReference: SessionReference | null;
+  generation: string;
+  retiringSession: SessionReference | null;
+  restoreStatus: SessionRestoreStatus;
+  /** This tab changed accounts and must bootstrap before exposing the new session. */
+  needsAccountSync: boolean;
   hasHydrated: boolean;
   isRestoringSession: boolean;
-  /** Whether a restored session's undetermined profile state is being resolved with the homeserver */
-  isResolvingProfile: boolean;
   /** Whether the sign-in dialog is open (for unauthenticated users) */
   showSignInDialog: boolean;
   /** Whether a logout is in progress (prevents flash of weird states during logout) */
@@ -25,8 +34,10 @@ export interface AuthActions {
   init: (params: AuthInitParams) => void;
   setCurrentUserPubky: (pubky: Pubky | null) => void;
   setSession: (session: Session | null) => void;
+  setNeedsAccountSync: (needed: boolean) => void;
+  setRestoreStatus: (status: SessionRestoreStatus) => void;
+  setRetiringSession: (reference: SessionReference | null) => void;
   setIsRestoringSession: (isRestoringSession: boolean) => void;
-  setIsResolvingProfile: (isResolvingProfile: boolean) => void;
   setHasProfile: (hasProfile: boolean) => void;
   setHasHydrated: (hasHydrated: boolean) => void;
   /** Open or close the sign-in dialog */
@@ -46,11 +57,15 @@ export type AuthStore = AuthState & AuthActions & AuthSelectors;
 export const authInitialState: AuthState = {
   currentUserPubky: null,
   session: null,
-  sessionExport: null,
+  sessionReference: null,
+  generation: '',
+  retiringSession: null,
+  pendingRetirements: [],
+  restoreStatus: 'idle',
+  needsAccountSync: false,
   hasProfile: null,
   hasHydrated: false,
   isRestoringSession: false,
-  isResolvingProfile: false,
   showSignInDialog: false,
   isLoggingOut: false,
 };
@@ -62,7 +77,6 @@ export enum AuthActionTypes {
   SET_SESSION = 'SET_SESSION',
   CLEAR_SESSION = 'CLEAR_SESSION',
   SET_IS_RESTORING_SESSION = 'SET_IS_RESTORING_SESSION',
-  SET_IS_RESOLVING_PROFILE = 'SET_IS_RESOLVING_PROFILE',
   SET_HAS_PROFILE = 'SET_HAS_PROFILE',
   SET_HAS_HYDRATED = 'SET_HAS_HYDRATED',
   SET_SHOW_SIGN_IN_DIALOG = 'SET_SHOW_SIGN_IN_DIALOG',
