@@ -25,11 +25,11 @@ import type { ProfileMenuActionItem, UseProfileMenuActionsResult } from './usePr
  * @param userId - The public key of the profile user
  * @returns Menu items array and loading state
  */
-export function useProfileMenuActions(userId: string): UseProfileMenuActionsResult {
+export function useProfileMenuActions(userId: string, active = true): UseProfileMenuActionsResult {
   const { profile, isLoading: isProfileLoading } = useUserProfile(userId);
   const { isFollowing, isLoading: isFollowingLoading } = useIsFollowing(userId);
-  const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = useFollowUser();
-  const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = useMuteUser();
+  const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = useFollowUser(active);
+  const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = useMuteUser(active);
   const { isMuted } = useMutedUsers();
   const { copyToClipboard: copyPubky } = useCopyToClipboard({
     successTitle: 'Pubky copied to clipboard',
@@ -87,7 +87,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     icon: isUserMuted ? Megaphone : MegaphoneOff,
     onClick: async () => {
       try {
-        await toggleMute(userId, isUserMuted);
+        if (!(await toggleMute(userId, isUserMuted))) return;
         toast({
           title: isUserMuted ? 'User unmuted' : 'User muted',
         });

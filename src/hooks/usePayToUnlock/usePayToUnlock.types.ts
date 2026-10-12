@@ -7,7 +7,8 @@ import type { LockFile, TPaykitConnectionState, TUnlockedContent } from '@/servi
  * could mean paying twice, so it is not offered. `unopened` is its own stage because the payment
  * succeeded there and only the content download failed: the reader must never be told to go pay.
  */
-export type TPayToUnlockStage = 'checking' | 'retry' | 'install' | 'waiting' | 'paid' | 'unopened' | 'blocked';
+export type TPayToUnlockStage =
+  'checking' | 'retry' | 'expired' | 'install' | 'waiting' | 'paid' | 'unopened' | 'blocked';
 
 export interface UsePayToUnlockParams {
   /** The modal's open state; closed keeps the hook idle (no requests, no polling). */

@@ -155,9 +155,7 @@ function CollectionHeroContent({
 
   const handleFollowToggle = () => {
     if (isBookmarkLoading || isToggling) return;
-    requireAuth(() => {
-      void toggle();
-    });
+    void toggle();
   };
 
   // Sharing a collection = reposting the underlying post; reuse the standard
@@ -184,7 +182,7 @@ function CollectionHeroContent({
   };
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const handleEdit = () => setIsEditDialogOpen(true);
+  const handleEdit = () => requireAuth(() => setIsEditDialogOpen(true));
 
   // Delete flow: open confirmation → on confirm, await the commit before
   // redirecting to `/collections`. Awaiting matters: the local-first delete
@@ -198,17 +196,19 @@ function CollectionHeroContent({
   // toast reads as "Collection deleted" not "Post deleted".
   const router = useRouter();
   const deleteCollectionDescription = `Are you sure you want to delete '${title || authorPubky}'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.`;
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { deletePost, isDeleting } = useDeletePost({
+    active: deleteConfirmOpen,
     toastMessages: {
       deleted: 'Your collection has been deleted',
       deleteFailed: 'Failed to delete collection. Please try again.',
     },
   });
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const handleDelete = () => setDeleteConfirmOpen(true);
+  const handleDelete = () => requireAuth(() => setDeleteConfirmOpen(true));
   const handleDeleteConfirm = async () => {
-    await deletePost(compositeId);
+    if (!(await deletePost(compositeId))) return false;
     router.replace(APP_ROUTES.COLLECTIONS);
+    return true;
   };
   // While reorder mode is active, every other owner action is disabled so the
   // hero reads as "you are reordering" — only Save order / Cancel stay live.
@@ -376,7 +376,7 @@ function CollectionHeroContent({
                         <Button
                           variant="secondary"
                           size="icon"
-                          onClick={reorder.onEnter}
+                          onClick={() => requireAuth(reorder.onEnter)}
                           disabled={isDeleting || itemCount < 2}
                           aria-label={'Reorder'}
                           data-cy="collection-hero-reorder-btn"
@@ -491,7 +491,7 @@ function CollectionHeroContent({
           <DialogConfirmDelete
             open={deleteConfirmOpen}
             onOpenChange={setDeleteConfirmOpen}
-            onConfirm={() => void handleDeleteConfirm()}
+            onConfirm={handleDeleteConfirm}
             title="Delete collection?"
             description={deleteCollectionDescription}
           />

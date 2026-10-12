@@ -28,6 +28,7 @@ vi.mock('qrcode.react', () => ({
 }));
 
 type DialogOverrides = {
+  price?: React.ComponentProps<typeof DialogPayToUnlock>['price'];
   isSubmitting?: boolean;
   onRetry?: () => void;
   isStalled?: boolean;
@@ -47,7 +48,7 @@ const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}
     onOpenChange={overrides.onOpenChange ?? vi.fn()}
     lockTitle="My locked post"
     authorId="pubkycreator"
-    priceSats="1000"
+    price={overrides.price ?? { amount: '1000', asset: 'BTC' }}
     stage={stage}
     isStalled={overrides.isStalled ?? false}
     handshakePubky={overrides.handshakePubky ?? null}
@@ -65,6 +66,16 @@ const renderDialog = (stage: TPayToUnlockStage, overrides: DialogOverrides = {})
   render(dialogElement(stage, overrides), { wrapper: overrides.wrapper });
 
 describe('DialogPayToUnlock', () => {
+  it.each([
+    ['waiting', 'COST TO UNLOCK'],
+    ['paid', 'PAYMENT RECEIVED'],
+    ['unopened', 'PAYMENT RECEIVED'],
+  ] as const)('keeps USD denomination in the %s checkout state', (stage, label) => {
+    renderDialog(stage, { price: { amount: '500', asset: 'USD' } });
+    expect(screen.getByText('$5.00')).toBeInTheDocument();
+    expect(screen.getByText(label)).toBeInTheDocument();
+  });
+
   // clearAllMocks keeps implementations, so a rejected copy would leak into later tests.
   beforeEach(() => {
     mocks.copyToClipboard.mockReset();
@@ -128,8 +139,33 @@ describe('DialogPayToUnlock', () => {
     const onRetry = vi.fn();
     renderDialog('retry', { onRetry });
 
+    expect(screen.getByText('The payment could not continue. Try again when Bitkit is ready.')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('expired: offers a new attempt without blaming Bitkit or showing a payment spinner', () => {
+    const onRetry = vi.fn();
+    const onOpenChange = vi.fn();
+    renderDialog('expired', { onRetry, onOpenChange });
+
+    expect(screen.getByText('The payment was not completed. You can try again.')).toBeInTheDocument();
+    expect(screen.queryByText(/when Bitkit is ready/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.queryByText('The payment is still running')).not.toBeInTheDocument();
+  });
+
+  it('expired: disables the new attempt while its submission is in flight', () => {
+    renderDialog('expired', { isSubmitting: true });
+    expect(document.querySelector('[data-cy="pay-to-unlock-retry"]')).toBeDisabled();
   });
 
   it('install: shows the setup steps, the store links and the I completed the steps button, and no QR', () => {

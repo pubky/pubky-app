@@ -10,8 +10,8 @@ import { IllustratedEmptyState } from '../IllustratedEmptyState/IllustratedEmpty
 /**
  * Empty state for the profile Collections tab. Own profile gets a
  * "Create Collection" CTA that acts as the `DialogNewCollection` trigger;
- * visitors see read-only copy. `isOwnProfile` already implies an authenticated
- * viewer, so the CTA needs no extra auth gate.
+ * visitors see read-only copy. Ownership controls CTA visibility;
+ * `DialogNewCollection` requires a ready session before opening or saving.
  */
 export function CollectionsEmpty() {
   const { isOwnProfile } = useProfileContext();

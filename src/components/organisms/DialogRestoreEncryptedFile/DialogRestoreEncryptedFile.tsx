@@ -20,7 +20,8 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { AuthController } from '@/controllers/auth/auth';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { AppError } from '@/libs/error/error';
-import { ErrorService } from '@/libs/error/error.types';
+import { DatabaseErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { formatFileName } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
@@ -67,26 +68,29 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
           variant: 'error',
           description: 'This key is linked to a different homeserver. Use a staging account on this site.',
         });
-      } else if (error instanceof Error) {
-        const errorMessage = error.message.toLowerCase();
-        if (
-          errorMessage.includes('password') ||
-          errorMessage.includes('decrypt') ||
-          errorMessage.includes('invalid') ||
-          errorMessage.includes('aead') ||
-          errorMessage.includes('authentication') ||
-          errorMessage.includes('cipher')
-        ) {
-          setError('Invalid password or corrupted file. Please check your password and try again.');
-        } else if (error instanceof AppError && error.service === ErrorService.Nexus) {
-          setError('Something went wrong with nexus. Please try again.');
-        } else {
-          setError('Failed to restore from file. Please check your file and try again.');
-        }
-      } else if (typeof error === 'string' && error.toLowerCase().includes('aead')) {
+      } else if (
+        error instanceof AppError &&
+        error.service === ErrorService.Local &&
+        error.operation === 'decryptRecoveryFile' &&
+        error.code === ValidationErrorCode.INVALID_INPUT
+      ) {
         setError('Invalid password or corrupted file. Please check your password and try again.');
+      } else if (
+        error instanceof AppError &&
+        error.category === ErrorCategory.Database &&
+        (error.code === DatabaseErrorCode.INIT_FAILED || error.code === DatabaseErrorCode.WRITE_FAILED) &&
+        ['commitAuthReference', 'checkSessionStore', 'saveSession'].includes(error.operation ?? '')
+      ) {
+        setError("Your browser couldn't save your session. Check your browser's storage settings and try again.");
+      } else if (error instanceof AppError && error.service === ErrorService.Nexus) {
+        setError('Something went wrong with nexus. Please try again.');
+      } else if (
+        error instanceof AppError &&
+        (error.category === ErrorCategory.Network || error.category === ErrorCategory.Timeout)
+      ) {
+        setError('Could not connect. Check your connection and try again.');
       } else {
-        setError('Unexpected error occurred.');
+        setError('Could not sign in. Please try again.');
       }
       setIsRestoring(false);
     }

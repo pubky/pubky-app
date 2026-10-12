@@ -6,6 +6,7 @@ import { ProfilePageTaggedAs } from './ProfilePageTaggedAs';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({
     push: vi.fn(),
   }),

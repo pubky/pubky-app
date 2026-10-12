@@ -10,25 +10,35 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { MOCK_LOCK_AUTHOR_PUBKY } from '@/test-utils/locks';
+import { mockGrantReference, mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 
-const mocks = vi.hoisted(() => ({ create: vi.fn(), exchange: vi.fn(), connect: vi.fn(), config: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  create: vi.fn(),
+  exchange: vi.fn(),
+  connect: vi.fn(),
+  config: vi.fn(),
+  setup: vi.fn(),
+}));
 vi.mock('@/application/locks/locks', () => ({
   LocksApplication: {
     createLockContent: mocks.create,
+    fetchPaykitSetupStatus: mocks.setup,
     exchangeSessionCode: mocks.exchange,
     generateConnectUrl: mocks.connect,
     setLockServiceConfig: mocks.config,
   },
 }));
 vi.mock('@/controllers/post/post', () => ({ PostController: { commitCreate: vi.fn() } }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/home' }));
 
 const params = {
   lockedPost: { content: 'locked body', kind: PubkyAppPostKind.Short, attachments: [] },
   announcement: { teaser: { lock_title: 'Title', teaser_description: 'Teaser' }, attachments: [], tags: [] },
-  lockConfig: { amountSats: '1000' },
+  lockConfig: { amount: '1000', asset: 'BTC' as const },
 };
 const rejectedSession = () =>
   Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Rejected old Locks session', {
@@ -39,12 +49,22 @@ const rejectedSession = () =>
 describe('useCreateLockContent reauthentication', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.setup.mockResolvedValue('ready');
     LocksController.clearSession();
+    useAuthStore.setState({
+      ...authInitialState,
+      currentUserPubky: MOCK_LOCK_AUTHOR_PUBKY,
+      generation: 'original-login',
+      hasHydrated: true,
+      session: mockSession(),
+      sessionReference: mockGrantReference(),
+      restoreStatus: 'ready',
+    });
   });
 
   afterEach(() => {
     LocksController.clearSession();
-    useAuthStore.setState({ currentUserPubky: null });
+    useAuthStore.setState(authInitialState);
   });
 
   it.each(['before', 'after'] as const)(

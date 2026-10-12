@@ -11,6 +11,8 @@ import { TimelinePostReplies } from './PostReplies';
 // Mock hooks
 const mockUseRequireAuth = vi.fn((): UseRequireAuthResult => ({
   isAuthenticated: true,
+  waitForAuth: async () => true,
+  isWaiting: false,
   requireAuth: <T,>(action: () => T) => action(),
 }));
 
@@ -121,6 +123,8 @@ describe('TimelinePostReplies', () => {
   it('renders ThreadTree when not authenticated', () => {
     vi.mocked(useRequireAuth).mockReturnValue({
       isAuthenticated: false,
+      waitForAuth: async () => false,
+      isWaiting: false,
       requireAuth: <T,>(_action: () => T) => undefined,
     });
 

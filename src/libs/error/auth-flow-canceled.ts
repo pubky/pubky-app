@@ -23,3 +23,14 @@ export const isAuthFlowCanceledError = (error: unknown): boolean =>
   error !== null &&
   'name' in error &&
   (error as { name?: unknown }).name === AUTH_FLOW_CANCELED_ERROR_NAME;
+
+/** A user can approve with the wrong account; show feedback without reporting a system failure. */
+export function createAuthApprovalMismatchError(): Error {
+  const error = new Error('Approve with the account and permissions requested.');
+  error.name = 'AuthApprovalMismatch';
+  return error;
+}
+
+export function isAuthApprovalMismatchError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AuthApprovalMismatch';
+}

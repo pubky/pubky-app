@@ -1,4 +1,5 @@
-import { type AuthFlow } from '@synonymdev/pubky';
+import { type AuthFlow, type Session } from '@synonymdev/pubky';
+import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -8,7 +9,7 @@ import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
-import { createCanceledError, extractStatusCode, handleError } from './error.utils';
+import { extractStatusCode, handleError } from './error.utils';
 import type {
   CancelableAuthApproval,
   StoragePath,
@@ -158,8 +159,10 @@ const AUTH_POLL_MAX_RESUMES = 60;
 const AUTH_RELAY_RETENTION_MS = 5 * 60 * 1000;
 
 /**
- * A transport failure with no HTTP status: the relay never answered (aborted, refused or offline fetch).
+ * A transport failure with no HTTP status (aborted, refused or offline fetch).
  * The SDK reports it as a `RequestError` without `data.statusCode`; an HTTP error response carries one.
+ * A failure during bearer exchange can have the same shape after the relay approval was consumed;
+ * resuming cannot guarantee recovery in that case.
  */
 const isTransientPollError = (error: unknown): boolean => {
   if (extractStatusCode(error) !== undefined) return false;
@@ -195,20 +198,16 @@ const waitUntilVisible = (signal?: AbortSignal): Promise<void> =>
   });
 
 /**
- * Creates a cancelable auth approval wrapper around an AuthFlow.
- * Pubky rc7: awaitApproval consumes the WASM handle, so we use tryPollOnce to keep flow.free() usable.
- * @param flow - The auth flow to wrap
- * @param options - Optional configuration: poll interval in milliseconds and `resume`, which reconnects to
- * the same relay channel. The SDK gives up on a flow after a few failed relay requests and never polls again,
- * so a later `tryPollOnce` cannot recover it; only a resumed flow can pick up an approval posted meanwhile.
- * @returns CancelableAuthApproval with awaitApproval promise and cancel function
+ * Polls approval without consuming the WASM handle. A resumable flow reconnects to the same relay
+ * channel after a transport failure; late sessions returned after cancellation are handed to cleanup.
  */
 export const createCancelableAuthApproval = (
   initialFlow: Pick<AuthFlow, 'tryPollOnce' | 'free'>,
   options?: {
     pollIntervalMs?: number;
     maxPollAttempts?: number;
-    resume?: () => Pick<AuthFlow, 'tryPollOnce' | 'free'>;
+    resume?: () => Pick<AuthFlow, 'tryPollOnce' | 'free'> | Promise<Pick<AuthFlow, 'tryPollOnce' | 'free'>>;
+    onCanceledSession?: (session: Session) => Promise<void>;
   },
 ): CancelableAuthApproval => {
   let flow = initialFlow;
@@ -219,9 +218,7 @@ export const createCancelableAuthApproval = (
   let freed = false;
   const waiting = new AbortController();
 
-  const cancel = () => {
-    canceled = true;
-    waiting.abort();
+  const freeFlow = () => {
     if (freed) return;
     freed = true;
     try {
@@ -231,13 +228,18 @@ export const createCancelableAuthApproval = (
     }
   };
 
+  const cancel = () => {
+    canceled = true;
+    waiting.abort();
+    freeFlow();
+  };
+
   const awaitApproval = (async () => {
     await sleep(0);
 
     const startedAt = Date.now();
     let attempts = 0;
     let resumes = 0;
-    let resumeError: unknown;
     for (;;) {
       if (canceled) throw createCanceledError();
       if (++attempts > maxPollAttempts) {
@@ -250,45 +252,36 @@ export const createCancelableAuthApproval = (
 
       try {
         const maybeSession = await flow.tryPollOnce();
+        if (canceled) {
+          if (maybeSession) await options?.onCanceledSession?.(maybeSession);
+          throw createCanceledError();
+        }
         if (maybeSession) return maybeSession;
       } catch (error) {
         if (canceled) throw createCanceledError();
-        // A mobile browser cuts the page's network once it goes to the background (the user is approving in
-        // Pubky Ring). The SDK gives up on the flow after a few failed relay requests, so wait until the
-        // page is visible again and resume the flow on the same relay channel: an approval made meanwhile is
-        // still there, and completes the sign-in.
+        // Mobile browsers can abort the relay poll while the user approves in Ring.
+        // Reconnect on the original channel once the page returns, within the relay retention window.
         if (options?.resume && isTransientPollError(error) && ++resumes <= AUTH_POLL_MAX_RESUMES) {
           await waitUntilVisible(waiting.signal);
           if (canceled) throw createCanceledError();
           if (Date.now() - startedAt <= AUTH_RELAY_RETENTION_MS) {
+            freeFlow();
             try {
-              flow.free();
-            } catch {
-              // Ignore double-free or already-finalized WASM objects.
-            }
-            try {
-              flow = options.resume();
+              flow = await options.resume();
+              freed = false;
+              if (canceled) {
+                freeFlow();
+                throw createCanceledError();
+              }
               continue;
-            } catch (resumeFailure) {
-              // The channel cannot be resumed: fall through to the dead-flow error below.
-              resumeError = resumeFailure;
+            } catch (resumeError) {
+              if (canceled) throw createCanceledError();
+              return handleError({ error: resumeError, additionalContext: { operation: 'awaitApproval' } });
             }
           }
         }
-        // From the caller's view, tryPollOnce is one-shot: one call, one outcome
-        // (pubky SDK 0.8 — it doesn't loop or retry on our behalf). If it throws,
-        // we treat the flow as dead and fail fast — showing "session expired" now
-        // is better UX than letting the user wait minutes on a flow that may already be dead.
-        throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Auth flow polling failed', {
-          service: ErrorService.Homeserver,
-          operation: 'awaitApproval',
-          context: {
-            originalError: error instanceof Error ? error.message : String(error),
-            resumeError: resumeError instanceof Error ? resumeError.message : undefined,
-            statusCode: extractStatusCode(error),
-          },
-          cause: error,
-        });
+        // Keep transport, permission and authentication failures distinct for the grant flow.
+        return handleError({ error, additionalContext: { operation: 'awaitApproval' } });
       }
 
       await sleep(pollIntervalMs);

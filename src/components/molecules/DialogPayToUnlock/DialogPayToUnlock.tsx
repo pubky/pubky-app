@@ -13,7 +13,7 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboar
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { generateBitkitContactDeeplink } from '@/libs/deeplink/deeplink';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
-import { formatSats } from '@/libs/utils/formatSats';
+import { formatLockPrice } from '@/libs/utils/lockPrice';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 import { AppDownload } from '@/molecules/AppDownload/AppDownload';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
@@ -73,7 +73,7 @@ export function DialogPayToUnlock({
   onOpenChange,
   lockTitle,
   authorId,
-  priceSats,
+  price,
   stage,
   isStalled,
   handshakePubky,
@@ -92,7 +92,7 @@ export function DialogPayToUnlock({
   const hasNotice = connectionState === 'blocked' || connectionState === 'recovery_required' || walletSetupNeeded;
   const showSpinner = stage === 'checking' || (stage === 'waiting' && !showQr && !isStalled && !hasNotice);
   const showHandshakeSpinner = showQr && connectionState === 'handshake' && !isStalled && !hasNotice;
-  const showPrimary = stage === 'retry' || isInstall;
+  const showPrimary = stage === 'retry' || stage === 'expired' || isInstall;
   const primaryLabel = isInstall ? 'I completed the steps' : 'Try again';
   // `unopened` reached this screen by a completed payment too, so it must not show a cost to pay.
   const isPaid = stage === 'paid' || stage === 'unopened';
@@ -155,7 +155,7 @@ export function DialogPayToUnlock({
                 {isPaid ? 'PAYMENT RECEIVED' : 'COST TO UNLOCK'}
               </Typography>
               <Typography className="text-2xl font-bold text-foreground">
-                {formatSats(priceSats, { space: true })}
+                {formatLockPrice(price, { space: true })}
               </Typography>
             </Container>
 
@@ -221,6 +221,12 @@ export function DialogPayToUnlock({
             {stage === 'retry' && (
               <Typography className="text-base text-secondary-foreground">
                 {'The payment could not continue. Try again when Bitkit is ready.'}
+              </Typography>
+            )}
+
+            {stage === 'expired' && (
+              <Typography className="text-base text-secondary-foreground">
+                {'The payment was not completed. You can try again.'}
               </Typography>
             )}
 
