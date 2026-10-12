@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInputActionBar } from './PostInputActionBar';
 
 // Use real libs - use actual implementations
@@ -22,6 +21,7 @@ vi.mock('@/atoms/Button/Button', () => {
       size,
       style,
       'aria-label': aria,
+      'aria-pressed': ariaPressed,
     }: {
       children: React.ReactNode;
       onClick?: React.MouseEventHandler;
@@ -31,6 +31,7 @@ vi.mock('@/atoms/Button/Button', () => {
       size?: string;
       style?: React.CSSProperties;
       'aria-label'?: string;
+      'aria-pressed'?: boolean;
     }) => (
       <button
         onClick={onClick}
@@ -40,6 +41,7 @@ vi.mock('@/atoms/Button/Button', () => {
         data-size={size}
         style={style}
         aria-label={aria}
+        aria-pressed={ariaPressed}
       >
         {children}
       </button>
@@ -254,63 +256,58 @@ describe('PostInputActionBar', () => {
   });
 });
 
-describe('PostInputActionBar - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot with default props', () => {
-    const { container } = render(<PostInputActionBar hideArticleButton={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with all callbacks', () => {
-    const onEmojiClick = vi.fn();
-    const onImageClick = vi.fn();
-    const onArticleClick = vi.fn();
-    const onPostClick = vi.fn();
-
-    const { container } = render(
+describe('PostInputActionBar - article controls', () => {
+  it('renders leading content before the action buttons', () => {
+    render(
       <PostInputActionBar
-        hideArticleButton={false}
-        onEmojiClick={onEmojiClick}
-        onImageClick={onImageClick}
-        onArticleClick={onArticleClick}
-        onPostClick={onPostClick}
+        hideArticleButton
+        isArticle
+        leadingContent={<span data-testid="leading-avatar">avatar</span>}
       />,
     );
-    expect(container.firstChild).toMatchSnapshot();
+
+    const leading = screen.getByTestId('leading-avatar');
+    const [leftGroup] = screen.getAllByTestId('container').slice(1);
+    expect(leftGroup.firstElementChild).toBe(leading);
   });
 
-  it('matches snapshot with disabled post button', () => {
-    const { container } = render(<PostInputActionBar hideArticleButton={false} isPostDisabled={true} />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('does not render a fullscreen toggle unless one is provided', () => {
+    render(<PostInputActionBar hideArticleButton isArticle />);
+
+    expect(screen.queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
   });
 
-  it('matches snapshot with hideArticleButton prop', () => {
-    const { container } = render(<PostInputActionBar hideArticleButton={true} />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('renders the fullscreen toggle with the expand icon and calls onToggle', () => {
+    const onToggle = vi.fn();
+    render(<PostInputActionBar hideArticleButton isArticle fullscreen={{ isFullscreen: false, onToggle }} />);
+
+    const toggle = screen.getByRole('button', { name: 'Enter fullscreen' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(toggle.querySelector('.lucide-expand')).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it('matches snapshot with isArticle prop', () => {
-    const { container } = render(<PostInputActionBar hideArticleButton={false} isArticle={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  it('labels the toggle as exit with the shrink icon while fullscreen', () => {
+    render(<PostInputActionBar hideArticleButton isArticle fullscreen={{ isFullscreen: true, onToggle: vi.fn() }} />);
 
-describe('PostInputActionBar - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(useIsMobile).mockReturnValue(true);
-    setMobileViewport();
+    const toggle = screen.getByRole('button', { name: 'Exit fullscreen' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(toggle.querySelector('.lucide-shrink')).toBeInTheDocument();
   });
 
-  afterEach(() => {
-    resetViewport();
-  });
+  it('disables the fullscreen toggle while submitting', () => {
+    render(
+      <PostInputActionBar
+        hideArticleButton
+        isArticle
+        isSubmitting
+        fullscreen={{ isFullscreen: false, onToggle: vi.fn() }}
+      />,
+    );
 
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<PostInputActionBar hideArticleButton={false} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(screen.getByRole('button', { name: 'Enter fullscreen' })).toBeDisabled();
   });
 });

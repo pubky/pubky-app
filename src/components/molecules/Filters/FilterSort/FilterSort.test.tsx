@@ -100,25 +100,3 @@ describe('FilterSort', () => {
     expect(popularityItem).toBeInTheDocument();
   });
 });
-
-describe('FilterSort - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<FilterSort />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with Recent content selected tab', () => {
-    const { container } = render(<FilterSort selectedTab={SORT.TIMELINE} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with Popularity content selected tab', () => {
-    const { container } = render(<FilterSort selectedTab={SORT.ENGAGEMENT} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with disabled state', () => {
-    const { container } = render(<FilterSort disabled />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

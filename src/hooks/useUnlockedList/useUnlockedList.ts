@@ -11,6 +11,12 @@ import type { UseUnlockedListParams, UseUnlockedListResult } from './useUnlocked
  * The signed-in user's unlocked content. Read once per profile visit from
  * `ProfilePageContainer` — that layout survives tab navigation, so the sidebar count and the
  * Unlocked screen share the single instance rather than enumerating twice.
+ *
+ * The cached list paints first, then the homeserver list replaces it. The homeserver is asked on
+ * every visit: an unlock made on another device exists only there, and an empty cache does not
+ * prove that there are no unlocks.
+ *
+ * TODO:[Locks] #2766 — move to `useLocalFirstQuery` once it can refresh a cache hit.
  */
 export function useUnlockedList({ enabled = true }: UseUnlockedListParams = {}): UseUnlockedListResult {
   const [items, setItems] = useState<TUnlockedListItem[]>([]);
@@ -44,18 +50,26 @@ export function useUnlockedList({ enabled = true }: UseUnlockedListParams = {}):
     }
 
     let cancelled = false;
-    LocksController.fetchUnlockedList({ readerPubky: currentUserPubky })
+    setHasResolved(false);
+    // A failed cache read leaves the list to the homeserver.
+    LocksController.getUnlockedList()
+      .catch((): TUnlockedListItem[] => [])
+      .then((cached) => {
+        if (cancelled) return null;
+        if (cached.length > 0) setItems(cached);
+        return LocksController.fetchUnlockedList({ readerPubky: currentUserPubky });
+      })
       .then((result) => {
-        if (cancelled) return;
+        if (cancelled || !result) return;
         setItems(result);
         // Cleared on success, not when the read starts: a retry of a failed read still holds the
         // emptied list, which would be reported as a settled count of 0 while it is in flight.
         setIsError(false);
       })
       .catch(() => {
-        // Already reported by the Err factory; `isError` lets the screen offer a retry.
+        // Already reported by the Err factory; `isError` lets the screen offer a retry, and the
+        // cached items stay visible.
         if (cancelled) return;
-        setItems([]);
         setIsError(true);
       })
       .finally(() => {
@@ -73,7 +87,8 @@ export function useUnlockedList({ enabled = true }: UseUnlockedListParams = {}):
     // A blocked session is settled, not loading — otherwise the sidebar spins on a count that cannot
     // arrive — and it is reported like a failed read, so the sidebar shows no number rather than a
     // confident 0. The Unlocked screen shows the permission notice instead of the error copy.
-    isLoading: enabled && !needsUpgrade && !hasResolved,
+    // Cached items are shown as settled; an empty cache stays loading until the homeserver answers.
+    isLoading: enabled && !needsUpgrade && !hasResolved && items.length === 0,
     isError: needsUpgrade || isError,
   };
 }

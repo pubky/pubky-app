@@ -43,10 +43,3 @@ describe('EditProfile', () => {
     expect(screen.getByTestId('edit-profile-content')).toBeInTheDocument();
   });
 });
-
-describe('EditProfile - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<EditProfile />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

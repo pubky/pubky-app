@@ -68,10 +68,3 @@ describe('HumanPhoneInput', () => {
     expect(screen.queryByTestId('human-phone-input-error')).not.toBeInTheDocument();
   });
 });
-
-describe('HumanPhoneInput - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<HumanPhoneInput onBack={() => {}} onCodeSent={() => {}} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

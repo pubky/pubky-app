@@ -121,7 +121,7 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
         <Button
           id="human-phone-back-btn"
           size="lg"
-          className="w-full flex-1 rounded-full bg-foreground/4 md:flex-0"
+          className="w-full flex-1 rounded-full md:flex-0"
           variant="outline"
           onClick={onBack}
         >

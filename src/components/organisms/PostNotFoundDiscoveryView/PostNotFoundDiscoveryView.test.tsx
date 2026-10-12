@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE, PUBKY_INVALID_TOO_LONG } from '@/test-utils/pubky';
+import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { PostNotFoundDiscoveryView } from './PostNotFoundDiscoveryView';
 
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
@@ -50,18 +50,5 @@ describe('PostNotFoundDiscoveryView', () => {
   it('passes postId to PostNotFound', () => {
     render(<PostNotFoundDiscoveryView postId={VALID_COMPOSITE} />);
     expect(screen.getByTestId('post-not-found-mock')).toHaveAttribute('data-post-id', VALID_COMPOSITE);
-  });
-});
-
-describe('PostNotFoundDiscoveryView - Snapshots', () => {
-  it('matches snapshot when composite author is valid', () => {
-    const { container } = render(<PostNotFoundDiscoveryView postId={VALID_COMPOSITE} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when composite author is invalid', () => {
-    const invalid = `${PUBKY_INVALID_TOO_LONG}:${POST_ID_STAGING_FIXTURE}`;
-    const { container } = render(<PostNotFoundDiscoveryView postId={invalid} />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

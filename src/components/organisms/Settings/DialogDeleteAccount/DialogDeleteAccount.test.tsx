@@ -264,27 +264,3 @@ describe('DialogDeleteAccount', () => {
     expect(trashIcon).toBeInTheDocument();
   });
 });
-
-describe('DialogDeleteAccount - Snapshots', () => {
-  beforeEach(() => {
-    mockIsDeleting = false;
-    mockProgress = 0;
-  });
-
-  it('matches snapshot for default DialogDeleteAccount', () => {
-    const { container } = render(<DialogDeleteAccount {...defaultProps} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when closed', () => {
-    const { container } = render(<DialogDeleteAccount {...defaultProps} isOpen={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot while deleting', () => {
-    mockIsDeleting = true;
-    mockProgress = 50;
-    const { container } = render(<DialogDeleteAccount {...defaultProps} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

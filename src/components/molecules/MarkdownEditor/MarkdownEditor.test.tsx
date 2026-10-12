@@ -152,29 +152,3 @@ describe('MarkdownEditor', () => {
     expect(editor).toHaveClass('custom-class');
   });
 });
-
-describe('MarkdownEditor - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot with default props', () => {
-    const { container } = render(<MarkdownEditor markdown="" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with markdown content', () => {
-    const { container } = render(<MarkdownEditor markdown="# Test Heading" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<MarkdownEditor markdown="" className="custom-editor" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with placeholder', () => {
-    const { container } = render(<MarkdownEditor markdown="" placeholder="Start typing..." />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

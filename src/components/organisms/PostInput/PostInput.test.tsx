@@ -19,7 +19,6 @@ import { PostHeader } from '@/organisms/PostHeader/PostHeader';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInputActionBar } from '../PostInputActionBar/PostInputActionBar';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
@@ -117,21 +116,24 @@ vi.mock('@/atoms/Container/Container', () => {
 
 vi.mock('@/atoms/Input/Input', () => {
   return {
-    Input: vi.fn(({ type, accept, multiple, onChange, ref, className, id, placeholder, defaultValue, disabled }) => (
-      <input
-        ref={ref}
-        type={type}
-        accept={accept}
-        multiple={multiple}
-        onChange={onChange}
-        className={className}
-        id={id}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-        disabled={disabled}
-        data-testid="input"
-      />
-    )),
+    Input: vi.fn(
+      ({ type, accept, multiple, onChange, ref, className, id, placeholder, defaultValue, value, disabled }) => (
+        <input
+          ref={ref}
+          type={type}
+          accept={accept}
+          multiple={multiple}
+          onChange={onChange}
+          className={className}
+          id={id}
+          placeholder={placeholder}
+          defaultValue={defaultValue}
+          value={value}
+          disabled={disabled}
+          data-testid="input"
+        />
+      ),
+    ),
   };
 });
 
@@ -233,8 +235,28 @@ vi.mock('../PostInputTags/PostInputTags', () => ({
 
 vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
   PostInputActionBar: vi.fn(
-    ({ onPostClick, onEmojiClick, onImageClick, onArticleClick, isPostDisabled, isSubmitting }) => (
+    ({
+      onPostClick,
+      onEmojiClick,
+      onImageClick,
+      onArticleClick,
+      isPostDisabled,
+      isSubmitting,
+      leadingContent,
+      fullscreen,
+    }) => (
       <div data-testid="post-input-action-bar" data-post-disabled={String(isPostDisabled)}>
+        {leadingContent}
+        {fullscreen ? (
+          <button
+            data-testid="fullscreen-button"
+            onClick={fullscreen.onToggle}
+            aria-pressed={fullscreen.isFullscreen}
+            aria-label="Enter fullscreen"
+          >
+            Fullscreen
+          </button>
+        ) : null}
         <button data-testid="emoji-button" onClick={onEmojiClick} aria-label="Add emoji">
           Emoji
         </button>
@@ -285,16 +307,20 @@ vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
 
 vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', () => {
   return {
-    MarkdownEditor: vi.fn(({ markdown, onChange, readOnly }) => (
-      <div
-        data-testid="markdown-editor"
-        data-readonly={readOnly}
-        contentEditable={!readOnly}
-        onInput={(e) => onChange?.((e.target as HTMLDivElement).textContent || '')}
-      >
-        {markdown}
-      </div>
-    )),
+    MarkdownEditor: vi.fn(({ markdown, onChange, readOnly, isLoading }) =>
+      isLoading ? (
+        <div data-testid="markdown-editor-loading" />
+      ) : (
+        <div
+          data-testid="markdown-editor"
+          data-readonly={readOnly}
+          contentEditable={!readOnly}
+          onInput={(e) => onChange?.((e.target as HTMLDivElement).textContent || '')}
+        >
+          {markdown}
+        </div>
+      ),
+    ),
   };
 });
 
@@ -420,6 +446,43 @@ vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
   };
 });
 
+vi.mock('@/organisms/ArticleComposerPreview/ArticleComposerPreview', () => ({
+  ArticleComposerPreview: vi.fn(
+    ({
+      title,
+      body,
+      authorPubky,
+      coverFile,
+      coverAttachment,
+    }: {
+      title: string;
+      body: string;
+      authorPubky: string;
+      coverFile?: File;
+      coverAttachment?: ExistingAttachment;
+    }) => (
+      <div
+        data-testid="article-composer-preview"
+        data-title={title}
+        data-body={body}
+        data-author={authorPubky}
+        data-cover-file={coverFile?.name}
+        data-cover-src={coverAttachment?.urls?.main}
+      />
+    ),
+  ),
+}));
+
+vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
+  useAvatarUrl: vi.fn(() => undefined),
+}));
+
+const mockToggleFullscreen = vi.fn();
+const mockUseFullscreenReturn = { isFullscreen: false, isSupported: true, toggle: mockToggleFullscreen };
+vi.mock('@/hooks/useFullscreen/useFullscreen', () => ({
+  useFullscreen: vi.fn(() => mockUseFullscreenReturn),
+}));
+
 vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: vi.fn(({ label }) => <div data-testid={`post-tag-${label}`}>{label}</div>),
@@ -490,6 +553,7 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     setArticleTitle: mockSetArticleTitle,
     lockTitle: mockUsePostReturn.lockTitle,
     setLockTitle: vi.fn(),
+    restoreComposerDraft: vi.fn(),
     handleArticleTitleChange: vi.fn(),
     handleArticleBodyChange: vi.fn(),
     isDragging: mockUsePostReturn.isDragging,
@@ -528,7 +592,13 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handleDragOver: vi.fn(),
     handleDrop: vi.fn(),
     handlePaste: vi.fn(),
-    inlineImages: { upload: vi.fn(), getPreviewUrl: vi.fn(() => null) },
+    inlineMedia: {
+      upload: vi.fn(),
+      getPreviewUrl: vi.fn(() => null),
+      getMediaType: vi.fn(() => null),
+      getMediaName: vi.fn(() => null),
+    },
+    isEditInlineMediaLoading: false,
     uploadingCount: 0,
     serializeArticleForLock: vi.fn(() => null),
     getLatestArticle: vi.fn(() => ({ title: '', body: '' })),
@@ -926,7 +996,248 @@ describe('PostInput', () => {
     mockUsePostReturn.content = 'Article body';
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
-    expect(getStatePostHeader()).not.toHaveAttribute('data-count');
+    // The article composer has no header row: the byline is the avatar in the action bar
+    expect(screen.queryByTestId('post-header')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-count]')).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('post-input-action-bar')).getByTestId('article-composer-avatar'),
+    ).toBeInTheDocument();
+  });
+
+  describe('article tabs', () => {
+    beforeEach(() => {
+      mockUsePostReturn.isArticle = true;
+      mockUsePostReturn.isExpanded = true;
+      mockUsePostReturn.articleTitle = 'Draft title';
+      mockUsePostReturn.content = 'Draft body';
+      mockUseFullscreenReturn.isFullscreen = false;
+      mockUseFullscreenReturn.isSupported = true;
+    });
+
+    it('renders Content, Header and Preview tabs with the title field between the tabs and the body box', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Content', 'Header', 'Preview']);
+      const root = screen.getAllByTestId('container')[0];
+      expect(root).not.toHaveClass('border-dashed');
+      // Title sits outside the dashed body box on desktop
+      const title = screen.getByPlaceholderText('Title');
+      const titleWrapper = title.parentElement!;
+      expect(titleWrapper.parentElement).toBe(root);
+      expect(title).toHaveValue('Draft title');
+      expect(title).toHaveClass('border-dashed');
+      expect(screen.getByTestId('article-composer-tabs').nextElementSibling).toBe(titleWrapper);
+      // The dashed frame moved to the body box
+      expect(titleWrapper.nextElementSibling).toHaveClass('border-dashed');
+      expect(screen.queryByTestId('article-composer-panel-title')).not.toBeInTheDocument();
+    });
+
+    it('keeps the title field with the Content tab on desktop, hidden but mounted on the other tabs', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      const title = screen.getByPlaceholderText('Title');
+
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Header' }));
+      expect(title.parentElement).toHaveClass('hidden');
+      expect(screen.getByPlaceholderText('Title')).toBe(title);
+
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Content' }));
+      expect(title.parentElement).not.toHaveClass('hidden');
+    });
+
+    it('follows every keystroke in the title and hands the change to the composer', () => {
+      const handleArticleTitleChange = vi.fn();
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, {
+          isArticle: true,
+          articleTitle: 'Draft title',
+          content: 'Draft body',
+          handleArticleTitleChange,
+        }),
+      );
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Draft title!' } });
+
+      // The debounced composer state has not caught up, yet the field shows the keystroke
+      expect(screen.getByPlaceholderText('Title')).toHaveValue('Draft title!');
+      expect(handleArticleTitleChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('takes a title set underneath it, as an edit opening does', () => {
+      const { rerender } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      expect(screen.getByPlaceholderText('Title')).toHaveValue('Draft title');
+
+      mockUsePostReturn.articleTitle = 'Restored title';
+      rerender(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.getByPlaceholderText('Title')).toHaveValue('Restored title');
+    });
+
+    it('starts on Content with the editor and the cover panel both mounted', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.getByTestId('article-composer-panel-content')).toHaveAttribute('data-state', 'active');
+      expect(
+        within(screen.getByTestId('article-composer-panel-content')).getByTestId('markdown-editor'),
+      ).toBeInTheDocument();
+      const headerPanel = screen.getByTestId('article-composer-panel-header');
+      expect(headerPanel).toHaveAttribute('data-state', 'inactive');
+      expect(headerPanel).toHaveClass('data-[state=inactive]:hidden');
+      expect(within(headerPanel).getByTestId('post-input-attachments')).toHaveAttribute('data-is-article', 'true');
+      expect(screen.queryByTestId('article-composer-preview')).not.toBeInTheDocument();
+    });
+
+    it('keeps the editor mounted while the Header tab shows', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Header' }));
+
+      expect(screen.getByTestId('article-composer-panel-header')).toHaveAttribute('data-state', 'active');
+      expect(screen.getByTestId('article-composer-panel-content')).toHaveAttribute('data-state', 'inactive');
+      expect(screen.getByTestId('markdown-editor')).toBeInTheDocument();
+    });
+
+    it('mounts the preview from the draft when the Preview tab shows', () => {
+      const cover = new File(['cover'], 'cover.jpg', { type: 'image/jpeg' });
+      mockUsePostReturn.attachments = [cover];
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Preview' }));
+
+      const preview = screen.getByTestId('article-composer-preview');
+      expect(preview).toHaveAttribute('data-title', 'Draft title');
+      expect(preview).toHaveAttribute('data-body', 'Draft body');
+      expect(preview).toHaveAttribute('data-author', 'test-user-id:pubkey');
+      expect(preview).toHaveAttribute('data-cover-file', 'cover.jpg');
+    });
+
+    it('previews the title as typed, ahead of the debounced composer state', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Typed just now' } });
+
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Preview' }));
+
+      expect(screen.getByTestId('article-composer-preview')).toHaveAttribute('data-title', 'Typed just now');
+    });
+
+    it('refuses a title past the character cap in the field as the composer does', () => {
+      const handleArticleTitleChange = vi.fn();
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, {
+          isArticle: true,
+          articleTitle: 'Draft title',
+          content: 'Draft body',
+          handleArticleTitleChange,
+        }),
+      );
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'x'.repeat(101) } });
+
+      expect(screen.getByPlaceholderText('Title')).toHaveValue('Draft title');
+      expect(handleArticleTitleChange).not.toHaveBeenCalled();
+    });
+
+    it('brings up the Header tab when a cover is added while another tab shows', () => {
+      const { rerender } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      expect(screen.getByRole('tab', { name: 'Content' })).toHaveAttribute('aria-selected', 'true');
+
+      mockUsePostReturn.attachments = [new File(['cover'], 'cover.jpg', { type: 'image/jpeg' })];
+      rerender(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.getByRole('tab', { name: 'Header' })).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByTestId('article-composer-panel-header')).toHaveAttribute('data-state', 'active');
+    });
+
+    it('hands the preview the kept cover of an edited article', () => {
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, {
+          isArticle: true,
+          articleTitle: 'Draft title',
+          content: 'Draft body',
+          existingAttachments: [
+            {
+              uri: 'pubky://author/pub/pubky.app/files/file-1',
+              type: 'image/jpeg',
+              name: 'existing-cover.jpg',
+              urls: { main: 'https://cdn.example.com/main/file-1', feed: 'https://cdn.example.com/feed/file-1' },
+            },
+          ],
+        }),
+      );
+
+      render(
+        <PostInput
+          variant={POST_INPUT_VARIANT.EDIT}
+          editPostId="test-post-123"
+          editContent='{"title":"Draft title","body":"Draft body"}'
+          editIsArticle={true}
+          editAttachments={['pubky://author/pub/pubky.app/files/file-1']}
+        />,
+      );
+      fireEvent.mouseDown(screen.getByRole('tab', { name: 'Preview' }));
+
+      expect(screen.getByTestId('article-composer-preview')).toHaveAttribute(
+        'data-cover-src',
+        'https://cdn.example.com/main/file-1',
+      );
+    });
+
+    it('offers the fullscreen toggle in the action bar when the browser supports it', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      fireEvent.click(screen.getByTestId('fullscreen-button'));
+
+      expect(mockToggleFullscreen).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the fullscreen toggle out where the browser has no Fullscreen API', () => {
+      mockUseFullscreenReturn.isSupported = false;
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.queryByTestId('fullscreen-button')).not.toBeInTheDocument();
+    });
+
+    it('does not offer the fullscreen toggle or the avatar slot for a plain post', () => {
+      mockUsePostReturn.isArticle = false;
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.queryByTestId('fullscreen-button')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('article-composer-avatar')).not.toBeInTheDocument();
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    });
+
+    describe('on mobile', () => {
+      // `useIsMobile` is mocked in this file, so the stub alone selects the phone branch
+      beforeEach(() => {
+        vi.mocked(useIsMobile).mockReturnValue(true);
+      });
+
+      afterEach(() => {
+        vi.mocked(useIsMobile).mockReturnValue(false);
+      });
+
+      it('splits the title into its own tab inside the body box', () => {
+        render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+        expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+          'Content',
+          'Title',
+          'Header',
+          'Preview',
+        ]);
+        const titlePanel = screen.getByTestId('article-composer-panel-title');
+        expect(titlePanel).toHaveAttribute('data-state', 'inactive');
+        const title = within(titlePanel).getByPlaceholderText('Title');
+        expect(title).toHaveClass('text-2xl', 'font-bold');
+        expect(title).not.toHaveClass('border-dashed');
+
+        fireEvent.mouseDown(screen.getByRole('tab', { name: 'Title' }));
+
+        expect(titlePanel).toHaveAttribute('data-state', 'active');
+        expect(screen.getByTestId('article-composer-panel-content')).toHaveAttribute('data-state', 'inactive');
+      });
+    });
   });
 
   it('renders with repost variant', () => {
@@ -1129,6 +1440,38 @@ describe('PostInput', () => {
     expect(mockSetIsArticle).toHaveBeenCalledWith(true);
     expect(mockSetArticleTitle).toHaveBeenCalledWith('Parsed title');
     expect(mockSetContent).toHaveBeenCalledWith('Parsed body');
+  });
+
+  it('holds the article editor behind its skeleton until the inline attachment types resolve', () => {
+    mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+      createUsePostInputReturn(options, { isArticle: true, isEditInlineMediaLoading: true }),
+    );
+
+    const { rerender } = render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent='{"title":"T","body":"Text ![a](attachment:1)"}'
+        editIsArticle={true}
+        editAttachments={['pubky://u/pub/pubky.app/files/cover', 'pubky://u/pub/pubky.app/files/clip']}
+      />,
+    );
+    expect(screen.getByTestId('markdown-editor-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('markdown-editor')).not.toBeInTheDocument();
+
+    mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+      createUsePostInputReturn(options, { isArticle: true, isEditInlineMediaLoading: false }),
+    );
+    rerender(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent='{"title":"T","body":"Text ![a](attachment:1)"}'
+        editIsArticle={true}
+        editAttachments={['pubky://u/pub/pubky.app/files/cover', 'pubky://u/pub/pubky.app/files/clip']}
+      />,
+    );
+    expect(screen.getByTestId('markdown-editor')).toBeInTheDocument();
   });
 
   it('shows toast when edit article content cannot be parsed', () => {
@@ -1554,226 +1897,5 @@ describe('PostInput - autoFocusTextarea', () => {
     expect(screen.getByTestId('input')).not.toHaveFocus();
     expect(screen.getByTestId('markdown-editor')).not.toHaveFocus();
     expect(screen.queryByTestId('textarea')).not.toBeInTheDocument();
-  });
-});
-
-describe('PostInput - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(useIsMobile).mockReturnValue(false);
-    mockIsAuthenticated = true;
-    mockRequireAuth.mockImplementation((action: () => unknown) => action());
-    mockUsePostReturn.content = '';
-    mockUsePostReturn.tags = [];
-    mockUsePostReturn.attachments = [];
-    mockUsePostReturn.isDragging = false;
-    mockUsePostReturn.isSubmitting = false;
-    mockUsePostReturn.isArticle = false;
-    mockUsePostReturn.articleTitle = '';
-    mockUsePostReturn.isExpanded = true;
-  });
-
-  it('matches snapshot for post variant without content or attachments', () => {
-    const { container } = render(
-      <PostMainLayoutProvider tagsLayout="side">
-        <PostInput variant={POST_INPUT_VARIANT.POST} />
-      </PostMainLayoutProvider>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for list layout', () => {
-    const { container } = render(
-      <PostMainLayoutProvider tagsLayout="list">
-        <PostInput variant={POST_INPUT_VARIANT.POST} />
-      </PostMainLayoutProvider>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for a collapsed post composer', () => {
-    mockUsePostReturn.isExpanded = false;
-
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for an expanded post composer', () => {
-    mockUsePostReturn.content = 'Expanded post';
-    mockUsePostReturn.isExpanded = true;
-
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with a logged-out fallback avatar', () => {
-    mockIsAuthenticated = false;
-    vi.mocked(usePostInput).mockImplementationOnce((options: UsePostInputOptions) =>
-      createUsePostInputReturn(options, { currentUserPubky: null, currentUserDetails: null, isExpanded: false }),
-    );
-
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for repost variant without content or attachments', () => {
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.REPOST} originalPostId="test-post-123" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for reply variant without content or attachments', () => {
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for post variant with content', () => {
-    mockUsePostReturn.content = 'Test content';
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for post variant with attachments', () => {
-    const testFile = new File(['test'], 'test-image.png', { type: 'image/png' });
-    mockUsePostReturn.attachments = [testFile];
-
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for post variant with custom placeholder', () => {
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} placeholder="Custom placeholder" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for reply with thread connector', () => {
-    const { container } = render(
-      <PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" showThreadConnector={true} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for post variant when dragging', () => {
-    mockUsePostReturn.isDragging = true;
-
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for post variant when submitting', () => {
-    mockUsePostReturn.isSubmitting = true;
-
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for article mode', () => {
-    mockUsePostReturn.isArticle = true;
-    mockUsePostReturn.articleTitle = 'Test Article Title';
-    mockUsePostReturn.content = 'Article body content';
-
-    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for edit variant', () => {
-    mockUsePostReturn.content = 'Existing post content';
-
-    const { container } = render(
-      <PostInput
-        variant={POST_INPUT_VARIANT.EDIT}
-        editPostId="test-post-123"
-        editContent="Existing post content"
-        editIsArticle={false}
-        editAttachments={[]}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for edit variant with article mode', () => {
-    mockUsePostReturn.isArticle = true;
-    mockUsePostReturn.articleTitle = 'Existing Article Title';
-    mockUsePostReturn.content = 'Existing article body';
-
-    const { container } = render(
-      <PostInput
-        variant={POST_INPUT_VARIANT.EDIT}
-        editPostId="test-post-123"
-        editContent='{"title":"Existing Article Title","body":"Existing article body"}'
-        editIsArticle={true}
-        editAttachments={[]}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for edit variant with existing attachments', () => {
-    mockUsePostReturn.content = 'Existing post content';
-    vi.mocked(usePostInput).mockImplementationOnce((options: UsePostInputOptions) =>
-      createUsePostInputReturn(options, {
-        existingAttachments: [
-          {
-            uri: 'pubky://author/pub/pubky.app/files/file-1',
-            type: 'image/jpeg',
-            name: 'existing-image.jpg',
-            urls: { main: 'https://cdn.example.com/main/file-1' },
-          },
-        ],
-      }),
-    );
-
-    const { container } = render(
-      <PostInput
-        variant={POST_INPUT_VARIANT.EDIT}
-        editPostId="test-post-123"
-        editContent="Existing post content"
-        editIsArticle={false}
-        editAttachments={['pubky://author/pub/pubky.app/files/file-1']}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('PostInput - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsAuthenticated = true;
-    mockRequireAuth.mockImplementation((action: () => unknown) => action());
-    mockUsePostReturn.content = '';
-    mockUsePostReturn.tags = [];
-    mockUsePostReturn.attachments = [];
-    mockUsePostReturn.isDragging = false;
-    mockUsePostReturn.isSubmitting = false;
-    mockUsePostReturn.isArticle = false;
-    mockUsePostReturn.articleTitle = '';
-    mockUsePostReturn.isExpanded = true;
-    vi.mocked(useIsMobile).mockReturnValue(true);
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(
-      <PostMainLayoutProvider tagsLayout="side">
-        <PostInput variant={POST_INPUT_VARIANT.POST} />
-      </PostMainLayoutProvider>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches expanded snapshot on mobile viewport', () => {
-    mockUsePostReturn.content = 'Expanded post';
-    mockUsePostReturn.isExpanded = true;
-
-    const { container } = render(
-      <PostMainLayoutProvider tagsLayout="side">
-        <PostInput variant={POST_INPUT_VARIANT.POST} />
-      </PostMainLayoutProvider>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

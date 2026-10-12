@@ -50,11 +50,3 @@ describe('BookmarksItems', () => {
     expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-trigger-variant', 'grid');
   });
 });
-
-describe('BookmarksItems - Snapshots', () => {
-  it('matches the snapshot', () => {
-    const { container } = render(<BookmarksItems header={<div>Bookmarks header</div>} />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

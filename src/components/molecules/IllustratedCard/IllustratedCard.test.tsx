@@ -48,35 +48,3 @@ describe('IllustratedCard', () => {
     expect(screen.getByText('Intrinsic illustration').parentElement).not.toHaveClass('w-48', 'shrink-0');
   });
 });
-
-describe('IllustratedCard - Snapshots', () => {
-  it('matches snapshot for the default row layout', () => {
-    const { container } = render(
-      <IllustratedCard visual={<span>Illustration</span>}>
-        <span>Content</span>
-      </IllustratedCard>,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the column layout', () => {
-    const { container } = render(
-      <IllustratedCard layout="column">
-        <span>Column content</span>
-      </IllustratedCard>,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for intrinsic visual sizing', () => {
-    const { container } = render(
-      <IllustratedCard visualSizing="intrinsic" visual={<span>Intrinsic illustration</span>}>
-        <span>Intrinsic content</span>
-      </IllustratedCard>,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

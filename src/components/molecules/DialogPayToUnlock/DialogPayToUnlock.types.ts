@@ -1,5 +1,5 @@
 import type { TPayToUnlockStage } from '@/hooks/usePayToUnlock/usePayToUnlock.types';
-import type { TLockPrice } from '@/services/locks/locks.types';
+import type { TLockPrice, TPaykitConnectionState } from '@/services/locks/locks.types';
 
 export interface DialogPayToUnlockProps {
   open: boolean;
@@ -13,14 +13,21 @@ export interface DialogPayToUnlockProps {
   stage: TPayToUnlockStage;
   /** Waiting stage: polling parked on its deadline, so the reader is offered a manual re-check. */
   isStalled: boolean;
-  /** Creator pubky to hand to Bitkit — a QR on desktop, the Pay with Bitkit button on mobile; null hides it. */
+  /** Creator pubky to hand to Bitkit — a QR on desktop, a contact deeplink on mobile; null hides it. */
   handshakePubky: string | null;
-  /** Waiting stage: a wallet-link state the reader cannot fix here — replaces the QR with a notice. */
-  connectionIssue: 'recovery_required' | 'blocked' | null;
+  /** Last observed creator-side link state; connected does not acknowledge payment-request delivery. */
+  connectionState: TPaykitConnectionState | null;
+  /** Waiting stage: the wallet-link state is not known yet — the copy says it is checking instead of awaiting payment. */
+  isConnectionPending: boolean;
+  /** Waiting stage: the server waits for the reader to finish setting up their wallet — replaces the QR with a notice. */
+  walletSetupNeeded: boolean;
   /** True while the install screen's wallet check or a submission is in flight — locks the primary button, and
    * outside the install screen makes a close ask first. */
   isSubmitting: boolean;
-  /** Install screen: re-checks the wallet, then submits. Retry screen: submits again (a fresh id after a failed/expired payment). */
+  /**
+   * Install screen: re-checks the wallet, then submits. Retry screen: submits again (a fresh id after a failed/expired
+   * payment), checking the wallet first after `failed`.
+   */
   onRetry: () => void;
   /** Restarts a parked wait. */
   onRecheck: () => void;

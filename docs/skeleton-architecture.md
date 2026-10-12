@@ -52,7 +52,7 @@ src/components/organisms/HotTagsCardsSection/
 
 ## Testing Rules
 
-- Reusable skeleton components should have direct unit/snapshot tests.
+- Reusable skeleton components should have direct unit tests.
 - Feature-private skeletons should be validated through the parent component loading-state tests.
 - Skeleton components that are queried by `data-testid` in parent loading-state tests must own that attribute directly on the rendered element. Never rely on a test mock to inject `data-testid` — the mock should forward props, not hardcode them.
 

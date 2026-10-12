@@ -1,10 +1,9 @@
 'use client';
 
 import { ChangeEvent, Dispatch, forwardRef, SetStateAction, useEffect, useMemo } from 'react';
-import { FileText, ImagePlus, Plus, Trash2 } from 'lucide-react';
+import { FileText, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { Audio } from '@/atoms/Audio/Audio';
 import { Button } from '@/atoms/Button/Button';
-import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Input } from '@/atoms/Input/Input';
@@ -120,18 +119,17 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
           className="hidden"
         />
 
+        {/* Article cover slot, empty: the add control sits centred in the frame the cover will fill */}
         {isArticle && !previews.length ? (
-          <Card className="h-39 w-full cursor-auto items-center justify-center rounded-md">
-            <CardContent className="flex flex-col items-center justify-center gap-3">
-              <Container overrideDefaults className="flex size-16 items-center justify-center rounded-full bg-brand/15">
-                <ImagePlus className="size-8 text-brand" />
-              </Container>
-
-              <Button variant="secondary" size="sm" onClick={handleFileClick} disabled={isSubmitting}>
-                <Plus className="size-4" /> Add image
-              </Button>
-            </CardContent>
-          </Card>
+          <Container
+            overrideDefaults
+            data-testid="article-cover-placeholder"
+            className="flex h-32 w-full cursor-auto items-center justify-center rounded-md bg-card md:h-64"
+          >
+            <Button variant="secondary" size="sm" onClick={handleFileClick} disabled={isSubmitting}>
+              <ImageIcon className="size-4" /> Add image
+            </Button>
+          </Container>
         ) : null}
 
         {previews.length ? (
@@ -144,6 +142,41 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
                 : a.previewUrl && (a.type === 'image' || a.type === 'video' || a.type === 'audio')
                   ? a.type
                   : 'generic';
+              // The article cover keeps the 16:9 frame the article page gives it, with its remove
+              // control centred on top; anything a cover cannot be (a file row that failed to
+              // resolve) falls through to the post attachment layout below
+              if (isArticle && (displayKind === 'image' || displayKind === 'skeleton')) {
+                return (
+                  <Container
+                    key={a.key}
+                    data-testid="article-cover"
+                    className="relative aspect-video w-full cursor-auto overflow-hidden rounded-md bg-card"
+                  >
+                    {displayKind === 'skeleton' ? (
+                      <Skeleton className="size-full rounded-md" />
+                    ) : (
+                      <>
+                        <Image
+                          src={a.previewUrl!}
+                          alt="Image preview"
+                          className="size-full object-cover object-center"
+                        />
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={a.onRemove}
+                          disabled={isSubmitting}
+                          data-cy="post-input-attachment-remove"
+                          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 disabled:pointer-events-auto disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="size-4" /> Remove image
+                        </Button>
+                      </>
+                    )}
+                  </Container>
+                );
+              }
+
               return (
                 <Container key={a.key} className="relative">
                   {displayKind !== 'skeleton' && (

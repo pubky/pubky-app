@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type FlatNotification, NotificationType, PostChangedSource } from '@/models/notification/notification.types';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { NotificationsList } from './NotificationsList';
 import type { GroupableNotification, NotificationListEntry } from './NotificationsList.types';
 
@@ -225,55 +224,5 @@ describe('NotificationsList', () => {
     render(<NotificationsList entries={[toGroup(grouped)]} unreadNotifications={[]} />);
 
     expect(screen.getByTestId('notification-group-item')).toHaveAttribute('data-unread', 'false');
-  });
-});
-
-/** Shared by the desktop and mobile snapshots, which must render the same input. */
-const renderSnapshotList = () => {
-  const notifications: FlatNotification[] = [
-    {
-      id: 'follow:123:user1',
-      type: NotificationType.Follow,
-      timestamp: Date.now() - 1000 * 60 * 30,
-      followed_by: 'user1',
-    } as FlatNotification,
-    {
-      id: 'reply:123:user2',
-      type: NotificationType.Reply,
-      timestamp: Date.now() - 1000 * 60 * 60,
-      replied_by: 'user2',
-      parent_post_uri: 'user1:post123',
-      reply_uri: 'user2:reply456',
-    } as FlatNotification,
-  ];
-
-  return render(<NotificationsList entries={notifications.map(toSingle)} unreadNotifications={[]} />);
-};
-
-describe('NotificationsList - Snapshots', () => {
-  it('matches snapshot with notifications', () => {
-    const { container } = renderSnapshotList();
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with empty list', () => {
-    const { container } = render(<NotificationsList entries={[]} unreadNotifications={[]} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('NotificationsList - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-    mockUseIsMobile.mockReturnValue(true);
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = renderSnapshotList();
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

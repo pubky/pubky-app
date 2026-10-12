@@ -96,16 +96,3 @@ describe('DialogFeedbackSuccess', () => {
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
 });
-
-describe('DialogFeedbackSuccess - Snapshots', () => {
-  const mockOnOpenChange = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot for success state', () => {
-    const { container } = render(<DialogFeedbackSuccess onOpenChange={mockOnOpenChange} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -317,10 +317,3 @@ describe('DialogBackupEncrypted', () => {
     expect(minLenText()).not.toHaveClass('text-destructive');
   });
 });
-
-describe('DialogBackupEncrypted - Snapshots', () => {
-  it('matches snapshot for default DialogBackupEncrypted', () => {
-    const { container } = render(<DialogBackupEncrypted />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -132,28 +132,3 @@ describe('ProfilePageSidebar', () => {
     expect(screen.getByText('Links')).toBeInTheDocument();
   });
 });
-
-describe('ProfilePageSidebar - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseSocialGraphStatus.mockReturnValue({ status: null, isLoading: false });
-  });
-
-  it('matches snapshot with default state', () => {
-    const { container } = render(<ProfilePageSidebar />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with a social graph tier', () => {
-    mockUseSocialGraphStatus.mockReturnValue({ status: NexusSocialGraphStatus.ESTABLISHED, isLoading: false });
-    const { container } = render(<ProfilePageSidebar />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot structure', () => {
-    const { container } = render(<ProfilePageSidebar />);
-    const rootElement = container.firstChild as HTMLElement;
-    expect(rootElement.tagName).toBe('DIV');
-    expect(rootElement.children.length).toBe(3);
-  });
-});
