@@ -279,31 +279,3 @@ describe('Fab', () => {
     });
   });
 });
-
-describe('Fab - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseKeyboardVisible.mockReturnValue(false);
-    mockUseAuthStatus.mockReturnValue({
-      isFullyAuthenticated: true,
-      isLoading: false,
-      status: 'AUTHENTICATED',
-      hasKeypair: true,
-      hasProfile: true,
-    });
-    mockIsPublicExploreRoute.mockReturnValue(false);
-    mockRequireAuth.mockImplementation((action: () => void) => action());
-    mockUseFabAction.mockReturnValue({ kind: 'createPost', ariaLabel: 'New post' });
-  });
-
-  it('matches snapshot for the default new post action', () => {
-    const { container } = render(<Fab />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for the create collection action', () => {
-    mockUseFabAction.mockReturnValue({ kind: 'createCollection', ariaLabel: 'New collection' });
-    const { container } = render(<Fab />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

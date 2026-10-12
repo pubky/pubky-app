@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import { MAX_RECENT_SEARCHES } from './search.constants';
 import { useSearchStore } from './search.store';
 
@@ -28,6 +29,20 @@ describe('SearchStore', () => {
       expect(useSearchStore.getState().recentQueries.map((q) => q.query)).toEqual(['bitcoin', 'nostr']);
     });
 
+    it('should dedupe case-insensitively, collapsing every variant and keeping the latest casing on top', () => {
+      useSearchStore.setState({
+        recentQueries: [
+          { query: 'Bitcoin', searchedAt: 2 },
+          { query: 'nostr', searchedAt: 1 },
+          { query: 'bitcoin', searchedAt: 0 },
+        ],
+      });
+
+      useSearchStore.getState().addQuery('BITCOIN');
+
+      expect(useSearchStore.getState().recentQueries.map((q) => q.query)).toEqual(['BITCOIN', 'nostr']);
+    });
+
     it('should cap recent queries at MAX_RECENT_SEARCHES, dropping the oldest', () => {
       const store = useSearchStore.getState();
 
@@ -38,6 +53,33 @@ describe('SearchStore', () => {
       const queries = useSearchStore.getState().recentQueries.map((q) => q.query);
       expect(queries).toHaveLength(MAX_RECENT_SEARCHES);
       expect(queries).toEqual(['query6', 'query5', 'query4', 'query3', 'query2']);
+    });
+  });
+
+  describe('active tags', () => {
+    // Tags the search URL can carry: the chip cap must match it, or a chip
+    // edit rebuilds the URL without the tags that had no chip (#2446).
+    const urlTags = Array.from({ length: getMaxStreamTags() }, (_, i) => `tag${i + 1}`);
+
+    it('keeps every tag the search URL carries as a chip', () => {
+      useSearchStore.getState().setActiveTags(urlTags);
+
+      expect(useSearchStore.getState().activeTags).toEqual(urlTags);
+    });
+
+    it('caps active tags at the stream tag limit', () => {
+      useSearchStore.getState().setActiveTags([...urlTags, 'extra']);
+
+      expect(useSearchStore.getState().activeTags).toEqual(urlTags);
+    });
+
+    it('drops the oldest active tag when adding past the stream tag limit', () => {
+      const store = useSearchStore.getState();
+      store.setActiveTags(urlTags);
+
+      store.addActiveTag('extra');
+
+      expect(useSearchStore.getState().activeTags).toEqual([...urlTags.slice(1), 'extra']);
     });
   });
 

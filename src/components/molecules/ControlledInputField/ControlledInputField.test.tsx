@@ -113,22 +113,3 @@ describe('ControlledInputField', () => {
     expect(screen.getByPlaceholderText('Enter value')).toBeInTheDocument();
   });
 });
-
-describe('ControlledInputField - Snapshots', () => {
-  it('matches snapshot for default state', () => {
-    const { container } = render(
-      <TestWrapper>
-        {(form) => (
-          <ControlledInputField<TestFormData>
-            name="testField"
-            control={form.control}
-            label="Test Label"
-            placeholder="Enter value"
-          />
-        )}
-      </TestWrapper>,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

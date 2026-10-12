@@ -225,36 +225,11 @@ describe('UserListItem - card variant', () => {
   });
 });
 
-describe('UserListItem - Snapshots', () => {
-  it('matches snapshot for compact variant', () => {
-    const { container } = render(<UserListItem user={mockUser} variant="compact" onFollowClick={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
+describe('UserListItem - deleted users', () => {
+  it('renders [DELETED] instead of the pubky fallback', () => {
+    render(<UserListItem user={{ ...mockUser, name: '', deleted: true }} variant="card" onFollowClick={vi.fn()} />);
 
-  it('matches snapshot for compact variant with stats', () => {
-    const { container } = render(<UserListItem user={mockUser} variant="compact" showStats onFollowClick={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for compact variant when following', () => {
-    const { container } = render(
-      <UserListItem user={{ ...mockUser, isFollowing: true }} variant="compact" onFollowClick={vi.fn()} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for compact variant as current user', () => {
-    const { container } = render(<UserListItem user={mockUser} variant="compact" isCurrentUser />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for full variant', () => {
-    const { container } = render(<UserListItem user={mockUser} variant="full" onFollowClick={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for card variant', () => {
-    const { container } = render(<UserListItem user={mockUser} variant="card" onFollowClick={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(screen.getByText('[DELETED]')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Follow \[DELETED\]/i })).toBeInTheDocument();
   });
 });

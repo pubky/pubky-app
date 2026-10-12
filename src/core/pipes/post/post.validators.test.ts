@@ -69,4 +69,24 @@ describe('PostValidators.validatePostId', () => {
       expect((error as AppError).code).toBe(ClientErrorCode.NOT_FOUND);
     }
   });
+
+  it('throws NOT_FOUND when the parent post is a Nexus tombstone (empty content, flag set)', async () => {
+    // The current Nexus shape: content cleared, `deleted: true`. A content-only
+    // check would let replies / reposts validate against a deleted parent.
+    vi.mocked(PostController.getDetails).mockResolvedValue(
+      asOpaque<EnrichedPostDetails>({
+        id: POST_ID,
+        content: '',
+        deleted: true,
+        uri: 'pubky://author/pub/pubky.app/posts/post-123',
+        kind: 'short',
+        indexed_at: 0,
+        attachments: null,
+      }),
+    );
+
+    await expect(PostValidators.validatePostId({ postId: POST_ID, message: 'Parent post' })).rejects.toBeInstanceOf(
+      AppError,
+    );
+  });
 });

@@ -63,10 +63,3 @@ describe('EditProfileHeader', () => {
     expect(screen.getByTestId('popover-public-key')).toBeInTheDocument();
   });
 });
-
-describe('EditProfileHeader - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<EditProfileHeader />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -115,6 +115,11 @@ export function getNexusResponseStartedAt(response: object): number | undefined 
   return responseStartedAt.get(response);
 }
 
+/** Carries a start time onto a response assembled from several Nexus responses. */
+export function markNexusResponseStartedAt(response: object, startedAt: number): void {
+  responseStartedAt.set(response, startedAt);
+}
+
 /**
  * Forced revalidations whose network request has already started, keyed by serialized query
  * key.

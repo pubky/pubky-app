@@ -63,9 +63,4 @@ describe('SearchContentTags', () => {
 
     expect(container).toBeEmptyDOMElement();
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<SearchContentTags />);
-    expect(container).toMatchSnapshot();
-  });
 });

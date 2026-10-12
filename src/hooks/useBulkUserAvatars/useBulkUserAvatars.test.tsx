@@ -43,6 +43,26 @@ describe('useBulkUserAvatars with reactive local data', () => {
     await waitFor(() => expect(result.current.usersMap.get(ids[0])?.name).toBe('Updated name'));
     expect(StreamUserController.getOrFetchUsers).toHaveBeenCalledTimes(20);
   }, 15_000);
+  it('labels a tombstoned user as [DELETED] instead of an empty name', async () => {
+    vi.mocked(StreamUserController.getOrFetchUsers).mockImplementationOnce(async ({ userIds }) => {
+      await UserDetailsModel.table.bulkPut(
+        userIds.map((id) => ({
+          id,
+          name: '',
+          bio: '',
+          image: null,
+          indexed_at: 0,
+          links: null,
+          status: null,
+          deleted: true,
+        })),
+      );
+    });
+    const { result } = renderHook(() => useBulkUserAvatars(['tombstone']));
+
+    await waitFor(() => expect(result.current.usersMap.get('tombstone')?.name).toBe('[DELETED]'));
+  });
+
   it('versions avatars by indexed_at and still reacts to a name/bio edit on an existing user', async () => {
     // This user is already cached, so the hook must not re-fetch over the row.
     vi.mocked(StreamUserController.getOrFetchUsers).mockResolvedValue(undefined);

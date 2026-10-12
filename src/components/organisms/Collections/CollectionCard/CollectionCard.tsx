@@ -102,11 +102,12 @@ export function CollectionCard({
     return isLoading ? <CollectionCardSkeleton className={className} /> : <CollectionMissing className={className} />;
   }
 
-  // Soft-deleted collections (`content === '[DELETED]'`) render the standard
-  // deleted-card fallback instead of an empty card. Short-circuits before
-  // `parseCollectionContent` is ever called against the `[DELETED]` sentinel.
+  // Soft-deleted collections (the Nexus `deleted` flag, or the legacy
+  // `[DELETED]` content) render the standard deleted-card fallback instead of
+  // an empty card. Short-circuits before `parseCollectionContent` is ever
+  // called against a tombstone.
   // `CollectionDeleted` owns its full card shell — no wrappers needed here.
-  if (isPostDeleted(postDetails.content)) {
+  if (isPostDeleted(postDetails)) {
     return <CollectionDeleted className={className} />;
   }
 

@@ -12,6 +12,8 @@ import { Header } from '@/organisms/Header/Header';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
 import { Search } from '@/templates/Feed/Search/Search';
+import { page } from 'vitest/browser';
+import { useSearchStore } from '@/stores/search/search.store';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
@@ -217,11 +219,12 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
       const cached = cache.get(streamId);
       if (cached) return cached;
       const result = {
-        postIds: !streamId
-          ? []
-          : streamId.includes(':collection:')
-            ? f.searchCollectionIds
-            : f.taggedSearchCompositeIds,
+        postIds:
+          !streamId || streamId.includes('q~unmatched')
+            ? []
+            : streamId.includes(':collection:')
+              ? f.searchCollectionIds
+              : f.taggedSearchCompositeIds,
         loading: false,
         loadingMore: false,
         error: null,
@@ -641,8 +644,36 @@ function resetSearchInputUi() {
 }
 
 beforeEach(() => {
+  useSearchStore.getState().reset();
   setSearchTags([]);
   resetSearchInputUi();
+});
+
+describe('Search reach — visual regression', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders empty scoped results on %s', async (name, viewport) => {
+    setContentSearchQuery('unmatched query');
+    useSearchStore.getState().setReach('friends');
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport });
+    await expect.element(screen.getByRole('button', { name: 'Search in All' })).toBeVisible();
+    await matchVrtFrameScreenshot(`search-reach-empty-${name}`);
+  });
+
+  it.each([
+    ['mobile', VRT_VIEWPORT_MOBILE],
+    ['tablet', { width: 768, height: 1024 }],
+  ] as const)('renders the reach control in the %s drawer', async (name, viewport) => {
+    setContentSearchQuery('bitcoin design');
+    useSearchStore.getState().setReach('network');
+    await renderForVRT(<SearchWithLayout />, { viewport });
+    await page
+      .elementLocator(document.querySelector<HTMLButtonElement>('button:has(.lucide-sliders-horizontal)')!)
+      .click();
+    await expect.element(page.getByRole('radio', { name: 'My network' })).toHaveAttribute('aria-checked', 'true');
+    await matchVrtFrameScreenshot(`search-reach-drawer-${name}`);
+  });
 });
 
 describe('Search (empty state) — visual regression', () => {

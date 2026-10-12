@@ -1,4 +1,5 @@
 import type { ZodType } from 'zod';
+import { LOCKS_GUARDED_CONTENT_PATH } from '@/config/locks';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -16,7 +17,6 @@ import {
   VerifierType,
 } from '@/services/locks/locks.types';
 
-const GUARDED_CONTENT_PREFIX = '/priv/locks.app/content/';
 /** Where a reader keeps its own copy of content it has unlocked. */
 const UNLOCKED_PREFIX = '/priv/social/unlocked/';
 /** Where a reader keeps each purchase's bundle id; without it the paid content cannot be fetched again. */
@@ -42,14 +42,15 @@ export class LockContentParser {
    * a `.json` file. Guards against malformed `lock` values before any fetch.
    */
   static isValidLockUrl(lockUrl: string): boolean {
-    const PUBKY_URL_PREFIX = 'pubky://';
-    const LOCK_FILE_EXTENSION = '.json';
-    if (!lockUrl.startsWith(PUBKY_URL_PREFIX) || !lockUrl.endsWith(LOCK_FILE_EXTENSION)) return false;
-    const host = lockUrl.slice(PUBKY_URL_PREFIX.length).split('/')[0] ?? '';
-    return isPubkyIdentifier(host);
+    return lockUrl.endsWith('.json') && (this.creatorFromUrl(lockUrl) ?? '') !== '';
   }
 
-  /** `pubky://<creator>/pub/locks.app/<lock_id>.json` → `<lock_id>`. Null when there is no `.json` tail. */
+  static creatorFromUrl(lockUrl: string): string | null {
+    const host = lockUrl.match(/^pubky:\/\/([^/]+)/)?.[1];
+    return host && isPubkyIdentifier(host) ? host : null;
+  }
+
+  /** `pubky://<creator>/pub/app.locks/<lock_id>.json` → `<lock_id>`. Null when there is no `.json` tail. */
   static lockIdFromUrl(lockUrl: string): string | null {
     const file = lockUrl.split('/').pop() ?? '';
     return file.endsWith('.json') ? file.slice(0, -'.json'.length) || null : null;
@@ -116,14 +117,27 @@ export class LockProofBundler {
 export class GuardedContentParser {
   private constructor() {}
 
-  /** `pubky://<owner>/priv/locks.app/content/img1` → `/priv/locks.app/content/img1`. */
+  /** `pubky://<owner>/priv/app.locks/content/img1` → `/priv/app.locks/content/img1`. */
   static attachmentUriToPath(uri: string): string {
     return uri.replace(/^pubky:\/\/[^/]+/, '');
   }
 
+  /** Keep only attachment references in IndexedDB; media bytes stay on the homeserver. */
+  static toCachedPost(post: GuardedPost, resources?: Record<string, { content_type: string }>): ReplicatedPost | null {
+    const refs: NonNullable<ReplicatedPost['attachments']> = [];
+    for (const url of post.attachments ?? []) {
+      const contentType = resources?.[this.attachmentUriToPath(url)]?.content_type;
+      if (!contentType) return null;
+      refs.push({ url, content_type: contentType });
+    }
+    return { content: post.content, kind: post.kind, attachments: refs.length ? refs : null };
+  }
+
   /** Relative path for `proxyReadGuardedResource`, or null when outside the guarded namespace. */
   static toReadPath(resourcePath: string): string | null {
-    return resourcePath.startsWith(GUARDED_CONTENT_PREFIX) ? resourcePath.slice(GUARDED_CONTENT_PREFIX.length) : null;
+    return resourcePath.startsWith(LOCKS_GUARDED_CONTENT_PATH)
+      ? resourcePath.slice(LOCKS_GUARDED_CONTENT_PATH.length)
+      : null;
   }
 
   /** Reader's own copy of one unlocked file: `pubky://<reader>/priv/social/unlocked/<lockId>/<file>`. */
@@ -216,24 +230,24 @@ export class GuardedContentParser {
    * The post to store as the completion marker: the unlocked post with each attachment repointed to
    * the reader's own copy, its `content_type` stored inline so rendering never needs the lock file.
    */
-  static buildUnlockedPost(
+  static buildReplicatedPost(
     post: GuardedPost,
     readerPubky: string,
     lockId: string,
     attachments: Array<{ id: string; contentType: string; slot: number }>,
     announcementUri: string,
-  ): string {
+  ): ReplicatedPost {
     const rewritten = attachments.map(({ id, contentType, slot }) => ({
       url: this.unlockedUrl(readerPubky, lockId, id),
       content_type: contentType,
       slot,
     }));
-    return JSON.stringify({
+    return {
       content: post.content,
       kind: post.kind,
       attachments: rewritten.length > 0 ? rewritten : null,
       announcement: announcementUri,
-    });
+    };
   }
 
   /** Parses the reader's replicated `post.json` bytes. Returns null on bad JSON. */

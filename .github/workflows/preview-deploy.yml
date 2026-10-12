@@ -34,7 +34,8 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') ||
       (github.event_name == 'pull_request' && github.event.action != 'closed' &&
-       github.event.pull_request.head.repo.full_name == github.repository)
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     outputs:
       pr_number: ${{ steps.vars.outputs.pr_number }}
@@ -79,10 +80,10 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.CLOUD_RUN_SA_KEY }}
 
@@ -96,7 +97,7 @@ jobs:
 
       - name: Deploy to Cloud Run
         id: deploy
-        uses: google-github-actions/deploy-cloudrun@v2
+        uses: google-github-actions/deploy-cloudrun@v3
         with:
           region: europe-west6
           metadata: preview-deploy-service-file.yml
@@ -112,7 +113,7 @@ jobs:
 
       - name: Comment on PR
         if: github.event_name == 'pull_request'
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
@@ -143,7 +144,7 @@ jobs:
           echo "service_name=pubky-app-pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
 
       - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.CLOUD_RUN_SA_KEY }}
 

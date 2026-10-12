@@ -102,6 +102,12 @@ describe('resolveMentionsForMetadata', () => {
     expect(await resolveMentionsForMetadata(`pk:${PUBKY_A} hi`, VISIBLE)).toBe(`${SHORT_A} hi`);
   });
 
+  it('renders a tombstoned mention as @[DELETED], matching the in-app mention', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ id: PUBKY_A, name: '', deleted: true }));
+
+    expect(await resolveMentionsForMetadata(`pk:${PUBKY_A} hi`, VISIBLE)).toBe('@[DELETED] hi');
+  });
+
   it('treats a Nexus error as a miss: one warning, no AppError, no Sentry capture', async () => {
     const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
     const errorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});

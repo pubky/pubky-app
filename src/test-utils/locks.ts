@@ -7,7 +7,7 @@ export const mockLockFile = (overrides: Partial<LockFile> = {}): LockFile => ({
   version: 1,
   creator: 'pubkycreator123',
   primary_resource: {
-    path: '/priv/locks.app/content/example.txt',
+    path: '/priv/app.locks/content/example.txt',
     hash: '<hash>',
     content_type: 'text/plain',
     size: 13,

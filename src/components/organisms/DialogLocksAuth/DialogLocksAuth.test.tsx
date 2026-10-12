@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   prepare: vi.fn(),
   start: vi.fn(),
   reset: vi.fn(),
+  checkPaykit: vi.fn(),
   startPaykit: vi.fn(),
   resetPaykit: vi.fn(),
   flow: {
@@ -61,6 +62,7 @@ vi.mock('@/hooks/usePaykitSetupFlow/usePaykitSetupFlow', () => ({
   usePaykitSetupFlow: () => ({
     ...mocks.paykitFlow,
     iframeRef: { current: null },
+    check: mocks.checkPaykit,
     start: mocks.startPaykit,
     reset: mocks.resetPaykit,
   }),
@@ -192,6 +194,7 @@ describe('DialogLocksAuth', () => {
     expect(screen.getByText(/authorize Pubky.app to access your private Locks data/)).toBeInTheDocument();
     expect(screen.getByTestId('session-upgrade-qr')).toBeInTheDocument();
     expect(screen.queryByTitle('Bitkit payout account setup')).not.toBeInTheDocument();
+    expect(mocks.checkPaykit).not.toHaveBeenCalled();
     expect(mocks.startPaykit).not.toHaveBeenCalled();
   });
 
@@ -203,6 +206,7 @@ describe('DialogLocksAuth', () => {
     expect(screen.getByText('Enable Locks')).toBeInTheDocument();
     expect(screen.getByTestId('session-upgrade-qr')).toBeInTheDocument();
     expect(mocks.prepare).not.toHaveBeenCalled();
+    expect(mocks.checkPaykit).not.toHaveBeenCalled();
     expect(mocks.startPaykit).not.toHaveBeenCalled();
   });
 
@@ -215,20 +219,39 @@ describe('DialogLocksAuth', () => {
     rerender(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
 
     expect(screen.getByText('Enable Payments')).toBeInTheDocument();
-    expect(mocks.startPaykit).toHaveBeenCalledTimes(1);
+    expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
   });
 
+  // #2627: the check decides whether the setup opens; the dialog never opens it on arrival.
   it('opens at the Bitkit step for a creator who is signed in but not connected', () => {
     signIn();
     renderDialog();
 
     expect(screen.getByText('Enable Payments')).toBeInTheDocument();
-    expect(mocks.startPaykit).toHaveBeenCalledTimes(1);
+    expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+    expect(mocks.startPaykit).not.toHaveBeenCalled();
     expect(mocks.prepare).not.toHaveBeenCalled();
+  });
+
+  it('shows a spinner instead of the QR while it checks the Paykit setup', () => {
+    signIn();
+    mocks.paykitFlow = { status: PaykitSetupFlowStatus.CHECKING, setupUrl: null, error: null };
+    renderDialog();
+
+    expect(screen.getByText('Checking whether your Bitkit wallet is connected.')).toBeInTheDocument();
+    expect(screen.getByRole('dialog').querySelector('svg.animate-spin')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Bitkit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'App Store' })).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Bitkit payout account setup')).not.toBeInTheDocument();
   });
 
   it('links Bitkit from the Enable Payments step in a new tab', () => {
     signIn();
+    mocks.paykitFlow = {
+      status: PaykitSetupFlowStatus.AWAITING_APPROVAL,
+      setupUrl: 'https://paykit.server/setup?state=STATE',
+      error: null,
+    };
     renderDialog();
 
     const link = screen.getByRole('link', { name: 'Bitkit' });
@@ -254,6 +277,11 @@ describe('DialogLocksAuth', () => {
 
   it('links the store badges to Bitkit on the Bitkit step', () => {
     signIn();
+    mocks.paykitFlow = {
+      status: PaykitSetupFlowStatus.AWAITING_APPROVAL,
+      setupUrl: 'https://paykit.server/setup?state=STATE',
+      error: null,
+    };
     renderDialog();
 
     expect(screen.getByAltText('Bitkit')).toBeInTheDocument();
@@ -262,7 +290,7 @@ describe('DialogLocksAuth', () => {
     expect(screen.getByRole('link', { name: 'Google Play' })).toHaveAttribute('href', BITKIT_PLAY_STORE_URL);
   });
 
-  it('retries only the Paykit setup when it fails', () => {
+  it('rechecks the setup status when the Paykit setup fails', () => {
     signIn();
     mocks.flow = {
       status: LocksAuthFlowStatus.ERROR,
@@ -278,8 +306,23 @@ describe('DialogLocksAuth', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
-    expect(mocks.startPaykit).toHaveBeenCalledTimes(1);
+    expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+    expect(mocks.startPaykit).not.toHaveBeenCalled();
     expect(mocks.start).not.toHaveBeenCalled();
+  });
+
+  it('retries only the setup-status check when payments are unavailable', () => {
+    signIn();
+    mocks.paykitFlow = { status: PaykitSetupFlowStatus.UNAVAILABLE, setupUrl: null, error: null };
+    renderDialog();
+
+    expect(screen.getByText('Payments are unavailable right now. Please try again later.')).toBeInTheDocument();
+    expect(screen.queryByTitle('Bitkit payout account setup')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+    expect(mocks.startPaykit).not.toHaveBeenCalled();
   });
 
   it('calls onSuccess then closes on the Success step', () => {

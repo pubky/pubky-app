@@ -11,11 +11,13 @@
  *                      approves a session with today's capability list and it replaces the stored one.
  *                      Steps 2 and 2b are numbered (1/2) and (2/2) when both are pending at open.
  *  3. Enable Payments — iframe loads Paykit's `/setup` page, where the creator connects the account
- *                      that receives payments.
+ *                      that receives payments. The Lock Server is asked first whether this creator's
+ *                      Paykit setup is already done (#2627): `ready` skips the step, and `unavailable`
+ *                      offers a retry instead of the page.
  *  4. Enabled        — success; "Continue" notifies the caller via `onSuccess` and closes.
  *
- * Which step shows is derived from the stores, so a creator who is already signed in but has not
- * connected Bitkit in this browser session opens straight at Enable Payments.
+ * Which step shows is derived from the stores, so a creator who is already signed in, but whose
+ * Paykit setup this Locks session has not confirmed yet, opens straight at Enable Payments.
  */
 import { type ReactNode, useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
@@ -86,7 +88,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
     setupUrl,
     error: paykitError,
     iframeRef: paykitIframeRef,
-    start: startPaykit,
+    check: checkPaykit,
     reset: resetPaykit,
   } = usePaykitSetupFlow();
   const isLocksAuthenticated = isLocksAuthenticatedState(useLocksAuthStore((state) => state.session));
@@ -120,10 +122,11 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
     if (!isLocksAuthenticatedState(useLocksAuthStore.getState().session)) prepare();
   }, [open, prepare, resetLocks, resetPaykit]);
 
-  // The Paykit page is the whole step, so open it on arrival rather than behind another "Continue".
+  // The Paykit page is the whole step, so it opens on arrival rather than behind another "Continue",
+  // once the setup-status check says it is required.
   useEffect(() => {
-    if (open && step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.IDLE) startPaykit();
-  }, [open, step, paykitStatus, startPaykit]);
+    if (open && step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.IDLE) checkPaykit();
+  }, [open, step, paykitStatus, checkPaykit]);
 
   const close = () => onOpenChange(false);
   const isSuccess = step === 'done';
@@ -131,7 +134,8 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
   const isServerUnavailable = locksStatus === LocksAuthFlowStatus.SERVER_UNAVAILABLE;
   const isLocksError = step === 'locks' && locksStatus === LocksAuthFlowStatus.ERROR;
   const isPaykitError = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.ERROR;
-  const isError = isLocksError || isPaykitError;
+  const isPaykitUnavailable = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.UNAVAILABLE;
+  const isError = isLocksError || isPaykitError || isPaykitUnavailable;
   // Intro step: the readiness probe (checking / ready / unavailable), before the auth iframe.
   const isIntroPhase =
     step === 'locks' && (isCheckingServer || isServerUnavailable || locksStatus === LocksAuthFlowStatus.IDLE);
@@ -141,7 +145,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
       locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL ||
       locksStatus === LocksAuthFlowStatus.EXCHANGING);
   const isSessionStep = step === 'session';
-  const isBitkitStep = step === 'bitkit' && !isPaykitError;
+  const isBitkitStep = step === 'bitkit' && !isPaykitError && !isPaykitUnavailable;
 
   let title = 'Lock Content';
   let description: ReactNode = 'Pubky Locks allows you to lock content with payments.';
@@ -164,7 +168,8 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
     description = <SessionUpgradeDescription />;
   } else if (isBitkitStep) {
     title = 'Enable Payments';
-    description = (
+    // No setup URL yet: the setup-status check is running, and there is no QR to scan.
+    description = setupUrl ? (
       <>
         {'Scan this QR with your '}
         <Link href={BITKIT_WEBSITE_URL} className="text-base font-bold">
@@ -172,10 +177,15 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
         </Link>
         {' wallet to enable payments.'}
       </>
+    ) : (
+      'Checking whether your Bitkit wallet is connected.'
     );
   } else if (isPaykitError) {
     title = 'Enable Payments';
     description = 'Something went wrong while connecting your Bitkit wallet.';
+  } else if (isPaykitUnavailable) {
+    title = 'Enable Payments';
+    description = 'Something went wrong while checking your Bitkit wallet.';
   } else if (isLocksError) {
     title = 'Enable Locks';
     description = 'Something went wrong while authorizing the Lock Server.';
@@ -211,7 +221,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
             {/* The shell's embed layout is the 192px QR panel, or the deep-link button on touch.
                 It also posts a `locks-auth-resize` height we could adopt instead, but a fixed box
                 keeps the loader from collapsing before the iframe mounts. */}
-            <Container className="flex min-h-[192px] w-full items-center justify-center pointer-coarse:min-h-[60px]">
+            <Container className="flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-15">
               {locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL && connectUrl ? (
                 <iframe
                   ref={locksIframeRef}
@@ -221,7 +231,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
                   // Without allow-same-origin, sandboxed postMessage uses origin "null" and gets rejected.
                   // The other flags let /connect run JS, submit its approval form, and open Pubky Ring.
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                  className="h-[192px] w-full pointer-coarse:h-[60px]"
+                  className="h-48 w-full pointer-coarse:h-15"
                 />
               ) : (
                 <LoaderCircle className="size-8 animate-spin text-brand" />
@@ -241,7 +251,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
 
         {isBitkitStep && (
           <Container className="flex flex-col items-center justify-center gap-6 py-3">
-            <Container className="flex min-h-[192px] w-full items-center justify-center pointer-coarse:min-h-[60px]">
+            <Container className="flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-15">
               {setupUrl ? (
                 <iframe
                   ref={paykitIframeRef}
@@ -251,17 +261,19 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
                   // sandboxed postMessage arrives as origin "null" and is rejected. allow-popups is
                   // for the Bitkit deep link Paykit's page opens on touch devices.
                   sandbox="allow-scripts allow-same-origin allow-popups"
-                  className="h-[192px] w-full pointer-coarse:h-[60px]"
+                  className="h-48 w-full pointer-coarse:h-15"
                 />
               ) : (
                 <LoaderCircle className="size-8 animate-spin text-brand" />
               )}
             </Container>
-            <AppDownload
-              logo={{ src: '/images/bitkit-logo.svg', alt: 'Bitkit', width: 110 }}
-              appStoreUrl={BITKIT_APP_STORE_URL}
-              playStoreUrl={BITKIT_PLAY_STORE_URL}
-            />
+            {setupUrl && (
+              <AppDownload
+                logo={{ src: '/images/bitkit-logo.svg', alt: 'Bitkit', width: 110 }}
+                appStoreUrl={BITKIT_APP_STORE_URL}
+                playStoreUrl={BITKIT_PLAY_STORE_URL}
+              />
+            )}
           </Container>
         )}
 
@@ -269,7 +281,9 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
 
         {isError && (
           <Typography size="sm" className="text-destructive">
-            {(isPaykitError ? paykitError?.message : locksError?.message) ?? 'Lock authorization failed.'}
+            {isPaykitUnavailable
+              ? 'Payments are unavailable right now. Please try again later.'
+              : ((isPaykitError ? paykitError?.message : locksError?.message) ?? 'Lock authorization failed.')}
           </Typography>
         )}
 
@@ -315,11 +329,12 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
             <Button variant={ButtonVariant.OUTLINE} size="lg" className="flex-1" onClick={close}>
               {'Cancel'}
             </Button>
+            {/* A failed Paykit setup retries through the check too, so the setup opens only on `setup_required`. */}
             <Button
               variant={ButtonVariant.DEFAULT}
               size="lg"
               className="flex-1"
-              onClick={isPaykitError ? startPaykit : startLocks}
+              onClick={isPaykitUnavailable || isPaykitError ? checkPaykit : startLocks}
             >
               {'Try again'}
             </Button>

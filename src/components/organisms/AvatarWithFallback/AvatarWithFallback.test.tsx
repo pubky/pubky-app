@@ -245,6 +245,14 @@ describe('AvatarWithFallback', () => {
     expect(screen.getByTestId('avatar-fallback-initial')).toHaveTextContent('S');
   });
 
+  it('renders a generic user icon instead of a `[` initial for a deleted user', () => {
+    render(<AvatarWithFallback name="[DELETED]" />);
+
+    expect(screen.getByTestId('avatar-deleted-placeholder')).toBeInTheDocument();
+    expect(screen.queryByTestId('facehash')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('avatar-fallback-initial')).not.toBeInTheDocument();
+  });
+
   it('renders with both className and fallbackClassName', () => {
     render(
       <AvatarWithFallback
@@ -606,71 +614,5 @@ describe('AvatarWithFallback', () => {
       const lastCall = mockUseLiveQuery.mock.calls[mockUseLiveQuery.mock.calls.length - 1];
       expect(lastCall[1]).toEqual([validUserId]);
     });
-  });
-});
-
-describe('AvatarWithFallback - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseLiveQuery.mockReturnValue({ is_blurred: false });
-    // Default mock: no current user (non-current user scenario)
-    mockUseAuthStore.mockImplementation((selector) => selector({ currentUserPubky: null }));
-    // Default mock: no local profile
-    mockUseLocalFilesStore.mockImplementation((selector) => selector({ profile: null }));
-  });
-
-  it('matches snapshot when avatarUrl is provided', () => {
-    const { container } = render(
-      <AvatarWithFallback
-        name="John Doe"
-        avatarUrl="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
-        className="size-16"
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when avatarUrl is not provided', () => {
-    const { container } = render(
-      <AvatarWithFallback name="Jane Smith" className="size-16" fallbackClassName="text-2xl" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom alt text', () => {
-    const { container } = render(
-      <AvatarWithFallback
-        name="John Doe"
-        avatarUrl="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
-        alt="Custom alt"
-        className="size-16"
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when image is blurred', () => {
-    mockUseLiveQuery.mockReturnValue({ is_blurred: true });
-
-    const { container } = render(
-      <AvatarWithFallback
-        name="John Doe"
-        avatarUrl="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
-        className="size-16"
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom data-testid', () => {
-    const { container } = render(
-      <AvatarWithFallback
-        name="John Doe"
-        avatarUrl="https://cdn.example.com/avatar/6mfxozzqmb36rc9rgy3rykoyfghfao74n8igt5tf1boehproahoy"
-        className="size-16"
-        data-testid="custom-avatar"
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

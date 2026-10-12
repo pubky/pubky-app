@@ -23,7 +23,7 @@ interface UseAttachmentsMetadataParams {
 }
 
 interface UseAttachmentsMetadataResult {
-  /** Local file rows that resolved, in the order requested. Empty until they exist. */
+  /** Local file rows that resolved, in Dexie key order (match by `uri`, never by index). Empty until they exist. */
   files: NexusFileDetails[];
   /** True until the initial metadata read and missing-file requests settle. */
   isLoading: boolean;

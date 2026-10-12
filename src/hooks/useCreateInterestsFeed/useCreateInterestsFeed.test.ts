@@ -1,6 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { INTERESTS_FEED_NAME } from '@/config/feed';
 import { toast } from '@/molecules/Toaster/toast';
 import { useCreateInterestsFeed } from './useCreateInterestsFeed';
 import { buildInterestsFeedParams } from './useCreateInterestsFeed.utils';
@@ -24,9 +23,7 @@ vi.mock('@/molecules/Toaster/toast');
 describe('useCreateInterestsFeed', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getList.mockResolvedValue([]);
     mocks.commitCreate.mockResolvedValue({ id: 'feed-interests' });
-    mocks.commitUpdate.mockResolvedValue({ id: 'feed-interests-2' });
   });
 
   it('creates the feed from the chosen tags and resolves true', async () => {
@@ -44,27 +41,30 @@ describe('useCreateInterestsFeed', () => {
     expect(result.current.isCreating).toBe(false);
   });
 
-  it('updates an existing Interests feed in place instead of creating a second one', async () => {
-    // A failed homeserver write leaves the local row behind; a retry with a changed selection
-    // must not add a second Interests tab under a new config-derived ID.
-    mocks.getList.mockResolvedValue([
-      { id: 'feed-interests', name: INTERESTS_FEED_NAME, tags: ['bitcoin'] },
-      { id: 'feed-other', name: 'Other', tags: ['nostr'] },
-    ]);
+  it('creates without looking up existing feeds, so a retry after a failed write creates again', async () => {
+    // A failed homeserver write rolls the local row back, so the retry starts from a clean
+    // slate: no lookup by name, no update of a leftover row, just a plain create.
+    mocks.commitCreate
+      .mockRejectedValueOnce(new Error('homeserver down'))
+      .mockResolvedValueOnce({ id: 'feed-interests-2' });
     const { result } = renderHook(() => useCreateInterestsFeed());
 
-    let created: boolean | undefined;
+    let first: boolean | undefined;
+    let second: boolean | undefined;
     await act(async () => {
-      created = await result.current.createInterestsFeed(['bitcoin', 'privacy']);
+      first = await result.current.createInterestsFeed(['bitcoin']);
+    });
+    await act(async () => {
+      second = await result.current.createInterestsFeed(['bitcoin', 'privacy']);
     });
 
-    expect(created).toBe(true);
-    expect(mocks.commitUpdate).toHaveBeenCalledTimes(1);
-    expect(mocks.commitUpdate).toHaveBeenCalledWith({
-      feedId: 'feed-interests',
-      changes: { tags: ['bitcoin', 'privacy'] },
-    });
-    expect(mocks.commitCreate).not.toHaveBeenCalled();
+    expect(first).toBe(false);
+    expect(second).toBe(true);
+    expect(mocks.getList).not.toHaveBeenCalled();
+    expect(mocks.commitUpdate).not.toHaveBeenCalled();
+    expect(mocks.commitCreate).toHaveBeenCalledTimes(2);
+    expect(mocks.commitCreate).toHaveBeenNthCalledWith(1, buildInterestsFeedParams(['bitcoin']));
+    expect(mocks.commitCreate).toHaveBeenNthCalledWith(2, buildInterestsFeedParams(['bitcoin', 'privacy']));
   });
 
   it('does nothing without tags', async () => {

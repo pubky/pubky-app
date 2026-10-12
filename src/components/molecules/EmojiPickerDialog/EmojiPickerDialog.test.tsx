@@ -150,21 +150,3 @@ describe('EmojiPickerDialog', () => {
     expect(screen.getByText('Select an emoji')).toBeInTheDocument();
   });
 });
-
-describe('EmojiPickerDialog - Snapshots', () => {
-  it('matches snapshot when open', () => {
-    render(<EmojiPickerDialog open={true} onOpenChange={() => {}} onEmojiSelect={() => {}} />);
-    // Portaled content: snapshot the content wrapper (same pattern as Dialog atom tests)
-    expect(screen.getByTestId('dialog-content').parentElement).toMatchSnapshot();
-  });
-
-  it('matches snapshot with maxLength', () => {
-    render(<EmojiPickerDialog open={true} onOpenChange={() => {}} onEmojiSelect={() => {}} maxLength={12} />);
-    expect(screen.getByTestId('dialog-content').parentElement).toMatchSnapshot();
-  });
-
-  it('matches snapshot with currentInput', () => {
-    render(<EmojiPickerDialog open={true} onOpenChange={() => {}} onEmojiSelect={() => {}} currentInput="Hello" />);
-    expect(screen.getByTestId('dialog-content').parentElement).toMatchSnapshot();
-  });
-});

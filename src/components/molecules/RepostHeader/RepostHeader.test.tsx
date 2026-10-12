@@ -117,25 +117,3 @@ describe('RepostHeader', () => {
     expect(screen.queryByTestId('post-header-timestamp')).not.toBeInTheDocument();
   });
 });
-
-describe('RepostHeader - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<RepostHeader onUndo={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for collection share', () => {
-    const { container } = render(<RepostHeader isCollectionShare onUndo={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot while undoing', () => {
-    const { container } = render(<RepostHeader onUndo={vi.fn()} isUndoing />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with timestamp', () => {
-    const { container } = render(<RepostHeader onUndo={vi.fn()} timeAgo="12m" indexedAt={new Date(0)} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

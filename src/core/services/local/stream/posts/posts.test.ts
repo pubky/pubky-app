@@ -15,6 +15,7 @@ import { TagModel } from '@/models/shared/tag/tag';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type { NexusPost, NexusPostDetails, NexusTag } from '@/services/nexus/nexus.types';
 import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
@@ -505,6 +506,45 @@ describe('LocalStreamPostsService', () => {
         // All rows must have a numeric created_at — the bug guard.
         expect(all.every((row) => typeof row.created_at === 'number')).toBe(true);
       });
+
+      it('does not restore a bookmark the viewer removed while Nexus was still indexing it', async () => {
+        // #2237: a post view fetched within Nexus's indexing lag still reports the
+        // removed bookmark; persisting it would bring the unfollowed collection back.
+        const removedId = buildCompositeId({ pubky: 'a1', id: 'p1' });
+        recentUnbookmarks.markRemoved('viewer-a', removedId);
+        const posts = [
+          createMockNexusPost('p1', 'a1', BASE_TIMESTAMP, { bookmark: { id: 'bm-1', indexed_at: 1_000 } }),
+          createMockNexusPost('p2', 'a2', BASE_TIMESTAMP, { bookmark: { id: 'bm-2', indexed_at: 2_000 } }),
+        ];
+
+        try {
+          await LocalStreamPostsService.persistPosts({ posts, tagGuard: { viewerId: 'viewer-a' } });
+        } finally {
+          recentUnbookmarks.reset();
+        }
+
+        const ids = (await BookmarkModel.table.toArray()).map((row) => row.id);
+        expect(ids).toEqual([buildCompositeId({ pubky: 'a2', id: 'p2' })]);
+        expect(await PostDetailsModel.table.get(removedId)).toBeTruthy();
+      });
+
+      it("keeps another viewer's bookmark on a post the previous viewer unbookmarked", async () => {
+        // Viewer A unbookmarks, then viewer B signs in to the same tab: B's own
+        // bookmark from Nexus must still be persisted.
+        const postId = buildCompositeId({ pubky: 'a1', id: 'p1' });
+        recentUnbookmarks.markRemoved('viewer-a', postId);
+        const posts = [
+          createMockNexusPost('p1', 'a1', BASE_TIMESTAMP, { bookmark: { id: 'bm-1', indexed_at: 1_000 } }),
+        ];
+
+        try {
+          await LocalStreamPostsService.persistPosts({ posts, tagGuard: { viewerId: 'viewer-b' } });
+        } finally {
+          recentUnbookmarks.reset();
+        }
+
+        expect(await BookmarkModel.table.get(postId)).toBeTruthy();
+      });
     });
   });
 
@@ -654,6 +694,59 @@ describe('LocalStreamPostsService', () => {
       const live = await PostDetailsModel.findById(liveId);
       expect(live!.content).toBe('Post live content');
       expect(await PostCountsModel.findById(liveId)).toBeTruthy();
+    });
+
+    it('skips the reanimating write for a Nexus-shaped tombstone (empty content, flag set)', async () => {
+      const compositeId = buildCompositeId({ pubky: 'author-1', id: 'flagged' });
+
+      // The current Nexus tombstone shape: content cleared, `deleted: true`.
+      await PostDetailsModel.table.put({
+        id: compositeId,
+        content: '',
+        deleted: true,
+        indexed_at: BASE_TIMESTAMP,
+        kind: 'short',
+        uri: 'pubky://author-1/pub/pubky.app/posts/flagged',
+        attachments: null,
+      });
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [createMockNexusPost('flagged', 'author-1', BASE_TIMESTAMP)],
+      });
+
+      const persisted = await PostDetailsModel.findById(compositeId);
+      expect(persisted!.content).toBe('');
+      expect(persisted!.deleted).toBe(true);
+      expect(await PostCountsModel.findById(compositeId)).toBeFalsy();
+    });
+
+    it('refreshes the freshness record for a tombstoned id so it stops re-fetching every tick', async () => {
+      const compositeId = buildCompositeId({ pubky: 'author-1', id: 'tombstoned' });
+
+      // Seed the tombstone with an expired TTL, as the refresh path finds it
+      // once `TtlApplication.findStalePostsByIds` has returned the id.
+      await PostDetailsModel.table.put({
+        id: compositeId,
+        content: DELETED,
+        indexed_at: BASE_TIMESTAMP,
+        kind: 'short',
+        uri: 'pubky://author-1/pub/pubky.app/posts/tombstoned',
+        attachments: null,
+      });
+      await PostTtlModel.table.put({ id: compositeId, lastUpdatedAt: BASE_TIMESTAMP });
+
+      const before = Date.now();
+      await LocalStreamPostsService.persistPosts({
+        posts: [createMockNexusPost('tombstoned', 'author-1', BASE_TIMESTAMP)],
+        refreshGuard: { fetchStartedAt: before - 1_000 },
+      });
+
+      // Content and auxiliary rows stay protected...
+      expect((await PostDetailsModel.findById(compositeId))!.content).toBe(DELETED);
+      expect(await PostCountsModel.findById(compositeId)).toBeFalsy();
+      // ...but the freshness record must advance, or `findStalePostsByIds`
+      // keeps returning the id and the client re-fetches it on every tick.
+      expect((await PostTtlModel.findById(compositeId))!.lastUpdatedAt).toBeGreaterThanOrEqual(before);
     });
   });
 
@@ -1846,6 +1939,238 @@ describe('LocalStreamPostsService', () => {
       ]);
 
       expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([later, pending]);
+    });
+  });
+
+  describe('markUnreadPostsAsReadFromResolvableHead', () => {
+    const createDetails = async (id: string, content = `Content for ${id}`) => {
+      await PostDetailsModel.create({
+        id,
+        content,
+        kind: 'short',
+        indexed_at: BASE_TIMESTAMP + 1,
+        uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${id}`,
+        attachments: null,
+      });
+    };
+
+    it('merges from the first hydrated id, keeping the pending id above it unread and the tail cursor', async () => {
+      const ready = postId('ready');
+      const pending = postId('pending');
+      const existing = postId('existing');
+      await LocalStreamPostsService.upsert({ streamId, stream: [existing], tailCursor: BASE_TIMESTAMP });
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending, ready]);
+      await createDetails(ready);
+
+      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+      const postStream = await LocalStreamPostsService.read({ streamId });
+      expect(postStream?.stream).toEqual([ready, existing]);
+      expect(postStream?.tailCursor).toBe(BASE_TIMESTAMP);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending]);
+    });
+
+    it('merges a pending id below a hydrated one with it, so it keeps its polled position', async () => {
+      const ready = postId('ready');
+      const pending = postId('pending');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready, pending]);
+      await createDetails(ready);
+
+      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+      await verifyStream([ready, pending, existing]);
+      expect(await UnreadPostStreamModel.findById(streamId as PostStreamId)).toBeNull();
+    });
+
+    it('holds back only the leading run of ids without details', async () => {
+      const first = postId('first-pending');
+      const second = postId('second-pending');
+      const ready = postId('ready');
+      const between = postId('between-pending');
+      const older = postId('older');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [first, second, ready, between, older]);
+      await createDetails(ready);
+      await createDetails(older);
+
+      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+      await verifyStream([ready, between, older, existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([first, second]);
+    });
+
+    it('acknowledges a leading tombstone and keeps the pending id below it unread', async () => {
+      const deleted = postId('deleted');
+      const pending = postId('pending');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [deleted, pending]);
+      await createDetails(deleted, DELETED);
+
+      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+      await verifyStream([existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending]);
+    });
+
+    it('acknowledges a tombstone between the held-back ids and the head', async () => {
+      const pending = postId('pending');
+      const deleted = postId('deleted');
+      const ready = postId('ready');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending, deleted, ready]);
+      await createDetails(deleted, DELETED);
+      await createDetails(ready);
+
+      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+      await verifyStream([ready, existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending]);
+    });
+
+    it('drops a tombstone below the head while merging the rest in order', async () => {
+      const ready = postId('ready');
+      const deleted = postId('deleted');
+      const older = postId('older');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready, deleted, older]);
+      await createDetails(ready);
+      await createDetails(deleted, DELETED);
+      await createDetails(older);
+
+      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+      await verifyStream([ready, older, existing]);
+      expect(await UnreadPostStreamModel.findById(streamId as PostStreamId)).toBeNull();
+    });
+
+    it('leaves both rows untouched when no unread id has details yet', async () => {
+      const pending = postId('pending');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending]);
+      const upsertPostStream = vi.spyOn(PostStreamModel, 'upsert');
+      const upsertUnread = vi.spyOn(UnreadPostStreamModel, 'upsert');
+
+      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+      expect(upsertPostStream).not.toHaveBeenCalled();
+      expect(upsertUnread).not.toHaveBeenCalled();
+      await verifyStream([existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending]);
+    });
+
+    it('drops the unread row without seeding a main row when the cache is empty', async () => {
+      const ready = postId('ready');
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready]);
+      await createDetails(ready);
+
+      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+      await verifyStreamDoesNotExist();
+      expect(await UnreadPostStreamModel.findById(streamId as PostStreamId)).toBeNull();
+    });
+
+    it('drops the unread row instead of seeding a main row that removals emptied', async () => {
+      const ready = postId('ready');
+      const pending = postId('pending');
+      const removed = postId('removed');
+      await LocalStreamPostsService.upsert({ streamId, stream: [removed], tailCursor: BASE_TIMESTAMP });
+      await PostStreamModel.removeItems(streamId as PostStreamId, [removed]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready, pending]);
+      await createDetails(ready);
+
+      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+      const postStream = await LocalStreamPostsService.read({ streamId });
+      expect(postStream?.stream).toEqual([]);
+      expect(postStream?.tailCursor).toBeUndefined();
+      expect(await UnreadPostStreamModel.findById(streamId as PostStreamId)).toBeNull();
+    });
+
+    it('leaves the main row alone when removals emptied the unread row', async () => {
+      const existing = postId('existing');
+      const removed = postId('removed');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [removed]);
+      await UnreadPostStreamModel.removeItems(streamId as PostStreamId, [removed]);
+      const upsertPostStream = vi.spyOn(PostStreamModel, 'upsert');
+
+      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+      expect(upsertPostStream).not.toHaveBeenCalled();
+      await verifyStream([existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([]);
+    });
+
+    it('rolls back the merge if acknowledgement fails', async () => {
+      const pending = postId('pending');
+      const ready = postId('ready');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending, ready]);
+      await createDetails(ready);
+      const error = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Could not acknowledge posts', {
+        service: ErrorService.Local,
+        operation: 'markUnreadPostsAsReadFromResolvableHead',
+      });
+      vi.spyOn(UnreadPostStreamModel, 'upsert').mockRejectedValueOnce(error);
+
+      await expect(LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId })).rejects.toBe(error);
+
+      await verifyStream([existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([pending, ready]);
+    });
+
+    it('leaves the main row alone when there is no unread row', async () => {
+      const existing = postId('existing');
+      await createStream([existing]);
+      const upsertPostStream = vi.spyOn(PostStreamModel, 'upsert');
+
+      await LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId });
+
+      expect(upsertPostStream).not.toHaveBeenCalled();
+      await verifyStream([existing]);
+    });
+
+    it('serializes a concurrent poll with the merge so a new arrival is neither lost nor acknowledged', async () => {
+      const pending = postId('pending');
+      const ready = postId('ready');
+      const later = postId('later');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending, ready]);
+      await createDetails(ready);
+
+      await Promise.all([
+        LocalStreamPostsService.persistUnreadNewStreamChunk({ streamId, stream: [later] }),
+        LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId }),
+      ]);
+
+      await verifyStream([ready, existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([later, pending]);
+    });
+
+    it('classifies inside the transaction so an id hydrated meanwhile ends up in exactly one row', async () => {
+      const pending = postId('pending');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending]);
+
+      await Promise.all([
+        createDetails(pending),
+        LocalStreamPostsService.markUnreadPostsAsReadFromResolvableHead({ streamId }),
+      ]);
+
+      const mainHolds = (await LocalStreamPostsService.read({ streamId }))?.stream.includes(pending) ?? false;
+      const unreadHolds =
+        (await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream.includes(pending) ?? false;
+      expect([mainHolds, unreadHolds].filter(Boolean)).toHaveLength(1);
     });
   });
 

@@ -57,6 +57,7 @@ export function ContentLayout({
   rightSidebarContent,
   leftDrawerContent,
   rightDrawerContent,
+  rightDrawerContentMobile,
   leftDrawerContentMobile,
   showLeftSidebar = true,
   showRightSidebar = true,
@@ -67,6 +68,7 @@ export function ContentLayout({
   className,
   classNameWrapperContent,
   classNameMobileHeader,
+  classNameRightDrawer,
   feedVariant,
   layoutOverride,
   disableWideShellLayout,
@@ -104,6 +106,13 @@ export function ContentLayout({
       setDrawerRightOpen(false);
     }
   }, [isMobile, usesWideShellLayout]);
+
+  // The feed shell stays mounted on navigation; Search hides this mobile control.
+  useEffect(() => {
+    if (isMobile && !showRightMobileButton) {
+      setDrawerRightOpen(false);
+    }
+  }, [isMobile, showRightMobileButton]);
 
   return (
     <>
@@ -159,9 +168,14 @@ export function ContentLayout({
       )}
 
       {/* Drawer for right sidebar - slides in from right */}
-      {rightDrawerContent && (
-        <SideDrawer open={drawerRightOpen} onOpenChangeAction={setDrawerRightOpen} position="right">
-          {rightDrawerContent}
+      {(rightDrawerContent || rightDrawerContentMobile) && (
+        <SideDrawer
+          open={drawerRightOpen}
+          onOpenChangeAction={setDrawerRightOpen}
+          position="right"
+          className={classNameRightDrawer}
+        >
+          {isPhoneViewport && rightDrawerContentMobile ? rightDrawerContentMobile : rightDrawerContent}
         </SideDrawer>
       )}
     </>

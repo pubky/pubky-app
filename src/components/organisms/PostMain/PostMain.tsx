@@ -114,7 +114,7 @@ export function PostMain({
   const detailsQuery = usePostDetails(postId, { enabled: providedPostDetails === undefined });
   const postDetails = providedPostDetails === undefined ? detailsQuery.postDetails : providedPostDetails;
   const isLoading = providedPostDetails === undefined && detailsQuery.isLoading;
-  const isDeleted = isPostDeleted(postDetails?.content);
+  const isDeleted = isPostDeleted(postDetails);
   // A settled `null` (cache miss after the fetch resolved) means the post 404'd.
   // Without this branch the card below would skeleton forever (PostHeader /
   // PostContent each wait on `postDetails`). `undefined` is still loading.
@@ -134,7 +134,7 @@ export function PostMain({
   // The original's details query stays disabled unless the header is showing.
   const { postDetails: originalPostDetails, isLoading: isOriginalLoading } = usePostDetails(repostedPostId);
   const isOriginalMissing = repostedPostId !== null && originalPostDetails === null && !isOriginalLoading;
-  const isOriginalDeleted = repostedPostId !== null && isPostDeleted(originalPostDetails?.content);
+  const isOriginalDeleted = repostedPostId !== null && isPostDeleted(originalPostDetails);
   const isCollectionShare = repostedPostId !== null && originalPostDetails?.kind === 'collection';
   const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(displayedPostId);
 

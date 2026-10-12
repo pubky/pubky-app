@@ -30,13 +30,12 @@ export function SinglePostContent({ postId, postDetails }: SinglePostContentProp
   const displayedPostId = getDisplayedPostId(postId, visibility);
   const { postDetails: originalDetails } = usePostDetails(displayedPostId !== postId ? displayedPostId : null);
   const displayedDetails = displayedPostId === postId ? postDetails : originalDetails;
-  const canReply =
-    !isPostDeleted(postDetails.content) && !!displayedDetails && !isPostDeleted(displayedDetails.content);
+  const canReply = !isPostDeleted(postDetails) && !!displayedDetails && !isPostDeleted(displayedDetails);
   const layout = useHomeStore((state) => state.layout);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
 
   // Check if parent post is deleted to determine replyability
-  const isDeleted = isPostDeleted(postDetails.content);
+  const isDeleted = isPostDeleted(postDetails);
 
   const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
 

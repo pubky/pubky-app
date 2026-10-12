@@ -45,7 +45,9 @@ vi.mock('next/navigation', () => {
 });
 
 // Autoplaying `/pubky.mp4` would capture a non-deterministic frame. Keep the
-// desktop layout slot (aspect-video card) as a static stand-in.
+// layout slot (aspect-video card) as a static stand-in, but only from `md` up:
+// the real component returns null below it (`matchMedia` on BREAKPOINTS.md), so
+// a stand-in that always renders would show a video the mobile page never has.
 vi.mock('@/templates/Public/Landing/LandingVideo', async () => {
   const { createElement } = await import('react');
   return {
@@ -53,7 +55,7 @@ vi.mock('@/templates/Public/Landing/LandingVideo', async () => {
       createElement(
         'aside',
         {
-          className: 'relative z-0 w-full max-w-[460px] md:max-w-[560px] lg:max-w-none lg:pt-20',
+          className: 'hidden md:block relative z-0 w-full max-w-[460px] md:max-w-[560px] lg:max-w-none lg:pt-20',
           'aria-label': 'Landing video',
         },
         createElement('div', {
@@ -63,6 +65,14 @@ vi.mock('@/templates/Public/Landing/LandingVideo', async () => {
       ),
   };
 });
+
+// `HomeActions` renders "Continue with Google" only when Passport eligibility
+// resolves to `'enabled'`. The VRT page is served over http, so the real hook
+// can only report `'pending'` or `'disabled'` here and the snapshot would miss a
+// button the landing page shows in production.
+vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
+  usePassportEligibility: () => 'enabled',
+}));
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: createZustandLikeHook({

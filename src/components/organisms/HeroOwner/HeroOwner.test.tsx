@@ -113,19 +113,3 @@ describe('HeroOwner', () => {
     expect(screen.queryByText('Alice', { selector: 'span' })).not.toBeInTheDocument();
   });
 });
-
-describe('HeroOwner - Snapshots', () => {
-  it('matches the snapshot for the resolved state', () => {
-    const { container } = render(
-      <HeroOwner name="Alice" fallbackSeed="alice-pubky" avatarUrl="https://example.com/a.png" isResolved size="sm" />,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the snapshot for the unresolved (skeleton) state', () => {
-    const { container } = render(<HeroOwner name="Alice" fallbackSeed="alice-pubky" isResolved={false} size="md" />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -172,7 +172,7 @@ describe('PostNormalizer', () => {
 
         // `lock` is only ever set on the public announcement of a lock post.
         it('should forward a lock URL when present', async () => {
-          const post = { ...createBasicPost(), lock: 'pubky://alice/pub/locks.app/LOCK1.json' };
+          const post = { ...createBasicPost(), lock: 'pubky://alice/pub/app.locks/LOCK1.json' };
 
           await PostNormalizer.to(post, TEST_PUBKY.USER_1);
 
@@ -182,7 +182,7 @@ describe('PostNormalizer', () => {
             null,
             null,
             null,
-            'pubky://alice/pub/locks.app/LOCK1.json',
+            'pubky://alice/pub/app.locks/LOCK1.json',
           );
         });
       });
@@ -799,6 +799,20 @@ describe('PostNormalizer', () => {
         ).rejects.toThrow('Post not found');
       });
 
+      it('should throw POST_NOT_FOUND when the post is a Nexus tombstone (empty content, flag set)', async () => {
+        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(
+          asOpaque<PostDetailsModel>({ ...createMockPostDetails(compositePostId), content: '', deleted: true }),
+        );
+
+        await expect(
+          PostNormalizer.toEdit({
+            compositePostId,
+            content: 'New content',
+            currentUserPubky: TEST_PUBKY.USER_1,
+          }),
+        ).rejects.toThrow('Post not found');
+      });
+
       it('should preserve parent URI for reply posts', async () => {
         const parentUri = buildPubkyUri(TEST_PUBKY.USER_2, `posts/${TEST_POST_IDS.POST_2}`);
 
@@ -876,7 +890,7 @@ describe('PostNormalizer', () => {
       });
 
       it('preserves the stored lock when editing announcement content', async () => {
-        const lockUrl = `pubky://${TEST_PUBKY.USER_1}/pub/locks.app/LOCK1.json`;
+        const lockUrl = `pubky://${TEST_PUBKY.USER_1}/pub/app.locks/LOCK1.json`;
         const postDetails = createMockPostDetails(compositePostId);
         postDetails.lock = lockUrl;
         vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(postDetails);
@@ -894,7 +908,7 @@ describe('PostNormalizer', () => {
       });
 
       it('preserves the stored lock when attachments and kind change', async () => {
-        const lockUrl = `pubky://${TEST_PUBKY.USER_1}/pub/locks.app/LOCK1.json`;
+        const lockUrl = `pubky://${TEST_PUBKY.USER_1}/pub/app.locks/LOCK1.json`;
         const nextAttachments = [buildPubkyUri(TEST_PUBKY.USER_1, 'files/NEXT1')];
         const postDetails = createMockPostDetails(compositePostId);
         postDetails.lock = lockUrl;

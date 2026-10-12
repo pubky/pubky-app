@@ -166,20 +166,3 @@ describe('DialogReportPostIssueStep', () => {
     expect(mockOnOpenChange).not.toHaveBeenCalled();
   });
 });
-
-describe('DialogReportPostIssueStep - Snapshots', () => {
-  const mockOnSelectIssueType = vi.fn();
-  const mockOnCancel = vi.fn();
-
-  it('matches the issue selection snapshot', () => {
-    renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-
-  it('matches the selected issue snapshot', async () => {
-    const user = userEvent.setup();
-    renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
-    await user.click(screen.getByRole('option', { name: REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.HATE_SPEECH] }));
-    expect(screen.getByRole('dialog')).toMatchSnapshot();
-  });
-});

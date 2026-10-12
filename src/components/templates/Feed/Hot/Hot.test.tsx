@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hot } from './Hot';
 
 let mockIsMobile = false;
@@ -79,8 +78,8 @@ vi.mock('@/organisms/FeedRightSidebar/FeedRightSidebar', () => {
 
 vi.mock('@/organisms/HotActiveUsers/HotActiveUsers', () => {
   return {
-    HotActiveUsers: ({ className }: { className?: string }) => (
-      <div data-testid="hot-active-users" className={className}>
+    HotActiveUsers: ({ className, hideHeadingOnMobile }: { className?: string; hideHeadingOnMobile?: boolean }) => (
+      <div data-testid="hot-active-users" className={className} data-hide-heading-on-mobile={hideHeadingOnMobile}>
         HotActiveUsers
       </div>
     ),
@@ -141,8 +140,10 @@ vi.mock('@/atoms/Container/Container', () => {
 
 vi.mock('@/atoms/Heading/Heading', () => {
   return {
-    Heading: ({ children, level }: { children: React.ReactNode; level: number }) => (
-      <div data-testid={`heading-${level}`}>{children}</div>
+    Heading: ({ children, level, className }: { children: React.ReactNode; level: number; className?: string }) => (
+      <div data-testid={`heading-${level}`} className={className}>
+        {children}
+      </div>
     ),
   };
 });
@@ -190,6 +191,16 @@ describe('Hot', () => {
   it('displays Trending posts heading', () => {
     render(<Hot />);
     expect(screen.getByText('Trending posts')).toBeInTheDocument();
+  });
+
+  it('visually hides the Trending posts heading below the lg breakpoint', () => {
+    render(<Hot />);
+    expect(screen.getByText('Trending posts')).toHaveClass('sr-only', 'lg:not-sr-only');
+  });
+
+  it('hides the Active users heading on mobile because the tab menu names the section', () => {
+    render(<Hot />);
+    expect(screen.getByTestId('hot-active-users')).toHaveAttribute('data-hide-heading-on-mobile', 'true');
   });
 
   it('passes hasGradientBackground={false} to ContentLayout', () => {
@@ -278,30 +289,5 @@ describe('Hot - Mobile', () => {
     expect(screen.getByTestId('hot-tags-cards-section')).not.toHaveClass('hidden');
     expect(screen.getByTestId('hot-tags-overview')).not.toHaveClass('hidden');
     expect(screen.getByTestId('hot-active-users')).toHaveClass('hidden');
-  });
-});
-
-describe('Hot - Snapshots', () => {
-  beforeEach(() => {
-    mockIsMobile = false;
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<Hot />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('Hot - Mobile Snapshots', () => {
-  beforeEach(() => {
-    mockIsMobile = true;
-    setMobileViewport();
-  });
-  afterEach(() => {
-    resetViewport();
-  });
-  it('matches snapshot on mobile viewport', () => {
-    const { container } = render(<Hot />);
-    expect(container).toMatchSnapshot();
   });
 });

@@ -74,7 +74,7 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
               overrideDefaults
               className={cn(
                 'h-14 rounded-md border border-dashed border-input py-4 pr-5 pl-6 text-base shadow-xs',
-                'flex items-center gap-3 bg-background/10',
+                'flex items-center gap-3 bg-background/20',
               )}
             >
               <span aria-hidden className="shrink-0 text-base text-foreground">

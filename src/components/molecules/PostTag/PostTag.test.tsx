@@ -82,43 +82,46 @@ describe('PostTag', () => {
   });
 
   it('renders with custom color', () => {
-    const { container } = render(<PostTag label="bitcoin" color="#123456" />);
+    render(<PostTag label="bitcoin" color="#123456" />);
     const tag = screen.getByRole('button');
 
-    // Verify the tag is rendered (custom color is applied via inline styles in the snapshot)
-    expect(tag).toBeInTheDocument();
-    expect(container.firstChild).toBeTruthy();
-  });
-});
-
-describe('PostTag - Snapshots', () => {
-  it('matches snapshot with default state', () => {
-    const { container } = render(<PostTag label="bitcoin" />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(tag).toHaveStyle({ backgroundImage: expect.stringContaining('#123456') });
+    expect(tag).toHaveAttribute('data-tag-label', 'bitcoin');
+    expect(tag).toHaveAttribute('data-cy', 'post-tag');
   });
 
-  it('matches snapshot when selected', () => {
-    const { container } = render(<PostTag label="bitcoin" selected />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('is unpressed without a selection border by default', () => {
+    const { container } = render(<PostTag label="bitcoin" color="#123456" />);
+
+    const tag = screen.getByRole('button');
+    expect(tag).toHaveAttribute('aria-pressed', 'false');
+    expect(tag).toHaveAttribute('data-state', 'off');
+    expect(tag.style.boxShadow).toBe('');
+    expect(container.querySelector('.border-solid.absolute')).toBeNull();
   });
 
-  it('matches snapshot with counter', () => {
-    const { container } = render(<PostTag label="bitcoin" count={16} />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('reflects the selected state with a pressed toggle and a border overlay', () => {
+    const { container } = render(<PostTag label="bitcoin" color="#123456" selected />);
+
+    const tag = screen.getByRole('button');
+    expect(tag).toHaveAttribute('aria-pressed', 'true');
+    expect(tag).toHaveAttribute('data-state', 'on');
+    expect(tag.style.boxShadow).toContain('#123456');
+    const overlay = container.querySelector('.border-solid.absolute');
+    expect(overlay).not.toBeNull();
+    expect(overlay).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('matches snapshot with close button', () => {
-    const { container } = render(<PostTag label="bitcoin" showClose />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('only renders the close control when showClose is set', () => {
+    const { rerender } = render(<PostTag label="bitcoin" />);
+    expect(screen.queryByLabelText(/remove bitcoin tag/i)).not.toBeInTheDocument();
+
+    rerender(<PostTag label="bitcoin" showClose />);
+    expect(screen.getByLabelText(/remove bitcoin tag/i)).toBeInTheDocument();
   });
 
-  it('matches snapshot with all features', () => {
-    const { container } = render(<PostTag label="bitcoin" count={16} showClose selected />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom color', () => {
-    const { container } = render(<PostTag label="bitcoin" color="#FF0000" />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('merges a custom className', () => {
+    render(<PostTag label="bitcoin" className="custom-tag" />);
+    expect(screen.getByRole('button')).toHaveClass('custom-tag', 'rounded-md', 'h-8');
   });
 });

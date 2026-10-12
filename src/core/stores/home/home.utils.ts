@@ -44,6 +44,11 @@ const REACH_TO_SOURCE = {
 /** Maps streamId SOURCE part to REACH filter (auto-generated) */
 const SOURCE_TO_REACH = reverseMapping(REACH_TO_SOURCE);
 
+/** Maps a reach (anything but Me) to its stream source, which is also the Nexus reach value. */
+export function getSourceFromReach<R extends SourceMappedReachType>(reach: R): (typeof REACH_TO_SOURCE)[R] {
+  return REACH_TO_SOURCE[reach];
+}
+
 /** Maps CONTENT filter to streamId KIND part */
 const CONTENT_TO_KIND = {
   [CONTENT.ALL]: 'all',

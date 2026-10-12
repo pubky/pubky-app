@@ -1,18 +1,18 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Logger } from '@/libs/logger/logger';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { useUserStream } from './useUserStream';
-import {
-  DEFAULT_USER_STREAM_BUFFER_SIZE,
-  DEFAULT_USER_STREAM_LIMIT,
-  DEFAULT_USER_STREAM_PAGE_SIZE,
-} from './useUserStream.constants';
+import { DEFAULT_USER_STREAM_BUFFER_SIZE, DEFAULT_USER_STREAM_LIMIT } from './useUserStream.constants';
 
-const { mockUseLiveQuery, mockGetOrFetchStreamSlice, mockRefreshStreamSlice } = vi.hoisted(() => ({
-  mockUseLiveQuery: vi.fn(),
-  mockGetOrFetchStreamSlice: vi.fn(),
-  mockRefreshStreamSlice: vi.fn(),
-}));
+const { mockUseLiveQuery, mockGetOrFetchStreamSlice, mockRefreshStreamSlice, mockGetStreamUserIds } = vi.hoisted(
+  () => ({
+    mockUseLiveQuery: vi.fn(),
+    mockGetOrFetchStreamSlice: vi.fn(),
+    mockRefreshStreamSlice: vi.fn(),
+    mockGetStreamUserIds: vi.fn(),
+  }),
+);
 
 // Mock dexie-react-hooks. The details/relationships queries (the two-argument calls, no default)
 // resolve to a `{ forIds, map }` snapshot tagged with the ids they ran for; tests keep returning
@@ -35,6 +35,8 @@ vi.mock('@/controllers/stream/users/users', () => ({
   StreamUserController: {
     getOrFetchStreamSlice: (...args: unknown[]) => mockGetOrFetchStreamSlice(...args),
     refreshStreamSlice: (...args: unknown[]) => mockRefreshStreamSlice(...args),
+    getStreamUserIds: (...args: unknown[]) => mockGetStreamUserIds(...args),
+    getOrFetchUsers: vi.fn().mockResolvedValue(undefined),
   },
 }));
 vi.mock('@/controllers/user/user', () => ({
@@ -84,6 +86,7 @@ describe('useUserStream', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRefreshStreamSlice.mockResolvedValue({ nextPageIds: [], skip: undefined, isExhausted: true });
+    mockGetStreamUserIds.mockResolvedValue([]);
     // Default mock for useLiveQuery - returns the details map
     mockUseLiveQuery.mockReturnValue(mockUserDetails);
   });
@@ -125,6 +128,20 @@ describe('useUserStream', () => {
         limit: 10,
         skip: 0,
       });
+    });
+  });
+
+  describe('deleted users', () => {
+    it('labels a tombstoned user as [DELETED]', async () => {
+      mockGetOrFetchStreamSlice.mockResolvedValue({ nextPageIds: ['user-1'], skip: 1 });
+      mockUseLiveQuery.mockReturnValue(
+        new Map([['user-1', { id: 'user-1', name: '', bio: '', image: null, status: null, deleted: true }]]),
+      );
+
+      const { result } = renderHook(() => useUserStream({ streamId: UserStreamTypes.RECOMMENDED }));
+
+      await waitFor(() => expect(result.current.users).toHaveLength(1));
+      expect(result.current.users[0].name).toBe('[DELETED]');
     });
   });
 
@@ -197,149 +214,6 @@ describe('useUserStream', () => {
           }),
         );
       });
-    });
-
-    it('hasMore is false when not paginated', async () => {
-      mockGetOrFetchStreamSlice.mockResolvedValue({
-        nextPageIds: ['user-1'],
-        skip: 1,
-      });
-      mockUseLiveQuery.mockReturnValue(mockUserDetails);
-
-      const { result } = renderHook(() =>
-        useUserStream({
-          streamId: UserStreamTypes.RECOMMENDED,
-          paginated: false,
-        }),
-      );
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      expect(result.current.hasMore).toBe(false);
-    });
-  });
-
-  describe('paginated mode', () => {
-    it('uses page size limit when paginated and no limit specified', async () => {
-      mockGetOrFetchStreamSlice.mockResolvedValue({ nextPageIds: [], skip: 0 });
-      mockUseLiveQuery.mockReturnValue(new Map());
-
-      renderHook(() =>
-        useUserStream({
-          streamId: UserStreamTypes.RECOMMENDED,
-          paginated: true,
-        }),
-      );
-
-      await waitFor(() => {
-        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledWith(
-          expect.objectContaining({
-            limit: DEFAULT_USER_STREAM_PAGE_SIZE,
-          }),
-        );
-      });
-    });
-
-    it('sets hasMore true when full page returned', async () => {
-      const fullPage = Array.from({ length: DEFAULT_USER_STREAM_PAGE_SIZE }, (_, i) => `user-${i}`);
-      mockGetOrFetchStreamSlice.mockResolvedValue({
-        nextPageIds: fullPage,
-        skip: DEFAULT_USER_STREAM_PAGE_SIZE,
-      });
-      mockUseLiveQuery.mockReturnValue(new Map());
-
-      const { result } = renderHook(() =>
-        useUserStream({
-          streamId: UserStreamTypes.RECOMMENDED,
-          paginated: true,
-        }),
-      );
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      expect(result.current.hasMore).toBe(true);
-    });
-
-    it('sets hasMore false when partial page returned', async () => {
-      mockGetOrFetchStreamSlice.mockResolvedValue({
-        nextPageIds: ['user-1', 'user-2'],
-        skip: 2,
-      });
-      mockUseLiveQuery.mockReturnValue(new Map());
-
-      const { result } = renderHook(() =>
-        useUserStream({
-          streamId: UserStreamTypes.RECOMMENDED,
-          paginated: true,
-        }),
-      );
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      expect(result.current.hasMore).toBe(false);
-    });
-
-    it('loadMore fetches next page when hasMore is true', async () => {
-      const fullPage = Array.from({ length: DEFAULT_USER_STREAM_PAGE_SIZE }, (_, i) => `user-${i}`);
-      mockGetOrFetchStreamSlice
-        .mockResolvedValueOnce({ nextPageIds: fullPage, skip: DEFAULT_USER_STREAM_PAGE_SIZE })
-        .mockResolvedValueOnce({ nextPageIds: ['user-30', 'user-31'], skip: 32 });
-      mockUseLiveQuery.mockReturnValue(new Map());
-
-      const { result } = renderHook(() =>
-        useUserStream({
-          streamId: UserStreamTypes.RECOMMENDED,
-          paginated: true,
-        }),
-      );
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-        expect(result.current.hasMore).toBe(true);
-      });
-
-      await act(async () => {
-        await result.current.loadMore();
-      });
-
-      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
-      expect(mockGetOrFetchStreamSlice).toHaveBeenLastCalledWith({
-        streamId: UserStreamTypes.RECOMMENDED,
-        limit: DEFAULT_USER_STREAM_PAGE_SIZE,
-        skip: DEFAULT_USER_STREAM_PAGE_SIZE,
-      });
-    });
-
-    it('loadMore does nothing when hasMore is false', async () => {
-      mockGetOrFetchStreamSlice.mockResolvedValue({
-        nextPageIds: ['user-1'],
-        skip: 1,
-      });
-      mockUseLiveQuery.mockReturnValue(new Map());
-
-      const { result } = renderHook(() =>
-        useUserStream({
-          streamId: UserStreamTypes.RECOMMENDED,
-          paginated: true,
-        }),
-      );
-
-      await waitFor(() => {
-        expect(result.current.hasMore).toBe(false);
-      });
-
-      await act(async () => {
-        await result.current.loadMore();
-      });
-
-      // Should only be called once (initial fetch)
-      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -530,6 +404,7 @@ describe('useUserStream', () => {
       });
       await new Promise((resolve) => setTimeout(resolve, 0));
 
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
       expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
     });
 
@@ -604,6 +479,7 @@ describe('useUserStream', () => {
       });
       await new Promise((resolve) => setTimeout(resolve, 0));
 
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
       expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
     });
 
@@ -666,18 +542,12 @@ describe('useUserStream', () => {
       expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
     });
 
-    it('makes one bounded refill request when eligible recommendations fall below threshold', async () => {
+    it('makes one bounded refill read when eligible recommendations fall below threshold', async () => {
       const ids = ['user-1', 'user-2', 'user-3'];
-      mockGetOrFetchStreamSlice.mockResolvedValue({
-        nextPageIds: ids,
-        skip: ids.length,
-        isExhausted: false,
-      });
-      mockRefreshStreamSlice.mockResolvedValue({
-        nextPageIds: ['user-4', 'user-5'],
-        skip: 5,
-        isExhausted: true,
-      });
+      // The read past the first slice finds nothing cached and goes to Nexus (a `skip` comes back)
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce({ nextPageIds: ids, skip: ids.length, isExhausted: false })
+        .mockResolvedValueOnce({ nextPageIds: ids, skip: ids.length * 2, isExhausted: false });
       mockLiveQueryMaps({
         details: createDetailsMap(ids),
         relationships: new Map(ids.map((id) => [id, { id, following: false, followed_by: false }])),
@@ -694,14 +564,224 @@ describe('useUserStream', () => {
       );
 
       await waitFor(() => {
-        expect(mockRefreshStreamSlice).toHaveBeenCalledTimes(1);
+        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
       });
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(mockRefreshStreamSlice).toHaveBeenCalledWith({
+      expect(mockGetOrFetchStreamSlice).toHaveBeenLastCalledWith({
         streamId: UserStreamTypes.RECOMMENDED,
         limit: DEFAULT_USER_STREAM_BUFFER_SIZE,
         skip: ids.length,
+        allowPartialCache: true,
       });
+      expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
+    });
+
+    it('asks Nexus for fresh candidates only when the cached tail was still short', async () => {
+      const ids = ['user-1', 'user-2', 'user-3'];
+      const cachedTail = ['user-4'];
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce({ nextPageIds: ids, skip: undefined, isExhausted: false })
+        .mockResolvedValueOnce({ nextPageIds: cachedTail, skip: undefined, isExhausted: false });
+      mockRefreshStreamSlice.mockResolvedValue({
+        nextPageIds: ['user-5', 'user-6'],
+        skip: 6,
+        isExhausted: true,
+      });
+      mockLiveQueryMaps({
+        details: createDetailsMap([...ids, ...cachedTail]),
+        relationships: new Map([...ids, ...cachedTail].map((id) => [id, { id, following: false, followed_by: false }])),
+      });
+
+      renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+          refillThreshold: 6,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(mockRefreshStreamSlice).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+      expect(mockRefreshStreamSlice).toHaveBeenCalledWith({
+        streamId: UserStreamTypes.RECOMMENDED,
+        limit: DEFAULT_USER_STREAM_BUFFER_SIZE,
+        skip: ids.length + cachedTail.length,
+      });
+    });
+
+    it('does not ask Nexus again when the read after a cache hit fails', async () => {
+      const ids = ['user-1', 'user-2', 'user-3'];
+      const loggerErrorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce({ nextPageIds: ids, skip: undefined, isExhausted: false })
+        // Fails only after the loading render, as a real transport error does
+        .mockImplementationOnce(
+          () => new Promise((_, reject) => setTimeout(() => reject(new Error('Nexus unavailable')), 10)),
+        );
+      mockLiveQueryMaps({
+        details: createDetailsMap(ids),
+        relationships: new Map(ids.map((id) => [id, { id, following: false, followed_by: false }])),
+      });
+
+      renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+          refillThreshold: 6,
+        }),
+      );
+
+      // Wait for the failure itself, then let the refill effect run once more
+      await waitFor(() => {
+        expect(loggerErrorSpy).toHaveBeenCalledWith('[useUserStream] Failed to fetch users:', expect.any(Error));
+      });
+      await act(async () => {});
+
+      expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
+    });
+
+    it('shows the whole cached row at once when asked to show all', async () => {
+      const ids = Array.from({ length: 12 }, (_, i) => `user-${i}`);
+      mockGetStreamUserIds.mockResolvedValue(ids);
+      mockLiveQueryMaps({
+        details: createDetailsMap(ids),
+        relationships: new Map(ids.map((id) => [id, { id, following: false, followed_by: false }])),
+      });
+
+      const { result } = renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 10,
+          bufferSize: 10,
+          refillThreshold: 10,
+          includeRelationships: true,
+          excludeFollowing: true,
+          showAll: true,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.users).toHaveLength(ids.length);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockGetOrFetchStreamSlice).not.toHaveBeenCalled();
+      expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
+    });
+
+    it('keeps the settled list on screen while a refill hydrates, without showing followed users early', async () => {
+      const ids = ['user-1', 'user-2', 'user-3'];
+      const appended = ['user-4', 'user-5'];
+      const allIds = [...ids, ...appended];
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce({ nextPageIds: ids, skip: undefined, isExhausted: false })
+        .mockResolvedValueOnce({ nextPageIds: appended, skip: undefined, isExhausted: false });
+      const initialRelationships = new Map(
+        ids.map((id) => [id, { id, following: id === 'user-1', followed_by: false }] as const),
+      );
+      const allRelationships = new Map([
+        ...initialRelationships,
+        ['user-4', { id: 'user-4', following: true, followed_by: false }],
+        ['user-5', { id: 'user-5', following: false, followed_by: false }],
+      ]);
+      // Details already cover the appended ids while the relationships live query still holds the
+      // snapshot it computed for the initial ids, as between two Dexie updates: user-4 (followed)
+      // has no relationship row yet and must not show as unfollowed.
+      let relationshipsLag = true;
+      let callCount = 0;
+      mockUseLiveQuery.mockImplementation((_querier: unknown, deps: unknown[]) => {
+        const index = callCount % 3;
+        callCount += 1;
+        if (index === 0) return createDetailsMap(allIds);
+        if (index === 1) return new Map();
+        return relationshipsLag
+          ? { forIds: ids, map: initialRelationships }
+          : { forIds: deps[0], map: allRelationships };
+      });
+
+      const { result, rerender } = renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          bufferSize: 3,
+          refillThreshold: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+      });
+      await act(async () => {});
+
+      // The append landed but relationships lag: the settled two stay, nothing new, no skeletons
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.userIds).toEqual(allIds);
+      expect(result.current.users.map((user) => user.id)).toEqual(['user-2', 'user-3']);
+
+      relationshipsLag = false;
+      rerender();
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.users.map((user) => user.id)).toEqual(['user-2', 'user-3', 'user-5']);
+    });
+
+    it('shows skeletons again for a new stream until its own ids hydrate', async () => {
+      const firstIds = ['user-1', 'user-2', 'user-3'];
+      const secondIds = ['user-4', 'user-5', 'user-6'];
+      mockGetOrFetchStreamSlice
+        .mockResolvedValueOnce({ nextPageIds: firstIds, skip: 3, isExhausted: true })
+        .mockResolvedValueOnce({ nextPageIds: secondIds, skip: 3, isExhausted: true });
+      const relationships = new Map(
+        [...firstIds, ...secondIds].map((id) => [id, { id, following: false, followed_by: false }] as const),
+      );
+      // Details cover both streams; the relationships live query lags behind the stream switch
+      let relationshipsLag = false;
+      let callCount = 0;
+      mockUseLiveQuery.mockImplementation((_querier: unknown, deps: unknown[]) => {
+        const index = callCount % 3;
+        callCount += 1;
+        if (index === 0) return createDetailsMap([...firstIds, ...secondIds]);
+        if (index === 1) return new Map();
+        return { forIds: relationshipsLag ? firstIds : deps[0], map: relationships };
+      });
+
+      const { result, rerender } = renderHook(
+        ({
+          streamId,
+        }: {
+          streamId: typeof UserStreamTypes.RECOMMENDED | typeof UserStreamTypes.TODAY_INFLUENCERS_ALL;
+        }) => useUserStream({ streamId, limit: 3, includeRelationships: true, excludeFollowing: true }),
+        { initialProps: { streamId: UserStreamTypes.RECOMMENDED } },
+      );
+
+      await waitFor(() => {
+        expect(result.current.users.map((user) => user.id)).toEqual(firstIds);
+      });
+
+      relationshipsLag = true;
+      rerender({ streamId: UserStreamTypes.TODAY_INFLUENCERS_ALL });
+      await waitFor(() => {
+        expect(result.current.userIds).toEqual(secondIds);
+      });
+
+      // The new ids are listed but their relationships are not: skeletons, not a stale list
+      expect(result.current.isLoading).toBe(true);
+
+      relationshipsLag = false;
+      rerender({ streamId: UserStreamTypes.TODAY_INFLUENCERS_ALL });
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.users.map((user) => user.id)).toEqual(secondIds);
     });
   });
 });

@@ -51,7 +51,7 @@ async function isPostStillInCollection(collectionId: string, postId: string): Pr
   // commitUpdateCollectionItem throws NOT_FOUND for this exact state before
   // writing anything, so "already gone" here would misread a failed no-op as
   // success. Unverifiable → caller keeps shouldRestore and rolls back.
-  if (!collection || isPostDeleted(collection.content)) return null;
+  if (!collection || isPostDeleted(collection)) return null;
 
   const content = CollectionPostContent.parse(collection.content);
   if (!content) return null;

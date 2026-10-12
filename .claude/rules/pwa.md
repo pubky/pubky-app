@@ -21,5 +21,3 @@ paths:
 # PWA Rules
 
 Read and follow `docs/pwa.md` before editing these files.
-
-@../../docs/pwa.md

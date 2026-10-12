@@ -39,7 +39,7 @@ templates/ → Page layouts
 ```
 src/components/atoms/Button/
 ├── Button.tsx           # Main component
-├── Button.test.tsx      # Unit + snapshot tests
+├── Button.test.tsx      # Unit tests
 └── Button.types.ts      # Type definitions
 ```
 
@@ -50,6 +50,15 @@ Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-
 - **Config:** import from `@/config/<topic>` (concrete modules under `src/config/`, such as `@/config/nexus`, `@/config/posts`). Do not introduce an aggregate `src/config/index.ts` that re-exports the whole tree.
 - **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file. Never hardcode a path string in a component; add or use a builder (`getProfileRoute`, `getCollectionRoute`, …).
 - **Active nav state:** a nav item that links to a default child route (footer Settings → `SETTINGS_ROUTES.ACCOUNT`) but must stay active on sibling routes (`/settings/notifications`) needs active detection on the parent prefix (`activePrefix: APP_ROUTES.SETTINGS`, see `MobileFooter`), not only `href` or `pathname.startsWith(href + '/')`.
+
+`MobileFooter` always disables prefetch for Search. With Next.js 16.3.6, any `/search` prefetch from the footer after a
+search with query params has rendered can loop on metadata requests, including after navigating to Home or opening a
+post modal. Optimistic route prediction omits the parallel `@post/[...catchAll]` parameter from the cache key
+([#2755](https://github.com/pubky/pubky-app/issues/2755), [reproduction and upgrade checks](search-prefetch-loop.md)).
+Already-active Home also skips prefetch because its click only scrolls to the top via `handleFeedNavClick`; active
+Search keeps that behavior and preserves its query. Other destinations retain Next's default prefetch behavior,
+including Settings and Collections when their parent prefix is active on a different child route. Verify with a
+production build; automatic prefetching is disabled in development.
 
 #### Explore mode (unauthenticated browsing)
 
@@ -192,6 +201,28 @@ Helpers such as **`getIconFromUrl`** and **`getLabelFromUrl`** live in **`@/libs
 
 Component tests must use **real** `lucide-react` and `@/icons` implementations (no `vi.mock('lucide-react')` / `vi.mock('@/icons')` for icons). See `docs/component-testing.md` — _Icon components: Always Real_.
 
+## Article composer
+
+Article mode in `PostInput` is tabbed. The `Tabs` atom (Radix, underline style) hosts the row rendered by the
+`ArticleComposerTabs` molecule: **Content** (the rich-text editor), **Header** (the cover slot in
+`PostInputAttachments`) and **Preview**; below `lg` the title gets a **Title** tab of its own, and the tabs are
+icon-only. Content, Title and Header panels stay mounted while another tab shows (`forceMount` +
+`data-[state=inactive]:hidden`): the editor imports its markdown once and the title field is uncontrolled, so
+unmounting either would lose what the user typed since the last debounce. Tags and the action bar sit under every
+tab; the author's avatar and a browser fullscreen toggle (`useFullscreen`, document-level because Radix portals
+render on `body`) live in the action bar.
+
+**Preview** is `ArticleComposerPreview`, which renders the draft through the published path (`PostText` with
+`articleMedia`): the body goes through `serializeArticleBody`, and the resulting `attachment:{n}` slots are fed
+`[cover?, ...inline]` local entries built from the composer session (object URLs for this session's uploads, CDN
+URLs for files kept from the published article). It is never a second renderer, and its links are inert.
+
+## Article inline media
+
+`PostText` renders an article body's `![alt](src)` nodes through `ArticleInlineMedia` whenever the surface passes `articleMedia` (the article detail page and unlocked content; feed previews pass nothing and strip them). `ArticleInlineMedia` routes by the resolved kind: images to `ArticleInlineImage`, videos and audio to the `Video` / `Audio` atoms, PDFs to a file card. The kind comes from file metadata, not the markdown (`docs/data-patterns.md`, _Article Inline Media_).
+
+Everything these render sits inside a markdown `<p>`, so it is phrasing content only: `span`, `img`, `video`, `audio`, `a` — never `div`, `Container` or `Typography`'s default `<p>`. External sources use `preload="none"`; media elements have no referrer policy.
+
 ## Toasts
 
 Stack: atom [`Toast`](src/components/atoms/Toast/Toast.tsx) + [`Toast.variants.ts`](src/components/atoms/Toast/Toast.variants.ts) + [`Toast.icons.tsx`](src/components/atoms/Toast/Toast.icons.tsx), molecule [`Toaster`](src/components/molecules/Toaster/Toaster.tsx), public API [`toast()`](src/components/molecules/Toaster/toast.ts). `<Toaster />` is mounted in the app layout.
@@ -299,9 +330,22 @@ Build forms with `react-hook-form` + `zod` (via `@hookform/resolvers/zod`). Cano
 
 // No arbitrary sizes
 <Avatar className="h-[37px] w-[37px]" />
+
+// Allowed: a viewport fraction or a calc() with no named utility
+<div className="max-h-[75dvh]" />
+<div className="max-h-[calc(100dvh-2rem)]" />
 ```
 
+An arbitrary value is fine only when the scale cannot express it: a viewport fraction with no named utility (`max-h-[75dvh]`; the full viewport is `h-dvh`, `max-h-screen`, `max-w-screen`), a `calc()` over the viewport or a CSS variable (`max-h-[calc(100dvh-2rem)]` in the `Dialog` atom), or a CSS variable set by a library (`translate-x-[var(--radix-toast-swipe-move-x)]`). Fixed lengths and colours always come from the scale and the tokens.
+
 ### Spacing
+
+Page-level headers and content share the 1200px container token and `CONTENT_GUTTER_CLASS`
+from `@/config/layoutClasses`: 16px side padding below `lg`, 24px from `lg`, and no
+internal side padding from `xl` (1280px), where the centered container supplies the
+outer space. Apply the gutter once to the width-constrained shell, including auth,
+onboarding, edit profile, and landing sections. Header spacing does not depend on
+the route or authentication state. Full-width section backgrounds stay outside this shell.
 
 ```tsx
 // Use Tailwind spacing scale
@@ -349,7 +393,7 @@ When migrating/creating a component:
 - [ ] Component imports point at concrete files (e.g. `@/atoms/Button/Button`), not aggregate folder indexes or re-export-only paths
 - [ ] All Figma variants implemented
 - [ ] CVA used for variant management
-- [ ] Tests created (unit + snapshot) — see `docs/component-testing.md`
+- [ ] Unit tests created — see `docs/component-testing.md`; VRT updated when a visual surface changed
 - [ ] Build passes (`npm run build`)
 - [ ] Visual verification in browser
 
@@ -362,6 +406,6 @@ When creating/modifying components:
 - [ ] Using concrete `@/atoms/*`, `@/molecules/*`, `@/organisms/*`, or `@/templates/*` imports?
 - [ ] Design tokens (not hardcoded colors)?
 - [ ] Figma sizing/spacing matched?
-- [ ] Tests created (unit + snapshot)?
+- [ ] Unit tests created, and VRT updated if a visual surface changed?
 - [ ] No re-export-only `index.ts` / `index.tsx` added under `src/components`?
 - [ ] Build passes?

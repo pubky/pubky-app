@@ -61,10 +61,3 @@ describe('LocksPermissionNotice', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });
-
-describe('LocksPermissionNotice - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<LocksPermissionNotice />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

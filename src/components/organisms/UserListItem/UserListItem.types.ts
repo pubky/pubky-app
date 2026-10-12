@@ -9,6 +9,8 @@ export interface UserListItemData {
   id: Pubky;
   /** User display name */
   name?: string;
+  /** Nexus tombstone flag; the row then renders `[DELETED]` instead of its pubky */
+  deleted?: boolean;
   /** User avatar URL */
   avatarUrl?: string | null;
   /** Alternative image field (for backward compatibility) */

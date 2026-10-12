@@ -229,6 +229,11 @@ describe('LocalFollowService.create', () => {
     expect(ttl?.lastUpdatedAt).toBeGreaterThan(0);
   });
 
+  it('reports whether the relationship flipped so a no-op needs no compensation', async () => {
+    await expect(LocalFollowService.create({ follower: userA, followee: userB })).resolves.toBe(true);
+    await expect(LocalFollowService.create({ follower: userA, followee: userB })).resolves.toBe(false);
+  });
+
   it('upserts relationship on first follow and sets following=true', async () => {
     // No relationship exists for userB
     await LocalFollowService.create({ follower: userA, followee: userB });
@@ -427,6 +432,12 @@ describe('LocalFollowService.delete', () => {
     // Connections removed
     expect(aConn?.following ?? []).not.toContain(userB);
     expect(bConn?.followers ?? []).not.toContain(userA);
+  });
+
+  it('reports whether the relationship flipped so a no-op needs no compensation', async () => {
+    await expect(LocalFollowService.delete({ follower: userA, followee: userB })).resolves.toBe(false);
+    await LocalFollowService.create({ follower: userA, followee: userB });
+    await expect(LocalFollowService.delete({ follower: userA, followee: userB })).resolves.toBe(true);
   });
 
   it('stamps the followee user TTL so an in-flight refresh can keep the local unfollow', async () => {

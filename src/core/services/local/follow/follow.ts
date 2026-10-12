@@ -15,9 +15,14 @@ import { UserStreamReach } from '@/services/nexus/nexus.types';
 import type { CreateFollowParams, DeleteFollowParams, UpdateUserStreamsParams } from './follow.types';
 
 export class LocalFollowService {
-  static async create({ follower, followee }: CreateFollowParams) {
+  /**
+   * Persists a follow locally.
+   * @returns Whether the relationship flipped to following; a no-op needs no compensation
+   */
+  static async create({ follower, followee }: CreateFollowParams): Promise<boolean> {
     try {
       let becomingFriends = false;
+      let changed = false;
 
       await db.transaction(
         'rw',
@@ -28,6 +33,7 @@ export class LocalFollowService {
           const isFollowedBy = !!rel?.followed_by;
           // Snapshot: whether we're already following according to relationship model
           const wasFollowing = !!rel?.following;
+          changed = !wasFollowing;
 
           // Connections first
           const [addedFollowing, addedFollower] = await Promise.all([
@@ -79,6 +85,8 @@ export class LocalFollowService {
         followee,
         friendshipChanged: becomingFriends,
       });
+
+      return changed;
     } catch (error) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to create follow relationship', {
         service: ErrorService.Local,
@@ -89,9 +97,14 @@ export class LocalFollowService {
     }
   }
 
-  static async delete({ follower, followee }: DeleteFollowParams) {
+  /**
+   * Removes a follow locally.
+   * @returns Whether the relationship flipped to not following; a no-op needs no compensation
+   */
+  static async delete({ follower, followee }: DeleteFollowParams): Promise<boolean> {
     try {
       let breakingFriendship = false;
+      let changed = false;
 
       await db.transaction(
         'rw',
@@ -101,6 +114,7 @@ export class LocalFollowService {
           // Snapshot: whether we were following according to relationship model
           const wasFollowing = !!rel?.following;
           const wasFriends = !!rel?.followed_by && wasFollowing;
+          changed = wasFollowing;
 
           // Connections first
           const [removedFollowing, removedFollower] = await Promise.all([
@@ -150,6 +164,8 @@ export class LocalFollowService {
         followee,
         friendshipChanged: breakingFriendship,
       });
+
+      return changed;
     } catch (error) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to delete follow relationship', {
         service: ErrorService.Local,

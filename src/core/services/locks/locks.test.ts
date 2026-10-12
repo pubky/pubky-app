@@ -10,10 +10,11 @@ import { LocksService } from './locks';
 
 const mocks = vi.hoisted(() => {
   const setLockServicePointer = vi.fn(async () => {});
+  const paykitSetupStatus = vi.fn(async (): Promise<unknown> => ({ status: 'ready' }));
   const fakeSession = {
     exportSecret: vi.fn(() => 'secret-abc'),
     signout: vi.fn(async () => {}),
-    creator: { setLockServicePointer },
+    creator: { setLockServicePointer, paykitSetupStatus },
   };
   const fakeViewer = {
     id: 'viewer',
@@ -38,6 +39,7 @@ const mocks = vi.hoisted(() => {
     getLockServer: vi.fn((): string | undefined => 'lockserverpubky'),
     getPaykitServerUrl: vi.fn((): string | undefined => 'https://paykit.server'),
     setLockServicePointer,
+    paykitSetupStatus,
     fakeSession,
     fakeLocks,
     fakeViewer,
@@ -217,6 +219,12 @@ describe('LocksService (auth)', () => {
     expect(mocks.fakeSession.signout).toHaveBeenCalled();
   });
 
+  it('signout signs out the given session instead of the stored one', async () => {
+    const other = { signout: vi.fn(async () => {}) };
+    await LocksService.signout(other as never);
+    expect(other.signout).toHaveBeenCalledTimes(1);
+  });
+
   it('setLockServiceConfig writes the pointer through the store session with the configured lock server', async () => {
     useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     await LocksService.setLockServiceConfig();
@@ -225,10 +233,30 @@ describe('LocksService (auth)', () => {
     );
   });
 
+  it('lookupPaykitSetupStatus returns the status the Lock Server reports for the session creator', async () => {
+    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'setup_required' });
+
+    await expect(LocksService.lookupPaykitSetupStatus()).resolves.toBe('setup_required');
+    expect(mocks.paykitSetupStatus).toHaveBeenCalledWith(); // the creator comes from the session
+  });
+
+  // The SDK types the response `any`: an unknown status must fail, not read as a setup answer.
+  it('lookupPaykitSetupStatus rejects an unknown status', async () => {
+    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'connected' });
+
+    const error = await LocksService.lookupPaykitSetupStatus().catch((caught: unknown) => caught);
+
+    expect(isAppError(error)).toBe(true);
+    expect((error as { category: ErrorCategory }).category).toBe(ErrorCategory.Validation);
+  });
+
   // Session-backed auth calls share the content calls' 401 → typed-auth-error promotion.
   it.each([
     ['signout', () => LocksService.signout(), () => mocks.fakeSession.signout],
     ['setLockServiceConfig', () => LocksService.setLockServiceConfig(), () => mocks.setLockServicePointer],
+    ['lookupPaykitSetupStatus', () => LocksService.lookupPaykitSetupStatus(), () => mocks.paykitSetupStatus],
   ])('%s promotes an HTTP 401 to an auth error', async (_name, call, mock) => {
     useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     mock().mockRejectedValueOnce(new Error('Lock Server request failed with HTTP 401'));
@@ -254,7 +282,7 @@ const session = asOpaque<LocksSdkSession>({
   lockServer: () => 'lockpubky',
 });
 
-const descriptor = { path: '/priv/locks.app/content/id-1', hash: 'H', content_type: 'image/png', size: 1 };
+const descriptor = { path: '/priv/app.locks/content/id-1', hash: 'H', content_type: 'image/png', size: 1 };
 
 const lockParams = {
   primaryResource: descriptor,
@@ -285,13 +313,13 @@ describe('LocksService (content)', () => {
   it('createContentLock returns the lock descriptor', async () => {
     mocks.createContentLock.mockResolvedValue({
       lock_id: 'LOCK1',
-      content_lock_path: '/pub/locks.app/LOCK1.json',
+      content_lock_path: '/pub/app.locks/LOCK1.json',
       content_lock: { creator: 'pubkybob' },
     });
 
     const result = await LocksService.createContentLock(lockParams);
 
-    expect(result).toEqual({ lock_id: 'LOCK1', content_lock_path: '/pub/locks.app/LOCK1.json', creator: 'pubkybob' });
+    expect(result).toEqual({ lock_id: 'LOCK1', content_lock_path: '/pub/app.locks/LOCK1.json', creator: 'pubkybob' });
   });
 
   it.each([
@@ -374,10 +402,10 @@ describe('LocksService (reader unlock)', () => {
   });
 
   it('readContentLock strips the pubky:// scheme and reads via the SDK', async () => {
-    const result = await LocksService.readContentLock('pubky://creatorb/pub/locks.app/lock1.json');
+    const result = await LocksService.readContentLock('pubky://creatorb/pub/app.locks/lock1.json');
 
     expect(mocks.readContentLockWithOptions).toHaveBeenCalledWith(
-      'creatorb/pub/locks.app/lock1.json',
+      'creatorb/pub/app.locks/lock1.json',
       expect.anything(),
     );
     expect(result).toEqual({ version: 1, creator: 'pubkybob' });
@@ -386,7 +414,7 @@ describe('LocksService (reader unlock)', () => {
   it('readContentLock wraps a wasm init failure as an AppError', async () => {
     mocks.ensureLocksSdkReady.mockRejectedValueOnce(new Error('wasm init failed'));
 
-    const error = await LocksService.readContentLock('pubky://creatorb/pub/locks.app/lock1.json').catch(
+    const error = await LocksService.readContentLock('pubky://creatorb/pub/app.locks/lock1.json').catch(
       (e: unknown) => e,
     );
     expect(isAppError(error)).toBe(true);
@@ -413,7 +441,21 @@ describe('LocksService (reader unlock)', () => {
     expect(mocks.fakeViewer.lookupVerificationTask).toHaveBeenCalledWith(
       expect.objectContaining({ creator: 'creator-b', bundle_id: 'b1' }),
     );
-    expect(task).toEqual({ status: 'completed' });
+    expect(task).toEqual({ status: 'completed', walletSetupNeeded: false, admissionDeadlineAt: null });
+  });
+
+  it('lookupVerificationTask reports the wallet setup notice and the invoice deadline', async () => {
+    mocks.fakeViewer.lookupVerificationTask.mockResolvedValueOnce({
+      status: 'pending',
+      status_message: 'Reader wallet setup needed',
+      admission_deadline_at: '2026-10-08T12:10:00Z',
+    } as never);
+
+    await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toEqual({
+      status: 'pending',
+      walletSetupNeeded: true,
+      admissionDeadlineAt: '2026-10-08T12:10:00Z',
+    });
   });
 
   it('lookupVerificationTask rejects an unknown lifecycle status', async () => {

@@ -207,15 +207,3 @@ describe('DialogConfirmDiscard', () => {
     expect(dialogContent).toHaveClass('w-xl');
   });
 });
-
-describe('DialogConfirmDiscard - Snapshots', () => {
-  it('matches snapshot for default DialogConfirmDiscard', () => {
-    const { container } = render(<DialogConfirmDiscard {...defaultProps} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when closed', () => {
-    const { container } = render(<DialogConfirmDiscard {...defaultProps} open={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

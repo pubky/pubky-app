@@ -11,6 +11,7 @@ import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { recentUnbookmarks } from './recentUnbookmarks';
 
 /**
  * The two local bookmark streams. The bookmarks route has no content/sort filter
@@ -32,9 +33,18 @@ export class LocalBookmarkService {
 
   /**
    * Persists a bookmark operation (create or delete).
+   *
+   * A delete is recorded in `recentUnbookmarks` for this viewer before the
+   * write, so a Nexus response that still reports the bookmark cannot restore
+   * it; a create clears that record.
    */
   static async persist(action: HttpMethod, { userId, postId }: TBookmarkEventParams) {
     const isCreate = action === HttpMethod.PUT;
+    if (isCreate) {
+      recentUnbookmarks.clear(userId, postId);
+    } else {
+      recentUnbookmarks.markRemoved(userId, postId);
+    }
 
     try {
       await db.transaction('rw', this.BOOKMARK_TABLES, async () => {

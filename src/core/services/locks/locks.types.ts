@@ -32,6 +32,16 @@ export type TGetPaykitSetupUrlParams = {
   state: string;
 };
 
+/**
+ * Whether the creator's Paykit payout account is set up, as the Lock Server reports it. `unavailable`
+ * means Paykit could not answer, which says nothing about the setup.
+ */
+const paykitSetupStatusSchema = z.enum(['ready', 'setup_required', 'unavailable']);
+export type TPaykitSetupStatus = z.infer<typeof paykitSetupStatusSchema>;
+
+/** Setup-status response (`session.creator.paykitSetupStatus()`, typed `any` by the SDK). */
+export const paykitSetupStatusResponseSchema = z.object({ status: paykitSetupStatusSchema });
+
 /** Params to exchange a one-time callback code for a Locks session. */
 export type TExchangeSessionCodeParams = {
   code: string;
@@ -50,7 +60,7 @@ export type TLocksSessionResult = {
 
 /**
  * A guarded-resource descriptor. `path` is the FULL homeserver path
- * (`/priv/locks.app/content/<tail>`) and `hash` is the server-computed BLAKE3 (Crockford base32).
+ * (`/priv/app.locks/content/<tail>`) and `hash` is the server-computed BLAKE3 (Crockford base32).
  * Returned by `registerGuardedResource` and fed back verbatim into a content lock's resources.
  */
 export type TGuardedResource = {
@@ -81,7 +91,7 @@ type TAccessPolicy = {
 /** Params to upload one guarded resource (raw bytes). */
 export type TRegisterGuardedResourceParams = {
   /**
-   * The path TAIL only (the caller mints it); the server prepends `/priv/locks.app/content/`.
+   * The path TAIL only (the caller mints it); the server prepends `/priv/app.locks/content/`.
    * Passing a full path double-prefixes.
    */
   path: string;
@@ -109,7 +119,7 @@ export type TCreateContentLockParams = {
 
 /**
  * `createContentLock` response (only the fields the FE consumes; the server also echoes the full
- * `content_lock` document). `content_lock_path` is the homeserver path (`/pub/locks.app/<lock_id>.json`)
+ * `content_lock` document). `content_lock_path` is the homeserver path (`/pub/app.locks/<lock_id>.json`)
  * and `creator` owns it — the pubky that authenticated to the Lock Server. This can differ from the
  * pubky.app account, so the announcement's `lock` URL must be built from `creator`, not the app user.
  */
@@ -165,12 +175,12 @@ interface LockAccessPolicy {
 
 /** Optional override of which lock server verifies the criteria. */
 interface LockServer {
-  override: string;
+  override: string | null;
 }
 
 /**
  * Mirror of the Lock server's public content-lock contract (`lock.json`), published
- * by the creator at `/pub/locks.app/<lock_id>.json` and read directly by the reader.
+ * by the creator at `/pub/app.locks/<lock_id>.json` and read directly by the reader.
  * The Lock server is a standalone service (not pubky.app-specific), so this type
  * belongs to the Lock SDK — hand-mirrored here until that ships a typed reader API.
  * Payment support is read from each criterion's `verifier_type`.
@@ -182,7 +192,7 @@ export interface LockFile {
   /** The entry-point post. Optional per the contract, but at least one resource is always present. */
   primary_resource?: LockPostResource;
   /** Attachments, keyed by full canonical private path. */
-  secondary_resources: Record<string, LockAttachmentResource>;
+  secondary_resources?: Record<string, LockAttachmentResource>;
   criteria: LockCriterion[];
   lock_logic: LockLogic;
   access_policy: LockAccessPolicy;
@@ -261,7 +271,7 @@ export interface TUnlockedListItem {
 
 /** One guarded attachment read back after unlock — raw bytes + its content type (for a Blob). */
 export interface TUnlockedAttachment {
-  /** Guarded path tail (`/priv/locks.app/content/<uuid>` → `<uuid>`); reused as the filename when replicated. */
+  /** Guarded path tail (`/priv/app.locks/content/<uuid>` → `<uuid>`); reused as the filename when replicated. */
   id: string;
   contentType: string;
   bytes: Uint8Array;
@@ -297,14 +307,14 @@ interface TProof {
 export interface TSubmittedProofBundle {
   version: number;
   bundle_id: string;
-  /** Public lock file as `<creator>/pub/locks.app/<lock_id>.json` — no `pubky://` scheme. */
+  /** Public lock file as `<creator>/pub/app.locks/<lock_id>.json` — no `pubky://` scheme. */
   pubky_lock_resource: string;
   /** Payment bundles only (`pubky` prefix included): where Paykit delivers the payment request. */
   reader_public_key?: string;
   proofs: TProof[];
 }
 
-export const verificationStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'expired']);
+const verificationStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'expired']);
 export type TVerificationStatus = z.infer<typeof verificationStatusSchema>;
 
 /**
@@ -318,8 +328,21 @@ export type TPaykitConnectionState = z.infer<typeof paykitConnectionStateSchema>
 /** Connection-state lookup response. Bound to an existing task, so it says nothing about payment. */
 export const paykitConnectionStateResponseSchema = z.object({ state: paykitConnectionStateSchema });
 
+/** Task lookup response fields the app reads. Absent on a Lock Server older than 0.1.0-rc9. */
+export const verificationTaskResponseSchema = z.object({
+  status: verificationStatusSchema,
+  status_message: z.string().nullable().default(null),
+  admission_deadline_at: z.string().nullable().default(null),
+});
+
 /** Verification lifecycle fields consumed by the app from a task lookup. */
-export type TVerificationTask = { status: TVerificationStatus };
+export type TVerificationTask = {
+  status: TVerificationStatus;
+  /** The server cannot create the invoice until the reader finishes setting up their wallet. */
+  walletSetupNeeded: boolean;
+  /** RFC 3339 time until which the server keeps trying to create the invoice; null once it exists. */
+  admissionDeadlineAt: string | null;
+};
 
 /** Proof-submission response fields used by the app. Connection state has its own lookup. */
 export const submitProofResultSchema = z.object({

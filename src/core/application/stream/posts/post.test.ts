@@ -436,7 +436,10 @@ describe('PostStreamApplication', () => {
     });
 
     describe('author-scoped content search (profile "Filter posts")', () => {
-      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', {
+        type: 'author',
+        author: DEFAULT_AUTHOR as Pubky,
+      });
 
       const createPostRelationships = async (postId: string, replied: string | null = null) => {
         await PostRelationshipsModel.create({ id: postId, replied, reposted: null, mentioned: [] });
@@ -633,7 +636,10 @@ describe('PostStreamApplication', () => {
       // Reply exclusion classifies via relationships.replied; a post whose details are cached
       // but whose relationships row is missing must still be hydrated, or it would stay
       // fail-open (then be dropped by the strict second pass) forever.
-      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', {
+        type: 'author',
+        author: DEFAULT_AUTHOR as Pubky,
+      });
       const classifiedPostId = `${DEFAULT_AUTHOR}:classified-post`;
       const unclassifiedPostId = `${DEFAULT_AUTHOR}:needs-hydration-post`;
       await createPostDetailWithKind(classifiedPostId, 'short');
@@ -663,7 +669,10 @@ describe('PostStreamApplication', () => {
       // A tombstoned post keeps its details row (content = DELETED) but its relationships
       // row is deleted for good. Re-fetching can never classify it and the deleted filter
       // drops it anyway — flagging it would issue a futile by_ids on every page load.
-      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', {
+        type: 'author',
+        author: DEFAULT_AUTHOR as Pubky,
+      });
       const tombstonedPostId = `${DEFAULT_AUTHOR}:tombstoned-post`;
       await PostDetailsModel.create({
         id: tombstonedPostId,
@@ -2426,6 +2435,107 @@ describe('PostStreamApplication', () => {
       const unreadStream = await UnreadPostStreamModel.findById(streamId);
       expect(postStream?.stream).toEqual([unreadPostIds[0], unreadPostIds[1], mainPostIds[0], mainPostIds[1]]);
       expect(unreadStream).toBeNull();
+    });
+
+    it('merges the unread row from its first hydrated id and keeps the pending head unread (#2608)', async () => {
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+
+      const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
+      await createStreamWithPosts([mainPostId]);
+      await createPostDetailWithTimestamp(mainPostId, now - 2);
+
+      // A head poll listed `unread-pending`, but Nexus has never served its details.
+      const pendingPostId = `${DEFAULT_AUTHOR}:unread-pending`;
+      const readyPostId = `${DEFAULT_AUTHOR}:unread-ready`;
+      await UnreadPostStreamModel.create(streamId, [pendingPostId, readyPostId]);
+      await createPostDetailWithTimestamp(readyPostId, now - 1);
+
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+
+      // The pending id never reaches the main head, which would leave the poll without a
+      // timestamp; it stays unread for the poll-time hydration to keep retrying.
+      const postStream = await PostStreamModel.findById(streamId);
+      const unreadStream = await UnreadPostStreamModel.findById(streamId);
+      expect(postStream?.stream).toEqual([readyPostId, mainPostId]);
+      expect(unreadStream?.stream).toEqual([pendingPostId]);
+    });
+
+    it('merges a pending id below a hydrated one in polled order, so its edited late arrival cannot move the poll head (#2608)', async () => {
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+
+      const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
+      await createStreamWithPosts([mainPostId]);
+      await createPostDetailWithTimestamp(mainPostId, now - 30);
+
+      // A head poll listed `unread-ready` above `unread-pending`; Nexus has served only the former.
+      const readyPostId = `${DEFAULT_AUTHOR}:unread-ready`;
+      const pendingPostId = `${DEFAULT_AUTHOR}:unread-pending`;
+      await UnreadPostStreamModel.create(streamId, [readyPostId, pendingPostId]);
+      await createPostDetailWithTimestamp(readyPostId, now - 20);
+
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+
+      // Both merge in polled order: the pending id sits below a resolvable head and keeps its
+      // position for when it is served.
+      expect((await PostStreamModel.findById(streamId))?.stream).toEqual([readyPostId, pendingPostId, mainPostId]);
+      expect(await UnreadPostStreamModel.findById(streamId)).toBeNull();
+      expect(await PostStreamApplication.getStreamHead({ streamId })).toBe(now - 20);
+
+      // Nexus serves the pending post after an edit, so its indexed_at is now newer than the
+      // ready post's although its stream position has not moved, and the next poll lists a post
+      // created in between. The merge keeps the row in polled order instead of floating the
+      // edited post to the top, so the poll head is the newest polled post, never the edit time.
+      await createPostDetailWithTimestamp(pendingPostId, now - 1);
+      const newerPostId = `${DEFAULT_AUTHOR}:unread-newer`;
+      await UnreadPostStreamModel.create(streamId, [newerPostId]);
+      await createPostDetailWithTimestamp(newerPostId, now - 10);
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+
+      expect((await PostStreamModel.findById(streamId))?.stream).toEqual([
+        newerPostId,
+        readyPostId,
+        pendingPostId,
+        mainPostId,
+      ]);
+      expect(await UnreadPostStreamModel.findById(streamId)).toBeNull();
+      expect(await PostStreamApplication.getStreamHead({ streamId })).toBe(now - 10);
+    });
+
+    it('drops the unread ids without seeding a main row when the cache is empty', async () => {
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+
+      // A poll ran before the first load: the head page sits in the unread row only.
+      const unreadPostId = `${DEFAULT_AUTHOR}:unread-1`;
+      await UnreadPostStreamModel.create(streamId, [unreadPostId]);
+      await createPostDetailWithTimestamp(unreadPostId, now - 1);
+
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+
+      // As before this fix: the first page is fetched from Nexus with a real cursor rather
+      // than served from a cursor-less row seeded with the polled ids.
+      expect(await PostStreamModel.findById(streamId)).toBeNull();
+      expect(await UnreadPostStreamModel.findById(streamId)).toBeNull();
+    });
+
+    it('rebuilds a main row whose head has no details instead of keeping it fresh forever (#2608)', async () => {
+      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+
+      // The row an earlier build left behind: its whole-row merge put an id Nexus never
+      // served at the main head, so neither the age check nor a poll can read a timestamp.
+      const unavailablePostId = `${DEFAULT_AUTHOR}:post-unavailable`;
+      const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
+      await createStreamWithPosts([unavailablePostId, mainPostId]);
+      await createPostDetailWithTimestamp(mainPostId, now - 1);
+      expect(await PostStreamApplication.getStreamHead({ streamId })).toBe(SKIP_FETCH_NEW_POSTS);
+
+      await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+
+      expect(await PostStreamModel.findById(streamId)).toBeNull();
+      expect(await PostStreamApplication.getStreamHead({ streamId })).toBe(FORCE_FETCH_NEW_POSTS);
     });
 
     describe('dirty-registry reconciliation (deferred invalidation, #2294/#2302)', () => {

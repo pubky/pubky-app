@@ -16,7 +16,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 const lockFile = asOpaque<LockFile>({ creator: 'pubkybob' });
-const LOCK_URL = 'pubky://pubkybob/pub/locks.app/LOCK1.json';
+const LOCK_URL = 'pubky://pubkybob/pub/app.locks/LOCK1.json';
 const content = asOpaque<TUnlockedContent>({
   post: { content: 'paid', kind: 'short', attachments: null },
   attachments: [],

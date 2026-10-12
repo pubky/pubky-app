@@ -1,8 +1,10 @@
 import type { PubkyAppUser } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getProfileLocalEditTtlMs } from '@/config/user';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalUserService } from '@/services/local/user/user';
 import { NexusSocialGraphStatus, type NexusUserCounts, type NexusUserDetails } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -130,10 +132,80 @@ describe('LocalProfileService', () => {
       const result = await UserDetailsModel.findById(userId);
       expect(result!.social_graph_status).toBeUndefined();
     });
+
+    describe('with a pending local edit', () => {
+      const localEdit = { ...baseDetails, name: 'Local edit', indexed_at: 1_000, nexusIndexedAt: 1 };
+      const serverChange = { ...baseDetails, name: 'Other change', indexed_at: 2 };
+
+      it('keeps the edit against a newer revision that does not include it', async () => {
+        await UserDetailsModel.upsert({ ...localEdit, localUpdatedAt: Date.now() });
+
+        await LocalProfileService.upsertDetails(serverChange);
+
+        expect(await UserDetailsModel.findById(userId)).toMatchObject({ name: 'Local edit', nexusIndexedAt: 1 });
+      });
+
+      it('accepts Nexus again once the protection window has passed', async () => {
+        await UserDetailsModel.upsert({ ...localEdit, localUpdatedAt: Date.now() - getProfileLocalEditTtlMs() });
+
+        await LocalProfileService.upsertDetails(serverChange);
+
+        const result = await UserDetailsModel.findById(userId);
+        expect(result).toMatchObject({ name: 'Other change', nexusIndexedAt: 2 });
+        expect(result!.localUpdatedAt).toBeUndefined();
+      });
+    });
   });
 
   describe('updateDetails', () => {
     const userId = 'test-user-id' as Pubky;
+
+    it('should store the published profile with its status, filling in absent fields', async () => {
+      await LocalProfileService.updateDetails(
+        asOpaque<PubkyAppUser>({ name: 'Published', status: '🪚building' }),
+        userId,
+      );
+
+      expect(await UserDetailsModel.findById(userId)).toMatchObject({
+        name: 'Published',
+        bio: '',
+        image: null,
+        links: [],
+        status: '🪚building',
+      });
+    });
+
+    it('should create a missing row as a pending local edit with a fresh TTL', async () => {
+      await UserTtlModel.table.clear();
+
+      await LocalProfileService.updateDetails(asOpaque<PubkyAppUser>({ name: 'Published' }), userId);
+
+      const result = await UserDetailsModel.findById(userId);
+      expect(result!.localUpdatedAt).toEqual(expect.any(Number));
+      expect(await UserTtlModel.findById(userId)).toMatchObject({ lastUpdatedAt: result!.localUpdatedAt });
+    });
+
+    it('should keep the known Nexus revision and badge tier of an existing row', async () => {
+      await UserDetailsModel.upsert({
+        id: userId,
+        name: 'Cached',
+        bio: '',
+        image: null,
+        status: null,
+        links: null,
+        indexed_at: 5,
+        nexusIndexedAt: 5,
+        social_graph_status: NexusSocialGraphStatus.NETWORKED,
+      });
+
+      await LocalProfileService.updateDetails(asOpaque<PubkyAppUser>({ name: 'Published' }), userId);
+
+      expect(await UserDetailsModel.findById(userId)).toMatchObject({
+        name: 'Published',
+        nexusIndexedAt: 5,
+        social_graph_status: NexusSocialGraphStatus.NETWORKED,
+      });
+    });
 
     it('should clear a cached tombstone when the profile is written', async () => {
       await UserDetailsModel.upsert({

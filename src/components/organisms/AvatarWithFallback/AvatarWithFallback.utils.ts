@@ -1,5 +1,5 @@
 import { getCdnUrl } from '@/config/nexus';
-import { extractInitials } from '@/libs/utils/utils';
+import { extractInitials, isUserDeleted } from '@/libs/utils/utils';
 import type { ResolveAvatarFallbackInitialProps, ResolveAvatarFallbackSeedProps } from './AvatarWithFallback.types';
 
 /**
@@ -61,7 +61,8 @@ export function resolveAvatarFallbackInitial({
   seed,
   defaultInitial = 'U',
 }: ResolveAvatarFallbackInitialProps): string {
-  const nameInitial = extractInitials({ name: name ?? '', maxLength: 1 });
+  // `[DELETED]` is a label, not a name: taking its initial would render a bare `[`.
+  const nameInitial = isUserDeleted({ name }) ? '' : extractInitials({ name: name ?? '', maxLength: 1 });
   if (nameInitial) return nameInitial;
 
   const seedInitial = typeof seed === 'string' ? seed.trim().charAt(0).toUpperCase() : '';

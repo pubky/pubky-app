@@ -29,7 +29,7 @@ export function DialogReportPostReasonStep({
 
       <Container className="gap-4 py-2">
         {/* User info card with textarea inside - same pattern as PostInput */}
-        <Container className="rounded-lg border border-dashed border-border p-4" overrideDefaults>
+        <Container className="rounded-lg border border-dashed border-input bg-background/20 p-4" overrideDefaults>
           <Container className="gap-4">
             {currentUserPubky && (
               <PostHeader

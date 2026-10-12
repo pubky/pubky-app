@@ -12,10 +12,3 @@ describe('ProfilePageSocialGraph', () => {
     expect(screen.getByText('Established')).toHaveAttribute('data-status', 'established');
   });
 });
-
-describe('ProfilePageSocialGraph - Snapshots', () => {
-  it('matches snapshot for networked tier', () => {
-    const { container } = render(<ProfilePageSocialGraph status={NexusSocialGraphStatus.NETWORKED} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

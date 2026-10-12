@@ -64,6 +64,14 @@ describe('resolvePubkyToNames', () => {
     expect(result).toBe('@Alice tagged @Bob then @Bob replied to @Alice and @Alice joined');
   });
 
+  it('resolves a tombstoned mention to [DELETED], matching an in-app mention', async () => {
+    mockGetOrFetchDetails.mockResolvedValue({ name: '', deleted: true });
+
+    const result = await resolvePubkyToNames(`pk:${PUBKY_A} said hello`);
+
+    expect(result).toBe('@[DELETED] said hello');
+  });
+
   it('keeps original mention when fetchDetails returns no name', async () => {
     mockGetOrFetchDetails.mockResolvedValue({ name: null });
 

@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import { useTagSearch } from './useTagSearch';
 import { buildSearchUrl } from './useTagSearch.utils';
 
@@ -99,6 +100,28 @@ describe('useTagSearch', () => {
       expect(mockSetActiveTags).toHaveBeenCalledWith(['react']);
       expect(mockPush).toHaveBeenCalledWith('/search?tags=react');
     });
+
+    it('keeps every existing tag while below the stream tag limit', () => {
+      mockActiveTags = Array.from({ length: getMaxStreamTags() - 1 }, (_, i) => `tag${i + 1}`);
+      const { result } = renderHook(() => useTagSearch());
+
+      act(() => {
+        result.current.addTagToSearch('extra');
+      });
+
+      expect(mockPush).toHaveBeenCalledWith(buildSearchUrl([...mockActiveTags, 'extra']));
+    });
+
+    it('drops the oldest tag when adding at the stream tag limit', () => {
+      mockActiveTags = Array.from({ length: getMaxStreamTags() }, (_, i) => `tag${i + 1}`);
+      const { result } = renderHook(() => useTagSearch());
+
+      act(() => {
+        result.current.addTagToSearch('extra');
+      });
+
+      expect(mockPush).toHaveBeenCalledWith(buildSearchUrl([...mockActiveTags.slice(1), 'extra']));
+    });
   });
 
   describe('removeTagFromSearch', () => {
@@ -112,6 +135,17 @@ describe('useTagSearch', () => {
 
       expect(mockRemoveActiveTag).toHaveBeenCalledWith('react');
       expect(mockPush).toHaveBeenCalledWith('/search?tags=typescript');
+    });
+
+    it('removes only the clicked tag from a search at the stream tag limit', () => {
+      mockActiveTags = Array.from({ length: getMaxStreamTags() }, (_, i) => `tag${i + 1}`);
+      const { result } = renderHook(() => useTagSearch());
+
+      act(() => {
+        result.current.removeTagFromSearch('tag1');
+      });
+
+      expect(mockPush).toHaveBeenCalledWith(buildSearchUrl(mockActiveTags.slice(1)));
     });
 
     it('lands on the /search empty state when removing the last tag', () => {

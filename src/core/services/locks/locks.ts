@@ -26,13 +26,19 @@ import type {
   TGuardedResource,
   TLocksSessionResult,
   TPaykitConnectionState,
+  TPaykitSetupStatus,
   TRegisterGuardedResourceParams,
   TRegisterGuardedResourceResult,
   TSubmitProofResult,
   TSubmittedProofBundle,
   TVerificationTask,
 } from './locks.types';
-import { paykitConnectionStateResponseSchema, submitProofResultSchema, verificationStatusSchema } from './locks.types';
+import {
+  paykitConnectionStateResponseSchema,
+  paykitSetupStatusResponseSchema,
+  submitProofResultSchema,
+  verificationTaskResponseSchema,
+} from './locks.types';
 import {
   buildLocksOptions,
   ensureLocksSdkReady,
@@ -46,6 +52,9 @@ import {
 /** Opt-in flag telling the Lock Server `/connect` shell to deliver the code via postMessage
  * instead of redirecting back to `returnTo`. */
 const DELIVERY_POSTMESSAGE = 'postmessage';
+
+/** The only `status_message` the Lock Server sends; the SDK rejects any other. */
+const READER_WALLET_SETUP_NEEDED = 'Reader wallet setup needed';
 
 /**
  * IO boundary for the Lock Server via the locks-sdk. Client building, session/config reads, wasm
@@ -181,7 +190,7 @@ export class LocksService {
   /**
    * Whether the reader has published anything under their public Paykit namespace — the gate
    * between submitting the payment and the install-Bitkit screen. Presence only: it does not prove the
-   * receiver is valid or ready, so a submission can still fail after this returns true.
+   * receiver is valid or ready, so the payment can still end `failed` after this returns true.
    */
   static async hasPaykitReceiver(readerPubky: string): Promise<boolean> {
     try {
@@ -199,20 +208,21 @@ export class LocksService {
   static async lookupVerificationTask(creator: string, bundleId: string): Promise<TVerificationTask | null> {
     try {
       const viewer = await this.getViewer();
-      const response: unknown = await viewer.lookupVerificationTask(
-        new VerificationTaskHandleOptions(creator, bundleId),
+      const response = verificationTaskResponseSchema.safeParse(
+        await viewer.lookupVerificationTask(new VerificationTaskHandleOptions(creator, bundleId)),
       );
-      const status = verificationStatusSchema.safeParse(
-        typeof response === 'object' && response !== null && 'status' in response ? response.status : undefined,
-      );
-      if (!status.success) {
+      if (!response.success) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'verification task response is invalid', {
           service: ErrorService.Locks,
           operation: 'LocksService.lookupVerificationTask',
-          cause: status.error,
+          cause: response.error,
         });
       }
-      return { status: status.data };
+      return {
+        status: response.data.status,
+        walletSetupNeeded: response.data.status_message === READER_WALLET_SETUP_NEEDED,
+        admissionDeadlineAt: response.data.admission_deadline_at,
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('HTTP 404')) return null;
@@ -293,9 +303,8 @@ export class LocksService {
     }
   }
 
-  /** Signs the Locks session out on the Lock Server. */
-  static async signout(): Promise<void> {
-    const session = getLockSession();
+  /** Signs a Locks session out on the Lock Server; the stored one by default. */
+  static async signout(session: LocksSdkSession = getLockSession()): Promise<void> {
     try {
       await session.signout();
     } catch (error) {
@@ -305,7 +314,7 @@ export class LocksService {
 
   /**
    * Registers the creator's default Lock Server (the runtime-configured one) by writing the
-   * lock-service pointer (`/pub/locks.app/config.json`). The Lock Server performs the homeserver
+   * lock-service pointer (`/pub/app.locks/config.json`). The Lock Server performs the homeserver
    * write; the SDK session carries the frontend-session bearer, so the FE attaches no
    * `Authorization` header by hand.
    */
@@ -320,7 +329,28 @@ export class LocksService {
   }
 
   /**
-   * Uploads one file's raw bytes under `/priv/locks.app/content/<path>` and returns its descriptor
+   * Whether the creator's Paykit payout account is set up (`GET /creator/paykit/setup-status`). The Lock
+   * Server asks Paykit server-to-server about the creator of this session; the browser sends nothing else.
+   */
+  static async lookupPaykitSetupStatus(): Promise<TPaykitSetupStatus> {
+    const session = getLockSession();
+    try {
+      const response = paykitSetupStatusResponseSchema.safeParse(await session.creator.paykitSetupStatus());
+      if (!response.success) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'paykit setup status response is invalid', {
+          service: ErrorService.Locks,
+          operation: 'LocksService.lookupPaykitSetupStatus',
+          cause: response.error,
+        });
+      }
+      return response.data.status;
+    } catch (error) {
+      throw toLocksError(error, 'LocksService.lookupPaykitSetupStatus');
+    }
+  }
+
+  /**
+   * Uploads one file's raw bytes under `/priv/app.locks/content/<path>` and returns its descriptor
    * ({ path, hash, content_type, size }) plus the owner pubky — the Lock-Server-authenticated account
    * the bytes landed on, which the post needs to reference its attachments by the right host.
    * Re-uploading the same path silently overwrites — the caller mints a fresh path per file so
@@ -351,7 +381,7 @@ export class LocksService {
    * TODO:[Locks] #2039 — orphan cleanup. A failure here leaves the resources uploaded by the
    * preceding `registerGuardedResource` calls on the server, unreferenced.
    * Scenario: 3 of 4 files upload, then this rejects (size/count limit, hash mismatch, malformed
-   * body) and the 3 blobs linger under `/priv/locks.app/content/`. Harmless — each path is minted
+   * body) and the 3 blobs linger under `/priv/app.locks/content/`. Harmless — each path is minted
    * fresh, so no existing lock breaks — but it wastes the creator's private storage. Closing the tab
    * between the two calls has the same effect and no `catch` can cover it.
    * When #2039 lands: best-effort `deleteGuardedResource` per path on a deterministic 4xx or a user

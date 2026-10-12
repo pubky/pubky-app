@@ -44,11 +44,3 @@ describe('NewCollectionCardCTA', () => {
     expect(screen.getByRole('heading', { name: 'New Collection' })).toBeInTheDocument();
   });
 });
-
-describe('NewCollectionCardCTA - Snapshots', () => {
-  it('matches the closed trigger snapshot', () => {
-    const { container } = render(<NewCollectionCardCTA />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

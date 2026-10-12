@@ -8,7 +8,7 @@ import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { getPubkyCoreLink } from '@/config/externalLinks';
-import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
+import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
 import { cn } from '@/libs/utils/utils';
 import { HomeBrandFooter } from '@/molecules/Home/Home';
@@ -27,8 +27,8 @@ export function LandingFinalSection() {
   };
 
   return (
-    <section id={LANDING_FINAL_SECTION_ID} className={cn('relative z-0 flex min-h-svh items-center py-10 sm:py-20', PAGE_GUTTER_CLASS)}>
-      <Container size="container" className="items-center gap-8 text-center">
+    <section id={LANDING_FINAL_SECTION_ID} className="relative z-0 flex min-h-svh items-center py-10 sm:py-20">
+      <Container size="container" className={cn('items-center gap-8 text-center', CONTENT_GUTTER_CLASS)}>
         <Heading level={2} size="xl" className="max-w-[820px] text-5xl sm:text-7xl">
           {'Enter the '}
           <span className="block">

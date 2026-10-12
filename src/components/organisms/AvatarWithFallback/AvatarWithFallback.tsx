@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { EyeOff } from 'lucide-react';
+import { EyeOff, UserRound } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
 import { Container } from '@/atoms/Container/Container';
 import { ModerationController } from '@/controllers/moderation/moderation';
 import { Logger } from '@/libs/logger/logger';
-import { cn } from '@/libs/utils/utils';
+import { cn, isUserDeleted } from '@/libs/utils/utils';
 import { ModerationType } from '@/models/moderation/moderation.schema';
 import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -31,6 +31,10 @@ export function AvatarWithFallback({
   'data-testid': dataTestId,
 }: AvatarWithFallbackProps) {
   const [imageError, setImageError] = useState(false);
+
+  // A tombstone has no name, so it gets the generic user glyph instead of a facehash built
+  // from a pubky seed and a `[` mouth.
+  const isDeletedUser = isUserDeleted({ name });
 
   // Extract userId from CDN URL for moderation and local avatar resolution
   const userId = extractUserIdFromAvatarUrl(avatarUrl);
@@ -117,7 +121,15 @@ export function AvatarWithFallback({
       )}
       {/* Always render fallback - Radix shows it while image loads or if image fails */}
       <AvatarFallback className={cn('overflow-hidden border-none', fallbackClassName)}>
-        <FacehashAvatar seed={resolvedFallbackSeed} initial={fallbackInitial} />
+        {isDeletedUser ? (
+          <UserRound
+            aria-label="Deleted user"
+            data-testid="avatar-deleted-placeholder"
+            className="size-1/2 text-muted-foreground"
+          />
+        ) : (
+          <FacehashAvatar seed={resolvedFallbackSeed} initial={fallbackInitial} />
+        )}
       </AvatarFallback>
     </Avatar>
   );

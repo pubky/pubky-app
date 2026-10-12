@@ -82,6 +82,25 @@ describe('MutedUsersList', () => {
     expect(screen.getByText('Unmute')).toBeInTheDocument();
   });
 
+  it('renders a deleted muted user as [DELETED] with the deleted-user glyph, never a seed letter', () => {
+    mockUseMutedUsers.mockReturnValue({
+      mutedUserIds: ['user-123'],
+      mutedUserIdSet: new Set(['user-123']),
+      isMuted: vi.fn((id: string) => id === 'user-123'),
+      isLoading: false,
+    });
+    mockUseBulkUserAvatars.mockReturnValue({
+      usersMap: new Map([['user-123', { id: 'user-123', name: '[DELETED]', avatarUrl: undefined }]]),
+      isLoading: false,
+    });
+
+    render(<MutedUsersList />);
+
+    expect(screen.getByText('[DELETED]')).toBeInTheDocument();
+    expect(screen.getByTestId('avatar-deleted-placeholder')).toBeInTheDocument();
+    expect(screen.queryByTestId('facehash-avatar')).not.toBeInTheDocument();
+  });
+
   it('calls toggleMute when clicking unmute and confirms with a generic toast', async () => {
     const toggleMute = vi.fn().mockResolvedValue(undefined);
     mockUseMutedUsers.mockReturnValue({
@@ -132,44 +151,5 @@ describe('MutedUsersList', () => {
       expect(toggleMute).toHaveBeenCalledWith('user-1', true);
       expect(toggleMute).toHaveBeenCalledWith('user-2', true);
     });
-  });
-});
-
-describe('MutedUsersList - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseMutedUsers.mockReturnValue({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: vi.fn(() => false),
-      isLoading: false,
-    });
-    mockUseBulkUserAvatars.mockReturnValue({
-      usersMap: new Map(),
-      isLoading: false,
-    });
-    mockUseMuteUser.mockReturnValue({
-      toggleMute: vi.fn(),
-      isLoading: false,
-      isUserLoading: vi.fn(() => false),
-      error: null,
-    });
-  });
-
-  it('matches snapshot - empty state', () => {
-    const { container } = render(<MutedUsersList />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot - with muted users', () => {
-    mockUseMutedUsers.mockReturnValue({
-      mutedUserIds: ['user-1', 'user-2', 'user-3'],
-      mutedUserIdSet: new Set(['user-1', 'user-2', 'user-3']),
-      isMuted: vi.fn(() => true),
-      isLoading: false,
-    });
-
-    const { container } = render(<MutedUsersList />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

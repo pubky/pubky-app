@@ -76,7 +76,7 @@ export function PostPreviewCard({ postId, className, interactiveActions = true, 
   const isMissing = postDetails === null && !isLoading;
   // Deleted originals are also handled at the card level so the header is
   // hidden — matching PostMain's isMissing → isDeleted → content ladder.
-  const isDeleted = isPostDeleted(postDetails?.content);
+  const isDeleted = isPostDeleted(postDetails);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();

@@ -1,22 +1,15 @@
 /**
- * Inline-image support for the article editor. When provided, the rich-text
- * mode gains an image toolbar button plus native paste/drop upload (via
- * MDXEditor's image plugin), and the raw-markdown mode gains an image toolbar
- * button plus custom paste/drop handlers on the textarea.
+ * The article composer's inline media surface: images, videos, audio and PDFs are inserted the
+ * same way (uploaded at insert time, referenced by their homeserver file URI).
  */
-export interface MarkdownEditorInlineImages {
-  /**
-   * Uploads the image and resolves with the homeserver file URI to insert.
-   * Rejections must be user-visible already (toast) — the editor inserts
-   * nothing and stays silent.
-   */
+export interface MarkdownEditorInlineMedia {
+  /** Uploads a picked file and resolves with its `pubky://…/files/{id}` URI */
   upload: (file: File) => Promise<string>;
-  /** Local preview URL for a file URI uploaded this session, if any */
+  /** Same-session object URL for a file URI, for in-editor previews */
   getPreviewUrl: (src: string) => string | null;
-  /**
-   * Uploads currently in flight. Drives the rich-text-mode uploading
-   * indicator — paste/drop there have no dialog or placeholder, so this is
-   * the only visible feedback during the upload.
-   */
+  /** MIME type of a file URI the composer knows (session upload or edited post attachment); null otherwise */
+  getMediaType: (uri: string) => string | null;
+  /** File name of a URI the composer knows; the in-editor node is labelled with it. */
+  getMediaName: (uri: string) => string | null;
   uploadingCount?: number;
 }

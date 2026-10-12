@@ -5,6 +5,7 @@ import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Typography } from '@/atoms/Typography/Typography';
 import { Google } from '@/icons';
 import { cn } from '@/libs/utils/utils';
+import { PopoverGoogleSignIn } from '@/molecules/PopoverGoogleSignIn/PopoverGoogleSignIn';
 import type { ContinueWithPassportProps } from './ContinueWithPassport.types';
 
 /**
@@ -13,23 +14,30 @@ import type { ContinueWithPassportProps } from './ContinueWithPassport.types';
  * Google is the only provider Passport supports today, so this renders a single button. The
  * parent owns the `usePassportAuth` attempt and passes its pending state down so the button can
  * be disabled for the whole attempt, including session initialization.
+ *
+ * The help mark explaining what Google does here sits inside the pill's corner as a sibling, never
+ * nested in it, so it stays reachable while an attempt is pending. The pill keeps symmetric `px-12`
+ * so its centred label leaves the mark its corner.
  */
 export function ContinueWithPassport({ onContinue, isPending, className }: ContinueWithPassportProps) {
   return (
-    <Button
-      type="button"
-      variant={ButtonVariant.SECONDARY}
-      size="lg"
-      className={cn('w-full', className)}
-      onClick={onContinue}
-      disabled={isPending}
-      aria-busy={isPending}
-      data-testid="continue-with-google"
-    >
-      {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Google className="size-4" />}
-      <Typography as="span" overrideDefaults aria-live="polite">
-        {isPending ? 'Waiting for Passport...' : 'Continue with Google'}
-      </Typography>
-    </Button>
+    <div className={cn('relative flex', className)}>
+      <Button
+        type="button"
+        variant={ButtonVariant.SECONDARY}
+        size="lg"
+        className="w-full px-12"
+        onClick={onContinue}
+        disabled={isPending}
+        aria-busy={isPending}
+        data-testid="continue-with-google"
+      >
+        {isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Google className="size-4" />}
+        <Typography as="span" overrideDefaults aria-live="polite">
+          {isPending ? 'Waiting for Passport...' : 'Continue with Google'}
+        </Typography>
+      </Button>
+      <PopoverGoogleSignIn className="absolute top-1/2 right-2 -translate-y-1/2" />
+    </div>
   );
 }

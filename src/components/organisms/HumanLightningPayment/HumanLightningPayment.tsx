@@ -218,7 +218,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
           id="human-phone-back-btn"
           size="lg"
           className="w-full flex-1 rounded-full lg:flex-0"
-          variant="secondary"
+          variant="outline"
           onClick={onBack}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

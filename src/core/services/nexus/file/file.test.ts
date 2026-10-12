@@ -45,6 +45,17 @@ describe('File API', () => {
       expect(result).toBe(`${getCdnUrl()}/files/${encodedPubky}/${encodedFileId}/feed`);
     });
 
+    it('should generate correct URL for LARGE variant', () => {
+      const params: TFileParams = {
+        pubky,
+        file_id: fileId,
+        variant: FileVariant.LARGE,
+      };
+
+      const result = filesApi.getFileUrl(params);
+      expect(result).toBe(`${getCdnUrl()}/files/${encodedPubky}/${encodedFileId}/large`);
+    });
+
     it('should generate correct URL for MAIN variant', () => {
       const params: TFileParams = {
         pubky,
