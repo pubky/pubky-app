@@ -29,6 +29,7 @@ import type {
   TFetchLockFileResult,
   TGetConnectUrlParams,
   TGetPaykitSetupUrlParams,
+  TLockPriceAsset,
   TLocksSessionResult,
   TPaykitConnectionState,
   TPaykitSetupStatus,
@@ -51,6 +52,9 @@ export class LocksController {
   private constructor() {} // Prevent instantiation
   /** Bumped before sign-in and when cleared, so older awaits cannot overwrite the latest attempt. */
   private static sessionEpoch = 0;
+
+  /** Setup checks can overlap across dialogs and publishing; only the latest may clear shared readiness. */
+  private static paykitSetupGeneration = 0;
 
   /** An awaited Locks operation belongs to both its app account and its original Locks session. */
   private static captureSessionOwner(): () => boolean {
@@ -197,12 +201,22 @@ export class LocksController {
    * Asks the Lock Server whether this creator's Paykit payout account is already set up. A rejected
    * session (401 → Auth) is cleared, as on restore, so the creator signs in again instead of retrying.
    */
-  static async fetchPaykitSetupStatus(): Promise<TPaykitSetupStatus> {
-    const isCurrent = this.captureSessionOwner();
+  static async fetchPaykitSetupStatus(asset: TLockPriceAsset): Promise<TPaykitSetupStatus> {
+    const isCurrentSession = this.captureSessionOwner();
+    const session = useLocksAuthStore.getState().selectLocksSession();
+    const generation = ++this.paykitSetupGeneration;
+    const isCurrent = () => isCurrentSession() && useLocksAuthStore.getState().selectLocksSession() === session;
     try {
-      return await LocksApplication.fetchPaykitSetupStatus();
+      const status = await LocksApplication.fetchPaykitSetupStatus(asset);
+      if (!isCurrent()) return 'unavailable';
+      if (generation === this.paykitSetupGeneration && status === 'setup_required') {
+        useLocksAuthStore.getState().setPaykitConnected(false);
+      }
+      return status;
     } catch (error) {
-      if (isCurrent() && isAppError(error) && isAuthError(error)) this.clearSession();
+      if (isCurrent() && generation === this.paykitSetupGeneration && isAppError(error) && isAuthError(error)) {
+        this.clearSession();
+      }
       throw error;
     }
   }
@@ -273,7 +287,7 @@ export class LocksController {
     const lockFile = await LocksApplication.fetchLockFile(params);
     return {
       lockFile,
-      priceSats: LockFileParser.resolvePriceSats(lockFile),
+      price: LockFileParser.resolvePrice(lockFile),
     };
   }
 
@@ -281,7 +295,7 @@ export class LocksController {
     const lockFile = await LocksApplication.getOrFetchLockFile(params);
     return {
       lockFile,
-      priceSats: LockFileParser.resolvePriceSats(lockFile),
+      price: LockFileParser.resolvePrice(lockFile),
     };
   }
 

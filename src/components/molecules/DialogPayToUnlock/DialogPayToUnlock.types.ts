@@ -1,5 +1,5 @@
 import type { TPayToUnlockStage } from '@/hooks/usePayToUnlock/usePayToUnlock.types';
-import type { TPaykitConnectionState } from '@/services/locks/locks.types';
+import type { TLockPrice, TPaykitConnectionState } from '@/services/locks/locks.types';
 
 export interface DialogPayToUnlockProps {
   open: boolean;
@@ -8,8 +8,8 @@ export interface DialogPayToUnlockProps {
   lockTitle: string;
   /** Post author — the avatar beside the title links to their profile. */
   authorId: string;
-  /** Price in sats (wire string), from the lock file's payment criterion. */
-  priceSats: string;
+  /** Price and denomination, from the lock file's payment criterion. */
+  price: TLockPrice;
   stage: TPayToUnlockStage;
   /** Waiting stage: polling parked on its deadline, so the reader is offered a manual re-check. */
   isStalled: boolean;

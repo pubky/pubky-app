@@ -148,7 +148,9 @@ file can complete sign-in; there is no separate saved-session retry screen.
 ## Locks contract
 
 Locks keeps its merged UI, payment behavior and independent Lock Server authentication. `@synonymdev/locks-sdk`
-uses `0.1.0-rc9` from the merged Locks update. Reader copies/purchases use `/priv/social/:rw`; creator originals use `/priv/app.locks/content/:r`.
+uses the merged BTC/USD build (`0.1.0-rc9+git.c692fb70522c`), pinned to the public
+[artifact commit `245253a6d7c9`](https://github.com/pubky/locks/commit/245253a6d7c9559fbcbdffc33250dacf28108d69).
+Reader copies/purchases use `/priv/social/:rw`; creator originals use `/priv/app.locks/content/:r`.
 
 `useAuthUrl({ type: 'upgrade' })` calls the shared `AuthController.requestCapabilities()` flow. Approval combines current,
 app and requested capabilities and validates the same account/environment/client. Resume the feature after adoption;

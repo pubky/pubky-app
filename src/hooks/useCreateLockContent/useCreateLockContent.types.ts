@@ -34,6 +34,7 @@ export type TUseCreateLockContentParams = {
 export type TPublishResult =
   | { status: 'published'; postId: string }
   | { status: 'auth-expired' } // the Lock Server rejected the session; the creator must sign in again
+  | { status: 'setup-required' }
   | { status: 'failed' }
   | { status: 'canceled' };
 

@@ -16,10 +16,17 @@ import { MOCK_LOCK_AUTHOR_PUBKY } from '@/test-utils/locks';
 import { mockGrantReference, mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 
-const mocks = vi.hoisted(() => ({ create: vi.fn(), exchange: vi.fn(), connect: vi.fn(), config: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  create: vi.fn(),
+  exchange: vi.fn(),
+  connect: vi.fn(),
+  config: vi.fn(),
+  setup: vi.fn(),
+}));
 vi.mock('@/application/locks/locks', () => ({
   LocksApplication: {
     createLockContent: mocks.create,
+    fetchPaykitSetupStatus: mocks.setup,
     exchangeSessionCode: mocks.exchange,
     generateConnectUrl: mocks.connect,
     setLockServiceConfig: mocks.config,
@@ -31,7 +38,7 @@ vi.mock('next/navigation', () => ({ usePathname: () => '/home' }));
 const params = {
   lockedPost: { content: 'locked body', kind: PubkyAppPostKind.Short, attachments: [] },
   announcement: { teaser: { lock_title: 'Title', teaser_description: 'Teaser' }, attachments: [], tags: [] },
-  lockConfig: { amountSats: '1000' },
+  lockConfig: { amount: '1000', asset: 'BTC' as const },
 };
 const rejectedSession = () =>
   Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Rejected old Locks session', {
@@ -42,6 +49,7 @@ const rejectedSession = () =>
 describe('useCreateLockContent reauthentication', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.setup.mockResolvedValue('ready');
     LocksController.clearSession();
     useAuthStore.setState({
       ...authInitialState,

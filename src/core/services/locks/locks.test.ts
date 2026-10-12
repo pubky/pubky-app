@@ -13,8 +13,8 @@ const mocks = vi.hoisted(() => {
   const setLockServicePointer = vi.fn(async () => {});
   const paykitSetupStatus = vi.fn(async (): Promise<unknown> => ({ status: 'ready' }));
   const fakeSession = {
-    creatorPubky: () => 'pubkyaccount',
     exportSecret: vi.fn(() => 'secret-abc'),
+    creatorPubky: vi.fn((): string | undefined => 'pubkyaccount'),
     signout: vi.fn(async () => {}),
     creator: { setLockServicePointer, paykitSetupStatus },
   };
@@ -240,8 +240,8 @@ describe('LocksService (auth)', () => {
     useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'setup_required' });
 
-    await expect(LocksService.lookupPaykitSetupStatus()).resolves.toBe('setup_required');
-    expect(mocks.paykitSetupStatus).toHaveBeenCalledWith(); // the creator comes from the session
+    await expect(LocksService.lookupPaykitSetupStatus('BTC')).resolves.toBe('setup_required');
+    expect(mocks.paykitSetupStatus).toHaveBeenCalledWith('BTC'); // the creator comes from the session
   });
 
   // The SDK types the response `any`: an unknown status must fail, not read as a setup answer.
@@ -249,7 +249,7 @@ describe('LocksService (auth)', () => {
     useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'connected' });
 
-    const error = await LocksService.lookupPaykitSetupStatus().catch((caught: unknown) => caught);
+    const error = await LocksService.lookupPaykitSetupStatus('BTC').catch((caught: unknown) => caught);
 
     expect(isAppError(error)).toBe(true);
     expect((error as { category: ErrorCategory }).category).toBe(ErrorCategory.Validation);
@@ -259,7 +259,7 @@ describe('LocksService (auth)', () => {
   it.each([
     ['signout', () => LocksService.signout(), () => mocks.fakeSession.signout],
     ['setLockServiceConfig', () => LocksService.setLockServiceConfig(), () => mocks.setLockServicePointer],
-    ['lookupPaykitSetupStatus', () => LocksService.lookupPaykitSetupStatus(), () => mocks.paykitSetupStatus],
+    ['lookupPaykitSetupStatus', () => LocksService.lookupPaykitSetupStatus('BTC'), () => mocks.paykitSetupStatus],
   ])('%s promotes an HTTP 401 to an auth error', async (_name, call, mock) => {
     useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     mock().mockRejectedValueOnce(new Error('Lock Server request failed with HTTP 401'));

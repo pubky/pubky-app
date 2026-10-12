@@ -217,7 +217,7 @@ export function usePostInputLock({
 
     const result = await publish();
     if (result.status === 'canceled') return;
-    if (result.status === 'auth-expired') {
+    if (result.status === 'auth-expired' || result.status === 'setup-required') {
       handleAuthExpired(); // recoverable: reopen sign-in, keep the configured lock
       return;
     }

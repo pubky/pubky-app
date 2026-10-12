@@ -64,7 +64,7 @@ export function LockedPostContent({
   const isFocusedPostPage =
     routeParams?.userId === authorId && routeParams?.postId === rawPostId && !isNestedPostPreview;
   const lockContent = LocksController.getLockContent(content);
-  const { lockFile, priceSats, isLoading: isLockFileLoading } = useLockFile(lock);
+  const { lockFile, price, isLoading: isLockFileLoading } = useLockFile(lock);
   const {
     unlockedPost,
     applyUnlockedContent,
@@ -90,7 +90,7 @@ export function LockedPostContent({
 
   // Paid but never received: the payment completed while the reader was away, so nothing on screen
   // would otherwise say so. Resolves itself, without the reader pressing anything.
-  const { hasPurchase, markPurchased } = usePurchasedLocks({ enabled: priceSats !== null });
+  const { hasPurchase, markPurchased } = usePurchasedLocks({ enabled: price !== null });
   const lockId = lock ? LockContentParser.lockIdFromUrl(lock) : null;
   usePurchaseResume({
     lock,
@@ -129,7 +129,7 @@ export function LockedPostContent({
   // reader gets the sign-in dialog instead. Unsupported legacy locks have no unlock handler, and
   // neither does the creator's own lock: it stays inert even if reading the original failed.
   const handleUnlock =
-    priceSats && !showPermissionNotice && !isOwnLock
+    price && !showPermissionNotice && !isOwnLock
       ? async () => {
           if (await waitForAuth()) setIsPayOpen(true);
         }
@@ -148,7 +148,7 @@ export function LockedPostContent({
       {unlockedPost || isResolvingOwn ? (
         <>
           {/* Own lock: keep the (now inert) lock card above the content so the price/terms stay visible. */}
-          {isOwnLock && <LockedPostCard title={lockContent.lock_title} priceSats={priceSats} />}
+          {isOwnLock && <LockedPostCard title={lockContent.lock_title} price={price} />}
           <div className="flex w-full flex-col gap-4">
             <div className="border-t border-border" />
             {/* Access indicator: the creator's own content vs. a lock the reader unlocked. */}
@@ -188,7 +188,7 @@ export function LockedPostContent({
           {showPermissionNotice && <LocksPermissionNotice />}
           <LockedPostCard
             title={lockContent.lock_title}
-            priceSats={priceSats}
+            price={price}
             isLoading={isLockFileLoading}
             unlockOpen={isPayOpen}
             onUnlock={handleUnlock}
@@ -198,13 +198,13 @@ export function LockedPostContent({
           />
         </>
       )}
-      {priceSats && (
+      {price && (
         <DialogPayToUnlock
           open={isPayOpen}
           onOpenChange={setIsPayOpen}
           lockTitle={lockContent.lock_title}
           authorId={authorId}
-          priceSats={priceSats}
+          price={price}
           stage={stage}
           isStalled={isStalled}
           handshakePubky={handshakePubky}
