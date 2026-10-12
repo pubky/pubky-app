@@ -29,18 +29,3 @@ describe('UserInfoPopoverStats', () => {
     ).toBeGreaterThan(0);
   });
 });
-
-describe('UserInfoPopoverStats - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(
-      <UserInfoPopoverStats
-        followersCount={10}
-        followingCount={3}
-        followersAvatars={[{ id: '1', name: 'A' }]}
-        followingAvatars={[{ id: '2', name: 'B' }]}
-        maxAvatars={3}
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

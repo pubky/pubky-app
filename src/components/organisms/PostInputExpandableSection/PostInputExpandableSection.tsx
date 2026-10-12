@@ -36,6 +36,8 @@ export function PostInputExpandableSection({
   onArticleClick,
   lockSwitch,
   lockCard,
+  leadingContent,
+  fullscreen,
 }: PostInputExpandableSectionProps) {
   const hasContent = content.trim().length > 0;
   const isUiDisabled = isSubmitting || isDisabled;
@@ -70,6 +72,8 @@ export function PostInputExpandableSection({
           isArticle={isArticle}
           postButtonIcon={submitIcon ?? defaultSubmitIcon}
           lockSwitch={lockSwitch}
+          leadingContent={leadingContent}
+          fullscreen={fullscreen}
         />
       </Container>
 

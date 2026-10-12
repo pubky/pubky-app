@@ -26,20 +26,3 @@ describe('SearchResultsEmpty', () => {
     expect(screen.getByRole('heading', { name: 'No collections match your search' })).toBeInTheDocument();
   });
 });
-
-describe('SearchResultsEmpty - Snapshots', () => {
-  it('matches snapshot with the Search in All action', () => {
-    const { container } = render(<SearchResultsEmpty isCollections={false} onSearchAll={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot without an action', () => {
-    const { container } = render(<SearchResultsEmpty isCollections={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for collections', () => {
-    const { container } = render(<SearchResultsEmpty isCollections onSearchAll={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

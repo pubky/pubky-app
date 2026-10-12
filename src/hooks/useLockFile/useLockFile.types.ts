@@ -5,6 +5,6 @@ export interface UseLockFileResult {
   lockFile: LockFile | null;
   /** Payment locks only: the price in sats, for the lock card. Null for every other lock. */
   priceSats: string | null;
-  /** True when the `lock` URL is invalid or the fetch failed (already sent to Sentry). */
-  hasError: boolean;
+  /** True until the lock file for a set URL arrives or fails. `priceSats` alone can't tell this from a lock with no price. */
+  isLoading: boolean;
 }

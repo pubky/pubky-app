@@ -29,6 +29,20 @@ describe('SearchStore', () => {
       expect(useSearchStore.getState().recentQueries.map((q) => q.query)).toEqual(['bitcoin', 'nostr']);
     });
 
+    it('should dedupe case-insensitively, collapsing every variant and keeping the latest casing on top', () => {
+      useSearchStore.setState({
+        recentQueries: [
+          { query: 'Bitcoin', searchedAt: 2 },
+          { query: 'nostr', searchedAt: 1 },
+          { query: 'bitcoin', searchedAt: 0 },
+        ],
+      });
+
+      useSearchStore.getState().addQuery('BITCOIN');
+
+      expect(useSearchStore.getState().recentQueries.map((q) => q.query)).toEqual(['BITCOIN', 'nostr']);
+    });
+
     it('should cap recent queries at MAX_RECENT_SEARCHES, dropping the oldest', () => {
       const store = useSearchStore.getState();
 

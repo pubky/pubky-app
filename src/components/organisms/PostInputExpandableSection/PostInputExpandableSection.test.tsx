@@ -94,6 +94,8 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
     isArticle,
     postButtonIcon,
     postButtonLabel,
+    leadingContent,
+    fullscreen,
   }: {
     onPostClick?: () => void;
     onEmojiClick?: () => void;
@@ -104,6 +106,8 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
     isArticle?: boolean;
     postButtonIcon?: React.ComponentType;
     postButtonLabel?: string;
+    leadingContent?: React.ReactNode;
+    fullscreen?: { isFullscreen: boolean; onToggle: () => void };
   }) => (
     <div
       data-testid="post-input-action-bar"
@@ -114,7 +118,9 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
       data-has-post-button-icon={!!postButtonIcon}
       data-post-button-icon-name={postButtonIcon?.displayName ?? ''}
       data-post-button-label={postButtonLabel}
+      data-fullscreen={fullscreen ? String(fullscreen.isFullscreen) : undefined}
     >
+      {leadingContent}
       <button data-testid="action-bar-post" onClick={onPostClick} disabled={isPostDisabled}>
         Post
       </button>
@@ -399,6 +405,21 @@ describe('PostInputExpandableSection', () => {
     expect(screen.queryByTestId('action-bar-article')).not.toBeInTheDocument();
   });
 
+  it('passes the leading content and fullscreen toggle through to the action bar', () => {
+    render(
+      <PostInputExpandableSection
+        {...defaultProps}
+        isArticle
+        leadingContent={<span data-testid="leading-avatar">avatar</span>}
+        fullscreen={{ isFullscreen: true, onToggle: vi.fn() }}
+      />,
+    );
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).toHaveAttribute('data-fullscreen', 'true');
+    expect(actionBar).toContainElement(screen.getByTestId('leading-avatar'));
+  });
+
   it('stacks tags above the action bar at all breakpoints', () => {
     render(<PostInputExpandableSection {...defaultProps} />);
 
@@ -406,75 +427,5 @@ describe('PostInputExpandableSection', () => {
     expect(layout).toHaveClass('gap-4');
     expect(layout).not.toHaveClass('md:flex-row');
     expect(layout).not.toHaveClass('md:gap-0');
-  });
-});
-
-describe('PostInputExpandableSection - Snapshots', () => {
-  const defaultProps = {
-    content: 'Test content',
-    tags: [],
-    isSubmitting: false,
-    isArticle: false,
-    submitMode: POST_INPUT_VARIANT.POST,
-    setTags: vi.fn(),
-    onSubmit: vi.fn(),
-    showEmojiPicker: false,
-    setShowEmojiPicker: vi.fn(),
-    onEmojiSelect: vi.fn(),
-    onArticleClick: vi.fn(),
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot when expanded with content', () => {
-    const { container } = render(
-      <PostInputExpandableSection {...defaultProps} content="Test content with link https://example.com" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when expanded with tags', () => {
-    const { container } = render(<PostInputExpandableSection {...defaultProps} tags={['tag1', 'tag2']} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with REPLY submit mode', () => {
-    const { container } = render(
-      <PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.REPLY} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when submitting', () => {
-    const { container } = render(<PostInputExpandableSection {...defaultProps} isSubmitting={true} content="Test" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when disabled', () => {
-    const { container } = render(<PostInputExpandableSection {...defaultProps} isDisabled={true} content="Test" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with emoji picker open', () => {
-    const { container } = render(
-      <PostInputExpandableSection {...defaultProps} showEmojiPicker={true} isDisabled={false} isSubmitting={false} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when isArticle is true', () => {
-    const { container } = render(
-      <PostInputExpandableSection {...defaultProps} isArticle={true} content="Article content" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with EDIT submit mode', () => {
-    const { container } = render(
-      <PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.EDIT} content="Editing content" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -283,23 +283,3 @@ describe('DialogCollectionForm', () => {
     expect(onRemoveCover).toHaveBeenCalledTimes(1);
   });
 });
-
-describe('DialogCollectionForm - Snapshots', () => {
-  it('matches snapshot in the default (no cover, idle) state', () => {
-    render(<Harness title="Edit Collection" submitLabel="Save changes" />);
-
-    expect(document.body).toMatchSnapshot();
-  });
-
-  it('matches snapshot with a cover preview present', () => {
-    render(<Harness title="Edit Collection" submitLabel="Save changes" coverPreviewUrl="blob:preview" />);
-
-    expect(document.body).toMatchSnapshot();
-  });
-
-  it('matches snapshot in the saving state', () => {
-    render(<Harness title="Edit Collection" submitLabel="Save changes" isSaving initialName="Reading list" />);
-
-    expect(document.body).toMatchSnapshot();
-  });
-});

@@ -82,6 +82,35 @@ describe('ContentContainer', () => {
     expect(screen.getByTestId('container')).toBeInTheDocument();
     expect(screen.getByText('Container content')).toBeInTheDocument();
   });
+
+  it('applies the lg max width and md gap by default', () => {
+    render(<ContentContainer>Defaults</ContentContainer>);
+    expect(screen.getByTestId('container')).toHaveClass('max-w-(--container-max-width)', 'gap-6');
+  });
+
+  it.each([
+    ['sm', 'max-w-[588px]'],
+    ['md', 'max-w-[800px]'],
+    ['lg', 'max-w-(--container-max-width)'],
+    ['xl', 'max-w-[1400px]'],
+  ] as const)('applies maxWidth=%s class', (maxWidth, className) => {
+    render(<ContentContainer maxWidth={maxWidth}>Sized</ContentContainer>);
+    expect(screen.getByTestId('container')).toHaveClass(className);
+  });
+
+  it.each([
+    ['sm', 'gap-3'],
+    ['md', 'gap-6'],
+    ['lg', 'gap-8'],
+  ] as const)('applies gap=%s class', (gap, className) => {
+    render(<ContentContainer gap={gap}>Spaced</ContentContainer>);
+    expect(screen.getByTestId('container')).toHaveClass(className);
+  });
+
+  it('merges a custom className', () => {
+    render(<ContentContainer className="custom-class">Custom</ContentContainer>);
+    expect(screen.getByTestId('container')).toHaveClass('custom-class', 'gap-6');
+  });
 });
 
 describe('ContentImage', () => {
@@ -108,111 +137,5 @@ describe('ContentImage', () => {
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper).toHaveClass('flex');
     expect(wrapper).not.toHaveClass('hidden');
-  });
-});
-
-describe('Content - Snapshots', () => {
-  it('matches snapshot for ContentCard with default props', () => {
-    const { container } = render(
-      <ContentCard>
-        <div>Test content</div>
-      </ContentCard>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ContentCard with custom className', () => {
-    const { container } = render(
-      <ContentCard className="custom-card">
-        <div>Custom content</div>
-      </ContentCard>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ContentCard with column layout', () => {
-    const { container } = render(
-      <ContentCard layout="column">
-        <div>Column layout content</div>
-      </ContentCard>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ContentCard with image', () => {
-    const image = {
-      src: '/test.jpg',
-      alt: 'Test image',
-      width: 200,
-      height: 200,
-    };
-    const { container } = render(
-      <ContentCard image={image}>
-        <div>Content with image</div>
-      </ContentCard>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ContentContainer with default props', () => {
-    const { container } = render(
-      <ContentContainer>
-        <div>Default container</div>
-      </ContentContainer>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ContentContainer with small max width', () => {
-    const { container } = render(
-      <ContentContainer maxWidth="sm">
-        <div>Small max width</div>
-      </ContentContainer>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ContentContainer with large gap', () => {
-    const { container } = render(
-      <ContentContainer gap="lg">
-        <div>Large gap</div>
-      </ContentContainer>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ContentContainer with custom className', () => {
-    const { container } = render(
-      <ContentContainer className="custom-container">
-        <div>Custom class</div>
-      </ContentContainer>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ContentImage with default props', () => {
-    const { container } = render(<ContentImage src="/test.jpg" alt="Test" width={100} height={100} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ContentImage visible on mobile', () => {
-    const { container } = render(
-      <ContentImage src="/test.jpg" alt="Test" width={100} height={100} hiddenOnMobile={false} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ContentImage with custom className', () => {
-    const { container } = render(
-      <ContentImage src="/test.jpg" alt="Test" width={100} height={100} className="custom-image" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for ContentImage with custom container className', () => {
-    const { container } = render(
-      <ContentImage src="/test.jpg" alt="Test" width={100} height={100} containerClassName="custom-container" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

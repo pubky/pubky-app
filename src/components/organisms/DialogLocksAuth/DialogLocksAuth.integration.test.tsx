@@ -8,6 +8,7 @@ import { authInitialState } from '@/stores/auth/auth.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
 import { LOCKS_AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
+import { MOCK_LOCK_AUTHOR_PUBKY } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { DialogLocksAuth } from './DialogLocksAuth';
 
@@ -46,7 +47,11 @@ vi.mock('@/config/network', async (importOriginal) => ({
 
 /** A Locks session as the SDK hands it out; the creator calls reach the Lock Server through it. */
 const fakeSession = () =>
-  asOpaque<LocksSdkSession>({ creator: { paykitSetupStatus: mocks.paykitSetupStatus }, signout: mocks.signout });
+  asOpaque<LocksSdkSession>({
+    creator: { paykitSetupStatus: mocks.paykitSetupStatus },
+    creatorPubky: () => `pubky${MOCK_LOCK_AUTHOR_PUBKY}`,
+    signout: mocks.signout,
+  });
 
 /** The store once the Lock Server step is done: a live session, and no answer about Paykit yet. */
 const signIn = () => useLocksAuthStore.getState().init({ session: fakeSession(), secret: 'secret-abc' });
@@ -61,7 +66,7 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
     mocks.signout.mockResolvedValue(undefined);
     localStorage.removeItem(LOCKS_AUTH_PERSIST_KEY);
     useLocksAuthStore.setState(locksAuthInitialState);
-    useAuthStore.setState(authInitialState);
+    useAuthStore.setState({ ...authInitialState, currentUserPubky: MOCK_LOCK_AUTHOR_PUBKY });
   });
 
   afterEach(() => {

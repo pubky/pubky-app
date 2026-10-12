@@ -5,43 +5,22 @@ import { Label } from './Label';
 describe('Label', () => {
   it('renders with default props', () => {
     render(<Label>Default Label</Label>);
-    const label = screen.getByText('Default Label');
-    expect(label).toBeInTheDocument();
-  });
-});
-
-describe('Label - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<Label>Default Label</Label>);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(screen.getByText('Default Label')).toBeInTheDocument();
+    expect(screen.getByText('Default Label')).toHaveAttribute('data-slot', 'label');
   });
 
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<Label className="custom-label">Custom Label</Label>);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with htmlFor prop', () => {
-    const { container } = render(<Label htmlFor="test-input">Form Label</Label>);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with complex children', () => {
-    const { container } = render(
-      <Label>
-        <span>Complex Label</span>
-      </Label>,
+  it('associates with a control via htmlFor', () => {
+    render(
+      <>
+        <Label htmlFor="email">Email</Label>
+        <input id="email" />
+      </>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
   });
 
-  it('matches snapshot for form association', () => {
-    const { container } = render(
-      <div>
-        <Label htmlFor="username">Username</Label>
-        <input id="username" type="text" />
-      </div>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
+  it('applies custom className', () => {
+    render(<Label className="custom-label">Custom Label</Label>);
+    expect(screen.getByText('Custom Label')).toHaveClass('custom-label');
   });
 });

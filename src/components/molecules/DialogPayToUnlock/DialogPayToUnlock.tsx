@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
 import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL } from '@/config/externalLinks';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { generateBitkitContactDeeplink } from '@/libs/deeplink/deeplink';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
@@ -16,6 +17,7 @@ import { formatSats } from '@/libs/utils/formatSats';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 import { AppDownload } from '@/molecules/AppDownload/AppDownload';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
+import { QR_HOVER_OPACITY } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import type { DialogPayToUnlockProps } from './DialogPayToUnlock.types';
 
 const FIELD_LABEL_CLASS = 'text-xs font-medium tracking-widest text-muted-foreground uppercase';
@@ -30,6 +32,32 @@ function CreatorAvatar({ authorId }: { authorId: string }) {
   return (
     <PostHeaderUserInfo userId={authorId} userName={userName} avatarUrl={profile?.avatarUrl} showUserInfo={false} />
   );
+}
+
+function WaitingMessage({
+  connectionState,
+  walletSetupNeeded,
+  isConnectionPending,
+}: Pick<DialogPayToUnlockProps, 'connectionState' | 'walletSetupNeeded' | 'isConnectionPending'>) {
+  if (connectionState === 'blocked') {
+    return 'This creator cannot receive payments from you right now. Please contact support.';
+  }
+  if (walletSetupNeeded) {
+    return 'Finish setting up Bitkit, then keep it open.';
+  }
+  if (connectionState === 'recovery_required') {
+    return 'Your connection to this creator needs to be restored. Keep Bitkit open.';
+  }
+  if (isConnectionPending && connectionState === null) {
+    return 'Checking your Bitkit connection…';
+  }
+  if (connectionState === 'handshake') {
+    return 'Connecting to this creator. Keep Bitkit open.';
+  }
+  if (connectionState === 'none') {
+    return 'Your Bitkit connection to this creator is not ready yet. Keep Bitkit open.';
+  }
+  return 'Check Bitkit for a payment request. Review and confirm it there when it appears.';
 }
 
 /**
@@ -49,7 +77,9 @@ export function DialogPayToUnlock({
   stage,
   isStalled,
   handshakePubky,
-  connectionIssue,
+  connectionState,
+  isConnectionPending,
+  walletSetupNeeded,
   isSubmitting,
   onRetry,
   onRecheck,
@@ -57,13 +87,16 @@ export function DialogPayToUnlock({
 }: DialogPayToUnlockProps) {
   // The install screen comes before any submission, so it never has a Noise link state to show.
   const isInstall = stage === 'install';
-  const showQr = Boolean(handshakePubky) && stage === 'waiting';
-  const showSpinner = stage === 'checking' || (stage === 'waiting' && !showQr && !isStalled && !connectionIssue);
+  const handshakeValue = handshakePubky ? withPubkyPrefix(handshakePubky) : null;
+  const showQr = Boolean(handshakeValue) && stage === 'waiting';
+  const hasNotice = connectionState === 'blocked' || connectionState === 'recovery_required' || walletSetupNeeded;
+  const showSpinner = stage === 'checking' || (stage === 'waiting' && !showQr && !isStalled && !hasNotice);
   const showPrimary = stage === 'retry' || isInstall;
   const primaryLabel = isInstall ? 'I completed the steps' : 'Try again';
   // `unopened` reached this screen by a completed payment too, so it must not show a cost to pay.
   const isPaid = stage === 'paid' || stage === 'unopened';
   const [isConfirmingClose, setIsConfirmingClose] = useState(false);
+  const { copyToClipboard } = useCopyToClipboard();
 
   const handleOpenChange = (next: boolean) => {
     // Paid content is already in memory. Closing should reveal that copy instead of enabling the
@@ -125,24 +158,6 @@ export function DialogPayToUnlock({
               </Typography>
             </Container>
 
-            {showQr && handshakePubky && (
-              <>
-                <Typography className="text-base text-secondary-foreground">
-                  {'Scan with Bitkit and pay to unlock.'}
-                </Typography>
-                {/* A phone cannot scan its own screen, so mobile hands the same pubky over by deeplink. */}
-                <Button
-                  asChild
-                  variant={ButtonVariant.DEFAULT}
-                  size="lg"
-                  className="w-full lg:hidden"
-                  data-cy="pay-to-unlock-bitkit-link"
-                >
-                  <a href={generateBitkitContactDeeplink(withPubkyPrefix(handshakePubky))}>{'Pay with Bitkit'}</a>
-                </Button>
-              </>
-            )}
-
             {isInstall && (
               <Container overrideDefaults className="flex flex-wrap gap-x-3 gap-y-1">
                 {INSTALL_STEPS.map((step, index) => (
@@ -154,20 +169,36 @@ export function DialogPayToUnlock({
               </Container>
             )}
 
-            {/* A parked wait shows only its Check again copy; the link notices still apply there. */}
-            {stage === 'waiting' && !showQr && (connectionIssue || !isStalled) && (
+            {/* A parked wait shows only its Check again copy; the notices still apply there. */}
+            {stage === 'waiting' && (hasNotice || !isStalled) && (
               <Typography className="text-base text-secondary-foreground">
-                {connectionIssue === 'blocked' ? (
-                  'This creator cannot receive payments from you right now. Please contact support.'
-                ) : connectionIssue === 'recovery_required' ? (
-                  'Your Bitkit connection to this creator is being restored. Keep Bitkit open while we reconnect.'
-                ) : (
-                  <>
-                    <span className="hidden lg:inline">{'Awaiting payment. '}</span>
-                    {'Please confirm in Bitkit.'}
-                  </>
-                )}
+                <WaitingMessage
+                  connectionState={connectionState}
+                  walletSetupNeeded={walletSetupNeeded}
+                  isConnectionPending={isConnectionPending}
+                />
               </Typography>
+            )}
+
+            {showQr && handshakeValue && (
+              <>
+                <Typography className="text-base text-secondary-foreground">
+                  <span className="hidden lg:inline">
+                    {'If this creator is not in your Bitkit contacts, scan this code to add them.'}
+                  </span>
+                  <span className="lg:hidden">{'If this creator is not in your Bitkit contacts, add them.'}</span>
+                </Typography>
+                {/* A phone cannot scan its own screen, so mobile hands the same pubky over by deeplink. */}
+                <Button
+                  asChild
+                  variant={ButtonVariant.DEFAULT}
+                  size="lg"
+                  className="w-full lg:hidden"
+                  data-cy="pay-to-unlock-bitkit-link"
+                >
+                  <a href={generateBitkitContactDeeplink(handshakeValue)}>{'Open in Bitkit'}</a>
+                </Button>
+              </>
             )}
 
             {/* Parked, not failed: the purchase is alive, so the reader gets a way back to it rather
@@ -175,7 +206,7 @@ export function DialogPayToUnlock({
             {stage === 'waiting' && isStalled && (
               <Container overrideDefaults className="flex flex-col items-start gap-3">
                 <Typography className="text-base text-secondary-foreground">
-                  {'Still waiting for the payment. Pay in Bitkit, then check again.'}
+                  {'This purchase is still pending. Check Bitkit, then check again here.'}
                 </Typography>
                 <Button variant={ButtonVariant.OUTLINE} size="lg" onClick={onRecheck} data-cy="pay-to-unlock-recheck">
                   {'Check again'}
@@ -223,16 +254,18 @@ export function DialogPayToUnlock({
             )}
           </Container>
 
-          {showQr && handshakePubky && (
-            <Container
+          {showQr && handshakeValue && (
+            // Same affordance as the session-upgrade QR: a wallet on a device without a camera needs the value itself.
+            <Button
               overrideDefaults
-              role="img"
-              aria-label="Creator Pubky QR code"
+              type="button"
+              onClick={() => copyToClipboard(handshakeValue)}
+              aria-label="Copy creator pubky"
               data-cy="pay-to-unlock-handshake-qr"
-              className="hidden shrink-0 self-center rounded-md bg-foreground p-2 lg:block"
+              className="group hidden shrink-0 cursor-pointer self-center rounded-md bg-foreground p-2 lg:block"
             >
-              <QRCodeSVG value={withPubkyPrefix(handshakePubky)} size={112} />
-            </Container>
+              <QRCodeSVG value={handshakeValue} size={112} className={QR_HOVER_OPACITY} />
+            </Button>
           )}
 
           {showSpinner && (
@@ -241,9 +274,6 @@ export function DialogPayToUnlock({
               className="flex shrink-0 flex-col items-center gap-3 self-center lg:size-24 lg:justify-center"
             >
               <Spinner size="md" />
-              {stage === 'waiting' && (
-                <Typography className={cn(FIELD_LABEL_CLASS, 'lg:hidden')}>{'AWAITING PAYMENT'}</Typography>
-              )}
             </Container>
           )}
 

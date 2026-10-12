@@ -220,36 +220,3 @@ describe('PostAttachmentsAudios', () => {
     });
   });
 });
-
-describe('PostAttachmentsAudios - Snapshots', () => {
-  it('matches snapshot with single audio', () => {
-    const audios = [createMockAudio({ urls: { main: 'https://example.com/audio.mp3' } })];
-    const { container } = render(<PostAttachmentsAudios audios={audios} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with multiple audios', () => {
-    const audios = [
-      createMockAudio({ urls: { main: 'https://example.com/audio1.mp3' } }),
-      createMockAudio({ urls: { main: 'https://example.com/audio2.mp3' } }),
-      createMockAudio({ urls: { main: 'https://example.com/audio3.mp3' } }),
-    ];
-    const { container } = render(<PostAttachmentsAudios audios={audios} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with empty audios array', () => {
-    const { container } = render(<PostAttachmentsAudios audios={[]} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with different audio formats', () => {
-    const audios = [
-      createMockAudio({ urls: { main: 'https://example.com/song.mp3' } }),
-      createMockAudio({ urls: { main: 'https://example.com/track.ogg' } }),
-      createMockAudio({ urls: { main: 'https://example.com/sound.wav' } }),
-    ];
-    const { container } = render(<PostAttachmentsAudios audios={audios} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

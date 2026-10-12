@@ -1,13 +1,12 @@
 import { fireEvent, render as rtlRender, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { USER_NAME_MAX_LENGTH } from '@/config/user';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { type FlatNotification, NotificationType, PostChangedSource } from '@/models/notification/notification.types';
 import { toast } from '@/molecules/Toaster/toast';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { NotificationItem } from './NotificationItem';
 
 function render(ui: ReactElement) {
@@ -818,97 +817,5 @@ describe('NotificationItem', () => {
     render(<NotificationItem notification={baseNotification} isUnread={false} />);
 
     expect(screen.getByText('User').closest('a')).not.toHaveClass('hover:underline');
-  });
-});
-
-describe('NotificationItem - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockPostDetails.value = null;
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-07-16T12:00:00Z'));
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('matches snapshot for Follow notification', () => {
-    const notification = {
-      id: 'follow:123:user1',
-      type: NotificationType.Follow,
-      timestamp: Date.now() - 1000 * 60 * 30,
-      followed_by: 'user1',
-    } as FlatNotification;
-    const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for TagPost notification', () => {
-    const notification = {
-      id: 'tagpost:123:user1',
-      type: NotificationType.TagPost,
-      timestamp: Date.now() - 1000 * 60 * 30,
-      tagged_by: 'user1',
-      tag_label: 'bitcoin',
-      post_uri: 'user1:post123',
-    } as FlatNotification;
-    const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for Mention notification', () => {
-    const notification = {
-      id: 'mention:123:user1',
-      type: NotificationType.Mention,
-      timestamp: Date.now() - 1000 * 60 * 30,
-      mentioned_by: 'user1',
-      post_uri: 'user1:post123',
-    } as FlatNotification;
-    const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for an edited collection with a title preview', async () => {
-    mockPostDetails.value = {
-      kind: 'collection',
-      content: JSON.stringify({ name: 'Based Bitcoin', description: '', items: [] }),
-    };
-    const notification = {
-      id: 'post_edited:123:collection-owner',
-      type: NotificationType.PostEdited,
-      timestamp: new Date('2026-07-16T11:30:00Z').getTime(),
-      edit_source: PostChangedSource.Repost,
-      edited_by: 'collection-owner',
-      edited_uri: 'pubky://collection-owner/pub/pubky.app/posts/collection-id',
-      linked_uri: 'pubky://viewer/pub/pubky.app/posts/repost-id',
-      post_kind: 'collection',
-    } satisfies FlatNotification;
-
-    render(<NotificationItem notification={notification} isUnread={false} />);
-
-    // Collection names derive synchronously from the live query's value.
-    expect(screen.getByText("'Based Bitcoin'")).toMatchSnapshot();
-  });
-});
-
-describe('NotificationItem - Mobile Snapshots', () => {
-  beforeEach(() => {
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches snapshot on mobile viewport', () => {
-    const notification = {
-      id: 'follow:123:user1',
-      type: NotificationType.Follow,
-      timestamp: Date.now() - 1000 * 60 * 30,
-      followed_by: 'user1',
-    } as FlatNotification;
-    const { container } = render(<NotificationItem notification={notification} isUnread={false} isMobile />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -244,7 +244,7 @@ function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof us
           iconAriaLabel="Paste"
           onClickIcon={() => void addContentForm.pasteFromClipboard()}
           iconClassName="mr-0 size-6 shrink-0 rounded-full text-foreground hover:bg-accent/50 hover:text-accent-foreground"
-          className="mb-0 h-auto gap-3 border-input bg-background/10! px-6 py-4 font-medium shadow-xs has-[input[aria-invalid=true]]:border-red-500"
+          className="mb-0 h-auto gap-3 border-input px-6 py-4 font-medium shadow-xs has-[input[aria-invalid=true]]:border-red-500"
           inputClassName="h-auto p-0 shadow-none"
           dataCy="add-content-url-input"
         />

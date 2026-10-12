@@ -3,7 +3,6 @@
 import { Users } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import { WHO_TO_FOLLOW_PAGE_SIZE } from '@/hooks/useUserStream/useUserStream.constants';
 import { useWhoToFollowFollowPreservation } from '@/hooks/useWhoToFollowFollowPreservation/useWhoToFollowFollowPreservation';
@@ -18,29 +17,24 @@ const LOAD_MORE_SKELETON_COUNT = 2;
  * WhoToFollow
  *
  * Main content component for the Who To Follow page.
- * Displays recommended users with infinite scroll pagination.
+ * Displays every recommended user the cached stream holds, in one list: Nexus serves `recommended`
+ * as a random sample of a small per-user pool and ignores `skip`, so there is no stream to page.
  */
 export function WhoToFollow() {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { preservedFollowedUserIds, handleFollowClick, isUserLoading } = useWhoToFollowFollowPreservation();
-  const { users, isLoading, isLoadingMore, hasMore, loadMore } = useUserStream({
+  const { users, isLoading, isLoadingMore } = useUserStream({
     streamId: UserStreamTypes.RECOMMENDED,
     limit: WHO_TO_FOLLOW_PAGE_SIZE,
     bufferSize: WHO_TO_FOLLOW_PAGE_SIZE,
     refillThreshold: WHO_TO_FOLLOW_PAGE_SIZE,
-    paginated: true,
     includeRelationships: true,
     includeCounts: true,
     excludeFollowing: true,
+    showAll: true,
     preserveFollowedUserIds: preservedFollowedUserIds,
   });
 
-  // Handle infinite scroll
-  const { sentinelRef } = useInfiniteScroll({
-    onLoadMore: loadMore,
-    hasMore,
-    isLoading: isLoadingMore,
-  });
   if (isLoading) {
     return (
       <Container className="mt-6 gap-4 lg:mt-0">
@@ -91,9 +85,6 @@ export function WhoToFollow() {
           />
         ))}
       </Container>
-
-      {/* Infinite scroll trigger */}
-      <Container overrideDefaults ref={sentinelRef} className="h-1" />
 
       {isLoadingMore && (
         <Container className="gap-4 py-4">

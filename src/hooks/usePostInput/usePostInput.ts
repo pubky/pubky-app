@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
-import { useDebounceCallback } from 'usehooks-ts';
+import { useDebounceCallback, useTimeout } from 'usehooks-ts';
 import { REPOST_OPTIMISTIC_PREPEND_VARIANTS } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_COVER_MAX_FILES,
+  ARTICLE_INLINE_SUPPORTED_MIME_TYPES,
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
   ARTICLE_SUPPORTED_FILE_TYPES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
@@ -17,6 +18,7 @@ import {
   POST_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
+import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useEditAttachments } from '@/hooks/useEditAttachments/useEditAttachments';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
@@ -26,7 +28,7 @@ import { usePost } from '@/hooks/usePost/usePost';
 import { useUndoRepost } from '@/hooks/useUndoRepost/useUndoRepost';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineImages';
+import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineMedia';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -50,6 +52,13 @@ import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.typ
  * - Clipboard paste handling for file attachments
  */
 type AttachmentRejectionReason = 'maxFiles' | 'unsupportedType' | 'imageTooLarge' | 'fileTooLarge';
+
+/**
+ * How long an article edit waits for the file rows of its inline attachments before the editor opens
+ * anyway. The read normally settles from Dexie at once; the cap keeps a degraded Nexus (its retries
+ * run for a minute) or a hung request from leaving the editor behind its skeleton.
+ */
+const EDIT_INLINE_MEDIA_MAX_WAIT_MS = 5000;
 
 const MAX_IMAGE_SIZE_LABEL = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
 const MAX_OTHER_SIZE_LABEL = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
@@ -100,7 +109,7 @@ export function usePostInput({
   onContentChange,
   onArticleModeChange,
   hasExternalContent,
-  keepInlineImages,
+  keepInlineMedia,
 }: UsePostInputOptions): UsePostInputReturn {
   const isLockAnnouncement = editLock != null;
 
@@ -137,15 +146,16 @@ export function usePostInput({
     setArticleTitle,
     lockTitle,
     setLockTitle,
+    restoreComposerDraft,
     reply,
     post,
     repost,
     edit,
     isSubmitting,
-    inlineImages,
+    inlineMedia: inlineMediaSession,
     uploadingCount,
     serializeArticleForLock,
-  } = usePost({ keepInlineImages });
+  } = usePost({ keepInlineMedia });
   const timelineFeed = useTimelineFeedContext();
   const { undoRepost } = useUndoRepost(isCollectionShare);
 
@@ -167,6 +177,35 @@ export function usePostInput({
           const isCover = index === 0 && !editRefIndexes.has(0);
           return !isCover && !editRefIndexes.has(index);
         });
+
+  // The inline attachments the body references at open. Their file rows type each one (the
+  // markdown never says video or image), and the rich editor imports the body only once, so the
+  // editor waits for them: `useEditAttachments` seeds the cover strip alone and never sees these.
+  const editInlineUris = editRefIndexes
+    ? (editAttachmentUris ?? []).filter((_uri, index) => editRefIndexes.has(index))
+    : [];
+  const { files: editInlineFiles, isLoading: isEditInlineMetadataLoading } = useAttachmentsMetadata({
+    fileUris: editInlineUris,
+  });
+  // Past the cap the editor opens with whatever rows landed: a slot without one imports as an image,
+  // exactly as it does when the read settles without a row
+  const [editInlineWaitExpired, setEditInlineWaitExpired] = useState(false);
+  useTimeout(
+    () => setEditInlineWaitExpired(true),
+    isEditInlineMetadataLoading && !editInlineWaitExpired ? EDIT_INLINE_MEDIA_MAX_WAIT_MS : null,
+  );
+  const isEditInlineMediaLoading = isEditInlineMetadataLoading && !editInlineWaitExpired;
+  // Session uploads know their own type; an edited article's attachments are typed by their rows
+  const inlineMedia = {
+    upload: inlineMediaSession.upload,
+    getPreviewUrl: inlineMediaSession.getPreviewUrl,
+    getMediaType: (uri: string) =>
+      inlineMediaSession.getMediaType(uri) ??
+      editInlineFiles.find((file) => file.uri === uri.trim())?.content_type ??
+      null,
+    getMediaName: (uri: string) =>
+      inlineMediaSession.getMediaName(uri) ?? editInlineFiles.find((file) => file.uri === uri.trim())?.name ?? null,
+  };
 
   // Seed and resolve the post's current attachments for the edit composer
   const { seededUris: seededAttachmentUris } = useEditAttachments({
@@ -239,6 +278,11 @@ export function usePostInput({
     onArticleModeChange?.(isArticle);
   }, [isArticle, onArticleModeChange]);
 
+  // The title and body inputs run ahead of `articleTitle` and `content` by the debounce. Null once
+  // the state has caught up.
+  const pendingArticleTitleRef = useRef<string | null>(null);
+  const pendingArticleBodyRef = useRef<string | null>(null);
+
   // Handle click outside to collapse (only when expanded prop is false)
   useEffect(() => {
     if (expanded) return;
@@ -262,12 +306,14 @@ export function usePostInput({
       // mounted composers cannot shadow each other.
       if (target instanceof Element && target.closest('[data-lock-title-input]')) return;
 
-      // An empty composer is not always idle — the lock flow holds the draft outside it.
+      // An empty composer is not always idle: the lock flow holds the draft outside it, and an
+      // article's inputs run ahead of the state by the debounce (the first keystrokes of a new
+      // article are pending, not empty)
       const isInProgress =
-        Boolean(content.trim()) ||
+        Boolean((pendingArticleBodyRef.current ?? content).trim()) ||
         tags.length > 0 ||
         attachments.length > 0 ||
-        Boolean(articleTitle.trim()) ||
+        Boolean((pendingArticleTitleRef.current ?? articleTitle).trim()) ||
         Boolean(hasExternalContent?.());
       if (!isInProgress) {
         setIsExpanded(false);
@@ -307,15 +353,44 @@ export function usePostInput({
     textarea.style.height = `${textarea.scrollHeight}px`;
   }, [content, isArticle, isExpanded]);
 
+  const getLatestArticle = () => ({
+    title: pendingArticleTitleRef.current ?? articleTitle,
+    body: pendingArticleBodyRef.current ?? content,
+  });
+
+  // Leaving article mode means the composer was emptied (a publish, a lock capture, a reset); the
+  // pending values went out with it, and a commit still on its timer must not write them back
+  useEffect(() => {
+    if (isArticle) return;
+    pendingArticleTitleRef.current = null;
+    pendingArticleBodyRef.current = null;
+  }, [isArticle]);
+
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
     if (isSubmitting || uploadingCount > 0) return;
 
+    // Articles publish what the editor holds right now: `articleTitle` and `content` trail the inputs
+    // by the debounce, and a publish read from them would drop an image inserted in the last half
+    // second, then delete its upload as unreferenced.
+    const latestArticle = isArticle
+      ? { title: pendingArticleTitleRef.current ?? articleTitle, body: pendingArticleBodyRef.current ?? content }
+      : undefined;
+    if (latestArticle) {
+      // The state catches up with the inputs here and the pending values are consumed: a debounce
+      // commit that fires after the publish has emptied the composer finds nothing left to apply
+      setArticleTitle(latestArticle.title);
+      setContent(latestArticle.body);
+      pendingArticleTitleRef.current = null;
+      pendingArticleBodyRef.current = null;
+    }
+    const hasBody = Boolean((latestArticle?.body ?? content).trim());
+
     // For replies, posts, and edits, require content or attachments. For reposts, content is optional. Content and title is required for articles.
     const totalAttachments = attachments.length + existingAttachments.length;
     if (
-      (variant !== POST_INPUT_VARIANT.REPOST && !content.trim() && totalAttachments === 0) ||
-      (isArticle && (!content.trim() || !articleTitle.trim()))
+      (variant !== POST_INPUT_VARIANT.REPOST && !hasBody && totalAttachments === 0) ||
+      (isArticle && (!hasBody || !(latestArticle?.title ?? articleTitle).trim()))
     )
       return;
 
@@ -432,12 +507,13 @@ export function usePostInput({
           isLockAnnouncement: isLockAnnouncement || undefined,
           originalAttachmentUris: seededAttachmentUris,
           preservedAttachmentUris: editPreservedUris,
+          article: latestArticle,
           onSuccess: handleSuccess,
         });
         break;
       case POST_INPUT_VARIANT.POST:
       default:
-        await post({ onSuccess: handleSuccess });
+        await post({ article: latestArticle, onSuccess: handleSuccess });
         break;
     }
   }, [
@@ -459,6 +535,8 @@ export function usePostInput({
     seededAttachmentUris,
     editPreservedUris,
     isSubmitting,
+    setArticleTitle,
+    setContent,
     uploadingCount,
     onSuccess,
     timelineFeed,
@@ -489,15 +567,11 @@ export function usePostInput({
     [setContent],
   );
 
-  // The title and body inputs run ahead of `articleTitle` and `content` by the debounce. Null once
-  // the state has caught up.
-  const pendingArticleTitleRef = useRef<string | null>(null);
-  const pendingArticleBodyRef = useRef<string | null>(null);
-
-  // Each render makes a new debounce and the old one's timer still fires, so a commit can carry an
-  // older value than the input holds: only a commit of the latest value clears it.
+  // Only a commit of the value the input still holds lands: a timer carrying an older value, or one
+  // that fires after a submit consumed the pending value, finds a mismatch and does nothing.
   const commitArticleTitle = useDebounceCallback((value: string) => {
-    if (pendingArticleTitleRef.current === value) pendingArticleTitleRef.current = null;
+    if (pendingArticleTitleRef.current !== value) return;
+    pendingArticleTitleRef.current = null;
     setArticleTitle(value);
   }, 500);
 
@@ -510,7 +584,8 @@ export function usePostInput({
   };
 
   const commitArticleBody = useDebounceCallback((markdown: string) => {
-    if (pendingArticleBodyRef.current === markdown) pendingArticleBodyRef.current = null;
+    if (pendingArticleBodyRef.current !== markdown) return;
+    pendingArticleBodyRef.current = null;
     setContent(markdown);
   }, 500);
 
@@ -520,11 +595,6 @@ export function usePostInput({
     pendingArticleBodyRef.current = markdown;
     commitArticleBody(markdown);
   };
-
-  const getLatestArticle = () => ({
-    title: pendingArticleTitleRef.current ?? articleTitle,
-    body: pendingArticleBodyRef.current ?? content,
-  });
 
   // Emoji insert handler
   const handleEmojiSelect = useEmojiInsert({
@@ -653,13 +723,14 @@ export function usePostInput({
     e.stopPropagation();
   }, []);
 
-  // Uploads image files and inserts their markdown at the rich-text editor's
+  // Uploads media files and inserts their markdown at the rich-text editor's
   // caret. Fallback for drops Lexical ignores (see handleDrop); the viewport
-  // uploading pill provides the in-flight feedback.
-  const insertInlineImagesAtCaret = async (files: File[]) => {
+  // uploading pill provides the in-flight feedback. Every kind shares the
+  // image syntax; the editor's import routes non-images by their session type.
+  const insertInlineMediaAtCaret = async (files: File[]) => {
     for (const file of files) {
       try {
-        const uri = await inlineImages.upload(file);
+        const uri = await inlineMedia.upload(file);
         markdownEditorRef.current?.focus();
         markdownEditorRef.current?.insertMarkdown(`![](${uri})`);
       } catch {
@@ -704,17 +775,17 @@ export function usePostInput({
       // at the editor: insert inline instead. Unsupported files fall through
       // to handleFilesAdded for its standard unsupported-type toast.
       if (isArticle && e.target instanceof Element && e.target.closest('.mdxeditor')) {
-        const imageFiles = files.filter((file) => ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type));
-        if (imageFiles.length > 0) {
-          void insertInlineImagesAtCaret(imageFiles);
+        const mediaFiles = files.filter((file) => ARTICLE_INLINE_SUPPORTED_MIME_TYPES.includes(file.type));
+        if (mediaFiles.length > 0) {
+          void insertInlineMediaAtCaret(mediaFiles);
           return;
         }
       }
 
       handleFilesAdded(files);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- insertInlineImagesAtCaret only uses stable refs and the upload handle
-    [handleFilesAdded, isArticle, inlineImages],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- insertInlineMediaAtCaret only uses stable refs and the upload handle
+    [handleFilesAdded, isArticle, inlineMediaSession],
   );
 
   // Trigger file input click
@@ -772,12 +843,14 @@ export function usePostInput({
     setArticleTitle,
     lockTitle,
     setLockTitle,
+    restoreComposerDraft,
     isDragging,
     isExpanded,
     isSubmitting,
     showEmojiPicker,
     setShowEmojiPicker,
-    inlineImages,
+    inlineMedia,
+    isEditInlineMediaLoading,
     uploadingCount,
     serializeArticleForLock,
     getLatestArticle,

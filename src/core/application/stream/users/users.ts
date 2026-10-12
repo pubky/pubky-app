@@ -5,7 +5,7 @@ import type {
   TMissingUsersParams,
   TUserStreamChunkResponse,
 } from '@/application/stream/users/users.types';
-import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
+import { NEXUS_USER_STREAM_MAX_LIMIT, NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
@@ -142,15 +142,17 @@ export class UserStreamApplication {
     cachedStream,
     replaceCache = false,
   }: TFetchStreamFromNexusParams): Promise<TUserStreamChunkResponse> {
-    // Fetch user IDs from Nexus
+    // Fetch user IDs from Nexus. A `limit` above the Nexus cap still sizes the cache read above;
+    // the request itself is clamped, and a page is exhausted against what was actually asked for.
+    const pageLimit = Math.min(limit, NEXUS_USER_STREAM_MAX_LIMIT);
     const userIds = await NexusUserStreamService.fetch({
       streamId,
-      params: { skip, limit, viewer_id: viewerId },
+      params: { skip, limit: pageLimit, viewer_id: viewerId },
     });
 
     if (isCurrent && !isCurrent())
       return { nextPageIds: [], cacheMissUserIds: [], skip: undefined, isExhausted: false };
-    const isExhausted = userIds.length < limit;
+    const isExhausted = userIds.length < pageLimit;
 
     // Handle empty response
     if (userIds.length === 0) {

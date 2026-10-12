@@ -1,4 +1,4 @@
-import type { LockFile, TUnlockedContent } from '@/services/locks/locks.types';
+import type { LockFile, TPaykitConnectionState, TUnlockedContent } from '@/services/locks/locks.types';
 
 /**
  * What the Pay to Unlock modal shows. Two of these exist for safety rather than display:
@@ -28,11 +28,18 @@ export interface UsePayToUnlockResult {
   isStalled: boolean;
   /** The lock creator's pubky to hand to Bitkit, until the reader's Paykit link with them is `connected`. */
   handshakePubky: string | null;
-  /** A link state the reader cannot fix by waiting or paying — shown as a notice instead of the QR. */
-  connectionIssue: 'recovery_required' | 'blocked' | null;
-  /** True while the install screen's wallet check or the proof submission is in flight. */
+  /** Last observed creator-side link state, not an acknowledgement of a scan or payment-request delivery. */
+  connectionState: TPaykitConnectionState | null;
+  /** True until the first link read answers — the wait then says it is checking, not that Bitkit needs a confirm. */
+  isConnectionPending: boolean;
+  /** The server is waiting for the reader to finish setting up their wallet — shown as a notice instead of the QR. */
+  walletSetupNeeded: boolean;
+  /** True while a wallet check started from a button or the proof submission is in flight. */
   isSubmitting: boolean;
-  /** Install screen: re-checks the wallet, then submits. Retry screen: submits again (a fresh id after a failed/expired payment). */
+  /**
+   * Install screen: re-checks the wallet, then submits. Retry screen: submits again (a fresh id after a failed/expired
+   * payment), checking the wallet first after `failed`; with none, it moves to the install screen.
+   */
   retry: () => void;
   /** Resume a parked wait. The purchase was never abandoned, so this only restarts the polling. */
   recheck: () => void;

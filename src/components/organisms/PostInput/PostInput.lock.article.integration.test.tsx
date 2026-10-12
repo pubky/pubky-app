@@ -123,12 +123,12 @@ vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', async () => {
     MarkdownEditor: (props: {
       markdown: string;
       onChange: (markdown: string, initialMarkdownNormalize: boolean) => void;
-      inlineImages: { upload: (file: File) => Promise<string> };
+      inlineMedia: { upload: (file: File) => Promise<string> };
     }) => {
       mocks.editor = {
         markdown: props.markdown,
         change: (markdown) => props.onChange(markdown, false),
-        upload: props.inlineImages.upload,
+        upload: props.inlineMedia.upload,
       };
       useEffect(
         () => () => {
@@ -199,7 +199,7 @@ const settle = () => act(() => vi.advanceTimersByTime(500));
 const writeArticle = async () => {
   render(<PostInput variant={POST_INPUT_VARIANT.POST} expanded />);
   fireEvent.click(screen.getByTestId('article-button'));
-  fireEvent.change(screen.getByPlaceholderText('Article Title'), { target: { value: 'Essay' } });
+  fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Essay' } });
 
   mocks.commitCreateFile.mockResolvedValueOnce(IMAGE_URI);
   await act(async () => {
@@ -307,6 +307,28 @@ describe('PostInput - locking an article with body images (integration)', () => 
     expect(mocks.createLockContent).not.toHaveBeenCalled();
     expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
     expect(mocks.commitDeleteFile).not.toHaveBeenCalled();
+  });
+
+  it('keeps the cover when the lock is abandoned after it was applied', async () => {
+    await writeArticle();
+    fireEvent.click(screen.getByTestId('add-cover'));
+    applyLock();
+
+    fireEvent.click(screen.getByTestId('lock-switch')); // off: the whole draft, cover included, comes back
+
+    expect(mocks.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Articles support one cover image' }),
+    );
+    fireEvent.click(screen.getByTestId('post-button'));
+    await waitFor(() => expect(mocks.commitCreatePost).toHaveBeenCalledTimes(1));
+
+    expect(mocks.commitCreatePost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: JSON.stringify({ title: 'Essay', body: 'Intro\n\n![shot](attachment:1)\n\nOutro' }),
+        attachments: [expect.objectContaining({ name: 'cover.png' })],
+        attachmentUris: [IMAGE_URI],
+      }),
+    );
   });
 
   it('locks what the editor reported last, before the composer state caught up with it', async () => {

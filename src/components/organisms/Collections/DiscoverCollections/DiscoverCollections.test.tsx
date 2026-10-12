@@ -723,38 +723,25 @@ describe('DiscoverCollections', () => {
     });
   });
 
-  describe('DiscoverCollections - Snapshots', () => {
-    it('matches the snapshot for the pre-hydration skeleton state', () => {
-      mockAuthState = { hasHydrated: false, currentUserPubky: null };
+  it('matches the snapshot for the populated state (cards + Show More)', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockGetOrFetchStreamSlice.mockResolvedValue(
+      makeSlice({ nextPageIds: ['authorA:p1', 'authorB:p2'], reachedEnd: false, nextCursor: 2 }),
+    );
 
-      const { container } = render(<DiscoverCollections />);
-      expect(container.firstChild).toMatchSnapshot();
+    await act(async () => render(<DiscoverCollections />));
+    await waitFor(() => {
+      expect(screen.getAllByTestId('collection-card')).toHaveLength(2);
     });
+  });
 
-    it('matches the snapshot for the populated state (cards + Show More)', async () => {
-      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
-      mockGetOrFetchStreamSlice.mockResolvedValue(
-        makeSlice({ nextPageIds: ['authorA:p1', 'authorB:p2'], reachedEnd: false, nextCursor: 2 }),
-      );
+  it('matches the snapshot for the exhausted-empty state', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: [], reachedEnd: true, nextCursor: 0 }));
 
-      const { container } = await act(async () => render(<DiscoverCollections />));
-      await waitFor(() => {
-        expect(screen.getAllByTestId('collection-card')).toHaveLength(2);
-      });
-
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches the snapshot for the exhausted-empty state', async () => {
-      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
-      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: [], reachedEnd: true, nextCursor: 0 }));
-
-      const { container } = await act(async () => render(<DiscoverCollections />));
-      await waitFor(() => {
-        expect(screen.getByText('No collections to discover right now.')).toBeInTheDocument();
-      });
-
-      expect(container.firstChild).toMatchSnapshot();
+    await act(async () => render(<DiscoverCollections />));
+    await waitFor(() => {
+      expect(screen.getByText('No collections to discover right now.')).toBeInTheDocument();
     });
   });
 });

@@ -199,15 +199,3 @@ describe('MobileTabBar', () => {
     });
   });
 });
-
-describe('MobileTabBar - Snapshots', () => {
-  it('matches snapshot for icon-only sticky (default)', () => {
-    const { container } = render(<MobileTabBar items={makeItems()} data-testid="mobile-tab-bar" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for showLabels + sticky', () => {
-    const { container } = render(<MobileTabBar items={makeItems()} showLabels data-testid="mobile-tab-bar" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

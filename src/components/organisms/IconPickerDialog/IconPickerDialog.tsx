@@ -203,7 +203,7 @@ export function IconPickerDialog({
             onChange={(event) => handleQueryChange(event.target.value)}
             placeholder={resolvedSearchPlaceholder}
             aria-label={resolvedSearchPlaceholder}
-            className="h-14 rounded-md border border-dashed border-input px-6 pr-12 text-lg shadow-none [&::-webkit-search-cancel-button]:appearance-none"
+            className="h-14 rounded-md border border-dashed border-input bg-background/20 px-6 pr-12 text-lg shadow-none [&::-webkit-search-cancel-button]:appearance-none"
             data-testid="icon-picker-search"
           />
           {query.length > 0 && (

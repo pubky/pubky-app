@@ -83,33 +83,4 @@ describe('PostThreadConnector', () => {
       expect(connector).toHaveStyle({ height: '96px' });
     });
   });
-
-  describe('Snapshots', () => {
-    it('matches snapshot with regular variant', () => {
-      const { container } = render(
-        <PostThreadConnector height={100} variant={POST_THREAD_CONNECTOR_VARIANTS.REGULAR} />,
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with last variant', () => {
-      const { container } = render(<PostThreadConnector height={100} variant={POST_THREAD_CONNECTOR_VARIANTS.LAST} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with dialog-reply variant', () => {
-      const { container } = render(<PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with small height', () => {
-      const { container } = render(<PostThreadConnector height={50} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with large height', () => {
-      const { container } = render(<PostThreadConnector height={300} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

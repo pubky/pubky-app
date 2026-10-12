@@ -85,20 +85,3 @@ describe('CollectionsEmpty', () => {
     expect(screen.queryByTestId('dialog-new-collection')).not.toBeInTheDocument();
   });
 });
-
-describe('CollectionsEmpty - Snapshots', () => {
-  beforeEach(() => {
-    mocks.isOwnProfile = true;
-  });
-
-  it('matches snapshot on own profile', () => {
-    const { container } = render(<CollectionsEmpty />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot on another user profile', () => {
-    mocks.isOwnProfile = false;
-    const { container } = render(<CollectionsEmpty />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

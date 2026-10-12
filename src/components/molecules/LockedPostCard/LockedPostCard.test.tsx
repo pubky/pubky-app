@@ -43,8 +43,8 @@ describe('LockedPostCard', () => {
     expect(screen.queryByText('••••••')).not.toBeInTheDocument();
   });
 
-  // The reader's lock file arrives after the first paint, and can fail to arrive at all. The mask
-  // fills the slot until then so the pill is never half-empty.
+  // No price to show (a failed lock file, a lock without a price, or a caller that does not pass
+  // `isLoading`): the mask fills the slot so the pill is never half-empty.
   it('falls back to the mask while the price is unknown', () => {
     render(<LockedPostCard title="" />);
     expect(screen.getByText('••••••')).toBeInTheDocument();
@@ -108,6 +108,26 @@ describe('LockedPostCard', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // The price is still loading, so a dimmed pill would read as "disabled" and then flash to active.
+  it('covers the whole pill with one spinner while loading, keeping its contents for width', () => {
+    render(<LockedPostCard title="" isLoading />);
+
+    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unlock' })).toHaveClass('invisible');
+    expect(screen.getByText('••••••').parentElement).toHaveClass('invisible');
+  });
+
+  it('keeps Unlock inert but undimmed while loading, even with a handler', () => {
+    const onUnlock = vi.fn();
+    render(<LockedPostCard title="" isLoading onUnlock={onUnlock} />);
+    const button = screen.getByRole('button', { name: 'Unlock' });
+
+    expect(button).toBeDisabled();
+    expect(button.parentElement).not.toHaveClass('opacity-50');
+    fireEvent.click(button);
+    expect(onUnlock).not.toHaveBeenCalled();
   });
 
   it('honours an explicit disabled even with a handler', () => {

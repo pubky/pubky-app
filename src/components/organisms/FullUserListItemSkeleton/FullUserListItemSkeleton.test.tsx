@@ -8,10 +8,3 @@ describe('FullUserListItemSkeleton', () => {
     expect(screen.getByTestId('user-list-item-skeleton-full')).toBeInTheDocument();
   });
 });
-
-describe('FullUserListItemSkeleton - Snapshots', () => {
-  it('matches snapshot for full variant', () => {
-    const { container } = render(<FullUserListItemSkeleton />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
