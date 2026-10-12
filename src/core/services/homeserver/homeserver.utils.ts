@@ -29,7 +29,7 @@ const PUBKY_HOSTNAME_PREFIX = '_pubky.';
 // Auth polling defaults
 /** Default interval between auth flow polls in milliseconds */
 const AUTH_POLL_INTERVAL_MS = 100;
-/** Maximum auth poll attempts (3000 × 100ms = 5 minutes max wait) */
+/** Maximum auth poll attempts (3000 × 100ms = 5 minutes of polling; time parked on a hidden page does not count) */
 const AUTH_POLL_MAX_ATTEMPTS = 3_000;
 
 /**
@@ -146,24 +146,82 @@ export const parseResponseOrUndefined = async <T>({
 };
 
 /**
+ * Times a flow is resumed after the relay could not be reached before the flow counts as dead. Each resume waits
+ * until the page is visible (a second when it already is).
+ */
+const AUTH_POLL_MAX_RESUMES = 60;
+
+/**
+ * How long the relay keeps an approval (per the SDK docs). A flow older than this when the page is visible again
+ * cannot find its approval, so it fails at once instead of resuming.
+ */
+const AUTH_RELAY_RETENTION_MS = 5 * 60 * 1000;
+
+/**
+ * A transport failure with no HTTP status: the relay never answered (aborted, refused or offline fetch).
+ * The SDK reports it as a `RequestError` without `data.statusCode`; an HTTP error response carries one.
+ */
+const isTransientPollError = (error: unknown): boolean => {
+  if (extractStatusCode(error) !== undefined) return false;
+  return error instanceof Error && error.name === 'RequestError';
+};
+
+/**
+ * Resolves at once when the page is visible (after a second), else on the next `visibilitychange` to visible.
+ * Aborting the signal resolves it early and drops the listener.
+ */
+const waitUntilVisible = (signal?: AbortSignal): Promise<void> =>
+  new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const done = () => {
+      clearTimeout(timer);
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onChange);
+      signal?.removeEventListener('abort', done);
+      resolve();
+    };
+    const onChange = () => {
+      if (document.visibilityState !== 'hidden') done();
+    };
+    signal?.addEventListener('abort', done);
+    if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+      timer = setTimeout(done, 1000);
+      return;
+    }
+    document.addEventListener('visibilitychange', onChange);
+  });
+
+/**
  * Creates a cancelable auth approval wrapper around an AuthFlow.
  * Pubky rc7: awaitApproval consumes the WASM handle, so we use tryPollOnce to keep flow.free() usable.
  * @param flow - The auth flow to wrap
- * @param options - Optional configuration with poll interval in milliseconds
+ * @param options - Optional configuration: poll interval in milliseconds and `resume`, which reconnects to
+ * the same relay channel. The SDK gives up on a flow after a few failed relay requests and never polls again,
+ * so a later `tryPollOnce` cannot recover it; only a resumed flow can pick up an approval posted meanwhile.
  * @returns CancelableAuthApproval with awaitApproval promise and cancel function
  */
 export const createCancelableAuthApproval = (
-  flow: AuthFlow,
-  options?: { pollIntervalMs?: number; maxPollAttempts?: number },
+  initialFlow: Pick<AuthFlow, 'tryPollOnce' | 'free'>,
+  options?: {
+    pollIntervalMs?: number;
+    maxPollAttempts?: number;
+    resume?: () => Pick<AuthFlow, 'tryPollOnce' | 'free'>;
+  },
 ): CancelableAuthApproval => {
+  let flow = initialFlow;
   const pollIntervalMs = options?.pollIntervalMs ?? AUTH_POLL_INTERVAL_MS;
   const maxPollAttempts = options?.maxPollAttempts ?? AUTH_POLL_MAX_ATTEMPTS;
 
   let canceled = false;
   let freed = false;
+  const waiting = new AbortController();
 
   const cancel = () => {
     canceled = true;
+    waiting.abort();
     if (freed) return;
     freed = true;
     try {
@@ -176,7 +234,10 @@ export const createCancelableAuthApproval = (
   const awaitApproval = (async () => {
     await sleep(0);
 
+    const startedAt = Date.now();
     let attempts = 0;
+    let resumes = 0;
+    let resumeError: unknown;
     for (;;) {
       if (canceled) throw createCanceledError();
       if (++attempts > maxPollAttempts) {
@@ -192,6 +253,28 @@ export const createCancelableAuthApproval = (
         if (maybeSession) return maybeSession;
       } catch (error) {
         if (canceled) throw createCanceledError();
+        // A mobile browser cuts the page's network once it goes to the background (the user is approving in
+        // Pubky Ring). The SDK gives up on the flow after a few failed relay requests, so wait until the
+        // page is visible again and resume the flow on the same relay channel: an approval made meanwhile is
+        // still there, and completes the sign-in.
+        if (options?.resume && isTransientPollError(error) && ++resumes <= AUTH_POLL_MAX_RESUMES) {
+          await waitUntilVisible(waiting.signal);
+          if (canceled) throw createCanceledError();
+          if (Date.now() - startedAt <= AUTH_RELAY_RETENTION_MS) {
+            try {
+              flow.free();
+            } catch {
+              // Ignore double-free or already-finalized WASM objects.
+            }
+            try {
+              flow = options.resume();
+              continue;
+            } catch (resumeFailure) {
+              // The channel cannot be resumed: fall through to the dead-flow error below.
+              resumeError = resumeFailure;
+            }
+          }
+        }
         // From the caller's view, tryPollOnce is one-shot: one call, one outcome
         // (pubky SDK 0.8 — it doesn't loop or retry on our behalf). If it throws,
         // we treat the flow as dead and fail fast — showing "session expired" now
@@ -201,6 +284,7 @@ export const createCancelableAuthApproval = (
           operation: 'awaitApproval',
           context: {
             originalError: error instanceof Error ? error.message : String(error),
+            resumeError: resumeError instanceof Error ? resumeError.message : undefined,
             statusCode: extractStatusCode(error),
           },
           cause: error,

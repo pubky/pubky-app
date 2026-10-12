@@ -19,7 +19,7 @@ describe('useLockFile', () => {
     vi.clearAllMocks();
     vi.mocked(LocksController.getOrFetchLockFile).mockResolvedValue({
       lockFile: MOCK_LOCK_FILE,
-      priceSats: '1000',
+      price: { amount: '1000', asset: 'BTC' as const },
     });
   });
 
@@ -35,15 +35,15 @@ describe('useLockFile', () => {
   it('exposes the price of a payment lock', async () => {
     const { result } = renderHook(() => useLockFile(LOCK_URL));
 
-    await waitFor(() => expect(result.current.priceSats).toBe('1000'));
+    await waitFor(() => expect(result.current.price).toEqual({ amount: '1000', asset: 'BTC' }));
   });
 
   it('replaces the cached descriptor and price when the URL changes', async () => {
     const nextFile = mockLockFile({ creator: 'pubkynext' });
     vi.mocked(LocksController.getOrFetchLockFile).mockImplementation(async ({ lockUrl }) =>
       lockUrl === LOCK_URL
-        ? { lockFile: MOCK_LOCK_FILE, priceSats: '1000' }
-        : { lockFile: nextFile, priceSats: '2000' },
+        ? { lockFile: MOCK_LOCK_FILE, price: { amount: '1000', asset: 'BTC' as const } }
+        : { lockFile: nextFile, price: { amount: '2000', asset: 'BTC' as const } },
     );
     const { result, rerender } = renderHook(({ url }) => useLockFile(url), { initialProps: { url: LOCK_URL } });
     await waitFor(() => expect(result.current.lockFile).toBe(MOCK_LOCK_FILE));
@@ -51,7 +51,7 @@ describe('useLockFile', () => {
     rerender({ url: NEXT_LOCK_URL });
     expect(result.current.lockFile).toBeNull();
     await waitFor(() => expect(result.current.lockFile).toBe(nextFile));
-    expect(result.current.priceSats).toBe('2000');
+    expect(result.current.price).toEqual({ amount: '2000', asset: 'BTC' });
   });
 
   it('ignores a prior URL read that finishes after the URL changes', async () => {
@@ -60,15 +60,15 @@ describe('useLockFile', () => {
     vi.mocked(LocksController.getOrFetchLockFile).mockImplementation(({ lockUrl }) =>
       lockUrl === LOCK_URL
         ? new Promise((resolve) => (resolveOld = resolve))
-        : Promise.resolve({ lockFile: nextFile, priceSats: '2000' }),
+        : Promise.resolve({ lockFile: nextFile, price: { amount: '2000', asset: 'BTC' as const } }),
     );
     const { result, rerender } = renderHook(({ url }) => useLockFile(url), { initialProps: { url: LOCK_URL } });
     rerender({ url: NEXT_LOCK_URL });
     await waitFor(() => expect(result.current.lockFile).toBe(nextFile));
 
-    await act(async () => resolveOld({ lockFile: MOCK_LOCK_FILE, priceSats: '1000' }));
+    await act(async () => resolveOld({ lockFile: MOCK_LOCK_FILE, price: { amount: '1000', asset: 'BTC' as const } }));
     expect(result.current.lockFile).toBe(nextFile);
-    expect(result.current.priceSats).toBe('2000');
+    expect(result.current.price).toEqual({ amount: '2000', asset: 'BTC' });
   });
 
   it('skips every read when the url is nullish', async () => {
@@ -89,12 +89,12 @@ describe('useLockFile', () => {
     expect(result.current.lockFile).toBeNull();
   });
 
-  // `priceSats` is null both while loading and for a lock without a price; only this flag tells them apart.
+  // `price` is null both while loading and for a lock without a price; only this flag tells them apart.
   it('reports loading until the lock file arrives', async () => {
     const { result } = renderHook(() => useLockFile(LOCK_URL));
 
     expect(result.current.isLoading).toBe(true);
-    expect(result.current.priceSats).toBeNull();
+    expect(result.current.price).toBeNull();
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
   });

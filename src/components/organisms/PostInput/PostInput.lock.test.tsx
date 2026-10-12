@@ -6,6 +6,7 @@ import type { ComposerDraft } from '@/hooks/usePost/usePost.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import type { TLockPrice } from '@/services/locks/locks.types';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
@@ -17,6 +18,7 @@ import { POST_INPUT_VARIANT } from './PostInput.constants';
 
 const mocks = vi.hoisted(() => ({
   createLockContent: vi.fn(),
+  fetchPaykitSetupStatus: vi.fn(),
   commitCreate: vi.fn(),
   clearSession: vi.fn(),
   handleSubmit: vi.fn(), // the normal (non-lock) publish path
@@ -45,7 +47,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/controllers/locks/locks', () => ({
-  LocksController: { createLockContent: mocks.createLockContent, clearSession: mocks.clearSession },
+  LocksController: {
+    fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    createLockContent: mocks.createLockContent,
+    clearSession: mocks.clearSession,
+  },
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: { commitCreate: mocks.commitCreate },
@@ -68,7 +74,8 @@ vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => moc
 vi.mock('@/hooks/useLockFile/useLockFile', () => ({
   useLockFile: (lockUrl?: string) => ({
     lockFile: null,
-    priceSats: lockUrl ? '4321' : null,
+    price: lockUrl ? { amount: '4321', asset: 'BTC' as const } : null,
+    isLoading: false,
   }),
 }));
 
@@ -216,7 +223,7 @@ vi.mock('@/molecules/DialogLockContent/DialogLockContent', () => ({
   }) =>
     props.open ? (
       <div data-testid="lock-dialog">
-        <button data-testid="apply-lock" onClick={() => props.onApplied({ amountSats: '1234' })} />
+        <button data-testid="apply-lock" onClick={() => props.onApplied({ amount: '1234', asset: 'BTC' as const })} />
         <button data-testid="cancel-lock" onClick={() => props.onOpenChange(false)} />
       </div>
     ) : null,
@@ -228,11 +235,11 @@ vi.mock('@/organisms/DialogLocksAuth/DialogLocksAuth', () => ({
 vi.mock('@/molecules/LockedPostCard/LockedPostCard', () => ({
   LockedPostCard: ({
     title,
-    priceSats,
+    price,
     editableTitle,
   }: {
     title?: string;
-    priceSats?: string | null;
+    price?: TLockPrice | null;
     editableTitle?: { value: string; onChange: (value: string) => void };
   }) =>
     editableTitle ? (
@@ -242,7 +249,7 @@ vi.mock('@/molecules/LockedPostCard/LockedPostCard', () => ({
           value={editableTitle.value}
           onChange={(event) => editableTitle.onChange(event.target.value)}
         />
-        <span data-testid="lock-card-price">{priceSats ?? ''}</span>
+        <span data-testid="lock-card-price">{price?.amount ?? ''}</span>
       </>
     ) : (
       <div data-testid="locked-post-card">{title}</div>
@@ -288,6 +295,7 @@ const configureLock = async (body = 'secret body') => {
 describe('PostInput lock wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
     mocks.currentUserPubky = null;
     mocks.uploadingCount = 0;
     mocks.latestArticle = null;

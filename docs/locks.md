@@ -5,8 +5,9 @@ teaser advertising it. This doc starts with the mental model — what is differe
 rest of the app — and gets more detailed the further down you read. If you know pubky-app
 but not locks, read top to bottom.
 
-Phase 2 (epic **#2364**) makes locks **payable**: a creator sets a price in sats and the
-reader pays it from Bitkit.
+Creators price payable locks in BTC or USD. Readers pay from Bitkit using the
+receiving methods enabled by the server and creator. Setup is Bitcoin-only while
+Paykit Server's optional USDT configuration is absent.
 
 ## Table of contents
 
@@ -294,16 +295,22 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    setup notice in place of the handoff. A failed submission (network, rate limit) shows
    **Try again**, which keeps the saved id.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
-   created; with nothing submitted, the install screen has no link state. `none` shows the handoff
-   that hands the creator's pubky to Bitkit: a QR on desktop (clicking it copies the pubky, for a
-   wallet on a device without a camera), and below the `lg` breakpoint (1024px)
-   a **Pay with Bitkit** button instead, since a phone cannot scan its own screen; it opens
-   `bitkit://contact?pubky=<creator pubky>`, which routes Bitkit to the screen a scan reaches. `handshake` keeps it: that state only
-   means Paykit has opened its half of the link and is waiting for the reader's wallet, which still
-   needs the creator's pubky to answer. `connected` removes it; `recovery_required` and `blocked`
-   replace it with a notice, because the reader cannot clear either from here (`blocked` is a policy
-   switch a fresh bundle id does not reset). A failed read keeps the last state and the handoff — it
-   never invents one, and never stops the task polling.
+   created; with nothing submitted, the install screen has no link state. Until the first read
+   answers, the modal says "Checking your Bitkit connection…". A failed first read keeps it there
+   until a read succeeds, the purchase ends or polling parks. Wallet setup, connection notices and
+   the parked copy take precedence over this checking copy. With wallet setup complete, `none`,
+   `handshake` and `recovery_required` keep the creator's contact handoff available: a QR on desktop
+   (clicking it copies the creator pubky for a wallet on a device without a camera), and below the
+   `lg` breakpoint (1024px) an **Open in Bitkit** button instead, since a phone cannot scan its own
+   screen. It opens `bitkit://contact?pubky=<creator pubky>`, the same contact screen
+   as a scan. The instructions ask the reader to add the creator only if needed; none of these
+   states proves whether the reader has already scanned. `handshake` says the link is connecting;
+   `recovery_required` shows a restoration-needed notice alongside the retained handoff, without
+   promising automatic recovery. `connected` removes the handoff and asks the reader to check
+   Bitkit for a payment request and confirm when it appears. It does not acknowledge request delivery.
+   `blocked` replaces the handoff with a support notice: it is a policy switch a fresh bundle id
+   does not reset. A failed read keeps the last state and the handoff — it never invents one, and
+   never stops the task polling. Wallet setup still hides the handoff as described in step 4.
 6. Waiting runs two loops on their own timers, and neither waits on the other: the task lookup every
    **3 seconds**, the link read every **1 second**. Each skips a tick while its own call is still out,
    so a link read that hangs cannot delay a finished payment. The task lookup is the only lifecycle
@@ -423,9 +430,25 @@ profile/(own)/layout.tsx → ProfilePageContainer
 ## Marker tracking
 
 Locks use one `paykit-payment` criterion holding the recipient (always the lock's creator),
-the amount in sats as a string, and `BTC` as the asset. A reader unlocks it by paying from
-Bitkit (see [Reading a lock post](#reading-a-lock-post)). Creator-configurable credential
-TTLs still come later. The descriptor and readable post are cached in IndexedDB; media bytes are not.
+an atomic amount as a string, and its denomination: `BTC` (sats) or `USD` (cents). The price
+dialog uses exact decimal conversion and clears the amount when the currency changes. Cards and checkout retain the denomination from the lock file.
+
+Paykit Server creates the immutable request and fixed conversion quote from the creator's
+enabled receiving methods. BTC prices need no conversion for Bitcoin; USD prices include a
+BTC quote. If the server explicitly enables USDT receiving, it can additionally offer USDT
+at the quoted rate. Bitkit shows the exact payment and fee before approval; Pubky App does
+not calculate settlement rates.
+
+Before publishing, the app asks the Lock Server whether the authenticated creator can accept
+the selected denomination. Setup is Bitcoin-only when Paykit Server's optional `[usdt]`
+configuration is absent. USD pricing by itself does not request a USDT address. An approval
+callback is checked against the server before setup is marked ready.
+
+Locks unlocks after Paykit Server verifies a full, on-time payment on one accepted method.
+USDT requires successful Arbitrum block inclusion. Pubky App does not query Arbitrum or verify
+transaction hashes. Retry, stored purchase IDs, and content recovery use the same flow for
+both price currencies (see [Reading a lock post](#reading-a-lock-post)).
+Creator-configurable credential TTLs still come later. The descriptor and readable post are cached in IndexedDB; media bytes are not.
 
 Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.
@@ -509,3 +532,9 @@ Never commit either.
 - Creator side: [ADR 0022](adr/0022-locks-creator-publishing.md)
 - Issues: #2297 (bundle-id persistence), #2368 (reader payment), #2369 (payment-only locks),
   #2468 (multi-tab read-back), #1998 (Phase 1 epic).
+
+## SDK and server integration
+
+This branch pins the built Locks SDK to [Git commit `245253a6d7c9`](https://github.com/pubky/locks/commit/245253a6d7c9559fbcbdffc33250dacf28108d69), generated from [Locks source `c692fb70522c`](https://github.com/pubky/locks/commit/c692fb70522cf75025b86ad72a3b98fa7ef84e72). A normal `npm ci` installs the JS/WASM files; no SDK release or local build overlay is required. The artifact README records its source and checksums.
+
+Deploy with [Locks #75](https://github.com/pubky/locks/pull/75) and Paykit Server's merged [#47](https://github.com/pubky/paykit-server/pull/47). The SDK's denomination-aware setup check requires the matching Locks server. Keep Paykit Server's `[usdt]` section absent for Bitcoin-only Bitkit clients, including [iOS #887](https://github.com/synonymdev/bitkit-ios/pull/887) and [Android #1437](https://github.com/synonymdev/bitkit-android/pull/1437).

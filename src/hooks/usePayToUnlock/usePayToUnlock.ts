@@ -57,6 +57,9 @@ export function usePayToUnlock({
   // manual way back the wait would be stuck for good.
   const [isStalled, setIsStalled] = useState(false);
   const [connectionState, setConnectionState] = useState<TPaykitConnectionState | null>(null);
+  // Not derived from a null `connectionState`: that is also what a finished payment resets to, and
+  // the content download that follows must not look like a link that was never read.
+  const [isConnectionPending, setIsConnectionPending] = useState(false);
   const [walletSetupNeeded, setWalletSetupNeeded] = useState(false);
   const readerPubky = useAuthStore((state) => state.currentUserPubky);
   // `currentUserPubky` is persisted and rehydrates first; the session is rebuilt asynchronously.
@@ -115,6 +118,7 @@ export function usePayToUnlock({
   const applyStatus = (gen: number, bundleId: string, status: TVerificationStatus): boolean => {
     if (status === 'completed') {
       setConnectionState(null);
+      setIsConnectionPending(false);
       void finish(gen, bundleId);
       return false;
     }
@@ -123,6 +127,7 @@ export function usePayToUnlock({
       deadBundleId.current = bundleId;
       checkWalletOnRetry.current = status === 'failed';
       setConnectionState(null);
+      setIsConnectionPending(false);
       toast({ variant: 'error', description: `The payment ${status}. You can try again.` });
       setStage('retry');
       return false;
@@ -147,6 +152,9 @@ export function usePayToUnlock({
     if (!lockFile) return;
     waitingBundleId.current = bundleId;
     setIsStalled(false);
+    // Pending only while this wait actually reads the link; a wait that does not (already connected,
+    // or a content re-download) has nothing to be pending about.
+    setIsConnectionPending(watchConnection);
 
     let active = true;
     let stallTimer: number | null = null;
@@ -218,6 +226,7 @@ export function usePayToUnlock({
       // A failed read invents no state: the last one stands, QR included.
       if (!state) return true;
       setConnectionState(state);
+      setIsConnectionPending(false);
       // `connected` needs no more reads; `blocked` is an operator switch this reader cannot flip.
       return state !== 'connected' && state !== 'blocked';
     });
@@ -326,6 +335,7 @@ export function usePayToUnlock({
     setStage('checking');
     setIsStalled(false);
     setConnectionState(null);
+    setIsConnectionPending(false);
     setWalletSetupNeeded(false);
     completedContent.current = null;
     deadBundleId.current = null;
@@ -411,21 +421,19 @@ export function usePayToUnlock({
     onCompleted(content);
   };
 
-  // `handshake` is the server's half only: Paykit has opened the link and waits for the reader's
-  // wallet, which still needs the creator pubky to answer. So the QR stays up until `connected`.
-  // Wallet setup comes first: scanning cannot help before it is done.
+  // Link state does not acknowledge a QR scan. Keep the contact handoff available through
+  // recovery as well: a stale link can need recovery before the reader has added the creator.
   const handshakePubky =
-    !walletSetupNeeded && (connectionState === 'none' || connectionState === 'handshake')
+    !walletSetupNeeded &&
+    (connectionState === 'none' || connectionState === 'handshake' || connectionState === 'recovery_required')
       ? (lockFile?.creator ?? null)
       : null;
-  // Neither state is something the reader can act on from here, so they are surfaced as notices.
-  const connectionIssue =
-    connectionState === 'recovery_required' || connectionState === 'blocked' ? connectionState : null;
   return {
     stage,
     isStalled,
     handshakePubky,
-    connectionIssue,
+    connectionState,
+    isConnectionPending,
     walletSetupNeeded,
     isSubmitting,
     retry,
