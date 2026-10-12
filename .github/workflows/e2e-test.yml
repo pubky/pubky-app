@@ -11,6 +11,10 @@ on:
       - master
       - dev
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   rebuild_images:
     name: Getting images to rebuild
@@ -153,26 +157,37 @@ jobs:
         with:
           path: pubky-app
 
+      # The Cypress binary lives outside node_modules; cache it alongside so a hit
+      # can skip `npm ci` (which is what downloads it) entirely.
+      - name: Restore node_modules cache
+        id: node-modules
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            pubky-app/node_modules
+            ~/.cache/Cypress
+          key: e2e-node-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubky-app/.nvmrc', 'pubky-app/package-lock.json', 'pubky-app/patches/*.patch') }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: 'pubky-app/.nvmrc'
-          cache: 'npm'
+          cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
           cache-dependency-path: 'pubky-app/package-lock.json'
 
-      - name: Cache node modules
-        uses: actions/cache@v6
+      - name: Install Cypress dependencies
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        working-directory: pubky-app
+        run: npm ci
+
+      - name: Save node_modules cache
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
         with:
           path: |
             pubky-app/node_modules
-            pubky-app/.next/cache
-          key: ${{ runner.os }}-node-${{ hashFiles('pubky-app/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install Cypress dependencies
-        working-directory: pubky-app
-        run: npm ci
+            ~/.cache/Cypress
+          key: ${{ steps.node-modules.outputs.cache-primary-key }}
 
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
