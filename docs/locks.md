@@ -303,7 +303,10 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    needs the creator's pubky to answer. `connected` removes it; `recovery_required` and `blocked`
    replace it with a notice, because the reader cannot clear either from here (`blocked` is a policy
    switch a fresh bundle id does not reset). A failed read keeps the last state and the handoff — it
-   never invents one, and never stops the task polling.
+   never invents one, and never stops the task polling. Until the first read answers, the modal says
+   "Checking your Bitkit connection…" instead of awaiting payment. A failed first read keeps it there
+   until a read succeeds, the purchase ends or polling parks. Wallet setup, connection notices and
+   the parked copy take precedence over this checking copy.
 6. Waiting runs two loops on their own timers, and neither waits on the other: the task lookup every
    **3 seconds**, the link read every **1 second**. Each skips a tick while its own call is still out,
    so a link read that hangs cannot delay a finished payment. The task lookup is the only lifecycle

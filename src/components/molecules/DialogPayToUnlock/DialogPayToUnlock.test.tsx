@@ -142,8 +142,10 @@ describe('DialogPayToUnlock', () => {
   // The notices say something the checking copy does not, so they win while the link is unknown.
   it.each([
     ['the wallet setup notice', { walletSetupNeeded: true }, /Finish setting up Bitkit/],
+    ['the blocked notice', { connectionIssue: 'blocked' }, /cannot receive payments from you/],
+    ['the recovery notice', { connectionIssue: 'recovery_required' }, /is being restored/],
     ['the parked copy', { isStalled: true }, /Still waiting for the payment/],
-  ])('waiting + unknown link: shows %s instead of the checking copy', (_name, state, copy) => {
+  ] as const)('waiting + unknown link: shows %s instead of the checking copy', (_name, state, copy) => {
     renderDialog('waiting', { isConnectionPending: true, ...state });
 
     expect(screen.getByText(copy)).toBeInTheDocument();
