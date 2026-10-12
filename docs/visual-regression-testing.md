@@ -13,7 +13,8 @@ interaction tests for those).
 - Baselines: `__screenshots__/<file>/<name>-<browser>-<platform>.png`, one per
   browser (chromium/firefox/webkit) × platform (darwin/linux).
 - Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `matchVrtFrameScreenshot`),
-  `vrt.setup.ts` (global mocks), `vrt.clock.ts`, `vrt.viewports.ts`.
+  `vrt.setup.ts` (global mocks), `vrt.clock.ts`, `vrt.viewports.ts`,
+  `vrt.scroll.ts` (`scrollElementToEnd`).
 - Reference example: `src/test/vrt/feed/Home.vrt.test.tsx`.
 
 ## Writing a test
@@ -53,9 +54,9 @@ those baselines, delete the PNGs first so they are regenerated from scratch.
 - **Time** — `renderForVRT` calls `freezeNow()`; mock any relative-time hook to
   the stable formatter in `vrt.clock.ts`.
 - **Waits** — every wait in the harness is bounded (`fonts`, viewport ack,
-  image preload/decode, dynamic icons, cursor park) and rejects with a message
-  naming the wait, so a stall is never reported as a generic
-  `Test timed out in 30000ms`. An untimed `document.fonts.ready` or
+  image preload/decode, dynamic icons, cursor park, sentinel intersection) and
+  rejects with a message naming the wait, so a stall is never reported as a
+  generic `Test timed out in 30000ms`. An untimed `document.fonts.ready` or
   `image.decode()` has no limit at all, and a Playwright action without
   `timeout` is given whatever is left of the test budget by Vitest, so its
   `.catch` runs too late to help. Inter Tight is loaded in `vrt.setup.ts`
@@ -64,6 +65,17 @@ those baselines, delete the PNGs first so they are regenerated from scratch.
   a surface whose first capture legitimately runs long on a busy macOS runner
   (the `next/dynamic` markdown editor, the Collections overview) gets its own
   `it`/`describe` timeout rather than a change to the project `testTimeout`.
+- **Programmatic scroll** — `element.scrollTop = element.scrollHeight` paints
+  in every browser. WebKit still may not deliver a viewport
+  `IntersectionObserver` callback in time when the scroller is inside a
+  transformed popover (Radix / Floating UI): the callback lands late, the
+  list's 300ms load debounce misses the caller's poll, and the next page
+  never appears. Paging tests scroll with `scrollElementToEnd` from
+  `vrt.scroll.ts`. It writes the position, dispatches `scroll`, yields a
+  frame, and waits until the sentinel is intersecting (or has unmounted)
+  before returning, so the following `expect.poll` measures the page load
+  rather than the missed observation. The sentinel is the element whose
+  `data-testid` ends in `sentinel`.
 - **Randomness** — `Math.random` is seeded by the harness, so name generators
   and placeholders stay stable.
 - **Images** — `next/image` is mocked to a plain `<img>` in `vrt.setup.ts` (the

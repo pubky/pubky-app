@@ -7,6 +7,7 @@ import { PostTagPopoverWrapper } from '@/molecules/PostTagPopoverWrapper/PostTag
 import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
 import { TaggedList } from '@/molecules/TaggedList/TaggedList';
 import { renderForVRT } from '@/test-utils/vrt';
+import { scrollElementToEnd } from '@/test-utils/vrt.scroll';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 
 // Keep real rows, Radix popovers, CSS and IntersectionObserver. Only data/auth
@@ -45,10 +46,7 @@ const preview = ids.slice(0, 5).map((id) => ({ id, name: id }));
 const tag = { label: 'bitcoin', taggers: preview, taggers_count: 50, relationship: false };
 const list = () => page.getByRole('list', { name: 'Who tagged expanded list' });
 const rowCount = () => list().element().querySelectorAll('[data-testid^="user-list-item-"]').length;
-const scrollToEnd = () => {
-  const element = list().element();
-  element.scrollTop = element.scrollHeight;
-};
+const scrollToEnd = () => scrollElementToEnd(list().element());
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -77,7 +75,7 @@ describe.each([
     // Cached profile membership is false, but the fresh response includes us.
     await expect.element(page.getByRole('button', { name: 'This is you' })).toBeInTheDocument();
     expect(list().element().scrollHeight).toBeGreaterThan(list().element().clientHeight);
-    scrollToEnd();
+    await scrollToEnd();
     await expect.element(page.getByRole('button', { name: 'Retry loading taggers' })).toBeVisible();
     expect(rowCount()).toBe(50);
     expect(UserController.fetchTaggers).toHaveBeenCalledTimes(2);
@@ -127,7 +125,7 @@ it('loads the next page inside the home-post nested taggers popover', async () =
   await page.getByRole('button', { name: 'Show all 51 taggers' }).click();
   await expect.poll(rowCount).toBe(50);
   await expect.element(page.getByRole('button', { name: 'This is you' })).toBeInTheDocument();
-  scrollToEnd();
+  await scrollToEnd();
   await expect.poll(rowCount).toBe(51);
   expect(PostController.fetchTaggers).toHaveBeenCalledTimes(2);
   expect(PostController.fetchTaggers).toHaveBeenLastCalledWith(
@@ -146,7 +144,7 @@ it('expands and pages the mobile profile preview taggers', async () => {
   await page.getByRole('button', { name: 'Show 50 users who tagged' }).click();
   await expect.poll(rowCount).toBe(50);
   expect(UserController.fetchTaggers).toHaveBeenLastCalledWith(expect.objectContaining({ user_id: 'profile' }));
-  scrollToEnd();
+  await scrollToEnd();
   await expect.poll(rowCount).toBe(51);
   await page.getByRole('button', { name: 'Show 50 users who tagged' }).click();
   await expect.element(list()).not.toBeInTheDocument();
