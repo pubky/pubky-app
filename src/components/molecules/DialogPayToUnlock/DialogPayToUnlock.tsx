@@ -150,7 +150,9 @@ export function DialogPayToUnlock({
         >
           <Container overrideDefaults className="flex min-w-0 flex-1 flex-col gap-3">
             <Container overrideDefaults className="flex flex-col gap-1">
-              <Typography className={cn(FIELD_LABEL_CLASS, isPaid && 'text-brand')}>{'COST TO UNLOCK'}</Typography>
+              <Typography className={cn(FIELD_LABEL_CLASS, isPaid && 'text-brand')}>
+                {isPaid ? 'PAYMENT RECEIVED' : 'COST TO UNLOCK'}
+              </Typography>
               <Typography className="text-2xl font-bold text-foreground">
                 {formatLockPrice(price, { space: true })}
               </Typography>

@@ -66,10 +66,14 @@ const renderDialog = (stage: TPayToUnlockStage, overrides: DialogOverrides = {})
   render(dialogElement(stage, overrides), { wrapper: overrides.wrapper });
 
 describe('DialogPayToUnlock', () => {
-  it.each(['waiting', 'paid', 'unopened'] as const)('keeps USD denomination in the %s checkout state', (stage) => {
+  it.each([
+    ['waiting', 'COST TO UNLOCK'],
+    ['paid', 'PAYMENT RECEIVED'],
+    ['unopened', 'PAYMENT RECEIVED'],
+  ] as const)('keeps USD denomination in the %s checkout state', (stage, label) => {
     renderDialog(stage, { price: { amount: '500', asset: 'USD' } });
     expect(screen.getByText('$5.00')).toBeInTheDocument();
-    expect(screen.getByText('COST TO UNLOCK')).toBeInTheDocument();
+    expect(screen.getByText(label)).toBeInTheDocument();
   });
 
   // clearAllMocks keeps implementations, so a rejected copy would leak into later tests.
@@ -340,7 +344,7 @@ describe('DialogPayToUnlock', () => {
     renderDialog('paid', { onViewContent });
 
     expect(screen.getByRole('heading', { name: 'Unlocked' })).toBeInTheDocument();
-    expect(screen.getByText('COST TO UNLOCK')).toHaveClass('text-brand');
+    expect(screen.getByText('PAYMENT RECEIVED')).toHaveClass('text-brand');
     expect(screen.getByText('₿ 1,000')).toBeInTheDocument();
     expect(screen.getByText('Thank you for supporting creators!')).toBeInTheDocument();
     expect(document.querySelector('.lucide-circle-check')).toHaveClass('size-[72px]');
@@ -367,7 +371,7 @@ describe('DialogPayToUnlock', () => {
     const onRecheck = vi.fn();
     renderDialog('unopened', { onRecheck });
 
-    expect(screen.getByText('COST TO UNLOCK')).toHaveClass('text-brand');
+    expect(screen.getByText('PAYMENT RECEIVED')).toHaveClass('text-brand');
     expect(screen.getByText(/could not be opened/)).toBeInTheDocument();
     expect(screen.queryByText(/Check Bitkit/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Try again/ })).not.toBeInTheDocument();
