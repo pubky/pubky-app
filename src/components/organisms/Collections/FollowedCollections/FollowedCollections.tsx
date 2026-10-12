@@ -147,7 +147,7 @@ export function FollowedCollections() {
           // the timeline's `isPostDeleted` guard in `useVisualFeedTiles`. The
           // live query observes `post_details`, so deleting flips visibility
           // immediately without a refresh.
-          if (detail && detail.kind === COLLECTION_KIND_STRING && !isPostDeleted(detail.content)) {
+          if (detail && detail.kind === COLLECTION_KIND_STRING && !isPostDeleted(detail)) {
             collectionIds.push(ids[i]);
             if (collectionIds.length >= visibleLimit) break;
           }

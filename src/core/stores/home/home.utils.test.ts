@@ -4,6 +4,7 @@ import { CONTENT, ContentType, REACH, ReachType, SORT, SortType } from './home.t
 import {
   getHomeStreamIdFromFilters,
   getKindFromContent,
+  getSourceFromReach,
   getStreamId,
   getStreamIdFromFilters,
   matchesFilters,
@@ -41,6 +42,17 @@ describe('filters.utils', () => {
         CONTENT.FILES,
       ]);
       expect([...covered].sort()).toEqual(Object.values(CONTENT).sort());
+    });
+  });
+
+  describe('getSourceFromReach', () => {
+    it.each([
+      [REACH.ALL, 'all'],
+      [REACH.NETWORK, 'wot'],
+      [REACH.FOLLOWING, 'following'],
+      [REACH.FRIENDS, 'friends'],
+    ] as const)('maps %s to the %s source', (reach, source) => {
+      expect(getSourceFromReach(reach)).toBe(source);
     });
   });
 

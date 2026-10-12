@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   escapeForInlineScript,
+  getProfileLocalEditTtlMs,
   getPulseClientKey,
   getPulseEndpoint,
   getRuntimeConfig,
@@ -9,6 +10,7 @@ import {
   getSentryReplaysOnErrorSampleRate,
   getSentryReplaysSessionSampleRate,
   getSentryTracesSampleRate,
+  getShopUrl,
   readClientConfig,
   readServerConfig,
   resetRuntimeConfigForTests,
@@ -33,6 +35,7 @@ const RUNTIME_ENV_VALUES: Partial<Record<keyof RuntimeConfig, string>> = {
   pkarrRelays: '["https://pkarr.runtime.example.com"]',
   testnet: 'false',
   deployEnv: 'production',
+  shopUrl: 'https://shop.runtime.example.com/marketplace',
   sentryDsn: 'https://abc123@o123.ingest.runtime.example.com/456',
   sentryEnvironment: 'staging',
   sentryTracesSampleRate: '0.5',
@@ -132,11 +135,63 @@ describe('runtime-config resolver', () => {
     vi.stubEnv('VITEST', '');
   }
 
+  describe('profile indexing protection', () => {
+    it('is optional in a deployed config and defaults to five minutes', () => {
+      simulateDeployedEnv();
+      setNetworkRuntimeEnv();
+      expect(readServerConfig().profileLocalEditTtlMs).toBe(300_000);
+    });
+
+    it('uses the configured window in deployed mode and in the injected client config', () => {
+      simulateDeployedEnv();
+      setNetworkRuntimeEnv();
+      process.env[PUBKY_RUNTIME_ENV_NAMES.profileLocalEditTtlMs] = '1800000';
+      process.env[PUBKY_RUNTIME_ENV_NAMES.ttlUserMs] = '60000';
+      const serverConfig = readServerConfig();
+      expect(serverConfig.profileLocalEditTtlMs).toBe(1_800_000);
+      window[RUNTIME_CONFIG_WINDOW_KEY] = serverConfig;
+      expect(getProfileLocalEditTtlMs()).toBe(1_800_000);
+      expect(serializeRuntimeConfig()).toContain('"profileLocalEditTtlMs":1800000');
+    });
+
+    it.each(['0', '-1', '1.5', 'invalid'])('rejects an invalid configured window: %s', (value) => {
+      process.env[PUBKY_RUNTIME_ENV_NAMES.profileLocalEditTtlMs] = value;
+      expect(() => readServerConfig()).toThrow();
+      simulateDeployedEnv();
+      setNetworkRuntimeEnv();
+      expect(() => readServerConfig()).toThrow();
+    });
+
+    it('rejects an invalid injected window', () => {
+      window[RUNTIME_CONFIG_WINDOW_KEY] = { ...readServerConfig(), profileLocalEditTtlMs: 0 };
+      expect(() => readClientConfig()).toThrow();
+    });
+  });
+
   describe('server', () => {
+    it.each([undefined, '', 'not-a-url', 'javascript:alert(1)'])(
+      'fails deployed startup with an absent or invalid Shop URL: %s',
+      (shopUrl) => {
+        simulateDeployedEnv();
+        setAllRuntimeEnv();
+        expect(readServerConfig().shopUrl).toBe(RUNTIME_ENV_VALUES.shopUrl);
+        if (shopUrl === undefined) delete process.env[PUBKY_RUNTIME_ENV_NAMES.shopUrl];
+        else process.env[PUBKY_RUNTIME_ENV_NAMES.shopUrl] = shopUrl;
+        expect(() => readServerConfig()).toThrow(
+          expect.objectContaining({
+            cause: expect.objectContaining({
+              issues: [expect.objectContaining({ path: ['shopUrl'] })],
+            }),
+          }),
+        );
+      },
+    );
+
     it('parses PUBKY_RUNTIME_* when present', () => {
       setAllRuntimeEnv();
       const config = readServerConfig();
       expect(config.nexusUrl).toBe('https://nexus.runtime.example.com');
+      expect(config.shopUrl).toBe('https://shop.runtime.example.com/marketplace');
       expect(config.pkarrRelays).toEqual(['https://pkarr.runtime.example.com']);
       expect(config.testnet).toBe(false);
       expect(config.sentryDsn).toBe('https://abc123@o123.ingest.runtime.example.com/456');
@@ -186,6 +241,7 @@ describe('runtime-config resolver', () => {
       expect(config.nexusUrl).toBe(NETWORK_RUNTIME_DEFAULTS.nexusUrl);
       // The staging default, spelled out:
       expect(config.nexusUrl).toBe('https://nexus.staging.pubky.app');
+      expect(config.shopUrl).toBe('https://shop.staging.pubky.app/marketplace');
       expect(config.testnet).toBe(NETWORK_RUNTIME_DEFAULTS.testnet);
     });
 
@@ -247,6 +303,16 @@ describe('runtime-config resolver', () => {
   });
 
   describe('client', () => {
+    it('uses the injected Shop URL at call time and includes it in serialization', () => {
+      setAllRuntimeEnv();
+      window[RUNTIME_CONFIG_WINDOW_KEY] = {
+        ...NETWORK_RUNTIME_DEFAULTS,
+        shopUrl: 'https://shop.injected.example.com/marketplace',
+      };
+      expect(getShopUrl()).toBe('https://shop.injected.example.com/marketplace');
+      expect(serializeRuntimeConfig()).toContain('"shopUrl":"https://shop.injected.example.com/marketplace"');
+    });
+
     it('reads and validates window.__PUBKY_CONFIG__', () => {
       window[RUNTIME_CONFIG_WINDOW_KEY] = {
         ...NETWORK_RUNTIME_DEFAULTS,

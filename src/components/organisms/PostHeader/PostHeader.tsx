@@ -52,7 +52,7 @@ export function PostHeader({
   // from a separate usePostDetails instance that can resolve after this one.
   // Never commit author data for a deleted post — hold the skeleton until the
   // parent swaps it out, so a username can't flash and then vanish.
-  const isDeleted = !isReplyInput && isPostDeleted(postDetails?.content);
+  const isDeleted = !isReplyInput && isPostDeleted(postDetails);
 
   if (isLoading || isDeleted) {
     return <PostHeaderSkeleton showUserInfo={showUserInfo} visuallyHideAvatar={visuallyHideAvatar} size={size} />;

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { resetDatabase } from '@/database/franky/franky.helpers';
 import { buildCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { NexusPostDetails } from '@/services/nexus/nexus.types';
 
@@ -56,6 +57,14 @@ describe('PostDetailsModel', () => {
       const postDetails = new PostDetailsModel(mockPostDetailsData);
 
       expect(postDetails.attachments).toBeNull();
+    });
+
+    it('should carry the Nexus deleted flag through the model', () => {
+      const mockPostDetailsData = createPostDetailsData(testPostId1, MOCK_NEXUS_POST_DETAILS);
+
+      const postDetails = new PostDetailsModel({ ...mockPostDetailsData, deleted: true });
+
+      expect(postDetails.deleted).toBe(true);
     });
   });
 
@@ -149,6 +158,34 @@ describe('PostDetailsModel', () => {
       expect(postDetails2).not.toBeNull();
       expect(postDetails1!.attachments).toEqual(['file1.jpg']);
       expect(postDetails2!.attachments).toBeNull();
+    });
+  });
+
+  describe('filterDeleted', () => {
+    it('filters out a Nexus-shaped tombstone (empty content, flag set)', async () => {
+      const compositeId = buildCompositeId({ pubky: testAuthor, id: testPostId1 });
+      await PostDetailsModel.bulkSave([
+        { ...createPostDetailsData(testPostId1, MOCK_NEXUS_POST_DETAILS), content: '', deleted: true },
+      ]);
+
+      expect(await PostDetailsModel.filterDeleted([compositeId])).toEqual([]);
+    });
+
+    it('filters out a legacy sentinel row', async () => {
+      const compositeId = buildCompositeId({ pubky: testAuthor, id: testPostId1 });
+      await PostDetailsModel.bulkSave([
+        { ...createPostDetailsData(testPostId1, MOCK_NEXUS_POST_DETAILS), content: DELETED },
+      ]);
+
+      expect(await PostDetailsModel.filterDeleted([compositeId])).toEqual([]);
+    });
+
+    it('keeps a live post and a post with no cached details (fail-open)', async () => {
+      const liveId = buildCompositeId({ pubky: testAuthor, id: testPostId1 });
+      const missingId = buildCompositeId({ pubky: testAuthor, id: 'no-details' });
+      await PostDetailsModel.bulkSave([createPostDetailsData(testPostId1, MOCK_NEXUS_POST_DETAILS)]);
+
+      expect(await PostDetailsModel.filterDeleted([liveId, missingId])).toEqual([liveId, missingId]);
     });
   });
 });

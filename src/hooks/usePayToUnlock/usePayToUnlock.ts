@@ -16,18 +16,21 @@ export const CONNECTION_POLL_INTERVAL_MS = 1000;
  * When to park the polling, on the wall clock — a frozen background tab skips attempts, so
  * counting them would under-measure. Parking is NOT failing: the purchase and its stored bundle
  * id survive, the screen stays on "awaiting payment", and the tab becoming visible again grants
- * a fresh window. There is no server-side deadline to align with.
+ * a fresh window. While the server is still creating the invoice, it counts from the server's
+ * deadline for that instead.
  */
 export const STALL_AFTER_MS = 3 * 60 * 1000;
 
-/**
- * The 502 wraps both "wallet not ready" and "Paykit down" — the server cannot tell us which.
- * TODO:[Locks] ask the locks side for a distinct code, so this toast can name the cause.
- */
-const SUBMIT_FAILED_TOAST = 'The payment could not be started. Check that Bitkit is set up, or try again later.';
+const SUBMIT_FAILED_TOAST = 'The payment could not be started. Try again later.';
 const NO_WALLET_TOAST = 'Bitkit is not set up yet. Finish the steps, then try again.';
 const FINISH_FAILED_TOAST =
   'Your payment went through, but the content could not be opened. Nothing is lost — try again.';
+
+// A time the browser cannot parse leaves the plain 3 minutes; a NaN delay would park at once.
+const stallNotBeforeFor = (admissionDeadlineAt: string | null): number => {
+  const deadline = admissionDeadlineAt ? Date.parse(admissionDeadlineAt) : NaN;
+  return Number.isNaN(deadline) ? 0 : deadline + STALL_AFTER_MS;
+};
 
 /**
  * State machine behind the Pay to Unlock modal.
@@ -54,6 +57,7 @@ export function usePayToUnlock({
   // manual way back the wait would be stuck for good.
   const [isStalled, setIsStalled] = useState(false);
   const [connectionState, setConnectionState] = useState<TPaykitConnectionState | null>(null);
+  const [walletSetupNeeded, setWalletSetupNeeded] = useState(false);
   const readerPubky = useAuthStore((state) => state.currentUserPubky);
   // `currentUserPubky` is persisted and rehydrates first; the session is rebuilt asynchronously.
   // Without it the bundle id read silently reports "none" (the homeserver service refuses
@@ -63,6 +67,9 @@ export function usePayToUnlock({
   // A saved id whose payment ended failed/expired — the one id the submit re-read must NOT reuse.
   // Deliberately not "null means dead": a concurrent tab's fresh id must survive the re-read.
   const deadBundleId = useRef<string | null>(null);
+  // The server creates the invoice after the submission, so a reader without a wallet ends `failed`
+  // rather than failing the submission. Without this check, Try again would mint id after id.
+  const checkWalletOnRetry = useRef(false);
   // One generation per modal opening: every async continuation checks it, so a closed (or
   // reopened) modal can't apply stale results or keep polling.
   const generation = useRef(0);
@@ -114,6 +121,7 @@ export function usePayToUnlock({
     if (status === 'failed' || status === 'expired') {
       // Unretryable: Try again mints a fresh id (the saved one is overwritten before it).
       deadBundleId.current = bundleId;
+      checkWalletOnRetry.current = status === 'failed';
       setConnectionState(null);
       toast({ variant: 'error', description: `The payment ${status}. You can try again.` });
       setStage('retry');
@@ -127,13 +135,25 @@ export function usePayToUnlock({
    * The wait: two loops on their own timers, plus the shared park. Splitting them is the point —
    * a link read that hangs must not hold up the read that decides whether the reader has paid.
    */
-  const startPolling = (gen: number, bundleId: string, watchConnection: boolean, lookupNow = false) => {
+  const startPolling = (
+    gen: number,
+    bundleId: string,
+    watchConnection: boolean,
+    {
+      lookupNow = false,
+      admissionDeadlineAt = null,
+    }: { lookupNow?: boolean; admissionDeadlineAt?: string | null } = {},
+  ) => {
     if (!lockFile) return;
     waitingBundleId.current = bundleId;
     setIsStalled(false);
 
     let active = true;
     let stallTimer: number | null = null;
+    // The reader cannot pay before the invoice exists, so the stall window does not start before the
+    // server's deadline for creating it. 0 once there is no such deadline. Only the reopen path seeds
+    // it from its own read; otherwise lookups that all fail would park 3 minutes in, long before it.
+    let stallNotBefore = stallNotBeforeFor(admissionDeadlineAt);
     // Bumped when the wait parks: an answer from before the park is no longer ours to apply.
     let epoch = 0;
 
@@ -175,10 +195,19 @@ export function usePayToUnlock({
     };
 
     const paymentLoop = addLoop(POLL_INTERVAL_MS, async (isCurrent) => {
-      const status = await LocksController.fetchPaymentStatus({ lockFile, bundleId }).catch(() => null);
+      const task = await LocksController.fetchPaymentStatus({ lockFile, bundleId }).catch(() => null);
       if (!isCurrent()) return false;
       // A failed lookup or a null task is transient mid-wait; both mean "keep waiting".
-      if (!status || applyStatus(gen, bundleId, status)) return true;
+      if (!task) return true;
+      setWalletSetupNeeded(task.walletSetupNeeded);
+      // Re-armed when the deadline appears, and again when it clears: the invoice now exists, so the
+      // reader gets a full window to pay.
+      const notBefore = stallNotBeforeFor(task.admissionDeadlineAt);
+      if (notBefore !== stallNotBefore) {
+        stallNotBefore = notBefore;
+        armStallTimer();
+      }
+      if (applyStatus(gen, bundleId, task.status)) return true;
       stop();
       return false;
     });
@@ -197,15 +226,18 @@ export function usePayToUnlock({
     // Independent of both loops: even a call that never settles must expose Check again on time.
     const armStallTimer = () => {
       if (stallTimer !== null) window.clearTimeout(stallTimer);
-      stallTimer = window.setTimeout(() => {
-        if (!active || generation.current !== gen) return;
-        epoch++;
-        loops.forEach((loop) => {
-          loop.inFlight = false;
-          if (loop.timer !== null) window.clearTimeout(loop.timer);
-        });
-        setIsStalled(true);
-      }, STALL_AFTER_MS);
+      stallTimer = window.setTimeout(
+        () => {
+          if (!active || generation.current !== gen) return;
+          epoch++;
+          loops.forEach((loop) => {
+            loop.inFlight = false;
+            if (loop.timer !== null) window.clearTimeout(loop.timer);
+          });
+          setIsStalled(true);
+        },
+        Math.max(STALL_AFTER_MS, stallNotBefore - Date.now()),
+      );
     };
 
     // The reader pays in Bitkit, so this tab is backgrounded (timers frozen) for most of the wait.
@@ -242,21 +274,22 @@ export function usePayToUnlock({
 
   // A reopen while an earlier submission is still out submits again; `startPayment` serializes the
   // two per reader and lock, so the second one replays the saved id instead of minting another.
-  const attemptPayment = async (gen: number, checkWallet: boolean) => {
+  const attemptPayment = async (gen: number, fromInstall: boolean) => {
     if (!lockFile || !readerPubky || !session || submittingGeneration.current === gen) return;
     submittingGeneration.current = gen;
     setIsSubmitting(true);
 
     try {
-      if (checkWallet) {
+      if (fromInstall || checkWalletOnRetry.current) {
         const hasWallet = await LocksController.hasPaykitReceiver(readerPubky);
         if (generation.current !== gen) return;
         if (!hasWallet) {
           toast({ variant: 'warning', description: NO_WALLET_TOAST });
+          setStage('install');
           return;
         }
         // Off the install screen before submitting: a close there skips the "still running" prompt.
-        setStage('checking');
+        if (fromInstall) setStage('checking');
       }
 
       const { bundleId, status } = await LocksController.startPayment({
@@ -273,9 +306,9 @@ export function usePayToUnlock({
       if (applyStatus(gen, bundleId, status)) startPolling(gen, bundleId, true);
     } catch {
       // Already reported by the Err factory. Try again replays the saved id; a failure that started
-      // on the install screen goes back there, because Try again skips the wallet check.
+      // on the install screen goes back there, the only screen whose button always checks the wallet.
       if (generation.current !== gen) return;
-      setStage(checkWallet ? 'install' : 'retry');
+      setStage(fromInstall ? 'install' : 'retry');
       toast({ variant: 'error', description: SUBMIT_FAILED_TOAST });
     } finally {
       if (submittingGeneration.current === gen) {
@@ -293,8 +326,10 @@ export function usePayToUnlock({
     setStage('checking');
     setIsStalled(false);
     setConnectionState(null);
+    setWalletSetupNeeded(false);
     completedContent.current = null;
     deadBundleId.current = null;
+    checkWalletOnRetry.current = false;
     // A wallet check from the last opening may still be out; its `finally` no longer owns the flag.
     submittingGeneration.current = null;
     setIsSubmitting(false);
@@ -305,8 +340,9 @@ export function usePayToUnlock({
         if (generation.current !== gen) return;
 
         if (stored) {
-          const status = await LocksController.fetchPaymentStatus({ lockFile, bundleId: stored });
+          const task = await LocksController.fetchPaymentStatus({ lockFile, bundleId: stored });
           if (generation.current !== gen) return;
+          const status = task?.status;
           // An ended payment is settled by this lookup alone: submitting it again would only echo
           // the same status back.
           if (status === 'completed' || status === 'failed' || status === 'expired') {
@@ -315,8 +351,11 @@ export function usePayToUnlock({
           }
           // A task that is already running needs no second submission: the connection state has its
           // own lookup now, and re-submitting would only re-confirm what the lookup just said.
-          if (status) {
-            if (applyStatus(gen, stored, status)) startPolling(gen, stored, true);
+          if (task) {
+            setWalletSetupNeeded(task.walletSetupNeeded);
+            if (applyStatus(gen, stored, task.status)) {
+              startPolling(gen, stored, true, { admissionDeadlineAt: task.admissionDeadlineAt });
+            }
             return;
           }
         } else {
@@ -362,7 +401,7 @@ export function usePayToUnlock({
     setStage('waiting');
     // Unknown state included: only a settled link (or an operator block) ends the watch.
     const watchConnection = paymentStillRunning && connectionState !== 'connected' && connectionState !== 'blocked';
-    startPolling(generation.current, bundleId, watchConnection, true);
+    startPolling(generation.current, bundleId, watchConnection, { lookupNow: true });
   };
 
   const viewContent = () => {
@@ -374,10 +413,23 @@ export function usePayToUnlock({
 
   // `handshake` is the server's half only: Paykit has opened the link and waits for the reader's
   // wallet, which still needs the creator pubky to answer. So the QR stays up until `connected`.
+  // Wallet setup comes first: scanning cannot help before it is done.
   const handshakePubky =
-    connectionState === 'none' || connectionState === 'handshake' ? (lockFile?.creator ?? null) : null;
+    !walletSetupNeeded && (connectionState === 'none' || connectionState === 'handshake')
+      ? (lockFile?.creator ?? null)
+      : null;
   // Neither state is something the reader can act on from here, so they are surfaced as notices.
   const connectionIssue =
     connectionState === 'recovery_required' || connectionState === 'blocked' ? connectionState : null;
-  return { stage, isStalled, handshakePubky, connectionIssue, isSubmitting, retry, recheck, viewContent };
+  return {
+    stage,
+    isStalled,
+    handshakePubky,
+    connectionIssue,
+    walletSetupNeeded,
+    isSubmitting,
+    retry,
+    recheck,
+    viewContent,
+  };
 }

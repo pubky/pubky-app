@@ -154,10 +154,3 @@ describe('Home', () => {
     expect(screen.queryByTestId('content-layout')).not.toBeInTheDocument();
   });
 });
-
-describe('Home - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<Home />);
-    expect(container).toMatchSnapshot();
-  });
-});

@@ -1,10 +1,11 @@
+import { NEXUS_USERS_BY_IDS_MAX_IDS } from '@/config/nexus';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUser, NexusUserIdsStream } from '@/services/nexus/nexus.types';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import { getNexusResponseStartedAt, markNexusResponseStartedAt, queryNexus } from '@/services/nexus/nexus.utils';
 import { userStreamApi } from '@/services/nexus/stream/users/userStream.api';
 import type {
   TFetchUserStreamParams,
@@ -83,12 +84,27 @@ export class NexusUserStreamService {
     }
     // Canonicalize (sorted user_ids) so identical concurrent batches share one query key and
     // coalesce in the query cache instead of racing the rate-limited by_ids endpoint (PUBKY-APP-B3).
-    const { url, body } = userStreamApi.usersByIds({ ...params, user_ids: [...params.user_ids].sort() });
-    return await queryNexus<NexusUser[]>({
-      url,
-      method: HttpMethod.POST,
-      body: JSON.stringify(body),
-      force,
-    });
+    const sortedIds = [...params.user_ids].sort();
+    const fetchSlice = async (user_ids: Pubky[]) => {
+      const { url, body } = userStreamApi.usersByIds({ ...params, user_ids });
+      return await queryNexus<NexusUser[]>({ url, method: HttpMethod.POST, body: JSON.stringify(body), force });
+    };
+    // One request returns the response as queryNexus stamped it (see getNexusResponseStartedAt)
+    if (sortedIds.length <= NEXUS_USERS_BY_IDS_MAX_IDS) {
+      return await fetchSlice(sortedIds);
+    }
+    // Nexus takes at most NEXUS_USERS_BY_IDS_MAX_IDS ids per request, so a longer list goes in
+    // sequential slices; the merged response carries the earliest start time of its parts.
+    const users: NexusUser[] = [];
+    let startedAt = Infinity;
+    for (let start = 0; start < sortedIds.length; start += NEXUS_USERS_BY_IDS_MAX_IDS) {
+      const page = await fetchSlice(sortedIds.slice(start, start + NEXUS_USERS_BY_IDS_MAX_IDS));
+      startedAt = Math.min(startedAt, getNexusResponseStartedAt(page) ?? 0);
+      users.push(...page);
+    }
+    if (startedAt > 0 && Number.isFinite(startedAt)) {
+      markNexusResponseStartedAt(users, startedAt);
+    }
+    return users;
   }
 }

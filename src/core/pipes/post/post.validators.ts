@@ -14,12 +14,12 @@ export class PostValidators {
 
   static async validatePostId({ postId, message }: TValidatePostIdParams): Promise<string> {
     const parentPost = await PostController.getDetails({ compositeId: postId });
-    // Treat tombstones (`content === '[DELETED]'`) as not-found. Pre-tombstone
-    // refactor the hard-delete branch fully removed the row so `!parentPost`
-    // caught this; now the row sticks around as a tombstone and we need an
-    // explicit content check or replies / repost validation would silently
-    // pass against a deleted parent.
-    if (!parentPost || isPostDeleted(parentPost.content)) {
+    // Treat tombstones (the Nexus `deleted` flag, or the legacy `[DELETED]`
+    // content) as not-found. Pre-tombstone refactor the hard-delete branch
+    // fully removed the row so `!parentPost` caught this; now the row sticks
+    // around as a tombstone and we need an explicit deleted check or replies /
+    // repost validation would silently pass against a deleted parent.
+    if (!parentPost || isPostDeleted(parentPost)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, `${message} not found`, {
         service: ErrorService.Local,
         operation: 'validatePostId',

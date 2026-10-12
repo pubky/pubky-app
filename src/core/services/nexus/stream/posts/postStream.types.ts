@@ -1,6 +1,7 @@
 import type { Pubky } from '@/models/models.types';
 import type { WotDomainDepth } from '@/models/stream/post/postStream.types';
 import type { StreamSorting, TPaginationParams, TPaginationRangeParams } from '@/services/nexus/nexus.types';
+import type { NexusSearchReach } from '@/services/nexus/search/search.types';
 
 export enum STREAM_PREFIX {
   POSTS = 'v0/stream/posts',
@@ -105,6 +106,7 @@ export type TStreamExtraParams = {
   post_id?: string;
   // Full-text query; populated only for StreamSource.CONTENT_SEARCH.
   q?: string;
+  reach?: NexusSearchReach;
 };
 
 export type TPostStreamFetchParams = {
@@ -126,4 +128,5 @@ export type TStreamIdBreakdown = {
   domainTags?: string;
   // Decoded full-text query; only for CONTENT_SEARCH breakdowns (undefined when the id is malformed).
   searchQuery?: string;
+  searchReach?: NexusSearchReach;
 };

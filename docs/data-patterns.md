@@ -219,8 +219,9 @@ class PostController {
 // Application also normalizes data before persisting
 // Real: src/core/application/profile/profile.ts
 class ProfileApplication {
-  static async commitUpdate({ pubky, name, bio, image, links }) {
-    const { user, meta } = UserNormalizer.to({ name, bio, image, links, status }, pubky);
+  private static async commitChanges({ pubky, changes }) {
+    const published = UserNormalizer.fromPublished(await HomeserverService.getFreshJson(userUriBuilder(pubky)));
+    const { user, meta } = UserNormalizer.to(UserNormalizer.merge(published, changes), pubky);
     await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: user.toJson() });
     await LocalProfileService.updateDetails(user, pubky);
   }
@@ -238,6 +239,17 @@ return await HomeserverService.request<RawSettings>({ method: HttpMethod.GET, ur
 const settingsJson = await HomeserverService.request<RawSettings>({ method: HttpMethod.GET, url });
 return SettingsNormalizer.from(settingsJson);
 ```
+
+## Article Inline Media (ADR-0023)
+
+Article bodies (`kind: long`) embed images, videos, audio and PDFs with one markdown form. The media type is never in the body.
+
+- **Composer form** references the author's upload: `![alt](pubky://{author}/pub/pubky.app/files/{id})`, uploaded at insert time (`useInlineMediaUpload`).
+- **Published form** references a slot: `![alt](attachment:{n})`, where `n` indexes `post.attachments = [cover?, ...inline first-appearance, ...unreferenced originals]` (spec cap 10). `serializeArticleBody` / `deserializeArticleBody` in `src/libs/post/articleInlineMedia.ts` convert between the two and block publishing hand-typed refs, blob URIs, author file URIs in raw HTML or reference-style definitions, and over-cap bodies.
+- **Slot-0 cover rule**: `attachments[0]` is the cover unless the body references `attachment:0` (`articleHasInlineSlotZero`), consumed by `usePostArticle`, `usePostAttachmentsMedia`, `useVisualFeedTiles` and `postCoverPreload`. The cover stays image-only.
+- **Type from metadata**: the reader resolves each inline slot through `useAttachmentsMetadata` and matches rows by `uri` (Dexie returns key order, never request order); a same-session publish uses the local files store entry's `type`; unlocked content uses the bytes the reader holds; an external `https:` URL is typed by its extension (`inferMediaKindFromUrl`). Unknown is rendered as an image.
+- **Ownership invariant**: a ref resolves only when `attachments[n]` is a file URI owned by the author (`isAuthorFileUri`); otherwise an unavailable placeholder renders with no request.
+- Inline slots never leak into post-media surfaces (lightbox, list thumbnails, Visual feed, OG text): those read the cover slot only.
 
 ## Data Model Reference
 
@@ -286,6 +298,7 @@ bookmarks          — Bookmarked post references
 hot_tags           — Trending tag snapshots
 feeds              — Custom feed definitions
 moderation         — Content moderation state
+locks              — Cached lock descriptors and readable post metadata
 ```
 
 ## Quick Checklist
@@ -297,3 +310,4 @@ When working with data:
 - [ ] TTL updated on every write?
 - [ ] External data normalized through pipes?
 - [ ] Pipes are pure (no IO)?
+- [ ] Article body media referenced by `attachment:{n}` slot, type from file metadata?

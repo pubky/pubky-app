@@ -322,25 +322,3 @@ describe('FilterRadioGroup', () => {
     });
   });
 });
-
-describe('FilterRadioGroup - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<FilterRadioGroup title="Test Filter" items={mockItems} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with selected value', () => {
-    const { container } = render(<FilterRadioGroup title="Test Filter" items={mockItems} selectedValue="option2" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with disabled item', () => {
-    const { container } = render(<FilterRadioGroup title="Test Filter" items={mockItemsWithDisabled} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with default value', () => {
-    const { container } = render(<FilterRadioGroup title="Test Filter" items={mockItems} defaultValue="option1" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

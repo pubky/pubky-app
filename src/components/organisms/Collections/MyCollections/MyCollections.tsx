@@ -143,7 +143,7 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
       const details = await PostController.getDetailsByIds({ compositeIds: postIds });
       return postIds.filter((_, i) => {
         const detail = details[i];
-        return !detail || !isPostDeleted(detail.content);
+        return !detail || !isPostDeleted(detail);
       });
     }, [postIds]) ?? EMPTY_IDS;
 

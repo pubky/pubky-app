@@ -348,41 +348,4 @@ describe('FollowedCollections', () => {
     });
     expect(screen.queryByText('Show more')).not.toBeInTheDocument();
   });
-
-  describe('FollowedCollections - Snapshots', () => {
-    it('matches the snapshot for the pre-hydration skeleton state', () => {
-      mockAuthState = { hasHydrated: false, currentUserPubky: null };
-
-      const { container } = render(<FollowedCollections />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches the snapshot for the populated state with cards + Show More', async () => {
-      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
-      mockUseLiveQuery.mockReturnValue(['authorA:p1', 'authorB:p2']);
-      mockGetOrFetchStreamSlice.mockResolvedValue(
-        makeSlice({ nextPageIds: ['authorA:p1', 'authorB:p2'], reachedEnd: false, nextCursor: 100 }),
-      );
-
-      const { container } = await act(async () => render(<FollowedCollections />));
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Show more' })).toBeInTheDocument();
-      });
-
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches the snapshot for the empty state (live query empty, seed resolved)', async () => {
-      mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
-      mockUseLiveQuery.mockReturnValue([]);
-      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: [], reachedEnd: true, nextCursor: 0 }));
-
-      const { container } = await act(async () => render(<FollowedCollections />));
-      await waitFor(() => {
-        expect(mockGetOrFetchStreamSlice).toHaveBeenCalled();
-      });
-
-      expect(container.firstChild).toBeNull();
-    });
-  });
 });

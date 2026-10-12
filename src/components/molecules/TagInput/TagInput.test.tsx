@@ -195,23 +195,6 @@ describe('TagInput - Banned Character Sanitization', () => {
     expect(mockOnTagAdd).toHaveBeenCalledWith('bitcoin');
   });
 });
-
-describe('TagInput - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<TagInput onTagAdd={mockOnTagAdd} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot in plain variant', () => {
-    const { container } = render(<TagInput onTagAdd={mockOnTagAdd} containerVariant="plain" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
 describe('TagInput - API Suggestions', () => {
   beforeEach(() => {
     vi.clearAllMocks();

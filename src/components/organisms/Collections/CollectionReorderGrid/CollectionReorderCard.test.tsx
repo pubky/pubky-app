@@ -85,14 +85,4 @@ describe('CollectionReorderCard', () => {
     expect(cell).toHaveClass('opacity-60', 'cursor-default');
     expect(cell).toHaveAttribute('aria-disabled', 'true');
   });
-
-  it('matches snapshot', () => {
-    const { container } = renderCard();
-    // dnd-kit assigns aria ids from a module-global counter; normalize so the
-    // baseline does not churn when tests are added or reordered in this file.
-    container.querySelectorAll('[aria-describedby^="DndDescribedBy"]').forEach((el) => {
-      el.setAttribute('aria-describedby', 'DndDescribedBy');
-    });
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });

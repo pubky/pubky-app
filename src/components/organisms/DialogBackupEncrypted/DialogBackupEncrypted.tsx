@@ -87,7 +87,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
                 value={passphrase}
                 onChange={(e) => setPassphrase(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="bg-opacity-90 h-14 rounded-md border border-dashed px-5 py-4 shadow-sm"
+                className="h-14 rounded-md border border-dashed bg-background/20 px-5 py-4 shadow-sm"
                 placeholder={'Enter a strong password'}
                 autoComplete="new-password"
                 aria-describedby="password-help"
@@ -135,7 +135,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
               value={confirmPassphrase}
               onChange={(e) => setConfirmPassphrase(e.target.value)}
               onKeyDown={handleKeyDown}
-              className={`bg-opacity-90 h-14 rounded-md border border-dashed px-5 py-4 shadow-sm ${confirmPassphrase && !passphraseMatch ? 'border-destructive' : ''}`}
+              className={`h-14 rounded-md border border-dashed bg-background/20 px-5 py-4 shadow-sm ${confirmPassphrase && !passphraseMatch ? 'border-destructive' : ''}`}
               placeholder={'Repeat your password'}
               autoComplete="new-password"
               aria-invalid={Boolean(confirmPassphrase && !passphraseMatch)}

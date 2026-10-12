@@ -21,13 +21,16 @@ export function deriveTextPreview({
   content,
   kind,
   lock,
+  deleted,
 }: {
   content: string;
   kind: string;
   /** The post's `lock` URL, or null. Required so a new surface cannot silently skip the lock branch. */
   lock: string | null;
+  /** The post's Nexus tombstone flag. Required so a new surface cannot silently skip the deleted branch. */
+  deleted: boolean;
 }): string {
-  if (isPostDeleted(content)) {
+  if (isPostDeleted({ content, deleted })) {
     return 'This post has been deleted by its author.';
   }
   // A lock announcement's `kind` is the teaser's own type, never a lock-specific one, so the
@@ -54,8 +57,16 @@ export function deriveTextPreview({
  * mention links in the app. Shared by the page description and the OG card so
  * the two never disagree on which previews resolve mentions.
  */
-export function isMentionResolvablePreview({ content, kind }: { content: string; kind: string }): boolean {
-  if (isPostDeleted(content)) return false;
+export function isMentionResolvablePreview({
+  content,
+  kind,
+  deleted,
+}: {
+  content: string;
+  kind: string;
+  deleted?: boolean;
+}): boolean {
+  if (isPostDeleted({ content, deleted })) return false;
   if (kind === 'long') return parseArticleContent(content) === null;
   return kind !== 'collection';
 }

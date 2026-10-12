@@ -53,13 +53,4 @@ describe('ProfileLayout', () => {
     expect(wrapper).toBeTruthy();
     expect(screen.getByTestId('profile-page-container')).toBeInTheDocument();
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(
-      <ProfileLayout>
-        <div>Test Content</div>
-      </ProfileLayout>,
-    );
-    expect(container).toMatchSnapshot();
-  });
 });

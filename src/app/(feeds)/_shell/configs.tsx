@@ -2,7 +2,11 @@ import { APP_ROUTES } from '@/app/routes';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { ContentLayoutProps } from '@/organisms/ContentLayout/ContentLayout.types';
 import { CustomFeedFilters } from '@/organisms/CustomFeedFilters/CustomFeedFilters';
-import { HomeFeedRightDrawer, HomeFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
+import {
+  HomeFeedRightDrawer,
+  HomeFeedRightDrawerMobile,
+  HomeFeedRightSidebar,
+} from '@/organisms/FeedRightSidebar/FeedRightSidebar';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '@/organisms/HomeFeedSidebar/HomeFeedSidebar';
 import { SearchFeedFilters } from '@/organisms/SearchFeedFilters/SearchFeedFilters';
 
@@ -38,15 +42,15 @@ const configs: Record<FeedsRouteKey, FeedsShellConfig> = {
   home: {
     feedVariant: TIMELINE_FEED_VARIANT.HOME,
     // Compact opaque mobile header (Hot pattern) so the feed tab bar rendered
-    // by the Home template can stick right below it. Feed selection moved from
-    // the mobile right drawer into that tab bar, so the right drawer falls
-    // back to `rightDrawerContent` on mobile too.
+    // by the Home template can stick right below it.
     hasGradientBackground: false,
     classNameMobileHeader: 'pb-0',
     leftSidebarContent: <HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />,
     rightSidebarContent: <HomeFeedRightSidebar />,
     leftDrawerContent: <HomeFeedDrawer allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />,
     rightDrawerContent: <HomeFeedRightDrawer />,
+    rightDrawerContentMobile: <HomeFeedRightDrawerMobile />,
+    classNameRightDrawer: 'w-64 p-6 sm:w-64 sm:p-6',
     leftDrawerContentMobile: <HomeFeedDrawerMobile allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />,
   },
   customFeed: {
@@ -57,6 +61,8 @@ const configs: Record<FeedsRouteKey, FeedsShellConfig> = {
     rightSidebarContent: <HomeFeedRightSidebar />,
     leftDrawerContent: <CustomFeedFilters variant="drawer" />,
     rightDrawerContent: <HomeFeedRightDrawer />,
+    rightDrawerContentMobile: <HomeFeedRightDrawerMobile />,
+    classNameRightDrawer: 'w-64 p-6 sm:w-64 sm:p-6',
     leftDrawerContentMobile: <CustomFeedFilters variant="drawer" />,
   },
   search: {

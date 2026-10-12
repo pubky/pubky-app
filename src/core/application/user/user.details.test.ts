@@ -1,9 +1,7 @@
 import type { PubkyAppUser } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ProfileApplication } from '@/application/profile/profile';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
-import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalProfileService } from '@/services/local/profile/profile';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalUserService } from '@/services/local/user/user';
@@ -92,34 +90,46 @@ describe('UserApplication concurrent details fetches', () => {
     },
   );
 
-  it('accepts a newer server edit from a retry started after a local edit with an ahead client clock', async () => {
-    const clock = vi.spyOn(Date, 'now').mockReturnValue(60_000);
-    let respond!: (response: Response) => void;
-    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementationOnce(
-      () =>
-        new Promise<Response>((resolve) => {
-          respond = resolve;
-        }),
-    );
-    expect(await LocalUserService.readDetails({ userId })).toBeNull();
-    const pending = UserApplication.fetchDetails({ userId });
-    expect(fetch).toHaveBeenCalledTimes(1);
+  describe('a retry started after a local edit, with an ahead client clock', () => {
+    const retryAfterLocalEdit = async (retryResponse: NexusUserDetails) => {
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(60_000);
+      let respond!: (response: Response) => void;
+      const fetch = vi.spyOn(globalThis, 'fetch').mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            respond = resolve;
+          }),
+      );
+      expect(await LocalUserService.readDetails({ userId })).toBeNull();
+      const pending = UserApplication.fetchDetails({ userId });
+      expect(fetch).toHaveBeenCalledTimes(1);
 
-    // A concurrent full-user hydration makes the profile editable while the miss request waits.
-    await LocalStreamUsersService.persistUsers([fullUser(older)]);
-    clock.mockReturnValue(61_000);
-    vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
-    await ProfileApplication.commitUpdate({ pubky: userId, name: 'Local edit', bio: '', image: null, links: [] });
-    expect(await LocalUserService.readDetails({ userId })).toMatchObject({ name: 'Local edit', indexed_at: 61_000 });
+      // A concurrent full-user hydration makes the profile editable while the miss request waits.
+      await LocalStreamUsersService.persistUsers([fullUser(older)]);
+      clock.mockReturnValue(61_000);
+      await LocalProfileService.updateDetails(localEdit, userId);
+      expect(await LocalUserService.readDetails({ userId })).toMatchObject({ name: 'Local edit', indexed_at: 61_000 });
 
-    clock.mockReturnValue(61_500);
-    fetch.mockResolvedValue(new Response(JSON.stringify(newer)));
-    respond(new Response('Not Found', { status: 404 }));
+      clock.mockReturnValue(61_500);
+      fetch.mockResolvedValue(new Response(JSON.stringify(retryResponse)));
+      respond(new Response('Not Found', { status: 404 }));
 
-    expect(await pending).toMatchObject(newer);
-    expect(fetch).toHaveBeenCalledTimes(2);
-    expect(await LocalUserService.readDetails({ userId })).toMatchObject(newer);
-    expect((await UserDetailsModel.findById(userId))?.localUpdatedAt).toBeUndefined();
+      const result = await pending;
+      expect(fetch).toHaveBeenCalledTimes(2);
+      return result;
+    };
+
+    it('keeps the local edit when the newer revision does not include it', async () => {
+      expect(await retryAfterLocalEdit(newer)).toMatchObject({ name: 'Local edit', indexed_at: 61_000 });
+      expect((await UserDetailsModel.findById(userId))?.localUpdatedAt).toBe(61_000);
+    });
+
+    it('accepts the newer revision once it includes the local edit', async () => {
+      const indexedEdit = { ...newer, name: 'Local edit', bio: '', image: null, links: [], status: '' };
+
+      expect(await retryAfterLocalEdit(indexedEdit)).toMatchObject(indexedEdit);
+      expect((await UserDetailsModel.findById(userId))?.localUpdatedAt).toBeUndefined();
+    });
   });
 
   it('keeps a local edit when an earlier request finishes, even with an ahead server clock', async () => {

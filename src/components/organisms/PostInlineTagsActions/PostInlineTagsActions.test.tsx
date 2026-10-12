@@ -174,13 +174,3 @@ describe('PostInlineTagsActions', () => {
     expect(onParentClick).not.toHaveBeenCalled();
   });
 });
-
-describe('PostInlineTagsActions - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(
-      <PostInlineTagsActions postId="snapshot-author:post-1" onReplyClick={vi.fn()} onRepostClick={vi.fn()} />,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

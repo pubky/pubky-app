@@ -50,12 +50,13 @@ export function Hot() {
       {/* Tags Overview - hidden via CSS when another tab is active on mobile */}
       <HotTagsOverview className={cn(hideTags && 'hidden')} />
 
-      {/* Active Users - hidden via CSS when another tab is active on mobile */}
-      <HotActiveUsers className={cn(hideUsers && 'hidden')} />
+      {/* Active Users - hidden via CSS when another tab is active on mobile; its heading is visually hidden on mobile */}
+      <HotActiveUsers hideHeadingOnMobile className={cn(hideUsers && 'hidden')} />
 
       {/* Trending Posts - hidden via CSS when another tab is active on mobile */}
       <Container overrideDefaults className={cn('flex flex-col gap-2', hidePosts && 'hidden')}>
-        <Heading level={5} size="lg" className="font-light text-muted-foreground">
+        {/* Visually hidden on mobile (kept for assistive tech): the tab menu already names the section */}
+        <Heading level={5} size="lg" className="sr-only font-light text-muted-foreground lg:not-sr-only">
           {'Trending posts'}
         </Heading>
         <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOT} />

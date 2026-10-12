@@ -36,7 +36,7 @@ export const ProfileNavigation = ({
         <Button
           size="lg"
           className="rounded-full"
-          variant={'secondary'}
+          variant={'outline'}
           onClick={onHandleBackButton}
           disabled={backButtonDisabled}
         >

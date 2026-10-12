@@ -799,6 +799,20 @@ describe('PostNormalizer', () => {
         ).rejects.toThrow('Post not found');
       });
 
+      it('should throw POST_NOT_FOUND when the post is a Nexus tombstone (empty content, flag set)', async () => {
+        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(
+          asOpaque<PostDetailsModel>({ ...createMockPostDetails(compositePostId), content: '', deleted: true }),
+        );
+
+        await expect(
+          PostNormalizer.toEdit({
+            compositePostId,
+            content: 'New content',
+            currentUserPubky: TEST_PUBKY.USER_1,
+          }),
+        ).rejects.toThrow('Post not found');
+      });
+
       it('should preserve parent URI for reply posts', async () => {
         const parentUri = buildPubkyUri(TEST_PUBKY.USER_2, `posts/${TEST_POST_IDS.POST_2}`);
 

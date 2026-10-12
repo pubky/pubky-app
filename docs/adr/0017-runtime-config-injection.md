@@ -17,6 +17,14 @@ Amended — 2026-07-02 (issue #2049):
   `self.__next_s` queue, which the client runtime executes only after the main bundle's module
   scope (i.e. after `instrumentation-client.ts`), silently breaking client Sentry init.
 
+Amended — 2026-10-07 (PR #2774): Shop navigation is always visible and its full HTTP(S)
+destination, `PUBKY_RUNTIME_SHOP_URL`, is explicitly required in deployed mode. This is an
+intentional exception to the defaulted external-link tier: deployments must choose the destination
+instead of silently inheriting a staging link. Missing, blank, or invalid values fail startup.
+This extends the public image's deployment contract and is a breaking change for existing deployers.
+Local dev/test retains the staging default. Add the variable to deployment configuration before
+upgrading the App image; the current rollout targets staging only.
+
 ## Context
 
 Many public deployer-facing values were exposed as `NEXT_PUBLIC_*` variables, which Next.js inlines into the JavaScript bundle at **build time** (even in server code). This included the required network values — `nexusUrl`, `cdnUrl`, `homeserver`, `homeserverUrl`, `homegateUrl`, `defaultHttpRelay`, `pkarrRelays`, `testnet` — plus public operational tuning, moderation config, analytics, metadata/branding defaults, and external links. As a result a separate Docker image had to be built per environment or deployer, which blocks promoting a single public image through environments (and specifically blocks the migration to Ansible-based deployment).
@@ -41,10 +49,10 @@ Read deployer-facing runtime values from **non-`NEXT_PUBLIC_` env names** (`PUBK
 - `src/libs/runtime-config/runtime-config.ts` is an isomorphic, memoized resolver: the server reads `PUBKY_RUNTIME_*`; the client reads `window.__PUBKY_CONFIG__`. It exposes getters (`getNexusUrl`, …) and `serializeRuntimeConfig()`.
 - `ContainerRoot` injects the serialized config as a **raw** inline `<script>` element rendered first in `<body>` (safe HTML escaping for `<`, `</script>`, U+2028/U+2029). The raw element executes during HTML parsing, before any async bundle — `next/script` `beforeInteractive` must NOT be used for this (see the 2026-07-02 amendment).
 - The runtime config has tiers:
-  - **Required network tier**: the eight network values must all be set in deployed/required mode. Partial config fails loudly.
-  - **Optional/defaulted public tier**: operational polling/TTL settings, moderation config, exchange-rate API, Prelude, Plausible, metadata/branding defaults, and external links may be omitted and use documented defaults; malformed provided values fail loudly.
+  - **Required tier**: the nine network values (including `deployEnv`) and the Shop destination must all be set in deployed/required mode. Partial config fails loudly.
+  - **Optional/defaulted public tier**: operational polling/TTL settings, moderation config, exchange-rate API, Prelude, Plausible, metadata/branding defaults, and external links other than Shop may be omitted and use documented defaults; malformed provided values fail loudly.
   - **Optional observability tier**: Sentry runtime values are optional; details and source-map handling are covered by [ADR 0018](0018-runtime-sentry-and-decoupled-source-maps.md).
-- "Required" = `(NODE_ENV === 'production' || PUBKY_RUNTIME_CONFIG_REQUIRED === 'true') && not a test run`. In required mode the eight network values are strict all-or-nothing: missing/invalid → throw. Outside required mode (dev/test) the same names parse leniently, layering partial values over the staging defaults. Optional/defaulted values can be set independently in any mode. A `next/constants` `PHASE_PRODUCTION_BUILD` guard ensures the throw can never fire during `next build`.
+- "Required" = `(NODE_ENV === 'production' || PUBKY_RUNTIME_CONFIG_REQUIRED === 'true') && not a test run`. In required mode the nine network values and Shop destination are strict all-or-nothing: missing/invalid → throw. Outside required mode (dev/test) the same names parse leniently, layering partial values over the staging defaults. Optional/defaulted values can be set independently in any mode. A `next/constants` `PHASE_PRODUCTION_BUILD` guard ensures the throw can never fire during `next build`.
 - Boot-time fail-fast: `register()` in `src/instrumentation.ts` resolves the config at server startup, so a misconfigured deploy fails on boot (with the full list of required variables) instead of on the first request.
 - Build-intrinsic values stay build-time: `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_DB_VERSION`, `NEXT_PUBLIC_DB_NAME`, and `NEXT_PUBLIC_DEBUG_MODE`.
 - ESLint rules ban all `Env.NEXT_PUBLIC_*` / `process.env.NEXT_PUBLIC_*` reads except the four build-intrinsic names, and ban direct `process.env.PUBKY_RUNTIME_*` reads outside `src/libs/runtime-config/**` (test setup assignments exempt).

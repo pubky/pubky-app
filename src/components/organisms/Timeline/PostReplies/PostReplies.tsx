@@ -27,7 +27,7 @@ export function TimelinePostReplies({ postId }: TimelinePostRepliesProps) {
 
   // Check if parent post is deleted to determine replyability
   const { postDetails } = usePostDetails(postId);
-  const isParentDeleted = isPostDeleted(postDetails?.content);
+  const isParentDeleted = isPostDeleted(postDetails);
 
   const shouldShowQuickReply = !isParentDeleted;
   const hasReplies = (postCounts?.replies ?? 0) > 0;

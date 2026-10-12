@@ -436,7 +436,10 @@ describe('PostStreamApplication', () => {
     });
 
     describe('author-scoped content search (profile "Filter posts")', () => {
-      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', {
+        type: 'author',
+        author: DEFAULT_AUTHOR as Pubky,
+      });
 
       const createPostRelationships = async (postId: string, replied: string | null = null) => {
         await PostRelationshipsModel.create({ id: postId, replied, reposted: null, mentioned: [] });
@@ -633,7 +636,10 @@ describe('PostStreamApplication', () => {
       // Reply exclusion classifies via relationships.replied; a post whose details are cached
       // but whose relationships row is missing must still be hydrated, or it would stay
       // fail-open (then be dropped by the strict second pass) forever.
-      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', {
+        type: 'author',
+        author: DEFAULT_AUTHOR as Pubky,
+      });
       const classifiedPostId = `${DEFAULT_AUTHOR}:classified-post`;
       const unclassifiedPostId = `${DEFAULT_AUTHOR}:needs-hydration-post`;
       await createPostDetailWithKind(classifiedPostId, 'short');
@@ -663,7 +669,10 @@ describe('PostStreamApplication', () => {
       // A tombstoned post keeps its details row (content = DELETED) but its relationships
       // row is deleted for good. Re-fetching can never classify it and the deleted filter
       // drops it anyway — flagging it would issue a futile by_ids on every page load.
-      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', {
+        type: 'author',
+        author: DEFAULT_AUTHOR as Pubky,
+      });
       const tombstonedPostId = `${DEFAULT_AUTHOR}:tombstoned-post`;
       await PostDetailsModel.create({
         id: tombstonedPostId,

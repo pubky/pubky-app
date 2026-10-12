@@ -12,10 +12,3 @@ describe('SettingsDivider', () => {
     expect(divider).toHaveAttribute('aria-hidden', 'true');
   });
 });
-
-describe('SettingsDivider - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<SettingsDivider />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

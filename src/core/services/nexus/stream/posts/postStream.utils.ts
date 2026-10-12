@@ -42,21 +42,21 @@ export function createPostStreamParams({
   viewerId,
   order,
 }: TFetchStreamParams): TPostStreamFetchParams {
-  const { sorting, invokeEndpoint, authorId, kind, tags, wotDepth, domainTags, searchQuery } =
+  const { sorting, invokeEndpoint, authorId, kind, tags, wotDepth, domainTags, searchQuery, searchReach } =
     breakDownStreamId(streamId);
 
-  // Content search hits its own endpoint with a minimal param surface (q, author, kind, skip,
-  // limit): no viewer/sorting/order/tags, and no author_id fabrication via
-  // handleNotCommonStreamParams. `author_id` is set only for author-scoped searches.
+  // Content search carries either a profile author or a reach. Only reach searches need
+  // the viewer; sorting/order/tags never apply to relevance-ranked results.
   if (invokeEndpoint === StreamSource.CONTENT_SEARCH) {
     const params: TStreamBase = {};
+    if (searchReach) params.viewer_id = viewerId ?? undefined;
     const parsedKind = kind ? parseContent(kind) : undefined;
     if (parsedKind) {
       params.kind = parsedKind;
     }
     params.limit = limit;
     setStreamPagination({ params, streamTail, streamHead, invokeEndpoint });
-    return { params, invokeEndpoint, extraParams: { q: searchQuery, author_id: authorId } };
+    return { params, invokeEndpoint, extraParams: { q: searchQuery, author_id: authorId, reach: searchReach } };
   }
 
   const params: TStreamBase = {};
@@ -186,6 +186,7 @@ export function breakDownStreamId(streamId: PostStreamId): TStreamIdBreakdown {
       searchQuery: contentSearch?.query,
       // Author-scoped searches (profile "Filter posts") carry the profile pubky.
       authorId: contentSearch?.author,
+      searchReach: contentSearch?.reach,
     };
   }
 

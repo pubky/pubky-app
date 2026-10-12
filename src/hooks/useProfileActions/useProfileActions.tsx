@@ -81,9 +81,8 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
         await ProfileController.commitUpdateStatus({ pubky: currentUserPubky, status });
       } catch (error) {
         Logger.error('Failed to update status:', error);
-        // A tombstoned row is refused before the PUT (`commitUpdateStatus`), and retrying cannot
-        // help, so surface why instead of inviting another attempt. Any other failure keeps the
-        // generic retry message.
+        // A missing homeserver profile maps to GONE before the PUT. Explain why the status
+        // cannot be saved; other failures keep the generic retry message.
         const isDeletedProfile = isAppError(error) && error.code === ClientErrorCode.GONE;
         toast({
           variant: 'error',

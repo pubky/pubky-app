@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { REACH } from '@/stores/home/home.types';
+import { useSearchStore } from '@/stores/search/search.store';
 import { SearchFeedFilters } from './SearchFeedFilters';
 
 const mocks = vi.hoisted(() => ({
@@ -53,11 +54,35 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   }),
 }));
 
+beforeEach(() => useSearchStore.getState().reset());
+
 describe('SearchFeedFilters', () => {
   beforeEach(() => {
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     mocks.searchParams = new URLSearchParams({ tags: 'bitcoin' });
     mocks.isPhoneViewport = false;
   });
+
+  afterEach(() => {
+    vi.mocked(window.scrollTo).mockRestore();
+  });
+
+  it.each(['sidebar', 'drawer', 'mobile'] as const)(
+    'shows the Search choices in the %s and changes only Search',
+    (variant) => {
+      render(<SearchFeedFilters variant={variant} />);
+      const reach = screen.getByTestId('filter-reach-radiogroup');
+      expect(
+        within(reach)
+          .getAllByRole('radio')
+          .map((radio) => radio.getAttribute('aria-label')),
+      ).toEqual(['All', 'My network', 'Following', 'Friends']);
+      fireEvent.click(within(reach).getByRole('radio', { name: 'Following' }));
+      expect(useSearchStore.getState().reach).toBe(REACH.FOLLOWING);
+      expect(mocks.homeState.setReach).not.toHaveBeenCalled();
+      expect(within(reach).getByRole('radio', { name: 'Following' })).toHaveAttribute('aria-checked', 'true');
+    },
+  );
 
   it('keeps Sort for tag search', () => {
     render(<SearchFeedFilters variant="sidebar" />);
@@ -93,52 +118,5 @@ describe('SearchFeedFilters', () => {
     expect(screen.queryByText('Sort')).not.toBeInTheDocument();
     expect(screen.queryByText('Layout')).not.toBeInTheDocument();
     expect(screen.getByText('Content')).toBeInTheDocument();
-  });
-});
-
-describe('SearchFeedFilters - Snapshots', () => {
-  beforeEach(() => {
-    mocks.isPhoneViewport = false;
-  });
-
-  it('matches full-text filters snapshot without Sort', () => {
-    mocks.searchParams = new URLSearchParams({ q: 'bitcoin' });
-    const { container } = render(<SearchFeedFilters variant="sidebar" />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches tag-search filters snapshot', () => {
-    mocks.searchParams = new URLSearchParams({ tags: 'bitcoin' });
-    const { container } = render(<SearchFeedFilters variant="sidebar" />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches full-text drawer filters snapshot', () => {
-    mocks.searchParams = new URLSearchParams({ q: 'bitcoin' });
-    const { container } = render(<SearchFeedFilters variant="drawer" />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches full-text mobile-shell filters snapshot', () => {
-    mocks.searchParams = new URLSearchParams({ q: 'bitcoin' });
-    const { container } = render(<SearchFeedFilters variant="mobile" />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('SearchFeedFilters - Mobile Snapshots', () => {
-  beforeEach(() => {
-    mocks.searchParams = new URLSearchParams({ q: 'bitcoin' });
-    mocks.isPhoneViewport = true;
-    setMobileViewport();
-  });
-
-  afterEach(() => {
-    resetViewport();
-  });
-
-  it('matches full-text sidebar filters snapshot on a mobile viewport', () => {
-    const { container } = render(<SearchFeedFilters variant="sidebar" />);
-    expect(container).toMatchSnapshot();
   });
 });

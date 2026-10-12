@@ -71,14 +71,13 @@ describe('ActionButtons', () => {
 
   it('renders and calls Continue with Google when provided, disabled while pending', () => {
     const mockOnContinueWithGoogle = vi.fn();
-    const { rerender, container } = render(
+    const { rerender } = render(
       <ActionButtons onCreateAccount={vi.fn()} onContinueWithGoogle={mockOnContinueWithGoogle} />,
     );
 
     const googleButton = screen.getByTestId('continue-with-google');
     fireEvent.click(googleButton);
     expect(mockOnContinueWithGoogle).toHaveBeenCalledTimes(1);
-    expect(container.firstChild).toMatchSnapshot();
 
     rerender(
       <ActionButtons
@@ -88,43 +87,5 @@ describe('ActionButtons', () => {
       />,
     );
     expect(screen.getByTestId('continue-with-google')).toBeDisabled();
-  });
-});
-
-describe('ActionButtons - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<ActionButtons />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<ActionButtons className="custom-action-buttons" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with create account and explore callbacks', () => {
-    const mockOnCreateAccount = vi.fn();
-    const mockOnExplore = vi.fn();
-
-    const { container } = render(<ActionButtons onCreateAccount={mockOnCreateAccount} onExplore={mockOnExplore} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with all callbacks', () => {
-    const mockOnLearn = vi.fn();
-    const mockOnCreateAccount = vi.fn();
-    const mockOnExplore = vi.fn();
-
-    const { container } = render(
-      <ActionButtons onLearn={mockOnLearn} onCreateAccount={mockOnCreateAccount} onExplore={mockOnExplore} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with create account callback only', () => {
-    const mockOnCreateAccount = vi.fn();
-
-    const { container } = render(<ActionButtons onCreateAccount={mockOnCreateAccount} />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

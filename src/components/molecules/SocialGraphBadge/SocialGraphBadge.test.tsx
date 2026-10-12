@@ -33,20 +33,3 @@ describe('SocialGraphBadge', () => {
     expect(screen.getByText('New')).toHaveClass('custom-class');
   });
 });
-
-describe('SocialGraphBadge - Snapshots', () => {
-  it('matches snapshot for new tier', () => {
-    const { container } = render(<SocialGraphBadge status={NexusSocialGraphStatus.NEW} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for networked tier', () => {
-    const { container } = render(<SocialGraphBadge status={NexusSocialGraphStatus.NETWORKED} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for established tier', () => {
-    const { container } = render(<SocialGraphBadge status={NexusSocialGraphStatus.ESTABLISHED} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

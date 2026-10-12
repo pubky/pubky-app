@@ -8,6 +8,7 @@ import { PaykitSetupFlowStatus } from './usePaykitSetupFlow.types';
 const mocks = vi.hoisted(() => ({
   getPaykitSetupUrl: vi.fn(),
   markPaykitConnected: vi.fn(),
+  fetchPaykitSetupStatus: vi.fn(),
   readBridge: vi.fn(),
 }));
 
@@ -18,6 +19,7 @@ vi.mock('@/controllers/locks/locks', () => ({
   LocksController: {
     getPaykitSetupUrl: mocks.getPaykitSetupUrl,
     markPaykitConnected: mocks.markPaykitConnected,
+    fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
   },
 }));
 
@@ -194,5 +196,69 @@ describe('usePaykitSetupFlow', () => {
 
     expect(result.current.status).toBe(PaykitSetupFlowStatus.IDLE);
     expect(result.current.setupUrl).toBeNull();
+  });
+
+  // The ready / setup_required / unavailable answers run through the real layers in
+  // `DialogLocksAuth.integration.test.tsx`; these cover the answers the hook must not act on.
+  describe('check', () => {
+    /** A setup-status answer the test releases by hand. */
+    const holdAnswer = () => {
+      let release: (status: string) => void = () => {};
+      mocks.fetchPaykitSetupStatus.mockImplementationOnce(() => new Promise((resolve) => (release = resolve)));
+      return (status: string) => release(status);
+    };
+
+    it('stops at unavailable without opening the setup when the check fails', async () => {
+      mocks.fetchPaykitSetupStatus.mockRejectedValueOnce(new Error('Lock Server request failed with HTTP 502'));
+      const { result } = renderHook(() => usePaykitSetupFlow());
+
+      await act(async () => {
+        await result.current.check();
+      });
+
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.UNAVAILABLE);
+      expect(result.current.error).not.toBeNull();
+      expect(result.current.setupUrl).toBeNull();
+      expect(mocks.getPaykitSetupUrl).not.toHaveBeenCalled();
+    });
+
+    it('drops the failed setup URL while it checks again', async () => {
+      const { result } = renderHook(() => usePaykitSetupFlow());
+      const state = startFlow(result);
+      attachIframeSource(result);
+      await postCallback({ type: PAYKIT_SETUP_MESSAGE_TYPE, state, error: 'setup-failed' });
+      expect(result.current.setupUrl).not.toBeNull();
+
+      holdAnswer();
+      act(() => void result.current.check());
+
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.CHECKING);
+      expect(result.current.setupUrl).toBeNull();
+    });
+
+    it('drops an answer that arrives after reset', async () => {
+      const answer = holdAnswer();
+      const { result } = renderHook(() => usePaykitSetupFlow());
+
+      act(() => void result.current.check());
+      act(() => result.current.reset());
+      await act(async () => answer('ready'));
+
+      expect(mocks.markPaykitConnected).not.toHaveBeenCalled();
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.IDLE);
+    });
+
+    it('checks again when the Locks session changed while it asked', async () => {
+      const answer = holdAnswer();
+      const { result } = renderHook(() => usePaykitSetupFlow());
+
+      act(() => void result.current.check());
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.CHECKING);
+      useLocksAuthStore.setState({ locksSessionSecret: 'secret-other' });
+      await act(async () => answer('ready'));
+
+      expect(mocks.markPaykitConnected).not.toHaveBeenCalled();
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.IDLE);
+    });
   });
 });

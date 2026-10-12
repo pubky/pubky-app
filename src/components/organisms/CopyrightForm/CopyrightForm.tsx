@@ -7,7 +7,7 @@ import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { RadioGroup, RadioGroupItem } from '@/atoms/RadioGroup/RadioGroup';
 import { Typography } from '@/atoms/Typography/Typography';
-import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
+import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { useCopyrightForm } from '@/hooks/useCopyrightForm/useCopyrightForm';
 import { COPYRIGHT_FORM_FIELDS, COPYRIGHT_ROLES } from '@/hooks/useCopyrightForm/useCopyrightForm.constants';
 import type { CopyrightFormData } from '@/hooks/useCopyrightForm/useCopyrightForm.types';
@@ -22,7 +22,7 @@ export function CopyrightForm() {
   const roleError = errors.role?.message;
   const currentDate = formatUSDate();
   return (
-    <Container size="container" className={cn('pb-12 xl:px-0', PAGE_GUTTER_CLASS)}>
+    <Container size="container" className={cn('pb-12', CONTENT_GUTTER_CLASS)}>
       <form onSubmit={onSubmit}>
         <Card className="rounded-t-lg rounded-b-none border border-border p-8 md:p-12">
           <Container className="gap-6">

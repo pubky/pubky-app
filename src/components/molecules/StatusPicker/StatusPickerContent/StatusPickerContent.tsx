@@ -106,7 +106,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPic
         <Container className="gap-3">
           <form
             onSubmit={handleSubmit}
-            className="flex items-center gap-2 rounded-md border border-dashed border-input bg-background/10 px-5 py-4 shadow-sm focus-within:border-white/80"
+            className="flex items-center gap-2 rounded-md border border-dashed border-input bg-background/20 px-5 py-4 shadow-sm focus-within:border-white/80"
           >
             {selectedEmoji ? (
               <Button

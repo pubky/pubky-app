@@ -358,99 +358,55 @@ describe('ProfileController', () => {
   });
 
   describe('commitUpdate', () => {
-    it('normalizes profile data and delegates to application layer', async () => {
-      const profile = {
-        name: 'Updated User',
-        bio: 'Updated bio',
-        links: [{ label: 'GitHub', url: 'https://github.com' }],
-      };
-
+    it('maps changed links to the API shape and passes the other changes through', async () => {
+      const links = [{ label: 'GitHub', url: 'https://github.com' }];
       mockProfileApplication.commitUpdate.mockResolvedValue(undefined);
 
       await ProfileController.commitUpdate({
-        name: profile.name,
-        bio: profile.bio,
-        links: profile.links,
-        image: 'updated-image-url',
         pubky: testPubky,
+        changes: { name: 'Updated User', bio: 'Updated bio', links, image: 'updated-image-url' },
       });
 
-      expect(mockUserNormalizer.linksFromUi).toHaveBeenCalledWith(profile.links);
+      expect(mockUserNormalizer.linksFromUi).toHaveBeenCalledWith(links);
       expect(mockProfileApplication.commitUpdate).toHaveBeenCalledWith({
         pubky: testPubky,
-        name: 'Updated User',
-        bio: 'Updated bio',
-        image: 'updated-image-url',
-        links: [{ title: 'GitHub', url: 'https://github.com' }],
+        changes: {
+          name: 'Updated User',
+          bio: 'Updated bio',
+          image: 'updated-image-url',
+          links: [{ title: 'GitHub', url: 'https://github.com' }],
+        },
       });
     });
 
-    it('defaults optional fields when not provided', async () => {
-      const profile = {
-        name: 'Updated User',
-      };
-
+    it('leaves links out when they did not change', async () => {
       mockProfileApplication.commitUpdate.mockResolvedValue(undefined);
 
-      await ProfileController.commitUpdate({
-        name: profile.name,
-        bio: undefined,
-        links: undefined,
-        image: null,
-        pubky: testPubky,
-      });
+      await ProfileController.commitUpdate({ pubky: testPubky, changes: { bio: 'Updated bio' } });
 
+      expect(mockUserNormalizer.linksFromUi).not.toHaveBeenCalled();
       expect(mockProfileApplication.commitUpdate).toHaveBeenCalledWith({
         pubky: testPubky,
-        name: 'Updated User',
-        bio: undefined,
-        image: null,
-        links: [],
+        changes: { bio: 'Updated bio' },
       });
     });
 
-    it('handles null image correctly', async () => {
-      const profile = {
-        name: 'Updated User',
-        bio: 'Updated bio',
-      };
-
+    it('passes clears through: removed avatar and an emptied link list', async () => {
       mockProfileApplication.commitUpdate.mockResolvedValue(undefined);
 
-      await ProfileController.commitUpdate({
-        name: profile.name,
-        bio: profile.bio,
-        links: undefined,
-        image: null,
-        pubky: testPubky,
-      });
+      await ProfileController.commitUpdate({ pubky: testPubky, changes: { image: null, links: [] } });
 
       expect(mockProfileApplication.commitUpdate).toHaveBeenCalledWith({
         pubky: testPubky,
-        name: 'Updated User',
-        bio: 'Updated bio',
-        image: null,
-        links: [],
+        changes: { image: null, links: [] },
       });
     });
 
     it('propagates errors from the application layer', async () => {
-      const profile = {
-        name: 'Updated User',
-        bio: 'Updated bio',
-      };
-      const error = new Error('update failed');
-
-      mockProfileApplication.commitUpdate.mockRejectedValue(error);
+      mockProfileApplication.commitUpdate.mockRejectedValue(new Error('update failed'));
 
       await expect(
-        ProfileController.commitUpdate({
-          name: profile.name,
-          bio: profile.bio,
-          links: undefined,
-          image: null,
-          pubky: testPubky,
-        }),
+        ProfileController.commitUpdate({ pubky: testPubky, changes: { bio: 'Updated bio' } }),
       ).rejects.toThrow('update failed');
     });
   });

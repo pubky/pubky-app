@@ -1,7 +1,0 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
-
-exports[`useAvatarUrl - Snapshots > matches snapshot for null userDetails 1`] = `undefined`;
-
-exports[`useAvatarUrl - Snapshots > matches snapshot for user with image 1`] = `"https://example.com/avatar/snapshot-user.png"`;
-
-exports[`useAvatarUrl - Snapshots > matches snapshot for user without image 1`] = `undefined`;

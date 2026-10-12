@@ -8,9 +8,10 @@ export interface SideDrawerProps {
   onOpenChangeAction: (open: boolean) => void;
   children: React.ReactNode;
   position?: 'left' | 'right';
+  className?: string;
 }
 
-export function SideDrawer({ open, onOpenChangeAction, children, position = 'left' }: SideDrawerProps) {
+export function SideDrawer({ open, onOpenChangeAction, children, position = 'left', className }: SideDrawerProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -69,6 +70,7 @@ export function SideDrawer({ open, onOpenChangeAction, children, position = 'lef
           widthClasses,
           positionClasses,
           slideClasses,
+          className,
         )}
       >
         <div className="h-full overflow-y-auto">{children}</div>

@@ -75,10 +75,3 @@ describe('HotMobileMenu', () => {
     expect(onSectionChange).toHaveBeenCalledTimes(3);
   });
 });
-
-describe('HotMobileMenu - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

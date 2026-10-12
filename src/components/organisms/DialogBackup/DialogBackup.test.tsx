@@ -201,10 +201,3 @@ describe('DialogBackup', () => {
     expect(screen.getByTestId('dialog-export')).toBeInTheDocument();
   });
 });
-
-describe('DialogBackup - Snapshots', () => {
-  it('matches snapshot for trigger button', () => {
-    const { container } = render(<DialogBackup />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -63,7 +63,9 @@ vi.mock('@/atoms/Container/Container', () => ({
 }));
 
 vi.mock('@/atoms/Heading/Heading', () => ({
-  Heading: ({ children }: { children: React.ReactNode }) => <h5>{children}</h5>,
+  Heading: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <h5 className={className}>{children}</h5>
+  ),
 }));
 
 vi.mock('@/atoms/Typography/Typography', () => ({
@@ -85,8 +87,6 @@ vi.mock('../UserListItem/UserListItem', () => ({
 const baseStreamResult = {
   userIds: [] as string[],
   isLoadingMore: false,
-  hasMore: false,
-  loadMore: vi.fn(),
   refetch: vi.fn(),
 };
 
@@ -145,5 +145,32 @@ describe('HotActiveUsers', () => {
 
     expect(screen.queryByTestId('hot-active-user-only-user')).not.toBeInTheDocument();
     expect(screen.getByText('No users to show')).toBeInTheDocument();
+  });
+
+  it('keeps the heading visible on every viewport by default', () => {
+    hooksMocks.useUserStream.mockReturnValue({
+      ...baseStreamResult,
+      users: [{ id: 'visible-user', name: 'Visible Person', image: null, avatarUrl: null, isFollowing: false }],
+      isLoading: false,
+      error: null,
+    });
+
+    render(<HotActiveUsers />);
+
+    expect(screen.getByText('Active users')).not.toHaveClass('sr-only');
+    expect(screen.getByText('Active users')).not.toHaveClass('lg:not-sr-only');
+  });
+
+  it('visually hides the heading below the lg breakpoint when hideHeadingOnMobile is set', () => {
+    hooksMocks.useUserStream.mockReturnValue({
+      ...baseStreamResult,
+      users: [{ id: 'visible-user', name: 'Visible Person', image: null, avatarUrl: null, isFollowing: false }],
+      isLoading: false,
+      error: null,
+    });
+
+    render(<HotActiveUsers hideHeadingOnMobile />);
+
+    expect(screen.getByText('Active users')).toHaveClass('sr-only', 'lg:not-sr-only');
   });
 });

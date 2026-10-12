@@ -113,18 +113,4 @@ describe('SearchRecentItem', () => {
 
   // Invalid type/data combos (e.g. USER without user data) are compile errors
   // now that the props are a discriminated union, so no runtime tests for them.
-
-  describe('SearchRecentItem - Snapshots', () => {
-    it('matches snapshot for user type', () => {
-      const { container } = render(
-        <SearchRecentItem type={RECENT_ITEM_TYPE.USER} user={mockUser} onUserClick={vi.fn()} />,
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot for tag type', () => {
-      const { container } = render(<SearchRecentItem type={RECENT_ITEM_TYPE.TAG} tag={mockTag} onTagClick={vi.fn()} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-  });
 });

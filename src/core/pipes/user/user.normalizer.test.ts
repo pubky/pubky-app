@@ -540,4 +540,81 @@ describe('UserNormalizer', () => {
       });
     });
   });
+
+  describe('fromPublished', () => {
+    it('reads a published profile and fills in absent optional fields', () => {
+      const published = { name: 'Test User', links: [{ title: 'WEBSITE', url: 'https://example.com/' }], extra: 1 };
+
+      expect(UserNormalizer.fromPublished(published)).toEqual({
+        name: 'Test User',
+        bio: '',
+        image: null,
+        links: [{ title: 'WEBSITE', url: 'https://example.com/' }],
+        status: null,
+      });
+    });
+
+    it('keeps every published value', () => {
+      const image = buildPubkyUri(TEST_PUBKY.USER_1, 'files/0035S78QPP4S0');
+      const published = { name: 'Test User', bio: 'Bio', image, links: null, status: '🪚building' };
+
+      expect(UserNormalizer.fromPublished(published)).toEqual({
+        name: 'Test User',
+        bio: 'Bio',
+        image,
+        links: [],
+        status: '🪚building',
+      });
+    });
+
+    it('throws a validation AppError for an empty or invalid body', () => {
+      for (const body of [undefined, { bio: 'no name' }]) {
+        try {
+          UserNormalizer.fromPublished(body);
+          expect.fail('Should have thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(AppError);
+          const appError = error as AppError;
+          expect(appError.category).toBe(ErrorCategory.Validation);
+          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
+          expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+          expect(appError.operation).toBe('fromPublished');
+        }
+      }
+    });
+  });
+
+  describe('merge', () => {
+    const published = {
+      name: 'Published Name',
+      bio: 'Published bio',
+      image: buildPubkyUri(TEST_PUBKY.USER_1, 'files/NEW'),
+      links: [{ title: 'WEBSITE', url: 'https://example.com/' }],
+      status: 'working',
+    };
+
+    it('keeps every published field the changes leave out', () => {
+      expect(UserNormalizer.merge(published, { status: '🪚building' })).toEqual({ ...published, status: '🪚building' });
+    });
+
+    it('applies explicit clears', () => {
+      expect(UserNormalizer.merge(published, { bio: '', image: null, links: [], status: '' })).toEqual({
+        name: 'Published Name',
+        bio: '',
+        image: null,
+        links: [],
+        status: '',
+      });
+    });
+
+    it('replaces the whole link list when links change', () => {
+      const links = [{ title: 'GITHUB', url: 'https://github.com/example' }];
+
+      expect(UserNormalizer.merge(published, { name: 'New Name', links })).toEqual({
+        ...published,
+        name: 'New Name',
+        links,
+      });
+    });
+  });
 });

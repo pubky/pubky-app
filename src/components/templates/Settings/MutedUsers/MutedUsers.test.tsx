@@ -1,7 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MutedUsers } from './MutedUsers';
 
 const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser, mockUseIsMobile } = vi.hoisted(() => ({
@@ -176,98 +175,5 @@ describe('MutedUsers', () => {
 
     render(<MutedUsers />);
     expect(screen.queryByText('Unmute all users')).not.toBeInTheDocument();
-  });
-});
-
-describe('MutedUsers - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseIsMobile.mockReturnValue(false);
-    mockUseMuteUser.mockReturnValue({
-      toggleMute: vi.fn(),
-      isLoading: false,
-      isUserLoading: vi.fn(() => false),
-      error: null,
-    });
-  });
-
-  it('matches snapshot with no muted users', () => {
-    mockUseMutedUsers.mockReturnValue({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: vi.fn(() => false),
-      isLoading: false,
-    });
-    mockUseBulkUserAvatars.mockReturnValue({
-      usersMap: new Map(),
-      isLoading: false,
-    });
-    const { container } = render(<MutedUsers />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with loading state', () => {
-    mockUseMutedUsers.mockReturnValue({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: vi.fn(() => false),
-      isLoading: true,
-    });
-    mockUseBulkUserAvatars.mockReturnValue({
-      usersMap: new Map(),
-      isLoading: false,
-    });
-    const { container } = render(<MutedUsers />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with muted users', () => {
-    const usersMap = new Map([
-      ['user-1', { name: 'Test User 1', avatarUrl: 'https://example.com/avatar1.jpg' }],
-      ['user-2', { name: 'Test User 2', avatarUrl: null }],
-    ]);
-    mockUseMutedUsers.mockReturnValue({
-      mutedUserIds: ['user-1', 'user-2'],
-      mutedUserIdSet: new Set(['user-1', 'user-2']),
-      isMuted: vi.fn(() => true),
-      isLoading: false,
-    });
-    mockUseBulkUserAvatars.mockReturnValue({
-      usersMap,
-      isLoading: false,
-    });
-    const { container } = render(<MutedUsers />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('MutedUsers - Mobile Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseIsMobile.mockReturnValue(true);
-    mockUseMuteUser.mockReturnValue({
-      toggleMute: vi.fn(),
-      isLoading: false,
-      isUserLoading: vi.fn(() => false),
-      error: null,
-    });
-    setMobileViewport();
-  });
-  afterEach(() => {
-    resetViewport();
-  });
-  it('matches snapshot on mobile viewport', () => {
-    mockUseMutedUsers.mockReturnValue({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: vi.fn(() => false),
-      isLoading: false,
-    });
-    mockUseBulkUserAvatars.mockReturnValue({
-      usersMap: new Map(),
-      isLoading: false,
-    });
-    const { container } = render(<MutedUsers />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

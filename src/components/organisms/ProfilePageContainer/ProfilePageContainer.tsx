@@ -95,7 +95,10 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
 
   // `null` on error, not `undefined`: the read has finished, so a spinner would be wrong, and `0`
   // would claim nothing is unlocked.
-  const unlockedCount = unlocked.isError ? null : unlocked.isLoading ? undefined : unlocked.count;
+  // A failed refresh hides the count only when there is nothing to count; the Unlocked screen keeps
+  // showing the cached items, so the sidebar shows their number.
+  const unlockedCount =
+    unlocked.isError && unlocked.count === 0 ? null : unlocked.isLoading ? undefined : unlocked.count;
 
   if (showUserNotFoundDiscovery) {
     return <ProfileUserNotFoundDiscoveryView />;

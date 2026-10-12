@@ -55,7 +55,7 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
     // collection envelope would render a fabricated collection card here
     // (mirrors the page's generateMetadata and renderPostOg's positive check).
     if (post.kind !== 'collection') return await renderFallbackOg();
-    if (isPostDeleted(post.content)) return await renderFallbackOg();
+    if (isPostDeleted(post)) return await renderFallbackOg();
 
     const collection = parseCollectionContent(post.content);
     if (!collection) return await renderFallbackOg();

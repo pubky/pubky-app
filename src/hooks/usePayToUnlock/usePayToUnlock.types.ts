@@ -30,9 +30,14 @@ export interface UsePayToUnlockResult {
   handshakePubky: string | null;
   /** A link state the reader cannot fix by waiting or paying — shown as a notice instead of the QR. */
   connectionIssue: 'recovery_required' | 'blocked' | null;
-  /** True while the install screen's wallet check or the proof submission is in flight. */
+  /** The server is waiting for the reader to finish setting up their wallet — shown as a notice instead of the QR. */
+  walletSetupNeeded: boolean;
+  /** True while a wallet check started from a button or the proof submission is in flight. */
   isSubmitting: boolean;
-  /** Install screen: re-checks the wallet, then submits. Retry screen: submits again (a fresh id after a failed/expired payment). */
+  /**
+   * Install screen: re-checks the wallet, then submits. Retry screen: submits again (a fresh id after a failed/expired
+   * payment), checking the wallet first after `failed`; with none, it moves to the install screen.
+   */
   retry: () => void;
   /** Resume a parked wait. The purchase was never abandoned, so this only restarts the polling. */
   recheck: () => void;

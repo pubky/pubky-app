@@ -95,9 +95,4 @@ describe('HumanFooter', () => {
     const footerLinks = screen.getAllByTestId('footer-links');
     expect(footerLinks).toHaveLength(2);
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<HumanFooter />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });

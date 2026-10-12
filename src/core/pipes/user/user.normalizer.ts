@@ -1,13 +1,24 @@
 import { UserResult } from 'pubky-app-specs';
+import { z } from 'zod';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
-import type { UserValidatorData } from '@/pipes/pipes.types';
+import type { ProfileChanges, ProfileFields, UserValidatorData } from '@/pipes/pipes.types';
 import type { NexusUserLink } from '@/services/nexus/nexus.types';
 
 export type UiLink = { label: string; url: string };
+
+// Read structure only: an older client may have published values outside today's limits.
+// UserNormalizer.to validates the complete profile after the user's corrections are merged.
+const publishedProfileSchema = z.object({
+  name: z.string(),
+  bio: z.string().nullish(),
+  image: z.string().nullish(),
+  links: z.array(z.object({ title: z.string(), url: z.string() })).nullish(),
+  status: z.string().nullish(),
+});
 
 export class UserNormalizer {
   private constructor() {}
@@ -18,6 +29,43 @@ export class UserNormalizer {
    */
   static linksFromUi(uiLinks: UiLink[] | undefined | null): NexusUserLink[] {
     return (uiLinks ?? []).map((link) => ({ title: link.label, url: link.url }));
+  }
+
+  /**
+   * Checks the shape of a `profile.json` read from the homeserver and returns its fields, filling in
+   * absent optional ones.
+   */
+  static fromPublished(profileJson: unknown): ProfileFields {
+    try {
+      const profile = publishedProfileSchema.parse(profileJson);
+      return {
+        name: profile.name,
+        bio: profile.bio ?? '',
+        image: profile.image ?? null,
+        links: (profile.links ?? []).map((link) => ({ title: link.title, url: link.url })),
+        status: profile.status ?? null,
+      };
+    } catch (error) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Published profile is not a valid profile.json', {
+        service: ErrorService.PubkyAppSpecs,
+        operation: 'fromPublished',
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * Applies `changes` onto the published profile. A field left out of `changes` keeps its
+   * published value, so a write never republishes one from a stale local copy.
+   */
+  static merge(published: ProfileFields, changes: ProfileChanges): ProfileFields {
+    return {
+      name: changes.name === undefined ? published.name : changes.name,
+      bio: changes.bio === undefined ? published.bio : changes.bio,
+      image: changes.image === undefined ? published.image : changes.image,
+      links: changes.links === undefined ? published.links : changes.links,
+      status: changes.status === undefined ? published.status : changes.status,
+    };
   }
 
   static to(user: UserValidatorData, pubky: Pubky): UserResult {

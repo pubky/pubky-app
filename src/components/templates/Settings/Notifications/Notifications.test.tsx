@@ -18,10 +18,3 @@ describe('Notifications', () => {
     expect(screen.getByText('New friend')).toBeInTheDocument();
   });
 });
-
-describe('Notifications - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<Notifications />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

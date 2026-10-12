@@ -74,7 +74,7 @@ function CardsPost({
     >
       {postDetails === undefined || isLoading ? (
         <CardsPostSkeleton index={index} />
-      ) : postDetails?.kind === 'collection' && !isPostDeleted(postDetails.content) ? (
+      ) : postDetails?.kind === 'collection' && !isPostDeleted(postDetails) ? (
         <CollectionCard authorPubky={identity.pubky} postId={identity.id} />
       ) : (
         <PostMain postId={postId} postDetails={postDetails} isReply={false} presentation="cards" />

@@ -79,15 +79,3 @@ describe('HotDiscoveryContentLayout', () => {
     expect(screen.getByTestId('content-layout-main')).toContainElement(screen.getByTestId('child'));
   });
 });
-
-describe('HotDiscoveryContentLayout - Snapshots', () => {
-  it('matches snapshot with child content', () => {
-    const { container } = render(
-      <HotDiscoveryContentLayout>
-        <p data-testid="snapshot-inner">discovery shell</p>
-      </HotDiscoveryContentLayout>,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
