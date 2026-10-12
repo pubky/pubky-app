@@ -55,6 +55,9 @@ export class LocksController {
   /** Bumped when a sign-in starts and when the session is cleared, so an `await` that started earlier cannot write over it. */
   private static sessionGeneration = 0;
 
+  /** Setup checks can overlap across dialogs and publishing; only the latest may clear shared readiness. */
+  private static paykitSetupGeneration = 0;
+
   private static captureSession(): () => boolean {
     const generation = this.sessionGeneration;
     return () => this.sessionGeneration === generation;
@@ -163,22 +166,19 @@ export class LocksController {
    * session (401 → Auth) is cleared, as on restore, so the creator signs in again instead of retrying.
    */
   static async fetchPaykitSetupStatus(asset: TLockPriceAsset): Promise<TPaykitSetupStatus> {
-    const isCurrent = this.captureSession();
+    const isCurrentSession = this.captureSession();
     const session = useLocksAuthStore.getState().selectLocksSession();
+    const generation = ++this.paykitSetupGeneration;
+    const isCurrent = () => isCurrentSession() && useLocksAuthStore.getState().selectLocksSession() === session;
     try {
       const status = await LocksApplication.fetchPaykitSetupStatus(asset);
-      if (!isCurrent() || useLocksAuthStore.getState().selectLocksSession() !== session) return 'unavailable';
-      if (status === 'setup_required') {
+      if (!isCurrent()) return 'unavailable';
+      if (generation === this.paykitSetupGeneration && status === 'setup_required') {
         useLocksAuthStore.getState().setPaykitConnected(false);
       }
       return status;
     } catch (error) {
-      if (
-        isCurrent() &&
-        isAppError(error) &&
-        isAuthError(error) &&
-        useLocksAuthStore.getState().selectLocksSession() === session
-      ) {
+      if (isCurrent() && generation === this.paykitSetupGeneration && isAppError(error) && isAuthError(error)) {
         this.clearSession();
       }
       throw error;

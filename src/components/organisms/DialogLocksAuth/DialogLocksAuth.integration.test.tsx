@@ -105,6 +105,40 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
     expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(false);
   });
 
+  it('keeps a confirmed wallet connection when a closed dialog receives a late setup response', async () => {
+    signIn();
+    const previousCheck = Promise.withResolvers<{ status: 'setup_required' }>();
+    mocks.paykitSetupStatus
+      .mockReturnValueOnce(previousCheck.promise)
+      .mockResolvedValueOnce({ status: 'setup_required' })
+      .mockResolvedValueOnce({ status: 'ready' });
+    const props = { onOpenChange: vi.fn(), onSuccess: vi.fn() };
+    const { rerender } = render(<DialogLocksAuth {...props} open />);
+
+    rerender(<DialogLocksAuth {...props} open={false} />);
+    rerender(<DialogLocksAuth {...props} open />);
+
+    const iframe = await screen.findByTitle<HTMLIFrameElement>('Bitkit payout account setup');
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: 'https://paykit.server',
+          source: iframe.contentWindow,
+          data: { type: 'paykit-setup-callback', state: new URL(iframe.src).searchParams.get('state') },
+        }),
+      );
+    });
+    expect(await screen.findByText('Locks Enabled')).toBeInTheDocument();
+    expect(mocks.paykitSetupStatus).toHaveBeenCalledTimes(3);
+
+    await act(async () => previousCheck.resolve({ status: 'setup_required' }));
+
+    expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(true);
+    expect(screen.getByText('Locks Enabled')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled();
+    expect(setupIframe()).not.toBeInTheDocument();
+  });
+
   it('unavailable: offers a retry instead of opening the setup', async () => {
     signIn();
     mocks.paykitSetupStatus

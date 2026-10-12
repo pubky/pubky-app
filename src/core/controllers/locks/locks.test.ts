@@ -378,6 +378,34 @@ describe('LocksController (auth)', () => {
       useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
     });
 
+    it('clears cached readiness when the current check requires setup', async () => {
+      LocksController.markPaykitConnected();
+      mocks.fetchPaykitSetupStatus.mockResolvedValueOnce('setup_required');
+
+      await expect(LocksController.fetchPaykitSetupStatus('USD')).resolves.toBe('setup_required');
+
+      expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(false);
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+    });
+
+    it('keeps the session when a superseded setup check is rejected after a successful check', async () => {
+      const previousCheck = Promise.withResolvers<never>();
+      mocks.fetchPaykitSetupStatus.mockReturnValueOnce(previousCheck.promise).mockResolvedValueOnce('ready');
+      const rejected = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', {
+        service: ErrorService.Locks,
+        operation: 'test',
+      });
+      const checked = expect(LocksController.fetchPaykitSetupStatus('BTC')).rejects.toBe(rejected);
+
+      await expect(LocksController.fetchPaykitSetupStatus('USD')).resolves.toBe('ready');
+      LocksController.markPaykitConnected();
+      previousCheck.reject(rejected);
+      await checked;
+
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+      expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(true);
+    });
+
     it('clears the session when the Lock Server rejects it (401 → Auth)', async () => {
       const rejected = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', {
         service: ErrorService.Locks,
