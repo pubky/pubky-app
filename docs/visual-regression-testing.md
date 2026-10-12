@@ -207,14 +207,24 @@ baselined.
 | Feature branch | Same feature branch                              | None                            |
 | `master`       | —                                                | Workflow fails (do not use)     |
 
-The workflow never commits directly to `dev` or `master`. It regenerates on both
-`ubuntu-latest` and `macos-latest`, merges `*-linux.png` and `*-darwin.png`
-artifacts, then commits the combined result.
+The workflow never commits directly to `dev` or `master`. It regenerates in one
+job per OS × browser (`ubuntu-latest` and `macos-latest` × chromium, firefox,
+webkit), merges every job's `*-<browser>-<platform>.png` artifact, then commits
+the combined result. `vrt.yml` uses the same matrix for the checks.
+
+Linux jobs run inside the official Playwright image
+(`mcr.microsoft.com/playwright:v<version>-noble`, resolved from the `playwright`
+entry in `package-lock.json`), so browsers and system libraries never install
+per run. The image's fonts differ from the bare runner, which is why Linux
+baselines must come from that image, not from a local Linux machine.
 
 Only baselines that changed are committed: `--update` leaves matching baselines
 untouched on disk (within the tolerance above), and the commit step stages via
 `git add` + `git diff --staged --quiet`, so a run with no visual changes makes no
-commit and opens no PR.
+commit and opens no PR. Changed files are committed in batches through the
+GraphQL `createCommitOnBranch` mutation (GitHub-signed, so `dev`'s
+required-signatures rule holds): one request per 20 MiB of baselines, which is
+one commit for a normal regeneration.
 
 **PR CI does not run VRT.** `vrt.yml` has no `pull_request` trigger, so a change that
 shifts pixels on a covered surface is not caught by the PR checks. Say so in the PR and
