@@ -7,7 +7,7 @@ import type {
   TDownloadDataParams,
 } from '@/application/profile/profile.types';
 import { APP_PRIVATE_PATH } from '@/config/app-files';
-import { ClientErrorCode } from '@/libs/error/error.codes';
+import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { hasHttpStatus, toAppError } from '@/libs/error/error.utils';
@@ -152,8 +152,22 @@ export class ProfileApplication {
     const url = buildUri(pubky, 'user');
     const current = await HomeserverService.getFreshBytes(url);
     if (current) {
-      const user = UserNormalizer.applyChanges(decodeObject(url, current, 'user'), changes);
-      return { body: encodeObject(url, user), user };
+      try {
+        const user = UserNormalizer.applyChanges(decodeObject(url, current, 'user'), changes);
+        return { body: encodeObject(url, user), user };
+      } catch (error) {
+        // The stored profile does not decode, or the edit breaks a profile rule
+        throw Err.validation(
+          ValidationErrorCode.INVALID_INPUT,
+          error instanceof Error ? error.message : String(error),
+          {
+            service: ErrorService.PubkyAppSpecs,
+            operation: 'readAndApply',
+            context: { pubky },
+            cause: error,
+          },
+        );
+      }
     }
     const legacyJson = await HomeserverService.getFreshJson(`${listPrefix(pubky, 'legacy')}profile.json`);
     const built = UserNormalizer.to(UserNormalizer.merge(UserNormalizer.fromPublished(legacyJson), changes), pubky);

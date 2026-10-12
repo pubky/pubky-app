@@ -30,9 +30,7 @@ describe('CustomFeedDialog layout hint', () => {
     );
     const trigger = screen.getByRole('button', { name: 'About layout settings' });
     await user.pointer({ target: trigger, keys: '[TouchA]' });
-    expect(screen.getByRole('tooltip')).toHaveTextContent(
-      'Cards also applies on mobile. Other layouts use a single column on mobile.',
-    );
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Layouts use a single column on mobile.');
     await user.pointer({ target: trigger, keys: '[TouchA]' });
     await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
     expect(screen.getByRole('dialog')).toBeVisible();

@@ -35,7 +35,7 @@ vi.mock('@/controllers/post/post', () => ({ PostController: { commitCreate: vi.f
 vi.mock('next/navigation', () => ({ usePathname: () => '/home' }));
 
 const params = {
-  lockedPost: { content: 'locked body', kind: 'note', attachments: [] },
+  lockedPost: { content: 'locked body', kind: 'note' as const, attachments: [] },
   announcement: { teaser: { lock_title: 'Title', teaser_description: 'Teaser' }, attachments: [], tags: [] },
   lockConfig: { amount: '1000', asset: 'BTC' as const },
 };

@@ -143,7 +143,7 @@ describe('FeedController', () => {
       });
     });
 
-    it.each(['all', 'followers'])('should reject profile tags for unsupported reach %s', async (reach) => {
+    it.each(['all', 'followers'] as const)('should reject profile tags for unsupported reach %s', async (reach) => {
       const params = createFeedParams({ domain_tags: ['bitcoiner'], reach });
 
       await expect(FeedController.commitCreate(params)).rejects.toThrow(

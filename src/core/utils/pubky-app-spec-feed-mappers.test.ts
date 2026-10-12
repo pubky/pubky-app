@@ -1,6 +1,7 @@
 import type { KnownFeedLayout, KnownFeedReach, KnownFeedSort, KnownPostKind } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import { CONTENT, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
+import { asInvalid } from '@/test-utils/type-assertions';
 import {
   homeContentToPubkyPostKind,
   homeLayoutToPubkyLayout,
@@ -28,7 +29,7 @@ describe('pubky-app-spec-feed-mappers', () => {
       });
 
       it('should return undefined for unknown layout values', () => {
-        expect(pubkyLayoutToHomeLayout(999 as KnownFeedLayout)).toBeUndefined();
+        expect(pubkyLayoutToHomeLayout(asInvalid<KnownFeedLayout>('a-newer-name'))).toBeUndefined();
       });
     });
 
@@ -53,7 +54,7 @@ describe('pubky-app-spec-feed-mappers', () => {
 
     describe('Layout bidirectional mapping', () => {
       it('should be reversible for all valid layouts', () => {
-        const layouts = ['columns', 'wide', 'visual', 'list', 'cards'];
+        const layouts: KnownFeedLayout[] = ['columns', 'wide', 'visual', 'list'];
 
         for (const pubkyLayout of layouts) {
           const homeLayout = pubkyLayoutToHomeLayout(pubkyLayout);
@@ -91,7 +92,7 @@ describe('pubky-app-spec-feed-mappers', () => {
       });
 
       it('should return undefined for unknown reach values', () => {
-        expect(pubkyReachToHomeReach(999 as KnownFeedReach)).toBeUndefined();
+        expect(pubkyReachToHomeReach(asInvalid<KnownFeedReach>('a-newer-name'))).toBeUndefined();
       });
     });
 
@@ -125,7 +126,7 @@ describe('pubky-app-spec-feed-mappers', () => {
     describe('Reach bidirectional mapping', () => {
       it('should be reversible for mappable reach values', () => {
         // Note: Followers is excluded because it has no home equivalent
-        const reaches = ['following', 'friends', 'all', 'wot', 'me'];
+        const reaches: KnownFeedReach[] = ['following', 'friends', 'all', 'wot', 'me'];
 
         for (const pubkyReach of reaches) {
           const homeReach = pubkyReachToHomeReach(pubkyReach);
@@ -147,7 +148,7 @@ describe('pubky-app-spec-feed-mappers', () => {
       });
 
       it('should return undefined for unknown sort values', () => {
-        expect(pubkySortToHomeSort(999 as KnownFeedSort)).toBeUndefined();
+        expect(pubkySortToHomeSort(asInvalid<KnownFeedSort>('a-newer-name'))).toBeUndefined();
       });
     });
 
@@ -168,7 +169,7 @@ describe('pubky-app-spec-feed-mappers', () => {
 
     describe('Sort bidirectional mapping', () => {
       it('should be reversible for all valid sorts', () => {
-        const sorts = ['recent', 'popularity'];
+        const sorts: KnownFeedSort[] = ['recent', 'popularity'];
 
         for (const pubkySort of sorts) {
           const homeSort = pubkySortToHomeSort(pubkySort);
@@ -210,7 +211,7 @@ describe('pubky-app-spec-feed-mappers', () => {
       });
 
       it('should return undefined for unknown post kind values', () => {
-        expect(pubkyPostKindToHomeContent(999 as KnownPostKind)).toBeUndefined();
+        expect(pubkyPostKindToHomeContent(asInvalid<KnownPostKind>('a-newer-name'))).toBeUndefined();
       });
     });
 
@@ -255,7 +256,7 @@ describe('pubky-app-spec-feed-mappers', () => {
 
     describe('Content/PostKind bidirectional mapping', () => {
       it('should be reversible for mappable post kinds', () => {
-        const postKinds = ['note', 'article', 'image', 'video', 'link', 'file', 'collection'];
+        const postKinds: KnownPostKind[] = ['note', 'article', 'image', 'video', 'link', 'file', 'collection'];
 
         for (const pubkyPostKind of postKinds) {
           const homeContent = pubkyPostKindToHomeContent(pubkyPostKind);

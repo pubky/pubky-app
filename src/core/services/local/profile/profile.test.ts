@@ -1,4 +1,4 @@
-import { PubkyAppUser } from 'pubky-app-specs';
+import type { User } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getProfileLocalEditTtlMs } from '@/config/user';
 import type { Pubky } from '@/models/models.types';
@@ -161,10 +161,7 @@ describe('LocalProfileService', () => {
     const userId = 'test-user-id' as Pubky;
 
     it('should store the published profile with its status, filling in absent fields', async () => {
-      await LocalProfileService.updateDetails(
-        asOpaque<PubkyAppUser>({ name: 'Published', status: '🪚building' }),
-        userId,
-      );
+      await LocalProfileService.updateDetails(asOpaque<User>({ name: 'Published', status: '🪚building' }), userId);
 
       expect(await UserDetailsModel.findById(userId)).toMatchObject({
         name: 'Published',
@@ -178,7 +175,7 @@ describe('LocalProfileService', () => {
     it('should create a missing row as a pending local edit with a fresh TTL', async () => {
       await UserTtlModel.table.clear();
 
-      await LocalProfileService.updateDetails(asOpaque<PubkyAppUser>({ name: 'Published' }), userId);
+      await LocalProfileService.updateDetails(asOpaque<User>({ name: 'Published' }), userId);
 
       const result = await UserDetailsModel.findById(userId);
       expect(result!.localUpdatedAt).toEqual(expect.any(Number));
@@ -198,7 +195,7 @@ describe('LocalProfileService', () => {
         social_graph_status: NexusSocialGraphStatus.NETWORKED,
       });
 
-      await LocalProfileService.updateDetails(asOpaque<PubkyAppUser>({ name: 'Published' }), userId);
+      await LocalProfileService.updateDetails(asOpaque<User>({ name: 'Published' }), userId);
 
       expect(await UserDetailsModel.findById(userId)).toMatchObject({
         name: 'Published',
@@ -220,7 +217,7 @@ describe('LocalProfileService', () => {
       });
 
       await LocalProfileService.updateDetails(
-        asOpaque<PubkyAppUser>({ name: 'Revived', bio: 'Back again', image: null, links: [] }),
+        asOpaque<User>({ name: 'Revived', bio: 'Back again', image: null, links: [] }),
         userId,
       );
 

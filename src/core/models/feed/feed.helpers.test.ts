@@ -2,12 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   buildFeedStreamId,
   contentToStreamKind,
-  layoutToString,
-  postKindToString,
   reachToStreamSource,
-  reachToString,
   sortToStreamSorting,
-  sortToString,
 } from '@/models/feed/feed.helpers';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { StreamSorting } from '@/services/nexus/nexus.types';
@@ -15,87 +11,6 @@ import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStre
 
 describe('Feed Helpers', () => {
   const TEST_VIEWER = 'viewer-pubky';
-  describe('reachToString', () => {
-    it('should convert Following to "following"', () => {
-      expect(reachToString('following')).toBe('following');
-    });
-
-    it('should convert Followers to "followers"', () => {
-      expect(reachToString('followers')).toBe('followers');
-    });
-
-    it('should convert Friends to "friends"', () => {
-      expect(reachToString('friends')).toBe('friends');
-    });
-
-    it('should convert All to "all"', () => {
-      expect(reachToString('all')).toBe('all');
-    });
-
-    it('should convert Wot and Me to their specs values', () => {
-      expect(reachToString('wot')).toBe('wot');
-      expect(reachToString('me')).toBe('me');
-    });
-  });
-
-  describe('layoutToString', () => {
-    it('should convert Columns to "columns"', () => {
-      expect(layoutToString('columns')).toBe('columns');
-    });
-
-    it('should convert Wide to "wide"', () => {
-      expect(layoutToString('wide')).toBe('wide');
-    });
-
-    it('should convert Visual to "visual"', () => {
-      expect(layoutToString('visual')).toBe('visual');
-    });
-  });
-
-  describe('sortToString', () => {
-    it('should convert Recent to "recent"', () => {
-      expect(sortToString('recent')).toBe('recent');
-    });
-
-    it('should convert Popularity to "popularity"', () => {
-      expect(sortToString('popularity')).toBe('popularity');
-    });
-  });
-
-  describe('postKindToString', () => {
-    it('should convert Short to "short"', () => {
-      expect(postKindToString('note')).toBe('short');
-    });
-
-    it('should convert Long to "long"', () => {
-      expect(postKindToString('article')).toBe('long');
-    });
-
-    it('should convert Image to "image"', () => {
-      expect(postKindToString('image')).toBe('image');
-    });
-
-    it('should convert Video to "video"', () => {
-      expect(postKindToString('video')).toBe('video');
-    });
-
-    it('should convert Link to "link"', () => {
-      expect(postKindToString('link')).toBe('link');
-    });
-
-    it('should convert File to "file"', () => {
-      expect(postKindToString('file')).toBe('file');
-    });
-
-    it('should convert Collection to "collection"', () => {
-      expect(postKindToString('collection')).toBe('collection');
-    });
-
-    it('should convert Unknown to "unknown"', () => {
-      expect(postKindToString('unknown')).toBe('unknown');
-    });
-  });
-
   describe('reachToStreamSource', () => {
     it('should convert All to StreamSource.ALL', () => {
       expect(reachToStreamSource('all')).toBe(StreamSource.ALL);
@@ -133,12 +48,12 @@ describe('Feed Helpers', () => {
       expect(contentToStreamKind(null)).toBeUndefined();
     });
 
-    it('should convert Short to StreamKind.NOTE', () => {
-      expect(contentToStreamKind('note')).toBe(StreamKind.NOTE);
+    it('should convert Short to StreamKind.SHORT', () => {
+      expect(contentToStreamKind('note')).toBe(StreamKind.SHORT);
     });
 
-    it('should convert Long to StreamKind.ARTICLE', () => {
-      expect(contentToStreamKind('article')).toBe(StreamKind.ARTICLE);
+    it('should convert Long to StreamKind.LONG', () => {
+      expect(contentToStreamKind('article')).toBe(StreamKind.LONG);
     });
 
     it('should convert Image to StreamKind.IMAGE', () => {
@@ -159,10 +74,6 @@ describe('Feed Helpers', () => {
 
     it('should convert Collection to StreamKind.COLLECTION', () => {
       expect(contentToStreamKind('collection')).toBe(StreamKind.COLLECTION);
-    });
-
-    it('should return undefined for Unknown (no StreamKind equivalent)', () => {
-      expect(contentToStreamKind('unknown')).toBeUndefined();
     });
   });
 
@@ -253,7 +164,7 @@ describe('Feed Helpers', () => {
         tags: ['second', 'first'],
         domain_tags: ['bitcoiner'],
       });
-      const friends = { ...following, reach: 'friends' };
+      const friends: FeedModelSchema = { ...following, reach: 'friends' };
 
       expect(buildFeedStreamId(following, TEST_VIEWER)).toBe('timeline:wot_domain:1:all:bitcoiner:second,first');
       expect(buildFeedStreamId(friends, TEST_VIEWER)).toBe('timeline:wot_domain:1:all:bitcoiner:second,first');

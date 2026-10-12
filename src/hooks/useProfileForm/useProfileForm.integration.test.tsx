@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { decodeObject, parsePubkyUrl } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { HttpMethod } from '@/libs/http/http.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useProfileForm } from './useProfileForm';
@@ -13,9 +13,11 @@ vi.mock('@/controllers/auth/auth', () => ({ AuthController: { bootstrapWithDelay
 vi.mock('@/controllers/file/file', () => ({ FileController: { getAvatarUrl: vi.fn() } }));
 vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/services/homeserver/homeserver', () => ({
+  // An account whose only profile is the 0.x one: the edit writes its first v1 profile
   HomeserverService: {
     getFreshJson: vi.fn(),
-    request: vi.fn(),
+    getFreshBytes: vi.fn(async () => null),
+    putBlob: vi.fn(),
     createWriteFence: () => ({ enter: () => {}, assertCurrent: () => {} }),
   },
 }));
@@ -23,9 +25,19 @@ vi.mock('@/services/nexus/bootstrap/bootstrap', () => ({ NexusBootstrapService: 
 
 const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 const profile = { name: 'Alice', bio: 'Bio', image: null, status: 'working', links: [] };
+const v1ProfileUrl = `pubky://${pubky}/pub/social/v1/profile.json`;
+
+/** The profile the edit PUT, decoded. */
+const putProfile = () => {
+  const [{ url, blob }] = vi.mocked(HomeserverService.putBlob).mock.calls[0];
+  return { url, profile: decodeObject(parsePubkyUrl(url), blob, 'user') };
+};
 
 describe('useProfileForm published links integration', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(HomeserverService.getFreshBytes).mockResolvedValue(null);
+  });
 
   it('preserves a link added on another device when an empty cached placeholder is removed', async () => {
     const publishedLinks = [{ title: 'WEBSITE', url: 'https://example.com/' }];
@@ -42,11 +54,10 @@ describe('useProfileForm published links integration', () => {
       await result.current.handlers.handleSubmit();
     });
 
-    expect(HomeserverService.request).toHaveBeenCalledExactlyOnceWith({
-      method: HttpMethod.PUT,
-      url: `pubky://${pubky}/pub/pubky.app/profile.json`,
-      bodyJson: { ...profile, image: undefined, bio: 'New bio', links: publishedLinks },
-      fence: expect.anything(),
+    expect(HomeserverService.putBlob).toHaveBeenCalledOnce();
+    expect(putProfile()).toEqual({
+      url: v1ProfileUrl,
+      profile: { ...profile, bio: 'New bio', links: publishedLinks },
     });
     expect(await UserDetailsModel.findById(pubky)).toMatchObject({ bio: 'New bio', links: publishedLinks });
   });
@@ -63,12 +74,8 @@ describe('useProfileForm published links integration', () => {
     });
 
     const repairedLinks = [{ title: 'X (TWITTER)', url: 'https://x.com/alice' }];
-    expect(HomeserverService.request).toHaveBeenCalledExactlyOnceWith({
-      method: HttpMethod.PUT,
-      url: `pubky://${pubky}/pub/pubky.app/profile.json`,
-      bodyJson: { ...published, image: undefined, links: repairedLinks },
-      fence: expect.anything(),
-    });
+    expect(HomeserverService.putBlob).toHaveBeenCalledOnce();
+    expect(putProfile()).toEqual({ url: v1ProfileUrl, profile: { ...published, links: repairedLinks } });
     expect(await UserDetailsModel.findById(pubky)).toMatchObject({ links: repairedLinks });
   });
 });

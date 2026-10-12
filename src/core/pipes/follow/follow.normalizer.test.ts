@@ -1,207 +1,43 @@
-import { FollowResult } from 'pubky-app-specs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { decodeObject } from 'pubky-social-specs';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
-import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  buildPubkyUri,
-  INVALID_INPUTS,
-  restoreMocks,
-  setupIntegrationTestMocks,
-  setupUnitTestMocks,
-  TEST_PUBKY,
-} from '../pipes.test-utils';
+import { INVALID_INPUTS, restoreMocks, setupIntegrationTestMocks, TEST_PUBKY } from '../pipes.test-utils';
 
 describe('FollowNormalizer', () => {
-  const createMockBuilder = (overrides?: Partial<{ createFollow: ReturnType<typeof vi.fn> }>) => ({
-    createFollow: vi.fn((followee: string) =>
-      asOpaque<FollowResult>({
-        follow: { followee, toJson: vi.fn(() => ({})) },
-        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `follows/${followee}`) },
-      }),
-    ),
-    ...overrides,
-  });
+  beforeEach(setupIntegrationTestMocks);
+  afterEach(restoreMocks);
 
-  /**
-   * Unit Tests
-   */
-  describe('Unit Tests', () => {
-    let mockBuilder: ReturnType<typeof createMockBuilder>;
+  describe('to', () => {
+    it('builds a public follow named by the followee', () => {
+      const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
 
-    beforeEach(() => {
-      mockBuilder = createMockBuilder();
-      setupUnitTestMocks(mockBuilder);
+      expect(result.id).toBe(TEST_PUBKY.USER_2);
+      expect(result.url).toBe(`pubky://${TEST_PUBKY.USER_1}/pub/social/v1/follows/${TEST_PUBKY.USER_2}.json`);
+      expect(decodeObject(result.url, result.body, 'follow')).toEqual(result.object);
     });
 
-    afterEach(restoreMocks);
-
-    describe('to - successful creation', () => {
-      it('should create follow with follow and meta properties', () => {
-        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
-
-        expect(result).toHaveProperty('follow');
-        expect(result).toHaveProperty('meta');
-      });
-
-      it('should call PubkySpecsSingleton.get with follower and createFollow with followee', () => {
-        FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
-
-        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-        expect(mockBuilder.createFollow).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
-      });
-
-      it('should return correct structure with follow and meta URL', () => {
-        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
-
-        expect(result.follow).toHaveProperty('toJson');
-        expect(result.meta.url).toContain('pubky://');
-        expect(result.meta.url).toContain('/pub/pubky.app/follows/');
-      });
+    it.each([`pubky${TEST_PUBKY.USER_2}`, `pk:${TEST_PUBKY.USER_2}`])('strips the display prefix of %s', (followee) => {
+      expect(FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee }).id).toBe(TEST_PUBKY.USER_2);
     });
 
-    describe('to - different inputs', () => {
-      it('should handle different follower/followee combinations', () => {
-        FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
-        expect(mockBuilder.createFollow).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
-
-        FollowNormalizer.to({ follower: TEST_PUBKY.USER_2, followee: TEST_PUBKY.USER_1 });
-        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_2);
-      });
-
-      it('should handle self-follow scenario', () => {
-        FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_1 });
-
-        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-        expect(mockBuilder.createFollow).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-      });
-    });
-
-    describe('to - error handling', () => {
-      it('should throw AppError with correct properties when createFollow fails', () => {
-        const errorMessage = 'Invalid followee';
-        mockBuilder.createFollow.mockImplementation(() => {
-          throw errorMessage;
-        });
-
-        try {
-          FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
-          expect(appError.operation).toBe('createFollow');
-          expect(appError.context).toEqual({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
-          expect(appError.message).toBe(errorMessage);
-        }
-      });
-
-      it('should throw AppError when PubkySpecsSingleton.get fails', () => {
-        vi.spyOn(PubkySpecsSingleton, 'get').mockImplementation(() => {
-          throw 'Singleton error';
-        });
-
-        expect(() => FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 })).toThrow(
-          AppError,
-        );
-      });
-    });
-
-    describe('to - edge cases', () => {
-      it.each([
-        ['empty followee', { follower: TEST_PUBKY.USER_1, followee: INVALID_INPUTS.EMPTY }],
-        ['empty follower', { follower: INVALID_INPUTS.EMPTY, followee: TEST_PUBKY.USER_2 }],
-      ])('should pass %s to builder (unit test)', (_, params) => {
-        FollowNormalizer.to(params);
-        // In unit tests, mocks don't validate - just verify calls
-        expect(mockBuilder.createFollow).toHaveBeenCalled();
-      });
+    it.each([INVALID_INPUTS.EMPTY, INVALID_INPUTS.INVALID_FORMAT])('refuses the followee %j', (followee) => {
+      expect(() => FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee })).toThrow(AppError);
+      try {
+        FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee });
+      } catch (error) {
+        expect((error as AppError).code).toBe(ValidationErrorCode.INVALID_INPUT);
+      }
     });
   });
 
-  /**
-   * Integration Tests - Real pubky-app-specs library
-   */
-  describe('Integration Tests', () => {
-    beforeEach(setupIntegrationTestMocks);
-    afterEach(restoreMocks);
-
-    describe('successful creation with real library', () => {
-      it('should create valid result with correct URL format', () => {
-        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
-
-        expect(result.follow).toBeDefined();
-        expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/follows\/.+/);
-        expect(result.meta.url).toContain(TEST_PUBKY.USER_2);
-      });
-
-      it('should create unique URLs for different followees', () => {
-        const result1 = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
-        const result2 = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_1 });
-
-        expect(result1.meta.url).not.toBe(result2.meta.url);
-      });
-
-      it('should allow self-follow at specs level', () => {
-        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_1 });
-
-        expect(result).toBeDefined();
-        expect(result.meta.url).toContain(TEST_PUBKY.USER_1);
-      });
-
-      it('should produce valid JSON from follow object', () => {
-        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 });
-
-        expect(typeof result.follow.toJson).toBe('function');
-        expect(result.follow.toJson()).toBeDefined();
-      });
-
-      it('should handle followee with "pubky" prefix by stripping it', () => {
-        const prefixedFollowee = `pubky${TEST_PUBKY.USER_2}`;
-        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: prefixedFollowee });
-
-        expect(result.follow).toBeDefined();
-        expect(result.meta.url).toContain(TEST_PUBKY.USER_2);
-      });
-
-      it('should handle followee with "pk:" prefix by stripping it', () => {
-        const prefixedFollowee = `pk:${TEST_PUBKY.USER_2}`;
-        const result = FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: prefixedFollowee });
-
-        expect(result.follow).toBeDefined();
-        expect(result.meta.url).toContain(TEST_PUBKY.USER_2);
-      });
-    });
-
-    describe('validation with real library', () => {
-      /**
-       * Note: createFollow(followee) validates the followee parameter.
-       * Unlike LastRead, invalid followees throw because the method takes a parameter.
-       */
-      it.each([
-        ['empty', INVALID_INPUTS.EMPTY],
-        ['null', INVALID_INPUTS.NULL],
-        ['undefined', INVALID_INPUTS.UNDEFINED],
-        ['invalid format', INVALID_INPUTS.INVALID_FORMAT],
-      ])('should throw AppError for %s followee', (_, invalidFollowee) => {
-        try {
-          FollowNormalizer.to({ follower: TEST_PUBKY.USER_1, followee: invalidFollowee });
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
-          expect(appError.operation).toBe('createFollow');
-        }
-      });
+  describe('toDeleteUrls', () => {
+    it('names the 0.x copy first, then the v1 one', () => {
+      expect(FollowNormalizer.toDeleteUrls({ follower: TEST_PUBKY.USER_1, followee: TEST_PUBKY.USER_2 })).toEqual([
+        `pubky://${TEST_PUBKY.USER_1}/pub/pubky.app/follows/${TEST_PUBKY.USER_2}`,
+        `pubky://${TEST_PUBKY.USER_1}/pub/social/v1/follows/${TEST_PUBKY.USER_2}.json`,
+      ]);
     });
   });
 });

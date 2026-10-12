@@ -1,5 +1,5 @@
-import { PubkyAppPost, PubkyAppPostEmbed } from 'pubky-app-specs';
 import type { KnownPostKind } from 'pubky-social-specs';
+import { buildPost } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
@@ -36,7 +36,7 @@ import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 // Test data
 const testData = {
   authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,
-  postId1: 'abc123xyz',
+  postId1: '0035V9A20WSE4',
   get fullPostId1() {
     return buildCompositeId({ pubky: this.authorPubky, id: this.postId1 });
   },
@@ -50,9 +50,16 @@ const createSaveParams = (
 ): TLocalSavePostParams => {
   return {
     compositePostId: compositePostId || testData.fullPostId1,
-    post: new PubkyAppPost(content, kind, undefined, undefined, undefined),
+    post: builtPost(content, kind),
   };
 };
+
+/** A post built by the package; the local row takes its id from `compositePostId`. */
+function builtPost(content: string, kind: KnownPostKind = 'note', threaded: { parent?: string; embed?: string } = {}) {
+  if (kind === 'collection') return buildPost(testData.authorPubky, { kind, name: content });
+  if (kind === 'article') return buildPost(testData.authorPubky, { kind, title: 'Title', body: content });
+  return buildPost(testData.authorPubky, { kind, content, ...threaded });
+}
 
 const getSavedPost = async (postId: string) => {
   return await PostDetailsModel.table.get(postId);
@@ -235,8 +242,8 @@ describe('LocalPostService', () => {
     });
 
     it('should increment parent reply count when creating a reply', async () => {
-      const parentPostId = 'parent:post123';
-      const parentUri = `pubky://parent/pub/pubky.app/posts/post123`;
+      const parentPostId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:0032PARTQP4G0';
+      const parentUri = `pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0032PARTQP4G0`;
 
       await setupExistingPost(parentPostId, 'Parent post');
       await setupUserCounts(testData.authorPubky);
@@ -246,7 +253,7 @@ describe('LocalPostService', () => {
       const baseParams = createSaveParams('This is a reply', testData.fullPostId1);
       const saveParams: TLocalSavePostParams = {
         ...baseParams,
-        post: new PubkyAppPost(baseParams.post.content, 'note', parentUri, undefined, undefined),
+        post: builtPost('This is a reply', 'note', { parent: parentUri }),
       };
 
       await LocalPostService.create(saveParams);
@@ -270,7 +277,7 @@ describe('LocalPostService', () => {
       const baseParams = createSaveParams('My collection');
       const saveParams: TLocalSavePostParams = {
         ...baseParams,
-        post: new PubkyAppPost(baseParams.post.content, 'collection', undefined, undefined, undefined),
+        post: builtPost('My collection', 'collection'),
       };
 
       await LocalPostService.create(saveParams);
@@ -298,12 +305,12 @@ describe('LocalPostService', () => {
     });
 
     it('should handle reply creation when parent post does not exist', async () => {
-      const parentUri = `pubky://nonexistent/pub/pubky.app/posts/missing123`;
+      const parentUri = `pubky://8kkppkmiubfq4pxn6f73nqrhhhgkb5xyfprntc9si3np9ydbotto/pub/pubky.app/posts/0032TESTID789`;
 
       const baseParams = createSaveParams('Reply to missing parent', testData.fullPostId1);
       const saveParams: TLocalSavePostParams = {
         ...baseParams,
-        post: new PubkyAppPost(baseParams.post.content, 'note', parentUri, undefined, undefined),
+        post: builtPost('Reply to missing parent', 'note', { parent: parentUri }),
       };
 
       // Should not throw - just silently skips incrementing non-existent parent
@@ -394,8 +401,8 @@ describe('LocalPostService', () => {
     });
 
     it('should touch TTL for both reply and parent post when creating a reply', async () => {
-      const parentPostId = 'parent:post123';
-      const parentUri = `pubky://parent/pub/pubky.app/posts/post123`;
+      const parentPostId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:0032PARTQP4G0';
+      const parentUri = `pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0032PARTQP4G0`;
 
       await setupExistingPost(parentPostId, 'Parent post');
       await setupUserCounts(testData.authorPubky);
@@ -403,7 +410,7 @@ describe('LocalPostService', () => {
       const baseParams = createSaveParams('This is a reply', testData.fullPostId1);
       const saveParams: TLocalSavePostParams = {
         ...baseParams,
-        post: new PubkyAppPost(baseParams.post.content, 'note', parentUri, undefined, undefined),
+        post: builtPost('This is a reply', 'note', { parent: parentUri }),
       };
 
       const beforeTimestamp = Date.now();
@@ -426,9 +433,9 @@ describe('LocalPostService', () => {
 
   describe('repost', () => {
     it('should create a repost with relationship to original post', async () => {
-      const originalPostId = 'original:post123';
+      const originalPostId = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y:0032PARTQP4G0';
       const repostId = testData.fullPostId1;
-      const originalUri = `pubky://original/pub/pubky.app/posts/post123`;
+      const originalUri = `pubky://5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y/pub/pubky.app/posts/0032PARTQP4G0`;
 
       // Setup original post
       await setupExistingPost(originalPostId, 'Original post content');
@@ -436,7 +443,7 @@ describe('LocalPostService', () => {
       // Create repost
       const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
-        post: new PubkyAppPost('', 'note', undefined, new PubkyAppPostEmbed(originalUri, 'note'), undefined),
+        post: builtPost('', 'note', { embed: originalUri }),
       };
 
       await LocalPostService.create(saveParams);
@@ -446,8 +453,8 @@ describe('LocalPostService', () => {
     });
 
     it('should increment original post repost count when creating repost', async () => {
-      const originalPostId = 'original:post123';
-      const originalUri = `pubky://original/pub/pubky.app/posts/post123`;
+      const originalPostId = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y:0032PARTQP4G0';
+      const originalUri = `pubky://5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y/pub/pubky.app/posts/0032PARTQP4G0`;
 
       // Setup original post
       await setupExistingPost(originalPostId, 'Original post');
@@ -455,7 +462,7 @@ describe('LocalPostService', () => {
       // Create repost
       const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
-        post: new PubkyAppPost('', 'note', undefined, new PubkyAppPostEmbed(originalUri, 'note'), undefined),
+        post: builtPost('', 'note', { embed: originalUri }),
       };
 
       await LocalPostService.create(saveParams);
@@ -465,15 +472,15 @@ describe('LocalPostService', () => {
     });
 
     it('should touch TTL for both repost and original post when creating a repost', async () => {
-      const originalPostId = 'original:post123';
-      const originalUri = `pubky://original/pub/pubky.app/posts/post123`;
+      const originalPostId = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y:0032PARTQP4G0';
+      const originalUri = `pubky://5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y/pub/pubky.app/posts/0032PARTQP4G0`;
 
       await setupExistingPost(originalPostId, 'Original post');
       await setupUserCounts(testData.authorPubky);
 
       const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
-        post: new PubkyAppPost('', 'note', undefined, new PubkyAppPostEmbed(originalUri, 'note'), undefined),
+        post: builtPost('', 'note', { embed: originalUri }),
       };
 
       const beforeTimestamp = Date.now();
@@ -494,9 +501,9 @@ describe('LocalPostService', () => {
     });
 
     it('should create repost with content for quote reposts', async () => {
-      const originalPostId = 'original:post123';
+      const originalPostId = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y:0032PARTQP4G0';
       const repostId = testData.fullPostId1;
-      const originalUri = `pubky://original/pub/pubky.app/posts/post123`;
+      const originalUri = `pubky://5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y/pub/pubky.app/posts/0032PARTQP4G0`;
       const quoteContent = 'This is great!';
 
       // Setup original post
@@ -505,7 +512,7 @@ describe('LocalPostService', () => {
       // Create quote repost
       const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
-        post: new PubkyAppPost(quoteContent, 'note', undefined, new PubkyAppPostEmbed(originalUri, 'note'), undefined),
+        post: builtPost(quoteContent, 'note', { embed: originalUri }),
       };
 
       await LocalPostService.create(saveParams);
@@ -578,7 +585,7 @@ describe('LocalPostService', () => {
 
     it('should handle delete when parent/original post no longer exists', async () => {
       const replyId = testData.fullPostId1;
-      const parentUri = `pubky://nonexistent/pub/pubky.app/posts/missing123`;
+      const parentUri = `pubky://8kkppkmiubfq4pxn6f73nqrhhhgkb5xyfprntc9si3np9ydbotto/pub/pubky.app/posts/0032TESTID789`;
 
       await setupExistingPost(replyId, 'Reply to deleted parent', parentUri);
 
@@ -595,9 +602,9 @@ describe('LocalPostService', () => {
     });
 
     it('should decrement parent reply count when deleting a reply', async () => {
-      const parentPostId = 'parent:post123';
+      const parentPostId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:0032PARTQP4G0';
       const replyId = testData.fullPostId1;
-      const parentUri = `pubky://parent/pub/pubky.app/posts/post123`;
+      const parentUri = `pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0032PARTQP4G0`;
 
       // Setup parent post
       await setupExistingPost(parentPostId, 'Parent post');
@@ -627,9 +634,9 @@ describe('LocalPostService', () => {
     });
 
     it('should decrement original post repost count when deleting a repost', async () => {
-      const originalPostId = 'original:post123';
+      const originalPostId = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y:0032PARTQP4G0';
       const repostId = testData.fullPostId1;
-      const originalUri = `pubky://original/pub/pubky.app/posts/post123`;
+      const originalUri = `pubky://5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y/pub/pubky.app/posts/0032PARTQP4G0`;
 
       // Setup original post
       await setupExistingPost(originalPostId, 'Original post');
@@ -649,9 +656,9 @@ describe('LocalPostService', () => {
     });
 
     it('should touch parent post TTL when deleting a reply', async () => {
-      const parentPostId = 'parent:post123';
+      const parentPostId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:0032PARTQP4G0';
       const replyId = testData.fullPostId1;
-      const parentUri = `pubky://parent/pub/pubky.app/posts/post123`;
+      const parentUri = `pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0032PARTQP4G0`;
 
       // Setup parent post
       await setupExistingPost(parentPostId, 'Parent post');
@@ -673,9 +680,9 @@ describe('LocalPostService', () => {
     });
 
     it('should touch original post TTL when deleting a repost', async () => {
-      const originalPostId = 'original:post123';
+      const originalPostId = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y:0032PARTQP4G0';
       const repostId = testData.fullPostId1;
-      const originalUri = `pubky://original/pub/pubky.app/posts/post123`;
+      const originalUri = `pubky://5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y/pub/pubky.app/posts/0032PARTQP4G0`;
 
       // Setup original post
       await setupExistingPost(originalPostId, 'Original post');
@@ -698,9 +705,9 @@ describe('LocalPostService', () => {
     });
 
     it('should not decrement counts below zero', async () => {
-      const parentPostId = 'parent:post123';
+      const parentPostId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:0032PARTQP4G0';
       const replyId = testData.fullPostId1;
-      const parentUri = `pubky://parent/pub/pubky.app/posts/post123`;
+      const parentUri = `pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0032PARTQP4G0`;
 
       // Setup with count already at 0
       await setupExistingPost(parentPostId, 'Parent post');
@@ -716,11 +723,11 @@ describe('LocalPostService', () => {
     });
 
     it('should handle deleting a post that is both a reply and a repost', async () => {
-      const parentPostId = 'parent:post123';
-      const originalPostId = 'original:post456';
+      const parentPostId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:0032PARTQP4G0';
+      const originalPostId = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y:0032QASXZ1230';
       const postId = testData.fullPostId1;
-      const parentUri = `pubky://parent/pub/pubky.app/posts/post123`;
-      const originalUri = `pubky://original/pub/pubky.app/posts/post456`;
+      const parentUri = `pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0032PARTQP4G0`;
+      const originalUri = `pubky://5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y/pub/pubky.app/posts/0032QASXZ1230`;
 
       // Setup parent and original posts
       await setupExistingPost(parentPostId, 'Parent post');
@@ -744,9 +751,9 @@ describe('LocalPostService', () => {
     });
 
     it('should rollback delete operation on transaction failure', async () => {
-      const parentPostId = 'parent:post123';
+      const parentPostId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:0032PARTQP4G0';
       const replyId = testData.fullPostId1;
-      const parentUri = `pubky://parent/pub/pubky.app/posts/post123`;
+      const parentUri = `pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0032PARTQP4G0`;
 
       // Setup parent and reply
       await setupExistingPost(parentPostId, 'Parent post');
@@ -1428,12 +1435,12 @@ describe('LocalPostService', () => {
       const sortedAuthorShort = buildSortedAuthorStreamId(
         StreamSorting.TIMELINE,
         testData.authorPubky,
-        StreamKind.NOTE,
+        StreamKind.SHORT,
       ) as PostStreamId;
       const sortedAuthorShortTagged = buildSortedAuthorStreamId(
         StreamSorting.TIMELINE,
         testData.authorPubky,
-        StreamKind.NOTE,
+        StreamKind.SHORT,
         ['bitcoin'],
       ) as PostStreamId;
       const wotShort = 'timeline:wot:short' as PostStreamId;
@@ -1600,9 +1607,9 @@ describe('LocalPostService', () => {
       });
 
       it('should add reply to author_replies and post_replies streams only', async () => {
-        const parentPostId = 'parent:post123';
+        const parentPostId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:0032PARTQP4G0';
         const replyId = testData.fullPostId1;
-        const parentUri = `pubky://parent/pub/pubky.app/posts/post123`;
+        const parentUri = `pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0032PARTQP4G0`;
 
         await setupExistingPost(parentPostId, 'Parent post');
         await setupUserCounts(testData.authorPubky);
@@ -1610,7 +1617,7 @@ describe('LocalPostService', () => {
         const baseParams = createSaveParams('This is a reply', replyId);
         const saveParams: TLocalSavePostParams = {
           ...baseParams,
-          post: new PubkyAppPost(baseParams.post.content, 'note', parentUri, undefined, undefined),
+          post: builtPost('This is a reply', 'note', { parent: parentUri }),
         };
 
         await LocalPostService.create(saveParams);
@@ -1631,7 +1638,7 @@ describe('LocalPostService', () => {
 
       it('should prepend posts to beginning of stream (most recent first)', async () => {
         const postId1 = testData.fullPostId1;
-        const postId2 = buildCompositeId({ pubky: testData.authorPubky, id: 'xyz789' });
+        const postId2 = buildCompositeId({ pubky: testData.authorPubky, id: '0035V9A20X47G' });
 
         await setupUserCounts(testData.authorPubky);
 
@@ -1674,9 +1681,9 @@ describe('LocalPostService', () => {
       });
 
       it('should remove reply from author_replies and post_replies streams', async () => {
-        const parentPostId = 'parent:post123';
+        const parentPostId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo:0032PARTQP4G0';
         const replyId = testData.fullPostId1;
-        const parentUri = `pubky://parent/pub/pubky.app/posts/post123`;
+        const parentUri = `pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0032PARTQP4G0`;
 
         await setupExistingPost(parentPostId, 'Parent post');
         await setupExistingPost(replyId, 'Reply post', parentUri);

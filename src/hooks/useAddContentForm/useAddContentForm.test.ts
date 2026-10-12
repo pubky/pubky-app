@@ -9,11 +9,11 @@ import { asInvalid } from '@/test-utils/type-assertions';
 import { useAddContentForm } from './useAddContentForm';
 import { ADD_CONTENT_FORM_FIELDS } from './useAddContentForm.types';
 
-const AUTHOR = 'a'.repeat(52);
-const VIEWER = 'v'.repeat(52);
+const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy';
+const VIEWER = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 const POST_ID = '00357R34CQ8Q0';
 const COMPOSITE_ID = `${AUTHOR}:${POST_ID}`;
-const POST_URI = `pubky://${AUTHOR}/pub/pubky.app/posts/${POST_ID}`;
+const POST_URI = `pubky://${AUTHOR}/pub/social/v1/posts/${POST_ID}`;
 const POST_URL = `https://pubky.app/post/${AUTHOR}/${POST_ID}`;
 const COLLECTION_ID = `${VIEWER}:collection-1`;
 

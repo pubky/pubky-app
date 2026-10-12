@@ -12,7 +12,6 @@ import { useNotificationStore } from '@/stores/notification/notification.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultNotificationPreferences, type NotificationPreferences } from '@/stores/settings/settings.types';
 import { mockAuthStore, mockNotificationStore } from '@/test-utils/stores';
-import { asOpaque } from '@/test-utils/type-assertions';
 import { NotificationController } from './notification';
 
 const mockUserId = 'pubky-user-123' as Pubky;
@@ -321,14 +320,7 @@ describe('NotificationController', () => {
       return { setLastRead, setUnread };
     };
 
-    const buildLastReadResult = () =>
-      asOpaque<ReturnType<typeof LastReadNormalizer.to>>({
-        last_read: {
-          timestamp: BigInt(mockTimestamp),
-          toJson: vi.fn().mockReturnValue({ timestamp: mockTimestamp }),
-        },
-        meta: { url: mockLastReadUrl },
-      });
+    const buildLastReadResult = () => ({ url: mockLastReadUrl, lastRead: { timestamp: mockTimestamp } });
 
     it('should call application and update local store once the write succeeds', async () => {
       const { setLastRead, setUnread } = setupStores(mockUserId);

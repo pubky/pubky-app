@@ -45,10 +45,18 @@ process.env.SUPPORT_ACCOUNT_ID = '123';
 
 const { db } = await import('@/database/franky/franky');
 
-// Resolve pubky-app-specs-backed MIME constants before per-file mocks of that
-// package can take effect. Previously this happened as a side effect of loading
-// the Radix snapshot serializer from `@/libs/utils/utils`.
-await import('@/config/posts');
+// jsdom's Blob has no `stream()`, which `hashMedia` of pubky-social-specs reads a file through.
+if (typeof Blob.prototype.stream !== 'function') {
+  Blob.prototype.stream = function stream(this: Blob) {
+    const read = () => this.arrayBuffer();
+    return new ReadableStream<Uint8Array>({
+      async start(controller) {
+        controller.enqueue(new Uint8Array(await read()));
+        controller.close();
+      },
+    });
+  } as Blob['stream'];
+}
 
 // Polyfill IntersectionObserver for jsdom
 class MockIntersectionObserver implements IntersectionObserver {

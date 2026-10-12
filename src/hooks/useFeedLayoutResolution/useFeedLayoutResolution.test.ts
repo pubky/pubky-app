@@ -211,26 +211,26 @@ describe('Cards scope', () => {
 });
 
 describe('saved custom feed layout', () => {
-  it.each([false, true])('uses saved Cards instead of the Home layout (phone: %s)', (isPhoneViewport) => {
+  it.each([false, true])('uses the saved layout instead of the Home layout (phone: %s)', (isPhoneViewport) => {
     useHomeStore.getState().setLayout(LAYOUT.WIDE);
     vi.mocked(useIsMobile).mockReturnValue(isPhoneViewport);
     vi.mocked(useCustomFeed).mockReturnValue({
-      id: 'cards-feed',
-      name: 'Cards feed',
+      id: 'list-feed',
+      name: 'List feed',
       tags: [],
       domain_tags: [],
       reach: 'all',
       sort: 'recent',
       content: null,
-      layout: 'cards',
+      layout: 'list',
       created_at: 0,
       updated_at: 0,
     });
 
     const { result } = renderHook(() => useFeedLayoutResolution(TIMELINE_FEED_VARIANT.CUSTOM));
 
-    expect(result.current.effectiveLayout).toBe(LAYOUT.CARDS);
-    expect(result.current.isCardsActive).toBe(true);
+    expect(result.current.effectiveLayout).toBe(LAYOUT.LIST);
+    expect(result.current.isCardsActive).toBe(false);
     expect(useHomeStore.getState().layout).toBe(LAYOUT.WIDE);
   });
 });

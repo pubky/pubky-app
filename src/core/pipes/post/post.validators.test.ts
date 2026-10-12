@@ -13,18 +13,19 @@ vi.mock('@/controllers/post/post', () => ({
 }));
 
 describe('PostValidators.validatePostId', () => {
-  const POST_ID = 'author:post-123';
+  const AUTHOR = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
+  const POST_ID = `${AUTHOR}:0032PARTQP4G0`;
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('returns the post uri when the parent exists with live content', async () => {
+  it('returns the v1 reference when the parent exists with live content, whatever spelling is stored', async () => {
     vi.mocked(PostController.getDetails).mockResolvedValue(
       asOpaque<EnrichedPostDetails>({
         id: POST_ID,
         content: 'Hello',
-        uri: 'pubky://author/pub/pubky.app/posts/post-123',
+        uri: `pubky://${AUTHOR}/pub/pubky.app/posts/0032PARTQP4G0`,
         kind: 'short',
         indexed_at: 0,
         attachments: null,
@@ -33,7 +34,7 @@ describe('PostValidators.validatePostId', () => {
 
     const uri = await PostValidators.validatePostId({ postId: POST_ID, message: 'Parent post' });
 
-    expect(uri).toBe('pubky://author/pub/pubky.app/posts/post-123');
+    expect(uri).toBe(`pubky://${AUTHOR}/pub/social/v1/posts/0032PARTQP4G0`);
   });
 
   it('throws NOT_FOUND when the parent post is missing from the local DB', async () => {
@@ -54,7 +55,7 @@ describe('PostValidators.validatePostId', () => {
       asOpaque<EnrichedPostDetails>({
         id: POST_ID,
         content: '[DELETED]',
-        uri: 'pubky://author/pub/pubky.app/posts/post-123',
+        uri: `pubky://${AUTHOR}/pub/pubky.app/posts/0032PARTQP4G0`,
         kind: 'short',
         indexed_at: 0,
         attachments: null,
@@ -78,7 +79,7 @@ describe('PostValidators.validatePostId', () => {
         id: POST_ID,
         content: '',
         deleted: true,
-        uri: 'pubky://author/pub/pubky.app/posts/post-123',
+        uri: `pubky://${AUTHOR}/pub/pubky.app/posts/0032PARTQP4G0`,
         kind: 'short',
         indexed_at: 0,
         attachments: null,

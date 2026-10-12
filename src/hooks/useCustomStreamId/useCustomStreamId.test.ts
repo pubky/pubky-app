@@ -3,6 +3,7 @@ import type { KnownFeedSort, KnownPostKind } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { useCustomStreamId } from './useCustomStreamId';
 
 const mockUseCustomFeed = vi.hoisted(() => vi.fn());
@@ -53,7 +54,7 @@ describe('useCustomStreamId', () => {
   // ============================================================================
 
   it('returns undefined when sort cannot be mapped (unknown sort value)', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: 999 as KnownFeedSort }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: asInvalid<KnownFeedSort>('a-newer-name') }));
 
     const { result } = renderHook(() => useCustomStreamId());
 
@@ -61,7 +62,7 @@ describe('useCustomStreamId', () => {
   });
 
   it('returns undefined when content cannot be mapped (unknown post kind)', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: 999 as KnownPostKind }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: asInvalid<KnownPostKind>('a-newer-name') }));
 
     const { result } = renderHook(() => useCustomStreamId());
 

@@ -8,12 +8,6 @@ const mockFolder = vi.fn();
 const mockGenerateAsync = vi.fn();
 const mockJSZipConstructor = vi.fn();
 
-// Avoid pulling WASM-heavy deps from type-only modules
-vi.mock('pubky-app-specs', () => ({
-  baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
-  getValidMimeTypes: () => ['image/jpeg', 'image/png'],
-}));
-
 // Mock config
 vi.mock('@/config/database', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/config/database')>();
@@ -113,12 +107,16 @@ beforeEach(async () => {
 });
 
 describe('ProfileApplication.downloadData', () => {
-  const pubky = 'test-pubky' as Pubky;
+  const pubky = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
+  const legacyTree = `pubky://${pubky}/pub/pubky.app/`;
+  // Files in the 0.x tree only; the other trees list empty
+  const listing = (files: string[]) => (params: { baseDirectory: string }) =>
+    Promise.resolve(params.baseDirectory === legacyTree ? files : []);
 
   it('should package files into a zip and trigger download', async () => {
     const dataUrls = [`pubky://${pubky}/pub/pubky.app/profile.json`, `pubky://${pubky}/pub/pubky.app/avatar.png`];
 
-    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(dataUrls);
+    vi.spyOn(HomeserverService, 'listAll').mockImplementation(listing(dataUrls));
     vi.spyOn(HomeserverService, 'get').mockImplementation(async (url: string) => {
       if (url.endsWith('profile.json')) {
         return new Response(JSON.stringify({ name: 'Test User' }), { status: 200 });
@@ -151,7 +149,9 @@ describe('ProfileApplication.downloadData', () => {
     expect(mockCreateElement).toHaveBeenCalledWith('a');
     expect(mockAppendChild).toHaveBeenCalledWith(mockAnchorElement);
     expect(mockAnchorElement.href).toBe('blob:mock-url');
-    expect(mockAnchorElement.download).toMatch(/^test-pubky_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_pubky\.app\.zip$/);
+    expect(mockAnchorElement.download).toMatch(
+      /^pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_pubky\.app\.zip$/,
+    );
     expect(mockClick).toHaveBeenCalledTimes(1);
     expect(mockRemoveChild).toHaveBeenCalledWith(mockAnchorElement);
     expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
@@ -161,16 +161,19 @@ describe('ProfileApplication.downloadData', () => {
     expect(progressValues[progressValues.length - 1]).toBe(100);
   });
 
-  it('should enumerate every file via the paginated listAll', async () => {
-    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(['file1.json', 'file2.json']);
+  it('should enumerate every tree the account holds via the paginated listAll', async () => {
+    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockImplementation(listing(['file1.json', 'file2.json']));
     // Return a new Response for each call since Response body can only be read once
     vi.spyOn(HomeserverService, 'get').mockImplementation(async () => new Response('{}', { status: 200 }));
 
     await ProfileApplication.downloadData({ pubky });
 
-    expect(listSpy).toHaveBeenCalledWith({
-      baseDirectory: `pubky://${pubky}/pub/pubky.app/`,
-    });
+    expect(listSpy.mock.calls.map(([params]) => params.baseDirectory)).toEqual([
+      legacyTree,
+      `pubky://${pubky}/pub/social/v1/`,
+      `pubky://${pubky}/priv/social/v1/`,
+      `pubky://${pubky}/priv/app.pubky/v1/`,
+    ]);
   });
 
   it('should propagate error when list fails', async () => {

@@ -39,14 +39,11 @@ let FileController: typeof import('./file').FileController;
 // Helper functions
 const createMockFile = () => new MockFile(['file content'], 'image.png', { type: 'image/png' });
 
-const createMockBlobResult = () => ({
-  blob: { data: new Uint8Array([1, 2, 3]) },
-  meta: { url: 'blob-url' },
-});
-
-const createMockFileResult = () => ({
-  file: { toJson: vi.fn() },
-  meta: { url: 'file-url' },
+const createMockAttachment = () => ({
+  media: { id: 'id', path: '/pub/social/v1/files/id.png', url: 'file-url' },
+  bytes: new Uint8Array([1, 2, 3]),
+  name: 'image.png',
+  contentType: 'image/png',
 });
 
 const createMockMetadata = () => ({
@@ -81,9 +78,7 @@ describe('FileController', () => {
   describe('commitCreate', () => {
     it('normalizes file and uploads it', async () => {
       const file = createMockFile();
-      const blobResult = createMockBlobResult();
-      const fileResult = createMockFileResult();
-      const fileAttachment = { blobResult, fileResult };
+      const fileAttachment = createMockAttachment();
 
       mockFileApplication.toFileAttachment.mockResolvedValue(fileAttachment);
       mockFileApplication.commitCreate.mockResolvedValue(undefined);
@@ -92,7 +87,7 @@ describe('FileController', () => {
 
       expect(mockFileApplication.toFileAttachment).toHaveBeenCalledWith({ file, pubky: testPubky });
       expect(mockFileApplication.commitCreate).toHaveBeenCalledWith({ fileAttachments: [fileAttachment] });
-      expect(result).toBe(fileResult.meta.url);
+      expect(result).toBe(fileAttachment.media.url);
     });
 
     it('propagates errors when file attachment preparation fails', async () => {
@@ -113,9 +108,7 @@ describe('FileController', () => {
 
     it('propagates errors when homeserver upload fails', async () => {
       const file = createMockFile();
-      const blobResult = createMockBlobResult();
-      const fileResult = createMockFileResult();
-      mockFileApplication.toFileAttachment.mockResolvedValue({ blobResult, fileResult });
+      mockFileApplication.toFileAttachment.mockResolvedValue(createMockAttachment());
       mockFileApplication.commitCreate.mockRejectedValue(new Error('upload failed'));
 
       await expect(FileController.commitCreate({ file, pubky: testPubky })).rejects.toThrow('upload failed');

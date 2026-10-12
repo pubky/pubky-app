@@ -9,7 +9,7 @@ import type { ComposerDraft } from '@/hooks/usePost/usePost.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { inferPostKindForCreate } from '@/pipes/post/post.kind';
+import { inferPostKindForCreate, toLocalPostKind } from '@/pipes/post/post.kind';
 import type { TGuardedResource } from '@/services/locks/locks.types';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
@@ -21,6 +21,10 @@ import { POST_INPUT_VARIANT } from './PostInput.constants';
  * See `.taehwa-work/Locks/2026-locks-create-content.md` → "Post-commit: RTL integration test".
  */
 
+/** The locked post a `buildPost` file holds, as readers parse it. */
+const decodePost = (file: { bytes: Uint8Array }) =>
+  JSON.parse(new TextDecoder().decode(file.bytes)) as { content: string; kind: string; attachments: string[] | null };
+
 const mocks = vi.hoisted(() => ({
   createLockContent: vi.fn(),
   fetchPaykitSetupStatus: vi.fn(),
@@ -28,7 +32,6 @@ const mocks = vi.hoisted(() => ({
   clearSession: vi.fn(),
   handleSubmit: vi.fn(), // the normal (non-lock) publish path
   toast: vi.fn(),
-  post: vi.fn(), // PubkyAppPost constructor spy — records the locked post's content/kind
   hasExternalContent: undefined as (() => boolean) | undefined,
   locksAuthed: false,
   paykitConnected: false,
@@ -71,26 +74,6 @@ vi.mock('@/config/network', () => ({
   getPaykitServerUrl: () => 'https://paykit.server',
 }));
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => mocks.toast(...args) }));
-
-// Minimal specs stand-in: a kind enum (consumed by the real `inferPostKindForCreate`) and a
-// constructor spy so the locked post's content/kind can be asserted.
-vi.mock('pubky-app-specs', () => ({
-  KnownPostKind: { Short: 0, Long: 1, Image: 2, Video: 3, Link: 4, File: 5, Collection: 6 },
-  PubkyAppPost: class {
-    constructor(
-      public content: string,
-      public kind: number,
-      public parent: string | null,
-      public embed: unknown,
-      public attachments: string[] | null,
-    ) {
-      mocks.post(content, kind, parent, embed, attachments);
-    }
-    toJson() {
-      return { content: this.content, kind: this.kind, attachments: this.attachments };
-    }
-  },
-}));
 
 // Fake composer: real state for the fields the lock flow captures/clears, no-ops for the rest.
 vi.mock('@/hooks/usePostInput/usePostInput', async () => {
@@ -308,15 +291,15 @@ describe('PostInput lock flow (integration)', () => {
 
     // The locked post carries the captured body and the kind a normal post would infer.
     const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    buildPost(files.length > 0 ? [descriptor('/priv/app.locks/content/id-1')] : [], 'pubkybob');
+    const postFile = buildPost(files.length > 0 ? [descriptor('/priv/app.locks/content/id-1')] : [], 'pubkybob');
     const expectedKind = inferPostKindForCreate({ content: body, attachments: files, isArticle: false });
-    expect(mocks.post).toHaveBeenLastCalledWith(
-      body,
-      expectedKind,
-      null,
-      null,
-      files.length > 0 ? ['pubky://bob/priv/app.locks/content/id-1'] : null,
-    );
+    expect(decodePost(postFile)).toEqual({
+      content: body,
+      kind: toLocalPostKind(expectedKind),
+      parent: null,
+      embed: null,
+      attachments: files.length > 0 ? ['pubky://bob/priv/app.locks/content/id-1'] : null,
+    });
 
     expect(mocks.handleSubmit).not.toHaveBeenCalled(); // never the normal path
     expect(onSuccess).toHaveBeenCalledWith('alice:POST1');
@@ -401,8 +384,7 @@ describe('PostInput lock flow (integration)', () => {
       'pubkybob',
     );
     expect(postFile.contentType).toBe('application/octet-stream');
-    const [, , , , uris] = mocks.post.mock.lastCall as [string, number, null, null, string[]];
-    expect(uris).toHaveLength(4);
+    expect(decodePost(postFile).attachments).toHaveLength(4);
 
     // The announcement carries its own public media, untouched.
     expect(mocks.commitCreate).toHaveBeenCalledWith(expect.objectContaining({ attachments: teaserFiles }));
@@ -420,8 +402,7 @@ describe('PostInput lock flow (integration)', () => {
     await waitFor(() => expect(mocks.createLockContent).toHaveBeenCalledTimes(1));
 
     const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    buildPost([descriptor('/priv/app.locks/content/id-1')], 'pubkybob');
-    const [, , , , uris] = mocks.post.mock.lastCall as [string, number, null, null, string[]];
+    const uris = decodePost(buildPost([descriptor('/priv/app.locks/content/id-1')], 'pubkybob')).attachments;
     expect(uris).toEqual(['pubky://bob/priv/app.locks/content/id-1']);
     expect(JSON.stringify(uris)).not.toContain('alice');
 

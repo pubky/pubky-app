@@ -6,15 +6,15 @@ import { mockSession } from '@/test-utils/pubky';
 import { mockAuthStore } from '@/test-utils/stores';
 import { DialogAddContent } from './DialogAddContent';
 
-const AUTHOR = 'a'.repeat(52);
-const VIEWER = 'v'.repeat(52);
+const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy';
+const VIEWER = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 const POST_ID = '00357R34CQ8Q0';
 const COMPOSITE_ID = `${AUTHOR}:${POST_ID}`;
-const POST_URI = `pubky://${AUTHOR}/pub/pubky.app/posts/${POST_ID}`;
+const POST_URI = `pubky://${AUTHOR}/pub/social/v1/posts/${POST_ID}`;
 const POST_URL = `https://pubky.app/post/${AUTHOR}/${POST_ID}`;
 
 const mocks = vi.hoisted(() => ({
-  currentUserPubky: 'v'.repeat(52) as string | null,
+  currentUserPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as string | null,
   restoreStatus: 'ready' as 'ready' | 'reauth-required',
   showSignIn: vi.fn(),
   bookmarkExists: vi.fn(),

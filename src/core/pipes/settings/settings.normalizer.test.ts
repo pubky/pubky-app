@@ -7,7 +7,7 @@ import {
   defaultPrivacyPreferences,
   type SettingsState,
 } from '@/stores/settings/settings.types';
-import { buildPubkyUri, restoreMocks, TEST_PUBKY } from '../pipes.test-utils';
+import { restoreMocks, TEST_PUBKY } from '../pipes.test-utils';
 
 describe('SettingsNormalizer', () => {
   beforeEach(() => {
@@ -72,7 +72,7 @@ describe('SettingsNormalizer', () => {
     it('should generate correct URL format', () => {
       const result = SettingsNormalizer.buildUrl(TEST_PUBKY.USER_1);
 
-      expect(result).toBe(buildPubkyUri(TEST_PUBKY.USER_1, 'settings.json'));
+      expect(result).toBe(`pubky://${TEST_PUBKY.USER_1}/priv/app.pubky/v1/settings.json`);
     });
 
     it('should include pubky in URL', () => {
@@ -123,7 +123,7 @@ describe('SettingsNormalizer', () => {
 
       const result = SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
 
-      expect(result.meta.url).toBe(buildPubkyUri(TEST_PUBKY.USER_1, 'settings.json'));
+      expect(result.meta.url).toBe(`pubky://${TEST_PUBKY.USER_1}/priv/app.pubky/v1/settings.json`);
     });
 
     it('should include correct meta path', () => {
@@ -131,7 +131,7 @@ describe('SettingsNormalizer', () => {
 
       const result = SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
 
-      expect(result.meta.path).toBe('pub/pubky.app/settings.json');
+      expect(result.meta.path).toBe('/priv/app.pubky/v1/settings.json');
     });
 
     it('should log debug message', () => {

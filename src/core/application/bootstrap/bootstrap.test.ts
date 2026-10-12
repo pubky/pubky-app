@@ -1,4 +1,3 @@
-import { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
 import { FeedApplication } from '@/application/feed/feed';
@@ -36,11 +35,6 @@ import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstra
 import { type NexusFileDetails, type NexusNotification, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { BootstrapApplication } from './bootstrap';
-
-// Mock pubky-app-specs to avoid WebAssembly issues
-vi.mock('pubky-app-specs', () => ({
-  default: vi.fn(() => Promise.resolve()),
-}));
 
 const TEST_PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 const MOCK_LAST_READ_URL = 'http://example.com/last-read';
@@ -125,10 +119,7 @@ const createFlatNotification = (timestamp: number): FlatNotification =>
   }) as FlatNotification;
 
 const getBootstrapParams = (pubky: string): TBootstrapParams & { allowedTypes: NotificationType[] } => {
-  const {
-    meta: { url },
-  } = NotificationNormalizer.to(pubky);
-  return { pubky, lastReadUrl: url, allowedTypes: MOCK_ALLOWED_TYPES };
+  return { pubky, lastReadUrl: MOCK_LAST_READ_URL, allowedTypes: MOCK_ALLOWED_TYPES };
 };
 
 type MockConfig = {
@@ -288,9 +279,6 @@ afterEach(() => {
 describe('BootstrapApplication', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(NotificationNormalizer, 'to').mockReturnValue({
-      meta: { url: MOCK_LAST_READ_URL },
-    } as LastReadResult);
     vi.spyOn(NotificationNormalizer, 'toFlatNotification').mockImplementation((n) =>
       createFlatNotification(n.timestamp),
     );
@@ -437,13 +425,10 @@ describe('BootstrapApplication', () => {
     it('should handle 404 homeserver error gracefully and create new lastRead', async () => {
       const bootstrapData = emptyBootstrap();
       const MOCK_NORMALIZED_TIMESTAMP = 9876543210;
-      const MOCK_NORMALIZED_LAST_READ_URL = 'pubky://test-pubky/pub/pubky.app/last-read';
+      const MOCK_NORMALIZED_LAST_READ_URL = 'pubky://test-pubky/priv/app.pubky/v1/last_read.json';
       const mockLastReadResult = {
-        last_read: {
-          timestamp: MOCK_NORMALIZED_TIMESTAMP,
-          toJson: vi.fn(() => ({ timestamp: MOCK_NORMALIZED_TIMESTAMP })),
-        },
-        meta: { url: MOCK_NORMALIZED_LAST_READ_URL },
+        lastRead: { timestamp: MOCK_NORMALIZED_TIMESTAMP },
+        url: MOCK_NORMALIZED_LAST_READ_URL,
       };
 
       const mocks = setupMocks({ bootstrapData });
@@ -461,9 +446,7 @@ describe('BootstrapApplication', () => {
       });
       mocks.homeserverRequest = homeserverRequestSpy;
 
-      const lastReadNormalizerSpy = vi
-        .spyOn(LastReadNormalizer, 'to')
-        .mockReturnValue(asOpaque<LastReadResult>(mockLastReadResult));
+      const lastReadNormalizerSpy = vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(mockLastReadResult);
       const loggerInfoSpy = vi.spyOn(Logger, 'info').mockImplementation(() => {});
 
       const result = await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
@@ -473,10 +456,15 @@ describe('BootstrapApplication', () => {
       });
       expect(lastReadNormalizerSpy).toHaveBeenCalledWith(TEST_PUBKY);
       expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
+      // The 0.x cursor is the fallback read before a new one is written
+      expect(homeserverRequestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.GET,
+        url: LastReadNormalizer.buildLegacyUrl(TEST_PUBKY),
+      });
       expect(homeserverRequestSpy).toHaveBeenCalledWith({
         method: HttpMethod.PUT,
         url: MOCK_NORMALIZED_LAST_READ_URL,
-        bodyJson: mockLastReadResult.last_read.toJson(),
+        bodyJson: mockLastReadResult.lastRead,
         fence: expect.anything(),
       });
 

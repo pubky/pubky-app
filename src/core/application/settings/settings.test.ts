@@ -33,6 +33,7 @@ vi.mock('@/pipes/settings/settings.normalizer', () => ({
     to: vi.fn(),
     from: vi.fn(),
     buildUrl: vi.fn(),
+    buildLegacyUrl: vi.fn(),
   },
 }));
 
@@ -41,7 +42,7 @@ describe('SettingsApplication', () => {
   const otherPubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
 
   const moderationBot = 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro' as Pubky;
-  const settingsUrl = `pubky://${testPubky}/pub/pubky.app/settings.json`;
+  const settingsUrl = `pubky://${testPubky}/priv/app.pubky/v1/settings.json`;
 
   // Test data factory. Defaults to a client that already knows the moderation-bot field,
   // so ordinary writes are a single PUT; stale-client cases override `privacy` explicitly.
@@ -62,8 +63,8 @@ describe('SettingsApplication', () => {
       version: settings.version,
     },
     meta: {
-      url: `pubky://${testPubky}/pub/pubky.app/settings.json`,
-      path: 'pub/pubky.app/settings.json',
+      url: `pubky://${testPubky}/priv/app.pubky/v1/settings.json`,
+      path: 'priv/app.pubky/v1/settings.json',
     },
   });
 
@@ -79,6 +80,9 @@ describe('SettingsApplication', () => {
       normalizerToSpy: vi.spyOn(SettingsNormalizer, 'to'),
       normalizerFromSpy: vi.spyOn(SettingsNormalizer, 'from'),
       normalizerBuildUrlSpy: vi.spyOn(SettingsNormalizer, 'buildUrl'),
+      normalizerBuildLegacyUrlSpy: vi
+        .spyOn(SettingsNormalizer, 'buildLegacyUrl')
+        .mockImplementation((pubky) => `pubky://${pubky}/pub/pubky.app/settings.json`),
     };
   };
 
@@ -180,8 +184,8 @@ describe('SettingsApplication', () => {
       normalizerToSpy.mockImplementation((state, pubky) => ({
         ...createMockNormalizerResult(state),
         meta: {
-          url: `pubky://${pubky}/pub/pubky.app/settings.json`,
-          path: 'pub/pubky.app/settings.json',
+          url: `pubky://${pubky}/priv/app.pubky/v1/settings.json`,
+          path: 'priv/app.pubky/v1/settings.json',
         },
       }));
       requestSpy.mockImplementation(({ url }) => (url.includes(testPubky) ? firstRequest : Promise.resolve(undefined)));
@@ -323,7 +327,7 @@ describe('SettingsApplication', () => {
       const remoteSettings = createMockSettingsState({ version: 2 });
       const { requestSpy, normalizerBuildUrlSpy, normalizerFromSpy } = setupMocks();
 
-      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
+      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/priv/app.pubky/v1/settings.json`);
       requestSpy.mockResolvedValue({
         notifications: remoteSettings.notifications,
         privacy: remoteSettings.privacy,
@@ -337,7 +341,7 @@ describe('SettingsApplication', () => {
       expect(normalizerBuildUrlSpy).toHaveBeenCalledWith(testPubky);
       expect(requestSpy).toHaveBeenCalledWith({
         method: HttpMethod.GET,
-        url: `pubky://${testPubky}/pub/pubky.app/settings.json`,
+        url: `pubky://${testPubky}/priv/app.pubky/v1/settings.json`,
       });
       expect(result).toEqual(remoteSettings);
     });
@@ -345,7 +349,7 @@ describe('SettingsApplication', () => {
     it('should return null when homeserver returns empty response', async () => {
       const { requestSpy, normalizerBuildUrlSpy } = setupMocks();
 
-      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
+      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/priv/app.pubky/v1/settings.json`);
       requestSpy.mockResolvedValue(undefined);
 
       const result = await SettingsApplication.fetchFromHomeserver(testPubky);
@@ -356,13 +360,13 @@ describe('SettingsApplication', () => {
     it('should return null on 404 error', async () => {
       const { requestSpy, normalizerBuildUrlSpy } = setupMocks();
 
-      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
+      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/priv/app.pubky/v1/settings.json`);
       const notFoundError = httpStatusCodeToError(
         404,
         'Not found',
         ErrorService.Homeserver,
         'request',
-        `pubky://${testPubky}/pub/pubky.app/settings.json`,
+        `pubky://${testPubky}/priv/app.pubky/v1/settings.json`,
       );
       requestSpy.mockRejectedValue(notFoundError);
 
@@ -379,7 +383,7 @@ describe('SettingsApplication', () => {
         context: { statusCode: 500 },
       });
 
-      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
+      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/priv/app.pubky/v1/settings.json`);
       requestSpy.mockRejectedValue(serverError);
 
       await expect(SettingsApplication.fetchFromHomeserver(testPubky)).rejects.toThrow('Server error');
@@ -391,8 +395,9 @@ describe('SettingsApplication', () => {
       const localSettings = createMockSettingsState({ updatedAt: 0 });
       const { requestSpy, normalizerBuildUrlSpy, normalizerToSpy } = setupMocks();
 
-      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
-      requestSpy.mockResolvedValueOnce(undefined); // fetchFromHomeserver returns null
+      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/priv/app.pubky/v1/settings.json`);
+      requestSpy.mockResolvedValueOnce(undefined); // no v1 settings
+      requestSpy.mockResolvedValueOnce(undefined); // and no 0.x settings either
       normalizerToSpy.mockReturnValue(createMockNormalizerResult(localSettings));
       requestSpy.mockResolvedValueOnce(undefined); // commitUpdate succeeds
 
@@ -416,7 +421,7 @@ describe('SettingsApplication', () => {
       const remoteSettings = createMockSettingsState({ version: 2, updatedAt: 1700000000000 });
       const { requestSpy, normalizerBuildUrlSpy, normalizerFromSpy } = setupMocks();
 
-      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
+      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/priv/app.pubky/v1/settings.json`);
       requestSpy.mockResolvedValue(remoteSettings);
       normalizerFromSpy.mockReturnValue(remoteSettings);
 
@@ -430,7 +435,7 @@ describe('SettingsApplication', () => {
       const remoteSettings = createMockSettingsState({ version: 1, updatedAt: 1800000000000 });
       const { requestSpy, normalizerBuildUrlSpy, normalizerFromSpy } = setupMocks();
 
-      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
+      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/priv/app.pubky/v1/settings.json`);
       requestSpy.mockResolvedValue(remoteSettings);
       normalizerFromSpy.mockReturnValue(remoteSettings);
 
@@ -445,7 +450,7 @@ describe('SettingsApplication', () => {
       const normalizerResult = createMockNormalizerResult(localSettings);
       const { requestSpy, normalizerBuildUrlSpy, normalizerFromSpy, normalizerToSpy } = setupMocks();
 
-      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
+      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/priv/app.pubky/v1/settings.json`);
       requestSpy.mockResolvedValueOnce(remoteSettings); // fetchFromHomeserver
       normalizerFromSpy.mockReturnValue(remoteSettings);
       normalizerToSpy.mockReturnValue(normalizerResult);
@@ -485,7 +490,7 @@ describe('SettingsApplication', () => {
       const localSettings = createMockSettingsState();
       const { normalizerBuildUrlSpy, requestSpy } = setupMocks();
 
-      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
+      normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/priv/app.pubky/v1/settings.json`);
       requestSpy.mockRejectedValue(new Error('Network error'));
 
       await expect(SettingsApplication.initializeSettings(testPubky, localSettings)).rejects.toThrow('Network error');

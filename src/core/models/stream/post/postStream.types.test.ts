@@ -419,9 +419,9 @@ describe('getPostStreamKind', () => {
 
   it('extracts the kind from sorting-first stream ids', () => {
     expect(getPostStreamKind('timeline:all:all')).toBe('all');
-    expect(getPostStreamKind('timeline:following:short')).toBe(StreamKind.NOTE);
+    expect(getPostStreamKind('timeline:following:short')).toBe(StreamKind.SHORT);
     expect(getPostStreamKind('total_engagement:friends:image')).toBe(StreamKind.IMAGE);
-    expect(getPostStreamKind('timeline:wot:short')).toBe(StreamKind.NOTE);
+    expect(getPostStreamKind('timeline:wot:short')).toBe(StreamKind.SHORT);
     expect(getPostStreamKind('timeline:bookmarks:collection')).toBe(StreamKind.COLLECTION);
   });
 
@@ -436,7 +436,7 @@ describe('getPostStreamKind', () => {
     );
     expect(getPostStreamKind('timeline:wot_domain:2:collection:bitcoin')).toBe(StreamKind.COLLECTION);
     expect(getPostStreamKind('total_engagement:wot_domain:1:all:🔥')).toBe('all');
-    expect(getPostStreamKind('timeline:wot_domain:0:short:dev')).toBe(StreamKind.NOTE);
+    expect(getPostStreamKind('timeline:wot_domain:0:short:dev')).toBe(StreamKind.SHORT);
     // #2190 shape with a trailing post-tags segment keeps the kind at index 3.
     expect(getPostStreamKind('timeline:wot_domain:2:image:bitcoin:dev')).toBe(StreamKind.IMAGE);
   });

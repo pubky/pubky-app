@@ -22,7 +22,7 @@ describe('TagController', () => {
     label: 'bitcoin',
     taggedKind: TagKind.POST,
     tagUrl: 'pubky://viewer/pub/pubky.app/tags/tag',
-    tagBody: { label: 'bitcoin' },
+    tagBody: new TextEncoder().encode('{"label":"bitcoin"}'),
   };
   beforeEach(() => {
     vi.resetAllMocks();

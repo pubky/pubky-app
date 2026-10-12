@@ -16,7 +16,6 @@ const mocks = vi.hoisted(() => ({
   waitForAuth: vi.fn<() => Promise<boolean>>(),
   fetchPaykitSetupStatus: vi.fn(),
   commitCreate: vi.fn(),
-  post: vi.fn(),
 }));
 
 vi.mock('@/controllers/locks/locks', () => ({
@@ -34,24 +33,6 @@ vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) => selector({ currentUserPubky: 'alice' }),
 }));
 
-vi.mock('pubky-app-specs', () => ({
-  KnownPostKind: { Short: 0, Long: 1 },
-  PubkyAppPost: class {
-    constructor(
-      public content: string,
-      public kind: number,
-      public parent: string | null,
-      public embed: unknown,
-      public attachments: string[] | null,
-    ) {
-      mocks.post(content, kind, parent, embed, attachments);
-    }
-    toJson() {
-      return { content: this.content, attachments: this.attachments };
-    }
-  },
-}));
-
 const decode = (bytes: Uint8Array) => JSON.parse(new TextDecoder().decode(bytes));
 const makeFile = (name: string, type: string) => new File(['xx'], name, { type });
 const descriptor = (path: string): TGuardedResource => ({ path, hash: 'HASH', content_type: 'image/png', size: 2 });
@@ -59,7 +40,7 @@ const descriptor = (path: string): TGuardedResource => ({ path, hash: 'HASH', co
 const teaser = { lock_title: 'My quote', teaser_description: 'a public teaser' };
 
 const params = (lockedAttachments: File[] = [], announcementAttachments: File[] = []) => ({
-  lockedPost: { content: 'locked body', kind: 'note', attachments: lockedAttachments },
+  lockedPost: { content: 'locked body', kind: 'note' as const, attachments: lockedAttachments },
   announcement: { teaser, attachments: announcementAttachments, tags: ['bitcoin'] },
   lockConfig: { amount: '1000', asset: 'BTC' as const },
 });
@@ -97,8 +78,12 @@ describe('useCreateLockContent', () => {
     const postFile = buildPost([descriptor('/priv/app.locks/content/id-1')], 'pubkybob');
 
     expect(postFile.contentType).toBe('application/octet-stream');
+    // The 0.x post shape every released reader parses
     expect(decode(postFile.bytes)).toEqual({
       content: 'locked body',
+      kind: 'short',
+      parent: null,
+      embed: null,
       attachments: ['pubky://bob/priv/app.locks/content/id-1'],
     });
   });

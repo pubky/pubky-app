@@ -1,5 +1,5 @@
 import { iconNames } from 'lucide-react/dynamic.js';
-import validationLimits from 'pubky-app-specs/validationLimits.json';
+import { limits } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import { INTERESTS_FEED_ICON, INTERESTS_FEED_NAME } from '@/config/feed';
 import { STARTER_PACK_MAX_TAGS } from '@/config/nexus';
@@ -31,6 +31,6 @@ describe('buildInterestsFeedParams', () => {
   it('fits every onboarding interest selection within the custom feed tag limit', () => {
     // The onboarding step caps the selection at STARTER_PACK_MAX_TAGS (a Nexus contract) and
     // specs caps a feed's tags independently; the whole selection must always fit the feed.
-    expect(STARTER_PACK_MAX_TAGS).toBeLessThanOrEqual(validationLimits.feedTagsMaxCount);
+    expect(STARTER_PACK_MAX_TAGS).toBeLessThanOrEqual(limits.feedTagsMaxCount);
   });
 });

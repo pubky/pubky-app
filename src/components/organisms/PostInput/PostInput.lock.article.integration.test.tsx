@@ -33,7 +33,6 @@ const mocks = vi.hoisted(() => ({
   commitCreateFile: vi.fn(),
   commitDeleteFile: vi.fn(),
   toast: vi.fn(),
-  post: vi.fn(), // PubkyAppPost constructor spy: the locked post as it is written
   // Handle into the stand-in editor, refreshed on every render. Null while no editor is mounted.
   editor: null as {
     markdown: string;
@@ -90,24 +89,6 @@ vi.mock('@/hooks/useMentionAutocomplete/useMentionAutocomplete', () => ({
   }),
 }));
 vi.mock('@/hooks/useUndoRepost/useUndoRepost', () => ({ useUndoRepost: () => ({ undoRepost: vi.fn() }) }));
-
-vi.mock('pubky-app-specs', () => ({
-  KnownPostKind: { Short: 0, Long: 1, Image: 2, Video: 3, Link: 4, File: 5, Collection: 6 },
-  PubkyAppPost: class {
-    constructor(
-      public content: string,
-      public kind: number,
-      public parent: string | null,
-      public embed: unknown,
-      public attachments: string[] | null,
-    ) {
-      mocks.post(content, kind, parent, embed, attachments);
-    }
-    toJson() {
-      return { content: this.content, kind: this.kind, attachments: this.attachments };
-    }
-  },
-}));
 
 // Auth wrappers: pass straight through, always authenticated to pubky.app.
 vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
@@ -241,14 +222,14 @@ const publishLock = async () => {
 const lockedPost = () => {
   const { attachments, buildPost } = mocks.createLockContent.mock.calls[0][0] as {
     attachments: { contentType: string; bytes: Uint8Array }[];
-    buildPost: (resources: TGuardedResource[], owner?: string) => unknown;
+    buildPost: (resources: TGuardedResource[], owner?: string) => { bytes: Uint8Array };
   };
-  buildPost(
+  const file = buildPost(
     attachments.map((_, index) => descriptor(`/priv/app.locks/content/file${index}`)),
     'pubkyowner',
   );
-  const [content, , , , uris] = mocks.post.mock.calls.at(-1) as [string, number, null, null, string[] | null];
-  return { attachments, body: (JSON.parse(content) as { body: string }).body, uris };
+  const post = JSON.parse(new TextDecoder().decode(file.bytes)) as { content: string; attachments: string[] | null };
+  return { attachments, body: (JSON.parse(post.content) as { body: string }).body, uris: post.attachments };
 };
 
 describe('PostInput - locking an article with body images (integration)', () => {

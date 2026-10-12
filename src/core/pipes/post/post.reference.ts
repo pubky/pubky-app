@@ -19,12 +19,15 @@ export function parsePostReference(value: string): ParsedPostReference | null {
 
   const { pubky, id } = parseCompositeId(compositeId);
 
-  return {
-    compositeId,
-    pubky,
-    postId: id,
-    postUri: buildUri(pubky, 'post', id),
-  };
+  let postUri: string;
+  try {
+    postUri = buildUri(pubky, 'post', id);
+  } catch {
+    // A pasted URL can carry anything: a key that is not one is no post reference.
+    return null;
+  }
+
+  return { compositeId, pubky, postId: id, postUri };
 }
 
 function resolveAppPostUrl(value: string): string | null {

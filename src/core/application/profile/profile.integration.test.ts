@@ -1,7 +1,7 @@
+import { decodeObject, parsePubkyUrl } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProfileApplication } from '@/application/profile/profile';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { HttpMethod } from '@/libs/http/http.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import type { ProfileChanges, ProfileFields } from '@/pipes/pipes.types';
@@ -10,7 +10,9 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     getFreshJson: vi.fn(),
+    getFreshBytes: vi.fn(),
     request: vi.fn(),
+    putBlob: vi.fn(),
     createWriteFence: () => ({ enter: () => {}, assertCurrent: () => {} }),
   },
 }));
@@ -41,10 +43,18 @@ const repairs: { label: string; invalid: Partial<ProfileFields>; changes: Profil
   { label: 'overlong status', invalid: { status: 'x'.repeat(51) }, changes: { status: valid.status } },
 ];
 
-// Exercise the real normalizer, SDK validation and IndexedDB persistence together.
+// Exercise the real normalizer, package validation and IndexedDB persistence together, on an account
+// whose only profile is the 0.x one: the first edit writes its v1 profile.
 describe('ProfileApplication published profile repair', () => {
+  /** The profile the edit PUT, decoded. */
+  const putProfile = () => {
+    const [{ url, blob }] = vi.mocked(HomeserverService.putBlob).mock.calls[0];
+    return { url, profile: decodeObject(parsePubkyUrl(url), blob, 'user') };
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
+    vi.mocked(HomeserverService.getFreshBytes).mockResolvedValue(null);
     await UserDetailsModel.table.clear();
     await UserTtlModel.table.clear();
   });
@@ -56,12 +66,8 @@ describe('ProfileApplication published profile repair', () => {
 
       await ProfileApplication.commitUpdate({ pubky, changes });
 
-      expect(HomeserverService.request).toHaveBeenCalledExactlyOnceWith({
-        method: HttpMethod.PUT,
-        url: `pubky://${pubky}/pub/pubky.app/profile.json`,
-        bodyJson: valid,
-        fence: expect.anything(),
-      });
+      expect(HomeserverService.putBlob).toHaveBeenCalledOnce();
+      expect(putProfile()).toEqual({ url: `pubky://${pubky}/pub/social/v1/profile.json`, profile: valid });
       expect(await UserDetailsModel.findById(pubky)).toMatchObject(valid);
       expect(await UserTtlModel.findById(pubky)).toBeTruthy();
     },
@@ -72,9 +78,9 @@ describe('ProfileApplication published profile repair', () => {
 
     await expect(ProfileApplication.commitUpdateStatus({ pubky, status: 'building' })).rejects.toMatchObject({
       code: ValidationErrorCode.INVALID_INPUT,
-      operation: 'createUser',
+      operation: 'buildUser',
     });
-    expect(HomeserverService.request).not.toHaveBeenCalled();
+    expect(HomeserverService.putBlob).not.toHaveBeenCalled();
     expect(await UserDetailsModel.findById(pubky)).toBeNull();
     expect(await UserTtlModel.findById(pubky)).toBeNull();
   });
@@ -87,7 +93,7 @@ describe('ProfileApplication published profile repair', () => {
         code: ValidationErrorCode.INVALID_INPUT,
         operation: 'fromPublished',
       });
-      expect(HomeserverService.request).not.toHaveBeenCalled();
+      expect(HomeserverService.putBlob).not.toHaveBeenCalled();
       expect(await UserDetailsModel.findById(pubky)).toBeNull();
     },
   );
