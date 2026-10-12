@@ -206,7 +206,7 @@ describe('LocalFileService', () => {
     const owner = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
     const bytes = Uint8Array.of(1, 2, 3);
     const media = buildFile(owner, { bytes, type: 'image/png' });
-    const compositeId = buildCompositeId({ pubky: owner, id: `${media.id}.png` });
+    const compositeId = buildCompositeId({ pubky: owner, id: media.id });
 
     it('creates the media row from the upload, named by the file the user picked', async () => {
       await LocalFileService.create({ media, bytes, name: 'cat.png', contentType: 'image/png' });
