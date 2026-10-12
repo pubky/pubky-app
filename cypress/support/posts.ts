@@ -224,6 +224,52 @@ const addArticleCover = (fileName = 'mustache-you.png') => {
   cy.get(ARTICLE_COVER_FILE_INPUT).should('have.length', 1).selectFile(imagePath, { force: true });
 };
 
+// The Remove image control is centred on the cover. Cypress only hit-tests the
+// centre of an element inside a fixed dialog, so `be.visible` on the img fails
+// there even though the preview is on screen around the button.
+const expectArticleCoverPreview = () => {
+  cy.get('[data-testid="article-cover"] img[alt="Image preview"]').should(($img) => {
+    const img = $img[0];
+    const view = img.ownerDocument.defaultView;
+    const rect = img.getBoundingClientRect();
+    expect(rect.width, 'cover preview width').to.be.greaterThan(0);
+    expect(rect.height, 'cover preview height').to.be.greaterThan(0);
+    expect((img.getAttribute('src') ?? '').length, 'cover preview src').to.be.greaterThan(0);
+    expect(view, 'cover preview window').to.not.equal(null);
+    if (!view) {
+      return;
+    }
+
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const candidates = [
+      { x: rect.left + 8, y: rect.top + 8 },
+      { x: rect.right - 8, y: rect.top + 8 },
+      { x: centerX, y: rect.top + 8 },
+      { x: rect.left + 8, y: centerY },
+    ];
+    const point = candidates.find(
+      (candidate) =>
+        candidate.x >= 0 &&
+        candidate.y >= 0 &&
+        candidate.x < view.innerWidth &&
+        candidate.y < view.innerHeight &&
+        candidate.x >= rect.left &&
+        candidate.x <= rect.right &&
+        candidate.y >= rect.top &&
+        candidate.y <= rect.bottom &&
+        Math.hypot(candidate.x - centerX, candidate.y - centerY) > 24,
+    );
+    expect(point, 'cover preview has a point clear of the remove control').to.not.equal(undefined);
+    if (!point) {
+      return;
+    }
+
+    const hit = img.ownerDocument.elementFromPoint(point.x, point.y);
+    expect(hit === img || Boolean(hit && img.contains(hit)), 'cover preview is visible').to.eq(true);
+  });
+};
+
 const fillArticleFields = ({
   title,
   body,
@@ -254,7 +300,7 @@ const fillArticleFields = ({
 
   if (imageAction?.action === 'add') {
     addArticleCover();
-    cy.get('img[alt="Image preview"]').should('be.visible');
+    expectArticleCoverPreview();
   }
 
   if (imageAction?.action === 'replace' || imageAction?.action === 'remove') {
@@ -262,7 +308,7 @@ const fillArticleFields = ({
     cy.get('img[alt="Image preview"]').should('not.exist');
     if (imageAction.action === 'replace') {
       addArticleCover('mustache-edit.png');
-      cy.get('img[alt="Image preview"]').should('be.visible');
+      expectArticleCoverPreview();
     }
   }
 };
