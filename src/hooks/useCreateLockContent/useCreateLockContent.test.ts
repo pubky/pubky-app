@@ -14,13 +14,17 @@ import { useCreateLockContent } from './useCreateLockContent';
 
 const mocks = vi.hoisted(() => ({
   createLockContent: vi.fn(),
+  waitForAuth: vi.fn<() => Promise<boolean>>(),
+  fetchPaykitSetupStatus: vi.fn(),
   commitCreate: vi.fn(),
   post: vi.fn(),
-  clearSession: vi.fn(),
 }));
 
 vi.mock('@/controllers/locks/locks', () => ({
-  LocksController: { createLockContent: mocks.createLockContent, clearSession: mocks.clearSession },
+  LocksController: {
+    fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    createLockContent: mocks.createLockContent,
+  },
 }));
 
 vi.mock('@/controllers/post/post', () => ({
@@ -58,12 +62,14 @@ const teaser = { lock_title: 'My quote', teaser_description: 'a public teaser' }
 const params = (lockedAttachments: File[] = [], announcementAttachments: File[] = []) => ({
   lockedPost: { content: 'locked body', kind: PubkyAppPostKind.Short, attachments: lockedAttachments },
   announcement: { teaser, attachments: announcementAttachments, tags: ['bitcoin'] },
-  lockConfig: { amountSats: '1000' },
+  lockConfig: { amount: '1000', asset: 'BTC' as const },
 });
 
 describe('useCreateLockContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
+    mocks.waitForAuth.mockResolvedValue(true);
     mocks.createLockContent.mockResolvedValue({
       lock_id: 'LOCK1',
       content_lock_path: '/pub/app.locks/LOCK1.json',
@@ -173,7 +179,7 @@ describe('useCreateLockContent', () => {
     expect(result.current.isPublishing).toBe(false);
   });
 
-  it('drops the Locks session and returns auth-expired when the Lock Server rejects it', async () => {
+  it('returns auth-expired when the Lock Server rejects the session', async () => {
     mocks.createLockContent.mockRejectedValue(
       Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Locks session rejected by the Lock Server', {
         service: ErrorService.Locks,
@@ -185,11 +191,63 @@ describe('useCreateLockContent', () => {
     const outcome = await act(() => result.current.publish());
 
     expect(outcome).toEqual({ status: 'auth-expired' });
-    expect(mocks.clearSession).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['BTC', 'USD'] as const)('waits for app authentication before checking %s receiving setup', async (asset) => {
+    const auth = Promise.withResolvers<boolean>();
+    mocks.waitForAuth.mockReturnValue(auth.promise);
+    const { result } = renderHook(() => useCreateLockContent({ ...params(), lockConfig: { amount: '500', asset } }));
+    let publish!: ReturnType<typeof result.current.publish>;
+    act(() => {
+      publish = result.current.publish();
+    });
+
+    expect(mocks.fetchPaykitSetupStatus).not.toHaveBeenCalled();
+    expect(mocks.createLockContent).not.toHaveBeenCalled();
+    await act(async () => {
+      auth.resolve(true);
+      expect(await publish).toEqual({ status: 'published', postId: 'POST1' });
+    });
+    expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledWith(asset);
+  });
+
+  it('does not check receiving setup or publish after app authentication is canceled', async () => {
+    mocks.waitForAuth.mockResolvedValue(false);
+    const { result } = renderHook(() => useCreateLockContent(params()));
+
+    expect(await act(() => result.current.publish())).toEqual({ status: 'canceled' });
+
+    expect(mocks.fetchPaykitSetupStatus).not.toHaveBeenCalled();
+    expect(mocks.createLockContent).not.toHaveBeenCalled();
+    expect(mocks.commitCreate).not.toHaveBeenCalled();
+    expect(result.current.error).toBeNull();
+  });
+
+  it.each(['BTC', 'USD'] as const)('checks %s receiving readiness before creating content', async (asset) => {
+    const { result } = renderHook(() => useCreateLockContent({ ...params(), lockConfig: { amount: '500', asset } }));
+    await act(() => result.current.publish());
+    expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledWith(asset);
+    expect(mocks.createLockContent).toHaveBeenCalledWith(
+      expect.objectContaining({ lockConfig: { amount: '500', asset } }),
+    );
+  });
+
+  it.each([
+    ['setup_required', 'setup-required'],
+    ['unavailable', 'failed'],
+  ])('does not create content when payment setup is %s', async (setup, status) => {
+    mocks.fetchPaykitSetupStatus.mockResolvedValue(setup);
+    const { result } = renderHook(() => useCreateLockContent(params()));
+    expect(await act(() => result.current.publish())).toEqual({ status });
+    expect(mocks.createLockContent).not.toHaveBeenCalled();
+    expect(mocks.commitCreate).not.toHaveBeenCalled();
   });
 
   describe('price guard', () => {
-    const withPrice = (amountSats: string) => ({ ...params(), lockConfig: { amountSats } });
+    const withPrice = (amountSats: string) => ({
+      ...params(),
+      lockConfig: { amount: amountSats, asset: 'BTC' as const },
+    });
 
     it('sends the applied price on to the lock', async () => {
       const { result } = renderHook(() => useCreateLockContent(withPrice('1234')));
@@ -197,7 +255,7 @@ describe('useCreateLockContent', () => {
       await act(() => result.current.publish());
 
       const [{ lockConfig }] = mocks.createLockContent.mock.calls[0];
-      expect(lockConfig).toEqual({ amountSats: '1234' });
+      expect(lockConfig).toEqual({ amount: '1234', asset: 'BTC' as const });
     });
 
     it.each(['0', '', '12.5'])('never creates the lock for the price %j', async (amountSats) => {
@@ -286,7 +344,6 @@ describe('useCreateLockContent', () => {
     const outcome = await act(() => result.current.publish());
 
     expect(outcome).toEqual({ status: 'failed' });
-    expect(mocks.clearSession).not.toHaveBeenCalled();
   });
 
   it('keeps the session and does not flag re-auth on a non-auth failure', async () => {
@@ -296,6 +353,9 @@ describe('useCreateLockContent', () => {
     const outcome = await act(() => result.current.publish());
 
     expect(outcome).toEqual({ status: 'failed' });
-    expect(mocks.clearSession).not.toHaveBeenCalled();
   });
 });
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ waitForAuth: mocks.waitForAuth }),
+}));

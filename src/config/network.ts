@@ -1,4 +1,5 @@
-import { LOCKS_GUARDED_CONTENT_PATH } from '@/config/locks';
+import type { Capabilities } from '@synonymdev/pubky';
+import { APP_CAPABILITIES, LOCKS_CAPABILITIES } from '@/config/auth';
 import {
   getDefaultHttpRelay,
   getDeployEnv,
@@ -62,4 +63,4 @@ export function isStagingHomeserverDeploy(): boolean {
 // - /pub/pubky.app/:rw         — the app's public data
 // - /priv/social/:rw           — where unlocked lock content is copied (reader replication)
 // - /priv/app.locks/content/:r — read-only: a creator reads their OWN guarded original here (Ring sessions)
-export const HOMESERVER_CAPABILITIES = `/pub/pubky.app/:rw,/priv/social/:rw,${LOCKS_GUARDED_CONTENT_PATH}:r`;
+export const HOMESERVER_CAPABILITIES = [APP_CAPABILITIES, ...LOCKS_CAPABILITIES].join(',') as Capabilities;

@@ -6,6 +6,7 @@ import type React from 'react';
  * intentionally absent: they are passed at call time to `handleDragEventWithAuth`.
  */
 export interface UsePostInputAuthHandlersOptions {
+  active?: boolean;
   handleExpand: () => void;
   handleSubmit: () => Promise<void>;
   setTags: React.Dispatch<React.SetStateAction<string[]>>;
@@ -31,6 +32,7 @@ export interface CreateKeyDownHandlerDeps {
 
 export interface UsePostInputAuthHandlersReturn {
   isAuthenticated: boolean;
+  isWaiting: boolean;
   handleExpandWithAuth: () => void;
   handleSubmitWithAuth: () => Promise<void> | undefined;
   setTagsWithAuth: React.Dispatch<React.SetStateAction<string[]>>;

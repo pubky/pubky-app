@@ -1,6 +1,8 @@
 import type { usePostSaveTargets } from '@/hooks/usePostSaveTargets/usePostSaveTargets';
 
 const noop = async () => {};
+/** An action that did nothing: the hook reports `false` when a toggle or create did not go through. */
+const noopAction = async () => false;
 
 /**
  * Idle `usePostSaveTargets` result for VRT surfaces that render post cards but never open
@@ -21,7 +23,7 @@ export const idlePostSaveTargets: ReturnType<typeof usePostSaveTargets> = {
   loadMoreCollections: noop,
   otherCollectionIds: [],
   isOtherCollectionsLoading: false,
-  toggleBookmark: noop,
-  toggleCollection: noop,
-  createCollectionWithPost: noop,
+  toggleBookmark: noopAction,
+  toggleCollection: noopAction,
+  createCollectionWithPost: noopAction,
 };

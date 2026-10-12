@@ -72,6 +72,7 @@ Guests can open routes that do not require a session:
 
 - **Route guard:** `EXPLORE_ROUTES` is included in `UNAUTHENTICATED_ROUTES`; dynamic public paths are allowed via `isDynamicPublicRoute()` in `RouteGuardProvider`.
 - **UI chrome:** use `usePublicRoute()` for layout (e.g. explore header, mobile footer on `/home`). `isPublicRoute` on the hook result is a **legacy alias** for `isDynamicPublicRoute` only—it is `false` on `/home` even though the page is browsable.
+- **Account identity in the UI:** Header, mobile footer and composers use `selectDisplayUserPubky` from `@/stores/auth/auth.selectors`. Keep the saved identity visible while restoring; show guest chrome after `reauth-required` or `temporary-error`, preserving the stored identity and draft. This selector only controls display; action guards still require a ready session.
 - **Auth-gated actions:** use `useRequireAuth().requireAuth()` for post, reply, follow, filters, etc. Streams for guests should use `REACH.ALL` (see `useStreamIdFromFilters`, `useHotStreamId`).
 
 ## Component Template

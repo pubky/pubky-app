@@ -7,7 +7,7 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
-import type { TPaykitSetupStatus } from '@/services/locks/locks.types';
+import type { TLockPriceAsset, TPaykitSetupStatus } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { PaykitSetupFlowStatus, type UsePaykitSetupFlowReturn } from './usePaykitSetupFlow.types';
 import { readPaykitSetupBridgeMessage } from './usePaykitSetupFlow.utils';
@@ -22,7 +22,7 @@ import { readPaykitSetupBridgeMessage } from './usePaykitSetupFlow.utils';
  * parent; the message is validated (origin / iframe source / schema), `state` is checked, and a
  * success is recorded on the Locks session.
  */
-export function usePaykitSetupFlow(): UsePaykitSetupFlowReturn {
+export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowReturn {
   const [status, setStatus] = useState<PaykitSetupFlowStatus>(PaykitSetupFlowStatus.IDLE);
   const [setupUrl, setSetupUrl] = useState<string | null>(null);
   const [error, setError] = useState<AppError | null>(null);
@@ -80,7 +80,7 @@ export function usePaykitSetupFlow(): UsePaykitSetupFlowReturn {
     let setupStatus: TPaykitSetupStatus | null = null;
     let failure: AppError | null = null;
     try {
-      setupStatus = await LocksController.fetchPaykitSetupStatus();
+      setupStatus = await LocksController.fetchPaykitSetupStatus(asset);
     } catch (caught) {
       failure = toAppError(caught, ErrorService.Locks, 'usePaykitSetupFlow.check');
     }
@@ -101,7 +101,7 @@ export function usePaykitSetupFlow(): UsePaykitSetupFlowReturn {
       setError(failure);
       setStatus(PaykitSetupFlowStatus.UNAVAILABLE);
     }
-  }, [start]);
+  }, [start, asset]);
 
   useEffect(() => {
     if (status !== PaykitSetupFlowStatus.AWAITING_APPROVAL) return;
@@ -130,8 +130,7 @@ export function usePaykitSetupFlow(): UsePaykitSetupFlowReturn {
           throw fail('Locks session changed while Paykit setup was open');
         }
 
-        LocksController.markPaykitConnected();
-        setStatus(PaykitSetupFlowStatus.SUCCESS);
+        void check();
       } catch (caught) {
         // No Logger here: Err.validation / toAppError both log at creation (double-log otherwise).
         setError(isAppError(caught) ? caught : toAppError(caught, ErrorService.Locks, 'usePaykitSetupFlow.onCallback'));
@@ -141,7 +140,7 @@ export function usePaykitSetupFlow(): UsePaykitSetupFlowReturn {
 
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [status]);
+  }, [status, check]);
 
   return { status, setupUrl, error, iframeRef, check, start, reset };
 }

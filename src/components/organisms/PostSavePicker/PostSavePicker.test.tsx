@@ -4,6 +4,9 @@ import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { PostSavePicker } from './PostSavePicker';
 
 const OTHER_AUTHOR = 'other-author';
@@ -36,7 +39,6 @@ const mockState = vi.hoisted(() => ({
   createCollectionWithPost: vi.fn(),
   loadMoreCollections: vi.fn(),
   resumeAutoLoad: vi.fn(),
-  setShowSignInDialog: vi.fn(),
 }));
 vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => ({
   usePostSaveTargets: () => ({
@@ -112,24 +114,6 @@ vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
-  useRequireAuth: () => ({
-    isAuthenticated: true,
-    requireAuth: <T,>(action: () => T) => action(),
-  }),
-}));
-
-// Both shapes are needed: the picker's auth gate reads `getState()`, while the
-// author avatars in the also-in rows call the store as a selector hook.
-vi.mock('@/stores/auth/auth.store', async () => {
-  const { createZustandLikeHook, mockAuthStore } = await import('@/test-utils/stores');
-  return {
-    useAuthStore: createZustandLikeHook(
-      mockAuthStore({ currentUserPubky: 'current-user', setShowSignInDialog: mockState.setShowSignInDialog }),
-    ),
-  };
-});
-
 // The also-in rows own a viewport TTL subscription; the coordinator is not under test here.
 vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
   useTtlSubscription: () => ({ ref: () => {}, isVisible: false }),
@@ -195,6 +179,13 @@ const closePicker = () => {
 describe('PostSavePicker', () => {
   beforeEach(() => {
     resetMockState();
+    useAuthStore.setState({
+      ...authInitialState,
+      currentUserPubky: 'current-user',
+      session: mockSession(),
+      restoreStatus: 'ready',
+      hasHydrated: true,
+    });
   });
 
   it('opens the desktop save menu with bookmarks and collections', async () => {
@@ -358,6 +349,37 @@ describe('PostSavePicker', () => {
 
     fireEvent.click(screen.getByText('Proof of Work'));
     expect(mockState.toggleCollection).toHaveBeenCalledWith('author:collection1');
+  });
+
+  describe.each([false, true])('recovery with mobile layout: %s', (isMobile) => {
+    it.each(['reauth-required', 'temporary-error'] as const)(
+      'preserves the draft when the mutation hooks cancel during %s',
+      async (restoreStatus) => {
+        mockState.isMobile = isMobile;
+        mockState.createCollectionWithPost.mockResolvedValueOnce(false);
+        renderPicker();
+        openPicker();
+        const input = await screen.findByPlaceholderText('Collection name');
+        fireEvent.change(input, { target: { value: 'Keep this draft' } });
+        act(() =>
+          useAuthStore.setState({
+            restoreStatus,
+            session: restoreStatus === 'temporary-error' ? mockSession() : null,
+          }),
+        );
+
+        await act(async () => {
+          fireEvent.click(screen.getByText('Bookmarks'));
+          fireEvent.click(screen.getByText('Proof of Work'));
+          fireEvent.click(screen.getByRole('button', { name: 'Create collection' }));
+        });
+        expect(mockState.toggleBookmark).toHaveBeenCalledOnce();
+        expect(mockState.toggleCollection).toHaveBeenCalledOnce();
+        expect(mockState.createCollectionWithPost).toHaveBeenCalledOnce();
+        expect(useAuthStore.getState().showSignInDialog).toBe(false);
+        expect(input).toHaveValue('Keep this draft');
+      },
+    );
   });
 
   it('creates a collection from the inline field', async () => {

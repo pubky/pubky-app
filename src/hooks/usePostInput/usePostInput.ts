@@ -93,6 +93,7 @@ function formatAttachmentRejection(
 }
 
 export function usePostInput({
+  active = true,
   variant,
   postId,
   originalPostId,
@@ -155,7 +156,7 @@ export function usePostInput({
     inlineMedia: inlineMediaSession,
     uploadingCount,
     serializeArticleForLock,
-  } = usePost({ keepInlineMedia });
+  } = usePost({ keepInlineMedia, active });
   const timelineFeed = useTimelineFeedContext();
   const { undoRepost } = useUndoRepost(isCollectionShare);
 

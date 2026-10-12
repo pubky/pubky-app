@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
@@ -40,6 +41,7 @@ export function useReorderCollection({
   const enterSnapshotRef = useRef<string[]>([]);
 
   const isReorderMode = draftItems !== null;
+  const { waitForAuth } = useRequireAuth(isReorderMode);
 
   // Clear the global FAB flag if the page unmounts mid-reorder (navigation).
   useEffect(() => () => useCollectionReorderStore.getState().exit(), []);
@@ -92,6 +94,7 @@ export function useReorderCollection({
 
     setIsSaving(true);
     try {
+      if (!(await waitForAuth())) return;
       await PostController.commitReorderCollectionItems({ collectionId: compositeCollectionId, items: draftItems });
       toast({ title: 'Collection order saved', dismissButton: true });
       exitReorderMode();

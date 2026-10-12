@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AUTH_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { ProfileController } from '@/controllers/profile/profile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Logger } from '@/libs/logger/logger';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -12,6 +13,7 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 interface UseDeleteAccountResult {
   handleDeleteAccount: () => Promise<void>;
   isDeleting: boolean;
+  isWaiting: boolean;
   progress: number;
 }
 
@@ -22,14 +24,22 @@ interface UseDeleteAccountResult {
  * then signs the user out and redirects to the logout page.
  * On failure, shows an error toast and resets state so the user can retry.
  */
-export function useDeleteAccount(): UseDeleteAccountResult {
+export function useDeleteAccount(active = true): UseDeleteAccountResult {
   const router = useRouter();
+  const { waitForAuth, isWaiting } = useRequireAuth(active);
+  const inFlight = useRef(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [progress, setProgress] = useState(0);
 
   const handleDeleteAccount = async () => {
-    if (isDeleting) {
+    if (inFlight.current) {
       Logger.warn('[useDeleteAccount] Deletion already in progress, ignoring request');
+      return;
+    }
+
+    inFlight.current = true;
+    if (!(await waitForAuth())) {
+      inFlight.current = false;
       return;
     }
 
@@ -45,6 +55,7 @@ export function useDeleteAccount(): UseDeleteAccountResult {
         variant: 'error',
         description: 'Failed to delete account. Please try again.',
       });
+      inFlight.current = false;
       setIsDeleting(false);
       setProgress(0);
       return;
@@ -65,6 +76,7 @@ export function useDeleteAccount(): UseDeleteAccountResult {
   return {
     handleDeleteAccount,
     isDeleting,
+    isWaiting,
     progress,
   };
 }

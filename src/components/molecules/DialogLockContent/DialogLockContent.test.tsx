@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogLockContent } from './DialogLockContent';
 
 const mocks = vi.hoisted(() => ({
@@ -15,25 +15,20 @@ vi.mock('@/hooks/useSatUsdRate/useSatUsdRate', () => ({
   },
 }));
 
-vi.mock('@/atoms/Dialog/Dialog', () => ({
-  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
-    open ? <div data-testid="dialog">{children}</div> : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-const setup = (override?: Partial<React.ComponentProps<typeof DialogLockContent>>) => {
+const setup = async (override?: Partial<React.ComponentProps<typeof DialogLockContent>>) => {
   const onOpenChange = vi.fn();
   const onApplied = vi.fn();
-  render(<DialogLockContent open onOpenChange={onOpenChange} onApplied={onApplied} {...override} />);
+  await act(async () => {
+    render(<DialogLockContent open onOpenChange={onOpenChange} onApplied={onApplied} {...override} />);
+  });
   return { onOpenChange, onApplied };
 };
 
 /** Types `sats` into the price field. */
-const enterPrice = (sats: string) => {
-  fireEvent.change(screen.getByLabelText('Bitcoin Amount', { selector: 'input' }), { target: { value: sats } });
+const enterPrice = async (sats: string) => {
+  await act(async () => {
+    fireEvent.change(screen.getByLabelText('Bitcoin Amount', { selector: 'input' }), { target: { value: sats } });
+  });
 };
 
 beforeEach(() => {
@@ -43,24 +38,24 @@ beforeEach(() => {
 });
 
 describe('DialogLockContent', () => {
-  it('asks for the rate only while open', () => {
-    setup({ open: false });
+  it('asks for the rate only while open', async () => {
+    await setup({ open: false });
     expect(mocks.useBtcRate).toHaveBeenCalledWith(false);
 
     mocks.useBtcRate.mockClear();
-    setup();
+    await setup();
     expect(mocks.useBtcRate).toHaveBeenCalledWith(true);
   });
 
-  it('renders a single payment form without unlock-method tabs', () => {
-    setup();
+  it('renders a single payment form without unlock-method tabs', async () => {
+    await setup();
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Bitcoin Amount', { selector: 'input' })).toBeInTheDocument();
   });
 
-  it('does not render when closed', () => {
-    setup({ open: false });
-    expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
+  it('does not render when closed', async () => {
+    await setup({ open: false });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it.each([
@@ -68,58 +63,65 @@ describe('DialogLockContent', () => {
     ['1.5', '1'], // a decimal stops at the dot; dropping it would multiply the price by ten
     ['07', '7'], // the Lock Server rejects a leading zero, so it never reaches the state
     ['1,234', '1,234'], // the field's own grouping survives a round trip
-  ])('normalizes %j typed into the price field to %j', (typed, shown) => {
-    setup();
-    enterPrice(typed);
+  ])('normalizes %j typed into the price field to %j', async (typed, shown) => {
+    await setup();
+    await enterPrice(typed);
     expect(screen.getByLabelText('Bitcoin Amount', { selector: 'input' })).toHaveValue(shown);
   });
 
-  it('emits exactly the price the field shows', () => {
-    const { onApplied } = setup();
-    enterPrice('07');
-    fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
+  it('emits exactly the price the field shows', async () => {
+    const { onApplied } = await setup();
+    await enterPrice('07');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
+    });
 
-    expect(onApplied).toHaveBeenCalledWith({ amountSats: '7' });
+    expect(onApplied).toHaveBeenCalledWith({ amount: '7', asset: 'BTC' as const });
   });
 
-  it('keeps Apply Lock disabled until the price is a positive amount', () => {
-    setup();
+  it('keeps Apply Lock disabled until the price is a positive amount', async () => {
+    await setup();
     const apply = screen.getByRole('button', { name: 'Apply Lock' });
 
-    enterPrice('abc'); // nothing survives the digit filter
+    await enterPrice('abc'); // nothing survives the digit filter
     expect(apply).toBeDisabled();
 
-    enterPrice('0');
+    await enterPrice('0');
     expect(apply).toBeDisabled();
 
-    enterPrice('1000');
+    await enterPrice('1000');
     expect(apply).toBeEnabled();
+
+    await enterPrice('0');
+    expect(apply).toBeDisabled();
   });
 
-  it('passes the price to onApplied on Apply Lock', () => {
-    const { onApplied } = setup();
-    enterPrice('1000');
-    fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
+  it('passes the price to onApplied on Apply Lock', async () => {
+    const { onApplied } = await setup();
+    await enterPrice('1000');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
+    });
 
-    expect(onApplied).toHaveBeenCalledWith({ amountSats: '1000' });
+    expect(onApplied).toHaveBeenCalledWith({ amount: '1000', asset: 'BTC' as const });
   });
 
-  it('shows the USD value of the price when a rate is available', () => {
+  it('shows the USD value of the price when a rate is available', async () => {
     mocks.btcRate = { satUsd: 0.001 };
-    setup();
-    enterPrice('1000');
+    await setup();
+    await enterPrice('1000');
     expect(screen.getByText('$1.00')).toBeInTheDocument();
   });
 
-  it('says so when the rate could not be loaded', () => {
+  it('says so when the rate could not be loaded', async () => {
     mocks.rateStatus = 'failed';
-    setup();
-    enterPrice('1000');
+    await setup();
+    await enterPrice('1000');
     expect(screen.getByText(/dollar value can't be shown/i)).toHaveClass('text-destructive');
   });
 
-  it('marks the apply button as refusing the pointer until the price is valid', () => {
-    setup();
+  it('marks the apply button as refusing the pointer until the price is valid', async () => {
+    await setup();
     const apply = screen.getByRole('button', { name: 'Apply Lock' });
 
     expect(apply).toBeDisabled();
@@ -127,23 +129,111 @@ describe('DialogLockContent', () => {
     expect(apply).toHaveClass('disabled:cursor-not-allowed', 'disabled:pointer-events-auto');
   });
 
-  it('stays quiet about the rate while it is still loading', () => {
+  it('stays quiet about the rate while it is still loading', async () => {
     mocks.rateStatus = 'loading';
-    setup();
-    enterPrice('1000');
+    await setup();
+    await enterPrice('1000');
     expect(screen.queryByText(/dollar value can't be shown/i)).not.toBeInTheDocument();
   });
 
-  it('omits the USD value when the rate is unavailable', () => {
-    setup();
-    enterPrice('1000');
+  it('omits the USD value when the rate is unavailable', async () => {
+    await setup();
+    await enterPrice('1000');
     expect(screen.queryByText(/^\$/)).not.toBeInTheDocument();
   });
 
-  it('closes without applying on Cancel', () => {
-    const { onOpenChange, onApplied } = setup();
+  it('closes without applying on Cancel', async () => {
+    const { onOpenChange, onApplied } = await setup();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onApplied).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+describe('price denomination', () => {
+  const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+  beforeAll(() => {
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+  afterAll(() => {
+    if (originalScrollIntoView) HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    else delete (HTMLElement.prototype as { scrollIntoView?: () => void }).scrollIntoView;
+  });
+
+  const chooseCurrency = async (currency: string) => {
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Price currency' }), { key: 'ArrowDown' });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option', { name: currency }));
+    });
+  };
+
+  it('applies an exact USD price and clears the previous amount on switching', async () => {
+    const { onApplied } = await setup();
+    await enterPrice('1000');
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Price currency' }), { key: 'ArrowDown' });
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['Bitcoin', 'USD']);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option', { name: 'USD' }));
+    });
+    const field = screen.getByLabelText('USD Amount', { selector: 'input' });
+    expect(field).toHaveValue('');
+    expect(mocks.useBtcRate).toHaveBeenLastCalledWith(false);
+    await act(async () => {
+      fireEvent.change(field, { target: { value: '5.25' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
+    });
+    expect(onApplied).toHaveBeenCalledWith({ amount: '525', asset: 'USD' });
+  });
+
+  it('does not silently round excess precision', async () => {
+    await setup();
+    await chooseCurrency('USD');
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('USD Amount', { selector: 'input' }), { target: { value: '1.001' } });
+    });
+    expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeDisabled();
+  });
+
+  it('clears the dollar amount when switching back to Bitcoin', async () => {
+    await setup();
+    await chooseCurrency('USD');
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('USD Amount', { selector: 'input' }), { target: { value: '5.25' } });
+    });
+    expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeEnabled();
+
+    await chooseCurrency('Bitcoin');
+    expect(screen.getByLabelText('Bitcoin Amount', { selector: 'input' })).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeDisabled();
+  });
+
+  it('resets currency and amount after applying', async () => {
+    await setup();
+    await chooseCurrency('USD');
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('USD Amount', { selector: 'input' }), { target: { value: '5.25' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
+    });
+    expect(screen.getByLabelText('Bitcoin Amount', { selector: 'input' })).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeDisabled();
+  });
+
+  it('discards the price when dismissed', async () => {
+    const { onOpenChange, onApplied } = await setup();
+    await chooseCurrency('USD');
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('USD Amount', { selector: 'input' }), { target: { value: '5.25' } });
+    });
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onApplied).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Bitcoin Amount', { selector: 'input' })).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeDisabled();
   });
 });

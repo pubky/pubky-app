@@ -108,7 +108,7 @@ describe('LogoutHeader', () => {
 
   it('renders subtitle correctly', () => {
     render(<LogoutHeader />);
-    expect(screen.getByText('You have securely signed out.')).toBeInTheDocument();
+    expect(screen.getByText('You have signed out.')).toBeInTheDocument();
   });
 });
 

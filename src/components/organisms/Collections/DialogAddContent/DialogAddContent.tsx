@@ -20,6 +20,7 @@ import { useAddContentForm } from '@/hooks/useAddContentForm/useAddContentForm';
 import { ADD_CONTENT_FORM_FIELDS } from '@/hooks/useAddContentForm/useAddContentForm.types';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSaveCreatedPostToTarget } from '@/hooks/useSaveCreatedPostToTarget/useSaveCreatedPostToTarget';
 import { cn } from '@/libs/utils/utils';
 import { ControlledInputField } from '@/molecules/ControlledInputField/ControlledInputField';
@@ -335,6 +336,11 @@ export function DialogAddContent({
   triggerVariant = 'hero',
 }: DialogAddContentProps) {
   const [open, setOpen] = useState(false);
+  const { requireAuth } = useRequireAuth();
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) requireAuth(() => setOpen(true));
+    else setOpen(false);
+  };
   const [newPostOpen, setNewPostOpen] = useState(false);
   const router = useRouter();
   const timelineFeed = useTimelineFeedContext();
@@ -372,7 +378,7 @@ export function DialogAddContent({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>{trigger}</DialogTrigger>
         <DialogContent
           className="flex w-xl flex-col border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"

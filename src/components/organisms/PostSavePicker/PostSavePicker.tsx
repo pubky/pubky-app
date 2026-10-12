@@ -76,9 +76,9 @@ type SavePickerContentProps = {
   loadMoreCollections: () => Promise<void>;
   otherCollectionIds: string[];
   isOtherCollectionsLoading: boolean;
-  toggleBookmark: () => Promise<void>;
-  toggleCollection: (collectionId: string) => Promise<void>;
-  createCollectionWithPost: (name: string) => Promise<void>;
+  toggleBookmark: () => Promise<boolean>;
+  toggleCollection: (collectionId: string) => Promise<boolean>;
+  createCollectionWithPost: (name: string) => Promise<boolean>;
 };
 
 function SaveTargetIcon({ isSaved, isBusy }: SaveTargetIconProps) {
@@ -252,7 +252,7 @@ function CollectionRow({
 }: {
   layout: SavePickerLayout;
   collection: PostSaveCollectionTarget;
-  onToggleCollection: (collectionId: string) => Promise<void>;
+  onToggleCollection: (collectionId: string) => Promise<boolean>;
 }) {
   return (
     <SavePickerRow
@@ -315,8 +315,7 @@ function SavePickerContent({
 
   const handleCreate = async () => {
     if (!canCreate) return;
-    await createCollectionWithPost(newCollectionName);
-    setNewCollectionName('');
+    if (await createCollectionWithPost(newCollectionName)) setNewCollectionName('');
   };
 
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {

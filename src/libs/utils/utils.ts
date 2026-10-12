@@ -90,26 +90,6 @@ export function isPubkyIdentifier(value: string): boolean {
   return /^[a-z0-9]{52}$/.test(value);
 }
 
-/**
- * A bare positive integer written as a string — the shape a Lock Server payment amount travels in.
- *
- * @example
- * ```ts
- * isPositiveIntegerString('1000')                 // true
- * isPositiveIntegerString('0')                    // false — not positive
- * isPositiveIntegerString('007')                  // false — leading zeros
- * isPositiveIntegerString('-1')                   // false — signed
- * isPositiveIntegerString('1.5')                  // false — decimal
- * isPositiveIntegerString('1,000')                // false — grouped
- * isPositiveIntegerString('1e3')                  // false — not bare digits
- * isPositiveIntegerString(' 12 ')                 // false — not trimmed
- * isPositiveIntegerString('99999999999999999999') // false — `Number` would round it
- * ```
- */
-export function isPositiveIntegerString(value: string): boolean {
-  return /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value));
-}
-
 function parseValidPostCompositeId(compositeId: string): { pubky: string; id: string } | null {
   try {
     const { pubky, id } = parseCompositeId(compositeId);
@@ -303,16 +283,6 @@ export function formatInviteCode(code: string) {
     // Take only first 12 characters for longer codes
     const truncated = uppercased.slice(0, 12);
     return `${truncated.slice(0, 4)}-${truncated.slice(4, 8)}-${truncated.slice(8, 12)}`;
-  }
-}
-
-export function clearCookies() {
-  if (typeof document !== 'undefined') {
-    document.cookie.split(';').forEach((cookie) => {
-      const eqPos = cookie.indexOf('=');
-      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-      document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-    });
   }
 }
 

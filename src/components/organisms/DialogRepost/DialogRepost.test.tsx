@@ -199,6 +199,7 @@ describe('DialogRepost', () => {
 
     expect(PostInput).toHaveBeenCalledWith(
       {
+        active: false,
         dataCy: 'repost-post-input',
         variant: POST_INPUT_VARIANT.REPOST,
         originalPostId: 'test-post-123',

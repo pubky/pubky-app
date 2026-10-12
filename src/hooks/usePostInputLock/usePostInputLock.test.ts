@@ -100,7 +100,7 @@ const setup = (isEnabled = true, canEnable = true, draftOverride: TLockDraft | n
 /** Switch on, sign-in skipped (already authenticated), lock price applied. */
 const configureLock = (result: { current: ReturnType<typeof usePostInputLock> }) => {
   act(() => result.current.lockSwitch?.onCheckedChange(true));
-  act(() => result.current.handleLockApplied({ amountSats: '1000' }));
+  act(() => result.current.handleLockApplied({ amount: '1000', asset: 'BTC' as const }));
 };
 
 /** Locks fully set up: signed into the Lock Server with a connected Bitkit payout account. */
@@ -210,7 +210,7 @@ describe('usePostInputLock', () => {
       expect(clearComposer).not.toHaveBeenCalled();
       expect(result.current.isLockDialogOpen).toBe(true);
 
-      act(() => result.current.handleLockApplied({ amountSats: '1000' }));
+      act(() => result.current.handleLockApplied({ amount: '1000', asset: 'BTC' as const }));
 
       // Applying the lock swaps the draft for the empty announcement composer.
       expect(clearComposer).toHaveBeenCalledTimes(1);
@@ -369,10 +369,10 @@ describe('usePostInputLock', () => {
       const { result } = setup();
 
       act(() => result.current.lockSwitch?.onCheckedChange(true));
-      act(() => result.current.handleLockApplied({ amountSats: '1234' }));
+      act(() => result.current.handleLockApplied({ amount: '1234', asset: 'BTC' as const }));
 
-      expect(mocks.lockContentOptions?.lockConfig).toEqual({ amountSats: '1234' });
-      expect(result.current.lockConfig).toEqual({ amountSats: '1234' }); // and to the card
+      expect(mocks.lockContentOptions?.lockConfig).toEqual({ amount: '1234', asset: 'BTC' as const });
+      expect(result.current.lockConfig).toEqual({ amount: '1234', asset: 'BTC' as const }); // and to the card
     });
 
     it('discards the price when the lock is abandoned', () => {
@@ -427,9 +427,9 @@ describe('usePostInputLock', () => {
       expect(result.current.lockSwitch?.checked).toBe(false); // lock state reset
     });
 
-    it('reopens sign-in and keeps the lock when the session expired mid-publish', async () => {
+    it.each(['auth-expired', 'setup-required'])('reopens setup and keeps the lock after %s', async (status) => {
       setUpLocks();
-      mocks.publish.mockResolvedValue({ status: 'auth-expired' });
+      mocks.publish.mockResolvedValue({ status });
       const { result, onPublished } = setup();
 
       configureLock(result);
@@ -439,6 +439,43 @@ describe('usePostInputLock', () => {
       expect(mocks.setPostAttachments).not.toHaveBeenCalled();
       expect(onPublished).not.toHaveBeenCalled();
       expect(result.current.lockSwitch?.checked).toBe(true); // lock kept
+    });
+
+    it('keeps the USD configuration when receiving setup must be completed', async () => {
+      setUpLocks();
+      mocks.publish.mockResolvedValue({ status: 'setup-required' });
+      const { result, clearComposer, onPublished } = setup();
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+      act(() => result.current.handleLockApplied({ amount: '500', asset: 'USD' }));
+      clearComposer.mockClear();
+
+      await act(async () => result.current.submitOrPublish());
+
+      expect(result.current.isAuthDialogOpen).toBe(true);
+      expect(result.current.lockConfig).toEqual({ amount: '500', asset: 'USD' });
+      expect(clearComposer).not.toHaveBeenCalled();
+      expect(onPublished).not.toHaveBeenCalled();
+      act(() => result.current.handleAuthSuccess());
+      expect(result.current.isLockDialogOpen).toBe(false);
+      expect(result.current.lockConfig).toEqual({ amount: '500', asset: 'USD' });
+    });
+
+    it('keeps the draft without opening setup or committing when authentication was canceled', async () => {
+      setUpLocks();
+      mocks.publish.mockResolvedValue({ status: 'canceled' });
+      const { result, clearComposer, clearTags, onPublished } = setup();
+      configureLock(result);
+      clearComposer.mockClear();
+
+      await act(async () => result.current.submitOrPublish());
+
+      expect(result.current.isAuthDialogOpen).toBe(false);
+      expect(result.current.isLockConfigured).toBe(true);
+      expect(mocks.setPostAttachments).not.toHaveBeenCalled();
+      expect(mocks.toast).not.toHaveBeenCalled();
+      expect(clearComposer).not.toHaveBeenCalled();
+      expect(clearTags).not.toHaveBeenCalled();
+      expect(onPublished).not.toHaveBeenCalled();
     });
 
     it('publishes the same draft and price once the creator signs in again', async () => {
@@ -455,7 +492,7 @@ describe('usePostInputLock', () => {
       expect(result.current.isAuthDialogOpen).toBe(false);
       // Re-auth, not a fresh lock: the price step must not come back and the captured draft must stand.
       expect(result.current.isLockDialogOpen).toBe(false);
-      expect(result.current.lockConfig).toEqual({ amountSats: '1000' });
+      expect(result.current.lockConfig).toEqual({ amount: '1000', asset: 'BTC' as const });
       expect(mocks.lockContentOptions?.lockedPost.content).toBe(JSON.stringify({ title: 'Essay', body: 'my secret' }));
 
       await act(async () => result.current.submitOrPublish());

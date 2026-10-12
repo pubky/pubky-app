@@ -13,12 +13,17 @@ export function getCacheGeneration(): number {
   return cacheGeneration;
 }
 
-export async function clearDatabase(): Promise<void> {
+export async function clearDatabase(isCurrent: () => boolean = () => true): Promise<void> {
+  if (!isCurrent()) return;
   if (!db.isOpen()) {
     await db.open();
   }
 
-  await Promise.all(db.tables.map((table) => table.clear()));
+  if (!isCurrent()) return;
+  // A failed table must not release account preparation while other clears can still erase data.
+  const results = await Promise.allSettled(db.tables.map(async (table) => table.clear()));
+  const failure = results.find((result) => result.status === 'rejected');
+  if (failure?.status === 'rejected') throw failure.reason;
   cacheGeneration += 1;
 }
 
