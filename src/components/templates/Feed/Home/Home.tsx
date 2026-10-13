@@ -1,9 +1,11 @@
 'use client';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useDefaultHomeReach } from '@/hooks/useDefaultHomeReach/useDefaultHomeReach';
+import { useVibesAlert } from '@/hooks/useVibesAlert/useVibesAlert';
 import { TaggedAsHeadline } from '@/molecules/TaggedAsHeadline/TaggedAsHeadline';
 import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
 import { AlertInstall } from '@/organisms/AlertInstall/AlertInstall';
+import { AlertVibes } from '@/organisms/AlertVibes/AlertVibes';
 import { DialogWelcome } from '@/organisms/DialogWelcome/DialogWelcome';
 import { FeedNavigation } from '@/organisms/FeedNavigation/FeedNavigation';
 import { PostInput } from '@/organisms/PostInput/PostInput';
@@ -17,13 +19,16 @@ import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFee
  */
 export function Home() {
   useDefaultHomeReach();
+  const { visible: isVibesAlertVisible } = useVibesAlert();
 
   return (
     <>
       <DialogWelcome />
       {/* First child so the mobile tab bar sits directly under the compact header (Hot pattern). */}
       <FeedNavigation />
-      <AlertInstall />
+      {/* One feature banner at a time: the Vibes alert has priority over the install banner. */}
+      <AlertVibes />
+      {!isVibesAlertVisible && <AlertInstall />}
       <AlertBackup />
       <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} persistentHeader={<TaggedAsHeadline />}>
         <PostInput dataCy="home-post-input" variant={POST_INPUT_VARIANT.POST} />

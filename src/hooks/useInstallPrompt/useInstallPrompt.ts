@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { PWA_INSTALL_BANNER_ENABLED } from '@/config/pwa';
+import { useFeatureReminderDue } from '@/hooks/useFeatureReminderDue/useFeatureReminderDue';
 import { useIsStandalone } from '@/hooks/useIsStandalone/useIsStandalone';
 import {
   getInstallPromptSnapshot,
@@ -9,12 +10,7 @@ import {
   promptInstall,
   subscribeToInstallPrompt,
 } from '@/libs/pwa/installPrompt';
-import {
-  isInstallReminderDue,
-  markInstallReminderDone,
-  snoozeInstallReminder,
-  subscribeToInstallReminderDismissal,
-} from '@/libs/pwa/installReminder';
+import { installReminder } from '@/libs/pwa/installReminder';
 import { isIosDevice } from '@/libs/pwa/platform';
 import type { InstallPlatform } from '@/libs/pwa/pwa.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -43,43 +39,16 @@ export function useInstallPrompt(): UseInstallPromptResult {
     getInstallPromptSnapshot,
     getServerInstallPromptSnapshot,
   );
-  const [reminder, setReminder] = useState<{ pubky: string | null; due: boolean }>({ pubky: null, due: false });
   const [iosDialogOpen, setIosDialogOpen] = useState(false);
 
   const platform: InstallPlatform | null = canPrompt ? 'native' : isIos ? 'ios' : null;
   // Only users who could actually see the banner pay for the storage re-check on every visit.
   const eligible = PWA_INSTALL_BANNER_ENABLED && !isStandalone && !installed && platform !== null;
-
-  useEffect(() => {
-    if (!currentUserPubky || !eligible) return;
-    const check = () => {
-      const due = isInstallReminderDue(currentUserPubky);
-      setReminder((previous) =>
-        previous.pubky === currentUserPubky && previous.due === due ? previous : { pubky: currentUserPubky, due },
-      );
-    };
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') check();
-    };
-    const unsubscribe = subscribeToInstallReminderDismissal(currentUserPubky, () => {
-      setReminder({ pubky: currentUserPubky, due: false });
-    });
-
-    check();
-    window.addEventListener('focus', check);
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      unsubscribe();
-      window.removeEventListener('focus', check);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    };
-  }, [currentUserPubky, eligible]);
-
-  const due = Boolean(currentUserPubky) && reminder.pubky === currentUserPubky && reminder.due;
+  const due = useFeatureReminderDue(installReminder, currentUserPubky, eligible);
   const visible = eligible && !hasPendingBackup && due;
 
   const remindLater = () => {
-    if (currentUserPubky && visible) snoozeInstallReminder(currentUserPubky);
+    if (currentUserPubky && visible) installReminder.snooze(currentUserPubky);
   };
 
   const install = async () => {
@@ -91,16 +60,16 @@ export function useInstallPrompt(): UseInstallPromptResult {
     // Called synchronously from the click so the native prompt keeps its user gesture.
     const outcome = await promptInstall();
     // Anything but an install counts as "later": a failed prompt must not re-nag on the next load.
-    if (outcome === 'accepted') markInstallReminderDone(currentUserPubky);
-    else snoozeInstallReminder(currentUserPubky);
+    if (outcome === 'accepted') installReminder.markDone(currentUserPubky);
+    else installReminder.snooze(currentUserPubky);
   };
 
   const closeIosDialog = (confirmed: boolean) => {
     setIosDialogOpen(false);
     if (!currentUserPubky) return;
     // iOS never fires `appinstalled`; "Got it" is the best signal we get.
-    if (confirmed) markInstallReminderDone(currentUserPubky);
-    else snoozeInstallReminder(currentUserPubky);
+    if (confirmed) installReminder.markDone(currentUserPubky);
+    else installReminder.snooze(currentUserPubky);
   };
 
   return { visible, platform, install, remindLater, iosDialogOpen, closeIosDialog };

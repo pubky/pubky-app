@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { markInstallReminderDone } from '@/libs/pwa/installReminder';
+import { installReminder } from '@/libs/pwa/installReminder';
 import { useInstallPromptLifecycle } from './useInstallPromptLifecycle';
 
 const mocks = vi.hoisted(() => ({
@@ -25,7 +25,7 @@ vi.mock('@/libs/pwa/installPrompt', () => ({
 }));
 
 vi.mock('@/libs/pwa/installReminder', () => ({
-  markInstallReminderDone: vi.fn(),
+  installReminder: { markDone: vi.fn() },
 }));
 
 function publish(next: { canPrompt: boolean; installed: boolean }) {
@@ -46,14 +46,14 @@ describe('useInstallPromptLifecycle', () => {
     renderHook(() => useInstallPromptLifecycle());
     publish({ canPrompt: true, installed: false });
 
-    expect(markInstallReminderDone).not.toHaveBeenCalled();
+    expect(installReminder.markDone).not.toHaveBeenCalled();
   });
 
   it('retires the install reminder for the signed-in user once installed', () => {
     renderHook(() => useInstallPromptLifecycle());
     publish({ canPrompt: false, installed: true });
 
-    expect(markInstallReminderDone).toHaveBeenCalledWith('pk:alice');
+    expect(installReminder.markDone).toHaveBeenCalledWith('pk:alice');
   });
 
   it('does not touch storage for a guest', () => {
@@ -61,6 +61,6 @@ describe('useInstallPromptLifecycle', () => {
     renderHook(() => useInstallPromptLifecycle());
     publish({ canPrompt: false, installed: true });
 
-    expect(markInstallReminderDone).not.toHaveBeenCalled();
+    expect(installReminder.markDone).not.toHaveBeenCalled();
   });
 });
