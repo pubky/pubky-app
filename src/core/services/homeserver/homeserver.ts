@@ -1,4 +1,5 @@
 import { Address, Client, Keypair, Pubky, PublicKey, resolvePubky, Session, Signer } from '@synonymdev/pubky';
+import { createSocialClient, type SocialClient } from 'pubky-social-specs/client';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { getAuthClientId } from '@/config/auth';
 import {
@@ -858,6 +859,22 @@ export class HomeserverService {
 
       cursor = batch[batch.length - 1];
     }
+  }
+
+  /**
+   * Runs `operation` on the data model's client over the signed-in session, for what takes several
+   * requests: the newest version of a post, the delete of every copy of one.
+   */
+  static async social<T>(operation: (social: SocialClient) => Promise<T>): Promise<T> {
+    const session = useAuthStore.getState().selectSession();
+    if (!session) {
+      throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'No signed-in session', {
+        service: ErrorService.Homeserver,
+        operation: 'social',
+      });
+    }
+    const social = createSocialClient(session, { publicStorage: this.getPubkySdk().publicStorage });
+    return operation(social).catch((error) => handleError({ error, additionalContext: { operation: 'social' } }));
   }
 
   /**

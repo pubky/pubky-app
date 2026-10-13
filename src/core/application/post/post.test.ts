@@ -1,4 +1,6 @@
-import { buildFile, buildPost } from 'pubky-social-specs';
+import { buildFile, buildPost, type BuiltPost, editPost } from 'pubky-social-specs';
+import { createSocialClient } from 'pubky-social-specs/client';
+import { memoryHomeserver } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostApplication } from '@/application/post/post';
@@ -55,10 +57,7 @@ vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     request: vi.fn(),
     putBlob: vi.fn(),
-    getBytes: vi.fn(),
-    listAll: vi.fn(),
-    exists: vi.fn(),
-    deleteIdempotent: vi.fn(),
+    social: vi.fn(),
   },
 }));
 
@@ -127,17 +126,23 @@ describe('Post Application', () => {
     tagCreateSpy: vi.spyOn(TagApplication, 'commitCreate').mockResolvedValue(undefined),
   });
 
-  const setupDeleteSpies = (stored: ReturnType<typeof buildPost>) => {
+  /** The data model's client over an in-memory homeserver holding `stored`, in place of the signed-in one. */
+  const setupSocial = async (stored: BuiltPost[]) => {
+    const { sessionOf, publicStorage } = memoryHomeserver();
+    const session = sessionOf(AUTHOR);
+    for (const { path, body } of stored) await session.storage.putBytes(path, body);
+    const social = createSocialClient(session, { publicStorage });
+    vi.mocked(HomeserverService.social).mockImplementation((operation) => operation(social));
+    return session.storage;
+  };
+
+  const setupDeleteSpies = async (stored: BuiltPost) => {
     // One public version of the post, and no 0.x copy
-    vi.mocked(HomeserverService.listAll).mockImplementation(async ({ baseDirectory }) =>
-      baseDirectory.includes('/pub/social/v1/posts/') ? [stored.url] : [],
-    );
-    vi.mocked(HomeserverService.getBytes).mockResolvedValue(stored.body);
-    vi.mocked(HomeserverService.exists).mockResolvedValue(false);
+    const storage = await setupSocial([stored]);
     return {
       findByIdSpy: vi.spyOn(PostDetailsModel, 'findById'),
       deleteSpy: vi.spyOn(LocalPostService, 'delete'),
-      requestSpy: vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined),
+      requestSpy: vi.spyOn(storage, 'delete'),
       fileCommitDeleteSpy: vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined),
     };
   };
@@ -519,7 +524,7 @@ describe('Post Application', () => {
 
     it('should fetch post, delete locally and sync to homeserver', async () => {
       const mockData = createMockDeleteData();
-      const { findByIdSpy, deleteSpy, requestSpy } = setupDeleteSpies(DELETED_POST);
+      const { findByIdSpy, deleteSpy, requestSpy } = await setupDeleteSpies(DELETED_POST);
       findByIdSpy.mockResolvedValue(mockPostDetails);
       deleteSpy.mockResolvedValue(false);
 
@@ -529,12 +534,12 @@ describe('Post Application', () => {
       expect(deleteSpy).toHaveBeenCalledWith({
         compositePostId: mockData.compositePostId,
       });
-      expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+      expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
     });
 
     it('should throw error when post not found', async () => {
       const mockData = createMockDeleteData();
-      const { findByIdSpy } = setupDeleteSpies(DELETED_POST);
+      const { findByIdSpy } = await setupDeleteSpies(DELETED_POST);
       findByIdSpy.mockResolvedValue(null);
 
       await expect(PostApplication.commitDelete(mockData)).rejects.toThrow('Post not found');
@@ -544,7 +549,7 @@ describe('Post Application', () => {
 
     it('should propagate error when local delete fails', async () => {
       const mockData = createMockDeleteData();
-      const { findByIdSpy, deleteSpy, requestSpy } = setupDeleteSpies(DELETED_POST);
+      const { findByIdSpy, deleteSpy, requestSpy } = await setupDeleteSpies(DELETED_POST);
       findByIdSpy.mockResolvedValue(mockPostDetails);
       deleteSpy.mockRejectedValue(new Error('local-delete-fail'));
 
@@ -557,7 +562,7 @@ describe('Post Application', () => {
 
     it('should propagate error when homeserver delete fails', async () => {
       const mockData = createMockDeleteData();
-      const { findByIdSpy, deleteSpy, requestSpy } = setupDeleteSpies(DELETED_POST);
+      const { findByIdSpy, deleteSpy, requestSpy } = await setupDeleteSpies(DELETED_POST);
       findByIdSpy.mockResolvedValue(mockPostDetails);
       deleteSpy.mockResolvedValue(false);
       requestSpy.mockRejectedValue(new Error('Failed to DELETE from homeserver: 500'));
@@ -566,7 +571,7 @@ describe('Post Application', () => {
 
       expect(findByIdSpy).toHaveBeenCalledWith(mockData.compositePostId);
       expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
-      expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+      expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
     });
 
     it('should propagate database error when findById throws', async () => {
@@ -576,7 +581,7 @@ describe('Post Application', () => {
         operation: 'findById',
         context: { compositePostId: mockData.compositePostId },
       });
-      const { findByIdSpy, deleteSpy, requestSpy } = setupDeleteSpies(DELETED_POST);
+      const { findByIdSpy, deleteSpy, requestSpy } = await setupDeleteSpies(DELETED_POST);
       findByIdSpy.mockRejectedValue(databaseError);
 
       await expect(PostApplication.commitDelete(mockData)).rejects.toThrow('Database connection failed');
@@ -590,7 +595,7 @@ describe('Post Application', () => {
     describe('when post has connections (hadConnections = true)', () => {
       it('should call homeserver DELETE but skip file deletion', async () => {
         const mockData = createMockDeleteData();
-        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies(DELETED_POST);
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = await setupDeleteSpies(DELETED_POST);
         findByIdSpy.mockResolvedValue(mockPostDetailsWithAttachments);
         deleteSpy.mockResolvedValue(true);
 
@@ -601,7 +606,7 @@ describe('Post Application', () => {
           compositePostId: mockData.compositePostId,
         });
         // Homeserver DELETE is always called, even for soft deletes
-        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
         // File cleanup is skipped when post has connections
         expect(fileCommitDeleteSpy).not.toHaveBeenCalled();
       });
@@ -617,7 +622,7 @@ describe('Post Application', () => {
           ],
         };
 
-        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies(DELETED_POST);
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = await setupDeleteSpies(DELETED_POST);
         findByIdSpy.mockResolvedValue(postWithAttachments);
         deleteSpy.mockResolvedValue(true);
 
@@ -626,7 +631,7 @@ describe('Post Application', () => {
         expect(findByIdSpy).toHaveBeenCalledWith(mockData.compositePostId);
         expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
         // Always sync deletion to homeserver (Nexus determines definitive state)
-        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
         // Files are preserved when post has connections (soft delete)
         expect(fileCommitDeleteSpy).not.toHaveBeenCalled();
       });
@@ -645,7 +650,7 @@ describe('Post Application', () => {
           attachments: ['pubky://author/pub/pubky.app/files/file1', 'pubky://author/pub/pubky.app/files/file2'],
         };
 
-        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies(DELETED_POST);
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = await setupDeleteSpies(DELETED_POST);
         findByIdSpy.mockResolvedValue(postWithFiles);
         deleteSpy.mockResolvedValue(false);
 
@@ -653,7 +658,7 @@ describe('Post Application', () => {
 
         expect(findByIdSpy).toHaveBeenCalledWith(mockData.compositePostId);
         expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
-        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
         expect(fileCommitDeleteSpy).toHaveBeenCalledWith(postWithFiles.attachments, DELETE_ID);
         expect(requestSpy).toHaveBeenCalledBefore(fileCommitDeleteSpy);
       });
@@ -669,7 +674,7 @@ describe('Post Application', () => {
           attachments: null,
         };
 
-        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies(DELETED_POST);
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = await setupDeleteSpies(DELETED_POST);
         findByIdSpy.mockResolvedValue(postWithoutFiles);
         deleteSpy.mockResolvedValue(false);
 
@@ -677,7 +682,7 @@ describe('Post Application', () => {
 
         expect(findByIdSpy).toHaveBeenCalledWith(mockData.compositePostId);
         expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
-        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
         expect(fileCommitDeleteSpy).not.toHaveBeenCalled();
       });
 
@@ -692,7 +697,7 @@ describe('Post Application', () => {
           attachments: ['pubky://author/pub/pubky.app/files/stubborn-file'],
         };
 
-        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies(DELETED_POST);
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = await setupDeleteSpies(DELETED_POST);
         findByIdSpy.mockResolvedValue(postWithFiles);
         deleteSpy.mockResolvedValue(false);
         fileCommitDeleteSpy.mockRejectedValue(new Error('File deletion failed: permission denied'));
@@ -704,7 +709,7 @@ describe('Post Application', () => {
 
         expect(findByIdSpy).toHaveBeenCalledWith(mockData.compositePostId);
         expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
-        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
         expect(fileCommitDeleteSpy).toHaveBeenCalledWith(postWithFiles.attachments, DELETE_ID);
       });
     });
@@ -729,13 +734,13 @@ describe('Post Application', () => {
           attachments: null,
         };
 
-        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies(DELETED_POST);
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = await setupDeleteSpies(DELETED_POST);
         findByIdSpy.mockResolvedValue(collectionPost);
         deleteSpy.mockResolvedValue(false);
 
         await PostApplication.commitDelete(mockData);
 
-        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
         expect(fileCommitDeleteSpy).toHaveBeenCalledWith([coverUri], DELETE_ID);
         expect(requestSpy).toHaveBeenCalledBefore(fileCommitDeleteSpy);
       });
@@ -755,13 +760,13 @@ describe('Post Application', () => {
           attachments: null,
         };
 
-        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies(DELETED_POST);
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = await setupDeleteSpies(DELETED_POST);
         findByIdSpy.mockResolvedValue(collectionPost);
         deleteSpy.mockResolvedValue(true);
 
         await PostApplication.commitDelete(mockData);
 
-        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
         expect(fileCommitDeleteSpy).toHaveBeenCalledWith([coverUri], DELETE_ID);
       });
 
@@ -780,13 +785,13 @@ describe('Post Application', () => {
           attachments: null,
         };
 
-        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies(DELETED_POST);
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = await setupDeleteSpies(DELETED_POST);
         findByIdSpy.mockResolvedValue(collectionPost);
         deleteSpy.mockResolvedValue(false);
 
         await PostApplication.commitDelete(mockData);
 
-        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
         expect(fileCommitDeleteSpy).not.toHaveBeenCalled();
       });
 
@@ -804,13 +809,13 @@ describe('Post Application', () => {
           attachments: null,
         };
 
-        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies(DELETED_POST);
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = await setupDeleteSpies(DELETED_POST);
         findByIdSpy.mockResolvedValue(shortPost);
         deleteSpy.mockResolvedValue(false);
 
         await PostApplication.commitDelete(mockData);
 
-        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
         expect(fileCommitDeleteSpy).not.toHaveBeenCalled();
       });
 
@@ -829,14 +834,14 @@ describe('Post Application', () => {
           attachments: null,
         };
 
-        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies(DELETED_POST);
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = await setupDeleteSpies(DELETED_POST);
         findByIdSpy.mockResolvedValue(collectionPost);
         deleteSpy.mockResolvedValue(false);
         fileCommitDeleteSpy.mockRejectedValue(new Error('cover cleanup failed'));
 
         await expect(PostApplication.commitDelete(mockData)).resolves.toBeUndefined();
 
-        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
         expect(fileCommitDeleteSpy).toHaveBeenCalledWith([coverUri], DELETE_ID);
       });
     });
@@ -916,7 +921,7 @@ describe('Post Application', () => {
           attachments: [],
         };
 
-        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = setupDeleteSpies(DELETED_POST);
+        const { findByIdSpy, deleteSpy, requestSpy, fileCommitDeleteSpy } = await setupDeleteSpies(DELETED_POST);
         findByIdSpy.mockResolvedValue(postWithEmptyAttachments);
         deleteSpy.mockResolvedValue(false);
 
@@ -924,7 +929,7 @@ describe('Post Application', () => {
 
         expect(findByIdSpy).toHaveBeenCalledWith(mockData.compositePostId);
         expect(deleteSpy).toHaveBeenCalledWith({ compositePostId: mockData.compositePostId });
-        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.url);
+        expect(requestSpy).toHaveBeenCalledWith(DELETED_POST.path);
         expect(fileCommitDeleteSpy).not.toHaveBeenCalled();
       });
     });
@@ -1270,7 +1275,10 @@ describe('Post Application', () => {
     // The newest stored version, which the edit applies to
     const HEAD = buildPost(AUTHOR, { content: 'Original content' });
     const EDIT_ID = `${AUTHOR}:${HEAD.id}`;
-    const nextVersionPut = { url: expect.stringContaining(`/posts/${HEAD.id}/`), blob: expect.anything() };
+    const nextVersionPut = {
+      url: expect.stringContaining(`/posts/${HEAD.id}/`),
+      blob: expect.toSatisfy(ArrayBuffer.isView),
+    };
     const mockPostDetails: PostDetailsModelSchema = {
       id: EDIT_ID,
       content: 'Original content',
@@ -1285,16 +1293,11 @@ describe('Post Application', () => {
       edit: { content: 'Edited content' },
     });
 
-    const setupEditSpies = () => ({
+    const setupEditSpies = async (stored: BuiltPost[] = [HEAD]) => ({
+      storage: await setupSocial(stored),
       readDetailsSpy: vi.spyOn(LocalPostService, 'readDetails').mockResolvedValue(mockPostDetails),
       editSpy: vi.spyOn(LocalPostService, 'edit').mockResolvedValue(undefined),
       requestSpy: vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined),
-      listSpy: vi
-        .mocked(HomeserverService.listAll)
-        .mockImplementation(async ({ baseDirectory }) =>
-          baseDirectory.includes('/pub/social/v1/posts/') ? [HEAD.url] : [],
-        ),
-      getBytesSpy: vi.mocked(HomeserverService.getBytes).mockResolvedValue(HEAD.body),
       fileCreateSpy: vi.spyOn(FileApplication, 'commitCreate').mockResolvedValue(undefined),
       fileDeleteSpy: vi.spyOn(FileApplication, 'commitDelete').mockResolvedValue(undefined),
       fileDeleteUploadedSpy: vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined),
@@ -1303,20 +1306,19 @@ describe('Post Application', () => {
 
     it('reads the newest stored version and writes the next one above it', async () => {
       const mockData = createMockEditInput();
-      const { listSpy, getBytesSpy, requestSpy } = setupEditSpies();
+      // The head is the newer of two stored versions
+      const newer = editPost(AUTHOR, HEAD.url, { ...HEAD.object, content: 'Second version' });
+      const { requestSpy } = await setupEditSpies([HEAD, newer]);
 
       await PostApplication.commitEdit(mockData);
 
-      expect(listSpy).toHaveBeenCalledWith({ baseDirectory: `pubky://${AUTHOR}/pub/social/v1/posts/${HEAD.id}/` });
-      expect(getBytesSpy).toHaveBeenCalledWith(HEAD.url);
       const [{ url, blob }] = requestSpy.mock.calls[0];
-      expect(url > HEAD.url).toBe(true);
+      expect(url > newer.url).toBe(true);
       expect(JSON.parse(new TextDecoder().decode(blob))).toMatchObject({ content: 'Edited content', kind: 'note' });
     });
 
     it('refuses to edit a post that has no v1 version (a 0.x post of an account not migrated)', async () => {
-      setupEditSpies();
-      vi.mocked(HomeserverService.listAll).mockResolvedValue([]);
+      await setupEditSpies([]);
 
       await expect(PostApplication.commitEdit(createMockEditInput())).rejects.toThrow('Post has no v1 version to edit');
       expect(HomeserverService.putBlob).not.toHaveBeenCalled();
@@ -1324,7 +1326,7 @@ describe('Post Application', () => {
 
     it('should edit locally and sync to homeserver', async () => {
       const mockData = createMockEditInput();
-      const { readDetailsSpy, editSpy, requestSpy } = setupEditSpies();
+      const { readDetailsSpy, editSpy, requestSpy } = await setupEditSpies();
 
       await PostApplication.commitEdit(mockData);
 
@@ -1340,7 +1342,7 @@ describe('Post Application', () => {
 
     it('should rollback local edit when homeserver sync fails', async () => {
       const mockData = createMockEditInput();
-      const { readDetailsSpy, editSpy, requestSpy, fileDeleteSpy, fileDeleteUploadedSpy } = setupEditSpies();
+      const { readDetailsSpy, editSpy, requestSpy, fileDeleteSpy, fileDeleteUploadedSpy } = await setupEditSpies();
       requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 401'));
 
       await expect(PostApplication.commitEdit(mockData)).rejects.toThrow('Failed to PUT to homeserver: 401');
@@ -1366,7 +1368,7 @@ describe('Post Application', () => {
 
     it('should propagate original error when edit rollback also fails', async () => {
       const mockData = createMockEditInput();
-      const { readDetailsSpy, editSpy, requestSpy } = setupEditSpies();
+      const { readDetailsSpy, editSpy, requestSpy } = await setupEditSpies();
       requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 401'));
       editSpy.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('Rollback DB error'));
 
@@ -1404,7 +1406,7 @@ describe('Post Application', () => {
 
       it('should upload new files before the local edit, and edit locally before the homeserver PUT', async () => {
         const mockData = createEditInputWithFiles();
-        const { editSpy, requestSpy, fileCreateSpy } = setupEditSpies();
+        const { editSpy, requestSpy, fileCreateSpy } = await setupEditSpies();
 
         await PostApplication.commitEdit(mockData);
 
@@ -1421,7 +1423,7 @@ describe('Post Application', () => {
 
       it('should rollback local edit with original content/attachments/kind and delete new files when PUT fails', async () => {
         const mockData = createEditInputWithFiles();
-        const { readDetailsSpy, editSpy, requestSpy, fileDeleteSpy, fileDeleteUploadedSpy } = setupEditSpies();
+        const { readDetailsSpy, editSpy, requestSpy, fileDeleteSpy, fileDeleteUploadedSpy } = await setupEditSpies();
         readDetailsSpy.mockResolvedValue(originalPostDetails);
         requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
 
@@ -1441,7 +1443,7 @@ describe('Post Application', () => {
 
       it('should sweep new files and skip the local edit when file upload fails', async () => {
         const mockData = createEditInputWithFiles();
-        const { editSpy, requestSpy, fileCreateSpy, fileDeleteSpy, fileDeleteUploadedSpy } = setupEditSpies();
+        const { editSpy, requestSpy, fileCreateSpy, fileDeleteSpy, fileDeleteUploadedSpy } = await setupEditSpies();
         fileCreateSpy.mockRejectedValue(new Error('File upload failed: quota exceeded'));
 
         await expect(PostApplication.commitEdit(mockData)).rejects.toThrow('File upload failed: quota exceeded');
@@ -1454,7 +1456,7 @@ describe('Post Application', () => {
 
       it('should propagate the upload error even when the sweep also fails', async () => {
         const mockData = createEditInputWithFiles();
-        const { editSpy, fileCreateSpy, fileDeleteUploadedSpy } = setupEditSpies();
+        const { editSpy, fileCreateSpy, fileDeleteUploadedSpy } = await setupEditSpies();
         fileCreateSpy.mockRejectedValue(new Error('File upload failed: quota exceeded'));
         fileDeleteUploadedSpy.mockRejectedValue(new Error('Sweep failed'));
 
@@ -1466,7 +1468,7 @@ describe('Post Application', () => {
 
       it('should delete uploaded files and skip the PUT when the local edit fails after uploads', async () => {
         const mockData = createEditInputWithFiles();
-        const { editSpy, requestSpy, fileCreateSpy, fileDeleteSpy, fileDeleteUploadedSpy } = setupEditSpies();
+        const { editSpy, requestSpy, fileCreateSpy, fileDeleteSpy, fileDeleteUploadedSpy } = await setupEditSpies();
         editSpy.mockRejectedValue(new Error('Local edit write failed'));
 
         await expect(PostApplication.commitEdit(mockData)).rejects.toThrow('Local edit write failed');
@@ -1481,7 +1483,7 @@ describe('Post Application', () => {
 
       it('should rethrow the local edit failure without file cleanup when there are no new uploads', async () => {
         const mockData = createMockEditInput();
-        const { editSpy, requestSpy, fileDeleteSpy, fileDeleteUploadedSpy } = setupEditSpies();
+        const { editSpy, requestSpy, fileDeleteSpy, fileDeleteUploadedSpy } = await setupEditSpies();
         editSpy.mockRejectedValue(new Error('Local edit write failed'));
 
         await expect(PostApplication.commitEdit(mockData)).rejects.toThrow('Local edit write failed');
@@ -1496,7 +1498,7 @@ describe('Post Application', () => {
           ...createMockEditInput(),
           removedUris: [oldFileUri, 'https://example.com/external.png'],
         };
-        const { requestSpy, fileDeleteSpy } = setupEditSpies();
+        const { requestSpy, fileDeleteSpy } = await setupEditSpies();
 
         await PostApplication.commitEdit(mockData);
 
@@ -1509,7 +1511,7 @@ describe('Post Application', () => {
           ...createMockEditInput(),
           removedUris: ['https://example.com/external.png'],
         };
-        const { fileDeleteSpy } = setupEditSpies();
+        const { fileDeleteSpy } = await setupEditSpies();
 
         await PostApplication.commitEdit(mockData);
 
@@ -1521,7 +1523,7 @@ describe('Post Application', () => {
           ...createMockEditInput(),
           removedUris: [oldFileUri],
         };
-        const { editSpy, fileDeleteSpy } = setupEditSpies();
+        const { editSpy, fileDeleteSpy } = await setupEditSpies();
         fileDeleteSpy.mockRejectedValue(new Error('cleanup failed'));
 
         await expect(PostApplication.commitEdit(mockData)).resolves.toBeUndefined();
@@ -1534,7 +1536,7 @@ describe('Post Application', () => {
       it('should remove the post from the old kind streams after a kind-changing edit succeeds', async () => {
         // mockPostDetails.kind is 'short'; the edited envelope is Image
         const mockData = createEditInputWithFiles();
-        const { requestSpy, removeKindStreamsSpy } = setupEditSpies();
+        const { requestSpy, removeKindStreamsSpy } = await setupEditSpies();
 
         await PostApplication.commitEdit(mockData);
 
@@ -1547,7 +1549,7 @@ describe('Post Application', () => {
 
       it('should not touch kind streams when the kind is unchanged', async () => {
         const mockData = createMockEditInput(); // Short envelope, 'short' stored kind
-        const { removeKindStreamsSpy } = setupEditSpies();
+        const { removeKindStreamsSpy } = await setupEditSpies();
 
         await PostApplication.commitEdit(mockData);
 
@@ -1556,7 +1558,7 @@ describe('Post Application', () => {
 
       it('should not touch kind streams when the PUT fails', async () => {
         const mockData = createEditInputWithFiles();
-        const { requestSpy, removeKindStreamsSpy } = setupEditSpies();
+        const { requestSpy, removeKindStreamsSpy } = await setupEditSpies();
         requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
 
         await expect(PostApplication.commitEdit(mockData)).rejects.toThrow('Failed to PUT to homeserver: 500');
@@ -1566,7 +1568,7 @@ describe('Post Application', () => {
 
       it('should not fail the edit when old-kind stream cleanup fails', async () => {
         const mockData = createEditInputWithFiles();
-        const { editSpy, removeKindStreamsSpy } = setupEditSpies();
+        const { editSpy, removeKindStreamsSpy } = await setupEditSpies();
         removeKindStreamsSpy.mockRejectedValue(new Error('stream cleanup failed'));
 
         await expect(PostApplication.commitEdit(mockData)).resolves.toBeUndefined();

@@ -1,15 +1,3 @@
-import {
-  decodeObject,
-  listPrefix,
-  parseOwnerPath,
-  parseUri,
-  planDelete,
-  type Post,
-  type StoredCopy,
-  toPath,
-  tryDecodeObject,
-  type UrlArg,
-} from 'pubky-social-specs';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import type {
@@ -39,7 +27,6 @@ import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.s
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
-import { ownerPathToUrl } from '@/pipes/pipes.utils';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { toLocalPostKind } from '@/pipes/post/post.kind';
 import { PostNormalizer, type TPostHead } from '@/pipes/post/post.normalizer';
@@ -328,7 +315,8 @@ export class PostApplication {
 
     // Always delete from homeserver, even if the post had connections (soft delete).
     // Nexus will determine the definitive state based on graph state.
-    await this.deleteEveryCopy(compositePostId);
+    const { id: postId } = parseCompositeId(compositePostId);
+    await HomeserverService.social((social) => social.posts.delete(postId));
 
     // Best-effort: the post delete already succeeded on the homeserver, so a
     // file-cleanup failure (e.g. files already deleted by an earlier edit whose
@@ -463,45 +451,13 @@ export class PostApplication {
     }
   }
 
-  /** The URLs of every stored version of the author's post under both v1 roots, as a LIST gives them. */
-  private static async listVersions(
-    authorId: string,
-    postId: string,
-  ): Promise<{ url: UrlArg<'post'>; editId: string; copy: StoredCopy }[]> {
-    const [publicUrls, privateUrls] = await Promise.all(
-      (['public', 'private'] as const).map((root) =>
-        HomeserverService.listAll({ baseDirectory: `${listPrefix(authorId, root)}posts/${postId}/` }),
-      ),
-    );
-    return [
-      ...publicUrls.map((url) => ({ url, root: 'public' as const })),
-      ...privateUrls.map((url) => ({ url, root: 'private' as const })),
-    ].flatMap(({ url, root }) => {
-      // A file name that is no canonical version URL is skipped
-      if (!isPubkyUrlString(url)) return [];
-      let parsed: ReturnType<typeof parseUri>;
-      try {
-        parsed = parseUri(url);
-      } catch {
-        return [];
-      }
-      if (parsed.kind !== 'post' || parsed.editId === undefined) return [];
-      return [{ url, editId: parsed.editId, copy: { root, path: toPath(url) } }];
-    });
-  }
-
   /**
    * The newest public version of the author's post, read and decoded. A post that only has its 0.x
    * copy (an account that has not migrated) cannot be edited here: the package has no 0.x reader
    * to carry that copy forward.
    */
   private static async readHead(authorId: string, postId: string): Promise<TPostHead> {
-    const versions = (await this.listVersions(authorId, postId)).filter(({ copy }) => copy.root === 'public');
-    // Edit ids sort by the time they were minted, as plain strings.
-    const head = versions.reduce<(typeof versions)[number] | null>(
-      (newest, version) => (newest && newest.editId > version.editId ? newest : version),
-      null,
-    );
+    const head = await HomeserverService.social((social) => social.posts.head(authorId, postId));
     if (!head) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Post has no v1 version to edit', {
         service: ErrorService.Homeserver,
@@ -509,38 +465,7 @@ export class PostApplication {
         context: { authorId, postId },
       });
     }
-    const post = decodeObject(head.url, await HomeserverService.getBytes(head.url), 'post');
-    return { url: head.url, post };
+    if (!head.ok) throw head.error;
+    return { url: head.url, post: head.object };
   }
-
-  /**
-   * Deletes every copy of the author's post: the 0.x file when there is one, then each v1 version,
-   * in the order `planDelete` gives so a reader never meets a dangling post.
-   */
-  private static async deleteEveryCopy(compositePostId: string): Promise<void> {
-    const { pubky: authorId, id: postId } = parseCompositeId(compositePostId);
-    const legacyUrl = `${listPrefix(authorId, 'legacy')}posts/${postId}`;
-    const [versions, hasLegacy] = await Promise.all([
-      this.listVersions(authorId, postId),
-      HomeserverService.exists(legacyUrl),
-    ]);
-    const readable = await Promise.all(
-      versions.map(async ({ url }): Promise<Post | null> => {
-        const read = tryDecodeObject(url, await HomeserverService.getBytes(url), 'post');
-        return read.ok ? read.value : null;
-      }),
-    );
-    const plan = planDelete(authorId, {
-      id: postId,
-      legacyPaths: hasLegacy ? [parseOwnerPath(`/pub/pubky.app/posts/${postId}`)] : null,
-      copies: versions.map(({ copy }) => copy),
-      versions: readable.filter((version): version is Post => version !== null),
-    });
-    for (const path of plan.deletes) await HomeserverService.deleteIdempotent(ownerPathToUrl(authorId, path));
-  }
-}
-
-/** A LIST entry spelled as a URL, typed so the package takes it as one. */
-function isPubkyUrlString(url: string): url is `pubky://${string}` {
-  return url.startsWith('pubky://');
 }
