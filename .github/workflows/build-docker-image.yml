@@ -106,6 +106,7 @@ jobs:
     needs: [check_image]
     if: ${{ needs.check_image.outputs.image_exists != 'true' }}
     runs-on: ['ubuntu-latest']
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
