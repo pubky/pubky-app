@@ -98,9 +98,13 @@ describe('collections', () => {
     createCollection(originalName, originalDescription);
     addTagsToCollectionHero(tags);
 
-    // * edit the collection name and description; the hero updates and survives a reload
+    // * edit the collection name and description; the hero updates and survives a reload.
+    // The hero is painted from the local cache while the session is still restoring,
+    // and Add Post ignores that click until then. The new-post button mounts only
+    // once the session is ready.
     editCollectionFromHero(editedName, editedDescription);
     cy.reload();
+    cy.get('[data-cy="new-post-btn"]').should('be.visible');
     cy.get('[data-cy="collection-hero"]').should('contain.text', editedName);
     cy.get('[data-cy="collection-hero"]').should('contain.text', editedDescription);
     tags.forEach((tag) => {

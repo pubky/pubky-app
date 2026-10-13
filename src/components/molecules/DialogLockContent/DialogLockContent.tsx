@@ -54,6 +54,7 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
+        avoidKeyboard
         className="max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
         hiddenTitle={'Lock Content'}
       >
