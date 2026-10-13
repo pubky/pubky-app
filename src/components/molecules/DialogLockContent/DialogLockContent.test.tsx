@@ -1,5 +1,5 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogLockContent } from './DialogLockContent';
 
 const mocks = vi.hoisted(() => ({
@@ -147,6 +147,48 @@ describe('DialogLockContent', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onApplied).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+describe('soft keyboard', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('makes room above the keyboard for the focused price field', async () => {
+    // An 800px phone screen with the sheet hugging its bottom edge and the price field low inside it.
+    const visualViewport = Object.assign(new EventTarget(), { height: 800, offsetTop: 0, scale: 1 });
+    vi.stubGlobal('visualViewport', visualViewport);
+    vi.spyOn(document.documentElement, 'clientHeight', 'get').mockReturnValue(800);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function getBoundingClientRect(
+      this: HTMLElement,
+    ) {
+      if (this.dataset.slot === 'dialog-content') return new DOMRect(0, 300, 360, 500);
+      if (this.id === 'lock-amount') return new DOMRect(0, 600, 360, 40);
+      return new DOMRect();
+    });
+
+    await setup();
+    await act(async () => {
+      screen.getByLabelText('Bitcoin Amount', { selector: 'input' }).focus();
+    });
+    expect(document.querySelector('[data-slot="dialog-keyboard-spacer"]')).not.toBeInTheDocument();
+
+    // The keyboard opens over the bottom half of the screen.
+    await act(async () => {
+      visualViewport.height = 400;
+      visualViewport.dispatchEvent(new Event('resize'));
+    });
+
+    // The room covers the hidden part of the sheet: from 24px above the keyboard (376) to its bottom (800).
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="dialog-keyboard-spacer"]')).toHaveStyle({ height: '424px' });
+    });
+    // The sheet scrolls the field's bottom edge from 640 up to 376, clear of the keyboard.
+    await waitFor(() => {
+      expect(screen.getByRole('dialog').scrollTop).toBe(264);
+    });
   });
 });
 
