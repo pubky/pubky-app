@@ -58,6 +58,12 @@ on:
         required: false
         type: string
 
+      tag_mode:
+        description: "Tag the image with the commit SHA ('commit', default) or a hash of the Docker build inputs ('content', lets e2e skip unchanged rebuilds)"
+        required: false
+        default: 'commit'
+        type: string
+
 env:
   registry: 'europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo'
 
@@ -68,6 +74,7 @@ jobs:
       image_tag: ${{ steps.set_tag.outputs.image_tag }}
       image_name: ${{ steps.set_tag.outputs.image_name }}
       image_exists: ${{ steps.check_image.outputs.exists }}
+      source_tag: ${{ steps.sha_tag.outputs.hash }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout this repository
@@ -84,7 +91,15 @@ jobs:
       - name: Set Current Tag as Output
         id: set_tag
         run: |
-          echo image_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
+          if [ "${{ inputs.tag_mode }}" = "content" ]; then
+            # Hash of every input the Docker build can consume (see the Dockerfile
+            # COPY). Identical inputs therefore reuse an already-built image.
+            # Keep in sync with the resolve step in e2e-test.yml.
+            TAG=$(git ls-tree -r HEAD -- Dockerfile .dockerignore package.json package-lock.json next.config.ts tsconfig.json postcss.config.mjs components.json public src | sha256sum | cut -c1-40)
+          else
+            TAG=${{ steps.sha_tag.outputs.hash }}
+          fi
+          echo image_tag=$TAG >> $GITHUB_OUTPUT
           echo image_name=pubky-app >> $GITHUB_OUTPUT
 
       - name: Login to registry
@@ -98,7 +113,7 @@ jobs:
         id: check_image
         with:
           image: ${{ env.registry }}/${{ steps.set_tag.outputs.image_name }}
-          tag: ${{ steps.sha_tag.outputs.hash }}
+          tag: ${{ steps.set_tag.outputs.image_tag }}
           arch: ${{ inputs.platforms }}
 
   build_image:
@@ -149,3 +164,15 @@ jobs:
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             SENTRY_ORG=synonym-52
             SENTRY_PROJECT=pubky-app
+
+      - name: Tag the image with the content hash
+        if: ${{ inputs.tag_mode == 'content' }}
+        run: |
+          # The build pushes the commit tag; alias it to the content tag so the
+          # next run with identical build inputs skips the build. Server-side
+          # manifest copy, no layers are re-pushed. NEXT_PUBLIC_APP_VERSION in a
+          # reused image keeps the sha of the commit that built it, which is
+          # acceptable for e2e.
+          docker buildx imagetools create \
+            -t ${{ env.registry }}/pubky-app:${{ needs.check_image.outputs.image_tag }} \
+            ${{ env.registry }}/pubky-app:${{ needs.check_image.outputs.source_tag }}
