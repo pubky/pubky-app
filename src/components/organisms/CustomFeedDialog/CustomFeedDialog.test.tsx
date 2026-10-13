@@ -1002,7 +1002,9 @@ describe('CustomFeedDialog', () => {
     await user.hover(screen.getByTestId('layout-tooltip-trigger'));
 
     await waitFor(() => {
-      expect(screen.getByRole('tooltip')).toHaveTextContent('Layouts use a single column on mobile.');
+      expect(screen.getByRole('tooltip')).toHaveTextContent(
+        'Cards also applies on mobile. Other layouts use a single column on mobile.',
+      );
     });
   });
 
@@ -1019,7 +1021,9 @@ describe('CustomFeedDialog', () => {
     fireEvent.pointerUp(trigger, { pointerType: 'touch' });
     if (synthesizeClick) fireEvent.click(trigger);
     await waitFor(() => {
-      expect(screen.getByRole('tooltip')).toHaveTextContent('Layouts use a single column on mobile.');
+      expect(screen.getByRole('tooltip')).toHaveTextContent(
+        'Cards also applies on mobile. Other layouts use a single column on mobile.',
+      );
     });
 
     fireEvent.pointerDown(trigger, { pointerType: 'touch' });
@@ -1070,13 +1074,25 @@ describe('CustomFeedDialog', () => {
     });
   });
 
-  it('offers no Cards layout, which a saved feed cannot store', () => {
+  it('offers Cards with all content types and preserves the selected content', () => {
     render(
       <CustomFeedDialog mode="create" open>
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
-    expect(within(screen.getByTestId('layout-select')).queryByText('Cards')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('layout-select')).getByText('Cards')).toBeInTheDocument();
+    changeSelectValue('content-select', 'article');
+    changeSelectValue('layout-select', 'cards');
+
+    expect(screen.getByTestId('content-select')).toHaveAttribute('data-value', 'article');
+    for (const label of ['All', 'Posts', 'Articles', 'Collections', 'Images', 'Videos', 'Links', 'Files']) {
+      expect(within(screen.getByTestId('content-filter-section')).getByText(label)).toBeInTheDocument();
+    }
+  });
+
+  it('loads a saved Cards feed for editing', () => {
+    render(<CustomFeedDialog mode="edit" feed={createMockFeed({ layout: 'cards' })} open />);
+    expect(screen.getByTestId('layout-select')).toHaveAttribute('data-value', 'cards');
   });
 
   // -- Default select values in create mode --
@@ -1360,7 +1376,7 @@ describe('CustomFeedDialog', () => {
     });
   });
 
-  it.each(['visual'] as const)('passes layout %s on create when selected', async (layout) => {
+  it.each(['visual', 'cards'] as const)('passes layout %s on create when selected', async (layout) => {
     const mockCreatedFeed = createMockFeed({
       id: 'new-feed-123',
       name: 'My Feed',
@@ -1399,7 +1415,7 @@ describe('CustomFeedDialog', () => {
 
   // -- Edit feed flow --
 
-  it.each(['wide'] as const)('saves layout %s when editing an existing feed', async (layout) => {
+  it.each(['wide', 'cards'] as const)('saves layout %s when editing an existing feed', async (layout) => {
     const mockFeed = createMockFeed();
 
     const mockUpdatedFeed = createMockFeed({ id: 'feed-abc123', name: 'Bitcoin News' });

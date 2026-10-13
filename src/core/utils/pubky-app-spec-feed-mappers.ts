@@ -13,7 +13,6 @@
  * Note: Some values don't have direct mappings and will return undefined:
  * - 'followers' has no home type equivalent
  * - CONTENT.ALL has no KnownPostKind equivalent
- * - LAYOUT.CARDS has no feed layout in pubky-social-specs, so it never reaches a saved feed
  */
 
 import type { KnownFeedLayout, KnownFeedReach, KnownFeedSort, KnownPostKind } from 'pubky-social-specs';
@@ -45,6 +44,8 @@ export function pubkyLayoutToHomeLayout(layout: KnownFeedLayout): LayoutType | u
       return LAYOUT.LIST;
     case 'visual':
       return LAYOUT.VISUAL;
+    case 'cards':
+      return LAYOUT.CARDS;
     default:
       return undefined;
   }
@@ -63,6 +64,8 @@ export function homeLayoutToPubkyLayout(layout: LayoutType): KnownFeedLayout | u
       return 'list';
     case LAYOUT.VISUAL:
       return 'visual';
+    case LAYOUT.CARDS:
+      return 'cards';
     default:
       return undefined;
   }

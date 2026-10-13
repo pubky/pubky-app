@@ -1,4 +1,4 @@
-import { buildFeed, buildUri, decodeObject, parsePubkyUrl } from 'pubky-social-specs';
+import { buildFeed, buildUri, decodeObject } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
@@ -93,7 +93,7 @@ describe('FeedApplication', () => {
   /** The feed a PUT wrote, decoded. */
   const putFeed = (call = 0) => {
     const [{ url, blob }] = vi.mocked(HomeserverService.putBlob).mock.calls[call];
-    return { url, feed: decodeObject(parsePubkyUrl(url), blob, 'feed') };
+    return { url, feed: decodeObject(url, blob, 'feed') };
   };
 
   const setupMocks = () => ({
@@ -402,6 +402,28 @@ describe('FeedApplication', () => {
       // created_at is stored in microseconds, the local row keeps milliseconds
       expect(result[0].created_at).toBe(Math.floor(FEED.object.created_at / 1000));
       expect(m.putSpy).not.toHaveBeenCalled();
+    });
+
+    it('round-trips a Cards feed through the stored bytes and local data', async () => {
+      const cards = built({ name: 'Cards feed', icon: 'layout-dashboard', tags: ['bitcoin'], layout: 'cards' });
+      const m = setupMocks();
+      m.createOrUpdateSpy.mockImplementation((feed) => Promise.resolve({ persisted: feed, prior: null }));
+      m.putSpy.mockResolvedValue(undefined);
+
+      const saved = await FeedApplication.persist({ userId: testUserId, params: { feed: cards } });
+
+      expect(saved.layout).toBe('cards');
+      expect(putFeed().feed.feed.layout).toBe('cards');
+
+      m.listSpy.mockResolvedValue([cards.url]);
+      vi.mocked(HomeserverService.getBytes).mockResolvedValue(cards.body);
+      m.createOrUpdateManySpy.mockImplementation((feeds) => Promise.resolve(feeds));
+
+      const restored = await FeedApplication.fetchFeeds(testUserId);
+
+      expect(restored).toHaveLength(1);
+      expect(restored[0]).toMatchObject({ id: saved.id, layout: 'cards', tags: ['bitcoin'] });
+      expect(buildFeedStreamId(restored[0], testUserId)).toBe(buildFeedStreamId(saved, testUserId));
     });
 
     it('skips a feed that does not decode and keeps the others', async () => {

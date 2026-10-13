@@ -270,6 +270,13 @@ describe('CustomFeedFilters', () => {
     expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'wide');
   });
 
+  it.each(['sidebar', 'drawer'] as const)('shows the saved Cards selection in the %s', (variant) => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ layout: 'cards' }));
+    render(<CustomFeedFilters variant={variant} />);
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'cards');
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-show-cards', 'true');
+  });
+
   it('maps customFeed content to filter selectedTab', () => {
     mockUseCustomFeed.mockReturnValue(createMockFeed({ content: 'image' }));
     render(<CustomFeedFilters variant="sidebar" />);

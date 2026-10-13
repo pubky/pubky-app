@@ -54,7 +54,7 @@ describe('pubky-app-spec-feed-mappers', () => {
 
     describe('Layout bidirectional mapping', () => {
       it('should be reversible for all valid layouts', () => {
-        const layouts: KnownFeedLayout[] = ['columns', 'wide', 'visual', 'list'];
+        const layouts: KnownFeedLayout[] = ['columns', 'wide', 'visual', 'list', 'cards'];
 
         for (const pubkyLayout of layouts) {
           const homeLayout = pubkyLayoutToHomeLayout(pubkyLayout);

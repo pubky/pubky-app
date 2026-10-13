@@ -11,6 +11,7 @@ import {
   Grid2X2,
   Image,
   Layers,
+  LayoutDashboard,
   Library,
   Link,
   Newspaper,
@@ -78,7 +79,7 @@ function parseReachValue(value: string): CustomFeedFormReach {
 /** Shown for a stored reach/content this dialog cannot offer as a choice. */
 const UNSUPPORTED_OPTION_LABEL = 'Unsupported (set elsewhere)';
 
-const LAYOUT_HINT = 'Layouts use a single column on mobile.';
+const LAYOUT_HINT = 'Cards also applies on mobile. Other layouts use a single column on mobile.';
 
 const REACH_OPTION_VALUES: CustomFeedFormReach[] = ['wot', TAGGED_AS_FILTER_KEY, 'following', 'friends', 'me', 'all'];
 
@@ -147,6 +148,11 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
       value: 'list',
       label: 'List',
       icon: Rows4,
+    },
+    {
+      value: 'cards',
+      label: 'Cards',
+      icon: LayoutDashboard,
     },
   ];
   const allContentFilters: Array<{
