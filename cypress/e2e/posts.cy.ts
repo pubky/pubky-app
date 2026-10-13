@@ -596,8 +596,7 @@ describe('posts', () => {
     });
   });
 
-  // TODO: repost toast Undo doesn't delete the repost - re-enable once fixed (https://github.com/pubky/pubky-app/issues/2813)
-  it.skip('can repost without content then undo via toast', () => {
+  it('can repost without content then undo via toast', () => {
     const postContent = `This post will be reposted without content! ${Date.now()}`;
     createQuickPost(postContent);
 
