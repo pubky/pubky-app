@@ -45,11 +45,12 @@ ENV NEXT_STANDALONE=true
 # old-space limit for the build. The runner stage does not inherit this ENV.
 ENV NODE_OPTIONS=--max-old-space-size=4096
 
-# Build the application. The webpack/tsc caches under .next/cache ride the
-# buildkit cache (mode=max exports cache mounts on current buildx), so warm
-# builds skip recompiling unchanged modules. A cache mount never lands in the
-# image, and Next validates a restored cache against file contents, so a stale
-# entry costs a recompile, never a wrong build.
+# Build the application. The webpack/tsc caches under .next/cache live in a
+# cache mount so warm builds skip recompiling unchanged modules. BuildKit cache
+# exporters do not persist mounts, so CI restores/injects the mount around the
+# build (buildkit-cache-dance in build-docker-image.yml). A cache mount never
+# lands in the image, and Next validates a restored cache against file
+# contents, so a stale entry costs a recompile, never a wrong build.
 RUN --mount=type=cache,target=/app/.next/cache npm run build
 
 # Inject Sentry Debug IDs into the built chunks and their source maps (deterministic, offline,

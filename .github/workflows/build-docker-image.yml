@@ -136,29 +136,76 @@ jobs:
           registry: ${{ env.registry }}
           gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
 
-      - name: Build and push image pubky-app
-        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
+      # Inlined from pubky/ci-workflows' docker/build_and_push composite (same
+      # pinned action SHAs) because the composite creates its own buildx builder
+      # without exposing its name, and the Next.js cache-mount restore below must
+      # inject into the builder that runs the build. Keep the two in sync.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        if: ${{ contains(inputs.platforms, 'linux/arm64') }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      # Persist the Next.js build cache (a RUN --mount=type=cache in the
+      # Dockerfile) across runners. BuildKit cache exporters do not include cache
+      # mounts, so the dance action copies the mount out of the builder after the
+      # build and injects the previous copy before it. Rolling key: every build
+      # saves a fresh entry and restores the most recent one.
+      - name: Cache the Next.js build cache
+        id: next_cache
+        uses: actions/cache@v6
         with:
-          image: 'pubky-app'
+          path: next-build-cache
+          key: ${{ runner.os }}-next-build-cache-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ runner.os }}-next-build-cache-
+
+      - name: Restore Docker cache mounts
+        uses: reproducible-containers/buildkit-cache-dance@v3
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          cache-dir: next-build-cache
+          dockerfile: Dockerfile
+          # Keep its scratch Dancefiles out of the Docker build context
+          scratch-dir: ${{ runner.temp }}/dance-scratch
+          skip-extraction: ${{ steps.next_cache.outputs.cache-hit }}
+
+      - name: Set image tags
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: |
+            ${{ env.registry }}/pubky-app
+          tags: |
+            type=raw,value=latest,enable=${{ inputs.latest }}
+            type=raw,value=${{ needs.check_image.outputs.source_tag }}
+
+      - name: Build and push image pubky-app
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          push: true
+          platforms: ${{ inputs.platforms }}
+          context: .
+          file: ./Dockerfile
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           # Scope the GHA cache to this image: preview and release builds all wrote
           # the same default-scope manifest, overwriting each other and pushing the
           # repo cache over its 10GB limit. ignore-error keeps a cache export
           # failure from failing the build. A registry cache would move the export
           # off the runner entirely but needs a GAR cleanup policy for the
           # buildcache tag, which is infra-owned; revisit with them.
-          cache_from: type=gha,scope=pubky-app
-          cache_to: type=gha,mode=max,scope=pubky-app,ignore-error=true
-          context: '.'
-          registry: ${{ env.registry }}
-          platforms: ${{ inputs.platforms }}
-          latest: ${{ inputs.latest }}
+          cache-from: type=gha,scope=pubky-app
+          cache-to: type=gha,mode=max,scope=pubky-app,ignore-error=true
           # NOTE: network values (NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL,
           # DEFAULT_HTTP_RELAY, PKARR_RELAYS, TESTNET) and Sentry values (SENTRY_DSN,
           # SENTRY_ENVIRONMENT, SENTRY_*_SAMPLE_RATE) are intentionally NOT build args. They are
           # supplied at container runtime as PUBKY_RUNTIME_* (see Dockerfile and
           # src/libs/runtime-config). Sentry build args are optional and used only by the
           # Dockerfile source-map upload step; public builds without them skip upload.
-          build_args: |
+          build-args: |
             NEXT_PUBLIC_DB_VERSION=3
             NEXT_PUBLIC_DB_NAME=franky
             NEXT_PUBLIC_DEBUG_MODE=false
@@ -166,6 +213,7 @@ jobs:
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             SENTRY_ORG=synonym-52
             SENTRY_PROJECT=pubky-app
+            ${{ contains(inputs.platforms, 'linux/arm64') && 'TARGETARCH=aarch64' || '' }}
 
       - name: Tag the image with the content hash
         if: ${{ inputs.tag_mode == 'content' }}
