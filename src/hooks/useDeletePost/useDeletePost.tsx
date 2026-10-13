@@ -35,7 +35,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
   const [isDeleting, setIsDeleting] = useState(false);
   const inFlight = useRef(false);
   const timelineFeed = useTimelineFeedContext();
-  const { waitForAuth } = useRequireAuth(options?.active ?? true);
+  const { waitForAuth } = useRequireAuth(options?.active ?? true, { outlivesOwner: options?.outlivesOwner });
 
   // Resolve toast copy with caller overrides so callers like CollectionCard /
   // CollectionHero can swap in collection-specific copy without forking the hook.

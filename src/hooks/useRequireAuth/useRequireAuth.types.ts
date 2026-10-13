@@ -1,3 +1,12 @@
+export interface UseRequireAuthOptions {
+  /**
+   * Wait in a scope of each call instead of this component's: for an action that a surface outliving the
+   * component starts, such as a toast's Undo clicked after its dialog closed. Logout, account replacement
+   * and the restore timeout still cancel it.
+   */
+  outlivesOwner?: boolean;
+}
+
 export interface UseRequireAuthResult {
   /** Whether this account has a ready session. */
   isAuthenticated: boolean;

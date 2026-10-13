@@ -6,13 +6,14 @@ import { AuthController } from '@/controllers/auth/auth';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthState } from '@/stores/auth/auth.types';
-import type { UseRequireAuthResult } from './useRequireAuth.types';
+import type { UseRequireAuthOptions, UseRequireAuthResult } from './useRequireAuth.types';
 
 const canActAsAccount = (state: AuthState): boolean =>
   !state.isLoggingOut && state.currentUserPubky !== null && state.session !== null && state.restoreStatus === 'ready';
 
 /** Synchronous UI guards preserve browser activation; mutations await waitForAuth before changing data. */
-export function useRequireAuth(active = true): UseRequireAuthResult {
+export function useRequireAuth(active = true, options?: UseRequireAuthOptions): UseRequireAuthResult {
+  const outlivesOwner = options?.outlivesOwner ?? false;
   const isAuthenticated = useAuthStore(canActAsAccount);
   const account = useAuthStore((state) => state.currentUserPubky);
   const generation = useAuthStore((state) => state.generation);
@@ -45,7 +46,8 @@ export function useRequireAuth(active = true): UseRequireAuthResult {
   };
 
   const waitForAuth = async (actionKey = 'default'): Promise<boolean> => {
-    const controller = scope.current;
+    // The owner scope is aborted for good once this component unmounts
+    const controller = outlivesOwner ? new AbortController() : scope.current;
     if (!active || controller.signal.aborted || waiting.current.has(actionKey)) return false;
     waiting.current.add(actionKey);
     setWaitingCount((count) => count + 1);
