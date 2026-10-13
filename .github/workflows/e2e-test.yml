@@ -285,11 +285,12 @@ jobs:
           DONE_GRACE=0
           IMAGE_BASE="$REGISTRY/pubky-app"
 
-          # failed = a build job ended badly, done = all ended well (image should
-          # exist), anything else (including a transient API error) = keep waiting.
+          # failed = a build job ended badly, done = every build job concluded
+          # (image should exist), running = any still in progress, anything else
+          # (including a transient API error) = keep waiting.
           build_jobs_state() {
             gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs?per_page=100" \
-              --jq '[.jobs[] | select(.name | startswith("rebuild_pubky_app / ")) | .conclusion] | map(select(. != null)) | if any(. == "failure" or . == "cancelled" or . == "timed_out" or . == "startup_failure") then "failed" elif length > 0 and all(. == "success" or . == "skipped") then "done" else "running" end' \
+              --jq '[.jobs[] | select(.name | startswith("rebuild_pubky_app / ")) | .conclusion] | if any(. == "failure" or . == "cancelled" or . == "timed_out" or . == "startup_failure") then "failed" elif length == 0 or any(. == null) then "running" else "done" end' \
               2>/dev/null || echo "unknown"
           }
 
