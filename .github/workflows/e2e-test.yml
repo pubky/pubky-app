@@ -284,7 +284,9 @@ jobs:
           CONTENT_TAG: ${{ steps.app_tag.outputs.content_tag }}
           COMMIT_TAG: ${{ steps.app_tag.outputs.commit_tag }}
         run: |
-          MAX_WAIT=900    # Maximum wait time in seconds (15 minutes)
+          # Matches the build job's 20min timeout; the build-status check below
+          # fails fast long before this cap when the build itself has failed.
+          MAX_WAIT=1200   # Maximum wait time in seconds (20 minutes)
           INTERVAL=15
           ELAPSED=0
           DONE_GRACE=0
