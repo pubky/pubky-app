@@ -94,6 +94,7 @@ export function DialogPayToUnlock({
     stage === 'checking' ||
     (stage === 'finishing' && !isStalled) ||
     (stage === 'waiting' && !showQr && !isStalled && !hasNotice);
+  const showHandshakeSpinner = showQr && connectionState === 'handshake' && !isStalled && !hasNotice;
   const showPrimary = stage === 'retry' || stage === 'expired' || isInstall;
   const primaryLabel = isInstall ? 'I completed the steps' : 'Try again';
   // Downloading or retrying paid content must not look like another payment is required.
@@ -174,13 +175,16 @@ export function DialogPayToUnlock({
 
             {/* A parked wait shows only its Check again copy; the notices still apply there. */}
             {stage === 'waiting' && (hasNotice || !isStalled) && (
-              <Typography className="text-base text-secondary-foreground">
-                <WaitingMessage
-                  connectionState={connectionState}
-                  walletSetupNeeded={walletSetupNeeded}
-                  isConnectionPending={isConnectionPending}
-                />
-              </Typography>
+              <Container overrideDefaults className="flex items-start gap-2">
+                {showHandshakeSpinner && <Spinner size="sm" className="mt-1 shrink-0" />}
+                <Typography className="text-base text-secondary-foreground">
+                  <WaitingMessage
+                    connectionState={connectionState}
+                    walletSetupNeeded={walletSetupNeeded}
+                    isConnectionPending={isConnectionPending}
+                  />
+                </Typography>
+              </Container>
             )}
 
             {showQr && handshakeValue && (
