@@ -122,6 +122,10 @@ describe('collections', () => {
     openCollectionFromMyCollections(editedName);
     // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
     cy.reload();
+    // The hero is painted from the local cache while the session is still restoring,
+    // and Add Post ignores that click until then. The new-post button mounts only
+    // once the session is ready.
+    cy.get('[data-cy="new-post-btn"]').should('be.visible');
     cy.get('[data-cy="timeline-posts-cards"]').should('contain.text', curator.postText1);
     collectionCounterEq(1);
 
@@ -164,6 +168,10 @@ describe('collections', () => {
     openCollectionFromMyCollections(editedName);
     // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
     cy.reload();
+    // The hero is painted from the local cache while the session is still restoring,
+    // and Delete ignores that click until then. The new-post button mounts only
+    // once the session is ready.
+    cy.get('[data-cy="new-post-btn"]').should('be.visible');
     cy.get('[data-cy="timeline-posts-cards"]').should('not.contain.text', curator.postText1);
     cy.get('[data-cy="timeline-posts-cards"]').find('[data-cy="post-card"]').should('have.length', 2);
     collectionCounterEq(2);
