@@ -10,6 +10,24 @@ on:
     branches:
       - master
       - dev
+    # Skip the full suite for pushes that cannot change the app image, the
+    # specs or this workflow (docs, other workflows, VRT-only changes).
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'cypress/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'next.config.ts'
+      - 'tsconfig.json'
+      - 'postcss.config.mjs'
+      - '.nvmrc'
+      - '.github/workflows/e2e-test.yml'
+      - '.github/workflows/build-docker-image.yml'
+      - '!src/**/*.vrt.test.tsx'
+      - '!src/**/__screenshots__/**'
 
 # A newer dev push supersedes an in-flight run: only the latest commit's result
 # matters. Master runs and manual dispatches are never cancelled.
