@@ -1,0 +1,89 @@
+{
+  "generatedWith": "@synonymdev/pubky@0.15.0",
+  "capabilities": "/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r",
+  "local": {
+    "saved": {
+      "authorization_url": "pubkyauth://signin_grant?caps=%2Fpub%2Fpubky.app%2F%3Arw%2C%2Fpriv%2Fsocial%2F%3Arw%2C%2Fpriv%2Fapp.locks%2Fcontent%2F%3Ar&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=AYRnsxt8o5AbJo2e6wXCcJS1tpuyUFTH_HIbtPzB4ck&cid=pubky.app&cpk=crsp4eezufg4ku1xohcu5fzreh1dinpsiaq7mmrbdoniihxgqgoo",
+      "client_key_secret": [
+        81, 206, 54, 109, 182, 13, 75, 105, 3, 42, 123, 7, 252, 242, 244, 126, 194, 93, 39, 37, 82, 199, 168, 87, 131,
+        90, 215, 190, 41, 19, 206, 177
+      ]
+    },
+    "authorizationUrl": "pubkyauth://signin_grant?caps=%2Fpub%2Fpubky.app%2F%3Arw%2C%2Fpriv%2Fsocial%2F%3Arw%2C%2Fpriv%2Fapp.locks%2Fcontent%2F%3Ar&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=AYRnsxt8o5AbJo2e6wXCcJS1tpuyUFTH_HIbtPzB4ck&cid=pubky.app&cpk=crsp4eezufg4ku1xohcu5fzreh1dinpsiaq7mmrbdoniihxgqgoo",
+    "storedSession": {
+      "version": "pubky-session-v1",
+      "id": "8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo:Vs4vpGUFPLctd1bxLexVXg",
+      "storageMode": "localSecret",
+      "credential": "pubky-grant-credential-v1:tkrq8zmwb8a3m9k15csu3q17qmfgqnp9dskbrg9uq1rydpyxp7qy:Uc42bbYNS2kDKnsH_PL0fsJdJyVSx6hXg1rXvikTzrE:eyJhbGciOiJFZERTQSIsInR5cCI6InB1Ymt5LWdyYW50In0.eyJpc3MiOiI4cGlueHhncXM0MW40YWlkaWRlbnc1YXBxcDF1cmZtemR6dHI4anQ0YWJya2RuNDM1ZXdvIiwiY2xpZW50X2lkIjoicHVia3kuYXBwIiwiY2FwcyI6WyIvcHViL3B1Ymt5LmFwcC86cnciLCIvcHJpdi9zb2NpYWwvOnJ3IiwiL3ByaXYvYXBwLmxvY2tzL2NvbnRlbnQvOnIiXSwiY25mIjoiY3JzcDRlZXp1Zmc0a3UxeG9oY3U1ZnpyZWgxZGlucHNpYXE3bW1yYmRvbmlpaHhncWdvbyIsImp0aSI6IlZzNHZwR1VGUExjdGQxYnhMZXhWWGciLCJpYXQiOjE3OTE4ODE1NzIsImV4cCI6MTg1NDk1MzU3Mn0.PqzzZEGv4knB91cy_9EgA6bABDDWW5wfdfLUJ8O5gRuL1hCFuMFGjyOrH-iR7kgXzZF9_ODDqpjdeWY84OfsBQ",
+      "publicKey": "8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo",
+      "homeserver": "tkrq8zmwb8a3m9k15csu3q17qmfgqnp9dskbrg9uq1rydpyxp7qy",
+      "grantId": "Vs4vpGUFPLctd1bxLexVXg",
+      "clientId": "pubky.app",
+      "capabilities": ["/pub/pubky.app/:rw", "/priv/social/:rw", "/priv/app.locks/content/:r"],
+      "grantExpiresAt": 1854953572,
+      "createdAt": 1791881572849,
+      "sharedSession": {
+        "response": {
+          "token": "synthetic-offline-bearer",
+          "session": {
+            "homeserver": "tkrq8zmwb8a3m9k15csu3q17qmfgqnp9dskbrg9uq1rydpyxp7qy",
+            "pubky": "8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo",
+            "client_id": "pubky.app",
+            "capabilities": ["/pub/pubky.app/:rw", "/priv/social/:rw", "/priv/app.locks/content/:r"],
+            "grant_id": "Vs4vpGUFPLctd1bxLexVXg",
+            "token_expires_at": 1791885172,
+            "grant_expires_at": 1854953572,
+            "created_at": 1791881572
+          }
+        },
+        "refresh_pending": false,
+        "logout_pending": false
+      }
+    }
+  },
+  "delegated": {
+    "saved": {
+      "authorization_url": "pubkyauth://signin_grant?caps=%2Fpub%2Fpubky.app%2F%3Arw%2C%2Fpriv%2Fsocial%2F%3Arw%2C%2Fpriv%2Fapp.locks%2Fcontent%2F%3Ar&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=Rlg5Tqz6O9ymdq_kwT7-PD7Wx-jJfZELrC1jjTr7NW4&cid=pubky.app&cpk=8ga3xm4txwxgh7dnzpzj34tbeubi9596nw31dcjahr4a6r773j6y",
+      "key_id": "abd4c54e-271e-436d-9b84-a32a12930e18",
+      "client_pk": "8ga3xm4txwxgh7dnzpzj34tbeubi9596nw31dcjahr4a6r773j6y"
+    },
+    "authorizationUrl": "pubkyauth://signin_grant?caps=%2Fpub%2Fpubky.app%2F%3Arw%2C%2Fpriv%2Fsocial%2F%3Arw%2C%2Fpriv%2Fapp.locks%2Fcontent%2F%3Ar&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=Rlg5Tqz6O9ymdq_kwT7-PD7Wx-jJfZELrC1jjTr7NW4&cid=pubky.app&cpk=8ga3xm4txwxgh7dnzpzj34tbeubi9596nw31dcjahr4a6r773j6y",
+    "key": {
+      "keyId": "abd4c54e-271e-436d-9b84-a32a12930e18",
+      "publicKeyRaw": "ObGXr1F9Hm50YrtunOohRMNf7/4VMyGxOOE1jxO9ynw=",
+      "privateKeyPkcs8": "MC4CAQAwBQYDK2VwBCIEIJc1/dhzverBJ2UX+MCcjVVK2WBncOSIg4Mg1/O9d6Az",
+      "createdAt": 1791874389668
+    },
+    "storedSession": {
+      "version": "pubky-session-v1",
+      "id": "8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo:kdQmFQjqkUO-5zeifSnhLw",
+      "storageMode": "delegated",
+      "credential": "{\"version\":\"pubky-delegated-grant-credential-v1\",\"grantJws\":\"eyJhbGciOiJFZERTQSIsInR5cCI6InB1Ymt5LWdyYW50In0.eyJpc3MiOiI4cGlueHhncXM0MW40YWlkaWRlbnc1YXBxcDF1cmZtemR6dHI4anQ0YWJya2RuNDM1ZXdvIiwiY2xpZW50X2lkIjoicHVia3kuYXBwIiwiY2FwcyI6WyIvcHViL3B1Ymt5LmFwcC86cnciLCIvcHJpdi9zb2NpYWwvOnJ3IiwiL3ByaXYvYXBwLmxvY2tzL2NvbnRlbnQvOnIiXSwiY25mIjoiOGdhM3htNHR4d3hnaDdkbnpwemozNHRiZXViaTk1OTZudzMxZGNqYWhyNGE2cjc3M2o2eSIsImp0aSI6ImtkUW1GUWpxa1VPLTV6ZWlmU25oTHciLCJpYXQiOjE3OTE4ODE1NzIsImV4cCI6MTg1NDk1MzU3Mn0.u_uh9q6cmoqX1jVgS_PbkOBKZwsQXJCSvxAVAJ7cl5EMJ1es6wtjSJs6YptbXxxO6iJa83_z7839GUzekGhECg\",\"homeserverPublicKey\":\"tkrq8zmwb8a3m9k15csu3q17qmfgqnp9dskbrg9uq1rydpyxp7qy\",\"clientPublicKey\":\"8ga3xm4txwxgh7dnzpzj34tbeubi9596nw31dcjahr4a6r773j6y\",\"keyId\":\"abd4c54e-271e-436d-9b84-a32a12930e18\"}",
+      "publicKey": "8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo",
+      "homeserver": "tkrq8zmwb8a3m9k15csu3q17qmfgqnp9dskbrg9uq1rydpyxp7qy",
+      "grantId": "kdQmFQjqkUO-5zeifSnhLw",
+      "clientId": "pubky.app",
+      "capabilities": ["/pub/pubky.app/:rw", "/priv/social/:rw", "/priv/app.locks/content/:r"],
+      "grantExpiresAt": 1854953572,
+      "createdAt": 1791881572852,
+      "sharedSession": {
+        "response": {
+          "token": "synthetic-offline-bearer",
+          "session": {
+            "homeserver": "tkrq8zmwb8a3m9k15csu3q17qmfgqnp9dskbrg9uq1rydpyxp7qy",
+            "pubky": "8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo",
+            "client_id": "pubky.app",
+            "capabilities": ["/pub/pubky.app/:rw", "/priv/social/:rw", "/priv/app.locks/content/:r"],
+            "grant_id": "kdQmFQjqkUO-5zeifSnhLw",
+            "token_expires_at": 1791885172,
+            "grant_expires_at": 1854953572,
+            "created_at": 1791881572
+          }
+        },
+        "refresh_pending": false,
+        "logout_pending": false
+      }
+    }
+  },
+  "note": "Synthetic offline fixtures; keys and grants were never authorized on a real homeserver. Pending state comes from saveLocal/saveDelegated; storedSession records come from browserSessionStore.save after a fully mocked approval/exchange."
+}

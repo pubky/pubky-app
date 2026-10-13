@@ -158,7 +158,7 @@ export function usePostInput({
     serializeArticleForLock,
   } = usePost({ keepInlineMedia, active });
   const timelineFeed = useTimelineFeedContext();
-  const { undoRepost } = useUndoRepost(isCollectionShare);
+  const { undoRepost } = useUndoRepost(isCollectionShare, { outlivesOwner: true });
 
   // Article edits show only the cover in the attachment strip — inline images
   // live in the body. The cover is attachments[0] unless the published body

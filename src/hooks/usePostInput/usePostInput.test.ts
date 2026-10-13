@@ -516,6 +516,7 @@ describe('usePostInput', () => {
         });
 
         expect(useDeletePost).toHaveBeenCalledWith({
+          outlivesOwner: true,
           toastMessages: { deleted: `${label} removed`, deleteFailed: `Could not remove ${failure}. Try again.` },
         });
         const { onUndo } = mockRepost.mock.calls[0][0];
