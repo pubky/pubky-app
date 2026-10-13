@@ -28,7 +28,7 @@ export function Home() {
       <FeedNavigation />
       {/* One feature banner at a time: the Vibes alert has priority over the install banner. */}
       <AlertVibes />
-      {!isVibesAlertVisible && <AlertInstall />}
+      <AlertInstall hidden={isVibesAlertVisible} />
       <AlertBackup />
       <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} persistentHeader={<TaggedAsHeadline />}>
         <PostInput dataCy="home-post-input" variant={POST_INPUT_VARIANT.POST} />

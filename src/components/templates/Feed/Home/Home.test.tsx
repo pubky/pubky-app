@@ -20,7 +20,11 @@ vi.mock('@/organisms/AlertBackup/AlertBackup', () => {
 
 vi.mock('@/organisms/AlertInstall/AlertInstall', () => {
   return {
-    AlertInstall: () => <div data-testid="alert-install">AlertInstall</div>,
+    AlertInstall: ({ hidden = false }: { hidden?: boolean }) => (
+      <div data-testid="alert-install" data-hidden={hidden}>
+        AlertInstall
+      </div>
+    ),
   };
 });
 
@@ -125,10 +129,11 @@ describe('Home', () => {
   });
 
   it('holds back the install banner while the Vibes alert is showing', () => {
+    const { rerender } = render(<Home />);
+    expect(screen.getByTestId('alert-install')).toHaveAttribute('data-hidden', 'false');
     vibesAlert.visible = true;
-    render(<Home />);
-    expect(screen.queryByTestId('alert-install')).not.toBeInTheDocument();
-    expect(screen.getByTestId('alert-vibes').nextElementSibling).toBe(screen.getByTestId('alert-backup'));
+    rerender(<Home />);
+    expect(screen.getByTestId('alert-install')).toHaveAttribute('data-hidden', 'true');
   });
 
   it('renders FeedNavigation in main content', () => {
