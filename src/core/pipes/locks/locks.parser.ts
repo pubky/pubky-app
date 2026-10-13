@@ -304,8 +304,8 @@ export class GuardedContentParser {
 
   /**
    * Parses the guarded primary bytes into the reader post shape: a v1 post, or the 0.x post a
-   * primary written before v1 holds. A 0.x kind decodes as a v1 post of a kind not known yet,
-   * which is how the two are told apart.
+   * primary written before v1 holds. A 0.x post with no `attachments` member also decodes as a
+   * v1 post, of a kind this version does not know, so the kind tells the two apart.
    */
   static parsePost(bytes: Uint8Array): GuardedPost | null {
     const read = tryDecodeObject({ kind: 'post', root: 'private' }, bytes);
