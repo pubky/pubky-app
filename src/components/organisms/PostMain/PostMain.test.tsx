@@ -825,7 +825,6 @@ describe('PostMain', () => {
 
     expect(screen.getByTestId('repost-header')).toHaveAttribute('data-collection-share', 'false');
     expect(useDeletePost).toHaveBeenCalledWith({
-      outlivesOwner: false,
       toastMessages: { deleted: 'Repost removed', deleteFailed: 'Could not remove repost. Try again.' },
     });
   });
@@ -861,7 +860,6 @@ describe('PostMain', () => {
     expect(screen.getByTestId('repost-header')).toHaveAttribute('data-collection-share', 'true');
     expect(screen.getByText('You shared this')).toBeInTheDocument();
     expect(useDeletePost).toHaveBeenCalledWith({
-      outlivesOwner: false,
       toastMessages: { deleted: 'Share removed', deleteFailed: 'Could not remove share. Try again.' },
     });
   });

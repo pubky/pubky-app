@@ -2,7 +2,8 @@ export interface UseRequireAuthOptions {
   /**
    * Wait in a scope of each call instead of this component's: for an action that a surface outliving the
    * component starts, such as a toast's Undo clicked after its dialog closed. Logout, account replacement
-   * and the restore timeout still cancel it.
+   * and the restore timeout still cancel it. It applies to every waitForAuth of this instance, so closing or
+   * navigating never cancels them: give such an action an instance of its own.
    */
   outlivesOwner?: boolean;
 }
