@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { encodeObject, type Post } from 'pubky-social-specs';
 import { LocksController } from '@/controllers/locks/locks';
 import { PostController } from '@/controllers/post/post';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
@@ -11,7 +12,6 @@ import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { buildLockTeaserContent, isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
-import { toLocalPostKind } from '@/pipes/post/post.kind';
 import { lockPriceSchema, type TGuardedResource } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type {
@@ -104,17 +104,17 @@ export function useCreateLockContent({
           });
         const host = ownerPubky ? stripPubkyPrefix(ownerPubky) : '';
         const uris = attachmentResources.map((resource) => `pubky://${host}${resource.path}`);
-        // The primary keeps the 0.x post shape every released reader parses (`guardedPostSchema`): it
-        // lives in the Locks namespace, where no data-model URL names it, and the package decodes a
-        // post only at such a URL.
-        const post = {
+        // The primary lives in the Locks namespace, a private place no data-model URL names, so it
+        // is encoded by kind alone.
+        const post: Post = {
           content: lockedPost.content,
-          kind: toLocalPostKind(lockedPost.kind),
+          kind: lockedPost.kind,
           parent: null,
           embed: null,
-          attachments: uris.length > 0 ? uris : null,
+          attachments: uris.map((uri) => ({ uri, name: null, alt: null })),
+          lock: null,
         };
-        return { contentType: POST_CONTENT_TYPE, bytes: new TextEncoder().encode(JSON.stringify(post)) };
+        return { contentType: POST_CONTENT_TYPE, bytes: encodeObject({ kind: 'post', root: 'private' }, post) };
       };
 
       // TODO:[Locks] #2685 — the files go up as the author picked them. A normal upload first removes

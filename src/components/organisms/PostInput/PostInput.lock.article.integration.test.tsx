@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TLockConfig } from '@/application/locks/locks.types';
+import { GuardedContentParser } from '@/pipes/locks/locks.parser';
 import type { TGuardedResource } from '@/services/locks/locks.types';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
@@ -218,6 +220,8 @@ const publishLock = async () => {
   await waitFor(() => expect(mocks.commitCreatePost).toHaveBeenCalledTimes(1));
 };
 
+const OWNER = fakeOwner(2);
+
 /** The locked post as `useCreateLockContent` builds it from the uploaded attachment descriptors. */
 const lockedPost = () => {
   const { attachments, buildPost } = mocks.createLockContent.mock.calls[0][0] as {
@@ -226,9 +230,9 @@ const lockedPost = () => {
   };
   const file = buildPost(
     attachments.map((_, index) => descriptor(`/priv/app.locks/content/file${index}`)),
-    'pubkyowner',
+    `pubky${OWNER}`,
   );
-  const post = JSON.parse(new TextDecoder().decode(file.bytes)) as { content: string; attachments: string[] | null };
+  const post = GuardedContentParser.parsePost(file.bytes)!;
   return { attachments, body: (JSON.parse(post.content) as { body: string }).body, uris: post.attachments };
 };
 
@@ -266,7 +270,7 @@ describe('PostInput - locking an article with body images (integration)', () => 
     expect(attachments).toHaveLength(1);
     expect(new TextDecoder().decode(attachments[0].bytes)).toBe('image bytes');
     expect(body).toBe('Intro\n\n![shot](attachment:0)\n\nOutro');
-    expect(uris).toEqual(['pubky://owner/priv/app.locks/content/file0']);
+    expect(uris).toEqual([`pubky://${OWNER}/priv/app.locks/content/file0`]);
     // The published lock lets go of the staged file: nothing was uploaded publicly, nothing to delete
     await act(async () => {});
     expect(mocks.commitCreateFile).not.toHaveBeenCalled();
@@ -286,7 +290,10 @@ describe('PostInput - locking an article with body images (integration)', () => 
       'image bytes',
     ]);
     expect(body).toBe('Intro\n\n![shot](attachment:1)\n\nOutro');
-    expect(uris).toEqual(['pubky://owner/priv/app.locks/content/file0', 'pubky://owner/priv/app.locks/content/file1']);
+    expect(uris).toEqual([
+      `pubky://${OWNER}/priv/app.locks/content/file0`,
+      `pubky://${OWNER}/priv/app.locks/content/file1`,
+    ]);
   });
 
   it('publishes the article normally, image included, after the lock is abandoned', async () => {

@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   LOCK_TEASER_MAX_CHARACTER_LENGTH,
@@ -9,6 +10,7 @@ import type { ComposerDraft } from '@/hooks/usePost/usePost.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { GuardedContentParser } from '@/pipes/locks/locks.parser';
 import { inferPostKindForCreate, toLocalPostKind } from '@/pipes/post/post.kind';
 import type { TGuardedResource } from '@/services/locks/locks.types';
 import { PostInput } from './PostInput';
@@ -22,8 +24,10 @@ import { POST_INPUT_VARIANT } from './PostInput.constants';
  */
 
 /** The locked post a `buildPost` file holds, as readers parse it. */
-const decodePost = (file: { bytes: Uint8Array }) =>
-  JSON.parse(new TextDecoder().decode(file.bytes)) as { content: string; kind: string; attachments: string[] | null };
+const decodePost = (file: { bytes: Uint8Array }) => GuardedContentParser.parsePost(file.bytes)!;
+
+/** The Lock-Server-authenticated account, which holds the guarded files. */
+const BOB = fakeOwner(2);
 
 const mocks = vi.hoisted(() => ({
   createLockContent: vi.fn(),
@@ -291,14 +295,12 @@ describe('PostInput lock flow (integration)', () => {
 
     // The locked post carries the captured body and the kind a normal post would infer.
     const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    const postFile = buildPost(files.length > 0 ? [descriptor('/priv/app.locks/content/id-1')] : [], 'pubkybob');
+    const postFile = buildPost(files.length > 0 ? [descriptor('/priv/app.locks/content/id-1')] : [], `pubky${BOB}`);
     const expectedKind = inferPostKindForCreate({ content: body, attachments: files, isArticle: false });
     expect(decodePost(postFile)).toEqual({
       content: body,
       kind: toLocalPostKind(expectedKind),
-      parent: null,
-      embed: null,
-      attachments: files.length > 0 ? ['pubky://bob/priv/app.locks/content/id-1'] : null,
+      attachments: files.length > 0 ? [`pubky://${BOB}/priv/app.locks/content/id-1`] : null,
     });
 
     expect(mocks.handleSubmit).not.toHaveBeenCalled(); // never the normal path
@@ -381,7 +383,7 @@ describe('PostInput lock flow (integration)', () => {
     // The locked post itself is declared as an opaque blob and links all four files.
     const postFile = buildPost(
       attachments.map((_: unknown, index: number) => descriptor(`/priv/app.locks/content/id-${index}`)),
-      'pubkybob',
+      `pubky${BOB}`,
     );
     expect(postFile.contentType).toBe('application/octet-stream');
     expect(decodePost(postFile).attachments).toHaveLength(4);
@@ -402,8 +404,8 @@ describe('PostInput lock flow (integration)', () => {
     await waitFor(() => expect(mocks.createLockContent).toHaveBeenCalledTimes(1));
 
     const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    const uris = decodePost(buildPost([descriptor('/priv/app.locks/content/id-1')], 'pubkybob')).attachments;
-    expect(uris).toEqual(['pubky://bob/priv/app.locks/content/id-1']);
+    const uris = decodePost(buildPost([descriptor('/priv/app.locks/content/id-1')], `pubky${BOB}`)).attachments;
+    expect(uris).toEqual([`pubky://${BOB}/priv/app.locks/content/id-1`]);
     expect(JSON.stringify(uris)).not.toContain('alice');
 
     // No owner → refuse loudly instead of silently using the pubky.app account.

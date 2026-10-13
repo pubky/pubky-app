@@ -1,4 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { decodeObject } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   LOCK_TEASER_MAX_CHARACTER_LENGTH,
@@ -74,17 +76,15 @@ describe('useCreateLockContent', () => {
     await act(() => result.current.publish());
 
     const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    // The controller passes the guarded-bytes owner (`bob`), so the URIs point at that account — not alice.
-    const postFile = buildPost([descriptor('/priv/app.locks/content/id-1')], 'pubkybob');
+    // The controller passes the guarded-bytes owner, so the URIs point at that account, not alice.
+    const bob = fakeOwner(2);
+    const postFile = buildPost([descriptor('/priv/app.locks/content/id-1')], `pubky${bob}`);
 
     expect(postFile.contentType).toBe('application/octet-stream');
-    // The 0.x post shape every released reader parses
-    expect(decode(postFile.bytes)).toEqual({
+    expect(decodeObject({ kind: 'post', root: 'private' }, postFile.bytes)).toMatchObject({
       content: 'locked body',
-      kind: 'short',
-      parent: null,
-      embed: null,
-      attachments: ['pubky://bob/priv/app.locks/content/id-1'],
+      kind: 'note',
+      attachments: [{ uri: `pubky://${bob}/priv/app.locks/content/id-1` }],
     });
   });
 
@@ -93,7 +93,7 @@ describe('useCreateLockContent', () => {
     await act(() => result.current.publish());
 
     const [{ buildPost }] = mocks.createLockContent.mock.calls[0];
-    expect(decode(buildPost([]).bytes).attachments).toBeNull();
+    expect(decode(buildPost([]).bytes).attachments).toEqual([]);
   });
 
   // The pubky.app account must never stand in for the missing owner — the two can differ (A ≠ B).
