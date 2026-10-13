@@ -61,7 +61,9 @@ remain available for retry; generic auth errors do not prove revocation succeede
   screen. Mutations use `useRequireAuth().waitForAuth()` before local writes or uploads: join an existing restore
   for up to 12 seconds, then proceed only for the same ready account and generation. Temporary failure or timeout
   cancels with a retry message; missing or expired authentication opens sign-in. Closing the owning dialog,
-  unmounting, navigation, logout or account replacement cancels the wait without replaying the action.
+  unmounting, navigation, logout or account replacement cancels the wait without replaying the action. A toast
+  action (repost Undo) is clicked after its producer unmounted, so it opts into `outlivesOwner` and waits in a
+  scope of its own; logout, account replacement and the timeout still cancel it.
   Synchronous guards remain for browser gestures and opening controls; they do not open sign-in while restoration runs.
   Direct logout waits for backup confirmation before erasing browser-generated recovery material and cancels if
   another tab replaces the account or grant while that confirmation is open.

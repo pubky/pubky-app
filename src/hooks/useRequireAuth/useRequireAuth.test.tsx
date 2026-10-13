@@ -154,6 +154,68 @@ describe('useRequireAuth', () => {
     expect(toast).not.toHaveBeenCalled();
   });
 
+  it('joins a restore from a handler called after unmount when it outlives its owner', async () => {
+    restoring();
+    const { result, unmount } = renderHook(() => useRequireAuth(true, { outlivesOwner: true }));
+    const { waitForAuth } = result.current;
+    unmount();
+    const pending = waitForAuth();
+    await act(async () => {
+      ready();
+      expect(await pending).toBe(true);
+    });
+  });
+
+  it.each(['logout', 'account', 'generation'] as const)(
+    'still cancels an outliving wait when %s changes',
+    async (change) => {
+      restoring();
+      const { result, unmount } = renderHook(() => useRequireAuth(true, { outlivesOwner: true }));
+      const { waitForAuth } = result.current;
+      unmount();
+      const pending = waitForAuth();
+      await act(async () => {
+        if (change === 'logout') useAuthStore.setState({ isLoggingOut: true });
+        else if (change === 'account') useAuthStore.setState({ currentUserPubky: 'other' });
+        else useAuthStore.setState({ generation: 'new-login' });
+        expect(await pending).toBe(false);
+      });
+      expect(toast).not.toHaveBeenCalled();
+    },
+  );
+
+  it('still times out an outliving wait', async () => {
+    vi.useFakeTimers();
+    restoring();
+    const { result, unmount } = renderHook(() => useRequireAuth(true, { outlivesOwner: true }));
+    const { waitForAuth } = result.current;
+    unmount();
+    const pending = waitForAuth();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12_000);
+      expect(await pending).toBe(false);
+    });
+    expect(toast).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('keeps an inactive owner inactive when it outlives its owner', async () => {
+    restoring();
+    ready();
+    const { result } = renderHook(() => useRequireAuth(false, { outlivesOwner: true }));
+    expect(await result.current.waitForAuth()).toBe(false);
+  });
+
+  it('rejects an outliving handler once another account signed in', async () => {
+    restoring();
+    ready();
+    const { result, unmount } = renderHook(() => useRequireAuth(true, { outlivesOwner: true }));
+    const { waitForAuth } = result.current;
+    unmount();
+    act(() => useAuthStore.setState({ currentUserPubky: 'other', generation: 'other' }));
+    expect(await waitForAuth()).toBe(false);
+  });
+
   it('ignores duplicate waiting clicks but permits independent targets', async () => {
     restoring();
     const { result } = renderHook(() => useRequireAuth());

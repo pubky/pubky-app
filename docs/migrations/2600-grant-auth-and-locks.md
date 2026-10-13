@@ -2,7 +2,7 @@
 
 ## Behavior
 
-PubkyApp uses `@synonymdev/pubky@0.15.0` and grant authentication for Ring, Passport (Continue with Google),
+PubkyApp uses `@synonymdev/pubky@0.16.0` and grant authentication for Ring, Passport (Continue with Google),
 encrypted-file and recovery-phrase login, and browser signup. Existing cookie sessions require fresh authorization.
 Valid saved grants continue to restore. The update does not change accounts, published content or the Dexie version.
 Nexus reads and public mute SSE subscriptions retain their current behavior.
@@ -10,6 +10,20 @@ Nexus reads and public mute SSE subscriptions retain their current behavior.
 Ring and Passport request `/pub/pubky.app/:rw`, `/priv/social/:rw` and `/priv/app.locks/content/:r`.
 Key recovery and browser signup obtain root grants. Feature access depends on the active grant's actual capabilities.
 A valid older grant without the Locks scopes can be upgraded for the same account from the Locks UI.
+
+### SDK 0.16 upgrade
+
+The 0.15 → 0.16 dependency bump retains the default `bareGrant` approval format, the existing `r`/`w` scopes and
+the current client ID. Bare grants continue to use `pubky-session-v1` records; the SDK IndexedDB version stays at 1.
+Existing 0.15 sessions remain readable, and the App Dexie `DB_VERSION` does not change. See the
+[stored-session compatibility contract](https://github.com/pubky/pubky-homeserver/blob/v0.16.0/docs/grant-session-lifecycle.md#upgrading-stored-browser-sessions).
+
+Scoped encryption is a separate opt-in rollout: requesting `e` requires `approvalFormat: "signedApprovalV1"`,
+HPKE-capable signers and homeserver support. Upgrade homeservers, then signers, then apps that request `e`.
+Signed approvals always create `pubky-session-v2` records, even without approved `e` scopes. Before sharing those
+records with another app on the same origin, coordinate SDK upgrades and reload older tabs; older SDKs cannot
+safely share V2 records. This bump does not enable signed approvals or encryption scopes. See the
+[encryption compatibility guide](https://github.com/pubky/pubky-homeserver/blob/v0.16.0/docs/scoped-encryption-keys.md#compatibility-and-deployment).
 
 ## Persistence and recovery
 
@@ -39,7 +53,7 @@ A valid older grant without the Locks scopes can be upgraded for the same accoun
   Rejection of an old grant does not block its valid replacement, but remote revocation remains unconfirmed.
   Rejected or unsupported SDK records retain their credentials and a persisted one-hour retry delay; reloads and
   online events respect that delay. Normal network failures remain eligible for retry when connectivity returns.
-  Unsupported records also remain queued after expiry because SDK 0.15 cannot remove them. Known missing,
+  Unsupported records also remain queued after expiry because SDK 0.16 cannot remove them. Known missing,
   signed-out or invalid-grant restore outcomes are excluded from error telemetry; unreadable versions still report.
 - Account switches persist a pending database-preparation marker before exposing the replacement reference. Restore,
   including another tab or a reload, completes that preparation before bootstrap. A separate shared Web Lock keeps
@@ -71,10 +85,10 @@ Web Locks must work. SDK notifications for removed/cleared records trigger a fen
 
 The SDK owns bearer renewal, concurrent request locks and its bounded 401 recovery. There is no app refresh token,
 bearer-sharing implementation or restore-on-401 loop. Both expiry timestamps come from `grant.sessionInfo()`.
-The [SDK's default issued grant lifetime](https://github.com/pubky/pubky-homeserver/blob/v0.15.0/pubky-sdk/src/actors/auth/grant/constants.rs)
-is 730 days; a signer can choose another lifetime. [HS 0.15 issues bearers](https://github.com/pubky/pubky-homeserver/blob/v0.15.0/pubky-homeserver/src/client_server/auth/grant/service.rs)
-for up to one hour, capped by grant expiry. These are not app timers. Reload old app tabs during rollout: an already-running
-older SDK cannot participate in the new coordination protocol. Apps that share a saved grant on the same origin
+The [SDK's default issued grant lifetime](https://github.com/pubky/pubky-homeserver/blob/v0.16.0/pubky-sdk/src/actors/auth/grant/constants.rs)
+is 730 days; a signer can choose another lifetime. [HS 0.16 issues bearers](https://github.com/pubky/pubky-homeserver/blob/v0.16.0/pubky-homeserver/src/client_server/auth/grant/service.rs)
+for up to one hour, capped by grant expiry. These are not app timers. During the grant-auth rollout, reload tabs
+running SDKs that predate grant-session coordination. Apps that share a saved grant on the same origin
 must coordinate SDK upgrades and use compatible browser-record formats and lifecycle protocols.
 
 If an active, owned HS storage request still fails with a terminal authentication error after SDK recovery,
@@ -84,7 +98,7 @@ and account data are retained. A same-origin BroadcastChannel shares only the fa
 Network failures, server errors and 403 permission denials leave the session active. A delayed error from an older
 session cannot invalidate a newer login; the original error still reaches the request caller for rollback.
 
-Call `session.signout()` directly, without a preceding storage request. SDK 0.15 supports grant-proof logout after
+Call `session.signout()` directly, without a preceding storage request. SDK 0.16 supports grant-proof logout after
 bearer expiry and retry of pending logout. Revocation precedes best-effort removal of owned SDK records; never call
 `clearAll()` during account logout. Local logout is bounded even if SDK remote work or its lock is stalled; delayed
 cleanup must not remove a replacement grant. A timeout leaves remote revocation unconfirmed, and SDK records may
@@ -101,12 +115,12 @@ even when the apps have different origins. This shared-cookie logout is intentio
 It does not revoke independent Shop grants; shared-grant access and cross-app account switching will be defined in
 the Shop integration.
 
-See the [released lifecycle contract](https://github.com/pubky/pubky-homeserver/blob/v0.15.0/docs/grant-session-lifecycle.md).
+See the [released lifecycle contract](https://github.com/pubky/pubky-homeserver/blob/v0.16.0/docs/grant-session-lifecycle.md).
 
 ### Accepted transport limitation
 
-Grant-only describes the FE authentication flows. SDK 0.15 internal storage requests still include browser cookies,
-and the [HS middleware](https://github.com/pubky/pubky-homeserver/blob/v0.15.0/pubky-homeserver/src/client_server/auth/middleware/authentication.rs)
+Grant-only describes the FE authentication flows. SDK 0.16 internal storage requests still include browser cookies,
+and the [HS middleware](https://github.com/pubky/pubky-homeserver/blob/v0.16.0/pubky-homeserver/src/client_server/auth/middleware/authentication.rs)
 can accept a valid ambient cookie after a rejected bearer. Removing app cookie persistence does not remove this server
 behavior. The team accepts this limitation for #2600; strict transport isolation is not an acceptance criterion or a
 release blocker for this migration. App-owned raw public HTTP calls omit cookies.
@@ -122,7 +136,7 @@ resume a matching saved attempt. Unmount alone preserves mobile handoff. Treat p
 
 Completed approvals rejected after approval (including insufficient scopes, an account mismatch, and losing races)
 are retained without becoming active. Permission upgrades reject a different identity; retained
-candidates still require the expected client ID, and failed SDK saves are not repeated by the retention fallback. SDK 0.15 removal still deletes delegated
+candidates still require the expected client ID, and failed SDK saves are not repeated by the retention fallback. SDK 0.16 removal still deletes delegated
 proof keys without ownership checks; a duplicated pending tab may share them. Do not infer safe key deletion from a
 count of completed records or clear all delegated keys on cancellation.
 

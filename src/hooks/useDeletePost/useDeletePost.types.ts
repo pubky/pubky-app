@@ -1,5 +1,7 @@
 export interface UseDeletePostOptions {
   active?: boolean;
+  /** Keep deleting after this component unmounts, for a toast action that outlives it (`useRequireAuth`). */
+  outlivesOwner?: boolean;
   /**
    * Override the success / failure toast copy. Useful when the deleted post is
    * something other than a generic post (e.g. a collection) so the toast reads

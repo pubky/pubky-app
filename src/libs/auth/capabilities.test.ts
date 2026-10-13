@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LOCKS_CAPABILITIES } from '@/config/auth';
 import { hasCapabilities } from './capabilities';
 
 describe('hasCapabilities', () => {
@@ -6,7 +7,13 @@ describe('hasCapabilities', () => {
     expect(hasCapabilities(['/:rw'], ['/priv/social/:rw', '/priv/locks.app/:r'])).toBe(true);
   });
 
+  it('accepts a root grant with encryption and read/write permissions for Locks', () => {
+    expect(hasCapabilities(['/:rwe'], LOCKS_CAPABILITIES)).toBe(true);
+  });
+
   it.each([
+    { granted: ['/:e'], required: ['/pub/pubky.app/:rw'], covered: false },
+    { granted: ['/pub/pubky.app/:e'], required: ['/pub/pubky.app/:rw'], covered: false },
     { granted: ['/pub/pubky.app/:rw'], required: ['/priv/social/:rw'], covered: false },
     { granted: ['/priv/social/:rw'], required: ['/priv/social/item:r'], covered: true },
     { granted: ['/priv/social/:r'], required: ['/priv/social/:rw'], covered: false },
