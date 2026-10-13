@@ -425,7 +425,7 @@ export class HomeserverService {
       !('message' in error)
     )
       return null;
-    // Exact terminal outcomes from SDK 0.15 restore; other ClientStateErrors include retryable storage failures.
+    // Exact terminal outcomes from SDK 0.16 restore; other ClientStateErrors include retryable storage failures.
     if (error.message === 'Browser session was signed out.') return 'remote_logout_completed';
     if (error.message === 'Browser session is no longer valid.') return 'invalid_grant';
     if (error.message === 'Unsupported stored session version.') return 'unsupported_stored_session';
@@ -436,7 +436,7 @@ export class HomeserverService {
   }
 
   private static isMissingSessionRecord(error: unknown, id: string): boolean {
-    // Pinned SDK 0.15 emits this only after a successful IndexedDB read finds no record.
+    // Pinned SDK 0.16 emits this only after a successful IndexedDB read finds no record.
     // list() is unsuitable for checking absence: it also returns [] when IndexedDB fails.
     return (
       typeof error === 'object' &&
@@ -494,7 +494,7 @@ export class HomeserverService {
     try {
       session = await this.getPubkySdk().restoreSession(exported);
     } catch (error) {
-      // SDK 0.15 maps a missing legacy GET /session (401/404) to this exact terminal error.
+      // SDK 0.16 maps a missing legacy GET /session (401/404) to this exact terminal error.
       if (
         typeof error === 'object' &&
         error !== null &&
@@ -517,7 +517,7 @@ export class HomeserverService {
 
   static async logout({ session }: THomeserverSessionResult) {
     try {
-      // SDK 0.15 coordinates logout and can use a grant proof after bearer expiry.
+      // SDK 0.16 coordinates logout and can use a grant proof after bearer expiry.
       // Do not send a storage request first: a pending logout intentionally rejects it.
       await session.signout();
     } catch (error) {

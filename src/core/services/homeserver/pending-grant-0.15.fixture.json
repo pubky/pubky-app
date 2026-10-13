@@ -1,0 +1,28 @@
+{
+  "generatedWith": "@synonymdev/pubky@0.15.0",
+  "capabilities": "/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r",
+  "local": {
+    "saved": {
+      "authorization_url": "pubkyauth://signin_grant?caps=%2Fpub%2Fpubky.app%2F%3Arw%2C%2Fpriv%2Fsocial%2F%3Arw%2C%2Fpriv%2Fapp.locks%2Fcontent%2F%3Ar&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=AYRnsxt8o5AbJo2e6wXCcJS1tpuyUFTH_HIbtPzB4ck&cid=pubky.app&cpk=crsp4eezufg4ku1xohcu5fzreh1dinpsiaq7mmrbdoniihxgqgoo",
+      "client_key_secret": [
+        81, 206, 54, 109, 182, 13, 75, 105, 3, 42, 123, 7, 252, 242, 244, 126, 194, 93, 39, 37, 82, 199, 168, 87, 131,
+        90, 215, 190, 41, 19, 206, 177
+      ]
+    },
+    "authorizationUrl": "pubkyauth://signin_grant?caps=%2Fpub%2Fpubky.app%2F%3Arw%2C%2Fpriv%2Fsocial%2F%3Arw%2C%2Fpriv%2Fapp.locks%2Fcontent%2F%3Ar&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=AYRnsxt8o5AbJo2e6wXCcJS1tpuyUFTH_HIbtPzB4ck&cid=pubky.app&cpk=crsp4eezufg4ku1xohcu5fzreh1dinpsiaq7mmrbdoniihxgqgoo"
+  },
+  "delegated": {
+    "saved": {
+      "authorization_url": "pubkyauth://signin_grant?caps=%2Fpub%2Fpubky.app%2F%3Arw%2C%2Fpriv%2Fsocial%2F%3Arw%2C%2Fpriv%2Fapp.locks%2Fcontent%2F%3Ar&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=Rlg5Tqz6O9ymdq_kwT7-PD7Wx-jJfZELrC1jjTr7NW4&cid=pubky.app&cpk=8ga3xm4txwxgh7dnzpzj34tbeubi9596nw31dcjahr4a6r773j6y",
+      "key_id": "abd4c54e-271e-436d-9b84-a32a12930e18",
+      "client_pk": "8ga3xm4txwxgh7dnzpzj34tbeubi9596nw31dcjahr4a6r773j6y"
+    },
+    "authorizationUrl": "pubkyauth://signin_grant?caps=%2Fpub%2Fpubky.app%2F%3Arw%2C%2Fpriv%2Fsocial%2F%3Arw%2C%2Fpriv%2Fapp.locks%2Fcontent%2F%3Ar&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=Rlg5Tqz6O9ymdq_kwT7-PD7Wx-jJfZELrC1jjTr7NW4&cid=pubky.app&cpk=8ga3xm4txwxgh7dnzpzj34tbeubi9596nw31dcjahr4a6r773j6y",
+    "key": {
+      "keyId": "abd4c54e-271e-436d-9b84-a32a12930e18",
+      "publicKeyRaw": "ObGXr1F9Hm50YrtunOohRMNf7/4VMyGxOOE1jxO9ynw=",
+      "privateKeyPkcs8": "MC4CAQAwBQYDK2VwBCIEIJc1/dhzverBJ2UX+MCcjVVK2WBncOSIg4Mg1/O9d6Az",
+      "createdAt": 1791874389668
+    }
+  }
+}

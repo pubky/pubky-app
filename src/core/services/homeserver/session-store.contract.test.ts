@@ -1,9 +1,10 @@
 import { webcrypto } from 'node:crypto';
-import { Keypair, Pubky } from '@synonymdev/pubky';
+import { AuthFlowKind, Keypair, Pubky, validateCapabilities } from '@synonymdev/pubky';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
-import { getAuthClientId } from '@/config/auth';
+import { APP_CAPABILITIES, getAuthClientId, LOCKS_CAPABILITIES } from '@/config/auth';
 import { HomeserverService } from './homeserver';
+import pendingGrant015 from './pending-grant-0.15.fixture.json';
 
 vi.mock('pubky-app-specs', () => ({
   default: vi.fn(),
@@ -185,4 +186,89 @@ it('the pinned SDK reports malformed local and delegated pending state as Invali
   const sdk = new Pubky();
   expect(() => sdk.resumeGrantAuthFlow('{broken')).toThrow(expect.objectContaining({ name: 'InvalidInput' }));
   await expect(sdk.resumeDelegatedGrantAuthFlow('{broken')).rejects.toMatchObject({ name: 'InvalidInput' });
+});
+
+describe('SDK upgrade grant compatibility', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('Unexpected network request', 'NetworkError')));
+  });
+
+  it.each([APP_CAPABILITIES, `${APP_CAPABILITIES},${LOCKS_CAPABILITIES[0]},${LOCKS_CAPABILITIES[1]}`] as const)(
+    'keeps bare-grant approval as the default for app capabilities %s',
+    async (capabilities) => {
+      const flow = await new Pubky().startGrantAuthFlow(capabilities, AuthFlowKind.signin(), {
+        clientId: getAuthClientId(),
+        relay: 'https://relay.example/inbox/',
+      });
+      try {
+        const params = new URL(flow.authorizationUrl).searchParams;
+        expect(params.get('caps')).toBe(validateCapabilities(capabilities));
+        // An af parameter opts into signedApprovalV1, requiring upgraded signers.
+        expect(params.has('af')).toBe(false);
+      } finally {
+        flow.free();
+      }
+    },
+  );
+
+  it.each(['local', 'delegated'] as const)('resumes a %s pending login saved by SDK 0.15', async (mode) => {
+    // Generated offline with 0.15 saveLocal/saveDelegated, never authorized by a user.
+    // The delegated fixture uses a synthetic key imported as non-extractable, like a browser record.
+    const sdk = new Pubky();
+    const fixture = pendingGrant015[mode];
+    let db: IDBDatabase | undefined;
+    if (mode === 'delegated') {
+      expect(await sdk.browserSessionStore.isAvailable()).toBe(true);
+      const key = pendingGrant015.delegated.key;
+      const privateKey = await crypto.subtle.importKey(
+        'pkcs8',
+        Buffer.from(key.privateKeyPkcs8, 'base64'),
+        'Ed25519',
+        false,
+        ['sign'],
+      );
+      db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('pubky-auth', 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const tx = db!.transaction('delegatedGrantKeys', 'readwrite');
+        tx.objectStore('delegatedGrantKeys').put({
+          keyId: key.keyId,
+          privateKey,
+          publicKeyRaw: new Uint8Array(Buffer.from(key.publicKeyRaw, 'base64')),
+          createdAt: key.createdAt,
+        });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    try {
+      const saved = JSON.stringify(fixture.saved);
+      const resumed = mode === 'local' ? sdk.resumeGrantAuthFlow(saved) : await sdk.resumeDelegatedGrantAuthFlow(saved);
+      try {
+        const original = new URL(fixture.authorizationUrl);
+        const restored = new URL(resumed.authorizationUrl);
+        expect(restored.protocol).toBe(original.protocol);
+        expect(restored.host).toBe(original.host);
+        expect(restored.pathname).toBe(original.pathname);
+        expect(Object.fromEntries(restored.searchParams)).toEqual(Object.fromEntries(original.searchParams));
+        expect(restored.searchParams.get('caps')).toBe(validateCapabilities(pendingGrant015.capabilities));
+        expect(restored.searchParams.has('af')).toBe(false);
+      } finally {
+        resumed.free();
+      }
+    } finally {
+      if (db) {
+        await new Promise<void>((resolve, reject) => {
+          const tx = db.transaction('delegatedGrantKeys', 'readwrite');
+          tx.objectStore('delegatedGrantKeys').delete(pendingGrant015.delegated.key.keyId);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+        db.close();
+      }
+    }
+  });
 });
