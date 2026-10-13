@@ -246,11 +246,14 @@ jobs:
           EOF
 
       # Start the infra services first; pubky-app follows once its image exists.
+      # Compose interpolates every service at config load, so PUBKY_APP_TAG must be
+      # set here even though the pubky-app service is not started in this step.
       - name: Run pubky-stack infra services
         working-directory: pubky-stack/docker
         run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis postgres
         env:
           REGISTRY: ${{ env.registry }}
+          PUBKY_APP_TAG: ${{ steps.app_tag.outputs.content_tag }}
 
       - name: Wait for dockerised pubky-stack to start
         run: |
