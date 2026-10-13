@@ -177,7 +177,8 @@ export const fillArticleFields = ({
   imageAction?: { action: 'add' } | { action: 'replace' } | { action: 'remove' };
 }) => {
   if (title !== undefined) {
-    cy.get(ARTICLE_TITLE_INPUT).clear().type(title, { delay: 0 });
+    // Centered: scrolled to the top, the title pulls the editor toolbar under the fixed site header
+    cy.get(ARTICLE_TITLE_INPUT).clear({ scrollBehavior: 'center' }).type(title, { delay: 0, scrollBehavior: 'center' });
   }
 
   if (body !== undefined) {
