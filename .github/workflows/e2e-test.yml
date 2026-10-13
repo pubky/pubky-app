@@ -110,7 +110,9 @@ jobs:
   rebuild_pubky_app:
     uses: ./.github/workflows/build-docker-image.yml
     with:
-      platforms: ${{ env.platforms }}
+      # The env context is not available in a reusable-call `with`, so the
+      # platform is a literal here (matches the env.platforms value).
+      platforms: linux/amd64
       # Content-hash tag: skip the build entirely when no Docker build input
       # changed since the last e2e build.
       tag_mode: content
