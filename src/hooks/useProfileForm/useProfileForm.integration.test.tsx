@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { decodeObject, parsePubkyUrl } from 'pubky-social-specs';
+import { decodeObject } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -30,7 +30,7 @@ const v1ProfileUrl = `pubky://${pubky}/pub/social/v1/profile.json`;
 /** The profile the edit PUT, decoded. */
 const putProfile = () => {
   const [{ url, blob }] = vi.mocked(HomeserverService.putBlob).mock.calls[0];
-  return { url, profile: decodeObject(parsePubkyUrl(url), blob, 'user') };
+  return { url, profile: decodeObject(url, blob, 'user') };
 };
 
 describe('useProfileForm published links integration', () => {

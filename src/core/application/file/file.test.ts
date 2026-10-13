@@ -135,7 +135,7 @@ describe('FileApplication', () => {
         file: sanitizedFile,
         // The id `hashMedia` reads from the sanitized file, as buildFile would derive it
         mediaId: buildFile(VALID_OWNER, { bytes: new TextEncoder().encode('sanitized'), type: 'image/jpeg' }).id,
-        blobData: expect.anything(),
+        blobData: expect.toSatisfy(ArrayBuffer.isView),
         pubky: TEST_PUBKY,
       });
       expect(result).toBe(fileAttachment);

@@ -1,10 +1,9 @@
-import { buildMute, type Built, deletionPaths, type Mute, type Owner } from 'pubky-social-specs';
+import { buildMute, type Built, deletionPaths, type Mute, type Owner, toUrl } from 'pubky-social-specs';
 import type { TMuteParams } from '@/controllers/mute/mute.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
-import { ownerPathToUrl } from '@/pipes/pipes.utils';
 
 export class MuteNormalizer {
   private constructor() {}
@@ -25,6 +24,6 @@ export class MuteNormalizer {
 
   /** Every copy an unmute deletes: the 0.x mute first, then the v1 one. */
   static toDeleteUrls({ muter, mutee }: TMuteParams): string[] {
-    return deletionPaths({ kind: 'mute', id: stripPubkyPrefix(mutee) }).map((path) => ownerPathToUrl(muter, path));
+    return deletionPaths({ kind: 'mute', id: stripPubkyPrefix(mutee) }).map((path) => toUrl(muter, path));
   }
 }

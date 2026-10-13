@@ -4,8 +4,9 @@ import {
   encodeObject,
   type Feed,
   feedId,
+  isOneOf,
   listPrefix,
-  parsePubkyUrl,
+  postKinds,
   tryDecodeObject,
 } from 'pubky-social-specs';
 import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/application/feed/feed.types';
@@ -25,7 +26,6 @@ import type { Pubky } from '@/models/models.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { FeedValidators } from '@/pipes/feed/feed.validators';
-import { isKnownPostKind } from '@/pipes/post/post.kind';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFeedService } from '@/services/local/feed/feed';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
@@ -75,7 +75,7 @@ export class FeedApplication {
       reach,
       sort,
       // Built from this client's input, so always a kind it knows; the type stays open for reads.
-      content: content !== null && isKnownPostKind(content) ? content : null,
+      content: content !== null && isOneOf(postKinds, content) ? content : null,
       layout,
       created_at: createdAt,
       updated_at: now,
@@ -227,11 +227,11 @@ export class FeedApplication {
    */
   private static normalizeRemoteFeed(feedUri: string, bytes: Uint8Array): FeedModelSchema | null {
     try {
-      const feed = decodeObject(parsePubkyUrl(feedUri), bytes, 'feed');
+      const feed = decodeObject(feedUri, bytes, 'feed');
       const { tags, domain_tags, reach, sort, layout, content } = feed.feed;
 
       // A content kind from a newer data model has no stream here.
-      if (content !== null && !isKnownPostKind(content)) {
+      if (content !== null && !isOneOf(postKinds, content)) {
         Logger.warn('Skipping feed with an unknown content kind during bootstrap fetch', { content });
         return null;
       }

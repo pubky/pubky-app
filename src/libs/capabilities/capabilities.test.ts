@@ -1,6 +1,6 @@
-import { MIGRATION_CAPS } from 'pubky-social-specs/migration';
+import { MIGRATION_CAPS } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
-import { HOMESERVER_CAPABILITIES, SOCIAL_V1_CAPABILITIES } from '@/config/network';
+import { HOMESERVER_CAPABILITIES } from '@/config/network';
 import { mockRingSession } from '@/test-utils/pubky';
 import { hasRequiredCapabilities, hasSocialV1Capabilities, sessionNeedsUpgrade } from './capabilities';
 
@@ -109,11 +109,7 @@ describe('hasSocialV1Capabilities', () => {
 });
 
 describe('the social v1 grant', () => {
-  it('is spelled as the package spells the migration grant', () => {
-    expect(SOCIAL_V1_CAPABILITIES).toBe(MIGRATION_CAPS);
-  });
-
   it('is covered by the grant every session asks for', () => {
-    expect(hasRequiredCapabilities(HOMESERVER_CAPABILITIES.split(','), SOCIAL_V1_CAPABILITIES)).toBe(true);
+    expect(hasRequiredCapabilities(HOMESERVER_CAPABILITIES.split(','), MIGRATION_CAPS)).toBe(true);
   });
 });

@@ -511,7 +511,7 @@ describe('UserController', () => {
       expect(followSpy).toHaveBeenCalledWith({
         eventType: HttpMethod.PUT,
         followUrl: built.url,
-        followBody: expect.anything(),
+        followBody: expect.toSatisfy(ArrayBuffer.isView),
         follower,
         followee,
       });

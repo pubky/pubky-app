@@ -31,7 +31,7 @@ describe('MuteController', () => {
       expect(commitMuteSpy).toHaveBeenCalledWith({
         eventType: HttpMethod.PUT,
         muteUrl: `pubky://${muter}/priv/social/v1/mutes/${mutee}.json`,
-        muteBody: expect.anything(),
+        muteBody: expect.toSatisfy(ArrayBuffer.isView),
         muter,
         mutee,
       });

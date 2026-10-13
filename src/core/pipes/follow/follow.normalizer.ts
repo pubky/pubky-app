@@ -1,10 +1,9 @@
-import { buildFollow, type Built, deletionPaths, type Follow, type Owner } from 'pubky-social-specs';
+import { buildFollow, type Built, deletionPaths, type Follow, type Owner, toUrl } from 'pubky-social-specs';
 import type { TFollowParams } from '@/controllers/user/user.type';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
-import { ownerPathToUrl } from '@/pipes/pipes.utils';
 
 export class FollowNormalizer {
   private constructor() {}
@@ -25,8 +24,6 @@ export class FollowNormalizer {
 
   /** Every copy an unfollow deletes: the 0.x follow first, then the v1 one. */
   static toDeleteUrls({ follower, followee }: TFollowParams): string[] {
-    return deletionPaths({ kind: 'follow', id: stripPubkyPrefix(followee) }).map((path) =>
-      ownerPathToUrl(follower, path),
-    );
+    return deletionPaths({ kind: 'follow', id: stripPubkyPrefix(followee) }).map((path) => toUrl(follower, path));
   }
 }

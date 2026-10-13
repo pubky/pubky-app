@@ -1,4 +1,4 @@
-import { buildUri, decodeObject, parsePubkyUrl } from 'pubky-social-specs';
+import { buildUri, decodeObject } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import { AppError } from '@/libs/error/error';
@@ -59,7 +59,7 @@ describe('TagNormalizer', () => {
       });
 
       expect(result).toMatchObject({ taggerId: TEST_PUBKY.USER_1, taggedId, label: 'cool', taggedKind: TagKind.POST });
-      expect(decodeObject(parsePubkyUrl(result.tagUrl), result.tagBody, 'tag').uri).toBe(
+      expect(decodeObject(result.tagUrl, result.tagBody, 'tag').uri).toBe(
         buildUri(TEST_PUBKY.USER_2, 'post', TEST_POST_IDS.POST_2),
       );
     });
@@ -72,9 +72,7 @@ describe('TagNormalizer', () => {
         taggerId: TEST_PUBKY.USER_1,
       });
 
-      expect(decodeObject(parsePubkyUrl(result.tagUrl), result.tagBody, 'tag').uri).toBe(
-        buildUri(TEST_PUBKY.USER_2, 'user'),
-      );
+      expect(decodeObject(result.tagUrl, result.tagBody, 'tag').uri).toBe(buildUri(TEST_PUBKY.USER_2, 'user'));
     });
 
     it('refuses a malformed composite post id', () => {

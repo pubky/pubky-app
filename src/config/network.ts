@@ -79,13 +79,3 @@ export function getHomeserverCapabilities(): Capabilities {
     ...new Set([...SOCIAL_V1_APP_CAPABILITIES, APP_CAPABILITIES, ...LOCKS_CAPABILITIES, ...SHOP_CAPABILITIES]),
   ].join(',') as Capabilities;
 }
-
-// The grant a social v1 migration runs under, spelled as `MIGRATION_CAPS` of
-// `pubky-social-specs` (a test asserts it). The constant is not imported from there so the
-// base bundle never pulls the migration code. `HOMESERVER_CAPABILITIES` covers it.
-// - /pub/social/v1/:rw      - the public v1 tree the migration writes
-// - /priv/social/v1/:rw     - feeds, bookmarks, mutes and the migration flag
-// - /priv/app.pubky/v1/:rw  - the app's own files (settings, last read) imported after a run
-// - /pub/pubky.app/:rw      - the legacy tree, still reachable for deletions of migrated objects
-export const SOCIAL_V1_CAPABILITIES =
-  '/pub/social/v1/:rw,/priv/social/v1/:rw,/priv/app.pubky/v1/:rw,/pub/pubky.app/:rw';

@@ -629,7 +629,7 @@ describe('UserApplication.ensureModerationFollow', () => {
     expect(result).toBe(moderationId);
     expect(localCreate).toHaveBeenCalledWith({ follower, followee: moderationId });
     expect(exists).toHaveBeenCalledOnce();
-    expect(request).toHaveBeenCalledWith({ url: followUrl, blob: expect.anything() });
+    expect(request).toHaveBeenCalledWith({ url: followUrl, blob: expect.toSatisfy(ArrayBuffer.isView) });
   });
 
   it('stops after the follow probe when the bootstrap task is cancelled', async () => {
@@ -685,7 +685,7 @@ describe('UserApplication.ensureModerationFollow', () => {
 
     expect(cancelledResult).toBeUndefined();
     expect(request).toHaveBeenCalledOnce();
-    expect(request).toHaveBeenCalledWith({ url: followUrl, blob: expect.anything() });
+    expect(request).toHaveBeenCalledWith({ url: followUrl, blob: expect.toSatisfy(ArrayBuffer.isView) });
 
     vi.mocked(HomeserverService.exists).mockReset().mockResolvedValueOnce(true);
     request.mockReset().mockResolvedValue(undefined);
@@ -761,7 +761,7 @@ describe('UserApplication.ensureModerationFollow', () => {
 
     expect(rollback).toHaveBeenCalledExactlyOnceWith({ follower, followee: moderationId });
     expect(request).toHaveBeenCalledOnce();
-    expect(request).toHaveBeenCalledWith({ url: followUrl, blob: expect.anything() });
+    expect(request).toHaveBeenCalledWith({ url: followUrl, blob: expect.toSatisfy(ArrayBuffer.isView) });
   });
 });
 

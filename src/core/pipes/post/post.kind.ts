@@ -1,5 +1,5 @@
 import { LinkifyIt } from 'linkify-it';
-import { type KnownPostKind, postKinds } from 'pubky-social-specs';
+import { isOneOf, type KnownPostKind, postKinds } from 'pubky-social-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -170,10 +170,5 @@ export const toStoredPostKind = (kind: string): KnownPostKind | null => {
   const normalized = kind.toLowerCase();
   if (normalized === 'short' || normalized === 'note') return 'note';
   if (normalized === 'long' || normalized === 'article') return 'article';
-  return isKnownPostKind(normalized) ? normalized : null;
+  return isOneOf(postKinds, normalized) ? normalized : null;
 };
-
-/** Whether `kind` is a post kind this version of the data model knows. */
-export function isKnownPostKind(kind: string): kind is KnownPostKind {
-  return (postKinds as readonly string[]).includes(kind);
-}

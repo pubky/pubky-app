@@ -62,7 +62,7 @@ describe('BookmarkController', () => {
       expect(persistSpy).toHaveBeenCalledWith(HttpMethod.PUT, {
         postId: testData.compositePostId,
         bookmarkUrl: expect.stringContaining('/priv/social/v1/bookmarks/'),
-        bookmarkBody: expect.anything(),
+        bookmarkBody: expect.toSatisfy(ArrayBuffer.isView),
       });
     });
   });
