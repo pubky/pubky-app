@@ -68,6 +68,10 @@ jobs:
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
+        with:
+          # Linux jobs install inside the Playwright image; that node_modules must not
+          # be restored on the bare Ubuntu runner (Build, Code Quality), or the reverse.
+          cache-namespace: ${{ matrix.os == 'ubuntu-latest' && format('playwright-{0}-noble', needs.playwright-version.outputs.version) || 'host' }}
 
       - name: Set Playwright browsers path
         if: runner.os == 'macOS'
@@ -81,22 +85,25 @@ jobs:
         id: playwright-browsers-cache
         with:
           path: ~/.cache/ms-playwright
-          key: vrt-playwright-${{ runner.os }}-${{ matrix.browser }}-${{ needs.playwright-version.outputs.version }}
+          key: vrt-playwright-${{ runner.os }}-${{ runner.arch }}-${{ matrix.browser }}-${{ needs.playwright-version.outputs.version }}
 
       - name: Install Playwright browser
+        id: playwright-browser
         if: runner.os == 'macOS' && steps.playwright-browsers-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
-      - name: Run visual regression tests
-        run: npx vitest run --project "vrt (${{ matrix.browser }})"
-
-      # Save even when VRT fails
+      # Save only a completed install. A failed or cancelled install leaves a partial
+      # directory, and an exact key is immutable, so the next run would skip the install.
+      # Saving before the tests still keeps the cache when the tests later fail.
       - name: Save Playwright browser cache
-        if: always() && runner.os == 'macOS' && steps.playwright-browsers-cache.outputs.cache-hit != 'true'
+        if: steps.playwright-browser.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright-browsers-cache.outputs.cache-primary-key }}
+
+      - name: Run visual regression tests
+        run: npx vitest run --project "vrt (${{ matrix.browser }})"
 
       - name: Upload VRT failure screenshots
         if: failure()

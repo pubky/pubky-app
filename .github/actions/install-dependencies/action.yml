@@ -1,7 +1,16 @@
 name: Install dependencies
 description: >-
   Sets up Node.js and installs node_modules, restoring them from the Actions cache
-  when the lockfile, Node version and dependency patches are unchanged.
+  when the manifest, lockfile, Node version and dependency patches are unchanged.
+
+inputs:
+  cache-namespace:
+    description: >-
+      Separates installs that must not be reused. Bare runners pass nothing ("host");
+      a job container passes its image identity, because runner.os inside a container
+      is still the host's and would otherwise share modules with bare-runner jobs.
+    required: false
+    default: host
 
 runs:
   using: composite
@@ -11,7 +20,10 @@ runs:
       uses: actions/cache/restore@v6
       with:
         path: node_modules
-        key: node-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'patches/*.patch') }}
+        # `v1` is the cache format: bump it when the install layout or policy changes.
+        # `.npmrc` is included so install config is part of the key; a missing file
+        # matches nothing and does not change the hash until one is added.
+        key: node-modules-v1-${{ inputs.cache-namespace }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.nvmrc', 'package.json', 'package-lock.json', '.npmrc', 'patches/*.patch') }}
 
     - name: Setup Node.js
       uses: actions/setup-node@v6

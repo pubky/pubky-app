@@ -166,7 +166,8 @@ jobs:
           path: |
             pubky-app/node_modules
             ~/.cache/Cypress
-          key: e2e-node-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubky-app/.nvmrc', 'pubky-app/package-lock.json', 'pubky-app/patches/*.patch') }}
+          # `v1` is the cache format. `.npmrc` matches nothing until the file exists.
+          key: e2e-node-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubky-app/.nvmrc', 'pubky-app/package.json', 'pubky-app/package-lock.json', 'pubky-app/.npmrc', 'pubky-app/patches/*.patch') }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
