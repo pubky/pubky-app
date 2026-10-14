@@ -25,8 +25,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # Clean install on purpose: this job is the proof that the production build
+      # works with no Actions cache, no npm download cache and no Next.js build cache.
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
       - name: Install dependencies
-        uses: ./.github/actions/install-dependencies
+        run: npm ci
 
       - name: Build prod
         run: npm run build
