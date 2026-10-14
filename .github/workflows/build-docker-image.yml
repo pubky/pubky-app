@@ -178,9 +178,13 @@ jobs:
         with:
           images: |
             ${{ env.registry }}/pubky-app
+          # Content mode pushes the commit tag and the content tag together, so
+          # consumers of either resolve the same image from the moment of push,
+          # even if the run is cancelled during cache export.
           tags: |
             type=raw,value=latest,enable=${{ inputs.latest }}
             type=raw,value=${{ needs.check_image.outputs.source_tag }}
+            type=raw,value=${{ needs.check_image.outputs.image_tag }},enable=${{ inputs.tag_mode == 'content' }}
 
       - name: Build and push image pubky-app
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
@@ -216,15 +220,3 @@ jobs:
             SENTRY_ORG=synonym-52
             SENTRY_PROJECT=pubky-app
             ${{ contains(inputs.platforms, 'linux/arm64') && 'TARGETARCH=aarch64' || '' }}
-
-      - name: Tag the image with the content hash
-        if: ${{ inputs.tag_mode == 'content' }}
-        run: |
-          # The build pushes the commit tag; alias it to the content tag so the
-          # next run with identical build inputs skips the build. Server-side
-          # manifest copy, no layers are re-pushed. NEXT_PUBLIC_APP_VERSION in a
-          # reused image keeps the sha of the commit that built it, which is
-          # acceptable for e2e.
-          docker buildx imagetools create \
-            -t ${{ env.registry }}/pubky-app:${{ needs.check_image.outputs.image_tag }} \
-            ${{ env.registry }}/pubky-app:${{ needs.check_image.outputs.source_tag }}
