@@ -207,24 +207,6 @@ jobs:
           cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
           cache-dependency-path: 'pubky-app/package-lock.json'
 
-      # Fallback for a node_modules cache miss on a dependency bump: the binary
-      # download is the bulk of npm ci, and the node_modules archive changes
-      # with every lockfile edit. Key the binary on the resolved Cypress version
-      # so an unrelated dependency update neither re-downloads nor re-archives
-      # it. Skipped when the node_modules hit above already provides the binary.
-      - name: Resolve the Cypress version
-        if: steps.node-modules.outputs.cache-hit != 'true'
-        id: cypress_version
-        working-directory: pubky-app
-        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/cypress'].version")" >> $GITHUB_OUTPUT
-
-      - name: Cache Cypress binary
-        if: steps.node-modules.outputs.cache-hit != 'true'
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/Cypress
-          key: ${{ runner.os }}-cypress-${{ steps.cypress_version.outputs.version }}
-
       - name: Install Cypress dependencies
         if: steps.node-modules.outputs.cache-hit != 'true'
         working-directory: pubky-app
