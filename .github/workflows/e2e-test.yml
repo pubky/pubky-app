@@ -264,8 +264,10 @@ jobs:
           printf '\nPUBKY_RUNTIME_SHOP_URL=%s\n' 'https://shop.staging.pubky.app/marketplace' >> .env
           # Poll Nexus more often than the 8888ms app defaults so specs do not sit on
           # multi-second notification/stream poll ticks between actions (E2E stack only).
+          # The stream poll sits above the notification poll: at 2000ms the feed spec's
+          # stream sync churn outweighed the saved poll ticks (feed Cypress regressed).
           printf '\nPUBKY_RUNTIME_NOTIFICATION_POLL_INTERVAL_MS=%s\n' '2000' >> .env
-          printf '\nPUBKY_RUNTIME_STREAM_POLL_INTERVAL_MS=%s\n' '2000' >> .env
+          printf '\nPUBKY_RUNTIME_STREAM_POLL_INTERVAL_MS=%s\n' '3000' >> .env
           # Guarantee the values reach the pubky-app container: the stack's compose file
           # may not pass through .env entries it does not list explicitly. Compose merges
           # docker-compose.override.yml automatically. Fail loudly rather than clobber an
@@ -279,7 +281,7 @@ jobs:
             pubky-app:
               environment:
                 PUBKY_RUNTIME_NOTIFICATION_POLL_INTERVAL_MS: "2000"
-                PUBKY_RUNTIME_STREAM_POLL_INTERVAL_MS: "2000"
+                PUBKY_RUNTIME_STREAM_POLL_INTERVAL_MS: "3000"
           EOF
 
       # pubky-stack@staging pins a homeserver that defaults to signup_mode = "open".
