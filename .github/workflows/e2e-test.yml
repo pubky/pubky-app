@@ -10,25 +10,28 @@ on:
     branches:
       - master
       - dev
-    # Skip the full suite for pushes that cannot change the app image, the
-    # specs or this workflow (docs, other workflows, VRT-only changes).
+    # Run on everything except a short exclude list of paths that can change
+    # neither the app image nor the specs, so a new input triggers the suite
+    # by default (running too often is the safe failure). Same list as
+    # .github/scripts/docker-content-tag.sh, minus cypress/ (specs must run).
+    # Later patterns win, so the last two re-include the workflows this suite
+    # and its image build consume.
     paths:
-      - 'src/**'
-      - 'public/**'
-      - 'cypress/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'Dockerfile'
-      - '.dockerignore'
-      - 'next.config.ts'
-      - 'tsconfig.json'
-      - 'postcss.config.mjs'
-      - '.nvmrc'
+      - '**'
+      # Covered by '**'; listed because both feed the spec jobs' npm ci
+      # (patch-package) and the node_modules cache key.
+      - 'patches/**'
+      - '.npmrc'
+      - '!docs/**'
+      - '!.agents/**'
+      - '!.claude/**'
+      - '!.codex/**'
+      - '!.cursor/**'
+      - '!.greptile/**'
+      - '!**/*.md'
+      - '!.github/workflows/**'
       - '.github/workflows/e2e-test.yml'
       - '.github/workflows/build-docker-image.yml'
-      - '.github/scripts/**'
-      - '!src/**/*.vrt.test.tsx'
-      - '!src/**/__screenshots__/**'
 
 # Runs group per branch, so one branch's run never cancels another's. A newer
 # dev push supersedes an in-flight dev push: only the latest commit's result
