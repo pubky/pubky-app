@@ -12,6 +12,10 @@ on:
   # Enable manual trigger
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   code-quality:
     name: Check Code Quality
@@ -21,14 +25,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
       - name: Install dependencies
-        run: npm ci
+        uses: ./.github/actions/install-dependencies
 
       - name: Check formatting
         run: npm run format:check

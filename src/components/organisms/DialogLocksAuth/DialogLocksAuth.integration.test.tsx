@@ -63,6 +63,9 @@ const setupIframe = () => screen.queryByTitle('Bitkit payout account setup');
 describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // clearAllMocks drops call history but keeps a mockResolvedValueOnce queue. A test
+    // that fails before consuming its queued answers would hand them to the next test.
+    mocks.paykitSetupStatus.mockReset();
     mocks.signout.mockResolvedValue(undefined);
     localStorage.removeItem(LOCKS_AUTH_PERSIST_KEY);
     useLocksAuthStore.setState(locksAuthInitialState);

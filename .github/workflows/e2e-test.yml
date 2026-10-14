@@ -10,11 +10,44 @@ on:
     branches:
       - master
       - dev
+    # Run on everything except a short exclude list of paths that can change
+    # neither the app image nor the specs, so a new input triggers the suite
+    # by default (running too often is the safe failure). Same list as
+    # .github/scripts/docker-content-tag.sh, minus cypress/ (specs must run).
+    # Later patterns win, so the last two re-include the workflows this suite
+    # and its image build consume.
+    paths:
+      - '**'
+      # Covered by '**'; listed because both feed the spec jobs' npm ci
+      # (patch-package) and the node_modules cache key.
+      - 'patches/**'
+      - '.npmrc'
+      - '!docs/**'
+      - '!.agents/**'
+      - '!.claude/**'
+      - '!.codex/**'
+      - '!.cursor/**'
+      - '!.greptile/**'
+      - '!**/*.md'
+      - '!.github/workflows/**'
+      - '.github/workflows/e2e-test.yml'
+      - '.github/workflows/build-docker-image.yml'
+
+# Runs group per branch, so one branch's run never cancels another's. A newer
+# dev push supersedes an in-flight dev push: only the latest commit's result
+# matters there. Manual dispatches get a group per run so every requested run
+# executes and none is ever cancelled or replaced. Master pushes are never
+# cancelled either; GitHub keeps the running run plus the newest pending one,
+# so a burst of master pushes attributes coverage to the latest pending commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
 
 jobs:
   rebuild_images:
     name: Getting images to rebuild
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     outputs:
       homeserver-testnet_tag: ${{ steps.set_tag.outputs.homeserver-testnet_tag }}
       pubky-nexus_tag: ${{ steps.set_tag.outputs.pubky-nexus_tag }}
@@ -82,36 +115,34 @@ jobs:
           build_args: ${{ matrix.build_args }}
         if: ${{ steps.check_image.outputs.exists != 'true' }}
 
-  set_vars_pubky_app:
-    name: Set vars for Pubky App
-    runs-on: ubuntu-latest
-    outputs:
-      env: ${{ steps.set_vars.outputs.env }}
-      platforms: ${{ steps.set_vars.outputs.platforms }}
-    steps:
-      - name: Set Vars
-        id: set_vars
-        run: |
-          echo platforms=${{ env.platforms }} >> $GITHUB_OUTPUT
-
   rebuild_pubky_app:
-    needs: [ set_vars_pubky_app ]
     uses: ./.github/workflows/build-docker-image.yml
     with:
-      platforms: ${{ needs.set_vars_pubky_app.outputs.platforms }}
+      # The env context is not available in a reusable-call `with`, so the
+      # platform is a literal here (matches the env.platforms value).
+      platforms: linux/amd64
+      # Content-hash tag: skip the build entirely when no Docker build input
+      # changed since the last e2e build.
+      tag_mode: content
     secrets: inherit
 
   e2e-test:
     name: End-to-End Tests
     runs-on: ubuntu-latest
-    needs: [rebuild_images, rebuild_pubky_app]
+    timeout-minutes: 40
+    # Intentionally not needs: rebuild_pubky_app. The spec jobs do their own
+    # setup (checkout, npm ci, infra services) while the app image is still
+    # building, then poll the registry for it (see the wait step below), so
+    # setup overlaps the build instead of starting after it.
+    needs: [rebuild_images]
     env:
       HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
-      PUBKY_APP_TAG: ${{ needs.rebuild_pubky_app.outputs.image_tag }}
       PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
     permissions:
       contents: read
       statuses: write
+      # read the app build job's status for a fast-fail while polling the image
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -123,11 +154,6 @@ jobs:
         run: |
           if [ -z "${{ env.HOMESERVER_TAG }}" ]; then
             echo "Error: env HOMESERVER_TAG is empty!"
-            exit 1
-          fi
-
-          if [ -z "${{ env.PUBKY_APP_TAG }}" ]; then
-            echo "Error: env PUBKY_APP_TAG is empty!"
             exit 1
           fi
 
@@ -153,26 +179,46 @@ jobs:
         with:
           path: pubky-app
 
+      - name: Resolve the pubky-app image tag
+        id: app_tag
+        working-directory: pubky-app
+        run: |
+          # Content hash of every input the Docker build can consume; single
+          # implementation shared with build-docker-image.yml (tag_mode: content).
+          echo "content_tag=$(bash .github/scripts/docker-content-tag.sh '${{ env.platforms }}')" >> $GITHUB_OUTPUT
+
+      # The Cypress binary lives outside node_modules; cache it alongside so a hit
+      # can skip `npm ci` (which is what downloads it) entirely.
+      - name: Restore node_modules cache
+        id: node-modules
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            pubky-app/node_modules
+            ~/.cache/Cypress
+          # `v1` is the cache format. `.npmrc` matches nothing until the file exists.
+          key: e2e-node-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubky-app/.nvmrc', 'pubky-app/package.json', 'pubky-app/package-lock.json', 'pubky-app/.npmrc', 'pubky-app/patches/*.patch') }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: 'pubky-app/.nvmrc'
-          cache: 'npm'
+          cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
           cache-dependency-path: 'pubky-app/package-lock.json'
 
-      - name: Cache node modules
-        uses: actions/cache@v6
+      - name: Install Cypress dependencies
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        working-directory: pubky-app
+        run: npm ci
+
+      - name: Save node_modules cache
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
         with:
           path: |
             pubky-app/node_modules
-            pubky-app/.next/cache
-          key: ${{ runner.os }}-node-${{ hashFiles('pubky-app/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install Cypress dependencies
-        working-directory: pubky-app
-        run: npm ci
+            ~/.cache/Cypress
+          key: ${{ steps.node-modules.outputs.cache-primary-key }}
 
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
@@ -197,12 +243,42 @@ jobs:
         run: |
           cp .env-sample .env
           printf '\nPUBKY_RUNTIME_SHOP_URL=%s\n' 'https://shop.staging.pubky.app/marketplace' >> .env
+          # Poll Nexus for notifications more often than the 8888ms app default so
+          # specs do not sit on multi-second poll ticks between actions (E2E stack
+          # only). Set on the pubky-app service alone via a compose override, which
+          # compose merges automatically. Fail loudly rather than clobber an
+          # override file if the stack ever ships one.
+          if [ -f docker-compose.override.yml ]; then
+            echo 'docker-compose.override.yml already exists in pubky-stack; merge the PUBKY_RUNTIME_* poll interval into it instead of overwriting.'
+            exit 1
+          fi
+          cat > docker-compose.override.yml <<'EOF'
+          services:
+            pubky-app:
+              environment:
+                PUBKY_RUNTIME_NOTIFICATION_POLL_INTERVAL_MS: "2000"
+          EOF
 
-      - name: Run pubky-stack
+      # pubky-stack@staging pins a homeserver that defaults to signup_mode = "open".
+      # Open mode rejects signup token generation, so the invite continue button stays disabled.
+      - name: Require signup tokens for e2e invite codes
         working-directory: pubky-stack/docker
-        run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis pubky-app postgres
+        run: |
+          sed -i 's/signup_mode = "open"/signup_mode = "token_required"/' homeserver.config.toml
+          grep -q 'signup_mode = "token_required"' homeserver.config.toml || {
+            echo 'Error: homeserver.config.toml is missing signup_mode = "token_required"'
+            exit 1
+          }
+
+      # Start the infra services first; pubky-app follows once its image exists.
+      # Compose interpolates every service at config load, so PUBKY_APP_TAG must be
+      # set here even though the pubky-app service is not started in this step.
+      - name: Run pubky-stack infra services
+        working-directory: pubky-stack/docker
+        run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis postgres
         env:
           REGISTRY: ${{ env.registry }}
+          PUBKY_APP_TAG: ${{ steps.app_tag.outputs.content_tag }}
 
       - name: Wait for dockerised pubky-stack to start
         run: |
@@ -222,6 +298,23 @@ jobs:
           done
 
           echo "Service is ready."
+
+      - name: Wait for the pubky-app image
+        working-directory: pubky-app
+        env:
+          REGISTRY: ${{ env.registry }}
+          GH_TOKEN: ${{ github.token }}
+          CONTENT_TAG: ${{ steps.app_tag.outputs.content_tag }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: bash .github/scripts/wait-for-app-image.sh
+
+      - name: Run pubky-app
+        working-directory: pubky-stack/docker
+        run: docker compose up -d --no-build pubky-app
+        env:
+          REGISTRY: ${{ env.registry }}
+          PUBKY_APP_TAG: ${{ steps.app_tag.outputs.content_tag }}
 
       - name: Run e2e tests - Desktop (${{ matrix.browser }}) - Spec (${{matrix.spec}})
         id: test-desktop

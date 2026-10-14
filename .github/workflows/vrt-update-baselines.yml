@@ -8,17 +8,16 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  regenerate:
-    name: Regenerate (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    concurrency:
-      group: vrt-update-baselines-regenerate-${{ github.ref }}-${{ matrix.os }}
-      cancel-in-progress: true
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+  playwright-version:
+    name: Resolve Playwright version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Refuse master
@@ -27,55 +26,91 @@ jobs:
           echo "Refusing to regenerate baselines on master. Run from dev or a feature branch." >&2
           exit 1
 
+      - name: Checkout lockfile
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: package-lock.json
+          sparse-checkout-cone-mode: false
+
+      # The Linux container image and the macOS browser cache must match the
+      # installed `playwright` package exactly; read it from the lockfile.
+      - name: Read Playwright version
+        id: version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/playwright'].version")" >> "$GITHUB_OUTPUT"
+
+  regenerate:
+    name: Regenerate (${{ matrix.os }}, ${{ matrix.browser }})
+    needs: playwright-version
+    runs-on: ${{ matrix.os }}
+    # Same image as vrt.yml so regenerated baselines render exactly like the checks.
+    container: ${{ matrix.os == 'ubuntu-latest' && format('mcr.microsoft.com/playwright:v{0}-noble', needs.playwright-version.outputs.version) || '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        browser: [chromium, firefox, webkit]
+        # Nobody browses with WebKit on Linux; Safari's engine is covered on macOS.
+        exclude:
+          - os: ubuntu-latest
+            browser: webkit
+
+    steps:
+      # Container steps run as root but inherit HOME=/github/home, owned by the
+      # image's pwuser; Firefox refuses to launch as root from a home it does not
+      # own. Exporting here (not in the container block, which the runner overrides)
+      # reaches every later step. Linux browsers live in /ms-playwright, so no
+      # cache path depends on HOME.
+      - name: Use root home in the container
+        if: runner.os == 'Linux'
+        run: echo "HOME=/root" >> "$GITHUB_ENV"
+
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
       - name: Install dependencies
-        run: npm ci
+        uses: ./.github/actions/install-dependencies
+        with:
+          # Linux jobs install inside the Playwright image; that node_modules must not
+          # be restored on the bare Ubuntu runner (Build, Code Quality), or the reverse.
+          cache-namespace: ${{ matrix.os == 'ubuntu-latest' && format('playwright-{0}-noble', needs.playwright-version.outputs.version) || 'host' }}
 
       - name: Set Playwright browsers path
+        if: runner.os == 'macOS'
         run: echo "PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright" >> "$GITHUB_ENV"
 
-      - name: Restore Playwright browsers cache
+      - name: Restore Playwright browser cache
+        if: runner.os == 'macOS'
         uses: actions/cache/restore@v6
         id: playwright-browsers-cache
         with:
           path: ~/.cache/ms-playwright
-          key: vrt-playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            vrt-playwright-${{ runner.os }}-
+          key: vrt-playwright-${{ runner.os }}-${{ runner.arch }}-${{ matrix.browser }}-${{ needs.playwright-version.outputs.version }}
 
-      - name: Install Playwright browsers
-        if: steps.playwright-browsers-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Install Playwright browser
+        id: playwright-browser
+        if: runner.os == 'macOS' && steps.playwright-browsers-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps ${{ matrix.browser }}
 
-      - name: Install Playwright system dependencies
-        if: steps.playwright-browsers-cache.outputs.cache-hit == 'true' && runner.os == 'Linux'
-        run: npx playwright install-deps chromium firefox webkit
-
-      - name: Regenerate VRT baselines
-        run: npm run test:vrt:regenerate-baseline
-
-      - name: Save Playwright browsers cache
-        if: always() && steps.playwright-browsers-cache.outputs.cache-hit != 'true'
+      # Save only a completed install. A failed or cancelled install leaves a partial
+      # directory, and an exact key is immutable, so the next run would skip the install.
+      # Saving before the tests still keeps the cache when regeneration later fails.
+      - name: Save Playwright browser cache
+        if: steps.playwright-browser.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright-browsers-cache.outputs.cache-primary-key }}
 
-      - name: Stage platform baselines for upload
+      - name: Regenerate VRT baselines
+        run: npx vitest run --project "vrt (${{ matrix.browser }})" --update
+
+      - name: Stage baselines for upload
         run: |
           PLATFORM_SUFFIX="$([ "${{ runner.os }}" = "Linux" ] && echo linux || echo darwin)"
-          STAGING="${RUNNER_TEMP}/vrt-baselines-${PLATFORM_SUFFIX}"
+          STAGING="${RUNNER_TEMP}/vrt-baselines"
           rm -rf "$STAGING"
           mkdir -p "$STAGING"
-          find src/test/vrt -name "*-${PLATFORM_SUFFIX}.png" | while IFS= read -r file; do
+          find src/test/vrt -name "*-${{ matrix.browser }}-${PLATFORM_SUFFIX}.png" | while IFS= read -r file; do
             rel="${file#src/test/vrt/}"
             dest="${STAGING}/${rel}"
             mkdir -p "$(dirname "$dest")"
@@ -85,8 +120,8 @@ jobs:
       - name: Upload regenerated baselines
         uses: actions/upload-artifact@v7
         with:
-          name: vrt-baselines-${{ runner.os == 'Linux' && 'linux' || 'darwin' }}
-          path: ${{ runner.temp }}/vrt-baselines-${{ runner.os == 'Linux' && 'linux' || 'darwin' }}
+          name: vrt-baselines-${{ matrix.os }}-${{ matrix.browser }}
+          path: ${{ runner.temp }}/vrt-baselines
           if-no-files-found: error
           retention-days: 1
 
@@ -94,9 +129,6 @@ jobs:
     name: Commit baselines
     needs: regenerate
     runs-on: ubuntu-latest
-    concurrency:
-      group: vrt-update-baselines-${{ github.ref }}
-      cancel-in-progress: true
 
     steps:
       - name: Refuse master
@@ -137,22 +169,15 @@ jobs:
             git checkout -B "$TARGET_BRANCH" "origin/${SOURCE_REF}"
           fi
 
-      - name: Download Linux baselines
+      - name: Download regenerated baselines
         uses: actions/download-artifact@v8
         with:
-          name: vrt-baselines-linux
-          path: ${{ runner.temp }}/vrt-baselines-linux
-
-      - name: Download macOS baselines
-        uses: actions/download-artifact@v8
-        with:
-          name: vrt-baselines-darwin
-          path: ${{ runner.temp }}/vrt-baselines-darwin
+          pattern: vrt-baselines-*
+          path: ${{ runner.temp }}/vrt-baselines
+          merge-multiple: true
 
       - name: Overlay baselines
-        run: |
-          rsync -a "${{ runner.temp }}/vrt-baselines-linux/" src/test/vrt/
-          rsync -a "${{ runner.temp }}/vrt-baselines-darwin/" src/test/vrt/
+        run: rsync -a "${{ runner.temp }}/vrt-baselines/" src/test/vrt/
 
       - name: Collect changed baseline files
         id: changes
@@ -173,8 +198,8 @@ jobs:
           echo "Changed baselines:"
           cat "$FILE_LIST"
 
-      # The signed-commit action creates missing branches from the repo default
-      # branch (often master). Pre-create/reset from the correct base instead.
+      # The target branch must already exist at the base we diffed against; the
+      # mutation below only appends to an existing branch.
       - name: Ensure remote target branch
         if: steps.changes.outputs.has_changes == 'true'
         run: |
@@ -187,16 +212,75 @@ jobs:
             git rev-parse --verify "origin/${TARGET_BRANCH}"
           fi
 
-      # Will split into multiple commits if there are many changes
+      # `createCommitOnBranch` takes every file inline and GitHub signs the result,
+      # so one request commits a whole batch instead of one blob upload per file.
+      # Batches hold at most 20 MiB of raw bytes (~27 MiB base64) to stay under the
+      # API's 40 MiB request limit; a regeneration larger than that lands as a few
+      # chained commits, each guarded by the previous head oid.
       - name: Commit and push signed baselines
         if: steps.changes.outputs.has_changes == 'true'
-        uses: magmanu/github-action-bot-signed-commit@fb2582c7c22a7183a95504156c4ac02bb734d6ed # v1.0.4
-        with:
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TARGET_REF: ${{ steps.target.outputs.target_branch }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_BRANCH: ${{ steps.target.outputs.target_branch }}
           FILE_LIST: ${{ steps.changes.outputs.file_list }}
-          SHOULD_CREATE_NEW_BRANCH: false
           COMMIT_MESSAGE: 'test(vrt): regenerate baselines'
+          MAX_BATCH_BYTES: 20971520
+        run: |
+          WORK="${RUNNER_TEMP}/vrt-commit"
+          rm -rf "$WORK"
+          mkdir -p "$WORK"
+
+          # Pass 1: encode each file once and split the list into batches.
+          batch=1
+          batch_bytes=0
+          : > "${WORK}/batch-${batch}.jsonl"
+          while IFS= read -r file; do
+            size="$(stat -c %s "$file")"
+            if [ "$batch_bytes" -gt 0 ] && [ $((batch_bytes + size)) -gt "$MAX_BATCH_BYTES" ]; then
+              batch=$((batch + 1))
+              batch_bytes=0
+              : > "${WORK}/batch-${batch}.jsonl"
+            fi
+            base64 -w 0 "$file" > "${WORK}/contents.b64"
+            jq -c -n --arg path "$file" --rawfile contents "${WORK}/contents.b64" \
+              '{path: $path, contents: $contents}' >> "${WORK}/batch-${batch}.jsonl"
+            batch_bytes=$((batch_bytes + size))
+          done < "$FILE_LIST"
+          total_batches="$batch"
+
+          # Pass 2: one mutation per batch, chained on the head it produced.
+          head_oid="$(git rev-parse HEAD)"
+          for batch in $(seq 1 "$total_batches"); do
+            additions="${WORK}/batch-${batch}.jsonl"
+            headline="$COMMIT_MESSAGE"
+            if [ "$total_batches" -gt 1 ]; then
+              headline="${COMMIT_MESSAGE} (${batch}/${total_batches})"
+            fi
+            echo "Committing batch ${batch}/${total_batches}: $(wc -l < "$additions") files on ${head_oid}"
+
+            jq -c -n \
+              --arg query 'mutation ($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }' \
+              --arg repo "$GITHUB_REPOSITORY" \
+              --arg branch "$TARGET_BRANCH" \
+              --arg head "$head_oid" \
+              --arg headline "$headline" \
+              --slurpfile additions "$additions" \
+              '{query: $query, variables: {input: {
+                branch: {repositoryNameWithOwner: $repo, branchName: $branch},
+                expectedHeadOid: $head,
+                message: {headline: $headline},
+                fileChanges: {additions: $additions}
+              }}}' > "${WORK}/request.json"
+
+            gh api graphql --input "${WORK}/request.json" > "${WORK}/response.json"
+            head_oid="$(jq -r '.data.createCommitOnBranch.commit.oid // empty' "${WORK}/response.json")"
+            if [ -z "$head_oid" ]; then
+              echo "createCommitOnBranch returned no commit:" >&2
+              cat "${WORK}/response.json" >&2
+              exit 1
+            fi
+            echo "Created signed commit ${head_oid}"
+          done
 
       - name: Open pull request
         if: steps.target.outputs.open_pr == 'true' && steps.changes.outputs.has_changes == 'true'

@@ -28,6 +28,13 @@ export function isCollectionLayout(value: unknown): value is CollectionLayout {
 export const COLLECTIONS_SECTION_PAGE_SIZE = 20;
 
 /**
+ * Protection while a local change to a post's `collections` count (the viewer added the post
+ * to, or removed it from, one of their collections) is waiting for Nexus indexing. Same window
+ * as `BOOKMARK_REMOVAL_PROTECTION_MS`.
+ */
+export const COLLECTIONS_COUNT_PROTECTION_MS = 300_000;
+
+/**
  * Cards shown in the collapsed `/search` Collections preview — two full rows
  * of the 2-col desktop grid. "See all" expands the section to the paginated
  * grid driven by `COLLECTIONS_SECTION_PAGE_SIZE`.

@@ -13,6 +13,7 @@ export class PostCountsModel extends TupleModelBase<string, PostCountsModelSchem
   unique_tags: number;
   replies: number;
   reposts: number;
+  collections: number;
 
   constructor(postCounts: PostCountsModelSchema) {
     super(postCounts);
@@ -20,6 +21,8 @@ export class PostCountsModel extends TupleModelBase<string, PostCountsModelSchem
     this.unique_tags = postCounts.unique_tags;
     this.replies = postCounts.replies;
     this.reposts = postCounts.reposts;
+    // Rows persisted before the field existed carry no value.
+    this.collections = postCounts.collections ?? 0;
   }
 
   // Adapter function to convert NexusPostCounts to PostCountsModelSchema
@@ -28,7 +31,9 @@ export class PostCountsModel extends TupleModelBase<string, PostCountsModelSchem
   }
 
   static async updateCounts({ postCompositeId, countChanges }: TPostCountsParams): Promise<void> {
-    const postCounts = await PostCountsModel.findById(postCompositeId);
+    // The raw row rather than the hydrated model: a row persisted before `collections` existed
+    // carries no baseline for it, and the model's default would turn that into a numeric zero.
+    const [postCounts] = await PostCountsModel.findByIds([postCompositeId]);
     if (!postCounts) return;
 
     const updates: Partial<PostCountsModelSchema> = {};
@@ -44,6 +49,11 @@ export class PostCountsModel extends TupleModelBase<string, PostCountsModelSchem
     }
     if (countChanges.unique_tags !== undefined) {
       updates.unique_tags = Math.max(0, postCounts.unique_tags + countChanges.unique_tags);
+    }
+    // A delta on an unknown total stays unknown: the next hydration supplies the real one,
+    // which the local-write guard then accepts (see `LocalStreamPostsService.persistPosts`).
+    if (countChanges.collections !== undefined && postCounts.collections !== undefined) {
+      updates.collections = Math.max(0, postCounts.collections + countChanges.collections);
     }
 
     if (Object.keys(updates).length > 0) {
