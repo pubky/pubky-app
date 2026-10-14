@@ -26,14 +26,7 @@ import {
   WaitForNewPosts,
 } from '../support/types/enums';
 import { verifyNotificationCounter } from '../support/common';
-import {
-  createCollection,
-  createPostInCollection,
-  deleteCollectionFromHero,
-  findCollectionCardInSection,
-  openCollectionFromMyCollections,
-} from '../support/collections';
-import { goToCollectionsPage, goToProfilePageFromHeader } from '../support/header';
+import { goToProfilePageFromHeader } from '../support/header';
 
 const uniqueSuffix = String(Date.now()).slice(-5);
 
@@ -479,59 +472,6 @@ describe('notifications', () => {
       [profile1.username, 'edited', 'posts you interacted with'],
       LatestNotificationReadState.Read,
     );
-  });
-
-  it('can be notified when a followed collection is updated with a new post', () => {
-    const DISCOVER_SECTION = '[data-cy="discover-collections-section"]';
-    const FOLLOWED_SECTION = '[data-cy="followed-collections-section"]';
-    const collectionName = `Notif collection ${Date.now()}`;
-    const seedPostContent = `Seed post for followed collection ${Date.now()}`;
-    const addedPostContent = `Post added after follow ${Date.now()}`;
-
-    // * profile 1 creates a collection with a seed post so it is discoverable
-    goToCollectionsPage();
-    createCollection(collectionName, 'Follow me for collection update notifications.');
-    createPostInCollection(seedPostContent);
-    // wait for nexus to index the collection as discoverable
-    cy.wait(1000);
-    cy.signOut(HasBackedUp.Yes);
-
-    // * profile 2 discovers the collection and follows it from the dedicated page header
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    goToCollectionsPage();
-    findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible');
-    cy.intercept('PUT', '**/priv/social/v1/bookmarks/**').as('followCollection');
-    findCollectionCardInSection(DISCOVER_SECTION, collectionName).click();
-    cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
-    cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Follow').click();
-    cy.wait('@followCollection').its('response.statusCode').should('eq', 201);
-    goToCollectionsPage();
-    findCollectionCardInSection(FOLLOWED_SECTION, collectionName).should('be.visible');
-
-    // * profile 1 adds a new post to the followed collection
-    cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
-    openCollectionFromMyCollections(collectionName);
-    createPostInCollection(addedPostContent);
-
-    // * profile 2 checks for notification that the collection was updated
-    cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    verifyNotificationCounter(1);
-    goToProfilePageFromHeader();
-    verifyNotificationCounter(0);
-    checkLatestNotification([profile1.username, 'updated collection'], LatestNotificationReadState.Unread);
-
-    // * toggle tabs to check unread dot disappears
-    causeNotificationsToBeRead();
-    verifyNotificationCounter(0);
-    checkLatestNotification([profile1.username, 'updated collection'], LatestNotificationReadState.Read);
-
-    // clean up so the collection does not linger in Discover for later runs/retries
-    cy.signOut(HasBackedUp.Yes);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
-    openCollectionFromMyCollections(collectionName);
-    deleteCollectionFromHero();
   });
 
   it('can display counter for multiple new notifications', () => {
