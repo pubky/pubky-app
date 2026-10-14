@@ -305,17 +305,33 @@ jobs:
               2>/dev/null || echo "unknown"
           }
 
+          # A tag existing is not enough: a manual arm64-only build can hold the
+          # same commit tag. Only accept a tag whose manifest carries linux/amd64,
+          # the platform this workflow builds and runs on. Covers both a manifest
+          # index (.manifests[].platform.architecture) and a single manifest
+          # (.architecture).
+          has_amd64() {
+            docker manifest inspect "$1" 2>/dev/null \
+              | jq -e '[.. | objects | .architecture? // empty] | any(. == "amd64")' >/dev/null 2>&1
+          }
+
+          # Resolve and log the manifest digest so the exact tested image stays
+          # identifiable even if a later build overwrites the tag.
+          log_digest() {
+            docker buildx imagetools inspect "$1" 2>/dev/null | awk '/^Digest:/ {print $2; found=1} END {if (!found) print "unknown"}'
+          }
+
           while true; do
-            if docker manifest inspect "$IMAGE_BASE:$CONTENT_TAG" >/dev/null 2>&1; then
+            if has_amd64 "$IMAGE_BASE:$CONTENT_TAG"; then
               echo "tag=$CONTENT_TAG" >> $GITHUB_OUTPUT
-              echo "Image available: $IMAGE_BASE:$CONTENT_TAG (content tag)"
+              echo "Image available: $IMAGE_BASE:$CONTENT_TAG@$(log_digest "$IMAGE_BASE:$CONTENT_TAG") (content tag, linux/amd64)"
               break
             fi
-            if docker manifest inspect "$IMAGE_BASE:$COMMIT_TAG" >/dev/null 2>&1; then
-              # The build pushes the commit tag before exporting the build cache
-              # and retagging; pulling it unblocks the tests minutes earlier.
+            if has_amd64 "$IMAGE_BASE:$COMMIT_TAG"; then
+              # A commit-tag-only producer (a preview build of this commit racing
+              # the e2e build) can unblock the tests minutes earlier.
               echo "tag=$COMMIT_TAG" >> $GITHUB_OUTPUT
-              echo "Image available: $IMAGE_BASE:$COMMIT_TAG (commit tag)"
+              echo "Image available: $IMAGE_BASE:$COMMIT_TAG@$(log_digest "$IMAGE_BASE:$COMMIT_TAG") (commit tag, linux/amd64)"
               break
             fi
 
