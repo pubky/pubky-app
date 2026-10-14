@@ -25,6 +25,9 @@
 #     Sentry source-map credentials (upload metadata, not image behaviour);
 #   - the base image: `node:lts-alpine` is a mutable tag, invisible to the
 #     hash. Bump SALT below to force a re-tag when it moves.
+#
+# The `e2e-` prefix keeps content tags distinguishable from commit SHAs in
+# the registry.
 set -euo pipefail
 
 platform="${1:?usage: docker-content-tag.sh <platform>}"
@@ -33,13 +36,17 @@ platform="${1:?usage: docker-content-tag.sh <platform>}"
 # mutable node:lts-alpine base image).
 SALT=1
 
-{
-  git ls-tree -r HEAD -- \
-    Dockerfile .dockerignore package.json package-lock.json \
-    next.config.ts tsconfig.json postcss.config.mjs components.json \
-    public src \
-    .github/workflows/build-docker-image.yml \
-    .github/scripts/docker-content-tag.sh
-  printf 'platform=%s\n' "$platform"
-  printf 'salt=%s\n' "$SALT"
-} | sha256sum | cut -c1-40
+hash=$(
+  {
+    git ls-tree -r HEAD -- \
+      Dockerfile .dockerignore package.json package-lock.json \
+      next.config.ts tsconfig.json postcss.config.mjs components.json \
+      public src \
+      .github/workflows/build-docker-image.yml \
+      .github/scripts/docker-content-tag.sh
+    printf 'platform=%s\n' "$platform"
+    printf 'salt=%s\n' "$SALT"
+  } | sha256sum | cut -c1-40
+)
+
+printf 'e2e-%s\n' "$hash"
