@@ -7,14 +7,26 @@ interaction tests for those).
 
 - Test files: `*.vrt.test.tsx` (the `vrt` Vitest project in `vitest.config.ts`).
 - Setup (once per machine, and after a Playwright bump): `npm run test:vrt:setup`
-  downloads the browsers; on Linux it also installs apt libraries via `sudo`.
+  downloads the browsers; on Linux it also installs apt libraries via `sudo`
+  (`npx playwright install --with-deps chromium firefox` is enough there, see
+  below).
 - Run: `npm run test:vrt`. Update baselines: `npm run test:vrt:regenerate-baseline`.
 - Orphan check: `npm run test:vrt:check-baselines` (also in Code Quality CI).
 - Baselines: `__screenshots__/<file>/<name>-<browser>-<platform>.png`, one per
-  browser (chromium/firefox/webkit) × platform (darwin/linux).
+  browser × platform: chromium and firefox on darwin and linux, webkit on darwin
+  only. Nobody browses with WebKit on Linux, so `vitest.config.ts` omits the
+  webkit instance when `process.platform === 'linux'` and there are no
+  `*-webkit-linux.png` files; do not add them.
 - Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `matchVrtFrameScreenshot`),
   `vrt.setup.ts` (global mocks), `vrt.clock.ts`, `vrt.viewports.ts`.
 - Reference example: `src/test/vrt/feed/Home.vrt.test.tsx`.
+- Run one browser only: `npx vitest run --project "vrt (chromium)"` (CI runs one
+  job per browser this way).
+- `patches/@vitest+browser+*.patch` (applied by `patch-package` on install) clears
+  the `toMatchScreenshot` stability timer once a capture settles. Upstream leaves
+  it running, so the last capture in a run kept the Node process alive and every
+  `npm run test:vrt` ended with a 10s `close timed out` wait. Drop the patch once
+  `@vitest/browser` ships the fix.
 
 ## Writing a test
 
@@ -223,14 +235,25 @@ baselined.
 | Feature branch | Same feature branch                              | None                            |
 | `master`       | —                                                | Workflow fails (do not use)     |
 
-The workflow never commits directly to `dev` or `master`. It regenerates on both
-`ubuntu-latest` and `macos-latest`, merges `*-linux.png` and `*-darwin.png`
-artifacts, then commits the combined result.
+The workflow never commits directly to `dev` or `master`. It regenerates in one
+job per OS × browser (`ubuntu-latest` × chromium, firefox; `macos-latest` ×
+chromium, firefox, webkit), merges every job's `*-<browser>-<platform>.png`
+artifact, then commits the combined result. `vrt.yml` uses the same matrix for
+the checks.
+
+Linux jobs run inside the official Playwright image
+(`mcr.microsoft.com/playwright:v<version>-noble`, resolved from the `playwright`
+entry in `package-lock.json`), so browsers and system libraries never install
+per run. The image's fonts differ from the bare runner, which is why Linux
+baselines must come from that image, not from a local Linux machine.
 
 Only baselines that changed are committed: `--update` leaves matching baselines
 untouched on disk (within the tolerance above), and the commit step stages via
 `git add` + `git diff --staged --quiet`, so a run with no visual changes makes no
-commit and opens no PR.
+commit and opens no PR. Changed files are committed in batches through the
+GraphQL `createCommitOnBranch` mutation (GitHub-signed, so `dev`'s
+required-signatures rule holds): one request per 20 MiB of baselines, which is
+one commit for a normal regeneration.
 
 **PR CI does not run VRT.** `vrt.yml` has no `pull_request` trigger, so a change that
 shifts pixels on a covered surface is not caught by the PR checks. Say so in the PR and

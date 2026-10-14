@@ -30,13 +30,14 @@ on:
       - '!src/**/*.vrt.test.tsx'
       - '!src/**/__screenshots__/**'
 
-# A newer dev push supersedes an in-flight dev push: only the latest commit's
-# result matters there. Manual dispatches get a group per run so every requested
-# run executes and none is ever cancelled or replaced. Master pushes are never
+# Runs group per branch, so one branch's run never cancels another's. A newer
+# dev push supersedes an in-flight dev push: only the latest commit's result
+# matters there. Manual dispatches get a group per run so every requested run
+# executes and none is ever cancelled or replaced. Master pushes are never
 # cancelled either; GitHub keeps the running run plus the newest pending one,
 # so a burst of master pushes attributes coverage to the latest pending commit.
 concurrency:
-  group: e2e-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event_name }}
   cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
 
 jobs:
@@ -187,31 +188,56 @@ jobs:
           # unblock the tests.
           echo "commit_tag=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
+      # The Cypress binary lives outside node_modules; cache it alongside so a hit
+      # can skip `npm ci` (which is what downloads it) entirely.
+      - name: Restore node_modules cache
+        id: node-modules
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            pubky-app/node_modules
+            ~/.cache/Cypress
+          # `v1` is the cache format. `.npmrc` matches nothing until the file exists.
+          key: e2e-node-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubky-app/.nvmrc', 'pubky-app/package.json', 'pubky-app/package-lock.json', 'pubky-app/.npmrc', 'pubky-app/patches/*.patch') }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: 'pubky-app/.nvmrc'
-          cache: 'npm'
+          cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
           cache-dependency-path: 'pubky-app/package-lock.json'
 
-      # The Cypress binary download is the bulk of npm ci here and is not covered
-      # by the npm cache. Key on the resolved Cypress version (not the whole
-      # lockfile) so unrelated dependency updates do not archive the identical
-      # binary again; postinstall validates the cached binary matches.
+      # Fallback for a node_modules cache miss on a dependency bump: the binary
+      # download is the bulk of npm ci, and the node_modules archive changes
+      # with every lockfile edit. Key the binary on the resolved Cypress version
+      # so an unrelated dependency update neither re-downloads nor re-archives
+      # it. Skipped when the node_modules hit above already provides the binary.
       - name: Resolve the Cypress version
+        if: steps.node-modules.outputs.cache-hit != 'true'
         id: cypress_version
         working-directory: pubky-app
         run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/cypress'].version")" >> $GITHUB_OUTPUT
 
       - name: Cache Cypress binary
+        if: steps.node-modules.outputs.cache-hit != 'true'
         uses: actions/cache@v6
         with:
           path: ~/.cache/Cypress
           key: ${{ runner.os }}-cypress-${{ steps.cypress_version.outputs.version }}
 
       - name: Install Cypress dependencies
+        if: steps.node-modules.outputs.cache-hit != 'true'
         working-directory: pubky-app
         run: npm ci
+
+      - name: Save node_modules cache
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            pubky-app/node_modules
+            ~/.cache/Cypress
+          key: ${{ steps.node-modules.outputs.cache-primary-key }}
 
       - name: Login to registry
         uses: pubky/ci-workflows/.github/actions/docker/registry_login@main

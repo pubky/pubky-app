@@ -1,0 +1,25 @@
+diff --git a/node_modules/@vitest/browser/dist/index.js b/node_modules/@vitest/browser/dist/index.js
+index 4044a74..4ee3d9d 100644
+--- a/node_modules/@vitest/browser/dist/index.js
++++ b/node_modules/@vitest/browser/dist/index.js
+@@ -2431,8 +2431,18 @@ function buildOutput(outcome, timeout) {
+ async function waitForStableScreenshot(options, timeout) {
+ 	const abortController = new AbortController();
+ 	const stableScreenshot = getStableScreenshot(options, abortController.signal);
+-	const result = await (timeout === 0 ? stableScreenshot : Promise.race([stableScreenshot, asyncTimeout(timeout).finally(() => abortController.abort())]));
+-	return result;
++	if (timeout === 0) {
++		return stableScreenshot;
++	}
++	let timer;
++	const timeoutPromise = new Promise((resolve) => {
++		timer = setTimeout(() => resolve(null), timeout);
++	});
++	try {
++		return await Promise.race([stableScreenshot, timeoutPromise.finally(() => abortController.abort())]);
++	} finally {
++		clearTimeout(timer);
++	}
+ }
+ /**
+ * Takes screenshots repeatedly until the page reaches a visually stable state.
