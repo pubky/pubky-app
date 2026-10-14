@@ -39,9 +39,10 @@ jobs:
           # one image, one cache, no default-scope clobbering of other images.
           cache_from: type=gha,scope=pubky-app
           cache_to: type=gha,mode=max,scope=pubky-app,ignore-error=true
-          # NEXT_PUBLIC_DB_VERSION / DB_NAME / DEBUG_MODE come from the
-          # Dockerfile ARG defaults (their single source of truth).
           build_args: |
+            NEXT_PUBLIC_DB_VERSION=3
+            NEXT_PUBLIC_DB_NAME=franky
+            NEXT_PUBLIC_DEBUG_MODE=false
             NEXT_PUBLIC_APP_VERSION=${{ github.sha }}
 
 

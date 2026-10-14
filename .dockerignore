@@ -1,5 +1,2 @@
 node_modules
 .next
-# CI-only staging dir for the Next.js cache mount (buildkit-cache-dance in
-# build-docker-image.yml); must never enter the build context.
-next-build-cache
