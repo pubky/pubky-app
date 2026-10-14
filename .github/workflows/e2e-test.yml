@@ -195,14 +195,19 @@ jobs:
           cache-dependency-path: 'pubky-app/package-lock.json'
 
       # The Cypress binary download is the bulk of npm ci here and is not covered
-      # by the npm cache; cache it by lockfile so postinstall finds it locally.
+      # by the npm cache. Key on the resolved Cypress version (not the whole
+      # lockfile) so unrelated dependency updates do not archive the identical
+      # binary again; postinstall validates the cached binary matches.
+      - name: Resolve the Cypress version
+        id: cypress_version
+        working-directory: pubky-app
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/cypress'].version")" >> $GITHUB_OUTPUT
+
       - name: Cache Cypress binary
         uses: actions/cache@v6
         with:
           path: ~/.cache/Cypress
-          key: ${{ runner.os }}-cypress-${{ hashFiles('pubky-app/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-cypress-
+          key: ${{ runner.os }}-cypress-${{ steps.cypress_version.outputs.version }}
 
       - name: Install Cypress dependencies
         working-directory: pubky-app
