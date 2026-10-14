@@ -36,6 +36,12 @@ jobs:
     name: VRT (${{ matrix.os }}, ${{ matrix.browser }})
     needs: playwright-version
     runs-on: ${{ matrix.os }}
+    # A single browser finishes in about 3–6 minutes (slowest successful vitest
+    # step after the per-browser split: 5.5). 30 minutes is the server-side
+    # backstop: it still fails the job if the VM stops heartbeating, instead of
+    # the 6-hour default. The vitest step below is shorter so a live runner can
+    # upload failure screenshots before the job is cancelled.
+    timeout-minutes: 30
     # Linux runs in the official Playwright image for the installed version: every
     # browser and its system libraries are preinstalled, so nothing is downloaded or
     # apt-installed per run. An empty string means "no container" (macOS runs on the host).
@@ -102,11 +108,22 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright-browsers-cache.outputs.cache-primary-key }}
 
+      # Outer bound for a stuck Node process whose event loop never reaches
+      # the in-process watchdog. ~3× the slowest successful single-browser step.
       - name: Run visual regression tests
+        timeout-minutes: 20
+        env:
+          # 18 minutes: under the step timeout, so the progress reporter can
+          # exit and flush before the runner kills the process.
+          VRT_RUN_TIMEOUT_MS: '1080000'
         run: npx vitest run --project "vrt (${{ matrix.browser }})"
 
+      # A step timeout fails the step. A job timeout, or cancellation after the
+      # runner stops heartbeating, cancels the job. Upload in both cases.
+      # Concurrency cancellation matches `cancelled()` too; with no attachments
+      # the upload is a no-op.
       - name: Upload VRT failure screenshots
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: vrt-failures-${{ matrix.os }}-${{ matrix.browser }}

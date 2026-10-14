@@ -42,6 +42,10 @@ jobs:
     name: Regenerate (${{ matrix.os }}, ${{ matrix.browser }})
     needs: playwright-version
     runs-on: ${{ matrix.os }}
+    # Same bounds as vrt.yml. A single-browser regeneration finishes in about
+    # 3–6 minutes; 30 minutes still fails a wedged runner, and the vitest step
+    # is shorter so a live runner can upload failure screenshots.
+    timeout-minutes: 30
     # Same image as vrt.yml so regenerated baselines render exactly like the checks.
     container: ${{ matrix.os == 'ubuntu-latest' && format('mcr.microsoft.com/playwright:v{0}-noble', needs.playwright-version.outputs.version) || '' }}
     strategy:
@@ -101,8 +105,23 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright-browsers-cache.outputs.cache-primary-key }}
 
+      # Same outer bound as vrt.yml. The progress reporter exits earlier via
+      # VRT_RUN_TIMEOUT_MS so a hang flushes its log before this step is killed.
       - name: Regenerate VRT baselines
+        timeout-minutes: 20
+        env:
+          VRT_RUN_TIMEOUT_MS: '1080000'
         run: npx vitest run --project "vrt (${{ matrix.browser }})" --update
+
+      - name: Upload VRT failure screenshots
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vrt-failures-${{ matrix.os }}-${{ matrix.browser }}
+          path: .vitest-attachments/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Stage baselines for upload
         run: |

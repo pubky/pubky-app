@@ -18,7 +18,9 @@ interaction tests for those).
   webkit instance when `process.platform === 'linux'` and there are no
   `*-webkit-linux.png` files; do not add them.
 - Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `matchVrtFrameScreenshot`),
-  `vrt.setup.ts` (global mocks), `vrt.clock.ts`, `vrt.viewports.ts`.
+  `vrt.setup.ts` (global mocks), `vrt.clock.ts`, `vrt.viewports.ts`,
+  `vrt.progress-reporter.ts` (CI progress log and run watchdog; silent unless
+  `VRT_RUN_TIMEOUT_MS` is set).
 - Reference example: `src/test/vrt/feed/Home.vrt.test.tsx`.
 - Run one browser only: `npx vitest run --project "vrt (chromium)"` (CI runs one
   job per browser this way).
@@ -254,6 +256,38 @@ commit and opens no PR. Changed files are committed in batches through the
 GraphQL `createCommitOnBranch` mutation (GitHub-signed, so `dev`'s
 required-signatures rule holds): one request per 20 MiB of baselines, which is
 one commit for a normal regeneration.
+
+## CI hang bounds
+
+A single-browser job finishes in about 3–6 minutes. The slowest successful
+vitest step after the per-browser split was 5.5 minutes (regeneration included).
+`vrt.yml` and the regenerate job in `vrt-update-baselines.yml` cap that step at
+20 minutes and the whole job at 30. The job cap is what still fails a runner
+that has stopped heartbeating; the shorter step cap leaves the runner alive
+long enough to upload `.vitest-attachments/` (`if: failure() || cancelled()`).
+
+Per-test, hook, and teardown timeouts stay at 30s, 30s, and 10s. They already
+fail a stuck test or hook. They do not cover a stall that never enters one
+(browser launch, a module import, a stuck orchestrator). Those two workflows
+set `VRT_RUN_TIMEOUT_MS` to 18 minutes. `vrt.progress-reporter.ts` is
+registered only when that variable is set (Vitest reporters are root-level, and
+setting them always would replace the unit-test reporter list). It then writes
+the browser, file, and test it is on to stderr and exits, so the log is flushed
+before the step timeout kills the process. A local `npm run test:vrt` does not
+set the variable, so it is unchanged.
+
+`fileParallelism: false` already limits each browser to one page, and each CI
+job is one browser. macOS runners are not given a separate worker cap; lowering
+it would not change the CI job and would serialise a local all-browser run.
+
+Run [38554085743](https://github.com/pubky/pubky-app/actions/runs/38554085743)
+is why the caps exist. `VRT (macos-latest, chromium)` sat in the vitest step
+for about 48 minutes and then died with "The hosted runner lost communication
+with the server." No log was published and the screenshot upload never ran.
+The other jobs in that run finished in 4–8 minutes, and the next `dev` run
+passed, including macOS Chromium in under 3 minutes. There was no failing test
+name to fix. The caps make the next occurrence fail while diagnostics can
+still be uploaded.
 
 **PR CI does not run VRT.** `vrt.yml` has no `pull_request` trigger, so a change that
 shifts pixels on a covered surface is not caught by the PR checks. Say so in the PR and

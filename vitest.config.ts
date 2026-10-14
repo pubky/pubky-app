@@ -31,6 +31,24 @@ export default defineConfig({
     },
     dangerouslyIgnoreUnhandledErrors: false,
     silent: false,
+    // Vitest rejects `teardownTimeout` on a project, so it is pinned here for
+    // every project. 10s is already the default; a hung shutdown fails there
+    // instead of holding the process open. The VRT project pins `hookTimeout`
+    // the same way.
+    teardownTimeout: 10_000,
+    // `reporters` is also root-only. Register the progress reporter only when a
+    // VRT workflow has set a run budget, so unit tests keep Vitest's own
+    // default list (including the github-actions reporter). Re-include that
+    // reporter here, because setting `reporters` replaces the default list.
+    ...(process.env.VRT_RUN_TIMEOUT_MS
+      ? {
+          reporters: [
+            'default' as const,
+            ...(process.env.GITHUB_ACTIONS === 'true' ? ['github-actions' as const] : []),
+            './src/test-utils/vrt.progress-reporter.ts',
+          ],
+        }
+      : {}),
     projects: [
       // Unit tests run in jsdom.
       {
@@ -63,11 +81,18 @@ export default defineConfig({
           name: 'vrt',
           globals: true,
           testTimeout: 30_000,
+          // Pin the browser-mode hook default (30s) so a hung beforeAll fails
+          // inside the test budget. A stall that never enters a test is bounded
+          // in CI by the job/step timeouts and `VRT_RUN_TIMEOUT_MS`.
+          hookTimeout: 30_000,
           // Vitest's Playwright webkit provider can throw
           // `route.fulfill: Target page, context or browser has been closed` when
           // multiple test files run in parallel within a browser context. Running
           // test files sequentially per browser avoids the race while still letting
-          // chromium, firefox, and webkit run concurrently.
+          // chromium, firefox, and webkit run concurrently as separate projects.
+          // `false` also forces maxWorkers to 1, so each browser opens one page.
+          // CI selects a single browser project per job, so a macOS runner is not
+          // hosting chromium, firefox, and webkit at the same time.
           fileParallelism: false,
           include: ['**/*.vrt.test.{ts,tsx}'],
           exclude: ['**/node_modules/**', '**/.claude/**'],
