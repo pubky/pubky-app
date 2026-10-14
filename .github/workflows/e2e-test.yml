@@ -326,80 +326,15 @@ jobs:
 
       - name: Wait for the pubky-app image
         id: wait_image
+        working-directory: pubky-app
         env:
           REGISTRY: ${{ env.registry }}
           GH_TOKEN: ${{ github.token }}
           CONTENT_TAG: ${{ steps.app_tag.outputs.content_tag }}
           COMMIT_TAG: ${{ steps.app_tag.outputs.commit_tag }}
-        run: |
-          # Matches the build job's 20min timeout; the build-status check below
-          # fails fast long before this cap when the build itself has failed.
-          MAX_WAIT=1200   # Maximum wait time in seconds (20 minutes)
-          INTERVAL=15
-          ELAPSED=0
-          DONE_GRACE=0
-          IMAGE_BASE="$REGISTRY/pubky-app"
-
-          # failed = a build job ended badly, done = every build job concluded
-          # (image should exist), running = any still in progress, anything else
-          # (including a transient API error) = keep waiting.
-          build_jobs_state() {
-            gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs?per_page=100" \
-              --jq '[.jobs[] | select(.name | startswith("rebuild_pubky_app / ")) | .conclusion] | if any(. == "failure" or . == "cancelled" or . == "timed_out" or . == "startup_failure") then "failed" elif length == 0 or any(. == null) then "running" else "done" end' \
-              2>/dev/null || echo "unknown"
-          }
-
-          # A tag existing is not enough: a manual arm64-only build can hold the
-          # same commit tag. Only accept a tag whose manifest carries linux/amd64,
-          # the platform this workflow builds and runs on. Covers both a manifest
-          # index (.manifests[].platform.architecture) and a single manifest
-          # (.architecture).
-          has_amd64() {
-            docker manifest inspect "$1" 2>/dev/null \
-              | jq -e '[.. | objects | .architecture? // empty] | any(. == "amd64")' >/dev/null 2>&1
-          }
-
-          # Resolve and log the manifest digest so the exact tested image stays
-          # identifiable even if a later build overwrites the tag.
-          log_digest() {
-            docker buildx imagetools inspect "$1" 2>/dev/null | awk '/^Digest:/ {print $2; found=1} END {if (!found) print "unknown"}'
-          }
-
-          while true; do
-            if has_amd64 "$IMAGE_BASE:$CONTENT_TAG"; then
-              echo "tag=$CONTENT_TAG" >> $GITHUB_OUTPUT
-              echo "Image available: $IMAGE_BASE:$CONTENT_TAG@$(log_digest "$IMAGE_BASE:$CONTENT_TAG") (content tag, linux/amd64)"
-              break
-            fi
-            if has_amd64 "$IMAGE_BASE:$COMMIT_TAG"; then
-              # A commit-tag-only producer (a preview build of this commit racing
-              # the e2e build) can unblock the tests minutes earlier.
-              echo "tag=$COMMIT_TAG" >> $GITHUB_OUTPUT
-              echo "Image available: $IMAGE_BASE:$COMMIT_TAG@$(log_digest "$IMAGE_BASE:$COMMIT_TAG") (commit tag, linux/amd64)"
-              break
-            fi
-
-            STATE=$(build_jobs_state)
-            if [ "$STATE" = "failed" ]; then
-              echo "The pubky-app build failed; not waiting for an image that will never arrive."
-              exit 1
-            fi
-            if [ "$STATE" = "done" ]; then
-              DONE_GRACE=$((DONE_GRACE + 1))
-              if [ $DONE_GRACE -ge 4 ]; then
-                echo "The pubky-app build finished successfully but neither $IMAGE_BASE:$CONTENT_TAG nor :$COMMIT_TAG exists in the registry."
-                exit 1
-              fi
-            fi
-
-            if [ $ELAPSED -ge $MAX_WAIT ]; then
-              echo "pubky-app image did not appear within $((MAX_WAIT / 60)) minutes."
-              exit 1
-            fi
-            echo "Waiting for the pubky-app image... ($ELAPSED seconds elapsed)"
-            sleep $INTERVAL
-            ELAPSED=$((ELAPSED + INTERVAL))
-          done
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: bash .github/scripts/wait-for-app-image.sh
 
       - name: Run pubky-app
         working-directory: pubky-stack/docker
