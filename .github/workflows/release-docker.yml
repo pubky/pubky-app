@@ -35,10 +35,8 @@ jobs:
             linux/arm64
             linux/amd64
           image: pubky-app
-          # Share the pubky-app GHA cache scope with the e2e/preview builds:
-          # one image, one cache, no default-scope clobbering of other images.
-          cache_from: type=gha,scope=pubky-app
-          cache_to: type=gha,mode=max,scope=pubky-app,ignore-error=true
+          cache_from: type=gha
+          cache_to: type=gha,mode=max
           build_args: |
             NEXT_PUBLIC_DB_VERSION=3
             NEXT_PUBLIC_DB_NAME=franky

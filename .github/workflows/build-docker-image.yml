@@ -139,14 +139,8 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
         with:
           image: 'pubky-app'
-          # Scope the GHA cache to this image: preview and release builds all wrote
-          # the same default-scope manifest, overwriting each other and pushing the
-          # repo cache over its 10GB limit. ignore-error keeps a cache export
-          # failure from failing the build. A registry cache would move the export
-          # off the runner entirely but needs a GAR cleanup policy for the
-          # buildcache tag, which is infra-owned; revisit with them.
-          cache_from: type=gha,scope=pubky-app
-          cache_to: type=gha,mode=max,scope=pubky-app,ignore-error=true
+          cache_from: type=gha
+          cache_to: type=gha,mode=max
           context: '.'
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}
