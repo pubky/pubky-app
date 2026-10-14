@@ -282,6 +282,17 @@ jobs:
                 PUBKY_RUNTIME_STREAM_POLL_INTERVAL_MS: "2000"
           EOF
 
+      # pubky-stack@staging pins a homeserver that defaults to signup_mode = "open".
+      # Open mode rejects signup token generation, so the invite continue button stays disabled.
+      - name: Require signup tokens for e2e invite codes
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/signup_mode = "open"/signup_mode = "token_required"/' homeserver.config.toml
+          grep -q 'signup_mode = "token_required"' homeserver.config.toml || {
+            echo 'Error: homeserver.config.toml is missing signup_mode = "token_required"'
+            exit 1
+          }
+
       # Start the infra services first; pubky-app follows once its image exists.
       # Compose interpolates every service at config load, so PUBKY_APP_TAG must be
       # set here even though the pubky-app service is not started in this step.
