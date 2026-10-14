@@ -157,6 +157,7 @@ vi.mock('@/stores/auth/auth.store', async () => {
     useAuthStore: createZustandLikeHook({
       currentUserPubky: f.viewerPubky,
       session: mockRingSession(['/:rw'], f.viewerPubky),
+      restoreStatus: 'ready',
       sessionExport: null,
       hasProfile: true,
       hasHydrated: true,
@@ -239,20 +240,9 @@ vi.mock('@/hooks/usePostCounts/usePostCounts', async () => {
   };
 });
 
-vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => {
-  const noop = async () => {};
-  const result = {
-    isBookmarked: false,
-    isBookmarkLoading: false,
-    isBookmarkToggling: false,
-    collections: [],
-    isCollectionsLoading: false,
-    isCreatingCollection: false,
-    toggleBookmark: noop,
-    toggleCollection: noop,
-    createCollectionWithPost: noop,
-  };
-  return { usePostSaveTargets: () => result };
+vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', async () => {
+  const { idlePostSaveTargets } = await import('@/test/mocks/usePostSaveTargets');
+  return { usePostSaveTargets: () => idlePostSaveTargets };
 });
 
 vi.mock('@/hooks/useUserDetails/useUserDetails', async () => {

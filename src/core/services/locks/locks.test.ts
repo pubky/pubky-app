@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => {
   const paykitSetupStatus = vi.fn(async (): Promise<unknown> => ({ status: 'ready' }));
   const fakeSession = {
     exportSecret: vi.fn(() => 'secret-abc'),
+    creatorPubky: vi.fn((): string | undefined => 'pubkyaccount'),
     signout: vi.fn(async () => {}),
     creator: { setLockServicePointer, paykitSetupStatus },
   };
@@ -143,6 +145,7 @@ vi.mock('@synonymdev/locks-sdk', () => {
 describe('LocksService (auth)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ currentUserPubky: 'account' });
     mocks.getLockServer.mockReturnValue('lockserverpubky');
     useLocksAuthStore.setState(locksAuthInitialState);
     // The client is a cached singleton; tests below assert construction, so build fresh per test.
@@ -237,8 +240,8 @@ describe('LocksService (auth)', () => {
     useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'setup_required' });
 
-    await expect(LocksService.lookupPaykitSetupStatus()).resolves.toBe('setup_required');
-    expect(mocks.paykitSetupStatus).toHaveBeenCalledWith(); // the creator comes from the session
+    await expect(LocksService.lookupPaykitSetupStatus('BTC')).resolves.toBe('setup_required');
+    expect(mocks.paykitSetupStatus).toHaveBeenCalledWith('BTC'); // the creator comes from the session
   });
 
   // The SDK types the response `any`: an unknown status must fail, not read as a setup answer.
@@ -246,7 +249,7 @@ describe('LocksService (auth)', () => {
     useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'connected' });
 
-    const error = await LocksService.lookupPaykitSetupStatus().catch((caught: unknown) => caught);
+    const error = await LocksService.lookupPaykitSetupStatus('BTC').catch((caught: unknown) => caught);
 
     expect(isAppError(error)).toBe(true);
     expect((error as { category: ErrorCategory }).category).toBe(ErrorCategory.Validation);
@@ -256,7 +259,7 @@ describe('LocksService (auth)', () => {
   it.each([
     ['signout', () => LocksService.signout(), () => mocks.fakeSession.signout],
     ['setLockServiceConfig', () => LocksService.setLockServiceConfig(), () => mocks.setLockServicePointer],
-    ['lookupPaykitSetupStatus', () => LocksService.lookupPaykitSetupStatus(), () => mocks.paykitSetupStatus],
+    ['lookupPaykitSetupStatus', () => LocksService.lookupPaykitSetupStatus('BTC'), () => mocks.paykitSetupStatus],
   ])('%s promotes an HTTP 401 to an auth error', async (_name, call, mock) => {
     useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
     mock().mockRejectedValueOnce(new Error('Lock Server request failed with HTTP 401'));
@@ -278,6 +281,7 @@ describe('LocksService (auth)', () => {
 });
 
 const session = asOpaque<LocksSdkSession>({
+  creatorPubky: () => 'pubkyaccount',
   creator: { registerGuardedResource: mocks.registerGuardedResource, createContentLock: mocks.createContentLock },
   lockServer: () => 'lockpubky',
 });
@@ -294,6 +298,7 @@ const lockParams = {
 describe('LocksService (content)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ currentUserPubky: 'account' });
     useLocksAuthStore.setState(locksAuthInitialState);
     useLocksAuthStore.getState().init({ session, secret: 'secret-abc' });
   });
@@ -396,6 +401,7 @@ describe('LocksService.isServerReady', () => {
 describe('LocksService (reader unlock)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ currentUserPubky: 'account' });
     mocks.getLockServer.mockReturnValue('lockserverpubky');
     LocksService['locksClient'] = null;
     LocksService['viewerClient'] = null;

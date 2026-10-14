@@ -5,7 +5,10 @@ import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useProfileForm } from './useProfileForm';
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
+  useRouter: () => ({ push: vi.fn() }),
+}));
 vi.mock('@/controllers/auth/auth', () => ({ AuthController: { bootstrapWithDelay: vi.fn() } }));
 vi.mock('@/controllers/file/file', () => ({ FileController: { getAvatarUrl: vi.fn() } }));
 vi.mock('@/molecules/Toaster/toast');
@@ -63,3 +66,5 @@ describe('useProfileForm published links integration', () => {
     expect(await UserDetailsModel.findById(pubky)).toMatchObject({ links: repairedLinks });
   });
 });
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({ useRequireAuth: () => ({ waitForAuth: async () => true }) }));

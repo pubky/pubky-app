@@ -5,8 +5,9 @@ teaser advertising it. This doc starts with the mental model — what is differe
 rest of the app — and gets more detailed the further down you read. If you know pubky-app
 but not locks, read top to bottom.
 
-Phase 2 (epic **#2364**) makes locks **payable**: a creator sets a price in sats and the
-reader pays it from Bitkit.
+Creators price payable locks in BTC or USD. Readers pay from Bitkit using the
+receiving methods enabled by the server and creator. Setup is Bitcoin-only while
+Paykit Server's optional USDT configuration is absent.
 
 ## Table of contents
 
@@ -294,19 +295,24 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    setup notice in place of the handoff. A failed submission (network, rate limit) shows
    **Try again**, which keeps the saved id.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
-   created; with nothing submitted, the install screen has no link state. `none` shows the handoff
-   that hands the creator's pubky to Bitkit: a QR on desktop (clicking it copies the pubky, for a
-   wallet on a device without a camera), and below the `lg` breakpoint (1024px)
-   a **Pay with Bitkit** button instead, since a phone cannot scan its own screen; it opens
-   `bitkit://contact?pubky=<creator pubky>`, which routes Bitkit to the screen a scan reaches. `handshake` keeps it: that state only
-   means Paykit has opened its half of the link and is waiting for the reader's wallet, which still
-   needs the creator's pubky to answer. `connected` removes it; `recovery_required` and `blocked`
-   replace it with a notice, because the reader cannot clear either from here (`blocked` is a policy
-   switch a fresh bundle id does not reset). A failed read keeps the last state and the handoff — it
-   never invents one, and never stops the task polling. Until the first read answers, the modal says
-   "Checking your Bitkit connection…" instead of awaiting payment. A failed first read keeps it there
+   created; with nothing submitted, the install screen has no link state. Until the first read
+   answers, the modal says "Checking your Bitkit connection…". A failed first read keeps it there
    until a read succeeds, the purchase ends or polling parks. Wallet setup, connection notices and
-   the parked copy take precedence over this checking copy.
+   the parked copy take precedence over this checking copy. With wallet setup complete, `none`,
+   `handshake` and `recovery_required` keep the creator's contact handoff available: a QR on desktop
+   (clicking it copies the creator pubky for a wallet on a device without a camera), and below the
+   `lg` breakpoint (1024px) an **Open in Bitkit** button instead, since a phone cannot scan its own
+   screen. It opens `bitkit://contact?pubky=<creator pubky>`, the same contact screen
+   as a scan. The instructions ask the reader to add the creator only if needed; none of these
+   states proves whether the reader has already scanned. `handshake` says the link is connecting,
+   with a small spinner beside the message while polling is active. The contact handoff stays
+   available; the spinner stops when polling parks or wallet setup takes precedence.
+   `recovery_required` shows a restoration-needed notice alongside the retained handoff, without
+   promising automatic recovery. `connected` removes the handoff and asks the reader to check
+   Bitkit for a payment request and confirm when it appears. It does not acknowledge request delivery.
+   `blocked` replaces the handoff with a support notice: it is a policy switch a fresh bundle id
+   does not reset. A failed read keeps the last state and the handoff — it never invents one, and
+   never stops the task polling. Wallet setup still hides the handoff as described in step 4.
 6. Waiting runs two loops on their own timers, and neither waits on the other: the task lookup every
    **3 seconds**, the link read every **1 second**. Each skips a tick while its own call is still out,
    so a link read that hangs cannot delay a finished payment. The task lookup is the only lifecycle
@@ -314,6 +320,10 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    return and **Check again** restart the pair, and both park together after 3 wall-clock minutes
    without failing the purchase. While the invoice does not exist yet, those 3 minutes count from the
    server's invoice deadline instead; once it exists, they start again.
+   An `expired` task stops waiting and shows "The payment was not completed. You can try again."
+   in both the dialog and toast. This covers rejected, canceled and timed-out requests without
+   interpreting `terminal_reason`. **Try again** starts a new payment with a fresh bundle id;
+   `failed` keeps its existing wallet-related guidance and retry handling.
 7. Turning a completed payment into content (credential → read) parks the same way when it fails,
    and **Check again** runs it again. Retrying is free — the entitlement is durable and the
    credential is minted fresh each time, which is also why an expired credential needs no detection.
@@ -426,9 +436,25 @@ profile/(own)/layout.tsx → ProfilePageContainer
 ## Marker tracking
 
 Locks use one `paykit-payment` criterion holding the recipient (always the lock's creator),
-the amount in sats as a string, and `BTC` as the asset. A reader unlocks it by paying from
-Bitkit (see [Reading a lock post](#reading-a-lock-post)). Creator-configurable credential
-TTLs still come later. The descriptor and readable post are cached in IndexedDB; media bytes are not.
+an atomic amount as a string, and its denomination: `BTC` (sats) or `USD` (cents). The price
+dialog uses exact decimal conversion and clears the amount when the currency changes. Cards and checkout retain the denomination from the lock file.
+
+Paykit Server creates the immutable request and fixed conversion quote from the creator's
+enabled receiving methods. BTC prices need no conversion for Bitcoin; USD prices include a
+BTC quote. If the server explicitly enables USDT receiving, it can additionally offer USDT
+at the quoted rate. Bitkit shows the exact payment and fee before approval; Pubky App does
+not calculate settlement rates.
+
+Before publishing, the app asks the Lock Server whether the authenticated creator can accept
+the selected denomination. Setup is Bitcoin-only when Paykit Server's optional `[usdt]`
+configuration is absent. USD pricing by itself does not request a USDT address. An approval
+callback is checked against the server before setup is marked ready.
+
+Locks unlocks after Paykit Server verifies a full, on-time payment on one accepted method.
+USDT requires successful Arbitrum block inclusion. Pubky App does not query Arbitrum or verify
+transaction hashes. Retry, stored purchase IDs, and content recovery use the same flow for
+both price currencies (see [Reading a lock post](#reading-a-lock-post)).
+Creator-configurable credential TTLs still come later. The descriptor and readable post are cached in IndexedDB; media bytes are not.
 
 Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.
@@ -436,42 +462,32 @@ Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
 
 ## Sessions from before locks
 
-A Pubky Ring session carries exactly the capability list approved at sign-in, for its whole life,
-and the app rebuilds the same session on every page load from `localStorage`. Locks added two
+A grant carries the capability list approved at sign-in for its whole life, and the app restores its SDK record on
+each page load. Legacy cookie users sign in again during the grant-only migration. Locks added two
 entries to that list (`HOMESERVER_CAPABILITIES` in `@/config/network`: `/priv/social/:rw` for the
-reader's replicas and purchases, `/priv/app.locks/content/:r` for a creator's own originals). A user who
-signed in through Ring before those entries shipped keeps a session without them: `/pub` keeps
+reader's replicas and purchases, `/priv/app.locks/content/:r` for a creator's own originals). A user
+with a valid saved Ring grant issued before those entries shipped keeps a session without them: `/pub/pubky.app/` keeps
 working, so the feed, posting and profiles are unaffected, but the homeserver answers every read
-or write under `/priv` with **403** (a session that lacks the capability; 401 is only "no session").
+or write under the missing private scopes with **403** (insufficient permission; 401 means authentication failed).
 Keypair sign-in is unaffected: the SDK mints it with the root capability, `/:rw` — confirmed against
 the local stack, and root covers every required entry with no special case.
 
-The app does not sign such a user out. Instead (#2373):
+The app does not sign out a user merely because a valid grant lacks Locks scopes. Instead (#2373):
 
 - **Detection is derived, not stored.** `sessionNeedsUpgrade` (`@/libs/capabilities/capabilities`)
   compares `session.info.capabilities` against the required list by coverage, with the homeserver's
   own rule: a scope covers a path when it is equal, or when it ends in `/` and is a prefix. `/:rw`
   therefore covers everything with no special case, and `/pub/app` covers only that one path.
   `useSessionNeedsUpgrade` reads it off the auth store, so it updates the moment the session changes.
-- **The upgrade is a swap, not a sign-in.** `useAuthUrl({ type: 'upgrade' })` starts the same Ring
-  flow as sign-in (the requested list is already the current one); on approval
-  `AuthController.upgradeSession` replaces the stored session and does nothing else. The sign-in
-  routine would re-init the auth store with the profile unknown, which the route guard reads as
-  "signed out" for a moment and redirects. A session approved with a different key is refused and
-  signed out on its own homeserver so it is not left dangling, and the same homeserver boundary as
-  sign-in is applied before the swap, in case the key republished to a homeserver this deployment
-  refuses.
-  The URL comes from `getUpgradeAuthUrl`, which only tracks the flow: the sign-in URL path also
-  clears the local database and resets the settings store for the previous account, which must
-  not happen to a user who stays signed in. An approval from another key is reported back as a
-  plain `false` and surfaced as a toast, not an `Err.*`: picking the wrong identity in Ring is a
-  choice to correct, and an AppError would file every mis-tap in Sentry. Guards that compare the
-  session object
-  (`captureViewerSession`, the TTL coordinator) see the swap as one change: reads in flight are
-  dropped once and TTL restarts, and the next interaction recovers both.
-- **The old session is never signed out.** The homeserver keys its cookie by pubky, so the new
-  sign-in already overwrote it; a sign-out request would answer with a removal cookie under that
-  same name and drop the new session too. The stale server-side row expires on its own.
+- **Upgrade preserves the current account and screen.** `useAuthUrl({ type: 'upgrade' })` calls
+  `AuthController.getUpgradeAuthUrl()`, which delegates to the shared grant capability request.
+  Approval validates the account, environment and required scopes, saves the grant, then retires
+  the previous credential. It preserves the profile, database and composer state. A rejected or
+  canceled approval leaves the existing session intact; a retirement failure keeps the new grant
+  active and queues the previous grant for cleanup retry. See [the grant migration contract](migrations/2600-grant-auth-and-locks.md).
+
+- **Retire the previous grant after adoption.** The replacement is saved before SDK signout and local removal of the
+  previous grant. A failed retirement remains retryable; it never restores the previous session over the replacement.
 - **Where it is asked for.** The creator setup dialog inserts the step between the Lock Server
   authorization and Bitkit, numbered `(1/2)` / `(2/2)` only when both were pending when the dialog
   opened. On the reader side, a locked post (`LockedPostContent`) and the Unlocked screen
@@ -487,16 +503,18 @@ The app does not sign such a user out. Instead (#2373):
   for it with a 403 per render. A creator whose Lock Server and Bitkit are already connected in this tab
   still meets the step: `usePostInputLock` gates the lock dialog on the session as well.
 
-Release note: after the deploy, users already signed in through Ring are not logged out, and
-nothing under `/pub` changes behaviour. Every locked post they scroll past shows the notice with
-its Unlock parked (the app cannot tell which locks they unlocked before), and so does their
-Unlocked page; a creator meets the extra step the next time they lock a post.
+Release note: the grant-only migration requires existing cookie users, including Ring users, to sign in again.
+New Ring/Passport grants request the Locks scopes upfront. Existing valid grants are preserved; only those missing
+the scopes need the permission notice and upgrade flow described above. For those users, every locked post shows
+the notice with Unlock paused (the app cannot read which locks they unlocked before), as does their Unlocked page;
+a creator meets the extra step when they next lock a post.
 
 ## Testing & local demo
 
-The Lock SDK is the `@synonymdev/locks-sdk` npm package (Rust compiled to WebAssembly, pinned
-to an exact version in `package.json`); `npm ci` installs it like any other dependency. To try an
-SDK change that is not published yet, build it from `pubky/locks` (`locks-sdk/bindings/js`,
+The Lock SDK is `@synonymdev/locks-sdk` (Rust compiled to WebAssembly). `package.json` currently pins
+a public GitHub artifact for the BTC/USD setup API, with integrity recorded in `package-lock.json`;
+`npm ci` installs it like any other dependency. To try a local SDK change, build it from
+`pubky/locks` (`locks-sdk/bindings/js`,
 `npm run build`) and point `package.json` at that folder with a `file:` path, or `npm link` it.
 Never commit either.
 
@@ -512,3 +530,9 @@ Never commit either.
 - Creator side: [ADR 0022](adr/0022-locks-creator-publishing.md)
 - Issues: #2297 (bundle-id persistence), #2368 (reader payment), #2369 (payment-only locks),
   #2468 (multi-tab read-back), #1998 (Phase 1 epic).
+
+## SDK and server integration
+
+This branch pins the built Locks SDK to [Git commit `245253a6d7c9`](https://github.com/pubky/locks/commit/245253a6d7c9559fbcbdffc33250dacf28108d69), generated from [Locks source `c692fb70522c`](https://github.com/pubky/locks/commit/c692fb70522cf75025b86ad72a3b98fa7ef84e72). A normal `npm ci` installs the JS/WASM files; no SDK release or local build overlay is required. The artifact README records its source and checksums.
+
+Deploy with [Locks #75](https://github.com/pubky/locks/pull/75) and Paykit Server's merged [#47](https://github.com/pubky/paykit-server/pull/47). The SDK's denomination-aware setup check requires the matching Locks server. Keep Paykit Server's `[usdt]` section absent for Bitcoin-only Bitkit clients, including [iOS #887](https://github.com/synonymdev/bitkit-ios/pull/887) and [Android #1437](https://github.com/synonymdev/bitkit-android/pull/1437).

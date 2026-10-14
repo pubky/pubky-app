@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
+    waitForAuth: async () => true,
     requireAuth: mocks.requireAuth,
   }),
 }));

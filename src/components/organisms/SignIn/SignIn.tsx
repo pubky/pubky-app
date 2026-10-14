@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import Image from 'next/image';
 import { CheckCircle, Circle, Key, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
@@ -24,7 +24,6 @@ import { PageTitle } from '@/molecules/Page/Page';
 import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { toast } from '@/molecules/Toaster/toast';
 import { PassportMethodCard, PassportMethodSection } from '@/organisms/PassportMethodCard/PassportMethodCard';
-import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 import type { SignInState } from '@/stores/signIn/signIn.types';
 
@@ -118,10 +117,6 @@ export const SignInContent = () => {
   const { startPassportAuth, isPending: isPassportPending } = usePassportAuth({
     onAttemptSettled: handlePassportAttemptSettled,
   });
-  useEffect(() => {
-    // Clear onboarding storage when sign-in flow begins to prevent backup reminders from showing for existing users
-    useOnboardingStore.getState().reset();
-  }, []);
   const handleQRClick = async () => {
     if (!url) return;
     try {

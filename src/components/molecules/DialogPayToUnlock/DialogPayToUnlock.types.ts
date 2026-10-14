@@ -1,4 +1,5 @@
 import type { TPayToUnlockStage } from '@/hooks/usePayToUnlock/usePayToUnlock.types';
+import type { TLockPrice, TPaykitConnectionState } from '@/services/locks/locks.types';
 
 export interface DialogPayToUnlockProps {
   open: boolean;
@@ -7,15 +8,15 @@ export interface DialogPayToUnlockProps {
   lockTitle: string;
   /** Post author — the avatar beside the title links to their profile. */
   authorId: string;
-  /** Price in sats (wire string), from the lock file's payment criterion. */
-  priceSats: string;
+  /** Price and denomination, from the lock file's payment criterion. */
+  price: TLockPrice;
   stage: TPayToUnlockStage;
   /** Waiting stage: polling parked on its deadline, so the reader is offered a manual re-check. */
   isStalled: boolean;
-  /** Creator pubky to hand to Bitkit — a QR on desktop, the Pay with Bitkit button on mobile; null hides it. */
+  /** Creator pubky to hand to Bitkit — a QR on desktop, a contact deeplink on mobile; null hides it. */
   handshakePubky: string | null;
-  /** Waiting stage: a wallet-link state the reader cannot fix here — replaces the QR with a notice. */
-  connectionIssue: 'recovery_required' | 'blocked' | null;
+  /** Last observed creator-side link state; connected does not acknowledge payment-request delivery. */
+  connectionState: TPaykitConnectionState | null;
   /** Waiting stage: the wallet-link state is not known yet — the copy says it is checking instead of awaiting payment. */
   isConnectionPending: boolean;
   /** Waiting stage: the server waits for the reader to finish setting up their wallet — replaces the QR with a notice. */

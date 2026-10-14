@@ -72,6 +72,7 @@ Guests can open routes that do not require a session:
 
 - **Route guard:** `EXPLORE_ROUTES` is included in `UNAUTHENTICATED_ROUTES`; dynamic public paths are allowed via `isDynamicPublicRoute()` in `RouteGuardProvider`.
 - **UI chrome:** use `usePublicRoute()` for layout (e.g. explore header, mobile footer on `/home`). `isPublicRoute` on the hook result is a **legacy alias** for `isDynamicPublicRoute` only—it is `false` on `/home` even though the page is browsable.
+- **Account identity in the UI:** Header, mobile footer and composers use `selectDisplayUserPubky` from `@/stores/auth/auth.selectors`. Keep the saved identity visible while restoring; show guest chrome after `reauth-required` or `temporary-error`, preserving the stored identity and draft. This selector only controls display; action guards still require a ready session.
 - **Auth-gated actions:** use `useRequireAuth().requireAuth()` for post, reply, follow, filters, etc. Streams for guests should use `REACH.ALL` (see `useStreamIdFromFilters`, `useHotStreamId`).
 
 ## Component Template
@@ -268,7 +269,7 @@ toast({ title: 'Reposted', action: { label: 'Undo', altText: 'Undo', onClick: ()
 - `ToastOptions` requires at least one of `title` / `description` (both `string`), and exposes only app concepts: `variant`, `dismissButton`, `action`, `persistent`. Radix lifecycle, duration, open-state, and styling props are not part of the public API.
 - **`variant: 'error'`** for errors — not `className: 'destructive …'`, and **no** `showErrorToast` / `showSuccessToast` wrapper helpers.
 - **`dismissButton: true`** when the toast should show an OK action (brand-styled on default toasts, muted otherwise, via `toastActionVariants`).
-- **`action`** is a plain descriptor `{ label, altText, onClick }` — never a component. The Toaster owns action rendering and styling, and dismisses the toast before invoking `onClick`.
+- **`action`** is a plain descriptor `{ label, altText, onClick }` — never a component. The Toaster owns action rendering and styling, and dismisses the toast before invoking `onClick`. The producing dialog or menu has usually unmounted by then, so an `onClick` that mutates waits with `useRequireAuth`'s `outlivesOwner` (ADR-0024), as the repost Undo does.
 - **`toast()` returns a `ToastHandle`** with `dismiss()` for dismissing that toast programmatically.
 - **`persistent: true`** keeps a toast open until its action, the dismiss button, or a swipe removes it (no auto-dismiss), and it does not count toward the toast limit, so later transient toasts stack next to it instead of evicting it. Reserve it for state the user must resolve, such as the "Update available" toast in `useServiceWorkerUpdate`; normal feedback stays transient.
 

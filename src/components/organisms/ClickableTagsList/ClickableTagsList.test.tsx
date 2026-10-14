@@ -98,7 +98,11 @@ vi.mock('@/hooks/useTagSuggestions/useTagSuggestions', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: mockIsAuthenticated,
-    requireAuth: <T,>(action: () => T) => (mockIsAuthenticated ? action() : (undefined as T)),
+    requireAuth: <T,>(action: () => T) => {
+      if (mockIsAuthenticated) return action();
+      useAuthStore.getState().setShowSignInDialog(true);
+      return undefined;
+    },
   }),
 }));
 
