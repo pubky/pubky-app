@@ -30,11 +30,14 @@ on:
       - '!src/**/*.vrt.test.tsx'
       - '!src/**/__screenshots__/**'
 
-# A newer dev push supersedes an in-flight run: only the latest commit's result
-# matters. Master runs and manual dispatches are never cancelled.
+# A newer dev push supersedes an in-flight dev push: only the latest commit's
+# result matters there. Manual dispatches get a group per run so every requested
+# run executes and none is ever cancelled or replaced. Master pushes are never
+# cancelled either; GitHub keeps the running run plus the newest pending one,
+# so a burst of master pushes attributes coverage to the latest pending commit.
 concurrency:
-  group: e2e-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref == 'refs/heads/dev' }}
+  group: e2e-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
 
 jobs:
   rebuild_images:
