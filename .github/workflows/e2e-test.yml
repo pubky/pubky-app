@@ -176,17 +176,13 @@ jobs:
         with:
           path: pubky-app
 
-      - name: Resolve the pubky-app image tags
+      - name: Resolve the pubky-app image tag
         id: app_tag
         working-directory: pubky-app
         run: |
           # Content hash of every input the Docker build can consume; single
           # implementation shared with build-docker-image.yml (tag_mode: content).
           echo "content_tag=$(bash .github/scripts/docker-content-tag.sh '${{ env.platforms }}')" >> $GITHUB_OUTPUT
-          # The wait step polls both tags so a commit-tag-only producer racing
-          # the e2e build (a preview build of this same commit) can also
-          # unblock the tests.
-          echo "commit_tag=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       # The Cypress binary lives outside node_modules; cache it alongside so a hit
       # can skip `npm ci` (which is what downloads it) entirely.
@@ -301,13 +297,11 @@ jobs:
           echo "Service is ready."
 
       - name: Wait for the pubky-app image
-        id: wait_image
         working-directory: pubky-app
         env:
           REGISTRY: ${{ env.registry }}
           GH_TOKEN: ${{ github.token }}
           CONTENT_TAG: ${{ steps.app_tag.outputs.content_tag }}
-          COMMIT_TAG: ${{ steps.app_tag.outputs.commit_tag }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
         run: bash .github/scripts/wait-for-app-image.sh
@@ -317,7 +311,7 @@ jobs:
         run: docker compose up -d --no-build pubky-app
         env:
           REGISTRY: ${{ env.registry }}
-          PUBKY_APP_TAG: ${{ steps.wait_image.outputs.tag }}
+          PUBKY_APP_TAG: ${{ steps.app_tag.outputs.content_tag }}
 
       - name: Run e2e tests - Desktop (${{ matrix.browser }}) - Spec (${{matrix.spec}})
         id: test-desktop

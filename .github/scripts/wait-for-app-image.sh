@@ -1,30 +1,24 @@
 #!/usr/bin/env bash
 # Wait for the pubky-app image built for this workflow run to appear in the
-# registry, then resolve the tag the compose pull should use.
+# registry under its content tag.
 #
 # The spec jobs start while rebuild_pubky_app may still be building, so their
-# setup overlaps the build; this step is where the two join. Polls the content
-# tag first, then the commit tag, and accepts a tag only when its manifest
-# carries linux/amd64: a manual arm64-only build can hold the same commit tag,
-# and the specs run on amd64. The check covers both a manifest index
-# (.manifests[].platform.architecture) and a single manifest (.architecture).
-# Fails fast when the build job has already failed; gives it a short grace
-# once it concluded successfully, since the push lands moments after the job
-# completion becomes visible. Times out after 20 minutes, matching the build
-# job's own amd64 timeout.
+# setup overlaps the build; this step is where the two join. The content tag
+# always names a linux/amd64 image: the platform is part of the hash and only
+# e2e requests content mode. Fails fast when the build job has already
+# failed; gives it a short grace once it concluded successfully, since the
+# push lands moments after the job completion becomes visible. Times out
+# after 20 minutes, matching the build job's own amd64 timeout.
 #
 # Required environment:
 #   GH_TOKEN     token for `gh api` (build-job state)
 #   REGISTRY     image registry host
 #   CONTENT_TAG  content tag rebuild_pubky_app publishes (tag_mode: content)
-#   COMMIT_TAG   commit tag the same build publishes (the full SHA)
 #   REPO         owner/name for the actions API (e.g. pubky/pubky-app)
 #   RUN_ID       workflow run id for the actions API
-#
-# Writes tag=<resolved tag> to $GITHUB_OUTPUT.
 set -euo pipefail
 
-for var in GH_TOKEN REGISTRY CONTENT_TAG COMMIT_TAG REPO RUN_ID; do
+for var in GH_TOKEN REGISTRY CONTENT_TAG REPO RUN_ID; do
   if [ -z "${!var:-}" ]; then
     echo "Required environment variable $var is not set."
     exit 1
@@ -37,7 +31,7 @@ MAX_WAIT=1200 # Maximum wait time in seconds (20 minutes)
 INTERVAL=15
 ELAPSED=0
 DONE_GRACE=0
-IMAGE_BASE="$REGISTRY/pubky-app"
+IMAGE="$REGISTRY/pubky-app:$CONTENT_TAG"
 
 # failed = the build job ended badly, done = it concluded (the image should
 # exist), running = still in progress, anything else (including a transient
@@ -48,13 +42,6 @@ build_jobs_state() {
     2>/dev/null || echo "unknown"
 }
 
-# A tag existing is not enough: only accept one whose manifest carries
-# linux/amd64 (see the header).
-has_amd64() {
-  docker manifest inspect "$1" 2>/dev/null |
-    jq -e '[.. | objects | .architecture? // empty] | any(. == "amd64")' >/dev/null 2>&1
-}
-
 # Resolve and log the manifest digest so the exact tested image stays
 # identifiable even if a later build overwrites the tag.
 log_digest() {
@@ -62,16 +49,8 @@ log_digest() {
 }
 
 while true; do
-  if has_amd64 "$IMAGE_BASE:$CONTENT_TAG"; then
-    echo "tag=$CONTENT_TAG" >>"$GITHUB_OUTPUT"
-    echo "Image available: $IMAGE_BASE:$CONTENT_TAG@$(log_digest "$IMAGE_BASE:$CONTENT_TAG") (content tag, linux/amd64)"
-    break
-  fi
-  if has_amd64 "$IMAGE_BASE:$COMMIT_TAG"; then
-    # A commit-tag-only producer (a preview build of this commit racing the
-    # e2e build) can unblock the tests minutes earlier.
-    echo "tag=$COMMIT_TAG" >>"$GITHUB_OUTPUT"
-    echo "Image available: $IMAGE_BASE:$COMMIT_TAG@$(log_digest "$IMAGE_BASE:$COMMIT_TAG") (commit tag, linux/amd64)"
+  if docker manifest inspect "$IMAGE" >/dev/null 2>&1; then
+    echo "Image available: $IMAGE@$(log_digest "$IMAGE")"
     break
   fi
 
@@ -83,7 +62,7 @@ while true; do
   if [ "$STATE" = "done" ]; then
     DONE_GRACE=$((DONE_GRACE + 1))
     if [ "$DONE_GRACE" -ge 4 ]; then
-      echo "The pubky-app build finished successfully but neither $IMAGE_BASE:$CONTENT_TAG nor :$COMMIT_TAG exists in the registry."
+      echo "The pubky-app build finished successfully but $IMAGE does not exist in the registry."
       exit 1
     fi
   fi
