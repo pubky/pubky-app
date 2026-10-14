@@ -1,5 +1,9 @@
 # Stage 1: Dependencies
-FROM node:lts-alpine AS deps
+# The base image is digest-pinned (OCI index, so every platform resolves): the
+# e2e content tag reuses images across commits, and the Dockerfile is part of
+# the hashed build contract, so a base refresh only ships via a deliberate
+# bump of this digest. Keep all three stages on the same digest.
+FROM node:lts-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS deps
 RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
@@ -11,7 +15,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # Stage 2: Builder
-FROM node:lts-alpine AS builder
+FROM node:lts-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS builder
 
 WORKDIR /app
 
@@ -20,10 +24,14 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Declare build arguments for Next.js public env vars (baked at build time)
-# All have defaults for simplicity - can be overridden if needed
-ARG NEXT_PUBLIC_DB_VERSION
-ARG NEXT_PUBLIC_DB_NAME
-ARG NEXT_PUBLIC_DEBUG_MODE
+# The semantic values below are the single source of truth — CI deliberately
+# does NOT pass them as build-args, so this hashed file is their contract and
+# the e2e content tag cannot go stale on them. Override via --build-arg only
+# for one-off local images.
+ARG NEXT_PUBLIC_DB_VERSION=3
+ARG NEXT_PUBLIC_DB_NAME=franky
+ARG NEXT_PUBLIC_DEBUG_MODE=false
+# Per-commit version label; deliberately outside the e2e content-tag contract.
 ARG NEXT_PUBLIC_APP_VERSION
 # NOTE: NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL, DEFAULT_HTTP_RELAY,
 # PKARR_RELAYS and TESTNET are intentionally NOT build args. They are runtime-configurable and must
@@ -79,7 +87,7 @@ RUN if [ -n "$SENTRY_AUTH_TOKEN" ] && [ -n "$SENTRY_ORG" ] && [ -n "$SENTRY_PROJ
 RUN find .next/static -name '*.map' -type f -delete
 
 # Stage 3: Runner
-FROM node:lts-alpine AS runner
+FROM node:lts-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS runner
 
 WORKDIR /app
 

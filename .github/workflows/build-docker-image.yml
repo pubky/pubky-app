@@ -92,10 +92,10 @@ jobs:
         id: set_tag
         run: |
           if [ "${{ inputs.tag_mode }}" = "content" ]; then
-            # Hash of every input the Docker build can consume (see the Dockerfile
-            # COPY). Identical inputs therefore reuse an already-built image.
-            # Keep in sync with the resolve step in e2e-test.yml.
-            TAG=$(git ls-tree -r HEAD -- Dockerfile .dockerignore package.json package-lock.json next.config.ts tsconfig.json postcss.config.mjs components.json public src | sha256sum | cut -c1-40)
+            # Hash of every input the Docker build can consume; identical inputs
+            # therefore reuse an already-built image. Single implementation in
+            # .github/scripts/docker-content-tag.sh, shared with e2e-test.yml.
+            TAG=$(bash .github/scripts/docker-content-tag.sh '${{ inputs.platforms }}')
           else
             TAG=${{ steps.sha_tag.outputs.hash }}
           fi
@@ -205,10 +205,12 @@ jobs:
           # supplied at container runtime as PUBKY_RUNTIME_* (see Dockerfile and
           # src/libs/runtime-config). Sentry build args are optional and used only by the
           # Dockerfile source-map upload step; public builds without them skip upload.
+          # NEXT_PUBLIC_DB_VERSION / DB_NAME / DEBUG_MODE are intentionally not
+          # passed: their single source of truth is the Dockerfile ARG defaults,
+          # which the content-tag contract hashes. APP_VERSION is a per-commit
+          # label and the Sentry values only drive source-map upload; neither
+          # changes the tested application.
           build-args: |
-            NEXT_PUBLIC_DB_VERSION=3
-            NEXT_PUBLIC_DB_NAME=franky
-            NEXT_PUBLIC_DEBUG_MODE=false
             NEXT_PUBLIC_APP_VERSION=${{ github.sha }}
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             SENTRY_ORG=synonym-52

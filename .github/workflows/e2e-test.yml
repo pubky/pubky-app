@@ -26,6 +26,7 @@ on:
       - '.nvmrc'
       - '.github/workflows/e2e-test.yml'
       - '.github/workflows/build-docker-image.yml'
+      - '.github/scripts/**'
       - '!src/**/*.vrt.test.tsx'
       - '!src/**/__screenshots__/**'
 
@@ -175,12 +176,12 @@ jobs:
         id: app_tag
         working-directory: pubky-app
         run: |
-          # Content hash of every input the Docker build can consume. Keep in sync
-          # with the tag step in build-docker-image.yml (tag_mode: content).
-          CONTENT_TAG=$(git ls-tree -r HEAD -- Dockerfile .dockerignore package.json package-lock.json next.config.ts tsconfig.json postcss.config.mjs components.json public src | sha256sum | cut -c1-40)
-          # The build pushes the commit tag first and only aliases it to the
-          # content tag at the end of the job, so poll for both.
-          echo "content_tag=$CONTENT_TAG" >> $GITHUB_OUTPUT
+          # Content hash of every input the Docker build can consume; single
+          # implementation shared with build-docker-image.yml (tag_mode: content).
+          echo "content_tag=$(bash .github/scripts/docker-content-tag.sh '${{ env.platforms }}')" >> $GITHUB_OUTPUT
+          # The wait step polls both tags so a commit-tag-only producer racing
+          # the e2e build (a preview build of this same commit) can also
+          # unblock the tests.
           echo "commit_tag=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
