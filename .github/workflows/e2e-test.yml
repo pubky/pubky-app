@@ -214,6 +214,17 @@ jobs:
           cp .env-sample .env
           printf '\nPUBKY_RUNTIME_SHOP_URL=%s\n' 'https://shop.staging.pubky.app/marketplace' >> .env
 
+      # pubky-stack@staging pins a homeserver that defaults to signup_mode = "open".
+      # Open mode rejects signup token generation, so the invite continue button stays disabled.
+      - name: Require signup tokens for e2e invite codes
+        working-directory: pubky-stack/docker
+        run: |
+          sed -i 's/signup_mode = "open"/signup_mode = "token_required"/' homeserver.config.toml
+          grep -q 'signup_mode = "token_required"' homeserver.config.toml || {
+            echo 'Error: homeserver.config.toml is missing signup_mode = "token_required"'
+            exit 1
+          }
+
       - name: Run pubky-stack
         working-directory: pubky-stack/docker
         run: docker compose up -d --no-build homeserver nexusd nexus-neo4j nexus-redis pubky-app postgres
