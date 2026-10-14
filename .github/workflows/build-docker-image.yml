@@ -152,15 +152,16 @@ jobs:
       # Dockerfile) across runners. BuildKit cache exporters do not include cache
       # mounts, so the dance action copies the mount out of the builder after the
       # build and injects the previous copy before it. Rolling key: every build
-      # saves a fresh entry and restores the most recent one.
+      # saves a fresh entry and restores the most recent one. Keyed per platform
+      # so a manual arm64 build never mixes mounts with CI's amd64 builds.
       - name: Cache the Next.js build cache
         id: next_cache
         uses: actions/cache@v6
         with:
           path: next-build-cache
-          key: ${{ runner.os }}-next-build-cache-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ${{ runner.os }}-next-build-cache-${{ inputs.platforms }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            ${{ runner.os }}-next-build-cache-
+            ${{ runner.os }}-next-build-cache-${{ inputs.platforms }}-
 
       - name: Restore Docker cache mounts
         uses: reproducible-containers/buildkit-cache-dance@v3
