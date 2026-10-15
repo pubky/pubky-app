@@ -93,10 +93,10 @@ export function usePayToUnlock({
    */
   const finish = async (gen: number, bundleId: string) => {
     if (!lockFile) return;
-    // The waiting screen owns this bundle from here on, even when the purchase was already
+    // The finishing screen owns this bundle from here on, even when the purchase was already
     // complete on open (no polling ran), so "Check again" has something to retry.
     waitingBundleId.current = bundleId;
-    setStage('waiting');
+    setStage('finishing');
 
     let content: TUnlockedContent;
     try {
@@ -414,7 +414,7 @@ export function usePayToUnlock({
     const paymentStillRunning = stage === 'waiting';
     // Take the retry screen away before the lookup goes out, so Check again cannot be pressed
     // again while it is still running.
-    setStage('waiting');
+    setStage(paymentStillRunning ? 'waiting' : 'finishing');
     // Unknown state included: only a settled link (or an operator block) ends the watch.
     const watchConnection = paymentStillRunning && connectionState !== 'connected' && connectionState !== 'blocked';
     startPolling(generation.current, bundleId, watchConnection, { lookupNow: true });

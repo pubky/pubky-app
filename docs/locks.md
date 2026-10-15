@@ -324,14 +324,18 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    in both the dialog and toast. This covers rejected, canceled and timed-out requests without
    interpreting `terminal_reason`. **Try again** starts a new payment with a fresh bundle id;
    `failed` keeps its existing wallet-related guidance and retry handling.
-7. Turning a completed payment into content (credential → read) parks the same way when it fails,
-   and **Check again** runs it again. Retrying is free — the entitlement is durable and the
+7. A completed payment enters `finishing` while the credential and content are fetched. The modal
+   shows **PAYMENT RECEIVED**, "Opening your content…" and a spinner, without asking the reader
+   to confirm in Bitkit. A failed content read enters `unopened`, and **Check again** runs it again.
+   Its status lookup stays in `finishing`; if that lookup parks, a paid-content prompt offers
+   **Check again** without payment instructions. Retrying is free — the entitlement is durable and the
    credential is minted fresh each time, which is also why an expired credential needs no detection.
    Once the content is ready, the modal shows the paid confirmation; **View Content** closes it and
    reveals the guarded post.
 
-Closing during submission or waiting opens a confirmation dialog. Closing only stops this tab's
-polling; the server-side payment continues and reopening resumes it from the saved bundle id.
+Closing during submission, waiting or finishing opens a confirmation dialog. Once payment is complete,
+the confirmation acknowledges receipt. Closing stops this tab's polling and ignores late content reads;
+the server-side purchase remains and reopening resumes it from the saved bundle id.
 
 `startPayment` holds a Web Lock named `locks-pay:<reader>:<lockId>` (#2468) for its whole run, so
 a quick reopen, a second tab, or React running the effect twice submits one bundle id. Browsers

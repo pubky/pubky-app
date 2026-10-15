@@ -465,6 +465,7 @@ export class AuthController {
     ++this.restoreVersion;
     this.sessionRestore = null;
     this.cancelModerationFollow();
+    useSignInStore.getState().reset();
     // Set the status first so clearing the handle cannot trigger automatic startup restoration.
     snapshot.setRestoreStatus('reauth-required');
     snapshot.setSession(null);

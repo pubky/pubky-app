@@ -102,7 +102,7 @@ describe('collection feed with local membership', () => {
 
   const closePicker = () => fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
   const openPicker = async () => {
-    const trigger = await screen.findByRole('button', { name: 'Save post' });
+    const trigger = await screen.findByRole('button', { name: /^Save post(?: \(\d+\))?$/ });
     fireEvent.pointerDown(trigger);
     fireEvent.click(trigger);
     await screen.findByText('Reading list');
@@ -235,6 +235,7 @@ describe('collection feed with local membership', () => {
     );
     await waitFor(() => expect(screen.getByTestId('item-count')).toHaveTextContent('1'));
     expect(screen.getByTestId(postId)).toBe(originalCard);
+    expect(await screen.findByRole('button', { name: 'Save post (1)' })).toBeInTheDocument();
     await openPicker();
     closePicker();
     expect(screen.getByTestId(postId)).toBeInTheDocument();
@@ -356,7 +357,14 @@ describe('collection feed with local membership', () => {
       .mockResolvedValue([]);
     showFeed(collectionId);
     expect(await screen.findByTestId(cold)).toBeInTheDocument();
-    expect(byIds).toHaveBeenCalledTimes(2);
+    expect(byIds).toHaveBeenCalledWith(expect.objectContaining({ post_ids: [cold] }));
+    // The mounted picker's count can also hydrate this cold post. Count stream pages
+    // to verify the session-discarded page was retried independently of that read.
+    expect(
+      vi
+        .mocked(NexusPostStreamService.fetch)
+        .mock.calls.filter(([request]) => request.invokeEndpoint === StreamSource.COLLECTION),
+    ).toHaveLength(2);
     expect(screen.queryByText(/^Error:/)).not.toBeInTheDocument();
   });
 

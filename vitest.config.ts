@@ -88,8 +88,8 @@ export default defineConfig({
                 comparatorOptions: {
                   allowedMismatchedPixelRatio: 0.001,
                 },
-                // Image-heavy suites (Home, Collections) on WebKit/Linux need
-                // extra headroom for layout to settle after fonts/images decode.
+                // Image-heavy suites (Home, Collections) on WebKit need extra
+                // headroom for layout to settle after fonts/images decode.
                 timeout: 15_000,
               },
             },
@@ -107,11 +107,18 @@ export default defineConfig({
                 browser: 'firefox',
                 viewport: VRT_VIEWPORT_DESKTOP,
               },
-              {
-                // `webkit` covers Safari's rendering engine.
-                browser: 'webkit',
-                viewport: VRT_VIEWPORT_DESKTOP,
-              },
+              // `webkit` covers Safari's rendering engine. Nobody browses with
+              // WebKit on Linux, so it runs on macOS only and there are no
+              // `*-webkit-linux.png` baselines; skipping it here keeps a local
+              // Linux run from creating them.
+              ...(process.platform === 'linux'
+                ? []
+                : [
+                    {
+                      browser: 'webkit' as const,
+                      viewport: VRT_VIEWPORT_DESKTOP,
+                    },
+                  ]),
             ],
           },
         },

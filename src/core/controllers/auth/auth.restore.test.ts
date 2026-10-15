@@ -15,9 +15,12 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { notificationInitialState } from '@/stores/notification/notification.types';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/stores/settings/settings.types';
+import { useSignInStore } from '@/stores/signIn/signIn.store';
+import { signInInitialState } from '@/stores/signIn/signIn.types';
 import { mockGrantReference, mockPubky, mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { AuthController } from './auth';
@@ -37,6 +40,13 @@ const savedSettings = {
   privacy: { ...defaultPrivacyPreferences, neverShowPosts: true, moderationBot: pubkyB },
   updatedAt: 10,
   version: 1,
+};
+const completedSignIn = {
+  authUrlResolved: true,
+  profileChecked: true,
+  bootstrapFetched: true,
+  dataPersisted: true,
+  homeserverSynced: true,
 };
 
 function deferred<T>() {
@@ -87,6 +97,8 @@ describe('AuthController restored session lifecycle', () => {
     useAuthStore.setState(authInitialState);
     useSettingsStore.getState().reset();
     useNotificationStore.getState().reset();
+    useSignInStore.getState().reset();
+    useOnboardingStore.getState().reset();
     useAuthStore.setState({
       hasHydrated: true,
       isLoggingOut: false,
@@ -111,34 +123,57 @@ describe('AuthController restored session lifecycle', () => {
 
   afterEach(() => {
     AuthController.cancelModerationFollow();
+    useSignInStore.getState().reset();
+    useOnboardingStore.getState().reset();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
-  it('requires normal sign-in after an active failure without erasing saved account data', () => {
-    useAuthStore.setState({ session: sessionA, restoreStatus: 'ready', hasProfile: true });
-    persistState();
-    const before = useAuthStore.getState();
-    expect(AuthController.requireSessionReauthentication({ session: sessionA, generation: before.generation })).toBe(
-      true,
-    );
-    expect(useAuthStore.getState()).toMatchObject({
-      session: null,
-      restoreStatus: 'reauth-required',
-      currentUserPubky: pubkyA,
-      sessionReference: before.sessionReference,
-      hasProfile: true,
-      generation: before.generation,
-    });
-    expect(databaseHelpers.clearDatabase).not.toHaveBeenCalled();
-    expect(HomeserverService.logout).not.toHaveBeenCalled();
-    expect(AuthController.requireSessionReauthentication({ generation: before.generation })).toBe(false);
-  });
+  it.each(['local', 'broadcast'])(
+    'requires normal sign-in after a %s active failure without erasing saved account data',
+    (source) => {
+      useAuthStore.setState({ session: sessionA, restoreStatus: 'ready', hasProfile: true });
+      useSignInStore.setState(completedSignIn);
+      useOnboardingStore
+        .getState()
+        .setSecrets({ secretKey: 'retained-secret-key', mnemonic: 'retained recovery phrase' });
+      const onboardingBefore = useOnboardingStore.getState();
+      const settingsBefore = useSettingsStore.getState();
+      persistState();
+      const before = useAuthStore.getState();
+      expect(
+        AuthController.requireSessionReauthentication({
+          session: source === 'local' ? sessionA : undefined,
+          generation: before.generation,
+        }),
+      ).toBe(true);
+      expect(useAuthStore.getState()).toMatchObject({
+        session: null,
+        restoreStatus: 'reauth-required',
+        currentUserPubky: pubkyA,
+        sessionReference: before.sessionReference,
+        hasProfile: true,
+        generation: before.generation,
+      });
+      expect(useSignInStore.getState()).toMatchObject(signInInitialState);
+      expect(useOnboardingStore.getState()).toBe(onboardingBefore);
+      expect(useSettingsStore.getState()).toBe(settingsBefore);
+      expect(databaseHelpers.clearDatabase).not.toHaveBeenCalled();
+      expect(HomeserverService.logout).not.toHaveBeenCalled();
+      // A duplicate notification must not reset progress for the next sign-in attempt.
+      useSignInStore.setState({ authUrlResolved: true });
+      const nextSignIn = useSignInStore.getState();
+      expect(AuthController.requireSessionReauthentication({ generation: before.generation })).toBe(false);
+      expect(useSignInStore.getState()).toBe(nextSignIn);
+    },
+  );
 
   it.each(['different-session', 'different-generation', 'newer-durable-login', 'logging-out'])(
     'ignores a stale active failure: %s',
     (condition) => {
       useAuthStore.setState({ session: sessionA, restoreStatus: 'ready', generation: 'current' });
+      useSignInStore.setState(completedSignIn);
+      const signInBefore = useSignInStore.getState();
       persistState();
       if (condition === 'newer-durable-login') {
         const stored = JSON.parse(localStorage.getItem(AUTH_PERSIST_KEY)!);
@@ -153,6 +188,7 @@ describe('AuthController restored session lifecycle', () => {
         }),
       ).toBe(false);
       expect(useAuthStore.getState()).toMatchObject({ session: sessionA, restoreStatus: 'ready' });
+      expect(useSignInStore.getState()).toBe(signInBefore);
     },
   );
 

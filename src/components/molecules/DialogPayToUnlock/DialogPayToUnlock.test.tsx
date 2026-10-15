@@ -412,6 +412,56 @@ describe('DialogPayToUnlock', () => {
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
+  it('finishing: shows the received payment and loading state without payment instructions or actions', () => {
+    renderDialog('finishing');
+
+    expect(screen.getByText('PAYMENT RECEIVED')).toHaveClass('text-brand');
+    expect(screen.getByText('Opening your content…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.queryByText(/Check Bitkit|COST TO UNLOCK|Thank you for supporting/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Try again|View Content|Copy creator pubky/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open in Bitkit' })).not.toBeInTheDocument();
+    expect(document.querySelector('[data-cy="pay-to-unlock-cancel"]')).toHaveTextContent('Close');
+  });
+
+  it('finishing: a parked content check offers Check again without sending the reader to Bitkit', () => {
+    const onRecheck = vi.fn();
+    renderDialog('finishing', { isStalled: true, onRecheck });
+
+    expect(screen.getByText('Your payment is complete. Check again to open the content.')).toBeInTheDocument();
+    expect(screen.queryByText(/Check Bitkit|Opening your content/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+    expect(onRecheck).toHaveBeenCalledTimes(1);
+  });
+
+  it('finishing: closing still asks first and acknowledges the completed payment', () => {
+    const onOpenChange = vi.fn();
+    renderDialog('finishing', { onOpenChange });
+
+    fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement);
+    expect(screen.getByRole('heading', { name: 'Payment received' })).toBeInTheDocument();
+    expect(screen.queryByText(/The payment is still running|has not finished yet/)).not.toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Close anyway' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('updates an open close prompt when the payment completes before the content is ready', () => {
+    const overrides = { onViewContent: vi.fn(), onOpenChange: vi.fn() };
+    const { rerender } = renderDialog('waiting', overrides);
+    fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement);
+
+    rerender(dialogElement('finishing', overrides));
+    expect(screen.getByRole('heading', { name: 'Payment received' })).toBeInTheDocument();
+    expect(screen.queryByText(/has not finished yet/)).not.toBeInTheDocument();
+
+    rerender(dialogElement('paid', overrides));
+    fireEvent.click(screen.getByRole('button', { name: 'Close anyway' }));
+    expect(overrides.onViewContent).toHaveBeenCalledTimes(1);
+    expect(overrides.onOpenChange).not.toHaveBeenCalled();
+  });
+
   // A completed purchase must not ask the reader to make another payment.
   it('unopened: says the payment landed and offers the retry, with no cost to pay', () => {
     const onRecheck = vi.fn();

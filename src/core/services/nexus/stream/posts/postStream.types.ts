@@ -21,6 +21,8 @@ export enum StreamSource {
   AUTHOR = 'author',
   AUTHOR_REPLIES = 'author_replies',
   COLLECTION = 'collection',
+  /** Collection posts that curate one post (`author_id` + `post_id` of that post). */
+  POST_COLLECTIONS = 'post_collections',
   CONTENT_SEARCH = 'content_search',
 }
 
@@ -80,6 +82,12 @@ export type TStreamCollectionParams = TStreamBase &
     post_id: string;
   };
 
+/** Collections that contain the post `author_id:post_id`; `kind` is rejected by Nexus. */
+export type TStreamPostCollectionsParams = TStreamBase &
+  TStreamAuthorId & {
+    post_id: string;
+  };
+
 export type TStreamAllParams = TStreamBase;
 
 // Posts by IDs endpoint
@@ -95,6 +103,7 @@ export type TStreamQueryParams =
   | TStreamAuthorParams
   | TStreamAuthorRepliesParams
   | TStreamCollectionParams
+  | TStreamPostCollectionsParams
   | TStreamAllParams
   | TStreamPostsByIdsParams;
 

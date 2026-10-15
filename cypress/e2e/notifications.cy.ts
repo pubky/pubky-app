@@ -88,10 +88,9 @@ describe('notifications', () => {
 
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     verifyNotificationCounter(1);
-    cy.intercept({
-      method: 'PUT',
-      url: '/pub/pubky.app/last_read',
-    }).as('putLastRead');
+    // Match the homeserver transport URL the same way as the other writes.
+    // An exact `/pub/pubky.app/last_read` url does not.
+    cy.intercept('PUT', '**/pub/pubky.app/last_read*').as('putLastRead');
     goToProfilePageFromHeader();
     cy.wait('@putLastRead').should('have.property', 'response').its('statusCode').should('eq', 201);
     verifyNotificationCounter(0);
