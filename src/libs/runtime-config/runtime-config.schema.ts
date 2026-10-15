@@ -6,7 +6,7 @@ import { z } from 'zod';
  * third parties against their own infrastructure).
  *
  * The config has multiple tiers:
- *  - REQUIRED network values and Shop destination (nexusUrl, cdnUrl, ..., shopUrl): a deployed container must set all of
+ *  - REQUIRED network values (nexusUrl, cdnUrl, ...): a deployed container must set all of
  *    them; partial config fails loudly instead of silently resolving to staging defaults.
  *  - OPTIONAL observability values (sentry*): absent means the feature is disabled (DSN) or
  *    a documented default applies (sample rates).
@@ -28,7 +28,6 @@ import { z } from 'zod';
 // ---------------------------------------------------------------------------
 
 const urlValue = z.url();
-const shopUrlValue = z.url({ protocol: /^https?$/ });
 const homeserverValue = z.string().min(1);
 /**
  * Declared deploy identity. Drives environment-gated behavior (e.g. the staging
@@ -213,7 +212,7 @@ export const PASSPORT_RUNTIME_DEFAULTS = {
 // ---------------------------------------------------------------------------
 
 /**
- * REQUIRED tier: environment-specific network values and Shop destination. A deployed container
+ * REQUIRED tier: environment-specific network values. A deployed container
  * must set all of them (see `runtimeEnvInputSchema`).
  */
 export const networkConfigValueSchema = z.object({
@@ -227,7 +226,6 @@ export const networkConfigValueSchema = z.object({
   pkarrRelays: pkarrRelaysValue,
   testnet: testnetValue,
   deployEnv: deployEnvValue,
-  shopUrl: shopUrlValue,
 });
 
 export type NetworkRuntimeConfig = z.infer<typeof networkConfigValueSchema>;
@@ -323,7 +321,6 @@ export const runtimeEnvInputSchema = z
     testnet: testnetFromString,
     deployEnv: deployEnvValue,
     authClientId: optionalTrimmedString,
-    shopUrl: shopUrlValue,
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
     pulseClientKey: optionalTrimmedString,
@@ -391,7 +388,6 @@ export const NETWORK_RUNTIME_DEFAULTS: NetworkRuntimeConfig = {
   pkarrRelays: ['https://pkarr.pubky.app', 'https://pkarr.pubky.org'],
   testnet: false,
   deployEnv: 'staging',
-  shopUrl: 'https://shop.staging.pubky.app/marketplace',
 };
 
 /**
@@ -410,7 +406,6 @@ export const runtimeEnvInputSchemaWithDefaults = z
     testnet: z.string().default(String(NETWORK_RUNTIME_DEFAULTS.testnet)).pipe(testnetFromString),
     deployEnv: deployEnvValue.default(NETWORK_RUNTIME_DEFAULTS.deployEnv),
     authClientId: optionalTrimmedString,
-    shopUrl: shopUrlValue.default(NETWORK_RUNTIME_DEFAULTS.shopUrl),
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
     pulseClientKey: optionalTrimmedString,
@@ -488,7 +483,6 @@ const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
   pkarrRelays: 'PUBKY_RUNTIME_PKARR_RELAYS',
   testnet: 'PUBKY_RUNTIME_TESTNET',
   deployEnv: 'PUBKY_RUNTIME_ENV',
-  shopUrl: 'PUBKY_RUNTIME_SHOP_URL',
 };
 
 export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {

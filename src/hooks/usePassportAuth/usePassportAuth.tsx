@@ -22,6 +22,7 @@ import {
   parsePassportReturnMessage,
 } from '@/libs/passport/passport';
 import type { PassportOutcome } from '@/libs/passport/passport.types';
+import { getShopReauthorizationIdentity } from '@/libs/shop-embed/sign-in';
 import { toast } from '@/molecules/Toaster/toast';
 import type {
   PassportAttemptResult,
@@ -184,6 +185,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
 
     try {
       const { authorizationUrl, awaitApproval, cancelAuthFlow } = await AuthController.getPassportAuthUrl({
+        ...getShopReauthorizationIdentity(),
         xCallback: buildPassportCallbacks(appOrigin, attempt.id),
       });
 

@@ -9,7 +9,7 @@ import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-q
 import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, LOCKS_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
-import { getDeployEnv, getHomeserver, HOMESERVER_CAPABILITIES } from '@/config/network';
+import { getDeployEnv, getHomeserver, getHomeserverCapabilities } from '@/config/network';
 import type {
   SessionReadiness,
   TLoginWithEncryptedFileParams,
@@ -550,14 +550,14 @@ export class AuthController {
    * @param params.keypair - The cryptographic keypair for the user
    * @returns Configured homeserver service instance
    */
-  private static async signIn({ keypair }: TKeypairParams): Promise<boolean> {
+  private static async signIn({ keypair }: TKeypairParams, expectedPubky?: string): Promise<boolean> {
     this.cancelActiveAuthFlow();
     const epoch = this.epoch;
     void this.retrySessionRetirement();
     const result = await AuthApplication.signIn({ keypair });
     if (epoch !== this.epoch) throw createCanceledError();
     if (!result) return false;
-    await this.completeAuthenticatedSession(result, { epoch });
+    await this.completeAuthenticatedSession(result, { epoch, expectedPubky });
     return true;
   }
 
@@ -918,9 +918,9 @@ export class AuthController {
    * @param params.mnemonic - The mnemonic phrase for key derivation
    * @returns Promise resolving to true if authentication succeeded, false otherwise
    */
-  static async loginWithMnemonic({ mnemonic }: TLoginWithMnemonicParams): Promise<boolean> {
+  static async loginWithMnemonic({ mnemonic, expectedPubky }: TLoginWithMnemonicParams): Promise<boolean> {
     const keypair = Identity.keypairFromMnemonic(mnemonic);
-    return await this.signIn({ keypair });
+    return await this.signIn({ keypair }, expectedPubky);
   }
 
   /**
@@ -930,9 +930,13 @@ export class AuthController {
    * @param params.password - The password to decrypt the recovery file
    * @returns Promise resolving to true if authentication succeeded, false otherwise
    */
-  static async loginWithEncryptedFile({ encryptedFile, password }: TLoginWithEncryptedFileParams): Promise<boolean> {
+  static async loginWithEncryptedFile({
+    encryptedFile,
+    password,
+    expectedPubky,
+  }: TLoginWithEncryptedFileParams): Promise<boolean> {
     const keypair = await Identity.decryptRecoveryFile({ encryptedFile, passphrase: password });
-    return await this.signIn({ keypair });
+    return await this.signIn({ keypair }, expectedPubky);
   }
 
   /**
@@ -1074,11 +1078,12 @@ export class AuthController {
    * Generates an authentication URL for external authentication flows.
    * @returns Promise resolving to the generated authentication URL
    */
-  static async getAuthUrl(fresh = false): Promise<TGenerateAuthUrlResult> {
+  static async getAuthUrl(fresh = false, expectedPubky?: string): Promise<TGenerateAuthUrlResult> {
     const state = useAuthStore.getState();
     return this.wrapAuthFlow({
       purpose: 'signin',
-      capabilities: HOMESERVER_CAPABILITIES,
+      expectedPubky,
+      capabilities: getHomeserverCapabilities(),
       generation: state.generation,
       fresh,
     });
@@ -1087,7 +1092,7 @@ export class AuthController {
   static async getSignupAuthUrl(inviteCode: string, fresh = false): Promise<TGenerateAuthUrlResult> {
     return this.wrapAuthFlow({
       purpose: 'signup',
-      capabilities: HOMESERVER_CAPABILITIES,
+      capabilities: getHomeserverCapabilities(),
       generation: useAuthStore.getState().generation,
       inviteCode,
       fresh,
@@ -1126,12 +1131,15 @@ export class AuthController {
    * @param params - x-callback-url metadata (source label and same-origin callbacks)
    * @returns Promise resolving to the generated authentication URL with wrapped approval
    */
-  static async getPassportAuthUrl(params: TGeneratePassportAuthUrlParams): Promise<TGenerateAuthUrlResult> {
+  static async getPassportAuthUrl(
+    params: TGeneratePassportAuthUrlParams & { expectedPubky?: string },
+  ): Promise<TGenerateAuthUrlResult> {
     const state = useAuthStore.getState();
     return this.wrapAuthFlow(
       {
         purpose: 'signin',
-        capabilities: params.caps || HOMESERVER_CAPABILITIES,
+        expectedPubky: params.expectedPubky,
+        capabilities: params.caps || getHomeserverCapabilities(),
         generation: state.generation,
         xCallback: params.xCallback,
         fresh: true,
@@ -1153,9 +1161,18 @@ export class AuthController {
     return this.requestCapabilities(LOCKS_CAPABILITIES, fresh);
   }
 
-  /**
-   * Logs out the current user from both the homeserver and local application state.
-   */
+  /** Retry durable Shop cleanup after an absent iframe or interrupted signed-out cleanup. */
+  static async retryShopCleanup(): Promise<void> {
+    try {
+      const record = AuthApplication.readPersistedAuth();
+      if (!record?.currentUserPubky && record?.shopCleanupEpoch)
+        await AuthApplication.cleanupEmbeddedShop(record.generation, record.shopCleanupEpoch);
+    } catch {
+      // The durable host epoch remains pending when storage is temporarily unavailable.
+    }
+  }
+
+  /** Logs out the current user from both the homeserver and local application state. */
   static async logout(): Promise<void> {
     const owner = Symbol('logout');
     this.logoutOwner = owner;
@@ -1245,6 +1262,9 @@ export class AuthController {
       const remote = Promise.allSettled([
         ...pendingRetirements(record).map((ref) => this.retireSession(ref, snapshot.session)),
         this.retireLegacyCookieSessions(),
+        persisted && record.shopCleanupEpoch
+          ? AuthApplication.cleanupEmbeddedShop(localGeneration, record.shopCleanupEpoch)
+          : Promise.resolve(),
         snapshot.currentUserPubky ? AuthApplication.logoutLegacyCookie(snapshot.currentUserPubky) : Promise.resolve(),
       ]);
       if (persisted)

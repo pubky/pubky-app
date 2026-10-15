@@ -5,6 +5,7 @@ import { AuthController } from '@/controllers/auth/auth';
 import { isAuthApprovalMismatchError, isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { isAppError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
+import { getShopReauthorizationIdentity } from '@/libs/shop-embed/sign-in';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
@@ -15,6 +16,7 @@ const reportedApprovalFailures = new WeakSet<object>();
 export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   const autoFetch = options.autoFetch ?? true;
   const type = options.type ?? 'signin';
+  const requiredCapabilities = options.type === 'upgrade' ? options.requiredCapabilities : undefined;
   const inviteCode = options.type === 'signup' ? options.inviteCode : '';
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(autoFetch);
@@ -28,12 +30,15 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
     setIsExpired(false);
     setUrl('');
     try {
+      const { expectedPubky } = getShopReauthorizationIdentity();
       const flow =
         type === 'signup'
           ? await AuthController.getSignupAuthUrl(inviteCode, fresh)
           : type === 'upgrade'
-            ? await AuthController.getUpgradeAuthUrl(fresh)
-            : await AuthController.getAuthUrl(fresh);
+            ? requiredCapabilities
+              ? await AuthController.requestCapabilities(requiredCapabilities, fresh)
+              : await AuthController.getUpgradeAuthUrl(fresh)
+            : await AuthController.getAuthUrl(fresh, expectedPubky);
       if (!flow) return;
       void flow.awaitApproval.catch((error: unknown) => {
         if (current()) {
@@ -78,7 +83,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
     return () => {
       subscriber.current++;
     };
-  }, [autoFetch, type, inviteCode]);
+  }, [autoFetch, type, inviteCode, requiredCapabilities]);
 
   return {
     url,

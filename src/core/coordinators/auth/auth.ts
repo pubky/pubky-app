@@ -32,6 +32,7 @@ export class AuthCoordinator {
       this.retiredLegacy = true;
       void AuthController.retireLegacyCookieSessions();
       void AuthController.retrySessionRetirement();
+      void AuthController.retryShopCleanup();
     }
     if (!state.session && state.sessionReference && state.restoreStatus === 'idle' && !state.isLoggingOut)
       this.restore();
@@ -68,6 +69,7 @@ export class AuthCoordinator {
     }
     void AuthController.retireLegacyCookieSessions();
     void AuthController.retrySessionRetirement();
+    void AuthController.retryShopCleanup();
   };
 
   private sessionRemoved = (event: Event) => {

@@ -16,7 +16,9 @@ import {
 } from '@/atoms/Dialog/Dialog';
 import { AuthController } from '@/controllers/auth/auth';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { isAuthApprovalMismatchError } from '@/libs/error/auth-flow-canceled';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
+import { getShopReauthorizationIdentity } from '@/libs/shop-embed/sign-in';
 import { toast } from '@/molecules/Toaster/toast';
 import { WordSlot } from '@/molecules/WordSlot/WordSlot';
 
@@ -45,6 +47,7 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
       const allFilled = userWords.every((word) => word !== '');
       const mnemonic = userWords.join(' ');
       await AuthController.loginWithMnemonic({
+        ...getShopReauthorizationIdentity(),
         mnemonic,
       });
       if (!hasErrors && allFilled) {
@@ -55,7 +58,9 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
         variant: 'error',
         description: isWrongEnvironmentHomeserverError(error)
           ? 'This key is linked to a different homeserver. Use a staging account on this site.'
-          : 'Could not sign in. Try again.',
+          : isAuthApprovalMismatchError(error)
+            ? 'Use the key you are already signed in with to enable Shop.'
+            : 'Could not sign in. Try again.',
       });
       setIsRestoring(false);
     }

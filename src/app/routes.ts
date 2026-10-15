@@ -30,6 +30,7 @@ export enum APP_ROUTES {
   PROFILE = '/profile',
   WHO_TO_FOLLOW = '/who-to-follow',
   SHARE = '/share',
+  SHOP = '/shop',
 }
 
 /**
@@ -171,6 +172,7 @@ export function isDynamicPublicRoute(pathname: string): boolean {
   const segments = pathname.split('/').filter(Boolean);
 
   switch (true) {
+    case segments[0] === 'shop':
     case segments[0] === 'invite' && segments.length === 2:
     case segments[0] === 'post' && segments.length === 3:
     case segments[0] === 'profile' && segments.length === 2 && isPubkyIdentifier(segments[1]):

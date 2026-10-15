@@ -248,3 +248,33 @@ describe('deferred grant retirement', () => {
     expect(LocalAuthService.read()?.sessionReference).toEqual(record.sessionReference);
   });
 });
+
+describe('durable Shop cleanup epoch', () => {
+  it('rotates on logout and same-account return, but preserves same-account grant refresh', async () => {
+    await LocalAuthService.commit(record, '');
+    expect(LocalAuthService.read()?.shopCleanupEpoch).toBe('new');
+    await LocalAuthService.commit({ ...record, generation: 'refresh' }, 'new');
+    expect(LocalAuthService.read()?.shopCleanupEpoch).toBe('new');
+    await LocalAuthService.commit(
+      { ...record, generation: 'logout', currentUserPubky: null, sessionReference: null },
+      'refresh',
+    );
+    expect(LocalAuthService.read()?.shopCleanupEpoch).toBe('logout');
+    await LocalAuthService.commit(
+      { ...record, generation: 'same-account', sessionReference: mockGrantReference('return-grant') },
+      'logout',
+    );
+    expect(LocalAuthService.read()?.shopCleanupEpoch).toBe('same-account');
+  });
+});
+
+it('does not turn an existing same-account session into a cleanup boundary when Shop is added', async () => {
+  localStorage.setItem(AUTH_PERSIST_KEY, JSON.stringify({ state: record, version: 3 }));
+  await LocalAuthService.commit({ ...record, generation: 'upgrade' }, record.generation);
+  expect(LocalAuthService.read()?.shopCleanupEpoch ?? '').toBe('');
+  await LocalAuthService.commit(
+    { ...record, generation: 'logout', currentUserPubky: null, sessionReference: null },
+    'upgrade',
+  );
+  expect(LocalAuthService.read()?.shopCleanupEpoch).toBe('logout');
+});

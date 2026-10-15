@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => {
     retireLegacyCookieSessions: vi.fn().mockResolvedValue(undefined),
     // Auth store state defaults
     hasHydrated: true,
+    generation: 'initial',
     session: {} as unknown,
     sessionReference: null as unknown,
     restoreStatus: 'ready',
@@ -43,6 +44,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mocks.mockRouterPush, refresh: mocks.mockRouterRefresh }),
   usePathname: () => mocks.pathname,
+  useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 
 vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
@@ -100,6 +102,7 @@ vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/stores/auth/auth.store', () => {
   const getState = () => ({
     hasHydrated: mocks.hasHydrated,
+    generation: mocks.generation,
     session: mocks.session,
     sessionReference: mocks.sessionReference,
     restoreStatus: mocks.restoreStatus,
@@ -123,6 +126,7 @@ vi.mock('@/stores/migration/migration.store', () => ({
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     subscribeSessionFailures: vi.fn(() => vi.fn()),
+    retryShopCleanup: vi.fn().mockResolvedValue(undefined),
     retrySessionRetirement: vi.fn().mockResolvedValue(undefined),
     restorePersistedSession: mocks.restorePersistedSession,
     retireLegacyCookieSessions: mocks.retireLegacyCookieSessions,
@@ -160,6 +164,25 @@ describe('RouteGuardProvider — migration resync', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it.each([
+    ['/shop/marketplace/listing/abc?checkout=1#payment', '/shop/marketplace/listing/abc?checkout=1#payment'],
+    ['https://attacker.test/shop', '/feed'],
+    ['/settings', '/feed'],
+  ])('returns a completed App login only to a safe Shop wrapper: %s', (returnTo, destination) => {
+    window.history.replaceState(null, '', `/sign-in?${new URLSearchParams({ returnTo })}`);
+    mocks.pathname = '/sign-in';
+    try {
+      render(
+        <RouteGuardProvider>
+          <div>Sign in</div>
+        </RouteGuardProvider>,
+      );
+      expect(mocks.mockRouterPush).toHaveBeenCalledWith(destination);
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
   });
 
   it.each(['reauth-required', 'temporary-error'])(

@@ -3,7 +3,7 @@ import { type GrantAuthFlow, Pubky, type Session } from '@synonymdev/pubky';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { getAuthClientId } from '@/config/auth';
-import { HOMESERVER_CAPABILITIES } from '@/config/network';
+import { getHomeserverCapabilities } from '@/config/network';
 import type { SessionReference } from '@/libs/auth/session.types';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -36,7 +36,7 @@ const reference = (id: string): SessionReference => ({
 });
 const session = (id: string) =>
   asOpaque<Session>({
-    info: { publicKey: { z32: () => PUBKY }, capabilities: HOMESERVER_CAPABILITIES.split(',') },
+    info: { publicKey: { z32: () => PUBKY }, capabilities: getHomeserverCapabilities().split(',') },
     grant: { sessionInfo: vi.fn().mockResolvedValue(reference(id)) },
     signout: vi.fn(),
     export: vi.fn(),

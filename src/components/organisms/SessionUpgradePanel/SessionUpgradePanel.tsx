@@ -28,9 +28,10 @@ export function SessionUpgradeDescription() {
  * Asks Pubky Ring for a session with today's capability list and swaps it in on approval (#2373).
  * Starts the flow on mount, so mount it only while it is on screen.
  */
-export function SessionUpgradePanel() {
+export function SessionUpgradePanel({ requiredCapabilities }: { requiredCapabilities?: readonly string[] } = {}) {
   const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth({
     type: 'upgrade',
+    requiredCapabilities,
   });
   const isLaunching = isLoading || isOpeningRing;
 

@@ -27,11 +27,13 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mocks.pathname,
+  useSearchParams: () => new URLSearchParams(window.location.search),
   useRouter: () => ({ push: mocks.push }),
 }));
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     subscribeSessionFailures: vi.fn(() => vi.fn()),
+    retryShopCleanup: vi.fn().mockResolvedValue(undefined),
     retrySessionRetirement: vi.fn().mockResolvedValue(undefined),
     retireLegacyCookieSessions: vi.fn().mockResolvedValue(undefined),
     restorePersistedSession: mocks.restore,

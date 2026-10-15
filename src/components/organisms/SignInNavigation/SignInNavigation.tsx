@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { HOME_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
+import { shopSignInReturn } from '@/libs/shop-embed/bridge';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 import { DialogRestoreEncryptedFile } from '../DialogRestoreEncryptedFile/DialogRestoreEncryptedFile';
 import { DialogRestoreRecoveryPhrase } from '../DialogRestoreRecoveryPhrase/DialogRestoreRecoveryPhrase';
@@ -14,7 +15,8 @@ export const SignInNavigation = () => {
   if (authUrlResolved) return null;
 
   const handleRestore = () => {
-    router.push(HOME_ROUTES.HOME);
+    const shopReturn = shopSignInReturn(window.location.search);
+    router.push(shopReturn ?? HOME_ROUTES.HOME);
   };
 
   return (

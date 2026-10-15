@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   AUTH_ROUTES,
   isCoreExploreRoute,
@@ -21,6 +21,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { isShopReauthorization, shopSignInReturn } from '@/libs/shop-embed/bridge';
 import { toast } from '@/molecules/Toaster/toast';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -51,9 +52,11 @@ interface RouteGuardProviderProps {
 export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const search = useSearchParams().toString();
   const { status, isLoading } = useAuthStatus();
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const session = useAuthStore((state) => state.session);
+  const generation = useAuthStore((state) => state.generation);
   const sessionReference = useAuthStore((state) => state.sessionReference);
   const restoreStatus = useAuthStore((state) => state.restoreStatus);
   const needsSignIn = restoreStatus === 'temporary-error' || restoreStatus === 'reauth-required';
@@ -159,6 +162,15 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     // An already-mounted private page may survive a healthy same-account exchange, never reauthorization.
     if (isLoading) return (restoreStatus === 'restoring' && preserveMountedPage) || interactiveAuth;
 
+    // A user may explicitly replace an existing grant from Shop (including a missing SDK record).
+    // Keep that grant intact while approval is pending; a newly adopted generation ends this exception.
+    if (
+      pathname === AUTH_ROUTES.SIGN_IN &&
+      status === AuthStatus.AUTHENTICATED &&
+      isShopReauthorization(search, generation)
+    )
+      return true;
+
     // Get the allowed routes for the current authentication status
     const routeAccess = ROUTE_ACCESS_MAP[status];
 
@@ -184,6 +196,16 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     // No redirect needed if user has access to current route
     if (isRouteAccessible) return;
 
+    // An explicit Shop login returns to its validated wrapper URL after App authentication.
+    // This branch is restricted to sign-in; ordinary route protection keeps its existing target.
+    if (pathname === AUTH_ROUTES.SIGN_IN && status === AuthStatus.AUTHENTICATED) {
+      const shopReturn = shopSignInReturn(search);
+      if (shopReturn) {
+        router.push(shopReturn);
+        return;
+      }
+    }
+
     // Redirect user to the appropriate default route for their authentication status
     const routeAccess = ROUTE_ACCESS_MAP[status];
     const redirectTo = routeAccess.redirectTo;
@@ -200,7 +222,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (redirectTo && pathname !== redirectTo) {
       router.push(redirectTo);
     }
-  }, [status, pathname, router, isLoading, isRouteAccessible]);
+  }, [status, pathname, search, router, isLoading, isRouteAccessible]);
 
   // Restore the Locks session alongside the homeserver one (no-op while Locks is unconfigured).
   useRestoreLocksAuth();

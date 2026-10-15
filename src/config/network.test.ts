@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isStagingHomeserverDeploy } from '@/config/network';
+import { getHomeserverCapabilities, HOMESERVER_CAPABILITIES, isStagingHomeserverDeploy } from '@/config/network';
 import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 
 /** Run with PUBKY_RUNTIME_* overrides, restoring env and memoized config after. */
@@ -48,5 +48,21 @@ describe('isStagingHomeserverDeploy', () => {
         expect(isStagingHomeserverDeploy()).toBe(true);
       },
     );
+  });
+});
+
+describe('embedded Shop initial permissions', () => {
+  it.each(['production', 'staging'])('includes Shop storage permissions by default on %s', (deployEnv) => {
+    withRuntimeEnv({ PUBKY_RUNTIME_ENV: deployEnv }, () => {
+      const scopes = getHomeserverCapabilities().split(',');
+      expect(scopes).toEqual([
+        ...HOMESERVER_CAPABILITIES.split(','),
+        '/pub/paykit/:rw',
+        '/priv/pubky.app/:rw',
+        '/pub/chat/v0/:rw',
+        '/priv/chat/v0/:rw',
+      ]);
+      expect(scopes.some((scope) => scope.split(':')[1].includes('e'))).toBe(false);
+    });
   });
 });

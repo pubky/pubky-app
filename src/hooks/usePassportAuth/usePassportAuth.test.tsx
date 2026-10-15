@@ -13,6 +13,7 @@ import {
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import * as shopSignIn from '@/libs/shop-embed/sign-in';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
@@ -667,5 +668,14 @@ describe('usePassportAuth', () => {
       variant: 'error',
       description: 'Sign in with Google is not available right now.',
     });
+  });
+  it('binds Passport to the Shop reauthorization account without deferring popup creation', async () => {
+    vi.spyOn(shopSignIn, 'getShopReauthorizationIdentity').mockReturnValue({ expectedPubky: 'alice' });
+    mockGetPassportAuthUrl.mockResolvedValue(createFlow());
+    const hook = renderHook(() => usePassportAuth());
+    act(() => hook.result.current.startPassportAuth());
+    expect(openSpy).toHaveBeenCalledOnce();
+    await flushMicrotasks();
+    expect(mockGetPassportAuthUrl).toHaveBeenCalledWith(expect.objectContaining({ expectedPubky: 'alice' }));
   });
 });

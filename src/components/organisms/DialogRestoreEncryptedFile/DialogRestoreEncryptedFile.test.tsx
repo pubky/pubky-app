@@ -5,6 +5,7 @@ import { AuthController } from '@/controllers/auth/auth';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, DatabaseErrorCode, NetworkErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import * as shopSignIn from '@/libs/shop-embed/sign-in';
 import { toast } from '@/molecules/Toaster/toast';
 import { DialogRestoreEncryptedFile } from './DialogRestoreEncryptedFile';
 
@@ -770,5 +771,24 @@ describe('DialogRestoreEncryptedFile', () => {
     await waitFor(() => {
       expect(mockLoginWithEncryptedFile).not.toHaveBeenCalled();
     });
+  });
+  it('keeps the Shop reauthorization identity when using an encrypted recovery file', async () => {
+    const identity = vi.spyOn(shopSignIn, 'getShopReauthorizationIdentity').mockReturnValue({ expectedPubky: 'alice' });
+    try {
+      mockLoginWithEncryptedFile.mockResolvedValue(true);
+      render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
+      const file = mockFile('test.pkarr');
+      fireEvent.change(screen.getByLabelText('Select file'), { target: { files: [file] } });
+      fireEvent.click(screen.getByText('Restore'));
+      await waitFor(() =>
+        expect(mockLoginWithEncryptedFile).toHaveBeenCalledWith({
+          encryptedFile: file,
+          password: '',
+          expectedPubky: 'alice',
+        }),
+      );
+    } finally {
+      identity.mockRestore();
+    }
   });
 });

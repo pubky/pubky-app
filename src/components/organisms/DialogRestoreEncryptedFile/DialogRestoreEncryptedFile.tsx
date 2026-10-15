@@ -19,10 +19,12 @@ import { Label } from '@/atoms/Label/Label';
 import { Typography } from '@/atoms/Typography/Typography';
 import { AuthController } from '@/controllers/auth/auth';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { isAuthApprovalMismatchError } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
 import { DatabaseErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
+import { getShopReauthorizationIdentity } from '@/libs/shop-embed/sign-in';
 import { formatFileName } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
 
@@ -58,6 +60,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
     setError('');
     try {
       await AuthController.loginWithEncryptedFile({
+        ...getShopReauthorizationIdentity(),
         encryptedFile: selectedFile,
         password,
       });
@@ -68,6 +71,8 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
           variant: 'error',
           description: 'This key is linked to a different homeserver. Use a staging account on this site.',
         });
+      } else if (isAuthApprovalMismatchError(error)) {
+        setError('Use the key you are already signed in with to enable Shop.');
       } else if (
         error instanceof AppError &&
         error.service === ErrorService.Local &&

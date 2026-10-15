@@ -12,6 +12,7 @@ vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     restorePersistedSession: vi.fn().mockResolvedValue(false),
     retireLegacyCookieSessions: vi.fn().mockResolvedValue(undefined),
+    retryShopCleanup: vi.fn().mockResolvedValue(undefined),
     retrySessionRetirement: vi.fn().mockResolvedValue(undefined),
     syncSessionFromStorage: vi.fn().mockResolvedValue(undefined),
     syncRemovedSession: vi.fn().mockResolvedValue(undefined),

@@ -5,13 +5,19 @@ import { AuthController } from '@/controllers/auth/auth';
 import { AuthErrorCode, NetworkErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import * as shopSignIn from '@/libs/shop-embed/sign-in';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
 import type { TGenerateAuthUrlResult } from '@/services/homeserver/homeserver.types';
 import { useAuthUrl } from './useAuthUrl';
 
 vi.mock('@/controllers/auth/auth', () => ({
-  AuthController: { getAuthUrl: vi.fn(), getSignupAuthUrl: vi.fn(), getUpgradeAuthUrl: vi.fn() },
+  AuthController: {
+    getAuthUrl: vi.fn(),
+    getSignupAuthUrl: vi.fn(),
+    getUpgradeAuthUrl: vi.fn(),
+    requestCapabilities: vi.fn(),
+  },
 }));
 vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/libs/utils/utils', async (original) => ({
@@ -36,9 +42,9 @@ describe('useAuthUrl', () => {
     vi.mocked(AuthController.getAuthUrl).mockResolvedValue(flow().value);
     const { result } = renderHook(() => useAuthUrl());
     await waitFor(() => expect(result.current.url).toBe('pubkyauth://grant'));
-    expect(AuthController.getAuthUrl).toHaveBeenLastCalledWith(false);
+    expect(AuthController.getAuthUrl).toHaveBeenLastCalledWith(false, undefined);
     await act(() => result.current.fetchUrl());
-    expect(AuthController.getAuthUrl).toHaveBeenLastCalledWith(true);
+    expect(AuthController.getAuthUrl).toHaveBeenLastCalledWith(true, undefined);
     expect(result.current.isLoading).toBe(false);
   });
   it('does not fetch when disabled', () => {
@@ -59,6 +65,16 @@ describe('useAuthUrl', () => {
     await act(() => result.current.fetchUrl());
     expect(AuthController.getUpgradeAuthUrl).toHaveBeenLastCalledWith(true);
     expect(AuthController.getAuthUrl).not.toHaveBeenCalled();
+  });
+  it('uses explicit feature scopes for the shared upgrade panel', async () => {
+    const requiredCapabilities = ['/pub/paykit/:rw', '/priv/pubky.app/:rw'];
+    vi.mocked(AuthController.requestCapabilities).mockResolvedValue(flow().value);
+    const { result } = renderHook(() => useAuthUrl({ type: 'upgrade', requiredCapabilities }));
+    await waitFor(() => expect(result.current.url).toBe('pubkyauth://grant'));
+    expect(AuthController.requestCapabilities).toHaveBeenCalledWith(requiredCapabilities, false);
+    await act(() => result.current.fetchUrl());
+    expect(AuthController.requestCapabilities).toHaveBeenLastCalledWith(requiredCapabilities, true);
+    expect(AuthController.getUpgradeAuthUrl).not.toHaveBeenCalled();
   });
   it('finishes loading if another tab already supplied the required permissions', async () => {
     vi.mocked(AuthController.getUpgradeAuthUrl).mockResolvedValue(null);
@@ -202,4 +218,18 @@ it('does not toast a relay polling failure after leaving the QR screen', async (
     ),
   );
   expect(toast).not.toHaveBeenCalled();
+});
+
+it('binds Ring and Bitkit approval to the existing identity during Shop reauthorization', async () => {
+  const identity = vi.spyOn(shopSignIn, 'getShopReauthorizationIdentity').mockReturnValue({ expectedPubky: 'alice' });
+  try {
+    vi.mocked(AuthController.getAuthUrl).mockResolvedValue(flow().value);
+    const { result } = renderHook(() => useAuthUrl());
+    await waitFor(() => expect(result.current.url).not.toBe(''));
+    expect(AuthController.getAuthUrl).toHaveBeenLastCalledWith(false, 'alice');
+    await act(() => result.current.fetchUrl());
+    expect(AuthController.getAuthUrl).toHaveBeenLastCalledWith(true, 'alice');
+  } finally {
+    identity.mockRestore();
+  }
 });
