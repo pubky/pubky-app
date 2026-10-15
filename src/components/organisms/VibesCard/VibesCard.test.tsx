@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AlertVibes } from '../AlertVibes/AlertVibes';
 import { VibesCard } from './VibesCard';
 
@@ -8,7 +8,13 @@ vi.mock('@/stores/auth/auth.store', () => ({
     selector({ currentUserPubky: 'vibes-test-user' }),
 }));
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  // Inside the Lugano window, where the Home alert is due.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-22T12:00:00Z'));
+});
+afterEach(() => vi.useRealTimers());
 
 describe('VibesCard', () => {
   it('dismisses the mounted Home alert when opening the sidebar link in a background tab', () => {

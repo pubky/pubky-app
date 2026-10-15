@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AlertVibes } from './AlertVibes';
 
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -8,7 +8,13 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 const storageKey = 'pubky-feature-discovery:vibes-test-user:vibes-alert-v2';
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  // Inside the Lugano window, where the Home alert is due.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-22T12:00:00Z'));
+});
+afterEach(() => vi.useRealTimers());
 
 describe('AlertVibes', () => {
   it.each(['vibes.pubky.app', 'Try now'])('records Try and dismisses from the %s link', (name) => {

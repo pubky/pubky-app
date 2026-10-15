@@ -177,6 +177,13 @@ vi.mock('@/stores/home/home.store', async () => {
   };
 });
 
+// VRT freezes the clock at VRT_FROZEN_NOW_MS (Jan 2026), outside the real Vibes alert window,
+// so the window is widened here to keep the alert scenarios meaningful.
+vi.mock('@/config/featureDiscovery', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/featureDiscovery')>()),
+  VIBES_ALERT_WINDOW: { startsAt: 0, endsAt: Number.MAX_SAFE_INTEGER },
+}));
+
 vi.mock('@/stores/auth/auth.store', async () => {
   const f = await fixtures;
   const { mockRingSession } = await import('@/test-utils/pubky');

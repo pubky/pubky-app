@@ -17,7 +17,7 @@ describe('useVibesAlert', () => {
     vibesReminder.resetMemory();
     auth.currentUserPubky = 'alice';
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-10-13T12:00:00Z'));
+    vi.setSystemTime(new Date('2026-10-22T12:00:00Z'));
   });
 
   afterEach(() => {

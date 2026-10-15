@@ -10,7 +10,7 @@ describe('vibesReminder', () => {
     localStorage.clear();
     vibesReminder.resetMemory();
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-10-13T12:00:00Z'));
+    vi.setSystemTime(new Date('2026-10-22T08:00:00Z'));
   });
 
   afterEach(() => {
