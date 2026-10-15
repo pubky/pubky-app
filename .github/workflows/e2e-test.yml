@@ -200,7 +200,7 @@ jobs:
           key: e2e-node-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubky-app/.nvmrc', 'pubky-app/package.json', 'pubky-app/package-lock.json', 'pubky-app/.npmrc', 'pubky-app/patches/*.patch') }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: 'pubky-app/.nvmrc'
           cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
