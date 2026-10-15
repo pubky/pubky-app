@@ -35,7 +35,7 @@ const stallNotBeforeFor = (admissionDeadlineAt: string | null): number => {
 /**
  * State machine behind the Pay to Unlock modal.
  *
- * Opening resolves the saved bundle id and submits automatically: a fresh purchase after the wallet
+ * Opening resolves the saved bundle ids and submits automatically: a fresh purchase after the wallet
  * check, and a saved id only when the server holds no task for it. A task that already exists is
  * never submitted again — its status is read, and its Paykit link has a lookup of its own.
  *
@@ -67,9 +67,6 @@ export function usePayToUnlock({
   // sessionless reads with null), which would fail OPEN — so everything waits for the session.
   const session = useAuthStore((state) => state.session);
 
-  // A saved id whose payment ended failed/expired — the one id the submit re-read must NOT reuse.
-  // Deliberately not "null means dead": a concurrent tab's fresh id must survive the re-read.
-  const deadBundleId = useRef<string | null>(null);
   // The server creates the invoice after the submission, so a reader without a wallet ends `failed`
   // rather than failing the submission. Without this check, Try again would mint id after id.
   const checkWalletOnRetry = useRef(false);
@@ -123,8 +120,7 @@ export function usePayToUnlock({
       return false;
     }
     if (status === 'failed' || status === 'expired') {
-      // Unretryable: Try again mints a fresh id (the saved one is overwritten before it).
-      deadBundleId.current = bundleId;
+      // Unretryable: Try again mints a fresh id, unless another device has since saved one that can still pay.
       checkWalletOnRetry.current = status === 'failed';
       setConnectionState(null);
       setIsConnectionPending(false);
@@ -307,12 +303,7 @@ export function usePayToUnlock({
         if (fromInstall) setStage('checking');
       }
 
-      const { bundleId, status } = await LocksController.startPayment({
-        lockFile,
-        lockUrl,
-        readerPubky,
-        rejectBundleId: deadBundleId.current,
-      });
+      const { bundleId, status } = await LocksController.startPayment({ lockFile, lockUrl, readerPubky });
       const lockId = LockContentParser.lockIdFromUrl(lockUrl);
       if (lockId) onPurchased(lockId);
       if (generation.current !== gen) return;
@@ -333,7 +324,7 @@ export function usePayToUnlock({
     }
   };
 
-  // Modal opened: resolve the saved bundle id, then route. Closed: bump the generation so every
+  // Modal opened: resolve the saved bundle ids, then route. Closed: bump the generation so every
   // pending continuation goes quiet, and tear the poll loop down.
   useEffect(() => {
     if (!open || !lockFile || !readerPubky || !session) return;
@@ -344,7 +335,6 @@ export function usePayToUnlock({
     setIsConnectionPending(false);
     setWalletSetupNeeded(false);
     completedContent.current = null;
-    deadBundleId.current = null;
     checkWalletOnRetry.current = false;
     // A wallet check from the last opening may still be out; its `finally` no longer owns the flag.
     submittingGeneration.current = null;
@@ -352,29 +342,30 @@ export function usePayToUnlock({
 
     void (async () => {
       try {
-        const stored = await LocksController.fetchPurchaseBundleId({ lockUrl, readerPubky });
+        const resolved = await LocksController.fetchResolvedPurchase({ lockFile, lockUrl, readerPubky });
         if (generation.current !== gen) return;
 
-        if (stored) {
-          const task = await LocksController.fetchPaymentStatus({ lockFile, bundleId: stored });
-          if (generation.current !== gen) return;
-          const status = task?.status;
-          // An ended payment is settled by this lookup alone: submitting it again would only echo
-          // the same status back.
-          if (status === 'completed' || status === 'failed' || status === 'expired') {
-            applyStatus(gen, stored, status);
+        // An ended payment is settled by the lookup alone: submitting it again would only echo the
+        // same status back.
+        if (resolved?.kind === 'terminal') {
+          applyStatus(gen, resolved.bundleId, resolved.status);
+          return;
+        }
+        if (resolved?.task) {
+          const { bundleId, task } = resolved;
+          if (task.status === 'completed') {
+            applyStatus(gen, bundleId, task.status);
             return;
           }
           // A task that is already running needs no second submission: the connection state has its
           // own lookup now, and re-submitting would only re-confirm what the lookup just said.
-          if (task) {
-            setWalletSetupNeeded(task.walletSetupNeeded);
-            if (applyStatus(gen, stored, task.status)) {
-              startPolling(gen, stored, true, { admissionDeadlineAt: task.admissionDeadlineAt });
-            }
-            return;
+          setWalletSetupNeeded(task.walletSetupNeeded);
+          if (applyStatus(gen, bundleId, task.status)) {
+            startPolling(gen, bundleId, true, { admissionDeadlineAt: task.admissionDeadlineAt });
           }
-        } else {
+          return;
+        }
+        if (!resolved) {
           const hasWallet = await LocksController.hasPaykitReceiver(readerPubky);
           if (generation.current !== gen) return;
           if (!hasWallet) {

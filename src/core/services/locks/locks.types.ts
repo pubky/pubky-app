@@ -267,7 +267,10 @@ export const replicatedPostSchema = z.object({
 
 export type ReplicatedPost = z.infer<typeof replicatedPostSchema>;
 
-/** Reader's `/priv/social/purchases/<lockId>.json`: the bundle id a payment was started with. */
+/**
+ * Body of a reader's purchase file: the bundle id a payment was started with. Parsed only from the
+ * legacy `/priv/social/purchases/<lockId>.json`; a `<lockId>/<bundleId>.json` file is read by its name.
+ */
 export const purchaseFileSchema = z.object({ bundle_id: z.string().min(1) });
 
 export interface TUnlockedListItem {

@@ -5,26 +5,24 @@ import type {
   TLockPrice,
   TUnlockedContent,
   TVerificationStatus,
+  TVerificationTask,
 } from '@/services/locks/locks.types';
 
-/** Params to read or write the bundle id the reader saved for one lock (`/priv/social/purchases/<lockId>.json`). */
-export type TPurchaseBundleIdParams = {
+/** A payment lock as seen by one reader: the lock file, its public URL, and the reader. */
+export type TPaymentLockParams = {
   lockUrl: string;
   readerPubky: string;
-};
-
-/** A payment lock as seen by one reader: the lock file, its public URL, and the reader. */
-export type TPaymentLockParams = TPurchaseBundleIdParams & {
   lockFile: LockFile;
 };
 
 /**
- * Params to start a payment. `rejectBundleId` is a saved id known to have ended `failed`/`expired`;
- * it is never reused, a fresh one is minted instead.
+ * The saved bundle id a payment continues with, by the Lock Server's view of every id the reader
+ * saved for the lock. `reusable` carries the task (null when the server never received the
+ * submission). `terminal` means every saved id ended `failed`/`expired`, so only a fresh one can pay.
  */
-export type TStartPaymentParams = TPaymentLockParams & {
-  rejectBundleId: string | null;
-};
+export type TResolvedPurchase =
+  | { kind: 'reusable'; bundleId: string; task: TVerificationTask | null }
+  | { kind: 'terminal'; bundleId: string; status: 'failed' | 'expired' };
 
 /** The bundle id and lifecycle status returned by proof submission. */
 export type TStartPaymentResult = {
