@@ -2402,7 +2402,10 @@ describe('usePost — article inline images', () => {
 
       const serialized = result.current.serializeArticleForLock(`![B](${b})\n\n![A](${a})`);
 
-      expect(serialized).toEqual({ body: '![B](attachment:1)\n\n![A](attachment:2)', inlineFiles: [fileB, fileA] });
+      expect(serialized).toMatchObject({
+        body: '![B](attachment:1)\n\n![A](attachment:2)',
+        inlineFiles: [fileB, fileA],
+      });
       expect(vi.mocked(toast)).not.toHaveBeenCalled();
       // The lock takes the bytes from the session; nothing was uploaded publicly
       expect(FileController.commitCreate).not.toHaveBeenCalled();

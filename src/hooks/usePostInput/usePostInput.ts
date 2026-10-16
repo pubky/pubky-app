@@ -732,8 +732,14 @@ export function usePostInput({
     const staged = await Promise.allSettled(files.map((file) => inlineMedia.upload(file)));
     const uris = staged.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
     if (uris.length === 0) return;
-    markdownEditorRef.current?.focus();
-    for (const uri of uris) markdownEditorRef.current?.insertMarkdown(`![](${uri})`);
+    try {
+      markdownEditorRef.current?.focus();
+      for (const uri of uris) markdownEditorRef.current?.insertMarkdown(`![](${uri})`);
+    } catch (error) {
+      // An insert the editor refused after the files were staged, which the author must hear about
+      Logger.error('[usePostInput] Failed to insert dropped media', { error });
+      toast({ variant: 'error', description: 'Could not insert the file. Try again.' });
+    }
   };
 
   const handleDrop = useCallback(

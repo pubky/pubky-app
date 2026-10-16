@@ -207,14 +207,15 @@ export default function InitializedMDXEditor({
   const uploadAndInsertInMarkdownMode = async (files: File[]) => {
     if (!inlineMedia || files.length === 0) return;
 
-    const current = markdownTextRef.current;
-    const offset = Math.min(textareaRef.current?.selectionStart ?? current.length, current.length);
-
     // The whole pick is staged in one tick, so the session's batch budget sees all of it
     const staged = await Promise.allSettled(files.map((file) => inlineMedia.upload(file)));
     const uris = staged.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
     if (uris.length === 0) return;
 
+    // Read the text and the caret after the staging settled, so the splice never lands on a stale
+    // snapshot should staging ever take longer than a tick
+    const current = markdownTextRef.current;
+    const offset = Math.min(textareaRef.current?.selectionStart ?? current.length, current.length);
     const snippet = uris.map((uri) => `![](${uri})`).join('\n');
     const next = current.slice(0, offset) + snippet + current.slice(offset);
     if (next.length > ARTICLE_MAX_CHARACTER_LENGTH) {

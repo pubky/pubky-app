@@ -26,7 +26,6 @@ import type {
   ComposerDraft,
   ExistingAttachment,
   LatestArticle,
-  SerializedArticle,
   UsePostEditOptions,
   UsePostOptions,
   UsePostPostOptions,
@@ -204,11 +203,6 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
 
     toast({ variant: 'error', description: FOREIGN_INLINE_FILES_MESSAGE });
     return null;
-  };
-
-  const serializeArticleForLock = (body: string): SerializedArticle | null => {
-    const article = serializeArticleWithSessionFiles(body);
-    return article && { body: article.body, inlineFiles: article.inlineFiles };
   };
 
   /**
@@ -620,6 +614,6 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       getMediaType: inlineMediaSession.getMediaType,
       getMediaName: inlineMediaSession.getMediaName,
     },
-    serializeArticleForLock,
+    serializeArticleForLock: serializeArticleWithSessionFiles,
   };
 }

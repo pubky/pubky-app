@@ -89,6 +89,27 @@ describe('useInlineMediaUpload', () => {
       expect(mockCreateObjectURL).not.toHaveBeenCalled();
     });
 
+    it('never lets a repeated random id replace a staged file', async () => {
+      const randomUUID = vi
+        .spyOn(crypto, 'randomUUID')
+        .mockReturnValueOnce('aaaaaaa0-0000-4000-8000-000000000000')
+        .mockReturnValueOnce('aaaaaaa0-0000-4000-8000-000000000000')
+        .mockReturnValueOnce('bbbbbbb0-0000-4000-8000-000000000000');
+      const { result } = setup();
+
+      try {
+        const first = await stage(result, imageFile('a.png'));
+        const second = await stage(result, imageFile('b.png'));
+
+        expect(first).toBe(fileUri('draft-aaaaaaa'));
+        expect(second).toBe(fileUri('draft-bbbbbbb'));
+        expect(result.current.getMediaName(first)).toBe('a.png');
+        expect(result.current.getMediaName(second)).toBe('b.png');
+      } finally {
+        randomUUID.mockRestore();
+      }
+    });
+
     it('rejects the batch, tagged and after one toast, when staging itself throws', async () => {
       const { result } = setup({
         getInlineBudget: () => {

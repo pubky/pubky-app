@@ -93,6 +93,7 @@ vi.mock('@/hooks/useUndoRepost/useUndoRepost', () => ({ useUndoRepost: () => ({ 
 
 vi.mock('pubky-app-specs', () => ({
   PubkyAppPostKind: { Short: 0, Long: 1, Image: 2, Video: 3, Link: 4, File: 5, Collection: 6 },
+  fileUriBuilder: (author: string, fileId: string) => `pubky://${author}/pub/pubky.app/files/${fileId}`,
   PubkyAppPost: class {
     constructor(
       public content: string,

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { fileUriBuilder } from 'pubky-app-specs';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
@@ -42,7 +43,7 @@ const STAGED_ID_RANDOM_LENGTH = 7;
 
 function createStagedUri(pubky: Pubky): string {
   const random = crypto.randomUUID().slice(0, STAGED_ID_RANDOM_LENGTH);
-  return `pubky://${pubky}/pub/pubky.app/files/${STAGED_ID_PREFIX}${random}`;
+  return fileUriBuilder(pubky, `${STAGED_ID_PREFIX}${random}`);
 }
 
 /**
@@ -181,13 +182,14 @@ export function useInlineMediaUpload({
       return rejectWithToast(`File exceeds the ${MAX_OTHER_SIZE_LABEL} limit.`);
     }
 
-    // Batch admission: a drop or paste of many files stages them in one tick
-    // and inserts all-or-nothing, so the budget decision waits one microtask
-    // to see the whole batch. A batch over the budget rejects wholesale with a
-    // single toast and stages NOTHING — partial inserts could never land
-    // anyway. The budget reads the debounced body, so a second drop within
-    // the debounce may pass here; `serializeArticleBody` at publish remains the
-    // authoritative cap enforcement.
+    // Batch admission: a drop or paste of many files stages them in one tick,
+    // so the budget decision waits one microtask to see the whole batch. A
+    // batch over the budget rejects wholesale with a single toast and stages
+    // NOTHING — the editor's own paste/drop inserts all-or-nothing, and a
+    // partial batch could never be what the author dropped. The budget reads
+    // the debounced body, so a second drop within the debounce may pass here;
+    // `serializeArticleBody` at publish remains the authoritative cap
+    // enforcement.
     return new Promise<string>((resolve, reject) => {
       if (!pendingBatchRef.current) {
         const batch: PendingStage[] = [];
@@ -214,7 +216,9 @@ export function useInlineMediaUpload({
             }
             const { entries } = getSession();
             for (const entry of batch) {
-              const uri = createStagedUri(pubky);
+              let uri = createStagedUri(pubky);
+              // 28 random bits per id: a repeat is next to impossible, and must still never replace a file
+              while (entries.has(uri)) uri = createStagedUri(pubky);
               entries.set(uri, {
                 objectUrl: URL.createObjectURL(entry.file),
                 file: entry.file,

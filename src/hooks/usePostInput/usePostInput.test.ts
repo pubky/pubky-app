@@ -3168,6 +3168,30 @@ describe('usePostInput', () => {
         }
       });
 
+      it('toasts when the editor refuses the insert of a staged file', async () => {
+        mockIsArticle = true;
+        mockInlineMediaUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/draft-a');
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        const { insertMarkdown, cleanup } = dropOnEditorIsland(result, [
+          new File(['a'], 'a.png', { type: 'image/png' }),
+        ]);
+        insertMarkdown.mockImplementation(() => {
+          throw new Error('editor torn down');
+        });
+        try {
+          await waitFor(() => expect(insertMarkdown).toHaveBeenCalledTimes(1));
+          await waitFor(() =>
+            expect(vi.mocked(toast)).toHaveBeenCalledWith({
+              variant: 'error',
+              description: 'Could not insert the file. Try again.',
+            }),
+          );
+        } finally {
+          cleanup();
+        }
+      });
+
       it('touches the editor not at all when the session refuses the whole batch', async () => {
         mockIsArticle = true;
         mockInlineMediaUpload.mockRejectedValue(new Error('over budget'));
