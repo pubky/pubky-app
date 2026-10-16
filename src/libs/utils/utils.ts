@@ -707,9 +707,8 @@ export function canSubmitPost(
   isSubmitting: boolean,
   isArticle?: boolean,
   articleTitle?: string,
-  hasBlockingUploads?: boolean,
 ): boolean {
-  if (isSubmitting || hasBlockingUploads) return false;
+  if (isSubmitting) return false;
 
   // Reposts allow empty content, posts and replies require content or attachments
   if (variant === 'repost') return true;

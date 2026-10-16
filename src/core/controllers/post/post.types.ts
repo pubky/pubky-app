@@ -10,11 +10,11 @@ export interface TCreatePostParams {
   tags?: string[];
   attachments?: File[];
   /**
-   * Already-uploaded homeserver file URIs owned by the author (article inline
-   * images, uploaded at insert time). Appended after the `attachments` upload
-   * results in the post's attachment list, so an article's final order is
-   * `[cover?, ...inline]`. Not uploaded or rolled back here — the composer
-   * session that uploaded them owns their cleanup.
+   * Already-uploaded homeserver file URIs owned by the author. Appended after
+   * the `attachments` upload results in the post's attachment list. Not
+   * uploaded or rolled back here — whoever uploaded them owns their cleanup.
+   * The article composer no longer uses it: inline files go through
+   * `attachments` with the cover, so a failed publish rolls them back too.
    */
   attachmentUris?: string[];
   parentPostId?: string;
@@ -100,8 +100,8 @@ export interface TEditPostAttachments {
   added: File[];
   /**
    * Article inline-image path: homeserver file URIs owned by the author that
-   * were already uploaded this composer session (insert-time uploads, plus a
-   * replacement cover uploaded before commit). Requires `nextOrder`.
+   * the composer uploaded before the commit (the inline files staged this
+   * session, plus a replacement cover). Requires `nextOrder`.
    */
   addedUris?: string[];
   /**

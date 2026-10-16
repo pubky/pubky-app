@@ -2237,22 +2237,28 @@ describe('usePost — article inline images', () => {
     return result;
   };
 
-  // Inline images may only reference session uploads (or original attachments
-  // on edit), so tests route their URIs through the real session
-  const uploadViaSession = async (result: { current: ReturnType<typeof usePost> }, uri: string, name = 'img.png') => {
-    vi.mocked(FileController.commitCreate).mockResolvedValueOnce(uri);
+  // Inline files may only reference session files (or original attachments
+  // on edit), so tests route their URIs through the real session. Staging
+  // uploads nothing: the URI it hands back is the one the body references.
+  const stageViaSession = async (
+    result: { current: ReturnType<typeof usePost> },
+    file = new File(['x'], 'img.png', { type: 'image/png' }),
+  ) => {
+    let uri = '';
     await act(async () => {
-      await result.current.inlineMedia.upload(new File(['x'], name, { type: 'image/png' }));
+      uri = await result.current.inlineMedia.upload(file);
     });
+    return uri;
   };
 
   describe('post()', () => {
-    it('rewrites inline images to attachment slots and passes attachmentUris', async () => {
+    it('rewrites inline images to attachment slots and uploads their files with the post', async () => {
       mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
+      const file = new File(['x'], 'img.png', { type: 'image/png' });
       const result = await setupArticle('draft');
-      await uploadViaSession(result, fileUri('img1'));
+      const staged = await stageViaSession(result, file);
       act(() => {
-        result.current.setContent(`Intro\n\n![A](${fileUri('img1')})`);
+        result.current.setContent(`Intro\n\n![A](${staged})`);
       });
 
       await act(async () => {
@@ -2262,19 +2268,23 @@ describe('usePost — article inline images', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           content: JSON.stringify({ title: 'My Article', body: 'Intro\n\n![A](attachment:0)' }),
-          attachmentUris: [fileUri('img1')],
+          attachments: [file],
           isArticle: true,
         }),
       );
+      expect(mockPostControllerCreate.mock.calls[0][0]).not.toHaveProperty('attachmentUris');
+      // Nothing went up ahead of the post: the controller uploads the file with it
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
     });
 
     it('offsets inline slots when a cover file is present', async () => {
       mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
       const cover = new File(['x'], 'cover.png', { type: 'image/png' });
+      const file = new File(['x'], 'img.png', { type: 'image/png' });
       const result = await setupArticle('draft', { cover });
-      await uploadViaSession(result, fileUri('img1'));
+      const staged = await stageViaSession(result, file);
       act(() => {
-        result.current.setContent(`![A](${fileUri('img1')})`);
+        result.current.setContent(`![A](${staged})`);
       });
 
       await act(async () => {
@@ -2284,31 +2294,57 @@ describe('usePost — article inline images', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           content: JSON.stringify({ title: 'My Article', body: '![A](attachment:1)' }),
-          attachments: [cover],
-          attachmentUris: [fileUri('img1')],
+          attachments: [cover, file],
         }),
       );
+    });
+
+    it('leaves nothing on the homeserver and keeps the staged file when the publish fails', async () => {
+      mockPostControllerCreate.mockRejectedValueOnce(new Error('offline'));
+      const result = await setupArticle('draft');
+      const staged = await stageViaSession(result);
+      act(() => {
+        result.current.setContent(`![A](${staged})`);
+      });
+      // The store reset in beforeEach revokes the previous test's entries; only this publish counts
+      vi.mocked(URL.revokeObjectURL).mockClear();
+
+      await act(async () => {
+        await result.current.post({});
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'error', description: 'Could not create post. Try again.' }),
+      );
+      // The controller rolled its uploads back; the session never uploaded anything itself
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
+      expect(FileController.commitDelete).not.toHaveBeenCalled();
+      // The file is still staged for a retry
+      expect(result.current.inlineMedia.getPreviewUrl(staged)).toBe('blob:mock-url');
+      expect(vi.mocked(URL.revokeObjectURL)).not.toHaveBeenCalled();
     });
 
     it('publishes the body and title passed as `article`, not the debounced state', async () => {
       // The composer hands over what the editor holds; `content` still trails by the debounce and
       // does not reference the freshly inserted image
       mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
+      const file = new File(['x'], 'img.png', { type: 'image/png' });
       const result = await setupArticle('Intro');
-      await uploadViaSession(result, fileUri('img1'));
+      const staged = await stageViaSession(result, file);
+      vi.mocked(URL.revokeObjectURL).mockClear();
 
       await act(async () => {
-        await result.current.post({ article: { title: 'Fresh title', body: `Intro\n\n![A](${fileUri('img1')})` } });
+        await result.current.post({ article: { title: 'Fresh title', body: `Intro\n\n![A](${staged})` } });
       });
 
       expect(mockPostControllerCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           content: JSON.stringify({ title: 'Fresh title', body: 'Intro\n\n![A](attachment:0)' }),
-          attachmentUris: [fileUri('img1')],
+          attachments: [file],
         }),
       );
-      // The image is referenced, so the publish sweep keeps its upload
-      expect(vi.mocked(FileController.commitDelete)).not.toHaveBeenCalled();
+      // The image is referenced, so the publish sweep keeps its preview for the local files store
+      expect(vi.mocked(URL.revokeObjectURL)).not.toHaveBeenCalled();
     });
 
     it('publishes an article whose body the debounced state has not received yet', async () => {
@@ -2338,7 +2374,7 @@ describe('usePost — article inline images', () => {
       expect(result.current.isSubmitting).toBe(false);
     });
 
-    it('blocks publishing images whose files were not uploaded this session (cross-post reuse)', async () => {
+    it('blocks publishing images whose files were not staged this session (cross-post reuse)', async () => {
       // A file URI hand-pasted from another post would attach a shared file
       // record; deleting it from either post later would break the other
       const result = await setupArticle(`![A](${fileUri('from-another-post')})`);
@@ -2359,31 +2395,27 @@ describe('usePost — article inline images', () => {
   });
 
   describe('lock capture', () => {
-    const uploadFile = async (result: { current: ReturnType<typeof usePost> }, uri: string, file: File) => {
-      vi.mocked(FileController.commitCreate).mockResolvedValueOnce(uri);
-      await act(async () => {
-        await result.current.inlineMedia.upload(file);
-      });
-    };
     const fileA = new File(['a'], 'a.png', { type: 'image/png' });
     const fileB = new File(['b'], 'b.png', { type: 'image/png' });
 
     it('serializes the body for a lock and returns its images in slot order, after the cover', async () => {
       const result = await setupArticle('draft', { cover: new File(['x'], 'cover.png', { type: 'image/png' }) });
-      await uploadFile(result, fileUri('a'), fileA);
-      await uploadFile(result, fileUri('b'), fileB);
+      const a = await stageViaSession(result, fileA);
+      const b = await stageViaSession(result, fileB);
 
-      const serialized = result.current.serializeArticleForLock(`![B](${fileUri('b')})\n\n![A](${fileUri('a')})`);
+      const serialized = result.current.serializeArticleForLock(`![B](${b})\n\n![A](${a})`);
 
       expect(serialized).toEqual({ body: '![B](attachment:1)\n\n![A](attachment:2)', inlineFiles: [fileB, fileA] });
       expect(vi.mocked(toast)).not.toHaveBeenCalled();
+      // The lock takes the bytes from the session; nothing was uploaded publicly
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
     });
 
     it('starts at slot 0 when the article has no cover', async () => {
       const result = await setupArticle('draft');
-      await uploadFile(result, fileUri('a'), fileA);
+      const a = await stageViaSession(result, fileA);
 
-      expect(result.current.serializeArticleForLock(`![A](${fileUri('a')})`)?.body).toBe('![A](attachment:0)');
+      expect(result.current.serializeArticleForLock(`![A](${a})`)?.body).toBe('![A](attachment:0)');
     });
 
     it('refuses, with the publish toast, a body a normal publish refuses', async () => {
@@ -2395,7 +2427,7 @@ describe('usePost — article inline images', () => {
       );
     });
 
-    it('refuses an image that was not uploaded this session: the lock has no bytes for it', async () => {
+    it('refuses an image that was not staged this session: the lock has no bytes for it', async () => {
       const result = await setupArticle('draft');
 
       expect(result.current.serializeArticleForLock(`![A](${fileUri('from-another-post')})`)).toBeNull();
@@ -2406,7 +2438,7 @@ describe('usePost — article inline images', () => {
   });
 
   describe('a captured lock draft', () => {
-    const BODY = `Intro\n\n![A](${fileUri('img1')})`;
+    const file = new File(['x'], 'img.png', { type: 'image/png' });
 
     const setupCapturedArticle = async () => {
       const view = renderHook((props: UsePostOptions) => usePost(props), { initialProps: {} });
@@ -2415,8 +2447,11 @@ describe('usePost — article inline images', () => {
         view.result.current.setArticleTitle('My Article');
         view.result.current.setContent('draft');
       });
-      await uploadViaSession(view.result, fileUri('img1'));
-      act(() => view.result.current.setContent(BODY));
+      const staged = await stageViaSession(view.result, file);
+      const body = `Intro\n\n![A](${staged})`;
+      act(() => view.result.current.setContent(body));
+      // The store reset in beforeEach revokes the previous test's entries; only this draft counts
+      vi.mocked(URL.revokeObjectURL).mockClear();
 
       // The switch captures the draft first; applying the lock then empties the composer.
       view.rerender({ keepInlineMedia: true });
@@ -2425,32 +2460,35 @@ describe('usePost — article inline images', () => {
         view.result.current.setArticleTitle('');
         view.result.current.setIsArticle(false);
       });
-      return view;
+      return { ...view, body };
     };
 
-    it('keeps the public uploads while the emptied composer writes the announcement', async () => {
+    it('keeps the staged file while the emptied composer writes the announcement', async () => {
       await setupCapturedArticle();
 
+      expect(vi.mocked(URL.revokeObjectURL)).not.toHaveBeenCalled();
       expect(FileController.commitDelete).not.toHaveBeenCalled();
     });
 
-    it('deletes the public uploads once the published lock lets go of them', async () => {
+    it('releases only the preview once the published lock lets go of the file: nothing is public', async () => {
       const { rerender } = await setupCapturedArticle();
 
       rerender({ keepInlineMedia: false });
 
       await waitFor(() => {
-        expect(FileController.commitDelete).toHaveBeenCalledWith({ fileUris: [fileUri('img1')] });
+        expect(vi.mocked(URL.revokeObjectURL)).toHaveBeenCalledTimes(1);
       });
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
+      expect(FileController.commitDelete).not.toHaveBeenCalled();
     });
 
-    it('publishes normally, with the images it uploaded, after the lock is abandoned', async () => {
+    it('publishes normally, with the files it staged, after the lock is abandoned', async () => {
       mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
-      const { result, rerender } = await setupCapturedArticle();
+      const { result, rerender, body } = await setupCapturedArticle();
 
       // Abandoning puts the draft back and drops it in the same update.
       act(() => {
-        result.current.setContent(BODY);
+        result.current.setContent(body);
         result.current.setArticleTitle('My Article');
         result.current.setIsArticle(true);
       });
@@ -2462,7 +2500,7 @@ describe('usePost — article inline images', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           content: JSON.stringify({ title: 'My Article', body: 'Intro\n\n![A](attachment:0)' }),
-          attachmentUris: [fileUri('img1')],
+          attachments: [file],
         }),
       );
       expect(vi.mocked(toast)).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
@@ -2478,9 +2516,11 @@ describe('usePost — article inline images', () => {
       const result = await setupArticle('draft', {
         existing: [mockExistingAttachment(coverUri)],
       });
-      await uploadViaSession(result, fileUri('reused'));
+      const reusedFile = new File(['x'], 'reused.png', { type: 'image/png' });
+      const staged = await stageViaSession(result, reusedFile);
+      vi.mocked(FileController.commitCreate).mockResolvedValue(fileUri('reused'));
       act(() => {
-        result.current.setContent(`![Old](${oldInline})\n\n![Reused](${fileUri('reused')})`);
+        result.current.setContent(`![Old](${oldInline})\n\n![Reused](${staged})`);
       });
 
       await act(async () => {
@@ -2490,6 +2530,8 @@ describe('usePost — article inline images', () => {
         });
       });
 
+      // The staged file went up before the commit, under the URI the order carries
+      expect(FileController.commitCreate).toHaveBeenCalledWith({ file: reusedFile, pubky: AUTHOR });
       expect(mockPostControllerEdit).toHaveBeenCalledWith({
         compositePostId: `${AUTHOR}:post1`,
         content: JSON.stringify({ title: 'My Article', body: '![Old](attachment:1)\n\n![Reused](attachment:2)' }),
@@ -2598,12 +2640,10 @@ describe('usePost — article inline images', () => {
 
       const result = await setupArticle('draft');
 
-      // newC is uploaded through this composer session
-      await act(async () => {
-        await result.current.inlineMedia.upload(new File(['x'], 'newC.png', { type: 'image/png' }));
-      });
+      // newC is staged through this composer session and uploaded by the save
+      const staged = await stageViaSession(result, new File(['x'], 'newC.png', { type: 'image/png' }));
       act(() => {
-        result.current.setContent(`![A](${oldA})\n\n![C](${newC})`);
+        result.current.setContent(`![A](${oldA})\n\n![C](${staged})`);
       });
 
       await act(async () => {
@@ -2635,6 +2675,86 @@ describe('usePost — article inline images', () => {
       ]);
       // The session upload was referenced, so it must not be swept
       expect(FileController.commitDelete).not.toHaveBeenCalled();
+      expect(FileController.commitCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('reuses the file a failed save already uploaded instead of uploading it again', async () => {
+      const newUri = fileUri('new');
+      vi.mocked(FileController.commitCreate).mockResolvedValue(newUri);
+      mockPostControllerEdit.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(undefined);
+      const result = await setupArticle('draft');
+      const staged = await stageViaSession(result, new File(['x'], 'new.png', { type: 'image/png' }));
+      act(() => {
+        result.current.setContent(`![N](${staged})`);
+      });
+
+      await act(async () => {
+        await result.current.edit({ editPostId: `${AUTHOR}:post1`, originalAttachmentUris: [] });
+      });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'error', description: 'Could not update post. Try again.' }),
+      );
+
+      await act(async () => {
+        await result.current.edit({ editPostId: `${AUTHOR}:post1`, originalAttachmentUris: [] });
+      });
+
+      expect(FileController.commitCreate).toHaveBeenCalledTimes(1);
+      expect(mockPostControllerEdit).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          attachments: expect.objectContaining({ addedUris: [newUri], nextOrder: [newUri] }),
+        }),
+      );
+      expect(FileController.commitDelete).not.toHaveBeenCalled();
+    });
+
+    it('deletes a file a failed save uploaded when the retry no longer references it', async () => {
+      const droppedUri = fileUri('dropped');
+      vi.mocked(FileController.commitCreate).mockResolvedValue(droppedUri);
+      mockPostControllerEdit.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(undefined);
+      const result = await setupArticle('draft');
+      const staged = await stageViaSession(result, new File(['x'], 'dropped.png', { type: 'image/png' }));
+      act(() => {
+        result.current.setContent(`![D](${staged})`);
+      });
+      await act(async () => {
+        await result.current.edit({ editPostId: `${AUTHOR}:post1`, originalAttachmentUris: [] });
+      });
+
+      act(() => {
+        result.current.setContent('No images any more');
+      });
+      await act(async () => {
+        await result.current.edit({ editPostId: `${AUTHOR}:post1`, originalAttachmentUris: [] });
+      });
+
+      expect(mockPostControllerEdit).toHaveBeenLastCalledWith(expect.objectContaining({ attachments: undefined }));
+      await waitFor(() => {
+        expect(FileController.commitDelete).toHaveBeenCalledWith({ fileUris: [droppedUri] });
+      });
+    });
+
+    it('warns with the storage-quota copy when a staged upload answers 507', async () => {
+      vi.mocked(FileController.commitCreate).mockRejectedValueOnce(
+        Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Insufficient Storage', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+          context: { statusCode: HttpStatusCode.INSUFFICIENT_STORAGE },
+        }),
+      );
+      const result = await setupArticle('draft');
+      const staged = await stageViaSession(result, new File(['x'], 'big.png', { type: 'image/png' }));
+      act(() => {
+        result.current.setContent(`![B](${staged})`);
+      });
+
+      await act(async () => {
+        await result.current.edit({ editPostId: `${AUTHOR}:post1`, originalAttachmentUris: [] });
+      });
+
+      expect(mockPostControllerEdit).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ variant: 'warning', description: STORAGE_QUOTA_REACHED_MESSAGE });
+      expect(result.current.isSubmitting).toBe(false);
     });
 
     it('carries preserved (unseen) original attachments through the edit instead of deleting them', async () => {

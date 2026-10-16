@@ -106,7 +106,6 @@ vi.mock('@/hooks/usePost/usePost', () => ({
       getMediaType: mockGetMediaType,
       getMediaName: mockGetMediaName,
     },
-    uploadingCount: 0,
     serializeArticleForLock: vi.fn(() => null),
   })),
 }));
@@ -3144,6 +3143,57 @@ describe('usePostInput', () => {
           });
           expect(mockInlineMediaUpload).toHaveBeenCalledWith(mockFile);
           expect(mockSetAttachments).not.toHaveBeenCalled();
+        } finally {
+          editorRoot.remove();
+        }
+      });
+
+      it('stages every file of a drop in one tick, so the session budget sees the whole batch', async () => {
+        mockIsArticle = true;
+        const resolvers: ((uri: string) => void)[] = [];
+        mockInlineMediaUpload.mockImplementation(() => new Promise<string>((resolve) => resolvers.push(resolve)));
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        const insertMarkdown = vi.fn();
+        result.current.markdownEditorRef.current = asOpaque<
+          NonNullable<(typeof result.current.markdownEditorRef)['current']>
+        >({ insertMarkdown, focus: vi.fn() });
+
+        const editorRoot = document.createElement('div');
+        editorRoot.className = 'mdxeditor dark-theme';
+        const island = document.createElement('img');
+        editorRoot.appendChild(island);
+        document.body.appendChild(editorRoot);
+
+        const first = new File(['a'], 'a.png', { type: 'image/png' });
+        const second = new File(['b'], 'b.png', { type: 'image/png' });
+        const dropEvent = mockDragEvent({
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+          target: island,
+          dataTransfer: asOpaque<DataTransfer>({
+            items: [
+              { kind: 'file', getAsFile: () => first },
+              { kind: 'file', getAsFile: () => second },
+            ],
+          }),
+        });
+
+        try {
+          act(() => {
+            result.current.handleDrop(dropEvent);
+          });
+
+          // Both files reached the session before either resolved
+          expect(mockInlineMediaUpload).toHaveBeenCalledTimes(2);
+          expect(insertMarkdown).not.toHaveBeenCalled();
+
+          resolvers[0]('pubky://author/pub/pubky.app/files/draft-a');
+          resolvers[1]('pubky://author/pub/pubky.app/files/draft-b');
+          await waitFor(() => expect(insertMarkdown).toHaveBeenCalledTimes(2));
+          expect(insertMarkdown).toHaveBeenNthCalledWith(1, '![](pubky://author/pub/pubky.app/files/draft-a)');
+          expect(insertMarkdown).toHaveBeenNthCalledWith(2, '![](pubky://author/pub/pubky.app/files/draft-b)');
         } finally {
           editorRoot.remove();
         }

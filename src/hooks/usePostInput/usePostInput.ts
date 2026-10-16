@@ -154,7 +154,6 @@ export function usePostInput({
     edit,
     isSubmitting,
     inlineMedia: inlineMediaSession,
-    uploadingCount,
     serializeArticleForLock,
   } = usePost({ keepInlineMedia, active });
   const timelineFeed = useTimelineFeedContext();
@@ -369,7 +368,7 @@ export function usePostInput({
 
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
-    if (isSubmitting || uploadingCount > 0) return;
+    if (isSubmitting) return;
 
     // Articles publish what the editor holds right now: `articleTitle` and `content` trail the inputs
     // by the debounce, and a publish read from them would drop an image inserted in the last half
@@ -538,7 +537,6 @@ export function usePostInput({
     isSubmitting,
     setArticleTitle,
     setContent,
-    uploadingCount,
     onSuccess,
     timelineFeed,
     undoRepost,
@@ -724,19 +722,18 @@ export function usePostInput({
     e.stopPropagation();
   }, []);
 
-  // Uploads media files and inserts their markdown at the rich-text editor's
-  // caret. Fallback for drops Lexical ignores (see handleDrop); the viewport
-  // uploading pill provides the in-flight feedback. Every kind shares the
-  // image syntax; the editor's import routes non-images by their session type.
+  // Stages media files and inserts their markdown at the rich-text editor's
+  // caret. Fallback for drops Lexical ignores (see handleDrop). Every kind
+  // shares the image syntax; the editor's import routes non-images by their
+  // session type. The whole drop is staged in one tick so the session's batch
+  // budget sees all of it; a refused file was already toasted by the handler
+  // and inserts nothing.
   const insertInlineMediaAtCaret = async (files: File[]) => {
-    for (const file of files) {
-      try {
-        const uri = await inlineMedia.upload(file);
-        markdownEditorRef.current?.focus();
-        markdownEditorRef.current?.insertMarkdown(`![](${uri})`);
-      } catch {
-        // The upload handler already surfaced the failure to the user
-      }
+    const staged = await Promise.allSettled(files.map((file) => inlineMedia.upload(file)));
+    for (const result of staged) {
+      if (result.status !== 'fulfilled') continue;
+      markdownEditorRef.current?.focus();
+      markdownEditorRef.current?.insertMarkdown(`![](${result.value})`);
     }
   };
 
@@ -852,7 +849,6 @@ export function usePostInput({
     setShowEmojiPicker,
     inlineMedia,
     isEditInlineMediaLoading,
-    uploadingCount,
     serializeArticleForLock,
     getLatestArticle,
 

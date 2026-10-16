@@ -72,17 +72,16 @@ article button while the lock switch is on (`PostInputExpandableSection`), and
 (`core/pipes/post/post.kind.ts`), which throws on those two kinds. The guard is the
 backstop for the UI rule, so a UI change can't loosen it silently.
 
-_Article body images._ An article uploads each body image to the creator's public storage the
-moment it is inserted, before anyone knows whether the article will be locked, and the editor
-references the image by its public URI. When the switch goes on, the composer captures the body in
-its published form instead (`serializeArticleForLock` in `usePost`), from the latest title and body
-the inputs reported rather than from the debounced composer state: every image becomes an
-`attachment:{n}` slot, the scheme a normal article already uses, and the files behind the slots join
-the lock's attachments after the cover. The bytes come from the composer's upload session, which
-still holds each file as the author picked it, so nothing is read back from public storage. The
-public copies are deleted once the lock is published or the composer closes (best-effort, #2684). They stay until then,
-so that abandoning the lock puts a working article back into the editor. A locked article's images
-are therefore public between the insert and the publish; that window is accepted (#2655).
+_Article body images._ The article editor stages each body file when it is inserted: the file
+stays in the composer's session and the editor references it by a placeholder file URI of the
+author's, so nothing reaches the creator's public storage before a publish (#2684, #2687). When the
+switch goes on, the composer captures the body in its published form (`serializeArticleForLock` in
+`usePost`), from the latest title and body the inputs reported rather than from the debounced
+composer state: every file becomes an `attachment:{n}` slot, the scheme a normal article already
+uses, and the files behind the slots join the lock's attachments after the cover, as the author
+picked them. The session keeps them while the lock draft exists (`keepInlineMedia`), so abandoning
+the lock puts a working article back into the editor; releasing it only revokes the local previews.
+A locked article's images are therefore never public.
 
 _SVG files._ A locked SVG is stored without its image type, so it does not render after an unlock.
 Until that is fixed the switch refuses a draft that holds one, with a toast (`TODO:[Locks] #2683`).

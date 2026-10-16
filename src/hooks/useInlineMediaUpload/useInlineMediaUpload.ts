@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
@@ -9,10 +9,7 @@ import {
   ATTACHMENT_MAX_OTHER_SIZE,
 } from '@/config/posts';
 import { FileController } from '@/controllers/file/file';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { isAppError, requiresLogin } from '@/libs/error/error.utils';
-import { getInlineMediaKindFromMime, type InlineMediaKind } from '@/libs/file/inlineMediaKind';
-import { getImageUploadSizeLimitLabelMb, getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
+import { getImageUploadSizeLimitLabelMb } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
@@ -24,8 +21,8 @@ import {
 } from './useInlineMediaUpload.types';
 
 /** Builds a rejection recognized (and silenced) by the global unhandled-rejection handler. */
-function taggedRejection(message: string, cause?: unknown): Error {
-  const rejection = new Error(message, cause === undefined ? undefined : { cause });
+function taggedRejection(message: string): Error {
+  const rejection = new Error(message);
   rejection.name = INLINE_MEDIA_UPLOAD_REJECTION_NAME;
   return rejection;
 }
@@ -33,46 +30,62 @@ function taggedRejection(message: string, cause?: unknown): Error {
 const MAX_IMAGE_SIZE_LABEL = getImageUploadSizeLimitLabelMb('raw');
 const MAX_OTHER_SIZE_LABEL = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
 
-/** Static retry copy per media kind; toasts never carry the file name. */
-function uploadFailedMessage(kind: InlineMediaKind | null): string {
-  switch (kind) {
-    case 'image':
-      return 'Could not upload image. Try again.';
-    case 'video':
-      return 'Could not upload video. Try again.';
-    case 'audio':
-      return 'Could not upload audio. Try again.';
-    default:
-      return 'Could not upload file. Try again.';
-  }
+/**
+ * A staged file is referenced by a file URI of the author's that no homeserver
+ * file can have: a homeserver file id is 13 Crockford base32 characters (digits
+ * and upper-case letters), this one is `draft-` plus 7 lower-case hex
+ * characters. Same length, so the markdown-mode character count is the one a
+ * published article's URI would give.
+ */
+const STAGED_ID_PREFIX = 'draft-';
+const STAGED_ID_RANDOM_LENGTH = 7;
+
+function createStagedUri(pubky: Pubky): string {
+  const random = crypto.randomUUID().replaceAll('-', '').slice(0, STAGED_ID_RANDOM_LENGTH);
+  return `pubky://${pubky}/pub/pubky.app/files/${STAGED_ID_PREFIX}${random}`;
 }
 
-interface SessionUpload {
-  objectUrl: string;
-  file: File;
+/**
+ * A session file. Staged: held locally, nothing on the homeserver yet. Uploaded:
+ * on the homeserver (at publish, or a cover uploaded by the composer itself),
+ * to be deleted if it never reaches a published post.
+ */
+type SessionEntry = { objectUrl: string; file: File } & (
+  { status: 'staged'; pubky: Pubky } | { status: 'uploaded'; uploadedUri: string }
+);
+
+interface Session {
+  /** Keyed by the URI the body references: the staged URI, or the upload's own URI for a registered upload */
+  entries: Map<string, SessionEntry>;
+  /** Homeserver URI → session key, for the entries uploaded this session */
+  uploadedKeys: Map<string, string>;
 }
 
-interface PendingUpload {
+interface PendingStage {
   file: File;
   resolve: (uri: string) => void;
   reject: (error: Error) => void;
 }
 
 /**
- * Tracks the inline media (images, videos, audio, PDFs) uploaded to the
- * homeserver during one article composer session (create or edit).
+ * Tracks the inline media (images, videos, audio, PDFs) of one article
+ * composer session (create or edit).
  *
- * Inline media is uploaded at insert time — before the article is
- * published — so the session is the cleanup boundary for uploads that never
- * make it into a published body: `finalizeSession` (after a successful
- * publish) deletes the uploads no longer referenced, and `discardSession`
- * (cancel, dialog close, unmount) deletes them all. Both are best-effort;
- * failures are logged and never surface to the user.
+ * A file is staged when it is inserted: validated, kept in memory and
+ * referenced by a placeholder file URI of the author's, so that nothing is
+ * written to the author's public storage before the article is published. A
+ * reload or a closed tab loses the draft and nothing else, and a locked
+ * article's files never exist outside the lock. The publish uploads what the
+ * body still references: a create hands the files to the post controller with
+ * the cover, an edit uploads them through `uploadStaged` first. The session is
+ * then the cleanup boundary for what never made it into a published body:
+ * `finalizeSession` (after a successful publish) releases the files no longer
+ * referenced, deleting the uploaded ones, and `discardSession` (cancel, dialog
+ * close, unmount) releases them all. Both are best-effort; failures are logged
+ * and never surface to the user.
  *
- * The session map also serves in-editor previews: browsers cannot load
- * `pubky://` URIs, and freshly uploaded files may briefly 404 at the CDN
- * before Nexus generates variants, so `getPreviewUrl` serves the local
- * object URL for anything uploaded this session.
+ * The session also serves in-editor previews: browsers cannot load `pubky://`
+ * URIs, so `getPreviewUrl` serves the local object URL of a session file.
  */
 export function useInlineMediaUpload({
   enabled,
@@ -80,37 +93,48 @@ export function useInlineMediaUpload({
   authorPubky,
   getInlineBudget,
 }: UseInlineMediaUploadOptions): UseInlineMediaUploadReturn {
-  const { waitForAuth } = useRequireAuth(enabled);
-  const sessionRef = useRef<Map<string, SessionUpload> | null>(null);
-  const [uploadingCount, setUploadingCount] = useState(0);
-  // Synchronous twin of uploadingCount: budget checks must see uploads
-  // started in earlier batches that haven't settled yet, which the async
-  // state value can't guarantee.
-  const inFlightRef = useRef(0);
-  // Same-tick upload calls (one drop/paste of many files) collected for a
+  const sessionRef = useRef<Session | null>(null);
+  // Same-tick staging calls (one drop/paste of many files) collected for a
   // single all-or-nothing budget decision one microtask later.
-  const pendingBatchRef = useRef<PendingUpload[] | null>(null);
+  const pendingBatchRef = useRef<PendingStage[] | null>(null);
   // While a publish/edit commit is in flight, discarding must NOT delete
   // session files — the commit may succeed and the published article would
-  // reference deleted files. Leaking on a rare abort is the safe direction.
+  // reference deleted files. The discard waits for the commit to settle.
   const committingRef = useRef(false);
-  // Set when the session was discarded; an upload resolving afterwards must
-  // clean itself up instead of registering into the dead session.
+  const pendingDiscardRef = useRef(false);
+  // Set when the session was discarded; a batch staged in the same tick must
+  // not register into the dead session.
   const discardedRef = useRef(false);
 
-  const getSession = (): Map<string, SessionUpload> => {
-    sessionRef.current ??= new Map();
+  const getSession = (): Session => {
+    sessionRef.current ??= { entries: new Map(), uploadedKeys: new Map() };
     return sessionRef.current;
   };
 
+  /** The session key for a URI the body references or the homeserver URI of an upload; null outside the session */
+  const resolveKey = (uri: string): string | null => {
+    const { entries, uploadedKeys } = getSession();
+    const trimmed = uri.trim();
+    if (entries.has(trimmed)) return trimmed;
+    return uploadedKeys.get(trimmed) ?? null;
+  };
+
+  const getEntry = (uri: string): SessionEntry | null => {
+    const key = resolveKey(uri);
+    return key === null ? null : (getSession().entries.get(key) ?? null);
+  };
+
+  /** Revokes every preview and empties the session; returns the homeserver URIs of its uploads. */
   const clearSession = (): string[] => {
-    const session = getSession();
-    const uris = [...session.keys()];
-    for (const { objectUrl } of session.values()) {
-      URL.revokeObjectURL(objectUrl);
+    const { entries, uploadedKeys } = getSession();
+    const uploaded: string[] = [];
+    for (const entry of entries.values()) {
+      URL.revokeObjectURL(entry.objectUrl);
+      if (entry.status === 'uploaded') uploaded.push(entry.uploadedUri);
     }
-    session.clear();
-    return uris;
+    entries.clear();
+    uploadedKeys.clear();
+    return uploaded;
   };
 
   const deleteUris = async (fileUris: string[]) => {
@@ -124,57 +148,15 @@ export function useInlineMediaUpload({
 
   const rejectWithToast = (description: string): Promise<never> => {
     toast({ variant: 'error', description });
-    return Promise.reject(taggedRejection(`Inline media upload rejected: ${description}`));
+    return Promise.reject(taggedRejection(`Inline media rejected: ${description}`));
   };
 
-  const runUpload = async (file: File, pubky: Pubky): Promise<string> => {
-    inFlightRef.current += 1;
-    setUploadingCount((count) => count + 1);
-    let uri: string;
-    try {
-      if (!(await waitForAuth(crypto.randomUUID())) || discardedRef.current)
-        throw taggedRejection('Inline media upload canceled.');
-      uri = await FileController.commitCreate({ file, pubky });
-    } catch (error) {
-      if (error instanceof Error && error.name === INLINE_MEDIA_UPLOAD_REJECTION_NAME) throw error;
-      Logger.error('[useInlineMediaUpload] Inline media upload failed', { error });
-      toast({
-        variant: 'error',
-        // An expired session cannot be retried away: ask for sign-in instead of
-        // showing retry copy (issue #2555). One toast only, and the rejection
-        // below keeps the tag the global handler uses to stay quiet.
-        description:
-          isAppError(error) && requiresLogin(error)
-            ? 'Session expired. Please sign in.'
-            : (getImageUploadSizeLimitToastMessage(error) ??
-              uploadFailedMessage(getInlineMediaKindFromMime(file.type))),
-      });
-      // Rethrow tagged (message preserved) so callers still see the failure
-      // but the global handler doesn't re-report what was just toasted
-      throw taggedRejection(error instanceof Error ? error.message : 'Inline media upload failed', error);
-    } finally {
-      inFlightRef.current -= 1;
-      setUploadingCount((count) => count - 1);
-    }
-
-    if (discardedRef.current) {
-      // The session was discarded while this upload was in flight — nothing
-      // will ever finalize it, so clean up now (silently: the composer is
-      // gone) instead of orphaning the file on the homeserver
-      void deleteUris([uri]);
-      throw taggedRejection('Inline media upload discarded before completion.');
-    }
-
-    getSession().set(uri, { objectUrl: URL.createObjectURL(file), file });
-    return uri;
-  };
-
-  const uploadInlineMedia = (file: File): Promise<string> => {
+  const stageInlineMedia = (file: File): Promise<string> => {
     if (!enabled || !authorPubky) {
-      return rejectWithToast('Files can only be uploaded while composing an article.');
+      return rejectWithToast('Files can only be added while composing an article.');
     }
     const pubky = authorPubky;
-    // A fresh upload means the composer session is active again (e.g. after
+    // A fresh insert means the composer session is active again (e.g. after
     // an earlier discard in the same mounted composer)
     discardedRef.current = false;
 
@@ -192,33 +174,39 @@ export function useInlineMediaUpload({
       return rejectWithToast(`File exceeds the ${MAX_OTHER_SIZE_LABEL} limit.`);
     }
 
-    // Batch admission: MDXEditor's paste/drop handling calls this once per
-    // file in the same tick and inserts all-or-nothing (Promise.all), so the
-    // budget decision waits one microtask to see the whole batch. A batch
-    // over the budget (in-flight uploads count too) rejects wholesale with a
-    // single toast and uploads NOTHING — partial uploads could never be
-    // inserted anyway. Sequential callers (dialog, markdown-mode flows)
-    // arrive in separate ticks and form batches of one, preserving their
-    // per-file behavior.
+    // Batch admission: a drop or paste of many files stages them in one tick
+    // and inserts all-or-nothing, so the budget decision waits one microtask
+    // to see the whole batch. A batch over the budget rejects wholesale with a
+    // single toast and stages NOTHING — partial inserts could never land
+    // anyway. The budget reads the debounced body, so a second drop within
+    // the debounce may pass here; `serializeArticleBody` at publish remains the
+    // authoritative cap enforcement.
     return new Promise<string>((resolve, reject) => {
       if (!pendingBatchRef.current) {
-        const batch: PendingUpload[] = [];
+        const batch: PendingStage[] = [];
         pendingBatchRef.current = batch;
         queueMicrotask(() => {
           pendingBatchRef.current = null;
-          if (batch.length > getInlineBudget() - inFlightRef.current) {
+          if (discardedRef.current) {
+            // Discarded in the same tick: the composer is gone, nothing to tell
+            const rejection = taggedRejection('Inline media staging canceled: the session was discarded.');
+            for (const entry of batch) entry.reject(rejection);
+            return;
+          }
+          if (batch.length > getInlineBudget()) {
             toast({
               variant: 'error',
               description: `Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} attachments including the cover.`,
             });
-            const rejection = taggedRejection(
-              'Inline media upload rejected: the batch exceeds the article attachment limit.',
-            );
+            const rejection = taggedRejection('Inline media rejected: the batch exceeds the article attachment limit.');
             for (const entry of batch) entry.reject(rejection);
             return;
           }
+          const { entries } = getSession();
           for (const entry of batch) {
-            runUpload(entry.file, pubky).then(entry.resolve, entry.reject);
+            const uri = createStagedUri(pubky);
+            entries.set(uri, { objectUrl: URL.createObjectURL(entry.file), file: entry.file, status: 'staged', pubky });
+            entry.resolve(uri);
           }
         });
       }
@@ -226,75 +214,104 @@ export function useInlineMediaUpload({
     });
   };
 
-  const getPreviewUrl = (src: string): string | null => {
-    return getSession().get(src.trim())?.objectUrl ?? null;
+  const uploadStaged = async (uris: string[]): Promise<Map<string, string>> => {
+    const { entries, uploadedKeys } = getSession();
+    const result = new Map<string, string>();
+    // One at a time: each upload sanitizes its file first (a canvas re-encode
+    // for an image), which is not worth running nine times at once on a phone
+    for (const uri of uris) {
+      const key = resolveKey(uri);
+      const entry = key === null ? undefined : entries.get(key);
+      if (key === null || !entry) {
+        result.set(uri, uri);
+        continue;
+      }
+      if (entry.status === 'staged') {
+        const uploadedUri = await FileController.commitCreate({ file: entry.file, pubky: entry.pubky });
+        entries.set(key, { objectUrl: entry.objectUrl, file: entry.file, status: 'uploaded', uploadedUri });
+        uploadedKeys.set(uploadedUri, key);
+        result.set(uri, uploadedUri);
+        continue;
+      }
+      result.set(uri, entry.uploadedUri);
+    }
+    return result;
   };
 
-  const getSessionFile = (uri: string): File | null => {
-    return getSession().get(uri.trim())?.file ?? null;
-  };
+  const getPreviewUrl = (src: string): string | null => getEntry(src)?.objectUrl ?? null;
+
+  const getSessionFile = (uri: string): File | null => getEntry(uri)?.file ?? null;
 
   const getMediaType = (uri: string): string | null => getSessionFile(uri)?.type ?? null;
 
   const getMediaName = (uri: string): string | null => getSessionFile(uri)?.name ?? null;
 
   const registerSessionUpload = (uri: string, file: File) => {
-    getSession().set(uri, { objectUrl: URL.createObjectURL(file), file });
+    const { entries, uploadedKeys } = getSession();
+    entries.set(uri, { objectUrl: URL.createObjectURL(file), file, status: 'uploaded', uploadedUri: uri });
+    uploadedKeys.set(uri, uri);
   };
 
   const finalizeSession = async (referencedUris: string[]) => {
-    const session = getSession();
-    const referenced = new Set(referencedUris);
+    const { entries, uploadedKeys } = getSession();
+    const referenced = new Set(referencedUris.map(resolveKey));
     const orphaned: string[] = [];
-    for (const [uri, { objectUrl }] of session) {
-      // Referenced uploads hand their object URL over to the localFiles store
+    for (const [key, entry] of entries) {
+      // Referenced files hand their object URL over to the localFiles store
       // (seeded via buildLocalAttachmentEntries before this call); the store's
       // set-difference revoke owns their lifetime from here.
-      if (referenced.has(uri)) continue;
-      URL.revokeObjectURL(objectUrl);
-      orphaned.push(uri);
+      if (referenced.has(key)) continue;
+      URL.revokeObjectURL(entry.objectUrl);
+      if (entry.status === 'uploaded') orphaned.push(entry.uploadedUri);
     }
-    session.clear();
+    entries.clear();
+    uploadedKeys.clear();
     await deleteUris(orphaned);
   };
 
   const discardSession = async () => {
     // Never delete while a commit is in flight: it may succeed, and the
-    // published article would reference deleted files. Skipping leaks the
-    // files if the commit then fails after the composer is gone — the safe
-    // direction, and finalizeSession still sweeps on success.
-    if (committingRef.current) return;
+    // published article would reference deleted files. The discard runs once
+    // the commit settles (see setCommitting); after a success the session is
+    // already empty, after a failure it releases what the commit left behind.
+    if (committingRef.current) {
+      pendingDiscardRef.current = true;
+      return;
+    }
     discardedRef.current = true;
     await deleteUris(clearSession());
   };
 
   /**
-   * Marks a publish/edit commit as in flight. While set, discards are
-   * no-ops (see discardSession). Cleared in the caller's finally.
+   * Marks a publish/edit commit as in flight. While set, discards are deferred
+   * (see discardSession). Cleared in the caller's finally, which runs the
+   * deferred discard if there is one.
    */
   const setCommitting = (committing: boolean) => {
     committingRef.current = committing;
+    if (committing || !pendingDiscardRef.current) return;
+    pendingDiscardRef.current = false;
+    void discardSession();
   };
 
   const buildLocalAttachmentEntries = (orderedUris: string[]): (InlineMediaLocalEntry | null)[] => {
-    const session = getSession();
     return orderedUris.map((uri) => {
-      const upload = session.get(uri);
-      if (!upload) return null;
+      const entry = getEntry(uri);
+      if (!entry) return null;
       // Only images have derived variants; a non-image entry serves `main` alone, like a CDN row
-      const isImage = upload.file.type.startsWith('image/');
+      const isImage = entry.file.type.startsWith('image/');
       return {
-        type: upload.file.type,
-        name: upload.file.name,
-        urls: { main: upload.objectUrl, feed: isImage ? upload.objectUrl : undefined },
+        type: entry.file.type,
+        name: entry.file.name,
+        urls: { main: entry.objectUrl, feed: isImage ? entry.objectUrl : undefined },
       };
     });
   };
 
-  // Discard leftover session uploads when the composer leaves article mode or
-  // unmounts (discard-remount, dialog close, navigation). After a successful
-  // publish `finalizeSession` has already emptied the session, so this sweep
-  // is a no-op. Fire-and-forget: deletion is best-effort by design.
+  // Discard the session when the composer leaves article mode or unmounts
+  // (discard-remount, dialog close, navigation). After a successful publish
+  // `finalizeSession` has already emptied the session, so this sweep is a
+  // no-op. Fire-and-forget: deletion is best-effort by design.
   const discardRef = useRef(discardSession);
   useEffect(() => {
     discardRef.current = discardSession;
@@ -313,13 +330,13 @@ export function useInlineMediaUpload({
   }, []);
 
   return {
-    uploadInlineMedia,
+    stageInlineMedia,
+    uploadStaged,
     getPreviewUrl,
     getSessionFile,
     getMediaType,
     getMediaName,
     registerSessionUpload,
-    uploadingCount,
     finalizeSession,
     discardSession,
     setCommitting,

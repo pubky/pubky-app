@@ -109,12 +109,11 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
   // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
 
-  // Article inline images: uploaded at insert time, tracked per composer
-  // session for previews and best-effort orphan cleanup. The insert-time
-  // budget counts the cover plus the unique inline images already in the
-  // body; `content` lags the editor by its 500ms debounce and in-flight
-  // uploads aren't in the body yet, so `serializeArticleBody` at publish
-  // remains the authoritative cap enforcement.
+  // Article inline media: staged at insert time and uploaded at publish,
+  // tracked per composer session for previews and best-effort cleanup. The
+  // insert-time budget counts the cover plus the unique inline files already
+  // in the body; `content` lags the editor by its 500ms debounce, so
+  // `serializeArticleBody` at publish remains the authoritative cap enforcement.
   const inlineMediaSession = useInlineMediaUpload({
     enabled: isArticle && active,
     keepSession: keepInlineMedia,
@@ -197,14 +196,23 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
     return true;
   };
 
+  /**
+   * The session files behind inline URIs, in slot order. Null when one is
+   * missing: a skipped file would shift every slot after it onto the wrong
+   * file. Unreachable after `rejectForeignInlineUris` passed on a create or a
+   * lock capture, where every inline URI is a session file.
+   */
+  const collectSessionFiles = (inlineUris: string[]): File[] | null => {
+    const inlineFiles = inlineUris.map((uri) => inlineMediaSession.getSessionFile(uri));
+    return inlineFiles.every((file) => file !== null) ? inlineFiles : null;
+  };
+
   const serializeArticleForLock = (body: string): SerializedArticle | null => {
     const serialized = serializeArticleForPublish(attachments.length > 0, body.trim());
     if (!serialized || rejectForeignInlineUris(serialized.inlineUris)) return null;
 
-    const inlineFiles = serialized.inlineUris.map((uri) => inlineMediaSession.getSessionFile(uri));
-    // A skipped file would shift every slot after it onto the wrong image.
-    if (!inlineFiles.every((file) => file !== null)) return null;
-    return { body: serialized.body, inlineFiles };
+    const inlineFiles = collectSessionFiles(serialized.inlineUris);
+    return inlineFiles ? { body: serialized.body, inlineFiles } : null;
   };
 
   /**
@@ -320,20 +328,27 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       inlineMediaSession.setCommitting(true);
       let articleBody = '';
       let inlineUris: string[] = [];
+      let inlineFiles: File[] = [];
       if (isArticle) {
         const serialized = serializeArticleForPublish(attachments.length > 0, latestBody.trim());
         if (!serialized) return;
         if (rejectForeignInlineUris(serialized.inlineUris)) return;
+        const sessionFiles = collectSessionFiles(serialized.inlineUris);
+        if (!sessionFiles) return;
         articleBody = serialized.body;
         inlineUris = serialized.inlineUris;
+        inlineFiles = sessionFiles;
       }
 
+      // The inline files go up with the cover, in slot order (`[cover?, ...inline]`, the order the
+      // serialized body references), through the controller: a failed publish rolls every upload
+      // back, so nothing of an unpublished article ever stays on the homeserver.
+      const uploads = [...attachments, ...inlineFiles];
       const createdPostId = await PostController.commitCreate({
         content: isArticle ? JSON.stringify({ title: latestTitle.trim(), body: articleBody }) : content.trim(),
         authorId: currentUserId,
         tags: tags.length > 0 ? tags : undefined,
-        attachments: attachments.length > 0 ? attachments : undefined,
-        attachmentUris: inlineUris.length > 0 ? inlineUris : undefined,
+        attachments: uploads.length > 0 ? uploads : undefined,
         isArticle,
       });
 
@@ -457,7 +472,12 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
           // the session's discard sweep.
           inlineMediaSession.registerSessionUpload(coverUri, newCoverFile);
         }
-        const referencedOrder = [...(coverUri ? [coverUri] : []), ...serialized.inlineUris];
+        // The files staged this session go up now, under their homeserver URIs: the slot-ordered
+        // `nextOrder` contract takes URIs only. Like the cover, they stay in the session if the
+        // commit fails — reused by a retry, deleted by the discard sweep.
+        const uploadedByUri = await inlineMediaSession.uploadStaged(serialized.inlineUris);
+        const inlineUris = serialized.inlineUris.map((uri) => uploadedByUri.get(uri) ?? uri);
+        const referencedOrder = [...(coverUri ? [coverUri] : []), ...inlineUris];
         // Original attachments the user was never shown (not the cover, not
         // referenced by the body at open) ride at the tail so an unrelated
         // edit never deletes files the user did not see and remove. Slots of
@@ -538,18 +558,7 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       onSuccess?.(editPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to edit post:', err);
-
-      // Same session-expiry handling as `showCommitErrorToast`: an unauthenticated
-      // edit cannot succeed by retrying (issue #2555).
-      if (isAppError(err) && requiresLogin(err)) {
-        showSessionExpiredToast();
-        return;
-      }
-
-      toast({
-        variant: 'error',
-        description: getImageUploadSizeLimitToastMessage(err) ?? 'Could not update post. Try again.',
-      });
+      showCommitErrorToast(err, 'Could not update post. Try again.');
     } finally {
       inlineMediaSession.setCommitting(false);
       inFlight.current = false;
@@ -620,12 +629,11 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
     edit,
     isSubmitting,
     inlineMedia: {
-      upload: inlineMediaSession.uploadInlineMedia,
+      upload: inlineMediaSession.stageInlineMedia,
       getPreviewUrl: inlineMediaSession.getPreviewUrl,
       getMediaType: inlineMediaSession.getMediaType,
       getMediaName: inlineMediaSession.getMediaName,
     },
-    uploadingCount: inlineMediaSession.uploadingCount,
     serializeArticleForLock,
   };
 }

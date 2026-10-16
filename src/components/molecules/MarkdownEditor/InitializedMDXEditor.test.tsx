@@ -1222,6 +1222,49 @@ describe('Inline images', () => {
     });
   });
 
+  it('stages every picked file before any placeholder swap, so the session sees one batch', async () => {
+    const resolvers: ((uri: string) => void)[] = [];
+    const upload = vi.fn(() => new Promise<string>((resolve) => resolvers.push(resolve)));
+    setupInlineImages(upload);
+
+    fireEvent.change(screen.getByTestId('markdown-image-input'), {
+      target: { files: [imageFile('a.png'), imageFile('b.png')] },
+    });
+
+    // Both files reach the session in the same tick, before either resolved
+    await waitFor(() => expect(upload).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId('markdown-textarea')).toHaveValue('![Uploading a.png…]()\n![Uploading b.png…]()');
+
+    resolvers[0](`${FILE_URI}a`);
+    resolvers[1](`${FILE_URI}b`);
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-textarea')).toHaveValue(`![](${FILE_URI}a)\n![](${FILE_URI}b)`);
+    });
+  });
+
+  it('leaves the caret after the whole inserted block when several files swap in the same tick', async () => {
+    const resolvers: ((uri: string) => void)[] = [];
+    const upload = vi.fn(() => new Promise<string>((resolve) => resolvers.push(resolve)));
+    setupInlineImages(upload);
+    const textarea = screen.getByTestId('markdown-textarea') as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: 'Body\n\n' } });
+    textarea.setSelectionRange(6, 6);
+
+    fireEvent.change(screen.getByTestId('markdown-image-input'), {
+      target: { files: [imageFile('a.png'), imageFile('b.png')] },
+    });
+    await waitFor(() => expect(upload).toHaveBeenCalledTimes(2));
+
+    // Both swaps run in one tick: the second must adjust the caret the first one scheduled, not the
+    // DOM's, or it lands inside the first file's URI (the real markdown is longer than the placeholder)
+    resolvers[0](`${FILE_URI}a`);
+    resolvers[1](`${FILE_URI}b`);
+    const expected = `Body\n\n![](${FILE_URI}a)\n![](${FILE_URI}b)`;
+    await waitFor(() => expect(textarea).toHaveValue(expected));
+    await waitFor(() => expect(textarea.selectionStart).toBe(expected.length));
+    expect(textarea.selectionEnd).toBe(expected.length);
+  });
+
   it('inserts one image markdown per uploaded file', async () => {
     const upload = vi.fn().mockResolvedValueOnce(`${FILE_URI}a`).mockResolvedValueOnce(`${FILE_URI}b`);
     setupInlineImages(upload);
@@ -1236,95 +1279,7 @@ describe('Inline images', () => {
   });
 });
 
-describe('Rich-text uploading indicator', () => {
-  const withUploads = (uploadingCount: number) => ({
-    upload: vi.fn(),
-    getPreviewUrl: vi.fn(() => null),
-    getMediaType: vi.fn(() => null),
-    getMediaName: vi.fn(() => null),
-    uploadingCount,
-  });
-
-  it('shows the pill while uploads are in flight in rich-text mode', () => {
-    render(<InitializedMDXEditor editorRef={null} markdown="" inlineMedia={withUploads(1)} />);
-
-    expect(screen.getByTestId('richtext-uploading-indicator')).toHaveTextContent('Uploading file…');
-    expect(screen.getByTestId('spinner')).toBeInTheDocument();
-  });
-
-  it('pluralizes for multiple in-flight uploads', () => {
-    render(<InitializedMDXEditor editorRef={null} markdown="" inlineMedia={withUploads(3)} />);
-
-    expect(screen.getByTestId('richtext-uploading-indicator')).toHaveTextContent('Uploading 3 files…');
-  });
-
-  it('hides the pill when nothing is uploading or the count is absent', () => {
-    const { rerender } = render(<InitializedMDXEditor editorRef={null} markdown="" inlineMedia={withUploads(0)} />);
-    expect(screen.queryByTestId('richtext-uploading-indicator')).not.toBeInTheDocument();
-
-    rerender(
-      <InitializedMDXEditor
-        editorRef={null}
-        markdown=""
-        inlineMedia={{ upload: vi.fn(), getPreviewUrl: () => null, getMediaType: () => null, getMediaName: () => null }}
-      />,
-    );
-    expect(screen.queryByTestId('richtext-uploading-indicator')).not.toBeInTheDocument();
-  });
-
-  it('hides the pill while the image dialog is open (the dialog shows its own spinner)', () => {
-    mockImageDialogState.current = { type: 'new' };
-    try {
-      render(<InitializedMDXEditor editorRef={null} markdown="" inlineMedia={withUploads(1)} />);
-
-      expect(screen.queryByTestId('richtext-uploading-indicator')).not.toBeInTheDocument();
-    } finally {
-      mockImageDialogState.current = { type: 'inactive' };
-    }
-  });
-
-  it('does not show the pill in markdown mode (placeholders cover it there)', () => {
-    const editorRef = createRef<MDXEditorMethods>();
-    Object.defineProperty(editorRef, 'current', {
-      value: { getMarkdown: vi.fn(() => ''), setMarkdown: vi.fn(), focus: vi.fn(), insertMarkdown: vi.fn() },
-      writable: true,
-    });
-    // Switch modes while idle (the toggle is disabled during uploads), then
-    // start an upload in markdown mode
-    const { rerender } = render(
-      <InitializedMDXEditor editorRef={editorRef} markdown="" inlineMedia={withUploads(0)} />,
-    );
-
-    fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
-    rerender(<InitializedMDXEditor editorRef={editorRef} markdown="" inlineMedia={withUploads(1)} />);
-
-    expect(screen.queryByTestId('richtext-uploading-indicator')).not.toBeInTheDocument();
-  });
-});
-
-describe('Upload-in-flight guards', () => {
-  const withUploads = (uploadingCount: number) => ({
-    upload: vi.fn(),
-    getPreviewUrl: vi.fn(() => null),
-    getMediaType: vi.fn(() => null),
-    getMediaName: vi.fn(() => null),
-    uploadingCount,
-  });
-
-  it('disables both mode-toggle buttons while uploads are in flight', () => {
-    render(<InitializedMDXEditor editorRef={null} markdown="" inlineMedia={withUploads(1)} />);
-
-    expect(screen.getByTestId('button-with-tooltip-markdown')).toBeDisabled();
-    expect(screen.getByTestId('markdown-richtext-button')).toBeDisabled();
-  });
-
-  it('keeps the mode-toggle buttons enabled when nothing is uploading', () => {
-    render(<InitializedMDXEditor editorRef={null} markdown="" inlineMedia={withUploads(0)} />);
-
-    expect(screen.getByTestId('button-with-tooltip-markdown')).toBeEnabled();
-    expect(screen.getByTestId('markdown-richtext-button')).toBeEnabled();
-  });
-
+describe('Markdown textarea drop guards', () => {
   it('ignores unsupported files dropped on the markdown textarea (no placeholder, no upload)', () => {
     const upload = vi.fn();
     render(
