@@ -483,6 +483,48 @@ describe('ShopEmbed', () => {
     expect(window.location.pathname).toBe('/shop/marketplace/cart');
   });
 
+  it.each(['load', 'ready'])('accepts a first-frame redirect after Back before its initial %s event', (event) => {
+    const { frame } = mount();
+    act(() => {
+      window.history.replaceState(null, '', '/shop/marketplace/my-shop');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+
+    // No adapter was installed in the old document before Back. The requested
+    // legacy URL redirects before the replacement document reports its route.
+    frame.src = '/shop-embed/marketplace/storefront?view=items#details';
+    if (event === 'load') fireEvent.load(frame);
+    else send(frame, { type: 'ready' });
+    expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe(
+      '/shop/marketplace/storefront?view=items#details',
+    );
+    const push = vi.spyOn(window.history, 'pushState');
+    act(() => frame.contentWindow!.history.pushState(null, '', '/shop-embed/marketplace/cart'));
+    expect(push).toHaveBeenCalledExactlyOnceWith(null, '', '/shop/marketplace/cart');
+  });
+
+  it.each(['load', 'ready'])('ignores a late initial %s from the old document while Back is pending', (event) => {
+    const { frame } = mount();
+    const oldChild = frame.contentWindow!;
+    act(() => {
+      window.history.replaceState(null, '', '/shop/marketplace/my-shop');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    if (event === 'load') fireEvent.load(frame);
+    else send(frame, { type: 'ready' });
+    send(frame, { type: 'navigate', path: '/shop-embed/marketplace' });
+    act(() => oldChild.history.pushState(null, '', '/shop-embed/marketplace/late'));
+    expect(window.location.pathname).toBe('/shop/marketplace/my-shop');
+
+    frame.src = '/shop-embed/marketplace/storefront';
+    fireEvent.load(frame);
+    expect(window.location.pathname).toBe('/shop/marketplace/storefront');
+    send(frame, { type: 'navigate', path: '/shop-embed/marketplace/late' });
+    expect(window.location.pathname).toBe('/shop/marketplace/storefront');
+    act(() => frame.contentWindow!.history.pushState(null, '', '/shop-embed/marketplace/cart'));
+    expect(window.location.pathname).toBe('/shop/marketplace/cart');
+  });
+
   it('updates the wrapper URL without adding a second history entry or accepting external redirects', () => {
     const { frame } = mount();
     send(frame, { type: 'navigate', path: '/shop-embed/settings/payments?paid=true#return' });

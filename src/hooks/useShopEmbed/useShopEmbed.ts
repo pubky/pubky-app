@@ -33,7 +33,7 @@ export function useShopEmbed() {
   const [isNavigating, startNavigation] = useTransition();
   const leavingShop = useRef(false);
   const currentFramePath = useRef<string | null>(null);
-  const pendingFramePath = useRef<string | null>(null);
+  const pendingFrameNavigation = useRef<{ path: string; document: Document | null } | null>(null);
   const frameHistory = useRef<{ document: Document; dispose: () => void } | null>(null);
   const [upgradeGeneration, setUpgradeGeneration] = useState<string | null>(null);
   const generation = useAuthStore((state) => state.generation);
@@ -60,7 +60,7 @@ export function useShopEmbed() {
     );
   };
   const commitFrameNavigation = (path: string, mode: 'push' | 'replace') => {
-    if (leavingShop.current || isShopHostNavigationPending() || pendingFramePath.current) return;
+    if (leavingShop.current || isShopHostNavigationPending() || pendingFrameNavigation.current) return;
     const outerPath = shopHostPath(path);
     const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     if (!outerPath || !shopFramePath(currentPath)) return;
@@ -80,10 +80,11 @@ export function useShopEmbed() {
         document: child.document,
         dispose: installShopFrameHistory(child, commitFrameNavigation),
       };
-      // A restored alias can redirect (my-shop -> storefront). A new document
-      // acknowledges the host navigation even when its canonical path differs.
-      if (pendingFramePath.current && (previous || path === pendingFramePath.current)) {
-        pendingFramePath.current = null;
+      // Capture the document at navigation start, even before its first load/ready.
+      // Its replacement may redirect an alias; the old document cannot acknowledge it.
+      const pending = pendingFrameNavigation.current;
+      if (pending && (child.document !== pending.document || path === pending.path)) {
+        pendingFrameNavigation.current = null;
         commitFrameNavigation(path, 'replace');
       }
     } catch {
@@ -145,7 +146,7 @@ export function useShopEmbed() {
       else if (request.type === 'navigate') {
         // A late child route must not turn into a Next restore that cancels host navigation.
         if (leavingShop.current || isShopHostNavigationPending()) return;
-        if (pendingFramePath.current && request.path !== pendingFramePath.current) return;
+        if (pendingFrameNavigation.current && request.path !== pendingFrameNavigation.current.path) return;
         if (frameHistory.current) {
           try {
             const child = iframe.current?.contentWindow;
@@ -160,7 +161,7 @@ export function useShopEmbed() {
         }
         const outerPath = shopHostPath(request.path);
         if (!outerPath || !shopFramePath(window.location.pathname)) return;
-        pendingFramePath.current = null;
+        pendingFrameNavigation.current = null;
         currentFramePath.current = request.path;
         if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== outerPath)
           // Initial routes and native fragment reports only synchronize the URL.
@@ -211,7 +212,7 @@ export function useShopEmbed() {
       }
       // Back/Forward restores the durable App entry. Ignore the old frame's
       // queued reports until its replacement acknowledges this route.
-      pendingFramePath.current = nextPath;
+      pendingFrameNavigation.current = { path: nextPath, document: iframe.current?.contentDocument ?? null };
       iframe.current?.contentWindow?.location.replace(new URL(nextPath, window.location.origin).href);
     };
     sync();
