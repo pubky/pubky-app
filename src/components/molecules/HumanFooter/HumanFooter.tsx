@@ -3,6 +3,7 @@ import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Link } from '@/atoms/Link/Link';
 import { getPubkyCoreLink } from '@/config/externalLinks';
+import { LEGAL_ENTITY_NAME } from '@/config/legal';
 import { cn } from '@/libs/utils/utils';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
 import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
@@ -22,7 +23,7 @@ export const HumanFooter = () => {
         <Link href={getPubkyCoreLink()} target="_blank">
           {'Pubky Core'}
         </Link>
-        {' and was built by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.'}
+        {` and was built by ${LEGAL_ENTITY_NAME} ©2026. All rights reserved.`}
       </FooterLinks>
     </Container>
   );
