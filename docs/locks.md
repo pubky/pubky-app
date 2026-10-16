@@ -294,14 +294,17 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    running, so nothing is submitted and the wait resumes. Only a saved id with **no task** is
    submitted again: that submission never reached the server.
 4. `startPayment` reuses the saved id or mints and saves a fresh one, then submits the proof (empty
-   payload, reader pubky at the bundle's top level). Replaying the same bundle is safe and creates no
-   second payment request. The Lock Server answers `pending` at once and creates the Paykit invoice
+   payload, reader pubky at the bundle's top level). Only **Try again** (or **I completed the
+   steps**) may replace an ended id: an automatic start that waited behind another submission and
+   finds every saved id ended returns that status for the modal to show, since the reader may have
+   just rejected the request in Bitkit. Replaying the same bundle is safe and creates no second
+   payment request. The Lock Server answers `pending` at once and creates the Paykit invoice
    afterwards, retrying for up to 10 minutes (its `admission_deadline_at`); Paykit then delivers the
    payment request to the reader's wallet, and the app never sees an address or invoice. A reader
    without a usable wallet or a Paykit outage therefore ends the task `failed`, not the submission.
-   While the server waits on the reader's wallet it says so (`status_message`), and the modal shows a
-   setup notice in place of the handoff. A failed submission (network, rate limit) shows
-   **Try again**, which keeps the saved id.
+   While the server waits on the reader's wallet it says so (`status_message`), and the modal shows
+   a setup notice in place of the handoff. A failed submission (network, rate limit) shows **Try
+   again**, which keeps the saved id.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
    created; with nothing submitted, the install screen has no link state. Until the first read
    answers, the modal says "Checking your Bitkit connection…". A failed first read keeps it there

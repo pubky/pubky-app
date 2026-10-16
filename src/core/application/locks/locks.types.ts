@@ -16,6 +16,13 @@ export type TPaymentLockParams = {
 };
 
 /**
+ * `isRetry`: the reader pressed Try again (or I completed the steps). Only then may an ended id be
+ * replaced by a fresh one: an automatic start that waited behind another submission can find its id
+ * ended (the reader rejected it in Bitkit), and replacing it would send a request nobody asked for.
+ */
+export type TStartPaymentParams = TPaymentLockParams & { isRetry: boolean };
+
+/**
  * The saved bundle id a payment continues with, by the Lock Server's view of every id the reader
  * saved for the lock. `reusable` carries the task (null when the server never received the
  * submission). `terminal` means every saved id ended `failed`/`expired`, so only a fresh one can pay.
@@ -24,7 +31,7 @@ export type TResolvedPurchase =
   | { kind: 'reusable'; bundleId: string; task: TVerificationTask | null }
   | { kind: 'terminal'; bundleId: string; status: 'failed' | 'expired' };
 
-/** The bundle id and lifecycle status returned by proof submission. */
+/** The bundle id and lifecycle status returned by proof submission, or the ended one an automatic start found. */
 export type TStartPaymentResult = {
   bundleId: string;
   status: TVerificationStatus;

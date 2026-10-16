@@ -500,7 +500,7 @@ describe('LocksApplication (payment unlock)', () => {
   });
 
   describe('startPayment', () => {
-    const params = { lockFile, lockUrl, readerPubky: 'reader1' };
+    const params = { lockFile, lockUrl, readerPubky: 'reader1', isRetry: false };
 
     beforeEach(() => {
       mocks.generateBundleId.mockResolvedValue('fresh-1');
@@ -548,14 +548,29 @@ describe('LocksApplication (payment unlock)', () => {
       expect(mocks.putBlob).not.toHaveBeenCalled();
     });
 
+    // An automatic start queued behind another submission can find its id ended (rejected in
+    // Bitkit): only the reader's Try again may send a new payment request.
+    it('returns the ended status without minting or submitting when the start is automatic', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
+      lookups({ [BUNDLE_A]: task('expired') });
+
+      await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: BUNDLE_A, status: 'expired' });
+      expect(mocks.generateBundleId).not.toHaveBeenCalled();
+      expect(mocks.putBlob).not.toHaveBeenCalled();
+      expect(mocks.submitProof).not.toHaveBeenCalled();
+    });
+
     // failed/expired cannot be retried — a fresh id gets its own file; the ended one stays as the
     // only handle to its invoice.
-    it('mints a fresh id beside the ended ones instead of overwriting them', async () => {
+    it('mints a fresh id beside the ended ones instead of overwriting them on Try again', async () => {
       mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
       mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"dead-1"}'));
       lookups({ [BUNDLE_A]: task('expired'), 'dead-1': task('failed') });
 
-      await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: 'fresh-1', status: 'pending' });
+      await expect(LocksApplication.startPayment({ ...params, isRetry: true })).resolves.toEqual({
+        bundleId: 'fresh-1',
+        status: 'pending',
+      });
       expect(mocks.generateBundleId).toHaveBeenCalledTimes(1);
       expect(mocks.putBlob).toHaveBeenCalledTimes(1);
       const [{ url, blob }] = mocks.putBlob.mock.calls[0] as [{ url: string; blob: Uint8Array }];

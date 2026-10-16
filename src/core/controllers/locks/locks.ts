@@ -10,6 +10,7 @@ import type {
   TPaymentLockParams,
   TReplicateUnlockedContentParams,
   TResolvedPurchase,
+  TStartPaymentParams,
   TStartPaymentResult,
 } from '@/application/locks/locks.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
@@ -325,8 +326,11 @@ export class LocksController {
     return LocksApplication.fetchResolvedPurchase(params);
   }
 
-  /** Reuses or saves a bundle id on the reader's homeserver and submits the payment proof to the Lock Server. */
-  static startPayment(params: TPaymentLockParams): Promise<TStartPaymentResult> {
+  /**
+   * Reuses or saves a bundle id on the reader's homeserver and submits the payment proof to the Lock Server;
+   * an automatic start that finds every saved id ended only reports that status.
+   */
+  static startPayment(params: TStartPaymentParams): Promise<TStartPaymentResult> {
     return LocksApplication.startPayment(params);
   }
 

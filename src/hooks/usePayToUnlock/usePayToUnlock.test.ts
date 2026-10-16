@@ -65,6 +65,8 @@ const task = (status: TVerificationStatus, fields: Partial<TVerificationTask> = 
   ...fields,
 });
 const PAYMENT_PARAMS = { lockFile, lockUrl: LOCK_URL, readerPubky: 'reader1' };
+const AUTO_PARAMS = { ...PAYMENT_PARAMS, isRetry: false };
+const RETRY_PARAMS = { ...PAYMENT_PARAMS, isRetry: true };
 
 type TResolved = Awaited<ReturnType<typeof LocksController.fetchResolvedPurchase>>;
 const reusable = (bundleId: string, task: TVerificationTask | null): TResolved => ({
@@ -103,11 +105,7 @@ describe('usePayToUnlock (opening)', () => {
 
     const { result } = renderPay();
     await waitFor(() => expect(result.current.stage).toBe('waiting'));
-    expect(LocksController.startPayment).toHaveBeenCalledWith({
-      lockFile,
-      lockUrl: LOCK_URL,
-      readerPubky: 'reader1',
-    });
+    expect(LocksController.startPayment).toHaveBeenCalledWith(AUTO_PARAMS);
   });
 
   it('shows the install steps when nothing is stored and there is no receiver', async () => {
@@ -125,7 +123,7 @@ describe('usePayToUnlock (opening)', () => {
 
     const { result } = renderPay();
     await waitFor(() => expect(result.current.stage).toBe('waiting'));
-    expect(LocksController.startPayment).toHaveBeenCalledWith(PAYMENT_PARAMS);
+    expect(LocksController.startPayment).toHaveBeenCalledWith(AUTO_PARAMS);
     expect(LocksController.hasPaykitReceiver).not.toHaveBeenCalled(); // a purchase exists; the gate is moot
   });
 
@@ -248,6 +246,7 @@ describe('usePayToUnlock (opening)', () => {
     rerender({ open: true });
     await waitFor(() => expect(result.current.stage).toBe('waiting'));
     expect(LocksController.startPayment).toHaveBeenCalledTimes(2);
+    expect(LocksController.startPayment).toHaveBeenNthCalledWith(2, AUTO_PARAMS);
     await waitFor(() => expect(result.current.handshakePubky).toBe('pubkybob'));
 
     // The closed opening's late answer changes nothing.
@@ -256,6 +255,25 @@ describe('usePayToUnlock (opening)', () => {
     });
     expect(result.current.handshakePubky).toBe('pubkybob');
     expect(result.current.isSubmitting).toBe(false);
+  });
+
+  // The earlier submission ended while the reopen waited behind it (rejected in Bitkit): the reopen
+  // shows that end and does not start a new payment on its own.
+  it('shows the ended status when the queued reopen finds the payment ended', async () => {
+    vi.mocked(LocksController.fetchResolvedPurchase).mockResolvedValue(null);
+    vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(true);
+    vi.mocked(LocksController.startPayment)
+      .mockImplementationOnce(() => new Promise(() => {}))
+      .mockResolvedValueOnce(submitted('fresh-1', 'expired'));
+
+    const { result, rerender } = renderPayWith({ open: true });
+    await waitFor(() => expect(LocksController.startPayment).toHaveBeenCalledTimes(1));
+
+    rerender({ open: false });
+    rerender({ open: true });
+    await waitFor(() => expect(result.current.stage).toBe('expired'));
+    expect(LocksController.startPayment).toHaveBeenNthCalledWith(2, AUTO_PARAMS);
+    expect(LocksController.fetchPaykitConnectionState).not.toHaveBeenCalled();
   });
 });
 
@@ -281,11 +299,7 @@ describe('usePayToUnlock (retry)', () => {
         await vi.advanceTimersByTimeAsync(0);
       });
       expect(result.current.stage).toBe('waiting');
-      expect(LocksController.startPayment).toHaveBeenCalledWith({
-        lockFile,
-        lockUrl: LOCK_URL,
-        readerPubky: 'reader1',
-      });
+      expect(LocksController.startPayment).toHaveBeenCalledWith(AUTO_PARAMS);
       // The submission answered the task, so its loop waits an interval; the link is unknown and the
       // QR waits on it, so that loop reads at once.
       expect(LocksController.fetchPaymentStatus).not.toHaveBeenCalled();
@@ -319,7 +333,7 @@ describe('usePayToUnlock (retry)', () => {
     result.current.retry();
 
     await waitFor(() => expect(LocksController.startPayment).toHaveBeenCalledTimes(1));
-    expect(LocksController.startPayment).toHaveBeenCalledWith(PAYMENT_PARAMS);
+    expect(LocksController.startPayment).toHaveBeenCalledWith(RETRY_PARAMS);
     // `expired` comes after an invoice reached the wallet, so only `failed` re-checks it.
     expect(LocksController.hasPaykitReceiver).toHaveBeenCalledTimes(status === 'failed' ? 1 : 0);
   });
@@ -337,11 +351,12 @@ describe('usePayToUnlock (retry)', () => {
     });
     expect(result.current.isSubmitting).toBe(false);
     expect(LocksController.fetchPaykitConnectionState).not.toHaveBeenCalled();
+    expect(LocksController.startPayment).toHaveBeenCalledWith(AUTO_PARAMS);
 
     vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('fresh-2'));
     act(() => result.current.retry());
     await waitFor(() => expect(result.current.stage).toBe('waiting'));
-    expect(LocksController.startPayment).toHaveBeenLastCalledWith(PAYMENT_PARAMS);
+    expect(LocksController.startPayment).toHaveBeenLastCalledWith(RETRY_PARAMS);
   });
 
   // A reader without a wallet ends `failed`: another id would fail the same way after the same wait.
@@ -360,7 +375,7 @@ describe('usePayToUnlock (retry)', () => {
     vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(true);
     result.current.retry();
     await waitFor(() => expect(LocksController.startPayment).toHaveBeenCalledTimes(1));
-    expect(LocksController.startPayment).toHaveBeenCalledWith(PAYMENT_PARAMS);
+    expect(LocksController.startPayment).toHaveBeenCalledWith(RETRY_PARAMS);
   });
 
   it.each([
@@ -391,7 +406,7 @@ describe('usePayToUnlock (retry)', () => {
 
     result.current.retry();
     await waitFor(() => expect(LocksController.startPayment).toHaveBeenCalledTimes(2));
-    expect(LocksController.startPayment).toHaveBeenLastCalledWith(PAYMENT_PARAMS);
+    expect(LocksController.startPayment).toHaveBeenLastCalledWith(RETRY_PARAMS);
   });
 
   describe('install screen', () => {
@@ -971,7 +986,7 @@ describe('usePayToUnlock (waiting)', () => {
       result.current.retry();
       await vi.advanceTimersByTimeAsync(0);
     });
-    expect(LocksController.startPayment).toHaveBeenCalledWith(PAYMENT_PARAMS);
+    expect(LocksController.startPayment).toHaveBeenCalledWith(RETRY_PARAMS);
   });
 
   it('keeps polling through a lookup error', async () => {

@@ -44,6 +44,7 @@ import type {
   TPaymentLockParams,
   TReplicateUnlockedContentParams,
   TResolvedPurchase,
+  TStartPaymentParams,
   TStartPaymentResult,
 } from './locks.types';
 
@@ -151,12 +152,19 @@ export class LocksApplication {
    * still pay (`fetchResolvedPurchase`), or mints and saves a fresh one when there is none. Then submits
    * the proof to the Lock Server, which creates the verification task (or returns the existing one
    * on a replay of the same id) and afterwards has Paykit deliver the payment request to the
-   * reader's wallet.
+   * reader's wallet. When every saved id ended and `isRetry` is false, nothing is minted or
+   * submitted: the ended status is returned for the modal to show.
    */
-  static async startPayment({ lockFile, lockUrl, readerPubky }: TPaymentLockParams): Promise<TStartPaymentResult> {
+  static async startPayment({
+    lockFile,
+    lockUrl,
+    readerPubky,
+    isRetry,
+  }: TStartPaymentParams): Promise<TStartPaymentResult> {
     const lockId = this.requireLockId(lockUrl, 'startPayment');
     const run = async (): Promise<TStartPaymentResult> => {
       const resolved = await this.fetchResolvedPurchase({ lockFile, lockUrl, readerPubky });
+      if (resolved?.kind === 'terminal' && !isRetry) return { bundleId: resolved.bundleId, status: resolved.status };
       let bundleId = resolved?.kind === 'reusable' ? resolved.bundleId : null;
       if (!bundleId) {
         bundleId = await LocksService.generateBundleId();

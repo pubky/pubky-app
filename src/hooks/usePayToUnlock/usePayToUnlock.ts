@@ -284,8 +284,9 @@ export function usePayToUnlock({
   };
 
   // A reopen while an earlier submission is still out submits again; `startPayment` serializes the
-  // two per reader and lock, so the second one replays the saved id instead of minting another.
-  const attemptPayment = async (gen: number, fromInstall: boolean) => {
+  // two per reader and lock, so the second one replays the saved id instead of minting another, or
+  // reports its end if the reader rejected it meanwhile (`isRetry` is false here).
+  const attemptPayment = async (gen: number, fromInstall: boolean, isRetry: boolean) => {
     if (!lockFile || !readerPubky || !session || submittingGeneration.current === gen) return;
     submittingGeneration.current = gen;
     setIsSubmitting(true);
@@ -303,7 +304,7 @@ export function usePayToUnlock({
         if (fromInstall) setStage('checking');
       }
 
-      const { bundleId, status } = await LocksController.startPayment({ lockFile, lockUrl, readerPubky });
+      const { bundleId, status } = await LocksController.startPayment({ lockFile, lockUrl, readerPubky, isRetry });
       const lockId = LockContentParser.lockIdFromUrl(lockUrl);
       if (lockId) onPurchased(lockId);
       if (generation.current !== gen) return;
@@ -374,7 +375,7 @@ export function usePayToUnlock({
           }
         }
         // Left: no saved id at all, or a saved id whose first submission never reached the server.
-        await attemptPayment(gen, false);
+        await attemptPayment(gen, false, false);
       } catch {
         // Includes an unreadable saved bundle id: minting a fresh one could pay twice, so there is
         // no retry. Already reported by the Err factory that threw it.
@@ -395,7 +396,7 @@ export function usePayToUnlock({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, lockUrl, lockFile, readerPubky, session]);
 
-  const retry = () => void attemptPayment(generation.current, stage === 'install');
+  const retry = () => void attemptPayment(generation.current, stage === 'install', true);
 
   const recheck = () => {
     const bundleId = waitingBundleId.current;
