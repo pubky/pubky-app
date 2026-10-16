@@ -23,6 +23,8 @@
 import '@/app/globals.css';
 
 import { vi } from 'vitest';
+import type { UsePassportAuthReturn } from '@/hooks/usePassportAuth/usePassportAuth.types';
+import type { PassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility.types';
 import type { UseUnlockedListResult } from '@/hooks/useUnlockedList/useUnlockedList.types';
 
 // Stabilize cross-OS / cross-run rendering for visual snapshots.
@@ -134,6 +136,20 @@ vi.mock('next/image', () => ({
 vi.mock('@/hooks/useUnlockedList/useUnlockedList', () => {
   const settled: UseUnlockedListResult = { items: [], count: 0, isLoading: false, isError: false };
   return { useUnlockedList: (): UseUnlockedListResult => settled };
+});
+
+// 2d. Render Pubky Passport ("Continue with Google") as production does, without
+//     reaching Google. Eligibility needs an HTTPS page, so the real hook only ever
+//     reports `'pending'` or `'disabled'` on the http VRT server and every surface
+//     would drop its Google option. The attempt hook would open a Passport popup
+//     and poll the HTTP relay; stub it to an idle attempt that never starts. A
+//     file that captures the waiting state overrides it with its own `vi.mock`.
+vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
+  usePassportEligibility: (): PassportEligibility => 'enabled',
+}));
+vi.mock('@/hooks/usePassportAuth/usePassportAuth', () => {
+  const idle: UsePassportAuthReturn = { startPassportAuth: () => undefined, isPending: false };
+  return { usePassportAuth: (): UsePassportAuthReturn => idle };
 });
 
 // 3. Load Inter Tight from `@fontsource-variable/inter-tight` (committed npm
