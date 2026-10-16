@@ -4,6 +4,7 @@ import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { toMarkdown } from 'mdast-util-to-markdown';
 import { gfm } from 'micromark-extension-gfm';
 import { visit } from 'unist-util-visit';
+import { parsePubkyUri } from '@/models/models.utils';
 
 /**
  * Inline article media — the attachment-mapping scheme for `kind: long` posts.
@@ -100,20 +101,13 @@ export function isAttachmentRefScheme(src: string | null | undefined): boolean {
 export function parseFileUriOwner(uri: string | null | undefined): string | null {
   if (!uri) return null;
 
-  let parsed: URL;
-  try {
-    parsed = new URL(uri.trim());
-  } catch {
-    return null;
-  }
+  const parsed = parsePubkyUri(uri.trim());
+  if (!parsed || !parsed.path.startsWith(FILE_PATH_PREFIX)) return null;
 
-  if (parsed.protocol !== 'pubky:') return null;
-  if (!parsed.pathname.startsWith(FILE_PATH_PREFIX)) return null;
-
-  const fileId = parsed.pathname.slice(FILE_PATH_PREFIX.length);
+  const fileId = parsed.path.slice(FILE_PATH_PREFIX.length);
   if (!fileId || fileId.includes('/')) return null;
 
-  return parsed.hostname || null;
+  return parsed.authority;
 }
 
 /** Returns true when `uri` is a homeserver file URI owned by `authorPubky`. */
@@ -126,23 +120,12 @@ function isBlobUri(src: string): boolean {
   const trimmed = src.trim();
   if (/^blob:/i.test(trimmed)) return true;
 
-  try {
-    const parsed = new URL(trimmed);
-    return parsed.protocol === 'pubky:' && parsed.pathname.startsWith(BLOB_PATH_PREFIX);
-  } catch {
-    return false;
-  }
+  return parsePubkyUri(trimmed)?.path.startsWith(BLOB_PATH_PREFIX) ?? false;
 }
 
 function isAuthorBlobUri(uri: string, authorPubky: string): boolean {
-  try {
-    const parsed = new URL(uri.trim());
-    return (
-      parsed.protocol === 'pubky:' && parsed.pathname.startsWith(BLOB_PATH_PREFIX) && parsed.hostname === authorPubky
-    );
-  } catch {
-    return false;
-  }
+  const parsed = parsePubkyUri(uri.trim());
+  return parsed !== null && parsed.path.startsWith(BLOB_PATH_PREFIX) && parsed.authority === authorPubky;
 }
 
 interface NodeSpan {
