@@ -335,7 +335,9 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
 
 Closing during submission, waiting or finishing opens a confirmation dialog. Once payment is complete,
 the confirmation acknowledges receipt. Closing stops this tab's polling and ignores late content reads;
-the server-side purchase remains and reopening resumes it from the saved bundle id.
+the server-side purchase remains and reopening resumes it from the saved bundle id. A session the
+homeserver rejects ends the modal at any step: the session-expired toast shows and the modal closes
+without the confirmation, and content already downloaded is shown, not dropped.
 
 `startPayment` holds a Web Lock named `locks-pay:<reader>:<lockId>` (#2468) for its whole run, so
 a quick reopen, a second tab, or React running the effect twice submits one bundle id. Browsers

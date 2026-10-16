@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CircleCheck, Newspaper } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
@@ -100,6 +100,11 @@ export function DialogPayToUnlock({
   // Downloading or retrying paid content must not look like another payment is required.
   const isPaid = stage === 'finishing' || stage === 'paid' || stage === 'unopened';
   const [isConfirmingClose, setIsConfirmingClose] = useState(false);
+  // The parent can close the modal itself (an expired session), past this prompt's buttons, so the
+  // prompt would otherwise still be up on the next open.
+  useEffect(() => {
+    if (!open) setIsConfirmingClose(false);
+  }, [open]);
   const { copyToClipboard } = useCopyToClipboard();
 
   const handleOpenChange = (next: boolean) => {

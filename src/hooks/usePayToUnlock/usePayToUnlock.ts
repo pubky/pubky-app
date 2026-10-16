@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
+import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { toast } from '@/molecules/Toaster/toast';
 import { LockContentParser } from '@/pipes/locks/locks.parser';
 import type { TPaykitConnectionState, TUnlockedContent, TVerificationStatus } from '@/services/locks/locks.types';
@@ -25,6 +26,7 @@ const SUBMIT_FAILED_TOAST = 'The payment could not be started. Try again later.'
 const NO_WALLET_TOAST = 'Bitkit is not set up yet. Finish the steps, then try again.';
 const FINISH_FAILED_TOAST =
   'Your payment went through, but the content could not be opened. Nothing is lost — try again.';
+const SESSION_EXPIRED_TOAST = 'Session expired. Please sign in.';
 
 // A time the browser cannot parse leaves the plain 3 minutes; a NaN delay would park at once.
 const stallNotBeforeFor = (admissionDeadlineAt: string | null): number => {
@@ -50,6 +52,7 @@ export function usePayToUnlock({
   lockFile,
   onCompleted,
   onPurchased,
+  onSessionExpired,
 }: UsePayToUnlockParams): UsePayToUnlockResult {
   const [stage, setStage] = useState<TPayToUnlockStage>('checking');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,6 +69,8 @@ export function usePayToUnlock({
   // Without it the bundle id read silently reports "none" (the homeserver service refuses
   // sessionless reads with null), which would fail OPEN — so everything waits for the session.
   const session = useAuthStore((state) => state.session);
+  // Set app-wide when the reader's own homeserver answers 401, whichever feature sent the request.
+  const isReauthRequired = useAuthStore((state) => state.restoreStatus === 'reauth-required');
 
   // A saved id whose payment ended failed/expired — the one id the submit re-read must NOT reuse.
   // Deliberately not "null means dead": a concurrent tab's fresh id must survive the re-read.
@@ -287,6 +292,28 @@ export function usePayToUnlock({
     connectionLoop.run();
   };
 
+  const viewContent = () => {
+    const content = completedContent.current;
+    if (!content) return;
+    completedContent.current = null;
+    onCompleted(content);
+  };
+
+  const endExpiredSession = () => {
+    toast({ variant: 'error', description: SESSION_EXPIRED_TOAST });
+    // Like closing from the paid screen: content already downloaded is shown, not dropped.
+    if (completedContent.current) viewContent();
+    else onSessionExpired();
+  };
+
+  // Once the app has cleared the session for this 401, the reauth effect ends the modal. This catch
+  // can run before or after that render, so it reads the store instead of relying on the order.
+  const endIfSessionExpired = (error: unknown): boolean => {
+    if (!isAppError(error) || !requiresLogin(error)) return false;
+    if (useAuthStore.getState().restoreStatus !== 'reauth-required') endExpiredSession();
+    return true;
+  };
+
   // A reopen while an earlier submission is still out submits again; `startPayment` serializes the
   // two per reader and lock, so the second one replays the saved id instead of minting another.
   const attemptPayment = async (gen: number, fromInstall: boolean) => {
@@ -319,10 +346,11 @@ export function usePayToUnlock({
       // The submission only reports lifecycle now, so the connection state is unknown until the
       // loop reads it — the QR appears one round trip later.
       if (applyStatus(gen, bundleId, status)) startPolling(gen, bundleId, true);
-    } catch {
+    } catch (error) {
       // Already reported by the Err factory. Try again replays the saved id; a failure that started
       // on the install screen goes back there, the only screen whose button always checks the wallet.
       if (generation.current !== gen) return;
+      if (endIfSessionExpired(error)) return;
       setStage(fromInstall ? 'install' : 'retry');
       toast({ variant: 'error', description: SUBMIT_FAILED_TOAST });
     } finally {
@@ -384,10 +412,11 @@ export function usePayToUnlock({
         }
         // Left: no saved id at all, or a saved id whose first submission never reached the server.
         await attemptPayment(gen, false);
-      } catch {
+      } catch (error) {
         // Includes an unreadable saved bundle id: minting a fresh one could pay twice, so there is
         // no retry. Already reported by the Err factory that threw it.
         if (generation.current !== gen) return;
+        if (endIfSessionExpired(error)) return;
         setStage('blocked');
       }
     })();
@@ -404,6 +433,13 @@ export function usePayToUnlock({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, lockUrl, lockFile, readerPubky, session]);
 
+  // Every step needs the session; without this the modal would sit on a step that can no longer move.
+  useEffect(() => {
+    if (open && isReauthRequired) endExpiredSession();
+    // Re-running on the callback's identity would toast again for the same expiry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isReauthRequired]);
+
   const retry = () => void attemptPayment(generation.current, stage === 'install');
 
   const recheck = () => {
@@ -418,13 +454,6 @@ export function usePayToUnlock({
     // Unknown state included: only a settled link (or an operator block) ends the watch.
     const watchConnection = paymentStillRunning && connectionState !== 'connected' && connectionState !== 'blocked';
     startPolling(generation.current, bundleId, watchConnection, { lookupNow: true });
-  };
-
-  const viewContent = () => {
-    const content = completedContent.current;
-    if (!content) return;
-    completedContent.current = null;
-    onCompleted(content);
   };
 
   // Link state does not acknowledge a QR scan. Keep the contact handoff available through

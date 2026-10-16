@@ -22,6 +22,8 @@ export interface UsePayToUnlockParams {
   onCompleted: (content: TUnlockedContent) => void;
   /** Called with the lock id as soon as a purchase is stored, so other cards see it this session. */
   onPurchased: (lockId: string) => void;
+  /** Called after the session-expired toast: the homeserver rejected the session, and no step works without one. */
+  onSessionExpired: () => void;
 }
 
 export interface UsePayToUnlockResult {

@@ -21,7 +21,12 @@ vi.mock('next/navigation', () => ({ usePathname: () => pathname.value }));
 vi.mock('@/hooks/useLockFile/useLockFile', () => ({ useLockFile: vi.fn() }));
 // The pay hook has its own tests; here only the wiring matters. `payMocks.params` captures what the
 // component passed so a test can drive `onCompleted` as if the payment finished.
-type PayParams = { open: boolean; onPurchased: (lockId: string) => void; onCompleted: (content: unknown) => void };
+type PayParams = {
+  open: boolean;
+  onPurchased: (lockId: string) => void;
+  onCompleted: (content: unknown) => void;
+  onSessionExpired: () => void;
+};
 const payMocks = vi.hoisted(() => ({
   params: null as null | PayParams,
   retry: vi.fn(),
@@ -384,6 +389,17 @@ describe('LockedPostContent', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Mock view content' }));
 
       expect(payMocks.viewContent).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the pay dialog when the pay hook reports an expired session', async () => {
+      paymentData();
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+      await screen.findByTestId('pay-dialog');
+      act(() => payMocks.params?.onSessionExpired());
+
+      expect(screen.queryByTestId('pay-dialog')).not.toBeInTheDocument();
     });
 
     it('renders available media and warns about dropped attachments once payment completes', async () => {

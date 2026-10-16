@@ -28,6 +28,7 @@ vi.mock('qrcode.react', () => ({
 }));
 
 type DialogOverrides = {
+  open?: boolean;
   price?: React.ComponentProps<typeof DialogPayToUnlock>['price'];
   isSubmitting?: boolean;
   onRetry?: () => void;
@@ -44,7 +45,7 @@ type DialogOverrides = {
 
 const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}) => (
   <DialogPayToUnlock
-    open
+    open={overrides.open ?? true}
     onOpenChange={overrides.onOpenChange ?? vi.fn()}
     lockTitle="My locked post"
     authorId="pubkycreator"
@@ -503,6 +504,19 @@ describe('DialogPayToUnlock', () => {
     fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-keep-waiting"]') as HTMLElement);
     expect(screen.queryByText('The payment is still running')).not.toBeInTheDocument();
     expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  // The parent closes the modal itself on an expired session, past the prompt's own buttons.
+  it('does not bring the close prompt back after the parent closes the modal', () => {
+    const { rerender } = renderDialog('waiting');
+
+    fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement);
+    expect(screen.getByText('The payment is still running')).toBeInTheDocument();
+
+    rerender(dialogElement('waiting', { open: false }));
+    rerender(dialogElement('checking'));
+    expect(screen.getByText('My locked post')).toBeInTheDocument();
+    expect(screen.queryByText('The payment is still running')).not.toBeInTheDocument();
   });
 
   it('waiting: Close anyway closes the modal', () => {

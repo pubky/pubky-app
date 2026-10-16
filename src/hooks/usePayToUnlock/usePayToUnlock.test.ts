@@ -1,6 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import type { LockFile, TUnlockedContent, TVerificationStatus, TVerificationTask } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { CONNECTION_POLL_INTERVAL_MS, POLL_INTERVAL_MS, STALL_AFTER_MS, usePayToUnlock } from './usePayToUnlock';
@@ -19,9 +22,15 @@ vi.mock('@/controllers/locks/locks', () => ({
   },
 }));
 
-const authState = vi.hoisted(() => ({ currentUserPubky: 'reader1' as string | null, session: {} as object | null }));
+const authState = vi.hoisted(() => ({
+  currentUserPubky: 'reader1' as string | null,
+  session: {} as object | null,
+  restoreStatus: 'ready',
+}));
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
+  useAuthStore: Object.assign((selector: (s: typeof authState) => unknown) => selector(authState), {
+    getState: () => authState,
+  }),
 }));
 
 const toastMock = vi.hoisted(() => vi.fn());
@@ -41,17 +50,28 @@ const unlockedContent = asOpaque<TUnlockedContent>({
 });
 
 const onPurchased = vi.fn();
+const onSessionExpired = vi.fn();
 const renderPay = (onCompleted = vi.fn()) => ({
   onCompleted,
-  ...renderHook(() => usePayToUnlock({ open: true, lockUrl: LOCK_URL, lockFile, onCompleted, onPurchased })),
+  ...renderHook(() =>
+    usePayToUnlock({ open: true, lockUrl: LOCK_URL, lockFile, onCompleted, onPurchased, onSessionExpired }),
+  ),
 });
 const renderPayWith = (initialProps: { open: boolean }, onCompleted = vi.fn()) => ({
   onCompleted,
   ...renderHook(
-    (props: { open: boolean }) => usePayToUnlock({ ...props, lockUrl: LOCK_URL, lockFile, onCompleted, onPurchased }),
+    (props: { open: boolean }) =>
+      usePayToUnlock({ ...props, lockUrl: LOCK_URL, lockFile, onCompleted, onPurchased, onSessionExpired }),
     { initialProps },
   ),
 });
+
+const SESSION_EXPIRED_TOAST = { variant: 'error', description: 'Session expired. Please sign in.' };
+const authError = (code: AuthErrorCode) =>
+  Err.auth(code, 'Authentication required to read private storage', {
+    service: ErrorService.Homeserver,
+    operation: 'getBytesIfExists',
+  });
 
 const statusCalls = () => vi.mocked(LocksController.fetchPaymentStatus).mock.calls.length;
 const connectionCalls = () => vi.mocked(LocksController.fetchPaykitConnectionState).mock.calls.length;
@@ -70,6 +90,7 @@ describe('usePayToUnlock (opening)', () => {
     vi.clearAllMocks();
     authState.currentUserPubky = 'reader1';
     authState.session = {};
+    authState.restoreStatus = 'ready';
     vi.mocked(LocksController.fetchPaidContent).mockResolvedValue(unlockedContent);
     vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('fresh-1'));
     vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('connected');
@@ -168,6 +189,7 @@ describe('usePayToUnlock (opening)', () => {
     expect(result.current.stage).toBe('checking');
     expect(LocksController.startPayment).not.toHaveBeenCalled();
     expect(LocksController.fetchPurchaseBundleId).not.toHaveBeenCalled();
+    expect(onSessionExpired).not.toHaveBeenCalled();
   });
 
   // Fail closed: the file may exist but be unreadable — minting a fresh id could pay twice.
@@ -177,6 +199,137 @@ describe('usePayToUnlock (opening)', () => {
     const { result } = renderPay();
     await waitFor(() => expect(result.current.stage).toBe('blocked'));
     expect(LocksController.startPayment).not.toHaveBeenCalled();
+  });
+
+  // Every later step needs the same session, so the reader is sent to sign in instead of the blocked screen.
+  it.each([AuthErrorCode.SESSION_EXPIRED, AuthErrorCode.UNAUTHORIZED])(
+    'asks the reader to sign in when the saved bundle id read fails with %s',
+    async (code) => {
+      vi.mocked(LocksController.fetchPurchaseBundleId).mockRejectedValue(authError(code));
+
+      const { result } = renderPay();
+      await waitFor(() => expect(onSessionExpired).toHaveBeenCalledTimes(1));
+      expect(toastMock).toHaveBeenCalledWith(SESSION_EXPIRED_TOAST);
+      expect(result.current.stage).toBe('checking');
+      expect(LocksController.startPayment).not.toHaveBeenCalled();
+    },
+  );
+
+  // Usually the app clears the session on the 401 before the read rejects, which retires this opening.
+  it('asks the reader to sign in once when the app clears the session before the read rejects', async () => {
+    let reject: (error: unknown) => void = () => {};
+    vi.mocked(LocksController.fetchPurchaseBundleId).mockImplementationOnce(
+      () =>
+        new Promise((_, r) => {
+          reject = r;
+        }),
+    );
+
+    const { rerender } = renderPay();
+    await waitFor(() => expect(LocksController.fetchPurchaseBundleId).toHaveBeenCalledTimes(1));
+    authState.restoreStatus = 'reauth-required';
+    authState.session = null;
+    rerender();
+    await act(async () => reject(authError(AuthErrorCode.SESSION_EXPIRED)));
+
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+    expect(toastMock).toHaveBeenCalledTimes(1);
+    expect(toastMock).toHaveBeenCalledWith(SESSION_EXPIRED_TOAST);
+  });
+
+  // The catch can also run before React renders the cleared session; that order must not toast twice.
+  it('asks the reader to sign in once when the read rejects before the cleared session renders', async () => {
+    let reject: (error: unknown) => void = () => {};
+    vi.mocked(LocksController.fetchPurchaseBundleId).mockImplementationOnce(
+      () =>
+        new Promise((_, r) => {
+          reject = r;
+        }),
+    );
+
+    const { rerender } = renderPay();
+    await waitFor(() => expect(LocksController.fetchPurchaseBundleId).toHaveBeenCalledTimes(1));
+    authState.restoreStatus = 'reauth-required';
+    authState.session = null;
+    await act(async () => reject(authError(AuthErrorCode.SESSION_EXPIRED)));
+    rerender();
+
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+    expect(toastMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays quiet when the session is rejected while the modal is closed', () => {
+    const { rerender } = renderPayWith({ open: false });
+    authState.restoreStatus = 'reauth-required';
+    authState.session = null;
+    rerender({ open: false });
+
+    expect(onSessionExpired).not.toHaveBeenCalled();
+    expect(toastMock).not.toHaveBeenCalled();
+  });
+
+  // Closing from the paid screen shows the downloaded content, so an expired session must not drop it.
+  it('shows the downloaded content when the session is rejected on the paid screen', async () => {
+    vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('stored-1');
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('completed'));
+
+    const { result, rerender, onCompleted } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('paid'));
+    authState.restoreStatus = 'reauth-required';
+    authState.session = null;
+    rerender();
+
+    expect(onCompleted).toHaveBeenCalledWith(unlockedContent);
+    expect(onSessionExpired).not.toHaveBeenCalled();
+    expect(toastMock).toHaveBeenCalledWith(SESSION_EXPIRED_TOAST);
+  });
+
+  // The wait itself reads only the Lock Server, but a 401 on any other homeserver request still ends the session.
+  it('asks the reader to sign in when another request gets the session rejected mid-wait', async () => {
+    vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('stored-1');
+    vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('pending'));
+
+    const { result, rerender } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('waiting'));
+    authState.restoreStatus = 'reauth-required';
+    authState.session = null;
+    rerender();
+
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+    expect(toastMock).toHaveBeenCalledWith(SESSION_EXPIRED_TOAST);
+  });
+
+  // The reader may have signed in again and reopened the modal by the time the old read fails.
+  it('ignores a session failure that arrives for an earlier opening', async () => {
+    let rejectFirst: (error: unknown) => void = () => {};
+    vi.mocked(LocksController.fetchPurchaseBundleId)
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, r) => {
+            rejectFirst = r;
+          }),
+      )
+      .mockResolvedValueOnce(null);
+    vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(true);
+
+    const { result, rerender } = renderPayWith({ open: true });
+    await waitFor(() => expect(LocksController.fetchPurchaseBundleId).toHaveBeenCalledTimes(1));
+    rerender({ open: false });
+    rerender({ open: true });
+    await waitFor(() => expect(result.current.stage).toBe('waiting'));
+
+    await act(async () => rejectFirst(authError(AuthErrorCode.SESSION_EXPIRED)));
+    expect(onSessionExpired).not.toHaveBeenCalled();
+    expect(toastMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the blocked screen for an auth failure that signing in again would not fix', async () => {
+    vi.mocked(LocksController.fetchPurchaseBundleId).mockRejectedValue(authError(AuthErrorCode.FORBIDDEN));
+
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('blocked'));
+    expect(onSessionExpired).not.toHaveBeenCalled();
+    expect(toastMock).not.toHaveBeenCalled();
   });
 
   // The lookup stands between the saved id and the automatic replay: an outage there must not
@@ -247,6 +400,7 @@ describe('usePayToUnlock (retry)', () => {
     vi.clearAllMocks();
     authState.currentUserPubky = 'reader1';
     authState.session = {};
+    authState.restoreStatus = 'ready';
     vi.mocked(LocksController.hasPaykitReceiver).mockResolvedValue(true);
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue(null);
     vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('fresh-1'));
@@ -450,6 +604,18 @@ describe('usePayToUnlock (retry)', () => {
       expect(result.current.stage).toBe('install');
     });
 
+    it('asks the reader to sign in instead of offering Try again when the submission fails for the session', async () => {
+      vi.mocked(LocksController.startPayment).mockRejectedValue(authError(AuthErrorCode.SESSION_EXPIRED));
+      const { result } = await openOnInstall();
+
+      result.current.retry();
+      await waitFor(() => expect(onSessionExpired).toHaveBeenCalledTimes(1));
+      expect(toastMock).toHaveBeenCalledTimes(1);
+      expect(toastMock).toHaveBeenCalledWith(SESSION_EXPIRED_TOAST);
+      expect(result.current.stage).toBe('checking');
+      expect(result.current.isSubmitting).toBe(false);
+    });
+
     it('stays on install when the re-check itself fails', async () => {
       const { result } = await openOnInstall();
       vi.mocked(LocksController.hasPaykitReceiver).mockRejectedValueOnce(new Error('homeserver blip'));
@@ -530,6 +696,7 @@ describe('usePayToUnlock (finishing)', () => {
     vi.clearAllMocks();
     authState.currentUserPubky = 'reader1';
     authState.session = {};
+    authState.restoreStatus = 'ready';
     vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('connected');
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('stored-1');
     vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('completed'));
@@ -640,6 +807,7 @@ describe('usePayToUnlock (waiting)', () => {
     vi.clearAllMocks();
     authState.currentUserPubky = 'reader1';
     authState.session = {};
+    authState.restoreStatus = 'ready';
     vi.useFakeTimers();
     vi.mocked(LocksController.fetchPurchaseBundleId).mockResolvedValue('stored-1');
     vi.mocked(LocksController.startPayment).mockResolvedValue(submitted('stored-1'));
@@ -1185,7 +1353,14 @@ describe('usePayToUnlock (waiting)', () => {
       const stages: TPayToUnlockStage[] = [];
 
       const { result } = renderHook(() => {
-        const value = usePayToUnlock({ open: true, lockUrl: LOCK_URL, lockFile, onCompleted: vi.fn(), onPurchased });
+        const value = usePayToUnlock({
+          open: true,
+          lockUrl: LOCK_URL,
+          lockFile,
+          onCompleted: vi.fn(),
+          onPurchased,
+          onSessionExpired,
+        });
         stages.push(value.stage);
         return value;
       });

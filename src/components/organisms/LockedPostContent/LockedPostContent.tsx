@@ -121,6 +121,7 @@ export function LockedPostContent({
     lockFile,
     onPurchased: markPurchased,
     onCompleted: showUnlockedContent,
+    onSessionExpired: () => setIsPayOpen(false),
   });
 
   if (!lockContent) return null;
