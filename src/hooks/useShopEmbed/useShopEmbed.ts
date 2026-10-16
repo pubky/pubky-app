@@ -16,6 +16,7 @@ import {
   shopHostPath,
   shopSignInPath,
 } from '@/libs/shop-embed/bridge';
+import { installShopFrameHistory } from '@/libs/shop-embed/frame-history';
 import { clearShopHostNavigation, isShopHostNavigationPending } from '@/libs/shop-embed/navigation';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
@@ -32,6 +33,8 @@ export function useShopEmbed() {
   const [isNavigating, startNavigation] = useTransition();
   const leavingShop = useRef(false);
   const currentFramePath = useRef<string | null>(null);
+  const pendingFramePath = useRef<string | null>(null);
+  const frameHistory = useRef<{ document: Document; dispose: () => void } | null>(null);
   const [upgradeGeneration, setUpgradeGeneration] = useState<string | null>(null);
   const generation = useAuthStore((state) => state.generation);
   const session = useAuthStore((state) => state.session);
@@ -56,7 +59,39 @@ export function useShopEmbed() {
       window.location.origin,
     );
   };
+  const commitFrameNavigation = (path: string, mode: 'push' | 'replace') => {
+    if (leavingShop.current || isShopHostNavigationPending() || pendingFramePath.current) return;
+    const outerPath = shopHostPath(path);
+    const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (!outerPath || !shopFramePath(currentPath)) return;
+    currentFramePath.current = path;
+    if (currentPath !== outerPath) window.history[mode === 'push' ? 'pushState' : 'replaceState'](null, '', outerPath);
+  };
+  const installFrameHistory = () => {
+    const child = iframe.current?.contentWindow;
+    if (!child) return;
+    try {
+      const path = `${child.location.pathname}${child.location.search}${child.location.hash}`;
+      if (child.location.origin !== window.location.origin || !shopHostPath(path)) return;
+      const previous = frameHistory.current;
+      if (previous?.document === child.document) return;
+      previous?.dispose();
+      frameHistory.current = {
+        document: child.document,
+        dispose: installShopFrameHistory(child, commitFrameNavigation),
+      };
+      // A restored alias can redirect (my-shop -> storefront). A new document
+      // acknowledges the host navigation even when its canonical path differs.
+      if (pendingFramePath.current && (previous || path === pendingFramePath.current)) {
+        pendingFramePath.current = null;
+        commitFrameNavigation(path, 'replace');
+      }
+    } catch {
+      // The frame may have navigated away from the same-origin Shop mount.
+    }
+  };
   const handleFrameLoad = () => {
+    installFrameHistory();
     markLoaded();
     publishSession();
   };
@@ -110,12 +145,26 @@ export function useShopEmbed() {
       else if (request.type === 'navigate') {
         // A late child route must not turn into a Next restore that cancels host navigation.
         if (leavingShop.current || isShopHostNavigationPending()) return;
+        if (pendingFramePath.current && request.path !== pendingFramePath.current) return;
+        if (frameHistory.current) {
+          try {
+            const child = iframe.current?.contentWindow;
+            // postMessage is queued: an older report must not overwrite a newer
+            // synchronous history change from this document.
+            if (child && `${child.location.pathname}${child.location.search}${child.location.hash}` !== request.path)
+              return;
+          } catch {
+            // A same-origin message can arrive after a cross-origin frame navigation.
+            return;
+          }
+        }
         const outerPath = shopHostPath(request.path);
-        if (!outerPath) return;
+        if (!outerPath || !shopFramePath(window.location.pathname)) return;
+        pendingFramePath.current = null;
         currentFramePath.current = request.path;
         if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== outerPath)
-          // Next integrates native history with its path hooks. Commit synchronously so
-          // a late server navigation cannot undo Back in the iframe's joint history.
+          // Initial routes and native fragment reports only synchronize the URL.
+          // The frame history adapter owns push/replace intent for client routing.
           window.history.replaceState(null, '', outerPath);
       } else if (request.type === 'request-login') {
         loginFromMessage();
@@ -143,6 +192,8 @@ export function useShopEmbed() {
       unsubscribe();
       window.removeEventListener('message', onMessage);
       clearShopHostNavigation();
+      frameHistory.current?.dispose();
+      frameHistory.current = null;
     };
   }, [router]);
 
@@ -158,12 +209,18 @@ export function useShopEmbed() {
         setInitialSrc(nextPath);
         return;
       }
-      // replace avoids adding a second history entry to the browser's joint frame history.
+      // Back/Forward restores the durable App entry. Ignore the old frame's
+      // queued reports until its replacement acknowledges this route.
+      pendingFramePath.current = nextPath;
       iframe.current?.contentWindow?.location.replace(new URL(nextPath, window.location.origin).href);
     };
     sync();
     window.addEventListener('hashchange', sync);
-    return () => window.removeEventListener('hashchange', sync);
+    window.addEventListener('popstate', sync);
+    return () => {
+      window.removeEventListener('hashchange', sync);
+      window.removeEventListener('popstate', sync);
+    };
   }, [pathname, searchParams]);
 
   return { iframe, initialSrc, unavailable, upgradeOpen, closeUpgrade, requestLogin, handleFrameLoad };

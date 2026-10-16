@@ -397,6 +397,92 @@ describe('ShopEmbed', () => {
     expect(navigation.push).toHaveBeenCalledWith('/shop');
     expect(AuthController.logout).not.toHaveBeenCalled();
   });
+  it('owns one outer entry per child push and preserves replacement semantics', () => {
+    const { frame } = mount();
+    fireEvent.load(frame);
+    const child = frame.contentWindow!;
+    const childLength = child.history.length;
+    const parentPush = vi.spyOn(window.history, 'pushState');
+    const parentReplace = vi.spyOn(window.history, 'replaceState');
+
+    act(() => child.history.pushState({ __NA: true }, '', '/shop-embed/marketplace/listing/test/item?size=1#details'));
+    expect(parentPush).toHaveBeenCalledExactlyOnceWith(null, '', '/shop/marketplace/listing/test/item?size=1#details');
+    expect(child.history.length).toBe(childLength);
+    send(frame, { type: 'navigate', path: '/shop-embed/marketplace/listing/test/item?size=1#details' });
+    expect(parentPush).toHaveBeenCalledTimes(1);
+    expect(parentReplace).not.toHaveBeenCalled();
+
+    act(() =>
+      child.history.replaceState({ __NA: true }, '', '/shop-embed/marketplace/listing/test/item?size=2#details'),
+    );
+    expect(parentReplace).toHaveBeenCalledExactlyOnceWith(
+      null,
+      '',
+      '/shop/marketplace/listing/test/item?size=2#details',
+    );
+    // A queued report from the previous route must not roll the address bar back.
+    send(frame, { type: 'navigate', path: '/shop-embed/marketplace/listing/test/item?size=1#details' });
+    expect(window.location.search).toBe('?size=2');
+  });
+
+  it('does not stack adapters on repeated ready/load events and releases them on unmount', () => {
+    const { frame, unmount } = mount();
+    const child = frame.contentWindow!;
+    const history = child.history;
+    const originalPush = history.pushState;
+    fireEvent.load(frame);
+    const adaptedPush = child.history.pushState;
+    send(frame, { type: 'ready' });
+    fireEvent.load(frame);
+    expect(child.history.pushState).toBe(adaptedPush);
+    expect(adaptedPush).not.toBe(originalPush);
+    unmount();
+    expect(history.pushState).toBe(originalPush);
+  });
+
+  it('fences stale child navigation immediately on outer Back and resumes after the target report', () => {
+    const { frame } = mount();
+    fireEvent.load(frame);
+    const child = frame.contentWindow!;
+    act(() => child.history.pushState(null, '', '/shop-embed/marketplace/listing/test/item'));
+    // jsdom cannot traverse joint frame history. Dispatch the browser boundary
+    // after restoring the outer entry; real Back/reload is checked in Chrome.
+    act(() => {
+      window.history.replaceState(null, '', '/shop');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    send(frame, { type: 'navigate', path: '/shop-embed/marketplace/listing/test/item' });
+    send(frame, { type: 'navigate', path: '/shop-embed/marketplace' });
+    act(() => child.history.replaceState(null, '', '/shop-embed/marketplace/listing/test/late'));
+    expect(window.location.pathname).toBe('/shop');
+    // Stand in for the iframe document loaded by location.replace.
+    act(() => child.history.replaceState(null, '', '/shop-embed/marketplace'));
+    send(frame, { type: 'navigate', path: '/shop-embed/marketplace' });
+    act(() => child.history.pushState(null, '', '/shop-embed/marketplace/cart'));
+    expect(window.location.pathname).toBe('/shop/marketplace/cart');
+  });
+
+  it('accepts a canonical redirect from the new frame document after outer Back', () => {
+    const { frame } = mount();
+    fireEvent.load(frame);
+    const oldChild = frame.contentWindow!;
+    act(() => oldChild.history.pushState(null, '', '/shop-embed/marketplace/cart'));
+    act(() => {
+      window.history.replaceState(null, '', '/shop/marketplace/my-shop');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    send(frame, { type: 'ready' });
+    act(() => oldChild.history.replaceState(null, '', '/shop-embed/marketplace/late'));
+    expect(window.location.pathname).toBe('/shop/marketplace/my-shop');
+
+    // Model the new document after the server redirects the restored legacy URL.
+    frame.src = '/shop-embed/marketplace/storefront';
+    fireEvent.load(frame);
+    expect(window.location.pathname).toBe('/shop/marketplace/storefront');
+    act(() => frame.contentWindow!.history.pushState(null, '', '/shop-embed/marketplace/cart'));
+    expect(window.location.pathname).toBe('/shop/marketplace/cart');
+  });
+
   it('updates the wrapper URL without adding a second history entry or accepting external redirects', () => {
     const { frame } = mount();
     send(frame, { type: 'navigate', path: '/shop-embed/settings/payments?paid=true#return' });
