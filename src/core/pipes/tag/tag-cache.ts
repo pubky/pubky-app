@@ -12,9 +12,15 @@ export function reconcileTagWindow(
 ) {
   const remoteTags = new Map(incoming.map((tag) => [tag.label.toLowerCase(), tag]));
   const localTags = new Map(existing?.tags.map((tag) => [tag.label.toLowerCase(), tag]));
-  const tags = new Map(
-    [...(options.append ? (existing?.tags ?? []) : []), ...incoming].map((tag) => [tag.label.toLowerCase(), tag]),
-  );
+  // A response without `tag_uri` keeps the address stored for the same viewer while they still tag the label.
+  const sameViewer = viewerId !== undefined && existing?.cache?.viewerId === viewerId;
+  const withStoredUri = (tag: NexusTag): NexusTag => {
+    const stored =
+      sameViewer && tag.relationship && tag.tag_uri === undefined && localTags.get(tag.label.toLowerCase())?.tag_uri;
+    return stored ? { ...tag, tag_uri: stored } : tag;
+  };
+  const retained = options.append ? (existing?.tags ?? []) : [];
+  const tags = new Map([...retained, ...incoming.map(withStoredUri)].map((tag) => [tag.label.toLowerCase(), tag]));
   const mutations: NonNullable<TagCollectionModelSchema<string>['mutations']> = {};
   for (const { key, label, mutation } of getTagMutationEntries(existing)) {
     // A replacement retires expired intent along with the optimistic window.
