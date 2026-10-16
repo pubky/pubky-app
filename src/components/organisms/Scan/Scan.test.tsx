@@ -63,6 +63,8 @@ vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
     fetchUrl: mockFetchUrl,
     copyAuthUrl: mockCopyAuthUrl,
     isOpeningRing: false,
+    isOpeningBitkit: false,
+    onAuthorizeBitkitClick: vi.fn(),
     onAuthorizeClick: mockOnAuthorizeClick,
   })),
 }));
@@ -234,6 +236,8 @@ describe('ScanContent', () => {
       fetchUrl: mockFetchUrl,
       copyAuthUrl: mockCopyAuthUrl,
       isOpeningRing: false,
+      isOpeningBitkit: false,
+      onAuthorizeBitkitClick: vi.fn(),
       onAuthorizeClick: mockOnAuthorizeClick,
     });
   });
@@ -278,7 +282,7 @@ describe('ScanContent', () => {
 
     // Wait for the component to finish loading
     await waitFor(() => {
-      expect(screen.getByText('Authorize with Pubky Ring')).toBeInTheDocument();
+      expect(screen.getByText('Authorize with Pubky Ring or Bitkit')).toBeInTheDocument();
     });
 
     const images = screen.getAllByTestId('next-image');
@@ -293,10 +297,10 @@ describe('ScanContent', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Authorize with Pubky Ring/i })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: /Authorize with Pubky Ring or Bitkit/i })).not.toBeDisabled();
     });
 
-    const authorizeButton = screen.getByRole('button', { name: /Authorize with Pubky Ring/i });
+    const authorizeButton = screen.getByRole('button', { name: /Authorize with Pubky Ring or Bitkit/i });
 
     await act(async () => {
       fireEvent.click(authorizeButton);
@@ -313,6 +317,8 @@ describe('ScanContent', () => {
       fetchUrl: mockFetchUrl,
       copyAuthUrl: mockCopyAuthUrl,
       isOpeningRing: false,
+      isOpeningBitkit: false,
+      onAuthorizeBitkitClick: vi.fn(),
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
@@ -333,6 +339,8 @@ describe('ScanContent', () => {
       fetchUrl: mockFetchUrl,
       copyAuthUrl: mockCopyAuthUrl,
       isOpeningRing: false,
+      isOpeningBitkit: false,
+      onAuthorizeBitkitClick: vi.fn(),
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 

@@ -1,3 +1,5 @@
+import { LEGAL_ENTITY_NAME } from '@/config/legal';
+
 export const FAQ_QUESTIONS = [
   'How can I update my profile information?',
   'How can I delete my post?',
@@ -6,4 +8,4 @@ export const FAQ_QUESTIONS = [
   'How is Pubky different from other social platforms?',
 ] as const;
 
-export const COPYRIGHT_TEXT = `© ${new Date().getFullYear()} Synonym Software, S.A. DE C.V.`;
+export const COPYRIGHT_TEXT = `© ${new Date().getFullYear()} ${LEGAL_ENTITY_NAME}`;
