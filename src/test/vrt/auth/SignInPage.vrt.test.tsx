@@ -101,12 +101,16 @@ vi.mock('@/controllers/auth/auth', async () => {
   };
 });
 
-// Passport needs an HTTPS page. This harness is served over http, so the real
-// hook settles on 'disabled' and would hide the method staging and production
-// show. Pin it per scenario, the same way the landing VRT pins 'enabled'.
+// The shared setup pins Passport eligibility to 'enabled'; this file also
+// captures the Ring-only layout, so pin it per scenario.
 vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
   usePassportEligibility: () => scenario.passport,
 }));
+
+// The shared setup stubs the Passport attempt as idle. Restore the real hook so
+// a Continue with Google click runs the real attempt against the stubbed
+// `AuthController` and the setup's inert popup.
+vi.mock('@/hooks/usePassportAuth/usePassportAuth', (importOriginal) => importOriginal());
 
 vi.mock('@/molecules/Toaster/toast');
 

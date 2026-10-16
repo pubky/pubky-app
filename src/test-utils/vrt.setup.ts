@@ -23,7 +23,10 @@
 import '@/app/globals.css';
 
 import { vi } from 'vitest';
+import type { UsePassportAuthReturn } from '@/hooks/usePassportAuth/usePassportAuth.types';
+import type { PassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility.types';
 import type { UseUnlockedListResult } from '@/hooks/useUnlockedList/useUnlockedList.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 // Stabilize cross-OS / cross-run rendering for visual snapshots.
 // Applied once per test file at setup time.
@@ -136,14 +139,25 @@ vi.mock('@/hooks/useUnlockedList/useUnlockedList', () => {
   return { useUnlockedList: (): UseUnlockedListResult => settled };
 });
 
-// 2d. Never open a real window from a capture. Popup sign-in (Pubky Passport's
-//     "Continue with Google") calls `window.open` from the click and then
-//     navigates the popup to a live third-party origin, so a real popup would
-//     put the network and another page into the run. Hand back an inert popup
-//     that never closes or navigates: the opener stays in its waiting state
-//     for as long as the capture needs. A file that needs a blocked popup
-//     overrides this with `vi.spyOn(window, 'open')`.
-import { asOpaque } from '@/test-utils/type-assertions';
+// 2d. Pubky Passport ("Continue with Google") renders as in production but
+//     never reaches Google. Eligibility needs an HTTPS page, so the real hook
+//     only ever reports `'pending'` or `'disabled'` on the http VRT server and
+//     every surface would drop its Google option: resolve it to `'enabled'`.
+//     The attempt hook opens a Passport popup and polls the HTTP relay, so it
+//     is an idle attempt that never starts. A file that captures the waiting
+//     state either overrides it with a pending stand-in (`onboarding/Join`) or
+//     drives the real hook with `AuthController` stubbed (`auth/SignInPage`).
+//     The real hook opens the popup from the click, so `window.open` returns an
+//     inert popup that never closes or navigates: no live origin enters the run
+//     and the attempt stays waiting for as long as the capture needs. A file
+//     that needs a blocked popup overrides it with `vi.spyOn(window, 'open')`.
+vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
+  usePassportEligibility: (): PassportEligibility => 'enabled',
+}));
+vi.mock('@/hooks/usePassportAuth/usePassportAuth', () => {
+  const idle: UsePassportAuthReturn = { startPassportAuth: () => undefined, isPending: false };
+  return { usePassportAuth: (): UsePassportAuthReturn => idle };
+});
 
 const inertPopup = asOpaque<Window>({
   closed: false,
