@@ -38,13 +38,14 @@ export interface UseInlineMediaUploadReturn {
    */
   stageInlineMedia: (file: File) => Promise<string>;
   /**
-   * Uploads the staged files among `uris` to the homeserver, in order, and maps
-   * every input URI to the URI to persist: a staged file to its homeserver file
-   * URI, anything else (already uploaded, or not a session file) to itself. A
-   * failed upload rejects with the controller's error as-is; the files uploaded
-   * before it stay recorded, so a retry does not upload them again.
+   * Uploads the staged files among `uris` to the homeserver, in order, and
+   * resolves with the URIs to persist, index-aligned with `uris`: a staged file
+   * becomes its homeserver file URI, anything else (already uploaded, or not a
+   * session file) stays as given. A failed upload rejects with the controller's
+   * error as-is; the files uploaded before it stay recorded, so a retry does
+   * not upload them again.
    */
-  uploadStaged: (uris: string[]) => Promise<Map<string, string>>;
+  uploadStaged: (uris: string[]) => Promise<string[]>;
   /** Object URL for a session file URI, for in-editor preview */
   getPreviewUrl: (src: string) => string | null;
   /** The file as picked, before upload sanitization; null for a URI outside the session */

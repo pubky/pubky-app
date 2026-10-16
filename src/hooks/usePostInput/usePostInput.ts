@@ -730,11 +730,10 @@ export function usePostInput({
   // and inserts nothing.
   const insertInlineMediaAtCaret = async (files: File[]) => {
     const staged = await Promise.allSettled(files.map((file) => inlineMedia.upload(file)));
-    for (const result of staged) {
-      if (result.status !== 'fulfilled') continue;
-      markdownEditorRef.current?.focus();
-      markdownEditorRef.current?.insertMarkdown(`![](${result.value})`);
-    }
+    const uris = staged.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+    if (uris.length === 0) return;
+    markdownEditorRef.current?.focus();
+    for (const uri of uris) markdownEditorRef.current?.insertMarkdown(`![](${uri})`);
   };
 
   const handleDrop = useCallback(

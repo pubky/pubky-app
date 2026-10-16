@@ -299,13 +299,89 @@ describe('Post Application', () => {
         };
 
         const { commitCreateSpy, saveSpy, requestSpy } = setupCreateSpies();
+        const fileDeleteUploadedSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
         commitCreateSpy.mockRejectedValue(new Error('File upload failed: quota exceeded'));
 
         await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('File upload failed: quota exceeded');
 
         expect(commitCreateSpy).toHaveBeenCalledWith({ fileAttachments: mockFileAttachments });
+        // A half-uploaded file (blob in, record missing) is swept by its known URLs
+        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith(mockFileAttachments);
         expect(saveSpy).not.toHaveBeenCalled();
         expect(requestSpy).not.toHaveBeenCalled();
+      });
+
+      it('should roll back the whole batch when one upload of several fails', async () => {
+        // An article sends its cover and body files together; the uploads run in
+        // parallel, so the siblings of the failed one are already on the homeserver
+        const mockFileAttachments = [
+          createMockFileAttachment('cover'),
+          createMockFileAttachment('body-1'),
+          createMockFileAttachment('body-2'),
+        ];
+
+        const mockPost = new PubkyAppPost('Article', PubkyAppPostKind.Long, undefined, undefined, undefined);
+        const mockData: TCreatePostInput = {
+          compositePostId: 'author:article-partial-upload',
+          post: mockPost,
+          postUrl: 'pubky://author/pub/pubky.app/posts/article-partial-upload',
+          fileAttachments: mockFileAttachments,
+        };
+
+        const { commitCreateSpy, saveSpy, requestSpy } = setupCreateSpies();
+        const fileDeleteUploadedSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
+        commitCreateSpy.mockRejectedValue(new Error('File upload failed: 507'));
+
+        await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('File upload failed: 507');
+
+        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith(mockFileAttachments);
+        expect(saveSpy).not.toHaveBeenCalled();
+        expect(requestSpy).not.toHaveBeenCalled();
+      });
+
+      it('should roll back the uploads when the local post write fails', async () => {
+        const mockFileAttachments = [createMockFileAttachment('cover'), createMockFileAttachment('body-1')];
+
+        const mockPost = new PubkyAppPost('Article', PubkyAppPostKind.Long, undefined, undefined, undefined);
+        const mockData: TCreatePostInput = {
+          compositePostId: 'author:article-local-write-fail',
+          post: mockPost,
+          postUrl: 'pubky://author/pub/pubky.app/posts/article-local-write-fail',
+          fileAttachments: mockFileAttachments,
+        };
+
+        const { commitCreateSpy, saveSpy, requestSpy } = setupCreateSpies();
+        const fileDeleteUploadedSpy = vi.spyOn(FileApplication, 'commitDeleteUploaded').mockResolvedValue(undefined);
+        saveSpy.mockRejectedValue(new Error('Dexie write failed'));
+
+        await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('Dexie write failed');
+
+        expect(commitCreateSpy).toHaveBeenCalledWith({ fileAttachments: mockFileAttachments });
+        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith(mockFileAttachments);
+        expect(requestSpy).not.toHaveBeenCalled();
+      });
+
+      it('should propagate the upload error when the batch rollback also fails', async () => {
+        const mockFileAttachments = [createMockFileAttachment('cover'), createMockFileAttachment('body-1')];
+
+        const mockPost = new PubkyAppPost('Article', PubkyAppPostKind.Long, undefined, undefined, undefined);
+        const mockData: TCreatePostInput = {
+          compositePostId: 'author:article-rollback-fail',
+          post: mockPost,
+          postUrl: 'pubky://author/pub/pubky.app/posts/article-rollback-fail',
+          fileAttachments: mockFileAttachments,
+        };
+
+        const { commitCreateSpy, saveSpy } = setupCreateSpies();
+        const fileDeleteUploadedSpy = vi
+          .spyOn(FileApplication, 'commitDeleteUploaded')
+          .mockRejectedValue(new Error('File rollback failed'));
+        commitCreateSpy.mockRejectedValue(new Error('File upload failed: 507'));
+
+        await expect(PostApplication.commitCreate(mockData)).rejects.toThrow('File upload failed: 507');
+
+        expect(fileDeleteUploadedSpy).toHaveBeenCalledWith(mockFileAttachments);
+        expect(saveSpy).not.toHaveBeenCalled();
       });
     });
 

@@ -41,7 +41,7 @@ const STAGED_ID_PREFIX = 'draft-';
 const STAGED_ID_RANDOM_LENGTH = 7;
 
 function createStagedUri(pubky: Pubky): string {
-  const random = crypto.randomUUID().replaceAll('-', '').slice(0, STAGED_ID_RANDOM_LENGTH);
+  const random = crypto.randomUUID().slice(0, STAGED_ID_RANDOM_LENGTH);
   return `pubky://${pubky}/pub/pubky.app/files/${STAGED_ID_PREFIX}${random}`;
 }
 
@@ -124,17 +124,24 @@ export function useInlineMediaUpload({
     return key === null ? null : (getSession().entries.get(key) ?? null);
   };
 
-  /** Revokes every preview and empties the session; returns the homeserver URIs of its uploads. */
-  const clearSession = (): string[] => {
+  /**
+   * Revokes the previews of the entries not in `keep`, empties the session and
+   * returns the homeserver URIs of the released uploads. A kept entry hands its
+   * object URL over to the localFiles store (seeded via
+   * buildLocalAttachmentEntries before this runs); the store's set-difference
+   * revoke owns its lifetime from here.
+   */
+  const releaseSession = (keep: Set<string | null> = new Set()): string[] => {
     const { entries, uploadedKeys } = getSession();
-    const uploaded: string[] = [];
-    for (const entry of entries.values()) {
+    const released: string[] = [];
+    for (const [key, entry] of entries) {
+      if (keep.has(key)) continue;
       URL.revokeObjectURL(entry.objectUrl);
-      if (entry.status === 'uploaded') uploaded.push(entry.uploadedUri);
+      if (entry.status === 'uploaded') released.push(entry.uploadedUri);
     }
     entries.clear();
     uploadedKeys.clear();
-    return uploaded;
+    return released;
   };
 
   const deleteUris = async (fileUris: string[]) => {
@@ -187,26 +194,41 @@ export function useInlineMediaUpload({
         pendingBatchRef.current = batch;
         queueMicrotask(() => {
           pendingBatchRef.current = null;
-          if (discardedRef.current) {
-            // Discarded in the same tick: the composer is gone, nothing to tell
-            const rejection = taggedRejection('Inline media staging canceled: the session was discarded.');
+          const rejectBatch = (message: string) => {
+            const rejection = taggedRejection(message);
             for (const entry of batch) entry.reject(rejection);
-            return;
-          }
-          if (batch.length > getInlineBudget()) {
-            toast({
-              variant: 'error',
-              description: `Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} attachments including the cover.`,
-            });
-            const rejection = taggedRejection('Inline media rejected: the batch exceeds the article attachment limit.');
-            for (const entry of batch) entry.reject(rejection);
-            return;
-          }
-          const { entries } = getSession();
-          for (const entry of batch) {
-            const uri = createStagedUri(pubky);
-            entries.set(uri, { objectUrl: URL.createObjectURL(entry.file), file: entry.file, status: 'staged', pubky });
-            entry.resolve(uri);
+          };
+          try {
+            if (discardedRef.current) {
+              // Discarded in the same tick: the composer is gone, nothing to tell
+              rejectBatch('Inline media staging canceled: the session was discarded.');
+              return;
+            }
+            if (batch.length > getInlineBudget()) {
+              toast({
+                variant: 'error',
+                description: `Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} attachments including the cover.`,
+              });
+              rejectBatch('Inline media rejected: the batch exceeds the article attachment limit.');
+              return;
+            }
+            const { entries } = getSession();
+            for (const entry of batch) {
+              const uri = createStagedUri(pubky);
+              entries.set(uri, {
+                objectUrl: URL.createObjectURL(entry.file),
+                file: entry.file,
+                status: 'staged',
+                pubky,
+              });
+              entry.resolve(uri);
+            }
+          } catch (error) {
+            // A promise nobody settles would strand the editor's insert; tell the
+            // author once and let every caller see a handled rejection
+            Logger.error('[useInlineMediaUpload] Inline media staging failed', { error });
+            toast({ variant: 'error', description: 'Could not add the file. Try again.' });
+            rejectBatch('Inline media staging failed.');
           }
         });
       }
@@ -214,26 +236,24 @@ export function useInlineMediaUpload({
     });
   };
 
-  const uploadStaged = async (uris: string[]): Promise<Map<string, string>> => {
+  const uploadStaged = async (uris: string[]): Promise<string[]> => {
     const { entries, uploadedKeys } = getSession();
-    const result = new Map<string, string>();
+    const result: string[] = [];
     // One at a time: each upload sanitizes its file first (a canvas re-encode
     // for an image), which is not worth running nine times at once on a phone
     for (const uri of uris) {
       const key = resolveKey(uri);
       const entry = key === null ? undefined : entries.get(key);
       if (key === null || !entry) {
-        result.set(uri, uri);
-        continue;
-      }
-      if (entry.status === 'staged') {
+        result.push(uri);
+      } else if (entry.status === 'uploaded') {
+        result.push(entry.uploadedUri);
+      } else {
         const uploadedUri = await FileController.commitCreate({ file: entry.file, pubky: entry.pubky });
         entries.set(key, { objectUrl: entry.objectUrl, file: entry.file, status: 'uploaded', uploadedUri });
         uploadedKeys.set(uploadedUri, key);
-        result.set(uri, uploadedUri);
-        continue;
+        result.push(uploadedUri);
       }
-      result.set(uri, entry.uploadedUri);
     }
     return result;
   };
@@ -247,26 +267,11 @@ export function useInlineMediaUpload({
   const getMediaName = (uri: string): string | null => getSessionFile(uri)?.name ?? null;
 
   const registerSessionUpload = (uri: string, file: File) => {
-    const { entries, uploadedKeys } = getSession();
-    entries.set(uri, { objectUrl: URL.createObjectURL(file), file, status: 'uploaded', uploadedUri: uri });
-    uploadedKeys.set(uri, uri);
+    getSession().entries.set(uri, { objectUrl: URL.createObjectURL(file), file, status: 'uploaded', uploadedUri: uri });
   };
 
   const finalizeSession = async (referencedUris: string[]) => {
-    const { entries, uploadedKeys } = getSession();
-    const referenced = new Set(referencedUris.map(resolveKey));
-    const orphaned: string[] = [];
-    for (const [key, entry] of entries) {
-      // Referenced files hand their object URL over to the localFiles store
-      // (seeded via buildLocalAttachmentEntries before this call); the store's
-      // set-difference revoke owns their lifetime from here.
-      if (referenced.has(key)) continue;
-      URL.revokeObjectURL(entry.objectUrl);
-      if (entry.status === 'uploaded') orphaned.push(entry.uploadedUri);
-    }
-    entries.clear();
-    uploadedKeys.clear();
-    await deleteUris(orphaned);
+    await deleteUris(releaseSession(new Set(referencedUris.map(resolveKey))));
   };
 
   const discardSession = async () => {
@@ -279,7 +284,7 @@ export function useInlineMediaUpload({
       return;
     }
     discardedRef.current = true;
-    await deleteUris(clearSession());
+    await deleteUris(releaseSession());
   };
 
   /**

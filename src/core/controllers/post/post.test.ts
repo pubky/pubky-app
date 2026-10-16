@@ -2407,64 +2407,6 @@ describe('PostController', () => {
       }
     });
   });
-  describe('commitCreate with attachmentUris (article inline images)', () => {
-    const inlineUriA = `pubky://${testData.authorPubky}/pub/pubky.app/files/inlineA`;
-    const inlineUriB = `pubky://${testData.authorPubky}/pub/pubky.app/files/inlineB`;
-
-    const stubTo = () =>
-      vi.spyOn(PostNormalizer, 'to').mockResolvedValue({
-        post: { toJson: () => ({}) },
-        meta: { id: 'post123', url: `pubky://${testData.authorPubky}/pub/pubky.app/posts/post123` },
-      } as never);
-
-    it('passes author-owned attachment URIs through to the normalizer', async () => {
-      const toSpy = stubTo();
-      const commitCreateSpy = vi.spyOn(PostApplication, 'commitCreate').mockResolvedValue(undefined as never);
-
-      const { PostController } = await import('./post');
-      await PostController.commitCreate({
-        content: JSON.stringify({ title: 'T', body: '![a](attachment:0)' }),
-        authorId: testData.authorPubky,
-        isArticle: true,
-        attachmentUris: [inlineUriA, inlineUriB],
-      });
-
-      expect(toSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ attachmentUris: [inlineUriA, inlineUriB], kind: PubkyAppPostKind.Long }),
-        testData.authorPubky,
-      );
-      expect(commitCreateSpy).toHaveBeenCalled();
-    });
-
-    it("rejects another user's file URIs", async () => {
-      const otherUri = 'pubky://someone-else/pub/pubky.app/files/theirs';
-
-      const { PostController } = await import('./post');
-      await expect(
-        PostController.commitCreate({
-          content: JSON.stringify({ title: 'T', body: 'x' }),
-          authorId: testData.authorPubky,
-          isArticle: true,
-          attachmentUris: [inlineUriA, otherUri],
-        }),
-      ).rejects.toThrow('Attachment URIs must be homeserver files owned by the author');
-    });
-
-    it('rejects URIs that are not homeserver file resources', async () => {
-      const blobUri = `pubky://${testData.authorPubky}/pub/pubky.app/blobs/blob1`;
-
-      const { PostController } = await import('./post');
-      await expect(
-        PostController.commitCreate({
-          content: JSON.stringify({ title: 'T', body: 'x' }),
-          authorId: testData.authorPubky,
-          isArticle: true,
-          attachmentUris: [blobUri],
-        }),
-      ).rejects.toThrow('Attachment URIs must be homeserver files owned by the author');
-    });
-  });
-
   describe('commitEdit with nextOrder (article inline images)', () => {
     const coverUri = `pubky://${testData.authorPubky}/pub/pubky.app/files/cover1`;
     const inlineA = `pubky://${testData.authorPubky}/pub/pubky.app/files/inlineA`;

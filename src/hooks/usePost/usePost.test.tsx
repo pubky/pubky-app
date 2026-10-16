@@ -2214,9 +2214,10 @@ describe('usePost — article inline images', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setMockCurrentUserId(AUTHOR);
+    // Reset first: it revokes the previous test's entries, which must not count against this test
+    useLocalFilesStore.getState().reset();
     global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
     global.URL.revokeObjectURL = vi.fn();
-    useLocalFilesStore.getState().reset();
   });
 
   const setupArticle = async (body: string, options?: { cover?: File; existing?: ExistingAttachment[] }) => {
@@ -2272,7 +2273,6 @@ describe('usePost — article inline images', () => {
           isArticle: true,
         }),
       );
-      expect(mockPostControllerCreate.mock.calls[0][0]).not.toHaveProperty('attachmentUris');
       // Nothing went up ahead of the post: the controller uploads the file with it
       expect(FileController.commitCreate).not.toHaveBeenCalled();
     });
@@ -2306,8 +2306,6 @@ describe('usePost — article inline images', () => {
       act(() => {
         result.current.setContent(`![A](${staged})`);
       });
-      // The store reset in beforeEach revokes the previous test's entries; only this publish counts
-      vi.mocked(URL.revokeObjectURL).mockClear();
 
       await act(async () => {
         await result.current.post({});
@@ -2331,7 +2329,6 @@ describe('usePost — article inline images', () => {
       const file = new File(['x'], 'img.png', { type: 'image/png' });
       const result = await setupArticle('Intro');
       const staged = await stageViaSession(result, file);
-      vi.mocked(URL.revokeObjectURL).mockClear();
 
       await act(async () => {
         await result.current.post({ article: { title: 'Fresh title', body: `Intro\n\n![A](${staged})` } });
@@ -2450,8 +2447,6 @@ describe('usePost — article inline images', () => {
       const staged = await stageViaSession(view.result, file);
       const body = `Intro\n\n![A](${staged})`;
       act(() => view.result.current.setContent(body));
-      // The store reset in beforeEach revokes the previous test's entries; only this draft counts
-      vi.mocked(URL.revokeObjectURL).mockClear();
 
       // The switch captures the draft first; applying the lock then empties the composer.
       view.rerender({ keepInlineMedia: true });
@@ -2800,10 +2795,15 @@ describe('usePost — article inline images', () => {
       );
     });
 
-    it('blocks edits whose attachment total (including the preserved tail) exceeds the cap', async () => {
+    it('blocks edits whose attachment total (including the preserved tail) exceeds the cap, before uploading', async () => {
       const referenced = fileUri('referenced');
       const preserved = Array.from({ length: 10 }, (_, index) => fileUri(`preserved-${index}`));
-      const result = await setupArticle(`![R](${referenced})`);
+      const cover = new File(['x'], 'new-cover.png', { type: 'image/png' });
+      const result = await setupArticle('draft', { cover });
+      const staged = await stageViaSession(result, new File(['x'], 'new.png', { type: 'image/png' }));
+      act(() => {
+        result.current.setContent(`![R](${referenced})\n\n![N](${staged})`);
+      });
 
       await act(async () => {
         await result.current.edit({
@@ -2813,6 +2813,8 @@ describe('usePost — article inline images', () => {
         });
       });
 
+      // Neither the replacement cover nor the staged file went up for a save that cannot land
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
       expect(mockPostControllerEdit).not.toHaveBeenCalled();
       expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({

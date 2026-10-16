@@ -89,6 +89,31 @@ describe('useInlineMediaUpload', () => {
       expect(mockCreateObjectURL).not.toHaveBeenCalled();
     });
 
+    it('rejects the batch, tagged and after one toast, when staging itself throws', async () => {
+      const { result } = setup({
+        getInlineBudget: () => {
+          throw new Error('budget parser crashed');
+        },
+      });
+
+      let batch!: Promise<string>[];
+      act(() => {
+        batch = [
+          result.current.stageInlineMedia(imageFile('a.png')),
+          result.current.stageInlineMedia(imageFile('b.png')),
+        ];
+      });
+
+      for (const staged of batch) {
+        await expect(staged).rejects.toMatchObject({ name: INLINE_MEDIA_UPLOAD_REJECTION_NAME });
+      }
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'error', description: 'Could not add the file. Try again.' }),
+      );
+      expect(mockCreateObjectURL).not.toHaveBeenCalled();
+    });
+
     it('rejects when disabled or unauthenticated', async () => {
       const disabled = setup({ enabled: false });
       await expect(disabled.result.current.stageInlineMedia(imageFile())).rejects.toThrow();
@@ -228,26 +253,25 @@ describe('useInlineMediaUpload', () => {
       const stagedA = await stage(result, pickedA);
       const stagedB = await stage(result, pickedB);
 
-      let uploaded!: Map<string, string>;
+      let uploaded: string[] = [];
       await act(async () => {
         uploaded = await result.current.uploadStaged([stagedB, stagedA]);
       });
 
       expect(FileController.commitCreate).toHaveBeenNthCalledWith(1, { file: pickedB, pubky: PUBKY });
       expect(FileController.commitCreate).toHaveBeenNthCalledWith(2, { file: pickedA, pubky: PUBKY });
-      expect(uploaded.get(stagedB)).toBe(fileUri('A'));
-      expect(uploaded.get(stagedA)).toBe(fileUri('B'));
+      expect(uploaded).toEqual([fileUri('A'), fileUri('B')]);
     });
 
     it('maps a URI from outside the session to itself without uploading', async () => {
       const { result } = setup();
 
-      let uploaded!: Map<string, string>;
+      let uploaded: string[] = [];
       await act(async () => {
         uploaded = await result.current.uploadStaged([fileUri('kept-original')]);
       });
 
-      expect(uploaded.get(fileUri('kept-original'))).toBe(fileUri('kept-original'));
+      expect(uploaded).toEqual([fileUri('kept-original')]);
       expect(FileController.commitCreate).not.toHaveBeenCalled();
     });
 
@@ -259,14 +283,13 @@ describe('useInlineMediaUpload', () => {
       await act(async () => {
         await result.current.uploadStaged([staged]);
       });
-      let uploaded!: Map<string, string>;
+      let uploaded: string[] = [];
       await act(async () => {
         uploaded = await result.current.uploadStaged([staged, fileUri('A')]);
       });
 
       expect(FileController.commitCreate).toHaveBeenCalledTimes(1);
-      expect(uploaded.get(staged)).toBe(fileUri('A'));
-      expect(uploaded.get(fileUri('A'))).toBe(fileUri('A'));
+      expect(uploaded).toEqual([fileUri('A'), fileUri('A')]);
     });
 
     it('rethrows the first failure as-is and keeps the uploads made before it', async () => {
@@ -282,13 +305,12 @@ describe('useInlineMediaUpload', () => {
 
       // A retry uploads only the file that failed
       vi.mocked(FileController.commitCreate).mockResolvedValueOnce(fileUri('B'));
-      let uploaded!: Map<string, string>;
+      let uploaded: string[] = [];
       await act(async () => {
         uploaded = await result.current.uploadStaged([stagedA, stagedB]);
       });
       expect(FileController.commitCreate).toHaveBeenCalledTimes(3);
-      expect(uploaded.get(stagedA)).toBe(fileUri('A'));
-      expect(uploaded.get(stagedB)).toBe(fileUri('B'));
+      expect(uploaded).toEqual([fileUri('A'), fileUri('B')]);
     });
 
     it('resolves an uploaded file by its staged URI and by its homeserver URI alike', async () => {

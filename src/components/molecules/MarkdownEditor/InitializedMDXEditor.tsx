@@ -114,15 +114,10 @@ export default function InitializedMDXEditor({
   // URL through untouched. Shared by the image previews and the video/audio/PDF nodes.
   const resolvePreview = (source: string) =>
     inlineMedia?.getPreviewUrl(source) ?? pubkyUriToCdnUrl(source, FileVariant.MAIN) ?? source;
-  // Synchronous mirror of markdownText: the async media-insert flows read and
-  // splice the freshest text through this ref, so back-to-back placeholder
-  // swaps never operate on a stale value while a render is still pending.
+  // Synchronous mirror of markdownText: the async media-insert flow reads and
+  // splices the freshest text through this ref, so it never operates on a
+  // stale value while a render is still pending.
   const markdownTextRef = useRef('');
-  // The selection a placeholder swap scheduled but has not applied yet (the
-  // caret moves on the next frame): a swap in the same tick adjusts it instead
-  // of the stale DOM selection, so a batch of files leaves the caret after the
-  // whole inserted block and not inside the first file's URI.
-  const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
 
   const switchToMarkdownMode = () => {
     if (editorRef && 'current' in editorRef) {
@@ -188,63 +183,12 @@ export default function InitializedMDXEditor({
     }
   };
 
-  /** A unique `![Uploading name…]()` marker for the file, GitHub-style. */
-  const makeUploadingPlaceholder = (fileName: string, existingText: string): string => {
-    const base = `![Uploading ${fileName}…]()`;
-    if (!existingText.includes(base)) return base;
-    let counter = 2;
-    while (existingText.includes(`![Uploading ${fileName} (${counter})…]()`)) counter += 1;
-    return `![Uploading ${fileName} (${counter})…]()`;
-  };
-
   /**
-   * Swaps an uploading placeholder in place, preserving the user's caret. A
-   * missing placeholder means the user deleted it — that cancels the
-   * insertion (the uploaded file is swept as an unreferenced session upload
-   * on publish/discard).
-   */
-  const replaceMarkdownPlaceholder = (placeholder: string, replacement: string) => {
-    const textarea = textareaRef.current;
-    const current = markdownTextRef.current;
-    const index = current.indexOf(placeholder);
-    if (index === -1) return;
-
-    const next = current.slice(0, index) + replacement + current.slice(index + placeholder.length);
-    if (replacement && next.length > ARTICLE_MAX_CHARACTER_LENGTH) {
-      // No room for the real markdown — drop the placeholder instead of
-      // leaving it stuck (handleMarkdownTextChange refuses over-cap text)
-      replaceMarkdownPlaceholder(placeholder, '');
-      toast({ variant: 'error', description: 'Not enough space left in the article for the file.' });
-      return;
-    }
-
-    const selection = pendingSelectionRef.current ?? {
-      start: textarea?.selectionStart ?? next.length,
-      end: textarea?.selectionEnd ?? next.length,
-    };
-    handleMarkdownTextChange(next);
-
-    // Controlled updates park the caret at the end; restore it after render,
-    // shifted by the swap delta when it sat behind the placeholder
-    const delta = replacement.length - placeholder.length;
-    const adjust = (position: number) => (position > index ? Math.max(index, position + delta) : position);
-    const adjusted = { start: adjust(selection.start), end: adjust(selection.end) };
-    pendingSelectionRef.current = adjusted;
-    requestAnimationFrame(() => {
-      if (pendingSelectionRef.current === adjusted) pendingSelectionRef.current = null;
-      textareaRef.current?.setSelectionRange(adjusted.start, adjusted.end);
-    });
-  };
-
-  /**
-   * Markdown-mode media insertion: an `![Uploading name…]()` placeholder lands
-   * at the caret immediately, then each staged file swaps its placeholder for
-   * the file-URI markdown in place — or removes it when the handler refused the
-   * file (it toasts the reason). Staging resolves within a tick, so the
-   * placeholder is rarely seen; it keeps the async insert anchored where the
-   * caret was. Every media kind shares the image syntax, so one flow covers
-   * them all. The insert-after-success invariant holds: a placeholder never
-   * contains a URI, and a refused file leaves no markdown behind.
+   * Markdown-mode media insertion: the files are staged, then their file-URI
+   * markdown lands at the caret in one edit. Every media kind shares the image
+   * syntax, so one flow covers them all. Staging settles within a tick (the
+   * bytes go up at publish), so the insert needs no loading state; a refused
+   * file was toasted by the handler and leaves no markdown behind.
    */
   const uploadAndInsertInMarkdownMode = async (files: File[]) => {
     if (!inlineMedia || files.length === 0) return;
@@ -252,18 +196,15 @@ export default function InitializedMDXEditor({
     const current = markdownTextRef.current;
     const offset = Math.min(textareaRef.current?.selectionStart ?? current.length, current.length);
 
-    const placeholders: string[] = [];
-    let accumulated = current;
-    for (const file of files) {
-      const placeholder = makeUploadingPlaceholder(file.name, accumulated);
-      placeholders.push(placeholder);
-      accumulated += placeholder;
-    }
+    // The whole pick is staged in one tick, so the session's batch budget sees all of it
+    const staged = await Promise.allSettled(files.map((file) => inlineMedia.upload(file)));
+    const uris = staged.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+    if (uris.length === 0) return;
 
-    const snippet = placeholders.join('\n');
+    const snippet = uris.map((uri) => `![](${uri})`).join('\n');
     const next = current.slice(0, offset) + snippet + current.slice(offset);
     if (next.length > ARTICLE_MAX_CHARACTER_LENGTH) {
-      // Checked before staging anything, so blocking here leaves nothing behind
+      // The staged files hold nothing but a preview each; the session releases them unreferenced
       toast({ variant: 'error', description: 'Not enough space left in the article for the file.' });
       return;
     }
@@ -273,19 +214,10 @@ export default function InitializedMDXEditor({
     requestAnimationFrame(() => {
       const textareaElement = textareaRef.current;
       if (!textareaElement) return;
-      // Restore focus (the toolbar button's native file chooser steals it)
-      // and park the caret after the inserted placeholders. Later placeholder
-      // swaps deliberately do NOT focus — the user may be typing elsewhere.
+      // Restore focus (the toolbar button's native file chooser steals it) and park the caret after
+      // the inserted markdown; the controlled update parked it at the end
       textareaElement.focus();
       textareaElement.setSelectionRange(caretAfterSnippet, caretAfterSnippet);
-    });
-
-    // The whole pick is staged in one tick, so the session's batch budget sees
-    // all of it; the swaps then run in order, each on the freshest textarea
-    // content. A refused file was already toasted by the handler.
-    const staged = await Promise.allSettled(files.map((file) => inlineMedia.upload(file)));
-    staged.forEach((result, index) => {
-      replaceMarkdownPlaceholder(placeholders[index], result.status === 'fulfilled' ? `![](${result.value})` : '');
     });
   };
 
