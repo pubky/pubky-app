@@ -281,7 +281,7 @@ describe('HomeFooter', () => {
   it('renders copyright', () => {
     render(<HomeFooter />);
 
-    expect(screen.getByText(/Synonym Software, S\.A\. DE C\.V\./)).toBeInTheDocument();
+    expect(screen.getByText(/Synonym Software, S\.A\. de C\.V\./)).toBeInTheDocument();
   });
 
   it('renders terms, privacy and age agreement text', () => {

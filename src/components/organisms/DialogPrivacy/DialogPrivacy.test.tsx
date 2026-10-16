@@ -142,7 +142,8 @@ describe('DialogPrivacy', () => {
     expect(screen.getByText(/SCOPE This Privacy Policy/)).toBeInTheDocument();
     expect(screen.getByText(/POLICY SUMMARY This summary offers/)).toBeInTheDocument();
     expect(screen.getByText(/Effective Date: January 29, 2026/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Synonym Software Ltd/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Synonym Software, S\.A\. de C\.V\./)).toHaveLength(2);
+    expect(screen.getByTestId('dialog-content')).not.toHaveTextContent('Synonym Software Ltd.');
   });
 
   it('exposes the default trigger as a keyboard focusable button', () => {

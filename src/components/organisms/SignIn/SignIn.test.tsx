@@ -403,7 +403,7 @@ describe('SignInContent', () => {
 
     // Wait for the component to finish loading
     await waitFor(() => {
-      expect(screen.getByText('Authorize with Pubky Ring')).toBeInTheDocument();
+      expect(screen.getByText('Authorize with Pubky Ring or Bitkit')).toBeInTheDocument();
     });
 
     const images = screen.getAllByTestId('next-image');
@@ -414,7 +414,7 @@ describe('SignInContent', () => {
     expect(logoImage).toHaveAttribute('width', '137');
     expect(logoImage).toHaveAttribute('height', '30');
 
-    expect(screen.getByRole('button', { name: /Authorize with Pubky Ring/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Authorize with Pubky Ring or Bitkit/i })).toBeInTheDocument();
   });
 
   it('calls mobile authorize handler when button is tapped', async () => {
@@ -423,10 +423,10 @@ describe('SignInContent', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Authorize with Pubky Ring/i })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: /Authorize with Pubky Ring or Bitkit/i })).not.toBeDisabled();
     });
 
-    const authorizeButton = screen.getByRole('button', { name: /Authorize with Pubky Ring/i });
+    const authorizeButton = screen.getByRole('button', { name: /Authorize with Pubky Ring or Bitkit/i });
     await act(async () => {
       fireEvent.click(authorizeButton);
     });
@@ -602,7 +602,7 @@ describe('SignInContent - Passport enabled', () => {
     render(<SignInContent />);
 
     expect(screen.getByRole('button', { name: 'Copy authentication link' })).toBeDisabled();
-    expect(screen.getByText('Authorize with Pubky Ring').closest('button')).toBeDisabled();
+    expect(screen.getByText('Authorize with Pubky Ring or Bitkit').closest('button')).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy authentication link' }));
     fireEvent.click(screen.getByRole('button', { name: 'Copy authentication link' }));
@@ -776,7 +776,7 @@ describe('SignInContent - Progress View', () => {
     });
 
     // Should not have the authorize button
-    expect(screen.queryByText('Authorize with Pubky Ring')).not.toBeInTheDocument();
+    expect(screen.queryByText('Authorize with Pubky Ring or Bitkit')).not.toBeInTheDocument();
 
     // Should not have the desktop/mobile specific containers
     const containers = screen.getAllByTestId('container');

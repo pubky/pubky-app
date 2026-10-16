@@ -3,6 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
+import { cdp, page, server } from 'vitest/browser';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook, mockSettingsStore } from '@/test-utils/stores';
@@ -13,6 +14,7 @@ import ShopLayout from '@/app/shop/layout';
 const routeState = vi.hoisted(() => ({
   pathname: '/shop',
   unavailable: false,
+  upgradeOpen: false,
 }));
 
 const SHOP_CHROME_IMAGE_URLS = [
@@ -219,20 +221,33 @@ vi.mock('@/hooks/useSignOut/useSignOut', () => ({
   useSignOut: () => ({ handleSignOut: async () => {}, isLoading: false }),
 }));
 
+// Keep the real upgrade dialog and QR panel; only replace the signer request boundary.
+vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
+  useMobileAuth: () => ({
+    url: 'pubkyauth://signin_grant?relay=https%3A%2F%2Frelay.example&client_id=pubky.app&caps=%2Fpub%2Fpaykit%2F%3Arw',
+    isLoading: false,
+    isExpired: false,
+    isOpeningRing: false,
+    fetchUrl: vi.fn(),
+    onAuthorizeClick: vi.fn(),
+  }),
+}));
+
 vi.mock('@/hooks/useShopEmbed/useShopEmbed', () => ({
   useShopEmbed: () => ({
     iframe: { current: null },
     // A real iframe with deterministic local content: no Shop server, auth, signer or payment dependency.
     initialSrc: `data:text/html,${encodeURIComponent('<!doctype html><html><body style="margin:0;padding:24px;background:transparent;color:white;font:16px sans-serif"><h1>Shop fixture</h1><p>Marketplace content</p></body></html>')}`,
     unavailable: routeState.unavailable,
-    upgradeOpen: false,
+    upgradeOpen: routeState.upgradeOpen,
     closeUpgrade: () => {},
     requestLogin: () => {},
     handleFrameLoad: () => {},
   }),
 }));
-async function renderShop(viewport: { width: number; height: number }, unavailable = false) {
+async function renderShop(viewport: { width: number; height: number }, unavailable = false, upgradeOpen = false) {
   routeState.unavailable = unavailable;
+  routeState.upgradeOpen = upgradeOpen;
   await preloadImages(SHOP_CHROME_IMAGE_URLS);
   return renderForVRT(
     <>
@@ -264,4 +279,41 @@ describe('embedded Shop shell — visual regression', () => {
     await expect.element(screen.getByRole('heading', { name: 'Shop unavailable' })).toBeVisible();
     await matchVrtFrameScreenshot('shop-unavailable-mobile');
   });
+  it('renders the Enable Shop dialog in the desktop App shell', async () => {
+    await renderShop(VRT_VIEWPORT_DESKTOP, false, true);
+    await expect.element(page.getByRole('dialog', { name: 'Enable Shop' })).toBeVisible();
+    await expect.element(page.getByTestId('session-upgrade-qr')).toBeVisible();
+    await expect
+      .element(page.getByRole('button', { name: 'Continue with Pubky Ring', includeHidden: true }))
+      .not.toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'Use Passport or recovery key' })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
+    await matchVrtFrameScreenshot('shop-enable-desktop');
+  });
+
+  // Resizing alone leaves a fine pointer and captures the desktop QR. CDP changes the real
+  // CSS media feature for this phone case. Our Linux Chromium CI cannot restore its native
+  // pointer/hover media after disabling touch, so keep this case on macOS Chromium.
+  // Other environments need a separate touch context, not a shared-page override.
+  it.skipIf(server.browser !== 'chromium' || server.platform !== 'darwin')(
+    'renders the Enable Shop dialog with mobile touch controls',
+    async () => {
+      const session = cdp();
+      try {
+        await session.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+        await expect.poll(() => window.matchMedia('(pointer: coarse)').matches).toBe(true);
+        await renderShop(VRT_VIEWPORT_MOBILE, false, true);
+        await expect.element(page.getByRole('dialog', { name: 'Enable Shop' })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
+        await expect.element(page.getByTestId('session-upgrade-qr')).not.toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Use Passport or recovery key' })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
+        await matchVrtFrameScreenshot('shop-enable-mobile');
+      } finally {
+        await session.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+        await expect.poll(() => window.matchMedia('(pointer: fine)').matches).toBe(true);
+        await expect.poll(() => window.matchMedia('(hover: hover)').matches).toBe(true);
+      }
+    },
+  );
 });

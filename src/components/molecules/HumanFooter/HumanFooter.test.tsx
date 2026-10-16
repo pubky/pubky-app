@@ -85,7 +85,7 @@ describe('HumanFooter', () => {
   it('renders the company information', () => {
     render(<HumanFooter />);
 
-    expect(screen.getByText(/Synonym Software, S\.A\. DE C\.V\./)).toBeInTheDocument();
+    expect(screen.getByText(/Synonym Software, S\.A\. de C\.V\./)).toBeInTheDocument();
     expect(screen.getByText(/©2026\. All rights reserved\./)).toBeInTheDocument();
   });
 
