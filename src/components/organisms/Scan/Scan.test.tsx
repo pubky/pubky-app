@@ -275,15 +275,18 @@ describe('ScanContent', () => {
     expect(screen.getByAltText('Pubky Ring phone scanning a QR code')).toHaveAttribute('src', '/images/scan.webp');
   });
 
-  it('renders logo and button in mobile version', async () => {
+  it('offers Pubky Ring for the pending signup request without promising an unsupported Bitkit handoff', async () => {
     await act(async () => {
       render(<ScanContent />);
     });
 
     // Wait for the component to finish loading
     await waitFor(() => {
-      expect(screen.getByText('Authorize with Pubky Ring or Bitkit')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Authorize with Pubky Ring' })).toBeEnabled();
     });
+
+    expect(screen.queryByRole('button', { name: /Bitkit/ })).not.toBeInTheDocument();
+    expect(useMobileAuth).toHaveBeenCalledWith({ type: 'signup', inviteCode: 'A9KM-7MJP-ERM9' });
 
     const images = screen.getAllByTestId('next-image');
     const logoImage = images.find((img) => img.getAttribute('src') === '/images/logo-pubky-ring.svg');
@@ -297,16 +300,42 @@ describe('ScanContent', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Authorize with Pubky Ring or Bitkit/i })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Authorize with Pubky Ring' })).not.toBeDisabled();
     });
 
-    const authorizeButton = screen.getByRole('button', { name: /Authorize with Pubky Ring or Bitkit/i });
+    const authorizeButton = screen.getByRole('button', { name: 'Authorize with Pubky Ring' });
 
     await act(async () => {
       fireEvent.click(authorizeButton);
     });
 
     expect(mockOnAuthorizeClick).toHaveBeenCalledTimes(1);
+    expect(mockFetchUrl).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { isLoading: true, isOpeningRing: false, url: '', label: 'Generating...' },
+    { isLoading: false, isOpeningRing: true, url: 'mock-auth-url', label: 'Opening Pubky Ring...' },
+    { isLoading: false, isOpeningRing: false, url: '', label: 'Authorize with Pubky Ring' },
+  ])('prevents signup handoff while $label is unavailable', ({ isLoading, isOpeningRing, url, label }) => {
+    vi.mocked(useMobileAuth).mockReturnValue({
+      url,
+      isLoading,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing,
+      isOpeningBitkit: false,
+      onAuthorizeBitkitClick: vi.fn(),
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+
+    render(<ScanContent />);
+    const button = screen.getByRole('button', { name: label });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(mockOnAuthorizeClick).not.toHaveBeenCalled();
+    expect(mockFetchUrl).not.toHaveBeenCalled();
   });
 
   it('shows the reload affordance when auth flow is expired', async () => {
@@ -328,7 +357,10 @@ describe('ScanContent', () => {
 
     const reloadQr = screen.getByLabelText('Reload sign-up QR code');
     expect(reloadQr).toBeEnabled();
-    expect(screen.getAllByText('Click to reload').length).toBeGreaterThan(0);
+    const reloadMobile = screen.getByRole('button', { name: 'Click to reload' });
+    expect(reloadMobile).toBeEnabled();
+    fireEvent.click(reloadMobile);
+    expect(mockOnAuthorizeClick).toHaveBeenCalledTimes(1);
   });
 
   it('calls fetchUrl when the blurred QR reload is clicked', async () => {
@@ -365,6 +397,8 @@ describe('ScanContent', () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith(ONBOARDING_ROUTES.HUMAN);
     });
+    expect(useMobileAuth).toHaveBeenCalledWith({ autoFetch: false });
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });
 
