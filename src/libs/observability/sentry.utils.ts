@@ -119,6 +119,18 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
     matches: (error) => error.code === TimeoutErrorCode.REQUEST_ABORTED && error.context?.signalAborted === true,
   },
   {
+    name: 'shop-listing-metadata-transport',
+    reason:
+      'Shop listing previews are best-effort enrichment (PR #2835, review 4292696485). safeFetch constructs transport ' +
+      'errors before the service returns its generic preview, so an unavailable Shop otherwise creates an alert per crawl. ' +
+      'Keep these connection/timeout failures in local logs; Shop readiness, cleanup, auth and payment operations, ' +
+      'and non-transport errors on this operation remain reportable.',
+    matches: (error) =>
+      error.service === ErrorService.Shop &&
+      error.operation === 'fetchListingMetadata' &&
+      (error.category === ErrorCategory.Network || error.category === ErrorCategory.Timeout),
+  },
+  {
     name: 'homeserver-event-stream-connect',
     reason:
       'The mute-list SSE subscribe drops routinely (homeserver deploys, idle timeouts, mobile backgrounding) and ' +
