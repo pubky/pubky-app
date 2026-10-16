@@ -26,6 +26,7 @@ import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutConte
 import { APP_ROUTES } from '@/app/routes';
 import { CONTENT, type HomeState, LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { useState } from 'react';
+import { buildFeatureDiscoveryStorageKey, VIBES_ALERT_STORAGE_ID } from '@/config/featureDiscovery';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
@@ -645,11 +646,11 @@ vi.mock('@/controllers/search/search', () => ({
 // ContentLayout. Resolve the same shell config here so VRT matches prod.
 const homeShellConfig = tryResolveFeedsShellConfig('/home')!;
 
-function HomeWithLayout() {
+function HomeWithLayout({ layout }: { layout?: LayoutType }) {
   return (
     <>
       <Header />
-      <ContentLayout {...homeShellConfig}>
+      <ContentLayout {...homeShellConfig} layoutOverride={layout}>
         <Home />
       </ContentLayout>
     </>
@@ -690,6 +691,69 @@ async function waitForArticleComposer() {
   await expect.element(page.getByText('Publish')).toBeVisible();
   await waitForMarkdownEditorReady();
 }
+
+// Existing feed scenarios represent a returning user who has already tried Vibes.
+// Fresh-user alert coverage below removes this saved choice explicitly.
+beforeEach(async () => {
+  const f = await fixtures;
+  localStorage.setItem(
+    buildFeatureDiscoveryStorageKey(f.viewerPubky, VIBES_ALERT_STORAGE_ID),
+    JSON.stringify({ done: true, laterCount: 0, nextShowAt: 0 }),
+  );
+});
+
+describe('Home — Vibes alert — visual regression', () => {
+  beforeEach(async () => {
+    feedState.mode = 'default';
+    const f = await fixtures;
+    localStorage.removeItem(buildFeatureDiscoveryStorageKey(f.viewerPubky, VIBES_ALERT_STORAGE_ID));
+  });
+
+  it('renders Vibes above the composer at desktop viewport', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(screen.getByRole('region', { name: 'Discover Pubky Vibes' })).toBeVisible();
+    await matchVrtFrameScreenshot('home-feed-vibes-desktop');
+  });
+
+  it('renders Vibes with wrapped copy and actions at mobile viewport', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(screen.getByRole('region', { name: 'Discover Pubky Vibes' })).toBeVisible();
+    await matchVrtFrameScreenshot('home-feed-vibes-mobile');
+    await screen.getByRole('button', { name: 'Later', exact: true }).click();
+    await expect.element(screen.getByRole('region', { name: 'Discover Pubky Vibes' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Home — Vibes discovery — visual regression', () => {
+  beforeEach(() => {
+    feedState.mode = 'default';
+  });
+
+  it('keeps the sidebar entry after permanent dismissal', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(screen.getByRole('region', { name: 'Discover Pubky Vibes' })).not.toBeInTheDocument();
+    await screen.getByRole('link', { name: 'Try vibes.pubky.app' }).hover();
+    await matchVrtFrameScreenshot('home-feed-vibes-sidebar-desktop');
+  });
+
+  it('keeps the permanent entry in the mobile right drawer', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(screen.getByRole('region', { name: 'Discover Pubky Vibes' })).not.toBeInTheDocument();
+    await screen.getByRole('button', { name: 'Open right panel' }).click();
+    await page.getByRole('link', { name: 'Try vibes.pubky.app' }).hover();
+    await matchVrtFrameScreenshot('home-feed-vibes-drawer-mobile');
+  });
+
+  it.each([LAYOUT.WIDE, LAYOUT.LIST, LAYOUT.VISUAL])(
+    'keeps the permanent entry in the %s layout drawer',
+    async (layout) => {
+      await renderForVRT(<HomeWithLayout layout={layout} />, { viewport: VRT_VIEWPORT_DESKTOP });
+      await page.elementLocator(document.querySelector('[data-cy="button-filters-right"]')!).click();
+      await page.getByRole('link', { name: 'Try vibes.pubky.app' }).hover();
+      if (layout === LAYOUT.WIDE) await matchVrtFrameScreenshot('home-feed-vibes-drawer-desktop');
+    },
+  );
+});
 
 describe('Home (global feed) — visual regression', () => {
   beforeEach(() => {
@@ -768,10 +832,12 @@ describe('Feed right drawer', () => {
     } else {
       expect(panel.querySelector('[data-testid="active-users"]')).not.toBeNull();
     }
+    // Only Home carries the permanent Vibes entry, directly above Feedback.
+    const vibes = pathname === APP_ROUTES.HOME ? ['vibes-card'] : [];
     expect(Array.from(content.children).map((section) => section.getAttribute('data-testid'))).toEqual(
       isPhone
-        ? ['who-to-follow', 'hot-tags', 'feedback-card']
-        : ['who-to-follow', 'active-users', 'hot-tags', 'feedback-card'],
+        ? ['who-to-follow', 'hot-tags', ...vibes, 'feedback-card']
+        : ['who-to-follow', 'active-users', 'hot-tags', ...vibes, 'feedback-card'],
     );
     const tag = content.querySelector<HTMLElement>('[data-testid="tag-0"]')!;
     const tagName = tag.querySelector<HTMLElement>('[data-testid="tag-name"]')!;
