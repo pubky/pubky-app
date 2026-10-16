@@ -136,6 +136,24 @@ vi.mock('@/hooks/useUnlockedList/useUnlockedList', () => {
   return { useUnlockedList: (): UseUnlockedListResult => settled };
 });
 
+// 2d. Never open a real window from a capture. Popup sign-in (Pubky Passport's
+//     "Continue with Google") calls `window.open` from the click and then
+//     navigates the popup to a live third-party origin, so a real popup would
+//     put the network and another page into the run. Hand back an inert popup
+//     that never closes or navigates: the opener stays in its waiting state
+//     for as long as the capture needs. A file that needs a blocked popup
+//     overrides this with `vi.spyOn(window, 'open')`.
+import { asOpaque } from '@/test-utils/type-assertions';
+
+const inertPopup = asOpaque<Window>({
+  closed: false,
+  close: () => {},
+  focus: () => {},
+  postMessage: () => {},
+  location: { assign: () => {}, replace: () => {} },
+});
+window.open = () => inertPopup;
+
 // 3. Load Inter Tight from `@fontsource-variable/inter-tight` (committed npm
 //    dep; same font as the real app's `next/font/google` Inter Tight, just
 //    sourced locally so VRT has no network dependency). Vite resolves the

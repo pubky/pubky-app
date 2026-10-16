@@ -108,6 +108,13 @@ those baselines, delete the PNGs first so they are regenerated from scratch.
   chrome change under the 0.1% tolerance (one 48px icon button, one sidebar
   row) does not fail existing baselines and `--update` does not rewrite them;
   delete the affected PNGs so they are regenerated with the new chrome.
+- **Popups and auth flows** — `vrt.setup.ts` replaces `window.open` with an
+  inert popup that never closes or navigates, so a click on "Continue with
+  Google" (Pubky Passport) leaves the page waiting without opening a live
+  third-party origin. Stub sign-in at the `AuthController` boundary and let the
+  real auth hooks drive the states. A Ring request that always resolves to one
+  fixed URL makes the QR matrix identical on every run and OS. See
+  `src/test/vrt/auth/SignInPage.vrt.test.tsx`.
 - **Avatars** — VRT profile fixtures use `image: null` so every avatar renders
   `FacehashAvatar`. `vrt.setup.ts` sets `globalThis.__VRT__` and stabiliser CSS;
   `FacehashAvatar` disables blink, 3D tilt, and hover when that flag is set.
