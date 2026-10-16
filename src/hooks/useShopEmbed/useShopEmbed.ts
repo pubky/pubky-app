@@ -16,10 +16,33 @@ import {
   shopHostPath,
   shopSignInPath,
 } from '@/libs/shop-embed/bridge';
-import { installShopFrameHistory } from '@/libs/shop-embed/frame-history';
+import {
+  installShopFrameHistory,
+  type ShopFrameHistory,
+  type ShopFrameSnapshot,
+} from '@/libs/shop-embed/frame-history';
 import { clearShopHostNavigation, isShopHostNavigationPending } from '@/libs/shop-embed/navigation';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
+
+const SHOP_HISTORY_ENTRY = '__pubkyShopEntry';
+
+function getEntryId(): string {
+  const stored: unknown = window.history.state?.[SHOP_HISTORY_ENTRY];
+  if (typeof stored === 'string') return stored;
+  const id = crypto.randomUUID();
+  window.history.replaceState({ ...window.history.state, [SHOP_HISTORY_ENTRY]: id }, '');
+  return id;
+}
+
+function writeEntry(path: string, mode: 'push' | 'replace', id: string) {
+  const state = { ...window.history.state, [SHOP_HISTORY_ENTRY]: id };
+  // Let Next's public history wrapper update its URL and copy its own current
+  // router fields. Its internal markers would otherwise bypass that integration.
+  delete state.__NA;
+  delete state._N;
+  window.history[mode === 'push' ? 'pushState' : 'replaceState'](state, '', path);
+}
 
 /** Owns the mounted Shop's message subscription and user-initiated App auth actions. */
 export function useShopEmbed() {
@@ -33,8 +56,10 @@ export function useShopEmbed() {
   const [isNavigating, startNavigation] = useTransition();
   const leavingShop = useRef(false);
   const currentFramePath = useRef<string | null>(null);
-  const pendingFrameNavigation = useRef<{ path: string; document: Document | null } | null>(null);
-  const frameHistory = useRef<{ document: Document; dispose: () => void } | null>(null);
+  const pendingFrameNavigation = useRef<{ path: string; document: Document | null; live?: boolean } | null>(null);
+  const currentEntry = useRef<string | null>(null);
+  const frameEntries = useRef(new Map<string, ShopFrameSnapshot>());
+  const frameHistory = useRef<{ document: Document; adapter: ShopFrameHistory } | null>(null);
   const [upgradeGeneration, setUpgradeGeneration] = useState<string | null>(null);
   const generation = useAuthStore((state) => state.generation);
   const session = useAuthStore((state) => state.session);
@@ -59,13 +84,26 @@ export function useShopEmbed() {
       window.location.origin,
     );
   };
+  const captureFrameEntry = () => {
+    const snapshot = frameHistory.current?.adapter.capture();
+    if (snapshot && currentEntry.current) frameEntries.current.set(currentEntry.current, snapshot);
+  };
   const commitFrameNavigation = (path: string, mode: 'push' | 'replace') => {
-    if (leavingShop.current || isShopHostNavigationPending() || pendingFrameNavigation.current) return;
+    if (leavingShop.current || isShopHostNavigationPending()) return;
+    const pending = pendingFrameNavigation.current;
+    if (pending) {
+      if (!pending.live || pending.path !== path) return;
+      pendingFrameNavigation.current = null;
+      frameHistory.current?.adapter.restoreScroll();
+    }
     const outerPath = shopHostPath(path);
     const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     if (!outerPath || !shopFramePath(currentPath)) return;
     currentFramePath.current = path;
-    if (currentPath !== outerPath) window.history[mode === 'push' ? 'pushState' : 'replaceState'](null, '', outerPath);
+    const id = mode === 'push' ? crypto.randomUUID() : getEntryId();
+    currentEntry.current = id;
+    if (mode === 'push' || currentPath !== outerPath) writeEntry(outerPath, mode, id);
+    captureFrameEntry();
   };
   const installFrameHistory = () => {
     const child = iframe.current?.contentWindow;
@@ -75,10 +113,11 @@ export function useShopEmbed() {
       if (child.location.origin !== window.location.origin || !shopHostPath(path)) return;
       const previous = frameHistory.current;
       if (previous?.document === child.document) return;
-      previous?.dispose();
+      previous?.adapter.dispose();
+      frameEntries.current.clear();
       frameHistory.current = {
         document: child.document,
-        dispose: installShopFrameHistory(child, commitFrameNavigation),
+        adapter: installShopFrameHistory(child, commitFrameNavigation, captureFrameEntry),
       };
       // Capture the document at navigation start, even before its first load/ready.
       // Its replacement may redirect an alias; the old document cannot acknowledge it.
@@ -86,7 +125,7 @@ export function useShopEmbed() {
       if (pending && (child.document !== pending.document || path === pending.path)) {
         pendingFrameNavigation.current = null;
         commitFrameNavigation(path, 'replace');
-      }
+      } else if (!pending) captureFrameEntry();
     } catch {
       // The frame may have navigated away from the same-origin Shop mount.
     }
@@ -97,6 +136,7 @@ export function useShopEmbed() {
     publishSession();
   };
   const publish = useEffectEvent(publishSession);
+  const commitNavigation = useEffectEvent(commitFrameNavigation);
   const frameReady = useEffectEvent(handleFrameLoad);
   const signOut = useEffectEvent(() => {
     leavingShop.current = true;
@@ -138,6 +178,7 @@ export function useShopEmbed() {
   }, [generation, session, upgradeGeneration]);
 
   useEffect(() => {
+    const entries = frameEntries.current;
     const onMessage = (event: MessageEvent) => {
       if (!isShopMessageSource(event, iframe.current?.contentWindow ?? null, window.location.origin)) return;
       const request = parseShopRequest(event.data);
@@ -159,14 +200,13 @@ export function useShopEmbed() {
             return;
           }
         }
+        // A queued message can match the URL we set before Next commits it.
+        // Only its synchronous history replacement acknowledges a live restore.
+        if (pendingFrameNavigation.current?.live) return;
         const outerPath = shopHostPath(request.path);
         if (!outerPath || !shopFramePath(window.location.pathname)) return;
         pendingFrameNavigation.current = null;
-        currentFramePath.current = request.path;
-        if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== outerPath)
-          // Initial routes and native fragment reports only synchronize the URL.
-          // The frame history adapter owns push/replace intent for client routing.
-          window.history.replaceState(null, '', outerPath);
+        commitNavigation(request.path, 'replace');
       } else if (request.type === 'request-login') {
         loginFromMessage();
       } else if (request.type === 'request-capabilities') {
@@ -193,7 +233,8 @@ export function useShopEmbed() {
       unsubscribe();
       window.removeEventListener('message', onMessage);
       clearShopHostNavigation();
-      frameHistory.current?.dispose();
+      frameHistory.current?.adapter.dispose();
+      entries.clear();
       frameHistory.current = null;
     };
   }, [router]);
@@ -204,11 +245,23 @@ export function useShopEmbed() {
       const nextPath =
         shopFramePath(`${window.location.pathname}${window.location.search}${window.location.hash}`) ??
         (isInitialNavigation ? '/shop-embed/marketplace' : null);
-      if (!nextPath || nextPath === currentFramePath.current) return;
+      if (!nextPath) return;
+      const entry = getEntryId();
+      if (nextPath === currentFramePath.current && entry === currentEntry.current) return;
+      // The outer entry has already changed, but the child still represents the
+      // source. Keep its most recent position before restoring the destination.
+      if (!pendingFrameNavigation.current) captureFrameEntry();
+      currentEntry.current = entry;
       currentFramePath.current = nextPath;
       if (isInitialNavigation) {
         setInitialSrc(nextPath);
         return;
+      }
+      frameHistory.current?.adapter.cancelScroll();
+      const snapshot = frameEntries.current.get(entry);
+      if (snapshot?.path === nextPath) {
+        pendingFrameNavigation.current = { path: nextPath, document: snapshot.document, live: true };
+        if (frameHistory.current?.adapter.restore(snapshot)) return;
       }
       // Back/Forward restores the durable App entry. Ignore the old frame's
       // queued reports until its replacement acknowledges this route.

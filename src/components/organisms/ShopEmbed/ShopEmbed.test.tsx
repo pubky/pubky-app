@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { runInNewContext } from 'node:vm';
 import { renderToString } from 'react-dom/server';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -406,7 +409,11 @@ describe('ShopEmbed', () => {
     const parentReplace = vi.spyOn(window.history, 'replaceState');
 
     act(() => child.history.pushState({ __NA: true }, '', '/shop-embed/marketplace/listing/test/item?size=1#details'));
-    expect(parentPush).toHaveBeenCalledExactlyOnceWith(null, '', '/shop/marketplace/listing/test/item?size=1#details');
+    expect(parentPush).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ __pubkyShopEntry: expect.any(String) }),
+      '',
+      '/shop/marketplace/listing/test/item?size=1#details',
+    );
     expect(child.history.length).toBe(childLength);
     send(frame, { type: 'navigate', path: '/shop-embed/marketplace/listing/test/item?size=1#details' });
     expect(parentPush).toHaveBeenCalledTimes(1);
@@ -416,13 +423,249 @@ describe('ShopEmbed', () => {
       child.history.replaceState({ __NA: true }, '', '/shop-embed/marketplace/listing/test/item?size=2#details'),
     );
     expect(parentReplace).toHaveBeenCalledExactlyOnceWith(
-      null,
+      expect.objectContaining({ __pubkyShopEntry: expect.any(String) }),
       '',
       '/shop/marketplace/listing/test/item?size=2#details',
     );
     // A queued report from the previous route must not roll the address bar back.
     send(frame, { type: 'navigate', path: '/shop-embed/marketplace/listing/test/item?size=1#details' });
     expect(window.location.search).toBe('?size=2');
+  });
+
+  it('preserves host custom and Next history fields while updating the parent router URL', () => {
+    const require = createRequire(import.meta.url);
+    const source = readFileSync(require.resolve('next/dist/client/components/app-router'), 'utf8');
+    const copyStart = source.indexOf('function copyNextJsInternalHistoryState(');
+    const copyEnd = source.indexOf('function Head(', copyStart);
+    const effectStart = source.indexOf('    (0, _react.useEffect)(()=>{\n        const originalPushState');
+    const effectEnd = source.indexOf('    }, []);', effectStart) + '    }, []);'.length;
+    expect(effectStart).toBeGreaterThan(-1);
+    const parentTree = { tree: ['shop-wrapper'], renderedSearch: '' };
+    window.history.replaceState(
+      { __NA: true, __PRIVATE_NEXTJS_INTERNALS_TREE: parentTree, custom: 'host' },
+      '',
+      '/shop',
+    );
+    const updateUrl = vi.fn();
+    let dispose = () => {};
+    // Use Next's installed public history wrappers; only the reducer boundary is
+    // controlled, so a bypass-marker regression is visible to this assertion.
+    runInNewContext(source.slice(copyStart, copyEnd) + source.slice(effectStart, effectEnd), {
+      window,
+      URL,
+      _react: {
+        useEffect: (run: () => () => void) => {
+          dispose = run();
+        },
+        startTransition: (run: () => void) => run(),
+      },
+      _routerreducertypes: { ACTION_RESTORE: 'restore' },
+      _useactionqueue: { dispatchAppRouterAction: updateUrl },
+      _approuterinstance: { dispatchTraverseAction: vi.fn() },
+    });
+    try {
+      const { frame } = mount();
+      fireEvent.load(frame);
+      act(() =>
+        frame.contentWindow!.history.pushState({ __NA: true, child: 'listing' }, '', '/shop-embed/marketplace/cart'),
+      );
+      expect(window.history.state).toEqual({
+        __NA: true,
+        __PRIVATE_NEXTJS_INTERNALS_TREE: parentTree,
+        custom: 'host',
+        __pubkyShopEntry: expect.any(String),
+      });
+      expect(updateUrl).toHaveBeenCalledExactlyOnceWith({
+        type: 'restore',
+        url: new URL('/shop/marketplace/cart', location.origin),
+        historyState: parentTree,
+      });
+    } finally {
+      dispose();
+    }
+  });
+
+  it('restores a live catalog entry and waits for its rows before restoring scroll', () => {
+    const { frame } = mount();
+    const child = frame.contentWindow!;
+    const catalogState = { __NA: true, __PRIVATE_NEXTJS_INTERNALS_TREE: { tree: ['catalog'] } };
+    child.history.replaceState(catalogState, '', '/shop-embed/marketplace');
+    fireEvent.load(frame);
+    const catalogEntry = window.history.state;
+    const catalogDocument = child.document;
+    Object.defineProperty(child, 'scrollY', { configurable: true, value: 2000 });
+    child.dispatchEvent(new Event('scroll'));
+    // A shorter listing can clamp the viewport before Next's insertion effect.
+    Object.defineProperty(child, 'scrollY', { configurable: true, value: 0 });
+    act(() => child.history.pushState({ __NA: true, listing: true }, '', '/shop-embed/marketplace/listing/test/item'));
+    const traversed = vi.fn();
+    child.addEventListener('popstate', traversed);
+    const scroll = vi.spyOn(child, 'scrollTo').mockImplementation(() => {});
+    let afterLayout: FrameRequestCallback | undefined;
+    vi.spyOn(child, 'requestAnimationFrame').mockImplementation((callback) => {
+      afterLayout = callback;
+      return 1;
+    });
+
+    act(() => {
+      window.history.replaceState(catalogEntry, '', '/shop');
+      window.dispatchEvent(new PopStateEvent('popstate', { state: catalogEntry }));
+    });
+
+    expect(child.location.pathname).toBe('/shop-embed/marketplace');
+    expect(child.document).toBe(catalogDocument);
+    expect(child.history.state).toEqual(catalogState);
+    expect(traversed).toHaveBeenCalledOnce();
+    expect(scroll).not.toHaveBeenCalled();
+    // A queued message can match the restored URL before React commits it.
+    send(frame, { type: 'navigate', path: '/shop-embed/marketplace' });
+    expect(afterLayout).toBeUndefined();
+    // Next can commit the catalog before its Dexie-backed rows replace the
+    // shorter skeleton. Restoring now would clamp 2000 to 884 in a real browser.
+    child.document.append(child.document.createElement('html'));
+    Object.defineProperty(child, 'innerHeight', { configurable: true, value: 675 });
+    Object.defineProperty(child.document.documentElement, 'scrollHeight', { configurable: true, value: 1559 });
+    act(() => child.history.replaceState(catalogState, '', '/shop-embed/marketplace'));
+    expect(scroll).not.toHaveBeenCalled();
+    afterLayout?.(0);
+    expect(scroll).not.toHaveBeenCalled();
+    Object.defineProperty(child.document.documentElement, 'scrollHeight', { configurable: true, value: 6316 });
+    afterLayout?.(16);
+    expect(scroll).toHaveBeenCalledExactlyOnceWith(0, 2000);
+    expect(window.history.state).not.toHaveProperty(
+      '__PRIVATE_NEXTJS_INTERNALS_TREE',
+      catalogState.__PRIVATE_NEXTJS_INTERNALS_TREE,
+    );
+  });
+
+  it('distinguishes duplicate URLs by entry when restoring live child state', () => {
+    const { frame } = mount();
+    const child = frame.contentWindow!;
+    child.history.replaceState({ __NA: true, selection: 'first' }, '', '/shop-embed/marketplace');
+    fireEvent.load(frame);
+    const firstEntry = window.history.state;
+    const length = window.history.length;
+    act(() => child.history.pushState({ __NA: true, selection: 'second' }, '', '/shop-embed/marketplace'));
+    const secondEntry = window.history.state;
+    act(() => child.history.pushState({ __NA: true, selection: 'third' }, '', '/shop-embed/marketplace'));
+    expect(window.history.length).toBe(length + 2);
+    expect(secondEntry).not.toEqual(firstEntry);
+    act(() => {
+      window.history.replaceState(secondEntry, '', '/shop/marketplace');
+      window.dispatchEvent(new PopStateEvent('popstate', { state: secondEntry }));
+    });
+    expect(child.history.state.selection).toBe('second');
+    act(() => {
+      window.history.replaceState(firstEntry, '', '/shop');
+      window.dispatchEvent(new PopStateEvent('popstate', { state: firstEntry }));
+    });
+    expect(child.history.state.selection).toBe('first');
+  });
+
+  it('keeps the newest live traversal fenced against earlier queued route reports', () => {
+    const { frame } = mount();
+    const child = frame.contentWindow!;
+    child.history.replaceState({ __NA: true, route: 'catalog' }, '', '/shop-embed/marketplace');
+    fireEvent.load(frame);
+    const catalogEntry = window.history.state;
+    act(() =>
+      child.history.pushState({ __NA: true, route: 'listing' }, '', '/shop-embed/marketplace/listing/test/item'),
+    );
+    const listingEntry = window.history.state;
+    act(() => child.history.pushState({ __NA: true, route: 'cart' }, '', '/shop-embed/marketplace/cart'));
+    act(() => {
+      window.history.replaceState(listingEntry, '', '/shop/marketplace/listing/test/item');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      window.history.replaceState(catalogEntry, '', '/shop');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    send(frame, { type: 'navigate', path: '/shop-embed/marketplace/listing/test/item' });
+    act(() => child.history.replaceState({ __NA: true }, '', '/shop-embed/marketplace/listing/test/item'));
+    expect(window.location.pathname).toBe('/shop');
+    act(() => child.history.replaceState({ __NA: true }, '', '/shop-embed/marketplace'));
+    act(() => child.history.pushState({ __NA: true }, '', '/shop-embed/marketplace/cart'));
+    expect(window.location.pathname).toBe('/shop/marketplace/cart');
+  });
+
+  it('restores the canonical route of a same-document replacement without adding an alias entry', () => {
+    const { frame } = mount();
+    const child = frame.contentWindow!;
+    child.history.replaceState({ __NA: true, route: 'catalog' }, '', '/shop-embed/marketplace');
+    fireEvent.load(frame);
+    const catalogEntry = window.history.state;
+    act(() => child.history.pushState({ __NA: true }, '', '/shop-embed/marketplace/my-shop'));
+    const aliasEntry = window.history.state;
+    const length = window.history.length;
+    act(() => child.history.replaceState({ __NA: true, route: 'canonical' }, '', '/shop-embed/marketplace/storefront'));
+    expect(window.history.state).toEqual(aliasEntry);
+    expect(window.history.length).toBe(length);
+    act(() => {
+      window.history.replaceState(catalogEntry, '', '/shop');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      window.history.replaceState(aliasEntry, '', '/shop/marketplace/storefront');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(child.location.pathname).toBe('/shop-embed/marketplace/storefront');
+    expect(child.history.state.route).toBe('canonical');
+  });
+
+  it('falls back for old entries after remount while keeping new entries live', () => {
+    const first = mount();
+    const previousChild = first.frame.contentWindow!;
+    previousChild.history.replaceState({ __NA: true }, '', '/shop-embed/marketplace');
+    fireEvent.load(first.frame);
+    const oldCatalogEntry = window.history.state;
+    act(() => previousChild.history.pushState({ __NA: true }, '', '/shop-embed/marketplace/listing/test/item'));
+    first.unmount();
+    const { frame } = mount();
+    const child = frame.contentWindow!;
+    child.history.replaceState({ __NA: true, route: 'reloaded-listing' }, '');
+    fireEvent.load(frame);
+    const listingEntry = window.history.state;
+    const traversed = vi.fn();
+    child.addEventListener('popstate', traversed);
+    act(() => child.history.pushState({ __NA: true }, '', '/shop-embed/marketplace/cart'));
+    act(() => {
+      window.history.replaceState(listingEntry, '', '/shop/marketplace/listing/test/item');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(traversed).toHaveBeenCalledOnce();
+    expect(child.history.state.route).toBe('reloaded-listing');
+    send(frame, { type: 'navigate', path: '/shop-embed/marketplace/listing/test/item' });
+    act(() => {
+      window.history.replaceState(oldCatalogEntry, '', '/shop');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(traversed).toHaveBeenCalledOnce();
+    // jsdom cannot perform the fallback document request; its old route remains
+    // visible until this fixture models the replacement document's load.
+    expect(child.location.pathname).toBe('/shop-embed/marketplace/listing/test/item');
+    frame.src = '/shop-embed/marketplace';
+    fireEvent.load(frame);
+    act(() => frame.contentWindow!.history.pushState({ __NA: true }, '', '/shop-embed/marketplace/cart'));
+    expect(window.location.pathname).toBe('/shop/marketplace/cart');
+  });
+
+  it('owns a plain fragment anchor entry and restores it within the living frame', () => {
+    const { frame } = mount();
+    const child = frame.contentWindow!;
+    child.history.replaceState({ __NA: true }, '', '/shop-embed/marketplace');
+    fireEvent.load(frame);
+    const initialEntry = window.history.state;
+    const childLength = child.history.length;
+    child.document.append(child.document.createElement('html'));
+    const anchor = child.document.createElement('a');
+    anchor.href = '#details';
+    child.document.documentElement.append(anchor);
+    act(() => anchor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
+    expect(window.location.hash).toBe('#details');
+    expect(child.history.length).toBe(childLength);
+    act(() => {
+      window.history.replaceState(initialEntry, '', '/shop');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(child.location.hash).toBe('');
+    expect(child.document).toBe(frame.contentDocument);
   });
 
   it('does not stack adapters on repeated ready/load events and releases them on unmount', () => {
@@ -500,7 +743,11 @@ describe('ShopEmbed', () => {
     );
     const push = vi.spyOn(window.history, 'pushState');
     act(() => frame.contentWindow!.history.pushState(null, '', '/shop-embed/marketplace/cart'));
-    expect(push).toHaveBeenCalledExactlyOnceWith(null, '', '/shop/marketplace/cart');
+    expect(push).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ __pubkyShopEntry: expect.any(String) }),
+      '',
+      '/shop/marketplace/cart',
+    );
   });
 
   it.each(['load', 'ready'])('ignores a late initial %s from the old document while Back is pending', (event) => {
