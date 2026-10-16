@@ -36,7 +36,13 @@ vi.mock('@/services/local/stream/posts/postStreamDirtyRegistry', () => ({
 }));
 
 describe('LocalUserTagService', () => {
-  const params = { taggedId: 'author:post', taggerId: 'viewer', label: 'bitcoin', mutationId: 'operation' };
+  const params = {
+    taggedId: 'author:post',
+    taggerId: 'viewer',
+    label: 'bitcoin',
+    mutationId: 'operation',
+    tagUri: 'pubky://viewer/pub/pubky.app/tags/tag',
+  };
   beforeEach(() => {
     vi.resetAllMocks();
     read.mockResolvedValue(collection);
@@ -108,6 +114,8 @@ describe('LocalUserTagService', () => {
         action === 'create',
         'operation',
         true,
+        // A create keeps the address it wrote; a delete has none to keep.
+        ...(action === 'create' ? [params.tagUri] : []),
       );
       expect(saved).toHaveBeenCalledOnce();
       expect(UserCountsModel.updateCounts).not.toHaveBeenCalled();
@@ -123,6 +131,7 @@ describe('LocalUserTagService', () => {
       action === 'create',
       'operation',
       false,
+      ...(action === 'create' ? [params.tagUri] : []),
     );
     expect(UserCountsModel.updateCounts).toHaveBeenCalledWith({
       userId: params.taggedId,

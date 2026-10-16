@@ -25,6 +25,29 @@ export function getTagMutationEntries(record: TagCollectionModelSchema<unknown> 
   }));
 }
 
+/**
+ * The viewer's own tag file for a label. A pending local create knows the address it wrote, which Nexus
+ * may not report yet; otherwise Nexus is the source, falling back to an expired create's address.
+ */
+export function getViewerTagUri(
+  record: TagCollectionModelSchema<unknown> | null | undefined,
+  label: string,
+  viewerId: string,
+  now = Date.now(),
+): string | undefined {
+  const mutation = findTagMutation(record, label, viewerId);
+  if (mutation && mutation.expiresAt > now) {
+    if (!mutation.relationship) return undefined;
+    if (mutation.uri) return mutation.uri;
+  }
+  const tag =
+    record?.cache?.viewerId === viewerId
+      ? record.tags.find((item) => item.label.toLowerCase() === label.toLowerCase())
+      : undefined;
+  if (tag?.relationship && tag.tag_uri) return tag.tag_uri;
+  return mutation?.relationship ? mutation.uri : undefined;
+}
+
 export function findTagMutation(
   record: TagCollectionModelSchema<unknown> | null | undefined,
   label: string,
