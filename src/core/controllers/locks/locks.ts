@@ -8,8 +8,8 @@ import type {
   TFetchUnlockedListParams,
   TPaymentBundleParams,
   TPaymentLockParams,
-  TPurchaseBundleIdParams,
   TReplicateUnlockedContentParams,
+  TResolvedPurchase,
   TStartPaymentParams,
   TStartPaymentResult,
 } from '@/application/locks/locks.types';
@@ -321,12 +321,15 @@ export class LocksController {
     return LocksApplication.hasPaykitReceiver(readerPubky);
   }
 
-  /** The bundle id saved on the reader's own homeserver for this lock, or null; an unreadable file throws. */
-  static fetchPurchaseBundleId(params: TPurchaseBundleIdParams): Promise<string | null> {
-    return LocksApplication.fetchPurchaseBundleId(params);
+  /** The saved bundle id to continue this lock's payment with, by the server's view of each; null when none is saved. */
+  static fetchResolvedPurchase(params: TPaymentLockParams): Promise<TResolvedPurchase | null> {
+    return LocksApplication.fetchResolvedPurchase(params);
   }
 
-  /** Saves a bundle id on the reader's homeserver and submits the payment proof to the Lock Server. */
+  /**
+   * Reuses or saves a bundle id on the reader's homeserver and submits the payment proof to the Lock Server;
+   * an automatic start that finds every saved id ended only reports that status.
+   */
   static startPayment(params: TStartPaymentParams): Promise<TStartPaymentResult> {
     return LocksApplication.startPayment(params);
   }

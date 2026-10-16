@@ -159,6 +159,9 @@ for (const [name, viewport] of VIEWPORTS) {
     it('renders both sign-in methods', async () => {
       await renderSignIn(viewport);
       await expect.element(page.getByRole('button', { name: ringAction })).toBeEnabled();
+      if (!isDesktop) {
+        await expect.element(page.getByRole('button', { name: 'Authorize with Bitkit' })).toBeEnabled();
+      }
       await expect.element(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
       await matchVrtFrameScreenshot(`sign-in-page-${name}`);
     });
@@ -167,6 +170,9 @@ for (const [name, viewport] of VIEWPORTS) {
       scenario.passport = 'disabled';
       await renderSignIn(viewport);
       await expect.element(page.getByRole('button', { name: ringAction })).toBeEnabled();
+      if (!isDesktop) {
+        await expect.element(page.getByRole('button', { name: 'Authorize with Bitkit' })).toBeEnabled();
+      }
       await expect.element(page.getByRole('button', { name: 'Continue with Google' })).not.toBeInTheDocument();
       await matchVrtFrameScreenshot(`sign-in-page-ring-only-${name}`);
     });
@@ -174,16 +180,26 @@ for (const [name, viewport] of VIEWPORTS) {
     it('renders the Pubky Ring request while it is generated', async () => {
       scenario.ring = 'generating';
       await renderSignIn(viewport);
-      await expect.element(page.getByText(isDesktop ? 'Generating QR Code...' : 'Generating...')).toBeVisible();
+      if (isDesktop) {
+        await expect.element(page.getByText('Generating QR Code...')).toBeVisible();
+      } else {
+        const signerButtons = page.getByRole('button', { name: 'Generating...' });
+        await expect.element(signerButtons.nth(0)).toBeDisabled();
+        await expect.element(signerButtons.nth(1)).toBeDisabled();
+      }
       await matchVrtFrameScreenshot(`sign-in-page-ring-generating-${name}`);
     });
 
     it('renders an expired Pubky Ring request', async () => {
       scenario.ring = 'expired';
       await renderSignIn(viewport);
-      await expect
-        .element(page.getByRole('button', { name: isDesktop ? 'Reload sign-in QR code' : 'Click to reload' }))
-        .toBeEnabled();
+      if (isDesktop) {
+        await expect.element(page.getByRole('button', { name: 'Reload sign-in QR code' })).toBeEnabled();
+      } else {
+        const reloadButtons = page.getByRole('button', { name: 'Click to reload' });
+        await expect.element(reloadButtons.nth(0)).toBeEnabled();
+        await expect.element(reloadButtons.nth(1)).toBeEnabled();
+      }
       await matchVrtFrameScreenshot(`sign-in-page-ring-expired-${name}`);
     });
 
@@ -198,9 +214,13 @@ for (const [name, viewport] of VIEWPORTS) {
       await renderSignIn(viewport);
       await page.getByRole('button', { name: 'Continue with Google' }).click();
       await expect.element(page.getByRole('button', { name: 'Waiting for Passport...' })).toBeDisabled();
-      await expect
-        .element(page.getByRole('button', { name: isDesktop ? 'Reload sign-in QR code' : 'Click to reload' }))
-        .toBeDisabled();
+      if (isDesktop) {
+        await expect.element(page.getByRole('button', { name: 'Reload sign-in QR code' })).toBeDisabled();
+      } else {
+        const reloadButtons = page.getByRole('button', { name: 'Click to reload' });
+        await expect.element(reloadButtons.nth(0)).toBeDisabled();
+        await expect.element(reloadButtons.nth(1)).toBeDisabled();
+      }
       await matchVrtFrameScreenshot(`sign-in-page-google-pending-${name}`);
     });
 

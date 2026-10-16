@@ -108,12 +108,12 @@ everything ever unlocked. The replica also survives the creator revoking the loc
 
 ## Where the data lives
 
-| Where                                              | What                                                                    | Who can read it                                              |
-| -------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------ |
-| creator's HS `/priv/app.locks/content/`            | the locked post + attachments (originals)                               | the creator; readers only via Lock Server proxy + credential |
-| creator's HS `/pub/app.locks/<lockId>.json`        | the public lock contract (`LockFile`)                                   | anyone                                                       |
-| reader's HS `/priv/social/unlocked/<lockId>/`      | the reader's replica, written on unlock                                 | that reader only                                             |
-| reader's HS `/priv/social/purchases/<lockId>.json` | the purchase's bundle id, written BEFORE the proof is submitted (#2297) | that reader only                                             |
+| Where                                                         | What                                                                                                                   | Who can read it                                              |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| creator's HS `/priv/app.locks/content/`                       | the locked post + attachments (originals)                                                                              | the creator; readers only via Lock Server proxy + credential |
+| creator's HS `/pub/app.locks/<lockId>.json`                   | the public lock contract (`LockFile`)                                                                                  | anyone                                                       |
+| reader's HS `/priv/social/unlocked/<lockId>/`                 | the reader's replica, written on unlock                                                                                | that reader only                                             |
+| reader's HS `/priv/social/purchases/<lockId>/<bundleId>.json` | one file per bundle id, written BEFORE the proof is submitted (#2297, #2827); the legacy `<lockId>.json` is still read | that reader only                                             |
 
 ---
 
@@ -267,10 +267,18 @@ own-content reads rely on it.
 **Payment unlock** (#2368) is split into steps the modal drives because a real payment takes
 minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state machine:
 
-1. On open: `fetchPurchaseBundleId` — the reader's `/priv/social/purchases/<lockId>.json` holds
-   the bundle id of a purchase in flight (#2297). It is the ONLY handle to reach a purchase
-   again (the reader is anonymous to the Lock Server), so it is written **before** the proof
-   is submitted, kept after replication, and a failed read blocks paying (fail closed).
+1. On open: `fetchResolvedPurchase` — the reader's `/priv/social/purchases/<lockId>/` holds one file
+   per bundle id the reader ever started this lock's payment with (#2297, #2827). A bundle id is the
+   ONLY handle to reach a purchase again (the reader is anonymous to the Lock Server), so it is
+   written **before** the proof is submitted, kept after replication, and a failed read or a file
+   that is not a bundle id blocks paying (fail closed). Every saved id is looked up on the Lock
+   Server and the best one continues: `completed` first, then a running task, then one the server
+   never received, else all of them ended and only a fresh id can pay (an ended `failed` is reported
+   over `expired`, so Try again checks the wallet). A failed lookup also blocks, unless another id is
+   `completed`: nothing outranks it. Ties go to the lowest id, so two devices settle on the same one.
+   One file per id, not one per lock, is what stops a second device from overwriting the id the
+   first one is paying with (#2827). Nothing is ever deleted: an ended id is still the only way to
+   trace its invoice.
 2. Opening the modal starts the payment: nothing asks the reader to confirm before the proof is
    submitted (#2574). With no saved id, the app first checks the reader's homeserver for Paykit data
    (`hasPaykitReceiver`). With none it shows the install screen (Bitkit setup steps, store links and
@@ -279,21 +287,25 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    submits. A failed check on open lands on the blocked screen; a failed check from the button, or a
    failed submission after it, shows a toast and returns to the install screen. The check reports
    presence only, so the payment can still end `failed` afterwards (step 4).
-3. A saved id is looked up first (`fetchPaymentStatus`; SDK 404 maps to `null`). `completed` →
-   credential; `failed`/`expired` → **Try again**, which mints a fresh id (those cannot be retried,
-   and doing it automatically could charge twice). After `failed`, **Try again** checks the wallet
-   first and goes to the install screen when there is none. `pending`/`in_progress` → the task is
-   already running, so nothing is submitted and the wait resumes. Only a saved id with **no task**
-   is submitted again: that submission never reached the server.
+3. The id step 1 picks decides the route (each lookup is `fetchPaymentStatus`; SDK 404 maps to
+   `null`). `completed` → credential; `failed`/`expired` → **Try again**, which mints a fresh id
+   unless another device has since saved one that can still pay (an ended id cannot be retried, and
+   doing it automatically could charge twice). After `failed`, **Try again** checks the wallet first
+   and goes to the install screen when there is none. `pending`/`in_progress` → the task is already
+   running, so nothing is submitted and the wait resumes. Only a saved id with **no task** is
+   submitted again: that submission never reached the server.
 4. `startPayment` reuses the saved id or mints and saves a fresh one, then submits the proof (empty
-   payload, reader pubky at the bundle's top level). Replaying the same bundle is safe and creates no
-   second payment request. The Lock Server answers `pending` at once and creates the Paykit invoice
+   payload, reader pubky at the bundle's top level). Only **Try again** (or **I completed the
+   steps**) may replace an ended id: an automatic start that waited behind another submission and
+   finds every saved id ended returns that status for the modal to show, since the reader may have
+   just rejected the request in Bitkit. Replaying the same bundle is safe and creates no second
+   payment request. The Lock Server answers `pending` at once and creates the Paykit invoice
    afterwards, retrying for up to 10 minutes (its `admission_deadline_at`); Paykit then delivers the
    payment request to the reader's wallet, and the app never sees an address or invoice. A reader
    without a usable wallet or a Paykit outage therefore ends the task `failed`, not the submission.
-   While the server waits on the reader's wallet it says so (`status_message`), and the modal shows a
-   setup notice in place of the handoff. A failed submission (network, rate limit) shows
-   **Try again**, which keeps the saved id.
+   While the server waits on the reader's wallet it says so (`status_message`), and the modal shows
+   a setup notice in place of the handoff. A failed submission (network, rate limit) shows **Try
+   again**, which keeps the saved id.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
    created; with nothing submitted, the install screen has no link state. Until the first read
    answers, the modal says "Checking your Bitkit connection…". A failed first read keeps it there
@@ -322,7 +334,7 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    server's invoice deadline instead; once it exists, they start again.
    An `expired` task stops waiting and shows "The payment was not completed. You can try again."
    in both the dialog and toast. This covers rejected, canceled and timed-out requests without
-   interpreting `terminal_reason`. **Try again** starts a new payment with a fresh bundle id;
+   interpreting `terminal_reason`. **Try again** starts a new payment as in step 3;
    `failed` keeps its existing wallet-related guidance and retry handling.
 7. A completed payment enters `finishing` while the credential and content are fetched. The modal
    shows **PAYMENT RECEIVED**, "Opening your content…" and a spinner, without asking the reader
@@ -341,7 +353,8 @@ without the confirmation, and content already downloaded is shown, not dropped.
 
 `startPayment` holds a Web Lock named `locks-pay:<reader>:<lockId>` (#2468) for its whole run, so
 a quick reopen, a second tab, or React running the effect twice submits one bundle id. Browsers
-without `navigator.locks` run the steps unserialized.
+without `navigator.locks` run the steps unserialized. The lock covers one browser; two devices are
+covered by the per-id files above (#2827).
 
 **Paid but never received.** The payment completes on the server whether or not the browser is
 watching, so a reader who closes the tab mid-wait would come back to a post still offering Unlock
@@ -381,7 +394,7 @@ screen does not re-read every marker.
 Locks has no local-first controller write, so its server actions do not use the `commit*`
 prefix: `hasPaykitReceiver` and `fetchPaykitConnectionState` are server queries, while `startPayment`
 is a server workflow action.
-The purchase bundle id file and the purchases listing are always read from the homeserver and
+The purchase bundle id files and the purchases listing are always read from the homeserver and
 never cached: they decide whether a payment is reused, so a stale copy could cost money.
 
 Notes:
@@ -534,8 +547,8 @@ Never commit either.
 - Lock server FE integration: `pubky/locks` → `docs/_front_end_integration.md` — the
   `lock.json` shape and the submit-proof → credential → proxy-read access flow.
 - Creator side: [ADR 0022](adr/0022-locks-creator-publishing.md)
-- Issues: #2297 (bundle-id persistence), #2368 (reader payment), #2369 (payment-only locks),
-  #2468 (multi-tab read-back), #1998 (Phase 1 epic).
+- Issues: #2297 (bundle-id persistence), #2827 (one file per bundle id), #2368 (reader payment),
+  #2369 (payment-only locks), #2468 (multi-tab read-back), #1998 (Phase 1 epic).
 
 ## SDK and server integration
 

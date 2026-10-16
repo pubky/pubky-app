@@ -4,8 +4,9 @@ import { Key, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
-import { getAppStoreLink, getPlayStoreLink, getPubkyRingLink } from '@/config/externalLinks';
+import { BITKIT_WEBSITE_URL, getAppStoreLink, getPlayStoreLink, getPubkyRingLink } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import { Bitkit } from '@/icons';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { AppDownload } from '@/molecules/AppDownload/AppDownload';
 import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
@@ -19,21 +20,33 @@ export function SessionUpgradeDescription() {
       <Link href={getPubkyRingLink()} className="text-base font-bold">
         {'Pubky Ring'}
       </Link>
+      {' or '}
+      <Link href={BITKIT_WEBSITE_URL} className="text-base font-bold">
+        {'Bitkit'}
+      </Link>
       {' to authorize Pubky.app to access your private Locks data.'}
     </>
   );
 }
 
 /**
- * Asks Pubky Ring for a session with today's capability list and swaps it in on approval (#2373).
+ * Asks Ring or Bitkit for a session with today's capability list and swaps it in on approval (#2373).
  * Starts the flow on mount, so mount it only while it is on screen.
  */
 export function SessionUpgradePanel({ requiredCapabilities }: { requiredCapabilities?: readonly string[] } = {}) {
-  const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth({
+  const {
+    url,
+    isLoading,
+    isExpired,
+    fetchUrl,
+    isOpeningRing,
+    onAuthorizeClick,
+    isOpeningBitkit,
+    onAuthorizeBitkitClick,
+  } = useMobileAuth({
     type: 'upgrade',
     requiredCapabilities,
   });
-  const isLaunching = isLoading || isOpeningRing;
 
   // Same affordance as the sign-in QR: a desktop tester (and anyone pairing over a call) needs the
   // link itself, not a picture of it.
@@ -74,10 +87,10 @@ export function SessionUpgradePanel({ requiredCapabilities }: { requiredCapabili
         size="lg"
         className="hidden w-full pointer-coarse:flex"
         onClick={onAuthorizeClick}
-        disabled={isLaunching || (!url && !isExpired)}
-        aria-busy={isLaunching}
+        disabled={isLoading || isOpeningRing || (!url && !isExpired)}
+        aria-busy={isLoading || isOpeningRing}
       >
-        {isLaunching ? (
+        {isLoading || isOpeningRing ? (
           <>
             <Loader2 className="mr-2 size-4 animate-spin" />
             {isOpeningRing ? 'Opening Pubky Ring...' : 'Generating...'}
@@ -91,6 +104,30 @@ export function SessionUpgradePanel({ requiredCapabilities }: { requiredCapabili
           <>
             <Key className="mr-2 size-4" />
             {'Continue with Pubky Ring'}
+          </>
+        )}
+      </Button>
+      <Button
+        size="lg"
+        className="hidden w-full pointer-coarse:flex"
+        onClick={onAuthorizeBitkitClick}
+        disabled={isLoading || isOpeningBitkit || (!url && !isExpired)}
+        aria-busy={isLoading || isOpeningBitkit}
+      >
+        {isLoading || isOpeningBitkit ? (
+          <>
+            <Loader2 className="mr-2 size-4 animate-spin" />
+            {isOpeningBitkit ? 'Opening Bitkit...' : 'Generating...'}
+          </>
+        ) : isExpired ? (
+          <>
+            <RefreshCw className="mr-2 size-4" />
+            {'Click to reload'}
+          </>
+        ) : (
+          <>
+            <Bitkit className="mr-2 size-4 [&_path]:fill-current" />
+            {'Continue with Bitkit'}
           </>
         )}
       </Button>

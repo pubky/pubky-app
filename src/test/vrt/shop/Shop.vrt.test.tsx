@@ -228,8 +228,10 @@ vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
     isLoading: false,
     isExpired: false,
     isOpeningRing: false,
+    isOpeningBitkit: false,
     fetchUrl: vi.fn(),
     onAuthorizeClick: vi.fn(),
+    onAuthorizeBitkitClick: vi.fn(),
   }),
 }));
 
@@ -286,6 +288,9 @@ describe('embedded Shop shell — visual regression', () => {
     await expect
       .element(page.getByRole('button', { name: 'Continue with Pubky Ring', includeHidden: true }))
       .not.toBeVisible();
+    await expect
+      .element(page.getByRole('button', { name: 'Continue with Bitkit', includeHidden: true }))
+      .not.toBeVisible();
     await expect.element(page.getByRole('button', { name: 'Use Passport or recovery key' })).toBeVisible();
     await expect.element(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
     await matchVrtFrameScreenshot('shop-enable-desktop');
@@ -305,6 +310,7 @@ describe('embedded Shop shell — visual regression', () => {
         await renderShop(VRT_VIEWPORT_MOBILE, false, true);
         await expect.element(page.getByRole('dialog', { name: 'Enable Shop' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeVisible();
         await expect.element(page.getByTestId('session-upgrade-qr')).not.toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Use Passport or recovery key' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();

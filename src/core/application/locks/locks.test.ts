@@ -353,8 +353,18 @@ describe('LocksApplication (payment unlock)', () => {
     ],
   });
   const lockUrl = 'pubky://pubkybob/pub/app.locks/LOCK1.json';
-  const purchaseUrl = 'pubky://reader1/priv/social/purchases/LOCK1.json';
+  const purchaseRoot = 'pubky://reader1/priv/social/purchases/LOCK1/';
+  const legacyPurchaseUrl = 'pubky://reader1/priv/social/purchases/LOCK1.json';
   const purchaseBytes = (raw: string) => ({ bytes: new TextEncoder().encode(raw), contentType: 'application/json' });
+  // Listing-based ids must look like `BundleId.generate()` output or the parser skips them.
+  const BUNDLE_A = 'A'.repeat(26);
+  const BUNDLE_B = 'B'.repeat(26);
+  const purchaseFile = (bundleId: string) => `${purchaseRoot}${bundleId}.json`;
+  const task = (status: string) => ({ status, walletSetupNeeded: false, admissionDeadlineAt: null });
+  /** Answers each id's lookup from the map; an id outside it reads as "never received". */
+  const lookups = (byId: Record<string, ReturnType<typeof task> | null>) =>
+    mocks.lookupVerificationTask.mockImplementation(async (_creator: string, id: string) => byId[id] ?? null);
+  const lookedUp = () => mocks.lookupVerificationTask.mock.calls.map(([, id]) => id);
   const withPrimary = () =>
     asOpaque<LockFile>({
       creator: 'pubkybob',
@@ -369,34 +379,148 @@ describe('LocksApplication (payment unlock)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.listAll.mockResolvedValue([]);
+    mocks.getBytesIfExists.mockResolvedValue(null);
+    mocks.lookupVerificationTask.mockResolvedValue(null);
   });
 
-  describe('fetchPurchaseBundleId', () => {
-    it('returns null when there is no purchase file', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(null);
-      await expect(LocksApplication.fetchPurchaseBundleId({ lockUrl, readerPubky: 'reader1' })).resolves.toBeNull();
-      expect(mocks.getBytesIfExists).toHaveBeenCalledWith(purchaseUrl);
+  describe('fetchResolvedPurchase', () => {
+    const params = { lockFile, lockUrl, readerPubky: 'reader1' };
+
+    it('returns null, without a lookup, when nothing is saved for the lock', async () => {
+      await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toBeNull();
+      expect(mocks.listAll).toHaveBeenCalledWith({ baseDirectory: purchaseRoot });
+      expect(mocks.getBytesIfExists).toHaveBeenCalledWith(legacyPurchaseUrl);
+      expect(mocks.lookupVerificationTask).not.toHaveBeenCalled();
     });
 
-    it('returns the stored bundle id', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"bundle-1"}'));
-      await expect(LocksApplication.fetchPurchaseBundleId({ lockUrl, readerPubky: 'reader1' })).resolves.toBe(
-        'bundle-1',
-      );
+    // Builds before #2827 saved one file per lock; those purchases must stay reachable.
+    it('reads the legacy single-file layout', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"saved-1"}'));
+      lookups({ 'saved-1': task('pending') });
+
+      await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({
+        kind: 'reusable',
+        bundleId: 'saved-1',
+        task: task('pending'),
+      });
+    });
+
+    it('counts a legacy id that is also saved per bundle once', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes(`{"bundle_id":"${BUNDLE_A}"}`));
+      lookups({ [BUNDLE_A]: task('pending') });
+
+      await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toMatchObject({ bundleId: BUNDLE_A });
+      expect(lookedUp()).toEqual([BUNDLE_A]);
+    });
+
+    // Two devices each minted an id (#2827): the one that was paid wins, whatever its order.
+    it('prefers a completed id over one still paying', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+      lookups({ [BUNDLE_A]: task('pending'), [BUNDLE_B]: task('completed') });
+
+      await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({
+        kind: 'reusable',
+        bundleId: BUNDLE_B,
+        task: task('completed'),
+      });
+      expect(lookedUp()).toEqual([BUNDLE_A, BUNDLE_B]);
+    });
+
+    // Same rank → lowest id, so both devices continue the same payment on their next open.
+    it('breaks a tie on the lowest id', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_B), purchaseFile(BUNDLE_A)]);
+      lookups({ [BUNDLE_A]: task('in_progress'), [BUNDLE_B]: task('pending') });
+
+      await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toMatchObject({ bundleId: BUNDLE_A });
+    });
+
+    it('prefers an id the server never received over one that ended', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+      lookups({ [BUNDLE_A]: task('failed') });
+
+      await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({
+        kind: 'reusable',
+        bundleId: BUNDLE_B,
+        task: null,
+      });
+    });
+
+    // A reported `failed` makes Try again check the wallet first; a reported `expired` skips the check.
+    it('reports terminal as failed over expired when every saved id ended', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+      lookups({ [BUNDLE_A]: task('expired'), [BUNDLE_B]: task('failed') });
+
+      await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({
+        kind: 'terminal',
+        bundleId: BUNDLE_B,
+        status: 'failed',
+      });
     });
 
     // Fail closed: something was purchased and its handle is gone — minting a fresh id could pay twice.
-    it('throws on an unreadable purchase file instead of pretending there is none', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('garbage'));
-      await expect(LocksApplication.fetchPurchaseBundleId({ lockUrl, readerPubky: 'reader1' })).rejects.toMatchObject({
+    it.each([
+      ['an unreadable legacy file', () => mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('garbage'))],
+      [
+        'a file under the lock root whose name is not a bundle id',
+        () => mocks.listAll.mockResolvedValue([`${purchaseRoot}notes.json`, purchaseFile(BUNDLE_A)]),
+      ],
+    ])('throws on %s instead of pretending there is none', async (_label, arrange) => {
+      arrange();
+
+      await expect(LocksApplication.fetchResolvedPurchase(params)).rejects.toMatchObject({
         code: ValidationErrorCode.INVALID_INPUT,
-        operation: 'fetchPurchaseBundleId',
+        operation: 'fetchResolvedPurchase',
       });
+      expect(mocks.lookupVerificationTask).not.toHaveBeenCalled();
+    });
+
+    // An id whose state is unknown must not be ranked: a fresh one minted beside it could pay twice.
+    it.each([
+      ['the listing', () => mocks.listAll.mockRejectedValue(new Error('offline'))],
+      ['one lookup beside an unreceived id', () => lookups({}).mockRejectedValueOnce(new Error('HTTP 503'))],
+      [
+        'one lookup beside a running id',
+        () => lookups({ [BUNDLE_B]: task('pending') }).mockRejectedValueOnce(new Error('HTTP 503')),
+      ],
+      [
+        'one lookup beside an ended id',
+        () => lookups({ [BUNDLE_B]: task('expired') }).mockRejectedValueOnce(new Error('HTTP 503')),
+      ],
+    ])('rethrows when %s fails', async (_step, fail) => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+      fail();
+
+      await expect(LocksApplication.fetchResolvedPurchase(params)).rejects.toThrow();
+    });
+
+    // Nothing outranks `completed`, so a paid id still unlocks while another id's lookup is down.
+    it('returns a completed id even when another lookup fails', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+      lookups({ [BUNDLE_B]: task('completed') }).mockRejectedValueOnce(new Error('HTTP 503'));
+
+      await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({
+        kind: 'reusable',
+        bundleId: BUNDLE_B,
+        task: task('completed'),
+      });
+    });
+
+    it('never writes or deletes', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"saved-1"}'));
+      lookups({ [BUNDLE_A]: task('failed'), 'saved-1': task('expired') });
+
+      await LocksApplication.fetchResolvedPurchase(params);
+      expect(mocks.putBlob).not.toHaveBeenCalled();
+      expect(mocks.generateBundleId).not.toHaveBeenCalled();
+      expect(mocks.submitProof).not.toHaveBeenCalled();
     });
   });
 
   describe('startPayment', () => {
-    const params = { lockFile, lockUrl, readerPubky: 'reader1', rejectBundleId: null };
+    const params = { lockFile, lockUrl, readerPubky: 'reader1', isRetry: false };
 
     beforeEach(() => {
       mocks.generateBundleId.mockResolvedValue('fresh-1');
@@ -405,14 +529,12 @@ describe('LocksApplication (payment unlock)', () => {
     });
 
     it('mints a bundle id, saves it BEFORE submitting, and returns it with the status', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(null);
-
       await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: 'fresh-1', status: 'pending' });
 
       // The bytes matter, not just the URL: a file written with the wrong id is money nobody can
       // reach again.
       const [{ url, blob }] = mocks.putBlob.mock.calls[0] as [{ url: string; blob: Uint8Array }];
-      expect(url).toBe(purchaseUrl);
+      expect(url).toBe(purchaseFile('fresh-1'));
       expect(GuardedContentParser.parsePurchaseFile(blob)).toBe('fresh-1');
       expect(mocks.putBlob.mock.invocationCallOrder[0]).toBeLessThan(mocks.submitProof.mock.invocationCallOrder[0]);
       expect(mocks.submitProof).toHaveBeenCalledWith({
@@ -426,40 +548,53 @@ describe('LocksApplication (payment unlock)', () => {
 
     // Another tab (or an earlier press) already saved an id: submit with THAT one. Minting again
     // would orphan its purchase and pay a second time.
-    it('reuses the saved bundle id without minting or overwriting', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"saved-1"}'));
+    it('reuses a saved bundle id that is still paying, without minting or writing', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
+      lookups({ [BUNDLE_A]: task('pending') });
 
-      await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: 'saved-1', status: 'pending' });
+      await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: BUNDLE_A, status: 'pending' });
       expect(mocks.generateBundleId).not.toHaveBeenCalled();
       expect(mocks.putBlob).not.toHaveBeenCalled();
-      expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: 'saved-1' }));
+      expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: BUNDLE_A }));
     });
 
-    // Only the exact rejected id is replaced: another tab may have saved a newer, live one meanwhile.
-    it('keeps a saved id that differs from the rejected one', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"saved-1"}'));
+    // Only ended ids are passed over: another device may have saved a live one beside them.
+    it('reuses the live id next to an ended one', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+      lookups({ [BUNDLE_A]: task('failed'), [BUNDLE_B]: task('pending') });
 
-      await expect(LocksApplication.startPayment({ ...params, rejectBundleId: 'dead-1' })).resolves.toEqual({
-        bundleId: 'saved-1',
-        status: 'pending',
-      });
+      await expect(LocksApplication.startPayment(params)).resolves.toMatchObject({ bundleId: BUNDLE_B });
       expect(mocks.generateBundleId).not.toHaveBeenCalled();
       expect(mocks.putBlob).not.toHaveBeenCalled();
-      expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: 'saved-1' }));
     });
 
-    // failed/expired cannot be retried — the dead id is replaced (file overwritten before submit).
-    it('replaces the rejected bundle id with a fresh one', async () => {
+    // An automatic start queued behind another submission can find its id ended (rejected in
+    // Bitkit): only the reader's Try again may send a new payment request.
+    it('returns the ended status without minting or submitting when the start is automatic', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
+      lookups({ [BUNDLE_A]: task('expired') });
+
+      await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: BUNDLE_A, status: 'expired' });
+      expect(mocks.generateBundleId).not.toHaveBeenCalled();
+      expect(mocks.putBlob).not.toHaveBeenCalled();
+      expect(mocks.submitProof).not.toHaveBeenCalled();
+    });
+
+    // failed/expired cannot be retried — a fresh id gets its own file; the ended one stays as the
+    // only handle to its invoice.
+    it('mints a fresh id beside the ended ones instead of overwriting them on Try again', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
       mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"dead-1"}'));
+      lookups({ [BUNDLE_A]: task('expired'), 'dead-1': task('failed') });
 
-      await expect(LocksApplication.startPayment({ ...params, rejectBundleId: 'dead-1' })).resolves.toEqual({
+      await expect(LocksApplication.startPayment({ ...params, isRetry: true })).resolves.toEqual({
         bundleId: 'fresh-1',
         status: 'pending',
       });
       expect(mocks.generateBundleId).toHaveBeenCalledTimes(1);
       expect(mocks.putBlob).toHaveBeenCalledTimes(1);
       const [{ url, blob }] = mocks.putBlob.mock.calls[0] as [{ url: string; blob: Uint8Array }];
-      expect(url).toBe(purchaseUrl);
+      expect(url).toBe(purchaseFile('fresh-1'));
       expect(GuardedContentParser.parsePurchaseFile(blob)).toBe('fresh-1');
       expect(mocks.putBlob.mock.invocationCallOrder[0]).toBeLessThan(mocks.submitProof.mock.invocationCallOrder[0]);
       expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: 'fresh-1' }));
@@ -476,12 +611,11 @@ describe('LocksApplication (payment unlock)', () => {
     };
 
     it('serializes the read-mint-write-submit section for the same reader and lock', async () => {
-      let storedBundleId: string | null = null;
-      mocks.getBytesIfExists.mockImplementation(async () =>
-        storedBundleId ? purchaseBytes(JSON.stringify({ bundle_id: storedBundleId })) : null,
-      );
-      mocks.putBlob.mockImplementation(async ({ blob }: { blob: Uint8Array }) => {
-        storedBundleId = GuardedContentParser.parsePurchaseFile(blob);
+      const saved: string[] = [];
+      mocks.generateBundleId.mockResolvedValue(BUNDLE_A);
+      mocks.listAll.mockImplementation(async () => [...saved]);
+      mocks.putBlob.mockImplementation(async ({ url }: { url: string }) => {
+        saved.push(url);
       });
 
       let tail = Promise.resolve();
@@ -505,7 +639,7 @@ describe('LocksApplication (payment unlock)', () => {
         expect(request).toHaveBeenNthCalledWith(1, 'locks-pay:reader1:LOCK1', expect.any(Function));
         expect(mocks.generateBundleId).toHaveBeenCalledTimes(1);
         expect(mocks.putBlob).toHaveBeenCalledTimes(1);
-        expect(mocks.submitProof.mock.calls.map(([bundle]) => bundle.bundle_id)).toEqual(['fresh-1', 'fresh-1']);
+        expect(mocks.submitProof.mock.calls.map(([bundle]) => bundle.bundle_id)).toEqual([BUNDLE_A, BUNDLE_A]);
         expect(first.bundleId).toBe(second.bundleId);
       } finally {
         restore();
@@ -538,7 +672,6 @@ describe('LocksApplication (payment unlock)', () => {
       });
       // The factory reported it on construction; only a SECOND report would be the bug.
       errorSpy.mockClear();
-      mocks.getBytesIfExists.mockResolvedValue(null);
       mocks.submitProof.mockRejectedValue(submitFailure);
       const restore = stubLockManager(vi.fn((_name: string, callback: () => Promise<unknown>) => callback()));
 
@@ -552,7 +685,6 @@ describe('LocksApplication (payment unlock)', () => {
     });
 
     it('does not submit when saving the fresh id fails', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(null);
       mocks.putBlob.mockRejectedValue(new Error('offline'));
 
       await expect(LocksApplication.startPayment(params)).rejects.toThrow();
@@ -565,7 +697,7 @@ describe('LocksApplication (payment unlock)', () => {
 
       await expect(LocksApplication.startPayment(params)).rejects.toMatchObject({
         code: ValidationErrorCode.INVALID_INPUT,
-        operation: 'fetchPurchaseBundleId',
+        operation: 'fetchResolvedPurchase',
       });
       expect(mocks.generateBundleId).not.toHaveBeenCalled();
       expect(mocks.submitProof).not.toHaveBeenCalled();
@@ -573,15 +705,13 @@ describe('LocksApplication (payment unlock)', () => {
 
     // A URL with no lock id must fail before any read or write: there is no file path to save an id under.
     it.each([
-      [
-        'fetchPurchaseBundleId',
-        (lockUrl: string) => LocksApplication.fetchPurchaseBundleId({ lockUrl, readerPubky: 'reader1' }),
-      ],
+      ['fetchResolvedPurchase', (lockUrl: string) => LocksApplication.fetchResolvedPurchase({ ...params, lockUrl })],
       ['startPayment', (lockUrl: string) => LocksApplication.startPayment({ ...params, lockUrl })],
     ])('%s rejects a lock URL without a lock id before touching the homeserver', async (_name, call) => {
       await expect(call('pubky://pubkybob/pub/app.locks/')).rejects.toMatchObject({
         code: ValidationErrorCode.INVALID_INPUT,
       });
+      expect(mocks.listAll).not.toHaveBeenCalled();
       expect(mocks.getBytesIfExists).not.toHaveBeenCalled();
       expect(mocks.generateBundleId).not.toHaveBeenCalled();
       expect(mocks.putBlob).not.toHaveBeenCalled();
@@ -605,10 +735,10 @@ describe('LocksApplication (payment unlock)', () => {
   });
 
   describe('fetchPurchasedLockIds', () => {
-    it('lists the reader purchases with one listing', async () => {
+    it('lists the reader purchases with one listing, in both layouts', async () => {
       mocks.listAll.mockResolvedValue([
         'pubky://reader1/priv/social/purchases/lock1.json',
-        'pubky://reader1/priv/social/purchases/lock2.json',
+        `pubky://reader1/priv/social/purchases/lock2/${BUNDLE_A}.json`,
       ]);
 
       await expect(LocksApplication.fetchPurchasedLockIds({ readerPubky: 'reader1' })).resolves.toEqual([
@@ -677,8 +807,6 @@ describe('LocksApplication (payment unlock)', () => {
     const paidBytes = new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}');
 
     it('returns null when the reader has no saved bundle id', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(null);
-
       await expect(LocksApplication.fetchPaidContentIfCompleted(params)).resolves.toBeNull();
       expect(mocks.lookupVerificationTask).not.toHaveBeenCalled();
     });
@@ -694,8 +822,7 @@ describe('LocksApplication (payment unlock)', () => {
     });
 
     it('returns null when the server has no task for the saved id', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"bundle-1"}'));
-      mocks.lookupVerificationTask.mockResolvedValue(null);
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
 
       await expect(LocksApplication.fetchPaidContentIfCompleted(params)).resolves.toBeNull();
       expect(mocks.issueAccessCredential).not.toHaveBeenCalled();
@@ -704,23 +831,24 @@ describe('LocksApplication (payment unlock)', () => {
       expect(mocks.submitProof).not.toHaveBeenCalled();
     });
 
-    // Still pending: the modal owns that wait, so recovery has nothing to do.
-    it('returns null while the payment is not completed', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"bundle-1"}'));
-      mocks.lookupVerificationTask.mockResolvedValue({ status: 'pending' });
+    // Not completed (still paying, or ended): there is no content to recover.
+    it.each(['pending', 'failed'])('returns null while the payment is %s', async (status) => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
+      lookups({ [BUNDLE_A]: task(status) });
 
       await expect(LocksApplication.fetchPaidContentIfCompleted(params)).resolves.toBeNull();
       expect(mocks.issueAccessCredential).not.toHaveBeenCalled();
     });
 
-    it('reads the paid content once the payment is completed', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"bundle-1"}'));
-      mocks.lookupVerificationTask.mockResolvedValue({ status: 'completed' });
+    it('reads the paid content with the completed id, whichever device minted it', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+      lookups({ [BUNDLE_A]: task('pending'), [BUNDLE_B]: task('completed') });
       mocks.issueAccessCredential.mockResolvedValue({ credential: 'cred-abc', expires_at: 'e' });
       mocks.proxyReadGuardedResource.mockResolvedValue(paidBytes);
 
       const content = await LocksApplication.fetchPaidContentIfCompleted(params);
       expect(content?.post.content).toBe('paid');
+      expect(mocks.issueAccessCredential).toHaveBeenCalledWith('pubkybob', BUNDLE_B);
       // Recovery reads; it never buys.
       expect(mocks.generateBundleId).not.toHaveBeenCalled();
       expect(mocks.putBlob).not.toHaveBeenCalled();

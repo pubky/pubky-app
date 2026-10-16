@@ -24,7 +24,7 @@ const mocks = vi.hoisted(() => ({
   fetchLockFile: vi.fn(),
   getOrFetchLockFile: vi.fn(),
   hasPaykitReceiver: vi.fn(),
-  fetchPurchaseBundleId: vi.fn(),
+  fetchResolvedPurchase: vi.fn(),
   fetchPaidContent: vi.fn(),
   startPayment: vi.fn(),
   fetchPaykitConnectionState: vi.fn(),
@@ -50,7 +50,7 @@ vi.mock('@/application/locks/locks', () => ({
     fetchLockFile: mocks.fetchLockFile,
     getOrFetchLockFile: mocks.getOrFetchLockFile,
     hasPaykitReceiver: mocks.hasPaykitReceiver,
-    fetchPurchaseBundleId: mocks.fetchPurchaseBundleId,
+    fetchResolvedPurchase: mocks.fetchResolvedPurchase,
     fetchPaidContent: mocks.fetchPaidContent,
     startPayment: mocks.startPayment,
     fetchPaykitConnectionState: mocks.fetchPaykitConnectionState,
@@ -769,11 +769,16 @@ describe('LocksController (payment delegation)', () => {
   it.each([
     ['hasPaykitReceiver', 'hasPaykitReceiver', 'reader1', true],
     ['fetchPurchasedLockIds', 'fetchPurchasedLockIds', { readerPubky: 'reader1' }, ['lock1']],
-    ['fetchPurchaseBundleId', 'fetchPurchaseBundleId', { lockUrl: 'u', readerPubky: 'r' }, 'b'],
+    [
+      'fetchResolvedPurchase',
+      'fetchResolvedPurchase',
+      { lockFile: MOCK_LOCK_FILE, lockUrl: 'u', readerPubky: 'r' },
+      { kind: 'reusable', bundleId: 'b', task: null },
+    ],
     [
       'startPayment',
       'startPayment',
-      { lockFile: MOCK_LOCK_FILE, lockUrl: 'u', readerPubky: 'r', rejectBundleId: null },
+      { lockFile: MOCK_LOCK_FILE, lockUrl: 'u', readerPubky: 'r' },
       { bundleId: 'b', status: 'pending' },
     ],
     [

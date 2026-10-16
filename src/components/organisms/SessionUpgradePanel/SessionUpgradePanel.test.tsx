@@ -1,10 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SessionUpgradePanel } from './SessionUpgradePanel';
+import { BITKIT_WEBSITE_URL, getPubkyRingLink } from '@/config/externalLinks';
+import { SessionUpgradeDescription, SessionUpgradePanel } from './SessionUpgradePanel';
 
 const mocks = vi.hoisted(() => ({
   fetchUrl: vi.fn(),
   onAuthorizeClick: vi.fn(),
+  onAuthorizeBitkitClick: vi.fn(),
   copyToClipboard: vi.fn(),
   toast: vi.fn(),
   auth: {
@@ -12,6 +14,7 @@ const mocks = vi.hoisted(() => ({
     isLoading: false,
     isExpired: false,
     isOpeningRing: false,
+    isOpeningBitkit: false,
   },
   options: null as unknown,
 }));
@@ -24,6 +27,7 @@ vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
       fetchUrl: mocks.fetchUrl,
       copyAuthUrl: vi.fn(),
       onAuthorizeClick: mocks.onAuthorizeClick,
+      onAuthorizeBitkitClick: mocks.onAuthorizeBitkitClick,
     };
   },
 }));
@@ -37,7 +41,7 @@ vi.mock('@/molecules/Toaster/toast', () => ({ toast: (args: unknown) => mocks.to
 describe('SessionUpgradePanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.auth = { url: '', isLoading: false, isExpired: false, isOpeningRing: false };
+    mocks.auth = { url: '', isLoading: false, isExpired: false, isOpeningRing: false, isOpeningBitkit: false };
   });
 
   it('starts an upgrade flow, not a sign-in', () => {
@@ -45,11 +49,25 @@ describe('SessionUpgradePanel', () => {
     expect(mocks.options).toEqual({ type: 'upgrade' });
   });
 
-  it('renders the QR and enables the touch button once the URL is ready', () => {
+  it('passes the requested Shop capabilities to the same upgrade flow', () => {
+    const requiredCapabilities = ['/pub/paykit/:rw', '/priv/pubky.app/:rw'];
+    render(<SessionUpgradePanel requiredCapabilities={requiredCapabilities} />);
+    expect(mocks.options).toEqual({ type: 'upgrade', requiredCapabilities });
+  });
+
+  it('names both signers in the Locks description', () => {
+    render(<SessionUpgradeDescription />);
+    expect(screen.getByRole('link', { name: 'Pubky Ring' })).toHaveAttribute('href', getPubkyRingLink());
+    expect(screen.getByRole('link', { name: 'Bitkit' })).toHaveAttribute('href', BITKIT_WEBSITE_URL);
+    expect(screen.getByText(/to authorize Pubky.app to access your private Locks data/)).toBeInTheDocument();
+  });
+
+  it('renders the QR and enables both touch buttons once the URL is ready', () => {
     mocks.auth.url = 'pubkyring://authorize?token=upgrade';
     render(<SessionUpgradePanel />);
     expect(screen.getByTestId('session-upgrade-qr').querySelector('svg')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Continue with Bitkit' })).toBeEnabled();
   });
 
   it('opens Pubky Ring from the touch button', () => {
@@ -57,6 +75,33 @@ describe('SessionUpgradePanel', () => {
     render(<SessionUpgradePanel />);
     fireEvent.click(screen.getByRole('button', { name: 'Continue with Pubky Ring' }));
     expect(mocks.onAuthorizeClick).toHaveBeenCalled();
+  });
+
+  it('opens Bitkit from its own touch button', () => {
+    mocks.auth.url = 'pubkyauth://signin_grant?token=upgrade';
+    render(<SessionUpgradePanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Bitkit' }));
+    expect(mocks.onAuthorizeBitkitClick).toHaveBeenCalledOnce();
+    expect(mocks.onAuthorizeClick).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { signer: 'Pubky Ring', opening: 'isOpeningRing', other: 'Bitkit' },
+    { signer: 'Bitkit', opening: 'isOpeningBitkit', other: 'Pubky Ring' },
+  ] as const)('keeps $other available while $signer is opening', ({ signer, opening, other }) => {
+    mocks.auth.url = 'pubkyauth://signin_grant?token=upgrade';
+    mocks.auth[opening] = true;
+    render(<SessionUpgradePanel />);
+    const openingButton = screen.getByRole('button', { name: `Opening ${signer}...` });
+    expect(openingButton).toBeDisabled();
+    expect(openingButton).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: `Continue with ${other}` })).toBeEnabled();
+  });
+
+  it('disables both signer buttons before a usable URL is available', () => {
+    render(<SessionUpgradePanel />);
+    expect(screen.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Continue with Bitkit' })).toBeDisabled();
   });
 
   it('copies the link when the QR is clicked', async () => {
@@ -92,9 +137,14 @@ describe('SessionUpgradePanel', () => {
     expect(mocks.fetchUrl).toHaveBeenCalled();
   });
 
-  it('disables the touch button while the URL is generating', () => {
+  it('disables both touch buttons while the URL is generating', () => {
     mocks.auth.isLoading = true;
     render(<SessionUpgradePanel />);
-    expect(screen.getByRole('button', { name: /Generating/ })).toBeDisabled();
+    const buttons = screen.getAllByRole('button', { name: 'Generating...' });
+    expect(buttons).toHaveLength(2);
+    for (const button of buttons) {
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('aria-busy', 'true');
+    }
   });
 });

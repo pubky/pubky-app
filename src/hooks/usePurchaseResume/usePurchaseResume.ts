@@ -12,7 +12,7 @@ import type { UsePurchaseResumeParams } from './usePurchaseResume.types';
  * The payment completes on the server whether or not the browser is watching, so a reader who
  * closed the tab mid-wait would come back to a post still offering Unlock over content they own.
  *
- * Never spends money: it reads the saved bundle id, asks the server its status, and downloads.
+ * Never spends money: it reads the saved bundle ids, asks the server their status, and downloads.
  * No branch here mints an id or submits a proof.
  */
 export function usePurchaseResume({

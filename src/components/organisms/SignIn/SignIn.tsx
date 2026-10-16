@@ -14,6 +14,7 @@ import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { usePassportAuth } from '@/hooks/usePassportAuth/usePassportAuth';
 import type { PassportAttemptSettledEvent } from '@/hooks/usePassportAuth/usePassportAuth.types';
 import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
+import { Bitkit } from '@/icons';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
 import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
@@ -97,7 +98,17 @@ const SignInProgress = () => {
   );
 };
 export const SignInContent = () => {
-  const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth();
+  const {
+    url,
+    isLoading,
+    isExpired,
+    fetchUrl,
+    copyAuthUrl,
+    isOpeningRing,
+    onAuthorizeClick,
+    isOpeningBitkit,
+    onAuthorizeBitkitClick,
+  } = useMobileAuth();
   const authUrlResolved = useSignInStore((state) => state.authUrlResolved);
   const passportEligibility = usePassportEligibility();
   const isPassportEnabled = passportEligibility === 'enabled';
@@ -133,26 +144,26 @@ export const SignInContent = () => {
       });
     }
   };
-  const isMobileLaunching = isLoading || isOpeningRing;
   const isRingLocked = isPassportPending;
-  const mobileAuthorizeContent = isMobileLaunching ? (
-    <>
-      <Loader2 className="mr-2 size-4 animate-spin" />
-      <Typography as="span" overrideDefaults aria-live="polite">
-        {isOpeningRing ? 'Opening Pubky Ring...' : 'Generating...'}
-      </Typography>
-    </>
-  ) : isExpired ? (
-    <>
-      <RefreshCw className="mr-2 size-4" />
-      {'Click to reload'}
-    </>
-  ) : (
-    <>
-      <Key className="mr-2 size-4" />
-      {'Authorize with Pubky Ring or Bitkit'}
-    </>
-  );
+  const mobileAuthorizeContent =
+    isLoading || isOpeningRing ? (
+      <>
+        <Loader2 className="mr-2 size-4 animate-spin" />
+        <Typography as="span" overrideDefaults aria-live="polite">
+          {isOpeningRing ? 'Opening Pubky Ring...' : 'Generating...'}
+        </Typography>
+      </>
+    ) : isExpired ? (
+      <>
+        <RefreshCw className="mr-2 size-4" />
+        {'Click to reload'}
+      </>
+    ) : (
+      <>
+        <Key className="mr-2 size-4" />
+        {'Authorize with Pubky Ring'}
+      </>
+    );
 
   // Show progress steps once auth URL is resolved
   if (authUrlResolved) {
@@ -189,11 +200,40 @@ export const SignInContent = () => {
       className="w-full"
       size="lg"
       onClick={onAuthorizeClick}
-      disabled={isMobileLaunching || isRingLocked || (!url && !isExpired)}
-      aria-busy={isMobileLaunching}
+      disabled={isLoading || isOpeningRing || isRingLocked || (!url && !isExpired)}
+      aria-busy={isLoading || isOpeningRing}
       data-testid="button"
     >
       {mobileAuthorizeContent}
+    </Button>
+  );
+
+  const mobileBitkitButton = (
+    <Button
+      className="w-full"
+      size="lg"
+      onClick={onAuthorizeBitkitClick}
+      disabled={isLoading || isOpeningBitkit || isRingLocked || (!url && !isExpired)}
+      aria-busy={isLoading || isOpeningBitkit}
+    >
+      {isLoading || isOpeningBitkit ? (
+        <>
+          <Loader2 className="mr-2 size-4 animate-spin" />
+          <Typography as="span" overrideDefaults aria-live="polite">
+            {isOpeningBitkit ? 'Opening Bitkit...' : 'Generating...'}
+          </Typography>
+        </>
+      ) : isExpired ? (
+        <>
+          <RefreshCw className="mr-2 size-4" />
+          {'Click to reload'}
+        </>
+      ) : (
+        <>
+          <Bitkit className="mr-2 size-4 [&_path]:fill-current" />
+          {'Authorize with Bitkit'}
+        </>
+      )}
     </Button>
   );
 
@@ -262,6 +302,7 @@ export const SignInContent = () => {
                 {SOVEREIGN_METHOD_TITLE}
               </Typography>
               {mobileRingButton}
+              {mobileBitkitButton}
             </Container>
             <PassportMethodSection onContinue={startPassportAuth} isPending={isPassportPending} />
           </Container>
@@ -270,6 +311,7 @@ export const SignInContent = () => {
             <Container className="flex-col items-center justify-center gap-6">
               <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
               {mobileRingButton}
+              {mobileBitkitButton}
             </Container>
           </ContentCard>
         )}
@@ -286,7 +328,7 @@ export const SignInFooter = () => {
       <Link href="https://pubkyring.app/" target="_blank" rel="noopener noreferrer">
         {'Pubky Ring'}
       </Link>
-      {'? Use the recovery phrase or encrypted file to restore your account.'}
+      {' or Bitkit? Use the recovery phrase or encrypted file to restore your account.'}
     </FooterLinks>
   );
 };
@@ -304,6 +346,8 @@ export const SignInHeader = ({ isPassportEnabled = false }: { isPassportEnabled?
           <>
             {'Authorize with '}
             <span className="text-brand">{'Pubky Ring'}</span>
+            {' or '}
+            <span className="text-brand">{'Bitkit'}</span>
             {' to sign in.'}
           </>
         )}

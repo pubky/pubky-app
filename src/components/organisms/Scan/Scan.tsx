@@ -44,6 +44,7 @@ export const ScanContent = () => {
   );
   if (!hasInviteCode) return null;
   const isMobileLaunching = isLoading || isOpeningRing;
+  // Onboarding uses signup_grant; Bitkit iOS only exposes a sign-in handoff.
   const mobileAuthorizeContent = isMobileLaunching ? (
     <>
       <Loader2 className="mr-2 size-4 animate-spin" />
@@ -59,7 +60,7 @@ export const ScanContent = () => {
   ) : (
     <>
       <Key className="mr-2 size-4" />
-      {'Authorize with Pubky Ring or Bitkit'}
+      {'Authorize with Pubky Ring'}
     </>
   );
   return (
