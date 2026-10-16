@@ -1,7 +1,7 @@
 'use client';
 
 import '@mdxeditor/editor/style.css';
-import { type ForwardedRef, Fragment, useRef, useState } from 'react';
+import { type ForwardedRef, Fragment, useLayoutEffect, useRef, useState } from 'react';
 import { languages } from '@codemirror/language-data';
 import { oneDark } from '@codemirror/theme-one-dark';
 import {
@@ -118,6 +118,20 @@ export default function InitializedMDXEditor({
   // splices the freshest text through this ref, so it never operates on a
   // stale value while a render is still pending.
   const markdownTextRef = useRef('');
+  // The caret to place once the textarea has rendered an inserted media block: the controlled
+  // update parks the caret at the end, and the insert puts it back after the block. Applied from
+  // the commit that renders the new text, so it cannot run ahead of it.
+  const pendingCaretRef = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const caret = pendingCaretRef.current;
+    if (caret === null) return;
+    pendingCaretRef.current = null;
+    const textareaElement = textareaRef.current;
+    if (!textareaElement) return;
+    // Restore focus too: the toolbar button's native file chooser stole it
+    textareaElement.focus();
+    textareaElement.setSelectionRange(caret, caret);
+  }, [markdownText]);
 
   const switchToMarkdownMode = () => {
     if (editorRef && 'current' in editorRef) {
@@ -209,16 +223,8 @@ export default function InitializedMDXEditor({
       return;
     }
 
+    pendingCaretRef.current = offset + snippet.length;
     handleMarkdownTextChange(next);
-    const caretAfterSnippet = offset + snippet.length;
-    requestAnimationFrame(() => {
-      const textareaElement = textareaRef.current;
-      if (!textareaElement) return;
-      // Restore focus (the toolbar button's native file chooser steals it) and park the caret after
-      // the inserted markdown; the controlled update parked it at the end
-      textareaElement.focus();
-      textareaElement.setSelectionRange(caretAfterSnippet, caretAfterSnippet);
-    });
   };
 
   const handleMarkdownMediaInputChange = (event: React.ChangeEvent<HTMLInputElement>, kind: InlineMediaKind) => {
