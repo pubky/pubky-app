@@ -9,6 +9,7 @@ import { Image } from '@/atoms/Image/Image';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { getPubkyCoreLink } from '@/config/externalLinks';
+import { LEGAL_ENTITY_NAME } from '@/config/legal';
 import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
 import { usePassportAuth } from '@/hooks/usePassportAuth/usePassportAuth';
 import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
@@ -61,7 +62,7 @@ export const HomeFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
         <Link href={getPubkyCoreLink()} target="_blank">
           {'Pubky Protocol'}
         </Link>
-        {' and was built by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.'}
+        {` and was built by ${LEGAL_ENTITY_NAME} ©2026. All rights reserved.`}
       </FooterLinks>
       <Container className="mt-2 flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
         <HomeBrandFooter />
