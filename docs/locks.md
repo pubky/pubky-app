@@ -274,10 +274,11 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    that is not a bundle id blocks paying (fail closed). Every saved id is looked up on the Lock
    Server and the best one continues: `completed` first, then a running task, then one the server
    never received, else all of them ended and only a fresh id can pay (an ended `failed` is reported
-   over `expired`, so Try again checks the wallet). Ties go to the lowest id, so two devices settle
-   on the same one. One file per id, not one per lock, is what stops a second device from
-   overwriting the id the first one is paying with (#2827). Nothing is ever deleted: an ended id is
-   still the only way to trace its invoice.
+   over `expired`, so Try again checks the wallet). A failed lookup also blocks, unless another id is
+   `completed`: nothing outranks it. Ties go to the lowest id, so two devices settle on the same one.
+   One file per id, not one per lock, is what stops a second device from overwriting the id the
+   first one is paying with (#2827). Nothing is ever deleted: an ended id is still the only way to
+   trace its invoice.
 2. Opening the modal starts the payment: nothing asks the reader to confirm before the proof is
    submitted (#2574). With no saved id, the app first checks the reader's homeserver for Paykit data
    (`hasPaykitReceiver`). With none it shows the install screen (Bitkit setup steps, store links and

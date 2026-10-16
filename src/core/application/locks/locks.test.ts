@@ -479,12 +479,32 @@ describe('LocksApplication (payment unlock)', () => {
     // An id whose state is unknown must not be ranked: a fresh one minted beside it could pay twice.
     it.each([
       ['the listing', () => mocks.listAll.mockRejectedValue(new Error('offline'))],
-      ['one lookup', () => lookups({ [BUNDLE_A]: task('pending') }).mockRejectedValueOnce(new Error('HTTP 503'))],
+      ['one lookup beside an unreceived id', () => lookups({}).mockRejectedValueOnce(new Error('HTTP 503'))],
+      [
+        'one lookup beside a running id',
+        () => lookups({ [BUNDLE_B]: task('pending') }).mockRejectedValueOnce(new Error('HTTP 503')),
+      ],
+      [
+        'one lookup beside an ended id',
+        () => lookups({ [BUNDLE_B]: task('expired') }).mockRejectedValueOnce(new Error('HTTP 503')),
+      ],
     ])('rethrows when %s fails', async (_step, fail) => {
       mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
       fail();
 
       await expect(LocksApplication.fetchResolvedPurchase(params)).rejects.toThrow();
+    });
+
+    // Nothing outranks `completed`, so a paid id still unlocks while another id's lookup is down.
+    it('returns a completed id even when another lookup fails', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+      lookups({ [BUNDLE_B]: task('completed') }).mockRejectedValueOnce(new Error('HTTP 503'));
+
+      await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({
+        kind: 'reusable',
+        bundleId: BUNDLE_B,
+        task: task('completed'),
+      });
     });
 
     it('never writes or deletes', async () => {

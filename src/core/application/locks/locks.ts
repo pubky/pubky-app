@@ -102,8 +102,8 @@ export class LocksApplication {
 
   /**
    * Ties go to the lowest id so two devices settle on the same one. Ended ids are kept: one may be the
-   * only handle to a late-paid invoice. A file that is not a readable bundle id throws: minting beside
-   * a lost id could charge twice.
+   * only handle to a late-paid invoice. A file that is not a readable bundle id throws, and so does a
+   * failed lookup unless another id is `completed`: minting beside a lost or unknown id could charge twice.
    */
   static async fetchResolvedPurchase({
     lockFile,
@@ -130,12 +130,17 @@ export class LocksApplication {
     }
     if (bundleIds.length === 0) return null;
 
-    const tasks = await Promise.all(bundleIds.map((bundleId) => this.fetchPaymentStatus({ lockFile, bundleId })));
+    const outcomes = await Promise.allSettled(
+      bundleIds.map((bundleId) => this.fetchPaymentStatus({ lockFile, bundleId })),
+    );
+    const tasks = outcomes.map((outcome) => (outcome.status === 'fulfilled' ? outcome.value : null));
     let best = 0;
     for (let i = 1; i < tasks.length; i++) {
       if (purchaseRank(tasks[i]) < purchaseRank(tasks[best])) best = i;
     }
     const task = tasks[best];
+    const failed = outcomes.find((outcome) => outcome.status === 'rejected');
+    if (failed?.status === 'rejected' && task?.status !== 'completed') throw failed.reason;
     if (task?.status === 'failed' || task?.status === 'expired') {
       return { kind: 'terminal', bundleId: bundleIds[best], status: task.status };
     }
