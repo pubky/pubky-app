@@ -292,21 +292,28 @@ describe('embedded Shop shell — visual regression', () => {
   });
 
   // Resizing alone leaves a fine pointer and captures the desktop QR. CDP changes the real
-  // CSS media feature for this phone case; other engines need a separate touch context.
-  it.skipIf(server.browser !== 'chromium')('renders the Enable Shop dialog with mobile touch controls', async () => {
-    const session = cdp();
-    try {
-      await session.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
-      await expect.poll(() => window.matchMedia('(pointer: coarse)').matches).toBe(true);
-      await renderShop(VRT_VIEWPORT_MOBILE, false, true);
-      await expect.element(page.getByRole('dialog', { name: 'Enable Shop' })).toBeVisible();
-      await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
-      await expect.element(page.getByTestId('session-upgrade-qr')).not.toBeVisible();
-      await expect.element(page.getByRole('button', { name: 'Use Passport or recovery key' })).toBeVisible();
-      await expect.element(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
-      await matchVrtFrameScreenshot('shop-enable-mobile');
-    } finally {
-      await session.send('Emulation.setTouchEmulationEnabled', { enabled: false });
-    }
-  });
+  // CSS media feature for this phone case. Our Linux Chromium CI cannot restore its native
+  // pointer/hover media after disabling touch, so keep this case on macOS Chromium.
+  // Other environments need a separate touch context, not a shared-page override.
+  it.skipIf(server.browser !== 'chromium' || server.platform !== 'darwin')(
+    'renders the Enable Shop dialog with mobile touch controls',
+    async () => {
+      const session = cdp();
+      try {
+        await session.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+        await expect.poll(() => window.matchMedia('(pointer: coarse)').matches).toBe(true);
+        await renderShop(VRT_VIEWPORT_MOBILE, false, true);
+        await expect.element(page.getByRole('dialog', { name: 'Enable Shop' })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
+        await expect.element(page.getByTestId('session-upgrade-qr')).not.toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Use Passport or recovery key' })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
+        await matchVrtFrameScreenshot('shop-enable-mobile');
+      } finally {
+        await session.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+        await expect.poll(() => window.matchMedia('(pointer: fine)').matches).toBe(true);
+        await expect.poll(() => window.matchMedia('(hover: hover)').matches).toBe(true);
+      }
+    },
+  );
 });
