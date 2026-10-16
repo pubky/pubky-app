@@ -78,6 +78,8 @@ beforeEach(() => {
     fetchUrl: vi.fn(),
     copyAuthUrl: vi.fn(),
     isOpeningRing: false,
+    isOpeningBitkit: false,
+    onAuthorizeBitkitClick: vi.fn(),
     onAuthorizeClick: vi.fn(),
   });
 });

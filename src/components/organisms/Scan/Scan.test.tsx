@@ -63,6 +63,8 @@ vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
     fetchUrl: mockFetchUrl,
     copyAuthUrl: mockCopyAuthUrl,
     isOpeningRing: false,
+    isOpeningBitkit: false,
+    onAuthorizeBitkitClick: vi.fn(),
     onAuthorizeClick: mockOnAuthorizeClick,
   })),
 }));
@@ -234,6 +236,8 @@ describe('ScanContent', () => {
       fetchUrl: mockFetchUrl,
       copyAuthUrl: mockCopyAuthUrl,
       isOpeningRing: false,
+      isOpeningBitkit: false,
+      onAuthorizeBitkitClick: vi.fn(),
       onAuthorizeClick: mockOnAuthorizeClick,
     });
   });
@@ -313,6 +317,8 @@ describe('ScanContent', () => {
       fetchUrl: mockFetchUrl,
       copyAuthUrl: mockCopyAuthUrl,
       isOpeningRing: false,
+      isOpeningBitkit: false,
+      onAuthorizeBitkitClick: vi.fn(),
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
@@ -333,6 +339,8 @@ describe('ScanContent', () => {
       fetchUrl: mockFetchUrl,
       copyAuthUrl: mockCopyAuthUrl,
       isOpeningRing: false,
+      isOpeningBitkit: false,
+      onAuthorizeBitkitClick: vi.fn(),
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
