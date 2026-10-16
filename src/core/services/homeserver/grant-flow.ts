@@ -11,9 +11,11 @@ import { z } from 'zod';
 import { getAuthClientId } from '@/config/auth';
 import { getDefaultHttpRelay, getDeployEnv, getHomeserver, getTestnet } from '@/config/network';
 import { createCanceledError } from '@/libs/error/auth-flow-canceled';
+import { isIosDevice } from '@/libs/pwa/platform';
 import { isPubkyErrorLike } from './error.utils';
 import type { TGenerateAuthUrlResult } from './homeserver.types';
 import { createCancelableAuthApproval } from './homeserver.utils';
+import { watchRelayAcks } from './relay-ack-watch';
 
 const PENDING_KEY = 'pubky-app-pending-grant-v1';
 // App resume policy, separate from grant expiry and server bearer lifetime.
@@ -75,99 +77,111 @@ export class GrantFlowService {
       inviteHash,
     });
     if (version !== this.version) throw createCanceledError();
-    const saved = this.read();
-    let flow: GrantAuthFlow | undefined;
-    let id = saved?.id ?? '';
-    let mode = saved?.mode ?? 'local';
-    let serialized = saved?.saved ?? '';
-    if (
-      !request.fresh &&
-      saved &&
-      saved.context === context &&
-      Date.now() >= saved.createdAt &&
-      Date.now() - saved.createdAt < RESUME_WINDOW_MS
-    ) {
-      id = saved.id;
-      try {
-        flow =
-          saved.mode === 'delegated'
-            ? await sdk.resumeDelegatedGrantAuthFlow(saved.saved)
-            : sdk.resumeGrantAuthFlow(saved.saved);
-      } catch (error) {
-        // Invalid serialization and a proven missing key cannot be resumed; storage failures can.
-        const cannotResume =
-          isPubkyErrorLike(error) &&
-          (error.name === 'InvalidInput' ||
-            (error.name === 'ClientStateError' && /^Delegated grant key not found: .+$/.test(error.message)));
-        if (!cannotResume) throw error;
-        if (version !== this.version) throw createCanceledError();
-        this.clear(saved.id);
+    // WebKit on iOS suspends hidden pages and aborts their in-flight work; other browsers keep polling in the
+    // background so an approval made there completes at once. The ACK watch starts before the flow so it sees a
+    // resumed flow's listener collect an approval the relay already holds.
+    const releaseWhileHidden = isIosDevice() && !request.xCallback;
+    const acks = releaseWhileHidden ? watchRelayAcks(getDefaultHttpRelay()) : null;
+    try {
+      const saved = this.read();
+      let flow: GrantAuthFlow | undefined;
+      let id = saved?.id ?? '';
+      let mode = saved?.mode ?? 'local';
+      let serialized = saved?.saved ?? '';
+      if (
+        !request.fresh &&
+        saved &&
+        saved.context === context &&
+        Date.now() >= saved.createdAt &&
+        Date.now() - saved.createdAt < RESUME_WINDOW_MS
+      ) {
+        id = saved.id;
+        try {
+          flow =
+            saved.mode === 'delegated'
+              ? await sdk.resumeDelegatedGrantAuthFlow(saved.saved)
+              : sdk.resumeGrantAuthFlow(saved.saved);
+        } catch (error) {
+          // Invalid serialization and a proven missing key cannot be resumed; storage failures can.
+          const cannotResume =
+            isPubkyErrorLike(error) &&
+            (error.name === 'InvalidInput' ||
+              (error.name === 'ClientStateError' && /^Delegated grant key not found: .+$/.test(error.message)));
+          if (!cannotResume) throw error;
+          if (version !== this.version) throw createCanceledError();
+          this.clear(saved.id);
+        }
       }
-    }
-    if (!flow) {
-      sessionStorage.removeItem(PENDING_KEY);
-      id = crypto.randomUUID();
-      const kind =
-        request.purpose === 'signup'
-          ? AuthFlowKind.signup(PublicKey.from(getHomeserver()), request.inviteCode)
-          : AuthFlowKind.signin();
-      flow = await sdk.startGrantAuthFlow(request.capabilities, kind, {
-        clientId: getAuthClientId(),
-        relay: getDefaultHttpRelay(),
-        xCallback: request.xCallback,
-      });
+      if (!flow) {
+        sessionStorage.removeItem(PENDING_KEY);
+        id = crypto.randomUUID();
+        const kind =
+          request.purpose === 'signup'
+            ? AuthFlowKind.signup(PublicKey.from(getHomeserver()), request.inviteCode)
+            : AuthFlowKind.signin();
+        flow = await sdk.startGrantAuthFlow(request.capabilities, kind, {
+          clientId: getAuthClientId(),
+          relay: getDefaultHttpRelay(),
+          xCallback: request.xCallback,
+        });
+        if (version !== this.version) {
+          flow.free();
+          throw createCanceledError();
+        }
+        try {
+          serialized = flow.saveDelegated();
+          mode = 'delegated';
+        } catch {
+          serialized = flow.saveLocal();
+          mode = 'local';
+        }
+        try {
+          sessionStorage.setItem(
+            PENDING_KEY,
+            JSON.stringify({ id, context, mode, saved: serialized, createdAt: Date.now() }),
+          );
+        } catch (error) {
+          flow.free();
+          throw error;
+        }
+      }
       if (version !== this.version) {
         flow.free();
         throw createCanceledError();
       }
-      try {
-        serialized = flow.saveDelegated();
-        mode = 'delegated';
-      } catch {
-        serialized = flow.saveLocal();
-        mode = 'local';
-      }
-      try {
-        sessionStorage.setItem(
-          PENDING_KEY,
-          JSON.stringify({ id, context, mode, saved: serialized, createdAt: Date.now() }),
-        );
-      } catch (error) {
-        flow.free();
-        throw error;
-      }
+      const approval = createCancelableAuthApproval(flow, {
+        onCanceledSession,
+        // Ring can suspend this page while approving. Resume the same relay and PoP key,
+        // using the serialization already saved before the link was displayed.
+        resume: request.xCallback
+          ? undefined
+          : async () => {
+              if (version !== this.version) throw createCanceledError();
+              const resumed =
+                mode === 'delegated'
+                  ? await sdk.resumeDelegatedGrantAuthFlow(serialized)
+                  : sdk.resumeGrantAuthFlow(serialized);
+              if (version !== this.version) {
+                resumed.free();
+                throw createCanceledError();
+              }
+              return resumed;
+            },
+        releaseWhileHidden,
+        ackSent: acks?.sent,
+      });
+      return {
+        authorizationUrl: flow.authorizationUrl,
+        awaitApproval: approval.awaitApproval.finally(() => acks?.stop()),
+        cancelAuthFlow: () => {
+          approval.cancel();
+          this.clear(id);
+        },
+        completeAuthFlow: () => this.clear(id),
+      };
+    } catch (error) {
+      acks?.stop();
+      throw error;
     }
-    if (version !== this.version) {
-      flow.free();
-      throw createCanceledError();
-    }
-    const approval = createCancelableAuthApproval(flow, {
-      onCanceledSession,
-      // Ring can suspend this page while approving. Resume the same relay and PoP key,
-      // using the serialization already saved before the link was displayed.
-      resume: request.xCallback
-        ? undefined
-        : async () => {
-            if (version !== this.version) throw createCanceledError();
-            const resumed =
-              mode === 'delegated'
-                ? await sdk.resumeDelegatedGrantAuthFlow(serialized)
-                : sdk.resumeGrantAuthFlow(serialized);
-            if (version !== this.version) {
-              resumed.free();
-              throw createCanceledError();
-            }
-            return resumed;
-          },
-    });
-    return {
-      authorizationUrl: flow.authorizationUrl,
-      awaitApproval: approval.awaitApproval,
-      cancelAuthFlow: () => {
-        approval.cancel();
-        this.clear(id);
-      },
-      completeAuthFlow: () => this.clear(id),
-    };
   }
 }
