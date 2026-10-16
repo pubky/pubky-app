@@ -150,7 +150,7 @@ export const SignInContent = () => {
   ) : (
     <>
       <Key className="mr-2 size-4" />
-      {'Authorize with Pubky Ring'}
+      {'Authorize with Pubky Ring or Bitkit'}
     </>
   );
 
