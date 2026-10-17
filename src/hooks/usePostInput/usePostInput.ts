@@ -23,12 +23,18 @@ import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentU
 import { useEditAttachments } from '@/hooks/useEditAttachments/useEditAttachments';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete';
-import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
+import {
+  buildMentionText,
+  getContentWithMention,
+  insertMentionAtRange,
+  type MentionInsertion,
+} from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
 import { usePost } from '@/hooks/usePost/usePost';
 import { useUndoRepost } from '@/hooks/useUndoRepost/useUndoRepost';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineMedia';
+import { isPubkyIdentifier, stripPubkyPrefix } from '@/libs/utils/utils';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -222,35 +228,100 @@ export function usePostInput({
   // the end of the value (prefilled content, a programmatic set)
   const mentionCaret = caret ?? content.length;
 
-  // Handle mention selection - writes pubky{userId} over the pattern at the caret
-  const handleMentionSelect = useCallback(
-    (userId: string) => {
-      const textarea = textareaRef.current;
-      const selectionCaret = textarea?.selectionStart ?? mentionCaret;
-      const insertion = getContentWithMention(content, selectionCaret, userId);
+  // Write a mention insertion into the controlled textarea and put the caret back
+  // after the inserted mention. Used by the autocomplete path and by the paste
+  // fallback when there is no live textarea to hand the edit to the browser.
+  const applyMentionToState = (insertion: MentionInsertion) => {
+    setContent(insertion.content);
+    setCaret(insertion.caret);
+    requestAnimationFrame(() => {
+      const element = textareaRef.current;
+      if (!element) return;
+      element.focus();
+      element.setSelectionRange(insertion.caret, insertion.caret);
+    });
+  };
 
-      if (insertion.content.length <= POST_MAX_CHARACTER_LENGTH) {
-        setContent(insertion.content);
-        setCaret(insertion.caret);
-
-        // A controlled value parks the caret at the end of the textarea; put it
-        // back after the inserted mention so the user keeps typing where they were
-        requestAnimationFrame(() => {
-          const element = textareaRef.current;
-          if (!element) return;
-          element.focus();
-          element.setSelectionRange(insertion.caret, insertion.caret);
-        });
-        return;
-      }
-
-      // Over the character limit: leave the content alone, just keep the caret in
-      // the textarea for the next edit
+  // Autocomplete selection: writes over the mention pattern the caret sits in.
+  // Keeps the character-limit check because it inserts into an existing mention
+  // range the user is mid-way through typing — exceeding the limit there would
+  // silently drop the edit with no visible feedback.
+  const handleMentionSelect = (userId: string) => {
+    const textarea = textareaRef.current;
+    const selectionCaret = textarea?.selectionStart ?? mentionCaret;
+    const insertion = getContentWithMention(content, selectionCaret, userId);
+    if (insertion.content.length > POST_MAX_CHARACTER_LENGTH) {
       textarea?.focus();
-    },
-    [content, mentionCaret, setContent],
-  );
+      return;
+    }
+    applyMentionToState(insertion);
+  };
 
+  // Paste handler for a valid pubky key. Returns true when the paste was handled
+  // (the caller should preventDefault), false when the caller should let the
+  // native paste run — which is the case when the normalized mention would
+  // exceed the field limit and would be silently clipped by insertText.
+  //
+  // Two things have to hold when we do handle it:
+  //   1. Selection is honored — the mention replaces [selectionStart, selectionEnd).
+  //   2. The edit is undoable — going through the browser's native insertion API
+  //      rather than assigning React state puts the edit on the undo stack.
+  //
+  // `document.execCommand` is deprecated but is still the only DOM API that both
+  // replaces the current selection and pushes onto the undo stack. `setRangeText`
+  // does not create an undo entry in Chromium, so the fallback below is limited
+  // to environments without execCommand (jsdom in tests).
+  const insertPastedMention = (userId: string): boolean => {
+    const textarea = textareaRef.current;
+
+    // No DOM element (tests, or a programmatic call): fall back to a state write.
+    if (!textarea) {
+      applyMentionToState(insertMentionAtRange(content, mentionCaret, mentionCaret, userId));
+      return true;
+    }
+
+    const start = textarea.selectionStart ?? mentionCaret;
+    const end = textarea.selectionEnd ?? start;
+
+    // Use textarea.value, not the React `content` state. The browser normalizes
+    // line endings (CRLF → LF) in the rendered value, so a share-target draft
+    // that came in as A\r\nB exposes A\nB in the DOM while `content` still holds
+    // the CRLF form. selectionStart/selectionEnd are offsets into the DOM value,
+    // so the separator and length checks must read the same string they index.
+    // The ?? content fallback only matters in tests without a real textarea.
+    const textareaValue = textarea.value ?? content;
+    const inserted = buildMentionText(textareaValue, start, userId);
+
+    // Chromium's insertText clips at maxLength and returns true, silently
+    // truncating the key. When the normalized mention cannot fit, let the
+    // original paste happen — the shorter pk:<key> form is a valid mention and
+    // does fit. Prefer the textarea's own maxLength when set (that's the field
+    // the browser clips against); fall back to the composer constant when it is
+    // unset (-1).
+    const fieldLimit = textarea.maxLength > 0 ? textarea.maxLength : POST_MAX_CHARACTER_LENGTH;
+    if (textareaValue.length - (end - start) + inserted.length > fieldLimit) {
+      return false;
+    }
+
+    textarea.focus();
+    textarea.setSelectionRange(start, end);
+
+    if (typeof document !== 'undefined' && typeof document.execCommand === 'function') {
+      try {
+        if (document.execCommand('insertText', false, inserted)) {
+          return true;
+        }
+      } catch {
+        // Some environments stub execCommand with a throwing function; fall through.
+      }
+    }
+
+    // Fallback for environments without execCommand: replace the range in the DOM
+    // and dispatch an input event so React syncs its controlled value.
+    textarea.setRangeText(inserted, start, end, 'end');
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  };
   // Mention autocomplete
   const {
     users: mentionUsers,
@@ -794,8 +865,26 @@ export function usePostInput({
     fileInputRef.current?.click();
   }, []);
 
-  // Handle paste events - extract files from clipboard
+  // Handle paste events - convert a pasted pubky identifier into a mention, otherwise extract files
   const handlePaste = (e: React.ClipboardEvent) => {
+    // A pasted pubky identifier (raw, `pubky<key>`, `pk:<key>`, or `pubky://<key>`) becomes a mention.
+    // Guard `getData` because tests construct partial ClipboardEvents.
+    const clipboardData = e.clipboardData;
+    const pastedText =
+      clipboardData && typeof clipboardData.getData === 'function' ? (clipboardData.getData('text') ?? '').trim() : '';
+
+    if (pastedText.length > 0) {
+      const withoutUrl = pastedText.startsWith('pubky://') ? pastedText.slice('pubky://'.length) : pastedText;
+      const candidate = stripPubkyPrefix(withoutUrl);
+      if (isPubkyIdentifier(candidate)) {
+        if (insertPastedMention(candidate)) {
+          e.preventDefault();
+        }
+        return;
+      }
+    }
+
+    // Existing behavior: extract files from the clipboard
     const items = e.clipboardData?.items;
     if (!items) return;
 
