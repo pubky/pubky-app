@@ -227,6 +227,20 @@ export function matchPostRoute(pathname: string): { userId: string; postId: stri
   return { userId, postId };
 }
 
+/**
+ * Matches another user's profile route `/profile/[pubky]` and returns its pubky,
+ * or `null` for any other path: the own `/profile`, profile sub-tabs, and
+ * prefixed (`pk:`) or malformed identifiers. Uses the same raw identifier check
+ * as `isDynamicPublicRoute`, so it only matches profiles a guest can open.
+ */
+export function matchProfileRoute(pathname: string): { pubky: string } | null {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] !== 'profile' || segments.length !== 2 || !isPubkyIdentifier(segments[1])) {
+    return null;
+  }
+  return { pubky: segments[1] };
+}
+
 /** `/post/[userId]/[postId]` — browsable without auth; uses explore header chrome for guests. */
 export function isPostRoute(pathname: string): boolean {
   return matchPostRoute(pathname) !== null;

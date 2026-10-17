@@ -1,8 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FabAction } from '@/hooks/useFabAction/useFabAction.types';
 import { useCollectionReorderStore } from '@/stores/collectionReorder/collectionReorder.store';
+import { useContextualBannerStore } from '@/stores/contextualBanner/contextualBanner.store';
+import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { Fab } from './Fab';
 
 const mockUseAuthStatus = vi.fn(() => ({
@@ -276,6 +278,68 @@ describe('Fab', () => {
       fireEvent.click(screen.getByTestId('new-post-cta'));
 
       expect(mockRequireAuth).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('guest contextual banner', () => {
+    const guestAuthStatus = {
+      isFullyAuthenticated: false,
+      isLoading: false,
+      status: 'UNAUTHENTICATED',
+      hasKeypair: false,
+      hasProfile: false,
+    };
+
+    beforeEach(() => {
+      useContextualBannerStore.setState({ visible: false });
+      mockUsePathname.mockReturnValue(`/post/${PUBKY_52_STAGING_FIXTURE}/${POST_ID_STAGING_FIXTURE}`);
+      mockIsPublicExploreRoute.mockReturnValue(true);
+    });
+
+    afterEach(() => {
+      useContextualBannerStore.setState({ visible: false });
+    });
+
+    it('hides the FAB for a guest while the banner is visible', () => {
+      mockUseAuthStatus.mockReturnValue(guestAuthStatus);
+      useContextualBannerStore.getState().show();
+
+      const { container } = render(<Fab />);
+
+      expect(container).toBeEmptyDOMElement();
+      expect(screen.queryByTestId('new-post-cta')).not.toBeInTheDocument();
+    });
+
+    it('keeps the FAB for a guest while the banner is hidden', () => {
+      mockUseAuthStatus.mockReturnValue(guestAuthStatus);
+
+      render(<Fab />);
+
+      expect(screen.getByTestId('new-post-cta')).toBeInTheDocument();
+    });
+
+    it('keeps the FAB and its dialog for an authenticated user while the banner is visible', () => {
+      useContextualBannerStore.getState().show();
+
+      render(<Fab />);
+
+      expect(screen.getByTestId('new-post-cta')).toBeInTheDocument();
+      expect(screen.getByTestId('dialog-new-post')).toBeInTheDocument();
+    });
+
+    it('follows the banner store for a guest: back when it hides, gone again when it shows', () => {
+      mockUseAuthStatus.mockReturnValue(guestAuthStatus);
+      useContextualBannerStore.getState().show();
+      render(<Fab />);
+      expect(screen.queryByTestId('new-post-cta')).not.toBeInTheDocument();
+
+      act(() => useContextualBannerStore.getState().hide());
+
+      expect(screen.getByTestId('new-post-cta')).toBeInTheDocument();
+
+      act(() => useContextualBannerStore.getState().show());
+
+      expect(screen.queryByTestId('new-post-cta')).not.toBeInTheDocument();
     });
   });
 });

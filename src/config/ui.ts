@@ -7,6 +7,12 @@
 export const TOOLTIP_DELAY_MS = 400;
 
 /**
+ * How long a guest can browse a shared post, profile or collection before the contextual
+ * "Join Pubky" banner slides in (`GuestContextualBanner`).
+ */
+export const CONTEXTUAL_BANNER_DELAY_MS = 10_000;
+
+/**
  * Menu display variants
  * Used for components that can render as either a dropdown (desktop) or sheet (mobile)
  */

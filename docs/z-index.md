@@ -113,6 +113,7 @@ z-0   ─────────────  Normal document flow
 
 - `Fab` (FAB)
 - `MobileFooter`
+- `ContextualBanner` (guest "Join Pubky" bar; sits on the mobile footer below `lg`)
 - `DialogOverlay`
 
 ### Modals (`z-50`)
