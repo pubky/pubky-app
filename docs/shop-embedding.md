@@ -6,7 +6,7 @@ App Shop navigation always opens `/shop`, which embeds a separately deployed Sho
 
 Deploy compatible App and Shop builds, the proxy, and Shop's BFF together. Shop validates embedded BFF configuration at startup, and deployment verification must check its readiness endpoint before promotion. `PUBKY_RUNTIME_AUTH_CLIENT_ID` remains the App identity; do not relabel saved grants as Shop grants.
 
-The paired App and Shop releases pin `@synonymdev/pubky` to `0.16.1`. Coordinate future SDK upgrades across both releases and repeat exact-record restore, pending-flow cleanup and logout verification before promoting the updated pair on a shared origin.
+The paired App and Shop releases pin `@synonymdev/pubky` to `0.16.2`. Coordinate future SDK upgrades across both releases and repeat exact-record restore, pending-flow cleanup and logout verification before promoting the updated pair on a shared origin.
 
 App: set the existing `PUBKY_RUNTIME_DEFAULT_URL` to the App's public origin, such as `https://staging.pubky.app`. Outer `/shop` listing previews read Shop's published metadata through that origin's `/shop-embed` mount. This server request sends no browser credentials; if staging access protection blocks it, the outer page uses a generic Shop preview until the public metadata is reachable.
 

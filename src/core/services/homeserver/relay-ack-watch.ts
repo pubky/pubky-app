@@ -1,7 +1,7 @@
 /**
  * Observes the relay ACK the SDK auth listener sends once it has received an approval: `DELETE {relay}/{channel}`
  * through the global `fetch` (the SDK has no fetch option). Until that request is issued the relay still holds the
- * approval, so a freed flow can be resumed. Once it is issued the relay may already have dropped it, and SDK 0.16.1
+ * approval, so a freed flow can be resumed. Once it is issued the relay may already have dropped it, and SDK 0.16.2
  * queues the approval for `tryPollOnce` after the ACK settles whatever its outcome, so only the live flow can
  * deliver it. `homeserver.grant-hidden-ios.contract.test.ts` pins this against the real SDK.
  */

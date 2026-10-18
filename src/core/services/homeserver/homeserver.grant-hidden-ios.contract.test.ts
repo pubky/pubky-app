@@ -26,7 +26,7 @@ const setVisibility = (next: 'visible' | 'hidden') => {
 };
 
 /**
- * The SDK 0.16.1 listener ACKs an approval (`DELETE {relay}/{channel}`) and only queues it once that request
+ * The SDK 0.16.2 listener ACKs an approval (`DELETE {relay}/{channel}`) and only queues it once that request
  * settles. When the page hides in between, the relay may already have dropped the approval while nothing is
  * queued yet, so the flow must stay live until it delivers that approval. Exercised with the real SDK.
  */
