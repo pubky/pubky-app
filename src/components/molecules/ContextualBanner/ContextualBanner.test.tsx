@@ -5,7 +5,7 @@ import { ContextualBanner } from './ContextualBanner';
 import type { ContextualBannerProps } from './ContextualBanner.types';
 
 const HEADLINE = 'Get to know Satoshi';
-const BODY = "Join Pubky to follow Satoshi and join the conversations they're part of.";
+const BODY = 'Join Pubky to follow Satoshi and take part in the conversation.';
 
 function renderBanner(overrides: Partial<ContextualBannerProps> = {}) {
   return render(

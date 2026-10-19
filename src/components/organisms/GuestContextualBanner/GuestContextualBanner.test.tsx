@@ -14,7 +14,7 @@ import { GuestContextualBanner } from './GuestContextualBanner';
 
 const COPY = {
   headline: 'Enjoying this video?',
-  body: 'Join Pubky to reply to Satoshi, tag this video, and follow more of their posts.',
+  body: 'Join Pubky to reply to Satoshi, tag this video, and discover more posts.',
 };
 
 const mocks = vi.hoisted(() => ({
