@@ -52,6 +52,8 @@ import type {
 // v1 payment locks must hold exactly one criterion, referenced once by the lock logic.
 const CRITERION_ID = 'criterion-1';
 const CREDENTIAL_TTL_SECONDS = 900;
+// Match Paykit's compatibility value in whole hours; invoice deadlines remain server-configured.
+const PAYKIT_PAYMENT_IN_HOURS = 24;
 
 // Lower wins. A null task beats an ended one because resubmitting it is a safe replay; `failed` beats
 // `expired` because a reported `failed` makes Try again check the wallet.
@@ -639,7 +641,12 @@ export class LocksApplication {
     const criterion = {
       criterion_id: CRITERION_ID,
       verifier_type: VerifierType.PAYMENT,
-      params: { recipient_pubky: post.creator, amount: lockConfig.amount, asset: lockConfig.asset },
+      params: {
+        recipient_pubky: post.creator,
+        amount: lockConfig.amount,
+        asset: lockConfig.asset,
+        payment_in: PAYKIT_PAYMENT_IN_HOURS,
+      },
     };
 
     const result = await LocksService.createContentLock({

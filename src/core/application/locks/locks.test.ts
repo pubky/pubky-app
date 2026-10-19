@@ -156,7 +156,7 @@ describe('LocksApplication (content)', () => {
         criterion_id: 'criterion-1',
         verifier_type: 'paykit-payment',
         // The recipient comes from the upload response, not the pubky.app account.
-        params: { recipient_pubky: 'pubkybob', amount: '1234', asset },
+        params: { recipient_pubky: 'pubkybob', amount: '1234', asset, payment_in: 24 },
       },
     ]);
     // v1 wants that single criterion referenced exactly once.
