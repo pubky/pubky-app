@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload.types';
 import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { BROWSER_INJECTED_ERROR_PATTERNS } from '@/libs/observability/sentry.constants';
 import { toast } from '@/molecules/Toaster/toast';
 
 interface GlobalErrorHandlerProviderProps {
@@ -22,6 +23,11 @@ export function GlobalErrorHandlerProvider({ children }: GlobalErrorHandlerProvi
       // stack frames replace the original's), creating duplicate Sentry issues.
       // This provider owns the UX side-effect (toast + log) only.
       const message = getErrorMessage(error);
+      // Only suppress known injected-script noise. The broader telemetry
+      // ignore list also contains real app failures that still need a toast.
+      const originalMessage = typeof error === 'string' ? error : message;
+      if (BROWSER_INJECTED_ERROR_PATTERNS.some((pattern) => pattern.test(originalMessage))) return;
+
       const now = Date.now();
       const toastKey = `${operation}:${message}`;
       const lastToastTime = toastTimestampsRef.current.get(toastKey);
