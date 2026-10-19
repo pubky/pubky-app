@@ -1034,6 +1034,178 @@ describe('usePayToUnlock (waiting)', () => {
     expect(LocksController.startPayment).not.toHaveBeenCalled();
   });
 
+  describe('paid content download that never settles', () => {
+    const holdDownload = () => {
+      let resolve: (content: TUnlockedContent) => void = () => {};
+      let reject: (reason: Error) => void = () => {};
+      vi.mocked(LocksController.fetchPaidContent).mockImplementationOnce(
+        () =>
+          new Promise<TUnlockedContent>((res, rej) => {
+            resolve = res;
+            reject = rej;
+          }),
+      );
+      return { resolve: () => resolve(unlockedContent), reject: () => reject(new Error('content unavailable')) };
+    };
+
+    const parkHeldDownload = async () => {
+      vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('completed'));
+      const first = holdDownload();
+      const rendered = renderPay();
+      await advance(STALL_AFTER_MS);
+      expect(rendered.result.current.isStalled).toBe(true);
+      return { ...rendered, first };
+    };
+
+    it('parks a purchase already complete on open and opens it from Check again', async () => {
+      vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('completed'));
+      vi.mocked(LocksController.fetchPaidContent).mockImplementation(hangForever);
+
+      const { result } = renderPay();
+      await advance(0);
+      expect(result.current.stage).toBe('finishing');
+      expect(result.current.isStalled).toBe(false);
+
+      await advance(STALL_AFTER_MS);
+      expect(result.current.stage).toBe('finishing');
+      expect(result.current.isStalled).toBe(true);
+      expect(LocksController.startPayment).not.toHaveBeenCalled();
+
+      vi.mocked(LocksController.fetchPaidContent).mockResolvedValue(unlockedContent);
+      act(() => result.current.recheck());
+      await advance(0);
+      expect(result.current.stage).toBe('paid');
+      expect(result.current.isStalled).toBe(false);
+    });
+
+    it('parks a download that the wait started', async () => {
+      vi.mocked(LocksController.fetchPaymentStatus)
+        .mockResolvedValueOnce(task('pending'))
+        .mockResolvedValue(task('completed'));
+      vi.mocked(LocksController.fetchPaidContent).mockImplementation(hangForever);
+
+      const { result } = renderPay();
+      await advance(POLL_INTERVAL_MS);
+      expect(result.current.stage).toBe('finishing');
+
+      await advance(STALL_AFTER_MS);
+      expect(result.current.isStalled).toBe(true);
+    });
+
+    it('does not park after the download settles', async () => {
+      vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('completed'));
+
+      const { result } = renderPay();
+      await advance(0);
+      expect(result.current.stage).toBe('paid');
+
+      await advance(STALL_AFTER_MS);
+      expect(result.current.isStalled).toBe(false);
+    });
+
+    it('drops the park timer when the modal closes', async () => {
+      vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('completed'));
+      vi.mocked(LocksController.fetchPaidContent).mockImplementation(hangForever);
+
+      const { result, rerender } = renderPayWith({ open: true });
+      await advance(0);
+      expect(result.current.stage).toBe('finishing');
+      expect(vi.getTimerCount()).toBe(1);
+
+      rerender({ open: false });
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('clears the park timer when the download fails', async () => {
+      vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('completed'));
+      vi.mocked(LocksController.fetchPaidContent).mockRejectedValue(new Error('content unavailable'));
+
+      const { result } = renderPay();
+      await advance(0);
+      expect(result.current.stage).toBe('unopened');
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('drops a parked download that fails while Check again is looking up the payment', async () => {
+      const { result, first } = await parkHeldDownload();
+      let releaseLookup: (value: TVerificationTask) => void = () => {};
+      vi.mocked(LocksController.fetchPaymentStatus).mockImplementationOnce(
+        () =>
+          new Promise((r) => {
+            releaseLookup = r;
+          }),
+      );
+      act(() => result.current.recheck());
+
+      first.reject();
+      await advance(0);
+      expect(result.current.stage).toBe('finishing');
+      expect(toastMock).not.toHaveBeenCalled();
+
+      vi.mocked(LocksController.fetchPaidContent).mockResolvedValue(unlockedContent);
+      releaseLookup(task('completed'));
+      await advance(0);
+      expect(result.current.stage).toBe('paid');
+    });
+
+    it('opens the parked download when it arrives before the one Check again started', async () => {
+      const { result, first } = await parkHeldDownload();
+      const second = holdDownload();
+      act(() => result.current.recheck());
+      await advance(0);
+      expect(LocksController.fetchPaidContent).toHaveBeenCalledTimes(2);
+
+      first.resolve();
+      await advance(0);
+      expect(result.current.stage).toBe('paid');
+
+      second.reject();
+      await advance(STALL_AFTER_MS);
+      expect(result.current.stage).toBe('paid');
+      expect(result.current.isStalled).toBe(false);
+      expect(toastMock).not.toHaveBeenCalled();
+    });
+
+    it('does not download again when the parked one arrives while Check again is looking up the payment', async () => {
+      const { result, first } = await parkHeldDownload();
+      let releaseLookup: (value: TVerificationTask) => void = () => {};
+      vi.mocked(LocksController.fetchPaymentStatus).mockImplementationOnce(
+        () =>
+          new Promise((r) => {
+            releaseLookup = r;
+          }),
+      );
+      act(() => result.current.recheck());
+
+      first.resolve();
+      await advance(0);
+      expect(result.current.stage).toBe('paid');
+
+      releaseLookup(task('completed'));
+      await advance(0);
+      expect(result.current.stage).toBe('paid');
+      expect(LocksController.fetchPaidContent).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the reopened download parkable when the earlier one settles late', async () => {
+      vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue(task('completed'));
+      const first = holdDownload();
+      vi.mocked(LocksController.fetchPaidContent).mockImplementation(hangForever);
+
+      const { result, rerender } = renderPayWith({ open: true });
+      await advance(0);
+      rerender({ open: false });
+      rerender({ open: true });
+      await advance(0);
+      expect(LocksController.fetchPaidContent).toHaveBeenCalledTimes(2);
+
+      first.reject();
+      await advance(STALL_AFTER_MS);
+      expect(result.current.stage).toBe('finishing');
+      expect(result.current.isStalled).toBe(true);
+    });
+  });
+
   it('keeps the last QR and keeps polling the task when the link read fails', async () => {
     vi.mocked(LocksController.fetchPaykitConnectionState)
       .mockResolvedValueOnce('none')

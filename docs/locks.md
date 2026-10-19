@@ -339,8 +339,11 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
 7. A completed payment enters `finishing` while the credential and content are fetched. The modal
    shows **PAYMENT RECEIVED**, "Opening your content…" and a spinner, without asking the reader
    to confirm in Bitkit. A failed content read enters `unopened`, and **Check again** runs it again.
-   Its status lookup stays in `finishing`; if that lookup parks, a paid-content prompt offers
-   **Check again** without payment instructions. Retrying is free — the entitlement is durable and the
+   Its status lookup stays in `finishing`. If that lookup or the content download itself is still out
+   after 3 wall-clock minutes, a paid-content prompt offers **Check again** without payment
+   instructions; unlike waiting, a returning tab does not re-read the download. A download that
+   **Check again** replaced still counts if its content arrives first, and its failure is ignored.
+   Retrying is free — the entitlement is durable and the
    credential is minted fresh each time, which is also why an expired credential needs no detection.
    Once the content is ready, the modal shows the paid confirmation; **View Content** closes it and
    reveals the guarded post.
