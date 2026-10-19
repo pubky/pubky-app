@@ -177,6 +177,12 @@
       "rule": "The service worker owns the app shell only: precache, the share target and the static offline fallback. Do not add runtime caching for homeserver, pkarr, httprelay, Nexus, CDN or any data (Dexie is the only data cache; TTL is the only freshness mechanism), no defaultCache, and keep skipWaiting false (updates are user-consented via useServiceWorkerUpdate). Public precache entries are an allow-list in globPublicPatterns. See docs/pwa.md and ADR-0021.",
       "scope": ["src/sw.ts", "next.config.ts", "src/hooks/useServiceWorkerUpdate/**"],
       "severity": "high"
+    },
+    {
+      "id": "homeserver-write-retry",
+      "rule": "Every homeserver PUT and DELETE goes through HomeserverService (request, putBlob, delete), which retries 429, 500, 503 and the GCS publish-conflict 409 in retryHomeserverWrite. Flag any direct SDK storage write or raw homeserver fetch outside it, and any new retry of another 409, 412 or 423. A write whose body comes from a homeserver read of the same data must pass the fence from HomeserverService.createWriteFence() and wrap the read and the write in retryHomeserverWriteAfterReread(fence, ...): the fenced write makes one attempt, every retried status (429, 500, 503, the publish conflict) runs the read again, and no later pass runs after logout; flag one that replays a read-dependent body or omits the fence. Notifications' last_read must never move backward. See docs/error-handling.md.",
+      "scope": ["src/core/**"],
+      "severity": "high"
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 import type { PropsWithChildren } from 'react';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
-import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
+import { getInteractionPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostMissing } from '@/hooks/usePostMissing/usePostMissing';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { HotDiscoveryContentLayout } from '@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout';
@@ -34,7 +34,8 @@ export interface PostPageShellProps extends PropsWithChildren {
 export function PostPageShell({ postId, children }: PostPageShellProps) {
   const { postMissing } = usePostMissing(postId);
   const visibility = usePostHeaderVisibility(postId);
-  const displayedPostId = getDisplayedPostId(postId, visibility);
+  // Participants of a contentless repost's thread are the original's, for every viewer.
+  const displayedPostId = getInteractionPostId(postId, visibility);
 
   if (postMissing) {
     return <HotDiscoveryContentLayout>{children}</HotDiscoveryContentLayout>;

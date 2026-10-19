@@ -309,6 +309,7 @@ describe('AuthController restored session lifecycle', () => {
         notifications: expect.objectContaining({ follow: false }),
         privacy: expect.objectContaining({ hideSearch: true, neverShowPosts: true }),
       }),
+      fence: expect.anything(),
     });
   });
 

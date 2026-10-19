@@ -3059,9 +3059,17 @@ describe('active session failure notifications', () => {
     { name: 'NetworkError', message: 'Offline' },
     { name: 'ClientStateError', message: 'Temporary IndexedDB failure' },
   ])('keeps a nonterminal SDK error out of the auth lifecycle: $message', async (error) => {
-    mockState.sessionStoragePutJson.mockRejectedValueOnce(error);
-    await expect(service.request({ method: HttpMethod.PUT, url: 'pubky://user/pub/test' })).rejects.toThrow();
-    expect(listener).not.toHaveBeenCalled();
+    // A 503 is retried; it must stay out of the lifecycle on every attempt.
+    const { installHomeserverWriteRetryDependenciesForTests } = await import('./write-retry');
+    installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {} });
+    mockState.sessionStoragePutJson.mockRejectedValue(error);
+    try {
+      await expect(service.request({ method: HttpMethod.PUT, url: 'pubky://user/pub/test' })).rejects.toThrow();
+      expect(listener).not.toHaveBeenCalled();
+    } finally {
+      mockState.sessionStoragePutJson.mockReset();
+      installHomeserverWriteRetryDependenciesForTests(null);
+    }
   });
   it('does not invalidate an active account for a public resource or sign-in failure', async () => {
     const error = { name: 'RequestError', message: 'Unauthorized', data: { statusCode: 401 } };

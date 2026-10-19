@@ -1,6 +1,7 @@
 import type { Capabilities, PublicKey, Session, XCallbackParams } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import type { THomeserverWriteFence } from './write-retry';
 
 export type FetchOptions = {
   method?: HttpMethod;
@@ -74,11 +75,21 @@ export type THomeserverRequestParams = {
   method: HttpMethod;
   url: string;
   bodyJson?: Record<string, unknown>;
+  /** One attempt, for a caller that runs its own retry loop around this write. */
+  singleAttempt?: boolean;
+  /**
+   * The fence of the read-check-write this write belongs to (`HomeserverService.createWriteFence`).
+   * A fenced write makes one attempt: its body was built from a read, so
+   * `retryHomeserverWriteAfterReread` retries it from that read instead of replaying it.
+   */
+  fence?: THomeserverWriteFence;
 };
 
 export type TPutBlobParams = {
   url: string;
   blob: Uint8Array;
+  /** See {@link THomeserverRequestParams.fence}. */
+  fence?: THomeserverWriteFence;
 };
 
 export type THomeserverListParams = {

@@ -15,6 +15,7 @@ import { TagStreamTypes } from '@/models/stream/tag/tagStream.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
 import { LocalHotService } from '@/services/local/hot/hot';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamTagsService } from '@/services/local/stream/tags/tags';
@@ -146,11 +147,7 @@ export class BootstrapApplication {
       if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
         Logger.info('Last read file not found, creating new one...', { pubky });
         const lastRead = LastReadNormalizer.to(pubky);
-        void HomeserverService.request({
-          method: HttpMethod.PUT,
-          url: lastRead.meta.url,
-          bodyJson: lastRead.last_read.toJson(),
-        });
+        void this.createMissingLastRead(lastRead.meta.url, lastRead.last_read.toJson());
         return Number(lastRead.last_read.timestamp);
       } else {
         // Network errors, timeouts, server errors, etc. should bubble up
@@ -159,5 +156,20 @@ export class BootstrapApplication {
         throw error;
       }
     }
+  }
+
+  /**
+   * Creates the last-read file a read just found missing. Before a retry (429, 500, 503 or the
+   * publish conflict) it is checked again, and a file another client created meanwhile is kept
+   * rather than overwritten.
+   */
+  private static async createMissingLastRead(url: string, bodyJson: Record<string, unknown>): Promise<void> {
+    const fence = HomeserverService.createWriteFence();
+    let seenMissing = true;
+    await retryHomeserverWriteAfterReread(fence, async () => {
+      if (!seenMissing && (await HomeserverService.exists(url))) return;
+      seenMissing = false;
+      await HomeserverService.request({ method: HttpMethod.PUT, url, bodyJson, fence });
+    });
   }
 }

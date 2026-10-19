@@ -148,6 +148,19 @@ describe('useEntityTags', () => {
     expect(usePostTags).toHaveBeenCalledWith(null, expect.any(Object));
   });
 
+  it('forwards mergeEntityId to usePostTags for POST kind only', async () => {
+    const { usePostTags } = await import('../usePostTags/usePostTags');
+
+    renderHook(() => useEntityTags('author:original', TagKind.POST, { mergeEntityId: 'author:repost' }));
+    expect(usePostTags).toHaveBeenLastCalledWith(
+      'author:original',
+      expect.objectContaining({ mergePostId: 'author:repost' }),
+    );
+
+    renderHook(() => useEntityTags('user-123', TagKind.USER, { mergeEntityId: 'author:repost' }));
+    expect(usePostTags).toHaveBeenLastCalledWith(null, expect.objectContaining({ mergePostId: null }));
+  });
+
   // =============================================================================
   // Functional Tests - Provided Tags
   // =============================================================================
