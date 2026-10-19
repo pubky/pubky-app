@@ -51,7 +51,7 @@ export function DialogConfirmBackup({ onConfirm }: DialogConfirmBackupProps) {
             <DialogTitle id="backup-done-dialog-title">All backed up?</DialogTitle>
             <DialogDescription id="backup-done-dialog-description">
               Please confirm if you have completed your preferred backup methods. For your security, the secret seed
-              will be be deleted from your browser. You can restore access to your account using your recovery phrase or
+              will be deleted from your browser. You can restore access to your account using your recovery phrase or
               encrypted file.
             </DialogDescription>
           </DialogHeader>

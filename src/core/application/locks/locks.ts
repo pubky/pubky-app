@@ -1,4 +1,5 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
+import { PAYKIT_PAYMENT_IN_HOURS } from '@/config/locks';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -639,7 +640,12 @@ export class LocksApplication {
     const criterion = {
       criterion_id: CRITERION_ID,
       verifier_type: VerifierType.PAYMENT,
-      params: { recipient_pubky: post.creator, amount: lockConfig.amount, asset: lockConfig.asset },
+      params: {
+        recipient_pubky: post.creator,
+        amount: lockConfig.amount,
+        asset: lockConfig.asset,
+        payment_in: PAYKIT_PAYMENT_IN_HOURS,
+      },
     };
 
     const result = await LocksService.createContentLock({

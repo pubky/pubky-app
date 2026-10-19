@@ -461,6 +461,15 @@ Locks use one `paykit-payment` criterion holding the recipient (always the lock'
 an atomic amount as a string, and its denomination: `BTC` (sats) or `USD` (cents). The price
 dialog uses exact decimal conversion and clears the amount when the currency changes. Cards and checkout retain the denomination from the lock file.
 
+Locks SDK 0.1.0 requires a numeric `payment_in` in whole hours. The App records `payment_in: 24`
+using `PAYKIT_PAYMENT_IN_HOURS` in `src/config/locks.ts`. This is the payment-window policy stored
+in each new lock; readers use the deadline returned by Paykit.
+
+Locks published without `payment_in` are incompatible with new payment attempts on Locks/Paykit
+0.1.0: backend validation rejects the missing field. This fix covers new publications only;
+legacy locks need a separate compatibility or migration decision. Existing lock files are not
+rewritten, since their contents determine their canonical hash and identity.
+
 Paykit Server creates the immutable request and fixed conversion quote from the creator's
 enabled receiving methods. BTC prices need no conversion for Bitcoin; USD prices include a
 BTC quote. If the server explicitly enables USDT receiving, it can additionally offer USDT

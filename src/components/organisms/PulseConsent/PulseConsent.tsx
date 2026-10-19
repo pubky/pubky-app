@@ -4,7 +4,17 @@ import { useState } from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Typography } from '@/atoms/Typography/Typography';
 import { usePulseConsent } from '@/hooks/usePulseConsent/usePulseConsent';
+import { cn } from '@/libs/utils/utils';
 import { SettingsSwitchItem } from '@/molecules/Settings/SettingsSwitchItem/SettingsSwitchItem';
+import { useContextualBannerStore } from '@/stores/contextualBanner/contextualBanner.store';
+
+/**
+ * Lifts the "Pulse analytics" pill clear of the guest contextual banner so consent withdrawal stays
+ * reachable and unfaded while it shows. Below `lg` the banner card (at most 144px, 72px in a
+ * landscape row) sits on the 72/80px mobile footer; from `lg` the bar (at most 108px) sits flush with
+ * the viewport under its 112px scrim. The consent card is not lifted: it is `z-50`, above the banner.
+ */
+const PILL_ABOVE_CONTEXTUAL_BANNER_CLASS = 'bottom-60 sm:bottom-62 max-lg:landscape:bottom-44 lg:bottom-58';
 
 const CONSENT_DESCRIPTION =
   'Allow Pubky Pulse to store an anonymous ID in this browser and measure how you use Pubky across visits, including page views, errors, and which browser and operating system you use. This helps us improve the app.';
@@ -14,6 +24,7 @@ const SAVE_ERROR =
 export function PulseConsentBanner() {
   const { consent, choose, saveFailed } = usePulseConsent();
   const [open, setOpen] = useState(false);
+  const isContextualBannerVisible = useContextualBannerStore((state) => state.visible);
   if (consent === 'unavailable') return null;
 
   if (consent !== null && !open) {
@@ -22,7 +33,10 @@ export function PulseConsentBanner() {
       <Button
         variant="secondary"
         size="sm"
-        className="fixed bottom-24 left-4 z-40 text-xs sm:bottom-4"
+        className={cn(
+          'fixed left-4 z-40 text-xs',
+          isContextualBannerVisible ? PILL_ABOVE_CONTEXTUAL_BANNER_CLASS : 'bottom-24 sm:bottom-4',
+        )}
         onClick={() => setOpen(true)}
       >
         Pulse analytics

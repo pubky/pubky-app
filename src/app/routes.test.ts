@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  POST_ID_STAGING_FIXTURE,
+  PUBKY_52_STAGING_FIXTURE,
+  PUBKY_INVALID_BAD_CHAR,
+  PUBKY_INVALID_TOO_LONG,
+} from '@/test-utils/pubky';
+import {
   APP_ROUTES,
   AUTH_ROUTES,
   AUTHENTICATED_ROUTES,
@@ -18,6 +24,7 @@ import {
   LOGO_LANDING_ROUTES,
   matchesAllowedRoute,
   matchPostRoute,
+  matchProfileRoute,
   matchSingleCollectionRoute,
   ONBOARDING_ROUTES,
   PROFILE_ROUTES,
@@ -336,6 +343,97 @@ describe('matchPostRoute', () => {
   it('returns null for unrelated routes', () => {
     expect(matchPostRoute('/home')).toBeNull();
     expect(matchPostRoute(`/collections/${pubky}/${postId}`)).toBeNull();
+  });
+});
+
+describe('matchProfileRoute', () => {
+  const pubky = PUBKY_52_STAGING_FIXTURE;
+  const postId = POST_ID_STAGING_FIXTURE;
+
+  it('extracts the pubky from another user profile route with a raw identifier', () => {
+    expect(matchProfileRoute(`/profile/${pubky}`)).toEqual({ pubky });
+  });
+
+  it('handles a trailing slash', () => {
+    expect(matchProfileRoute(`/profile/${pubky}/`)).toEqual({ pubky });
+  });
+
+  it('matches a raw identifier that happens to start with "pubky" without stripping it', () => {
+    const rawStartingWithPubky = `pubky${pubky.slice('pubky'.length)}`;
+    expect(rawStartingWithPubky).toHaveLength(52);
+    expect(matchProfileRoute(`/profile/${rawStartingWithPubky}`)).toEqual({ pubky: rawStartingWithPubky });
+  });
+
+  it('returns null for the own profile route and its sub-tabs', () => {
+    expect(matchProfileRoute('/profile')).toBeNull();
+    expect(matchProfileRoute('/profile/')).toBeNull();
+    expect(matchProfileRoute('/profile/followers')).toBeNull();
+    expect(matchProfileRoute('/profile/notifications')).toBeNull();
+    for (const route of Object.values(PROFILE_ROUTES)) {
+      expect(matchProfileRoute(route), route).toBeNull();
+    }
+  });
+
+  it('returns null for sub-tabs of another user profile', () => {
+    expect(matchProfileRoute(`/profile/${pubky}/followers`)).toBeNull();
+    expect(matchProfileRoute(`/profile/${pubky}/following`)).toBeNull();
+    expect(matchProfileRoute(`/profile/${pubky}/friends`)).toBeNull();
+    expect(matchProfileRoute(`/profile/${pubky}/replies`)).toBeNull();
+    expect(matchProfileRoute(`/profile/${pubky}/tagged`)).toBeNull();
+    expect(matchProfileRoute(`/profile/${pubky}/posts`)).toBeNull();
+  });
+
+  it('matches only the base URL among the profile URLs the app builds for another user', () => {
+    const base = `/profile/${pubky}`;
+    const built = Object.values(PROFILE_ROUTES).map((route) => getProfileRoute(route, pubky));
+    const subTabs = built.filter((path) => path !== base);
+    // Guard against an empty loop: the builder must produce both the base URL and real sub-tab URLs.
+    expect(built).toContain(base);
+    expect(subTabs).toEqual(expect.arrayContaining([`${base}/followers`, `${base}/collections`, `${base}/unlocked`]));
+    expect(matchProfileRoute(base)).toEqual({ pubky });
+    for (const path of subTabs) {
+      expect(matchProfileRoute(path), path).toBeNull();
+    }
+  });
+
+  it('returns null for prefixed identifiers', () => {
+    expect(matchProfileRoute(`/profile/pk:${pubky}`)).toBeNull();
+    expect(matchProfileRoute(`/profile/pubky${pubky}`)).toBeNull();
+  });
+
+  it('returns null for identifiers of the wrong length', () => {
+    expect(matchProfileRoute(`/profile/${PUBKY_INVALID_TOO_LONG}`)).toBeNull();
+    expect(matchProfileRoute(`/profile/${pubky.slice(0, 51)}`)).toBeNull();
+    expect(matchProfileRoute('/profile/shortname')).toBeNull();
+  });
+
+  it('returns null for 52-char identifiers with invalid characters', () => {
+    expect(matchProfileRoute(`/profile/${PUBKY_INVALID_BAD_CHAR}`)).toBeNull();
+    expect(matchProfileRoute(`/profile/${pubky.toUpperCase()}`)).toBeNull();
+    expect(matchProfileRoute(`/profile/${pubky.slice(0, 51)}!`)).toBeNull();
+  });
+
+  it('returns null for other routes', () => {
+    expect(matchProfileRoute('/')).toBeNull();
+    expect(matchProfileRoute('/home')).toBeNull();
+    expect(matchProfileRoute(`/post/${pubky}/${postId}`)).toBeNull();
+    expect(matchProfileRoute(`/collections/${pubky}/${postId}`)).toBeNull();
+    expect(matchProfileRoute(`/invite/${pubky}`)).toBeNull();
+    expect(matchProfileRoute(`/settings/profile/${pubky}`)).toBeNull();
+  });
+
+  it('matches exactly the profile routes that are public for guests', () => {
+    const profilePaths = [
+      '/profile',
+      `/profile/${pubky}`,
+      `/profile/${pubky}/followers`,
+      `/profile/pk:${pubky}`,
+      `/profile/${PUBKY_INVALID_TOO_LONG}`,
+      `/profile/${PUBKY_INVALID_BAD_CHAR}`,
+    ];
+    for (const path of profilePaths) {
+      expect(matchProfileRoute(path) !== null, path).toBe(isDynamicPublicRoute(path));
+    }
   });
 });
 
