@@ -1,4 +1,5 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
+import { PAYKIT_PAYMENT_IN_HOURS } from '@/config/locks';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -52,8 +53,6 @@ import type {
 // v1 payment locks must hold exactly one criterion, referenced once by the lock logic.
 const CRITERION_ID = 'criterion-1';
 const CREDENTIAL_TTL_SECONDS = 900;
-// Match Paykit's compatibility value in whole hours; invoice deadlines remain server-configured.
-const PAYKIT_PAYMENT_IN_HOURS = 24;
 
 // Lower wins. A null task beats an ended one because resubmitting it is a safe replay; `failed` beats
 // `expired` because a reported `failed` makes Try again check the wallet.
