@@ -97,19 +97,19 @@ const GENERIC = GENERIC_CONTEXTUAL_BANNER_COPY;
 
 const postCopy = (name: string) => ({
   headline: 'Join the conversation',
-  body: `Reply to ${name}, tag what resonates, and share where you stand.`,
+  body: `Join Pubky to reply to ${name}, tag this post, and share your perspective.`,
 });
 const articleCopy = (title: string, name: string) => ({
   headline: `Enjoying “${title}”?`,
-  body: `Join Pubky to reply to ${name}, tag this article, and follow more of their writing.`,
+  body: `Join Pubky to reply to ${name}, tag this article, and discover more great writing.`,
 });
 const profileCopy = (name: string) => ({
   headline: `Get to know ${name}`,
-  body: `Join Pubky to follow ${name} and join the conversations they're part of.`,
+  body: `Join Pubky to follow ${name} and take part in the conversation.`,
 });
 const collectionCopy = (name: string) => ({
   headline: `Interested in ${name}?`,
-  body: 'Join Pubky to follow this collection and see what people are talking about.',
+  body: 'Join Pubky to follow this collection and discover more about this topic.',
 });
 
 const makePost = (compositeId: string, overrides: Partial<EnrichedPostDetails> = {}): EnrichedPostDetails => ({

@@ -18,7 +18,7 @@ const MAX_TITLE_GRAPHEMES = 64;
 /** Shown while the page's data is not in the local database, and for content the copy must not describe. */
 export const GENERIC_CONTEXTUAL_BANNER_COPY: ContextualBannerCopy = {
   headline: 'Join the conversation',
-  body: 'Join Pubky to reply, tag, and follow the people and topics you care about.',
+  body: 'Join Pubky to discover conversations and follow people and topics you care about.',
 };
 
 /**
@@ -67,7 +67,7 @@ export function buildContextualBannerCopy({ target, post, user }: ContextualBann
     if (!name) return GENERIC_CONTEXTUAL_BANNER_COPY;
     return {
       headline: `Get to know ${name}`,
-      body: `Join Pubky to follow ${name} and join the conversations they're part of.`,
+      body: `Join Pubky to follow ${name} and take part in the conversation.`,
     };
   }
 
@@ -78,7 +78,7 @@ export function buildContextualBannerCopy({ target, post, user }: ContextualBann
     if (!collectionName) return GENERIC_CONTEXTUAL_BANNER_COPY;
     return {
       headline: `Interested in ${collectionName}?`,
-      body: 'Join Pubky to follow this collection and see what people are talking about.',
+      body: 'Join Pubky to follow this collection and discover more about this topic.',
     };
   }
   if (target === 'collection') return GENERIC_CONTEXTUAL_BANNER_COPY;
@@ -90,7 +90,7 @@ export function buildContextualBannerCopy({ target, post, user }: ContextualBann
   if (post.lock) {
     return {
       headline: "Want to see what's inside?",
-      body: `Join Pubky to unlock posts from ${name} and follow what they share next.`,
+      body: `Join Pubky to unlock posts from ${name} and stay up to date.`,
     };
   }
   if (post.kind === 'long') {
@@ -98,18 +98,18 @@ export function buildContextualBannerCopy({ target, post, user }: ContextualBann
     if (title) {
       return {
         headline: `Enjoying “${title}”?`,
-        body: `Join Pubky to reply to ${name}, tag this article, and follow more of their writing.`,
+        body: `Join Pubky to reply to ${name}, tag this article, and discover more great writing.`,
       };
     }
   }
   if (post.kind === 'video') {
     return {
       headline: 'Enjoying this video?',
-      body: `Join Pubky to reply to ${name}, tag this video, and follow more of their posts.`,
+      body: `Join Pubky to reply to ${name}, tag this video, and discover more posts.`,
     };
   }
   return {
     headline: 'Join the conversation',
-    body: `Reply to ${name}, tag what resonates, and share where you stand.`,
+    body: `Join Pubky to reply to ${name}, tag this post, and share your perspective.`,
   };
 }
