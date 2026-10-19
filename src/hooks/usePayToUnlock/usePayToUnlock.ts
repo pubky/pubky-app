@@ -18,7 +18,8 @@ export const CONNECTION_POLL_INTERVAL_MS = 1000;
  * counting them would under-measure. Parking is NOT failing: the purchase and its stored bundle
  * id survive, the screen stays on "awaiting payment", and the tab becoming visible again grants
  * a fresh window. While the server is still creating the invoice, it counts from the server's
- * deadline for that instead.
+ * deadline for that instead. The content download after a completed payment parks after the same
+ * time, but a returning tab does not re-read it: only Check again does.
  */
 export const STALL_AFTER_MS = 3 * 60 * 1000;
 
@@ -81,6 +82,12 @@ export function usePayToUnlock({
   // The active poll loop's teardown (timer + visibility listener) — replaced on every loop start,
   // called on close/unmount. The generation makes a leaked loop inert; this makes it absent.
   const stopPolling = useRef<(() => void) | null>(null);
+  // The download's own park. The wait's park does not cover it: the wait stops once the payment
+  // completes, and a purchase already complete on open never starts one.
+  const finishStallTimer = useRef<number | null>(null);
+  // Check again on a parked download starts another while the first may still be out. Any of them
+  // may deliver the content; only the latest may fail or park.
+  const finishCall = useRef(0);
   // The bundle the current wait belongs to, so a manual re-check knows what to look up.
   const waitingBundleId = useRef<string | null>(null);
   // Held behind the paid confirmation screen until the reader explicitly chooses View Content.
@@ -95,10 +102,16 @@ export function usePayToUnlock({
    */
   const finish = async (gen: number, bundleId: string) => {
     if (!lockFile) return;
+    const call = ++finishCall.current;
+    const isLatest = () => generation.current === gen && finishCall.current === call;
     // The finishing screen owns this bundle from here on, even when the purchase was already
     // complete on open (no polling ran), so "Check again" has something to retry.
     waitingBundleId.current = bundleId;
     setStage('finishing');
+    const stallTimer = window.setTimeout(() => {
+      if (isLatest()) setIsStalled(true);
+    }, STALL_AFTER_MS);
+    finishStallTimer.current = stallTimer;
 
     let content: TUnlockedContent;
     try {
@@ -106,12 +119,19 @@ export function usePayToUnlock({
     } catch {
       // Already reported by the Err factory. The payment stands — only the download failed — so
       // this gets its own stage rather than the waiting copy that asks the reader to go pay.
-      if (generation.current !== gen) return;
+      if (!isLatest()) return;
       setStage('unopened');
       toast({ variant: 'error', description: FINISH_FAILED_TOAST });
       return;
+    } finally {
+      window.clearTimeout(stallTimer);
+      // After a close and reopen, `finishStallTimer` belongs to the new download.
+      if (finishStallTimer.current === stallTimer) finishStallTimer.current = null;
     }
     if (generation.current !== gen) return;
+    // Retire the download and lookup a Check again started, or they would fetch it again.
+    finishCall.current++;
+    stopPolling.current?.();
     completedContent.current = content;
     setIsStalled(false);
     setStage('paid');
@@ -419,6 +439,8 @@ export function usePayToUnlock({
       generation.current++;
       stopPolling.current?.();
       stopPolling.current = null;
+      if (finishStallTimer.current !== null) window.clearTimeout(finishStallTimer.current);
+      finishStallTimer.current = null;
     };
     // attemptPayment and the helpers it calls are stable for one opening; re-running on their
     // identity would restart the purchase.
@@ -437,6 +459,9 @@ export function usePayToUnlock({
   const recheck = () => {
     const bundleId = waitingBundleId.current;
     if (!bundleId) return;
+    // Retire a parked download now, not when the next one starts: a late failure in between would
+    // show the failure screen while this lookup is still out.
+    finishCall.current++;
     // Read before the stage moves: `unopened` means the payment is already done, so its Check again
     // retries the content read and must not start watching the link again.
     const paymentStillRunning = stage === 'waiting';
