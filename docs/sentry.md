@@ -44,6 +44,11 @@ Drop rules implement the `shouldReportToSentry` predicate from ADR-0015 §5.1 Ch
 
 Global-handler noise that is not an `AppError` (extension `inpage.js`, native webview bridge scripts) belongs in `ignoreErrors`, with a pattern specific enough to match only the third-party message.
 
+`BROWSER_INJECTED_ERROR_PATTERNS` is the subset shared by `OBSERVABILITY_IGNORE_ERRORS` and
+`GlobalErrorHandlerProvider`: known wallet/bridge injection errors produce neither an app toast nor an app log.
+The toast handler does not apply the broader telemetry ignore list, so app network, abort and chunk-loading
+failures retain their existing feedback. Empty filenames and third-party source URLs alone do not suppress a toast.
+
 The two route-segment error boundaries (`app/error.tsx`, `app/global-error.tsx`) guard their `Sentry.captureException` and `Pulse.captureException` calls with `if (!(error instanceof AppError))` so an `AppError` thrown during render isn't captured twice (once by the factory, once by the boundary).
 
 ### Stale chunk recovery after a deploy

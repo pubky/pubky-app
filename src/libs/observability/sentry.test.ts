@@ -875,6 +875,17 @@ describe('Sentry tracing hooks wired into init base', () => {
   it('takes its ignore policy from the constant the optional Pulse sink also spreads', () => {
     expect(getSentryInitBase().ignoreErrors).toEqual([...OBSERVABILITY_IGNORE_ERRORS]);
   });
+
+  it.each(['selectedAddress = undefined', 'chainId = "0x1"', 'networkVersion = "1"'])(
+    'ignores the Brave injected wallet assignment in both error sinks: %s',
+    (assignment) => {
+      const message = `TypeError: undefined is not an object (evaluating 'window.ethereum.${assignment}')`;
+      const patterns = getSentryInitBase().ignoreErrors ?? [];
+      expect(
+        patterns.some((pattern) => (typeof pattern === 'string' ? message.includes(pattern) : pattern.test(message))),
+      ).toBe(true);
+    },
+  );
 });
 
 describe('Sentry transaction PII scrubbing', () => {
