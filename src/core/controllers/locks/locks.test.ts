@@ -110,6 +110,7 @@ describe('LocksController (auth)', () => {
     expect(store.selectIsLocksAuthenticated()).toBe(true);
     expect(store.selectLocksSession()).toBe(fakeSession);
     expect(store.selectLocksSessionSecret()).toBe('secret-abc');
+    expect(store.selectLocksCreatorPubky()).toBe(MOCK_LOCK_AUTHOR_PUBKY);
   });
 
   it('completeAuthFromCallback registers the lock-service config in the background after the session is stored', async () => {
@@ -175,7 +176,9 @@ describe('LocksController (auth)', () => {
 
   describe('logout', () => {
     it('signs out the live session on the Lock Server and clears the store', async () => {
-      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
 
       await LocksController.logout();
 
@@ -186,7 +189,9 @@ describe('LocksController (auth)', () => {
     });
 
     it('clears the store even when the Lock Server signout fails', async () => {
-      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       mocks.signout.mockRejectedValue(new Error('network down'));
 
       await LocksController.logout();
@@ -199,7 +204,9 @@ describe('LocksController (auth)', () => {
     it('clears the store without waiting for a signout that never answers', async () => {
       vi.useFakeTimers();
       try {
-        useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+        useLocksAuthStore
+          .getState()
+          .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
         mocks.signout.mockReturnValue(new Promise(() => {})); // never settles
 
         const done = LocksController.logout();
@@ -213,7 +220,9 @@ describe('LocksController (auth)', () => {
     });
 
     it('does not keep a sign-in that started while the Lock Server signout was pending', async () => {
-      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       const signout = Promise.withResolvers<void>();
       mocks.signout.mockReturnValue(signout.promise);
       const exchange = Promise.withResolvers<{ session: LocksSdkSession; secret: string }>();
@@ -232,7 +241,9 @@ describe('LocksController (auth)', () => {
     });
 
     it('preserves a newer app login while the previous Lock Server signout is pending', async () => {
-      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-old' });
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-old', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       const signout = Promise.withResolvers<void>();
       mocks.signout.mockReturnValueOnce(signout.promise);
       const pendingLogout = LocksController.logout();
@@ -249,7 +260,7 @@ describe('LocksController (auth)', () => {
     });
 
     it('clears the persisted secret without a network call when no live session exists', async () => {
-      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
 
       await LocksController.logout();
 
@@ -298,18 +309,20 @@ describe('LocksController (auth)', () => {
 
   describe('restorePersistedLocksSession', () => {
     it('rebuilds the session, validates it against the server, and keeps it on success', async () => {
-      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
-      mocks.restoreSession.mockReturnValue(fakeSession);
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+      // Like the SDK's `restoreSession`, the rebuilt session has no creator pubky (#2856).
+      const restoredSession = asOpaque<LocksSdkSession>({ id: 'restored-session', creatorPubky: () => undefined });
+      mocks.restoreSession.mockReturnValue(restoredSession);
 
       await LocksController.restorePersistedLocksSession();
 
       expect(mocks.restoreSession).toHaveBeenCalledTimes(1);
       expect(mocks.setLockServiceConfig).toHaveBeenCalledTimes(1); // validity probe
-      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(restoredSession);
     });
 
     it('clears the session when the server rejects the restored secret as expired (401 → Auth)', async () => {
-      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       mocks.restoreSession.mockReturnValue(fakeSession);
       mocks.setLockServiceConfig.mockRejectedValue(
         Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' }),
@@ -323,7 +336,7 @@ describe('LocksController (auth)', () => {
     });
 
     it('keeps the session when the validation write fails for a non-auth reason', async () => {
-      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       mocks.restoreSession.mockReturnValue(fakeSession);
       mocks.setLockServiceConfig.mockRejectedValue(new Error('network down'));
 
@@ -333,7 +346,7 @@ describe('LocksController (auth)', () => {
     });
 
     it('does not bring the session back when the restore finishes after logout', async () => {
-      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       const restore = Promise.withResolvers<LocksSdkSession>();
       mocks.restoreSession.mockReturnValue(restore.promise);
 
@@ -347,7 +360,7 @@ describe('LocksController (auth)', () => {
     });
 
     it('keeps a newer sign-in when the restored session is rejected after it', async () => {
-      useLocksAuthStore.getState().init({ session: null, secret: 'secret-old' });
+      useLocksAuthStore.getState().init({ session: null, secret: 'secret-old', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       mocks.restoreSession.mockReturnValue(
         asOpaque<LocksSdkSession>({ id: 'restored-session', creatorPubky: () => `pubky${MOCK_LOCK_AUTHOR_PUBKY}` }),
       );
@@ -374,13 +387,15 @@ describe('LocksController (auth)', () => {
     });
 
     it('no-ops when a live session already exists', async () => {
-      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       await LocksController.restorePersistedLocksSession();
       expect(mocks.restoreSession).not.toHaveBeenCalled();
     });
 
     it('clears the store when restore throws (malformed/stale secret)', async () => {
-      useLocksAuthStore.getState().init({ session: null, secret: 'bad-secret' });
+      useLocksAuthStore.getState().init({ session: null, secret: 'bad-secret', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       mocks.restoreSession.mockImplementation(() => {
         throw new Error('invalid secret');
       });
@@ -395,7 +410,7 @@ describe('LocksController (auth)', () => {
 
   describe('account changes during Locks operations', () => {
     it('does not reinstall a restored session after logout', async () => {
-      useLocksAuthStore.getState().init({ session: null, secret: 'old-secret' });
+      useLocksAuthStore.getState().init({ session: null, secret: 'old-secret', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       const pending = Promise.withResolvers<LocksSdkSession>();
       mocks.restoreSession.mockReturnValueOnce(pending.promise);
       const restore = LocksController.restorePersistedLocksSession();
@@ -407,22 +422,25 @@ describe('LocksController (auth)', () => {
     });
 
     it('keeps a newer secret when an old restore fails', async () => {
-      useLocksAuthStore.getState().init({ session: null, secret: 'old-secret' });
+      useLocksAuthStore.getState().init({ session: null, secret: 'old-secret', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       const pending = Promise.withResolvers<LocksSdkSession>();
       mocks.restoreSession.mockReturnValueOnce(pending.promise);
       const restore = LocksController.restorePersistedLocksSession();
       useAuthStore.setState({ generation: 'new-account-generation' });
-      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'new-secret' });
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'new-secret', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       pending.reject(new Error('old restore failed'));
       await restore;
       expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBe('new-secret');
       expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
     });
 
-    it('does not validate or use a saved secret belonging to another account', async () => {
-      useLocksAuthStore.getState().init({ session: null, secret: 'other-secret' });
-      mocks.restoreSession.mockResolvedValueOnce(asOpaque<LocksSdkSession>({ creatorPubky: () => 'pubkyother' }));
+    // null: a secret saved before its creator pubky was persisted.
+    it.each(['otheraccount', null])('does not restore a saved secret whose creator is %s', async (creatorPubky) => {
+      useLocksAuthStore.getState().init({ session: null, secret: 'other-secret', creatorPubky });
       await LocksController.restorePersistedLocksSession();
+      expect(mocks.restoreSession).not.toHaveBeenCalled();
       expect(useLocksAuthStore.getState().selectLocksSession()).toBeNull();
       expect(mocks.setLockServiceConfig).not.toHaveBeenCalled();
     });
@@ -442,7 +460,9 @@ describe('LocksController (auth)', () => {
 
   describe('fetchPaykitSetupStatus', () => {
     beforeEach(() => {
-      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
     });
 
     it('clears cached readiness when the current check requires setup', async () => {
@@ -489,7 +509,11 @@ describe('LocksController (auth)', () => {
 
     it('discards readiness for a session that changed during the check', async () => {
       mocks.fetchPaykitSetupStatus.mockImplementationOnce(async () => {
-        useLocksAuthStore.getState().init({ session: asOpaque<LocksSdkSession>({ id: 'other' }), secret: 'other' });
+        useLocksAuthStore.getState().init({
+          session: asOpaque<LocksSdkSession>({ id: 'other' }),
+          secret: 'other',
+          creatorPubky: MOCK_LOCK_AUTHOR_PUBKY,
+        });
         return 'ready';
       });
       await expect(LocksController.fetchPaykitSetupStatus('USD')).resolves.toBe('unavailable');
@@ -498,7 +522,11 @@ describe('LocksController (auth)', () => {
 
     it('does not clear a new session when the old readiness check is rejected', async () => {
       mocks.fetchPaykitSetupStatus.mockImplementationOnce(async () => {
-        useLocksAuthStore.getState().init({ session: asOpaque<LocksSdkSession>({ id: 'other' }), secret: 'other' });
+        useLocksAuthStore.getState().init({
+          session: asOpaque<LocksSdkSession>({ id: 'other' }),
+          secret: 'other',
+          creatorPubky: MOCK_LOCK_AUTHOR_PUBKY,
+        });
         throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' });
       });
       await expect(LocksController.fetchPaykitSetupStatus('USD')).rejects.toThrow('rejected');
@@ -620,7 +648,9 @@ describe('LocksController (content)', () => {
   it.each([ErrorService.Locks, ErrorService.Homeserver])(
     'only clears the current Locks session for a Locks auth error: %s',
     async (service) => {
-      useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       const rejected = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service, operation: 'test' });
       mocks.createLockContent.mockRejectedValueOnce(rejected);
 

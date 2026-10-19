@@ -54,7 +54,10 @@ const fakeSession = () =>
   });
 
 /** The store once the Lock Server step is done: a live session, and no answer about Paykit yet. */
-const signIn = () => useLocksAuthStore.getState().init({ session: fakeSession(), secret: 'secret-abc' });
+const signIn = () =>
+  useLocksAuthStore
+    .getState()
+    .init({ session: fakeSession(), secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
 
 const renderDialog = () => render(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
 

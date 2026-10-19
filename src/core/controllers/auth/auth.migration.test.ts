@@ -373,7 +373,7 @@ describe('grant-only session lifecycle', () => {
     }
   });
   it('revokes the separate Lock Server session during app logout', async () => {
-    useLocksAuthStore.getState().init({ session: asOpaque({}), secret: 'lock-secret' });
+    useLocksAuthStore.getState().init({ session: asOpaque({}), secret: 'lock-secret', creatorPubky: PUBKY });
     const signout = vi.spyOn(LocksApplication, 'signout').mockResolvedValue(undefined);
     await AuthController.logout();
     expect(signout).toHaveBeenCalledOnce();
@@ -674,7 +674,9 @@ describe('grant-only session lifecycle', () => {
   it('preserves account-local state when another tab upgrades the same account', async () => {
     useSettingsStore.getState().setMutedUsers(['same-account-mute']);
     const locksSession = asOpaque<LocksSession>({});
-    useLocksAuthStore.getState().init({ session: locksSession, secret: 'same-account-lock-secret' });
+    useLocksAuthStore
+      .getState()
+      .init({ session: locksSession, secret: 'same-account-lock-secret', creatorPubky: PUBKY });
     await AuthApplication.commitPersistedAuth(
       {
         generation: 'upgraded',
@@ -980,7 +982,7 @@ describe('grant-only migration and SDK removal events', () => {
 describe('logout SDK lock deadline', () => {
   it('clears this tab when all localStorage writes fail', async () => {
     useSettingsStore.getState().setMutedUsers(['private-mute']);
-    useLocksAuthStore.getState().init({ session: asOpaque({}), secret: 'old-lock-secret' });
+    useLocksAuthStore.getState().init({ session: asOpaque({}), secret: 'old-lock-secret', creatorPubky: PUBKY });
     const sharedSettings = localStorage.getItem(SETTINGS_PERSIST_KEY);
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('Storage unavailable', 'QuotaExceededError');
@@ -994,7 +996,7 @@ describe('logout SDK lock deadline', () => {
   });
   it('bounds a stalled metadata lock and fences its late commit after a newer login', async () => {
     vi.useFakeTimers();
-    useLocksAuthStore.getState().init({ session: asOpaque({}), secret: 'old-lock-secret' });
+    useLocksAuthStore.getState().init({ session: asOpaque({}), secret: 'old-lock-secret', creatorPubky: PUBKY });
     const release: Array<() => void> = [];
     Object.defineProperty(navigator, 'locks', {
       configurable: true,
@@ -1044,7 +1046,7 @@ describe('logout SDK lock deadline', () => {
     vi.spyOn(AuthApplication, 'readPersistedAuth').mockImplementation(() => {
       throw offline();
     });
-    useLocksAuthStore.getState().init({ session: asOpaque({}), secret: 'old-lock-secret' });
+    useLocksAuthStore.getState().init({ session: asOpaque({}), secret: 'old-lock-secret', creatorPubky: PUBKY });
     await AuthController.logout();
     expect(useAuthStore.getState().session).toBeNull();
     expect(useLocksAuthStore.getState().session).toBeNull();
@@ -1173,11 +1175,11 @@ describe('account ownership across asynchronous cleanup', () => {
     },
   );
   it.each([null, OTHER_PUBKY])('clears only this tab Locks session when the account changes to %s', async (pubky) => {
-    useLocksAuthStore.getState().init({ session: asOpaque({}), secret: 'old-lock-secret' });
+    useLocksAuthStore.getState().init({ session: asOpaque({}), secret: 'old-lock-secret', creatorPubky: PUBKY });
     useLocksAuthStore.getState().setPaykitConnected(true);
     const sharedLocks = JSON.stringify({
       version: 0,
-      state: { locksSessionSecret: 'new-lock-secret', hasHydrated: false },
+      state: { locksSessionSecret: 'new-lock-secret', creatorPubky: OTHER_PUBKY, hasHydrated: false },
     });
     localStorage.setItem(LOCKS_AUTH_PERSIST_KEY, sharedLocks);
     await AuthApplication.commitPersistedAuth(
@@ -1267,7 +1269,10 @@ describe('Locks restore ownership after account changes', () => {
     const sharedLocks =
       pubky === PUBKY
         ? localStorage.getItem(LOCKS_AUTH_PERSIST_KEY)!
-        : JSON.stringify({ version: 0, state: { locksSessionSecret: 'new-lock-secret', hasHydrated: false } });
+        : JSON.stringify({
+            version: 0,
+            state: { locksSessionSecret: 'new-lock-secret', creatorPubky: OTHER_PUBKY, hasHydrated: false },
+          });
     localStorage.setItem(LOCKS_AUTH_PERSIST_KEY, sharedLocks);
     await AuthApplication.commitPersistedAuth(
       {
@@ -1288,7 +1293,7 @@ describe('Locks restore ownership after account changes', () => {
   }
 
   it.each([null, OTHER_PUBKY])('does not restore an old Locks handle after switching to %s', async (pubky) => {
-    useLocksAuthStore.getState().init({ session: null, secret: 'old-lock-secret' });
+    useLocksAuthStore.getState().init({ session: null, secret: 'old-lock-secret', creatorPubky: PUBKY });
     const pending = deferred<LocksSession>();
     vi.spyOn(LocksApplication, 'restoreSession').mockReturnValue(pending.promise);
     const config = vi.spyOn(LocksApplication, 'setLockServiceConfig').mockResolvedValue(undefined);
@@ -1304,7 +1309,7 @@ describe('Locks restore ownership after account changes', () => {
   it.each(['restore', 'validation'])(
     'does not clear a newer shared Locks secret after stale %s failure',
     async (stage) => {
-      useLocksAuthStore.getState().init({ session: null, secret: 'old-lock-secret' });
+      useLocksAuthStore.getState().init({ session: null, secret: 'old-lock-secret', creatorPubky: PUBKY });
       const restore = deferred<LocksSession>();
       const validation = deferred<void>();
       vi.spyOn(LocksApplication, 'restoreSession').mockReturnValue(restore.promise);
@@ -1324,7 +1329,7 @@ describe('Locks restore ownership after account changes', () => {
   );
 
   it('retries Locks restoration for a newer grant without accepting the stale pending result', async () => {
-    useLocksAuthStore.getState().init({ session: null, secret: 'same-lock-secret' });
+    useLocksAuthStore.getState().init({ session: null, secret: 'same-lock-secret', creatorPubky: PUBKY });
     const pending = deferred<LocksSession>();
     vi.spyOn(LocksApplication, 'restoreSession').mockReturnValue(pending.promise);
     const config = vi.spyOn(LocksApplication, 'setLockServiceConfig').mockResolvedValue(undefined);
@@ -1386,7 +1391,9 @@ describe('sign-in after session expiry', () => {
 describe('reviewed account lifecycle boundaries', () => {
   it('clears this tab and suppresses discarded credentials when the logout write fails', async () => {
     const commit = vi.spyOn(AuthApplication, 'commitPersistedAuth').mockRejectedValueOnce(offline());
-    useLocksAuthStore.getState().init({ session: asOpaque({ creatorPubky: () => PUBKY }), secret: 'old-locks-secret' });
+    useLocksAuthStore
+      .getState()
+      .init({ session: asOpaque({ creatorPubky: () => PUBKY }), secret: 'old-locks-secret', creatorPubky: PUBKY });
     vi.spyOn(LocksApplication, 'signout').mockResolvedValue(undefined);
     await AuthController.logout();
     expect(useAuthStore.getState()).toMatchObject({ session: null, sessionReference: null, currentUserPubky: null });
@@ -1461,7 +1468,9 @@ describe('reviewed account lifecycle boundaries', () => {
     );
   });
   it('stays signed out when auth storage cannot be read or written during logout and rehydration', async () => {
-    useLocksAuthStore.getState().init({ session: asOpaque({ creatorPubky: () => PUBKY }), secret: 'old-secret' });
+    useLocksAuthStore
+      .getState()
+      .init({ session: asOpaque({ creatorPubky: () => PUBKY }), secret: 'old-secret', creatorPubky: PUBKY });
     const getItem = Storage.prototype.getItem;
     const setItem = Storage.prototype.setItem;
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function (this: Storage, key) {
@@ -1533,9 +1542,11 @@ describe('reviewed account lifecycle boundaries', () => {
   });
 
   it.each([null, OTHER_PUBKY])('detaches the old Locks account on cross-tab account change to %s', async (pubky) => {
-    useLocksAuthStore.getState().init({ session: asOpaque({ creatorPubky: () => PUBKY }), secret: 'old-locks-secret' });
+    useLocksAuthStore
+      .getState()
+      .init({ session: asOpaque({ creatorPubky: () => PUBKY }), secret: 'old-locks-secret', creatorPubky: PUBKY });
     const newerLocks = JSON.stringify({
-      state: { locksSessionSecret: 'newer-locks-secret', hasHydrated: false },
+      state: { locksSessionSecret: 'newer-locks-secret', creatorPubky: OTHER_PUBKY, hasHydrated: false },
       version: 0,
     });
     localStorage.setItem(LOCKS_AUTH_PERSIST_KEY, newerLocks);
@@ -1558,7 +1569,9 @@ describe('reviewed account lifecycle boundaries', () => {
 
   it('does not clear a newer account database or Locks secret after old Locks signout settles', async () => {
     const signout = deferred<void>();
-    useLocksAuthStore.getState().init({ session: asOpaque({ creatorPubky: () => PUBKY }), secret: 'old-locks-secret' });
+    useLocksAuthStore
+      .getState()
+      .init({ session: asOpaque({ creatorPubky: () => PUBKY }), secret: 'old-locks-secret', creatorPubky: PUBKY });
     vi.spyOn(LocksApplication, 'signout').mockReturnValue(signout.promise);
     const logout = AuthController.logout();
     await vi.waitFor(() => expect(LocksApplication.signout).toHaveBeenCalledOnce());
@@ -1571,9 +1584,11 @@ describe('reviewed account lifecycle boundaries', () => {
     };
     await AuthApplication.commitPersistedAuth(newer, useAuthStore.getState().generation);
     useAuthStore.getState().init({ ...newer, session: grantSession([APP_CAPABILITIES], OTHER_PUBKY) });
-    useLocksAuthStore
-      .getState()
-      .init({ session: asOpaque({ creatorPubky: () => OTHER_PUBKY }), secret: 'newer-locks-secret' });
+    useLocksAuthStore.getState().init({
+      session: asOpaque({ creatorPubky: () => OTHER_PUBKY }),
+      secret: 'newer-locks-secret',
+      creatorPubky: OTHER_PUBKY,
+    });
     const savedLocks = localStorage.getItem(LOCKS_AUTH_PERSIST_KEY);
     const clearCount = vi.mocked(clearDatabase).mock.calls.length;
     signout.resolve();

@@ -123,7 +123,7 @@ export class LocksController {
     }
     // Also invalidate requests that began on the old session while this exchange was in flight.
     this.sessionEpoch++;
-    useLocksAuthStore.getState().init({ session: result.session, secret: result.secret });
+    useLocksAuthStore.getState().init({ session: result.session, secret: result.secret, creatorPubky: creator });
     // Register the creator's default Lock Server pointer in the background on every auth, mirroring
     // the homeserver's post-auth write. Fire-and-forget: a failure (already reported to Sentry by the
     // service Err factory) must not drop the established session — the write is idempotent and
@@ -236,16 +236,16 @@ export class LocksController {
     const { currentUserPubky } = useAuthStore.getState();
     const secret = store.selectLocksSessionSecret();
     if (!currentUserPubky || !secret || store.selectLocksSession() !== null) return;
+    if (store.selectLocksCreatorPubky() !== currentUserPubky) {
+      this.clearLocalSession();
+      return;
+    }
     const ownsAccount = this.captureSessionOwner();
     const isCurrent = () => ownsAccount() && useLocksAuthStore.getState().selectLocksSessionSecret() === secret;
 
     try {
       const session = await LocksApplication.restoreSession();
       if (!isCurrent()) return;
-      if (stripPubkyPrefix(session.creatorPubky() ?? '') !== currentUserPubky) {
-        this.clearLocalSession();
-        return;
-      }
       store.setSession(session);
     } catch {
       // Malformed/stale secret — already reported by the service Err factory; clear it so the UI

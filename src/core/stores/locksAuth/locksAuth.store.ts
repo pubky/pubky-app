@@ -22,9 +22,10 @@ export const useLocksAuthStore = create<LocksAuthStore>()(
       }),
       {
         name: LOCKS_AUTH_PERSIST_KEY,
-        // Only the bearer secret persists; the live session is rebuilt from it on load.
+        // Only the bearer secret and its creator persist; the live session is rebuilt from the secret on load.
         partialize: (state) => ({
           locksSessionSecret: state.locksSessionSecret,
+          creatorPubky: state.creatorPubky,
           hasHydrated: false, // set by the rehydration handler
         }),
         onRehydrateStorage: () => (state) => {

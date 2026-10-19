@@ -203,7 +203,7 @@ describe('LocksService (auth)', () => {
   });
 
   it('restoreSession rebuilds a session from the persisted secret in the store', async () => {
-    useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
+    useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc', creatorPubky: 'account' });
     const session = await LocksService.restoreSession();
     expect(session).toBe(mocks.fakeSession);
     expect(mocks.fakeLocks.restoreSession).toHaveBeenCalledWith('secret-abc');
@@ -217,7 +217,9 @@ describe('LocksService (auth)', () => {
   });
 
   it('signout delegates to the store session', async () => {
-    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    useLocksAuthStore
+      .getState()
+      .init({ session: mocks.fakeSession as never, secret: 'secret-abc', creatorPubky: 'account' });
     await LocksService.signout();
     expect(mocks.fakeSession.signout).toHaveBeenCalled();
   });
@@ -229,7 +231,9 @@ describe('LocksService (auth)', () => {
   });
 
   it('setLockServiceConfig writes the pointer through the store session with the configured lock server', async () => {
-    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    useLocksAuthStore
+      .getState()
+      .init({ session: mocks.fakeSession as never, secret: 'secret-abc', creatorPubky: 'account' });
     await LocksService.setLockServiceConfig();
     expect(mocks.setLockServicePointer).toHaveBeenCalledWith(
       expect.objectContaining({ default_lock_server: 'lockserverpubky' }),
@@ -237,7 +241,9 @@ describe('LocksService (auth)', () => {
   });
 
   it('lookupPaykitSetupStatus returns the status the Lock Server reports for the session creator', async () => {
-    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    useLocksAuthStore
+      .getState()
+      .init({ session: mocks.fakeSession as never, secret: 'secret-abc', creatorPubky: 'account' });
     mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'setup_required' });
 
     await expect(LocksService.lookupPaykitSetupStatus('BTC')).resolves.toBe('setup_required');
@@ -246,7 +252,9 @@ describe('LocksService (auth)', () => {
 
   // The SDK types the response `any`: an unknown status must fail, not read as a setup answer.
   it('lookupPaykitSetupStatus rejects an unknown status', async () => {
-    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    useLocksAuthStore
+      .getState()
+      .init({ session: mocks.fakeSession as never, secret: 'secret-abc', creatorPubky: 'account' });
     mocks.paykitSetupStatus.mockResolvedValueOnce({ status: 'connected' });
 
     const error = await LocksService.lookupPaykitSetupStatus('BTC').catch((caught: unknown) => caught);
@@ -261,7 +269,9 @@ describe('LocksService (auth)', () => {
     ['setLockServiceConfig', () => LocksService.setLockServiceConfig(), () => mocks.setLockServicePointer],
     ['lookupPaykitSetupStatus', () => LocksService.lookupPaykitSetupStatus('BTC'), () => mocks.paykitSetupStatus],
   ])('%s promotes an HTTP 401 to an auth error', async (_name, call, mock) => {
-    useLocksAuthStore.getState().init({ session: mocks.fakeSession as never, secret: 'secret-abc' });
+    useLocksAuthStore
+      .getState()
+      .init({ session: mocks.fakeSession as never, secret: 'secret-abc', creatorPubky: 'account' });
     mock().mockRejectedValueOnce(new Error('Lock Server request failed with HTTP 401'));
 
     const error = await call().catch((caught: unknown) => caught);
@@ -300,7 +310,7 @@ describe('LocksService (content)', () => {
     vi.clearAllMocks();
     useAuthStore.setState({ currentUserPubky: 'account' });
     useLocksAuthStore.setState(locksAuthInitialState);
-    useLocksAuthStore.getState().init({ session, secret: 'secret-abc' });
+    useLocksAuthStore.getState().init({ session, secret: 'secret-abc', creatorPubky: 'account' });
   });
 
   it('registerGuardedResource returns the descriptor and the owner pubky', async () => {
