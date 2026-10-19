@@ -2,6 +2,8 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { useUndoRepost } from './useUndoRepost';
 
 // Exercise the real useDeletePost so the assertions cover the resulting action,
@@ -22,6 +24,7 @@ describe('useUndoRepost', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ currentUserPubky: 'viewer', session: mockSession(), restoreStatus: 'ready' });
     vi.mocked(PostController.commitDelete).mockResolvedValue(undefined);
     vi.mocked(PostController.getDetails).mockResolvedValue(null);
   });
@@ -60,11 +63,36 @@ describe('useUndoRepost', () => {
     expect(result.current.isUndoing).toBe(false);
   });
 
+  it('removes the repost from a toast Undo clicked after the composer unmounted', async () => {
+    const { result, unmount } = renderHook(() => useUndoRepost(false, { outlivesOwner: true }));
+    const { undoRepost } = result.current;
+    unmount();
+
+    await act(async () => {
+      expect(await undoRepost(repostId)).toBe(true);
+    });
+
+    expect(PostController.commitDelete).toHaveBeenCalledExactlyOnceWith({ compositePostId: repostId });
+    expect(toast).toHaveBeenCalledExactlyOnceWith({ title: 'Repost removed', dismissButton: true });
+  });
+
+  it('keeps the header Undo scoped to its mounted post', async () => {
+    const { result, unmount } = renderHook(() => useUndoRepost());
+    const { undoRepost } = result.current;
+    unmount();
+
+    await act(async () => {
+      expect(await undoRepost(repostId)).toBe(false);
+    });
+
+    expect(PostController.commitDelete).not.toHaveBeenCalled();
+  });
+
   it('exposes the pending state until deletion settles', async () => {
     const deletion = Promise.withResolvers<void>();
     vi.mocked(PostController.commitDelete).mockReturnValueOnce(deletion.promise);
     const { result } = renderHook(() => useUndoRepost());
-    let undo: Promise<void>;
+    let undo: Promise<boolean>;
 
     act(() => {
       undo = result.current.undoRepost(repostId);

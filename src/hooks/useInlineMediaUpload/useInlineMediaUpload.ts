@@ -9,6 +9,7 @@ import {
   ATTACHMENT_MAX_OTHER_SIZE,
 } from '@/config/posts';
 import { FileController } from '@/controllers/file/file';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getInlineMediaKindFromMime, type InlineMediaKind } from '@/libs/file/inlineMediaKind';
 import { getImageUploadSizeLimitLabelMb, getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
@@ -79,6 +80,7 @@ export function useInlineMediaUpload({
   authorPubky,
   getInlineBudget,
 }: UseInlineMediaUploadOptions): UseInlineMediaUploadReturn {
+  const { waitForAuth } = useRequireAuth(enabled);
   const sessionRef = useRef<Map<string, SessionUpload> | null>(null);
   const [uploadingCount, setUploadingCount] = useState(0);
   // Synchronous twin of uploadingCount: budget checks must see uploads
@@ -130,8 +132,11 @@ export function useInlineMediaUpload({
     setUploadingCount((count) => count + 1);
     let uri: string;
     try {
+      if (!(await waitForAuth(crypto.randomUUID())) || discardedRef.current)
+        throw taggedRejection('Inline media upload canceled.');
       uri = await FileController.commitCreate({ file, pubky });
     } catch (error) {
+      if (error instanceof Error && error.name === INLINE_MEDIA_UPLOAD_REJECTION_NAME) throw error;
       Logger.error('[useInlineMediaUpload] Inline media upload failed', { error });
       toast({
         variant: 'error',

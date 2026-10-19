@@ -5,6 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { TagKind } from '@/application/tag/tag.types';
 import { PostController } from '@/controllers/post/post';
 import { TagController } from '@/controllers/tag/tag';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTagCache } from '@/hooks/useTagCache/useTagCache';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
@@ -201,10 +202,14 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     else if (mergeHasMore) await loadNextMergePage();
   }
 
+  const { waitForAuth } = useRequireAuth();
+
   const handleTagAdd = useCallback(
     async (tagString: string): Promise<{ success: boolean; error?: string }> => {
       const revision = viewRevision.current;
       const label = tagString.trim();
+      if (!(await waitForAuth(label.toLowerCase()))) return { success: false };
+      if (viewRevision.current !== revision) return { success: false };
 
       if (!label) return { success: false, error: 'Tag label cannot be empty' };
       if (!postId) return { success: false, error: 'Post ID is required' };
@@ -247,13 +252,15 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         return { success: false, error: 'Failed to add tag' };
       }
     },
-    [postId, viewerId, allTags],
+    [postId, viewerId, allTags, waitForAuth],
   );
 
   const handleTagToggle = useCallback(
     async (tag: { label: string; relationship?: boolean }): Promise<void> => {
-      if (!postId || !viewerId) return;
+      if (!postId) return;
       const revision = viewRevision.current;
+      if (!(await waitForAuth(tag.label.toLowerCase()))) return;
+      if (viewRevision.current !== revision || !viewerId) return;
 
       // Use the relationship from the tag (which comes from transformTagsForViewer)
       // This is more reliable than checking the taggers array which may be truncated
@@ -328,7 +335,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         });
       }
     },
-    [postId, viewerId, allTags, tagOrder],
+    [postId, viewerId, allTags, tagOrder, waitForAuth],
   );
 
   return {

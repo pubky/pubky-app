@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CircleCheck, Newspaper } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
@@ -13,7 +13,7 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboar
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { generateBitkitContactDeeplink } from '@/libs/deeplink/deeplink';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
-import { formatSats } from '@/libs/utils/formatSats';
+import { formatLockPrice } from '@/libs/utils/lockPrice';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 import { AppDownload } from '@/molecules/AppDownload/AppDownload';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
@@ -64,7 +64,7 @@ function WaitingMessage({
  * Pay to Unlock modal. Purely presentational — `usePayToUnlock` owns the state machine.
  *
  * Opening the modal starts the purchase automatically once the reader has a wallet. Closing during a
- * submission or `waiting` is allowed — the stored bundle id safely resumes it on reopen — but it asks
+ * submission, `waiting` or `finishing` is allowed — the stored bundle id safely resumes it on reopen — but it asks
  * first, because a spinner vanishing on its own reads as a lost payment. The install screen is the
  * exception: nothing has been submitted there, so that close goes through without asking.
  */
@@ -73,7 +73,7 @@ export function DialogPayToUnlock({
   onOpenChange,
   lockTitle,
   authorId,
-  priceSats,
+  price,
   stage,
   isStalled,
   handshakePubky,
@@ -90,12 +90,21 @@ export function DialogPayToUnlock({
   const handshakeValue = handshakePubky ? withPubkyPrefix(handshakePubky) : null;
   const showQr = Boolean(handshakeValue) && stage === 'waiting';
   const hasNotice = connectionState === 'blocked' || connectionState === 'recovery_required' || walletSetupNeeded;
-  const showSpinner = stage === 'checking' || (stage === 'waiting' && !showQr && !isStalled && !hasNotice);
-  const showPrimary = stage === 'retry' || isInstall;
+  const showSpinner =
+    stage === 'checking' ||
+    (stage === 'finishing' && !isStalled) ||
+    (stage === 'waiting' && !showQr && !isStalled && !hasNotice);
+  const showHandshakeSpinner = showQr && connectionState === 'handshake' && !isStalled && !hasNotice;
+  const showPrimary = stage === 'retry' || stage === 'expired' || isInstall;
   const primaryLabel = isInstall ? 'I completed the steps' : 'Try again';
-  // `unopened` reached this screen by a completed payment too, so it must not show a cost to pay.
-  const isPaid = stage === 'paid' || stage === 'unopened';
+  // Downloading or retrying paid content must not look like another payment is required.
+  const isPaid = stage === 'finishing' || stage === 'paid' || stage === 'unopened';
   const [isConfirmingClose, setIsConfirmingClose] = useState(false);
+  // The parent can close the modal itself (an expired session), past this prompt's buttons, so the
+  // prompt would otherwise still be up on the next open.
+  useEffect(() => {
+    if (!open) setIsConfirmingClose(false);
+  }, [open]);
   const { copyToClipboard } = useCopyToClipboard();
 
   const handleOpenChange = (next: boolean) => {
@@ -107,7 +116,7 @@ export function DialogPayToUnlock({
     }
     // `isSubmitting` covers the gap before `waiting`, while the submission is in flight.
     // On the install screen it is only the wallet check, and nothing is running yet.
-    if (!next && (stage === 'waiting' || (isSubmitting && !isInstall))) {
+    if (!next && (stage === 'waiting' || stage === 'finishing' || (isSubmitting && !isInstall))) {
       setIsConfirmingClose(true);
       return;
     }
@@ -154,7 +163,7 @@ export function DialogPayToUnlock({
                 {isPaid ? 'PAYMENT RECEIVED' : 'COST TO UNLOCK'}
               </Typography>
               <Typography className="text-2xl font-bold text-foreground">
-                {formatSats(priceSats, { space: true })}
+                {formatLockPrice(price, { space: true })}
               </Typography>
             </Container>
 
@@ -171,13 +180,16 @@ export function DialogPayToUnlock({
 
             {/* A parked wait shows only its Check again copy; the notices still apply there. */}
             {stage === 'waiting' && (hasNotice || !isStalled) && (
-              <Typography className="text-base text-secondary-foreground">
-                <WaitingMessage
-                  connectionState={connectionState}
-                  walletSetupNeeded={walletSetupNeeded}
-                  isConnectionPending={isConnectionPending}
-                />
-              </Typography>
+              <Container overrideDefaults className="flex items-start gap-2">
+                {showHandshakeSpinner && <Spinner size="sm" className="mt-1 shrink-0" />}
+                <Typography className="text-base text-secondary-foreground">
+                  <WaitingMessage
+                    connectionState={connectionState}
+                    walletSetupNeeded={walletSetupNeeded}
+                    isConnectionPending={isConnectionPending}
+                  />
+                </Typography>
+              </Container>
             )}
 
             {showQr && handshakeValue && (
@@ -203,10 +215,12 @@ export function DialogPayToUnlock({
 
             {/* Parked, not failed: the purchase is alive, so the reader gets a way back to it rather
               than a spinner that never resolves. */}
-            {stage === 'waiting' && isStalled && (
+            {(stage === 'waiting' || stage === 'finishing') && isStalled && (
               <Container overrideDefaults className="flex flex-col items-start gap-3">
                 <Typography className="text-base text-secondary-foreground">
-                  {'This purchase is still pending. Check Bitkit, then check again here.'}
+                  {stage === 'finishing'
+                    ? 'Your payment is complete. Check again to open the content.'
+                    : 'This purchase is still pending. Check Bitkit, then check again here.'}
                 </Typography>
                 <Button variant={ButtonVariant.OUTLINE} size="lg" onClick={onRecheck} data-cy="pay-to-unlock-recheck">
                   {'Check again'}
@@ -214,9 +228,19 @@ export function DialogPayToUnlock({
               </Container>
             )}
 
+            {stage === 'finishing' && !isStalled && (
+              <Typography className="text-base text-secondary-foreground">{'Opening your content…'}</Typography>
+            )}
+
             {stage === 'retry' && (
               <Typography className="text-base text-secondary-foreground">
                 {'The payment could not continue. Try again when Bitkit is ready.'}
+              </Typography>
+            )}
+
+            {stage === 'expired' && (
+              <Typography className="text-base text-secondary-foreground">
+                {'The payment was not completed. You can try again.'}
               </Typography>
             )}
 
@@ -308,7 +332,7 @@ export function DialogPayToUnlock({
               data-cy="pay-to-unlock-cancel"
             >
               {/* Past submission there is nothing to cancel — the purchase continues server-side. */}
-              {stage === 'waiting' || stage === 'unopened' ? 'Close' : 'Cancel'}
+              {stage === 'waiting' || isPaid ? 'Close' : 'Cancel'}
             </Button>
           )}
           {showPrimary && (
@@ -329,12 +353,12 @@ export function DialogPayToUnlock({
         <Dialog open={isConfirmingClose} onOpenChange={setIsConfirmingClose}>
           <DialogContent className="w-full max-w-md rounded-xl bg-card sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>{'The payment is still running'}</DialogTitle>
+              <DialogTitle>{isPaid ? 'Payment received' : 'The payment is still running'}</DialogTitle>
             </DialogHeader>
             <Typography className="text-base text-secondary-foreground">
-              {
-                'Your payment to unlock this post has not finished yet. It keeps running if you close this, and you can open it again to come back to it.'
-              }
+              {isPaid
+                ? 'Your payment is complete. You can open this post again to access your content.'
+                : 'Your payment to unlock this post has not finished yet. It keeps running if you close this, and you can open it again to come back to it.'}
             </Typography>
             <DialogFooter>
               <Button

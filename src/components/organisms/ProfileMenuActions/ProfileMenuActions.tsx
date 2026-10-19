@@ -35,7 +35,12 @@ export function ProfileMenuActions({ userId, trigger }: ProfileMenuActionsProps)
               <SheetTitle className="sr-only">Profile Actions</SheetTitle>
             </SheetHeader>
             <Container overrideDefaults className="flex flex-col gap-2">
-              <ProfileMenuActionsContent userId={userId} variant={MENU_VARIANT.SHEET} onActionComplete={closeMenu} />
+              <ProfileMenuActionsContent
+                active={open}
+                userId={userId}
+                variant={MENU_VARIANT.SHEET}
+                onActionComplete={closeMenu}
+              />
             </Container>
           </SheetContent>
         </Sheet>
@@ -47,7 +52,12 @@ export function ProfileMenuActions({ userId, trigger }: ProfileMenuActionsProps)
             className="flex w-56 flex-col gap-2.5"
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
-            <ProfileMenuActionsContent userId={userId} variant={MENU_VARIANT.DROPDOWN} onActionComplete={closeMenu} />
+            <ProfileMenuActionsContent
+              active={open}
+              userId={userId}
+              variant={MENU_VARIANT.DROPDOWN}
+              onActionComplete={closeMenu}
+            />
           </DropdownMenuContent>
         </DropdownMenu>
       )}

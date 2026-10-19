@@ -6,6 +6,7 @@ import {
   type TStreamAuthorParams,
   type TStreamAuthorRepliesParams,
   type TStreamCollectionParams,
+  type TStreamPostCollectionsParams,
   type TStreamPostRepliesParams,
   type TStreamPostsByIdsParams,
   type TStreamQueryParams,
@@ -73,6 +74,10 @@ export const postStreamApi = {
   // Single-collection items requiring author_id and post_id
   collection: (params: TStreamCollectionParams) =>
     buildPostStreamUrl(params, StreamSource.COLLECTION, STREAM_PREFIX.POSTS_KEYS),
+
+  // Collections containing a post, requiring the post's author_id and post_id
+  post_collections: (params: TStreamPostCollectionsParams) =>
+    buildPostStreamUrl(params, StreamSource.POST_COLLECTIONS, STREAM_PREFIX.POSTS_KEYS),
 
   // Posts by IDs (POST request)
   postsByIds: (params: TStreamPostsByIdsParams) => {

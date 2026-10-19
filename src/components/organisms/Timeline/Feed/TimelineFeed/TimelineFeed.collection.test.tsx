@@ -179,7 +179,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
       expect(lastProps().membershipPostIds).toBeUndefined();
     });
 
-    it('does not hand the owner a membership (their own flows already update the feed)', () => {
+    it('hands the owner the same local membership as other viewers', () => {
       mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
       mockAuthState.currentUserPubky = 'author-1';
       mockAuthState.session = {};
@@ -187,7 +187,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
 
-      expect(lastProps().membershipPostIds).toBeUndefined();
+      expect(lastProps().membershipPostIds).toEqual(['author-1:item-a']);
     });
 
     it('hands a signed-out viewer the membership too (the public TTL refreshes their envelope)', () => {

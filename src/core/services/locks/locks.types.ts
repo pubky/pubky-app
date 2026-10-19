@@ -2,6 +2,16 @@ import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { z } from 'zod';
 import { POST_KINDS } from '@/models/models.types';
 
+/** A price in the denomination's smallest unit: sats or USD cents. */
+export const lockPriceSchema = z.object({
+  asset: z.enum(['BTC', 'USD']),
+  amount: z
+    .string()
+    .refine((value) => /^[1-9]\d{0,19}$/.test(value) && BigInt(value) <= BigInt('18446744073709551615')),
+});
+export type TLockPrice = z.infer<typeof lockPriceSchema>;
+export type TLockPriceAsset = TLockPrice['asset'];
+
 // ── Creator: auth + publishing ──────────────────────────────────────────────
 
 /** Params to build a `/connect` URL for the Lock-Server-hosted auth shell. */
@@ -257,7 +267,10 @@ export const replicatedPostSchema = z.object({
 
 export type ReplicatedPost = z.infer<typeof replicatedPostSchema>;
 
-/** Reader's `/priv/social/purchases/<lockId>.json`: the bundle id a payment was started with. */
+/**
+ * Body of a reader's purchase file: the bundle id a payment was started with. Parsed only from the
+ * legacy `/priv/social/purchases/<lockId>.json`; a `<lockId>/<bundleId>.json` file is read by its name.
+ */
 export const purchaseFileSchema = z.object({ bundle_id: z.string().min(1) });
 
 export interface TUnlockedListItem {
@@ -293,7 +306,7 @@ export interface TFetchLockFileParams {
 /** A fetched lock file and its validated payment price. */
 export interface TFetchLockFileResult {
   lockFile: LockFile | null;
-  priceSats: string | null;
+  price: TLockPrice | null;
 }
 
 /** One payment proof for a lock criterion. Its verifier payload is currently empty. */

@@ -58,6 +58,12 @@ on:
         required: false
         type: string
 
+      tag_mode:
+        description: "Tag the image with the commit SHA ('commit', default) or a hash of the Docker build inputs ('content', lets e2e skip unchanged rebuilds)"
+        required: false
+        default: 'commit'
+        type: string
+
 env:
   registry: 'europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo'
 
@@ -84,7 +90,15 @@ jobs:
       - name: Set Current Tag as Output
         id: set_tag
         run: |
-          echo image_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
+          if [ "${{ inputs.tag_mode }}" = "content" ]; then
+            # Hash of every input the Docker build can consume; identical inputs
+            # therefore reuse an already-built image. Single implementation in
+            # .github/scripts/docker-content-tag.sh, shared with e2e-test.yml.
+            TAG=$(bash .github/scripts/docker-content-tag.sh '${{ inputs.platforms }}')
+          else
+            TAG=${{ steps.sha_tag.outputs.hash }}
+          fi
+          echo image_tag=$TAG >> $GITHUB_OUTPUT
           echo image_name=pubky-app >> $GITHUB_OUTPUT
 
       - name: Login to registry
@@ -98,7 +112,7 @@ jobs:
         id: check_image
         with:
           image: ${{ env.registry }}/${{ steps.set_tag.outputs.image_name }}
-          tag: ${{ steps.sha_tag.outputs.hash }}
+          tag: ${{ steps.set_tag.outputs.image_tag }}
           arch: ${{ inputs.platforms }}
 
   build_image:
@@ -106,6 +120,9 @@ jobs:
     needs: [check_image]
     if: ${{ needs.check_image.outputs.image_exists != 'true' }}
     runs-on: ['ubuntu-latest']
+    # Fast-fail a hung amd64 build (a warm one takes ~7min). Manual dispatches can
+    # pick emulated arm64 platforms, which legitimately run far longer.
+    timeout-minutes: ${{ inputs.platforms == 'linux/amd64' && 20 || 60 }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -128,6 +145,12 @@ jobs:
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}
           latest: ${{ inputs.latest }}
+          # Content mode pushes the content tag together with the commit tag
+          # (the composite's sha_tag), so consumers of either resolve the same
+          # image from the moment of push, even if the run is cancelled during
+          # cache export.
+          tags: |
+            type=raw,value=${{ needs.check_image.outputs.image_tag }},enable=${{ inputs.tag_mode == 'content' }}
           # NOTE: network values (NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL,
           # DEFAULT_HTTP_RELAY, PKARR_RELAYS, TESTNET) and Sentry values (SENTRY_DSN,
           # SENTRY_ENVIRONMENT, SENTRY_*_SAMPLE_RATE) are intentionally NOT build args. They are

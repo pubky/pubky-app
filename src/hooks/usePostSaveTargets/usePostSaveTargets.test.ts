@@ -13,6 +13,10 @@ const mocks = vi.hoisted(() => ({
   toggleBookmark: vi.fn(),
   loadMoreCollections: vi.fn(),
   paginationEnabled: null as boolean | null,
+  collection1Saved: true,
+  completionReadPending: false,
+  postCollectionsEnabled: null as boolean | null,
+  postCollectionIds: [] as string[],
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
@@ -40,14 +44,14 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
       loadMore: mocks.loadMoreCollections,
     };
   },
-  useAuthoredCollections: () => ({
+  useAuthoredCollections: (_enabled: boolean, version: number) => ({
     collections: [
       {
         details: { id: 'author:collection1' },
         content: {
           name: 'Proof of Work',
           description: 'Bitcoin writing',
-          items: ['pubky://author/pub/pubky.app/posts/post1'],
+          items: mocks.collection1Saved ? ['pubky://author/pub/pubky.app/posts/post1'] : [],
         },
       },
       {
@@ -59,8 +63,17 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
         },
       },
     ],
-    isLoading: false,
+    isLoading: version > 0 && mocks.completionReadPending,
+    // A pending forced read still shows the rows of the previous version.
+    readVersion: version > 0 && mocks.completionReadPending ? version - 1 : version,
   }),
+}));
+
+vi.mock('@/hooks/usePostCollections/usePostCollections', () => ({
+  usePostCollections: (_postId: string, { enabled }: { enabled?: boolean }) => {
+    mocks.postCollectionsEnabled = enabled ?? null;
+    return { collectionIds: mocks.postCollectionIds, isLoading: false };
+  },
 }));
 
 vi.mock('@/molecules/Toaster/toast');
@@ -73,6 +86,30 @@ describe('usePostSaveTargets', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.paginationEnabled = null;
+    mocks.collection1Saved = true;
+    mocks.completionReadPending = false;
+    mocks.commitUpdateCollectionItem.mockReset().mockResolvedValue(undefined);
+    mocks.postCollectionsEnabled = null;
+    mocks.postCollectionIds = [];
+  });
+
+  it("lists other users' curating collections only while the picker is open, without the viewer's own", async () => {
+    // A malformed key from Nexus is dropped instead of throwing out of the render.
+    mocks.postCollectionIds = [
+      'other-user:collection9',
+      'current-user:collection1',
+      'malformed',
+      'another-user:collection3',
+    ];
+
+    const open = renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: true }));
+
+    expect(mocks.postCollectionsEnabled).toBe(true);
+    expect(open.result.current.otherCollectionIds).toEqual(['other-user:collection9', 'another-user:collection3']);
+    expect(open.result.current.isOtherCollectionsLoading).toBe(false);
+
+    renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: false }));
+    expect(mocks.postCollectionsEnabled).toBe(false);
   });
 
   it('paginates authored collections only while the picker is open', async () => {
@@ -158,6 +195,69 @@ describe('usePostSaveTargets', () => {
     });
   });
 
+  it('stays busy until the live query acknowledges a rollback, then accepts subsequent membership changes', async () => {
+    const pending = Promise.withResolvers<void>();
+    mocks.commitUpdateCollectionItem.mockReturnValueOnce(pending.promise);
+    const { result, rerender } = renderHook(() => usePostSaveTargets('author:post1'));
+    let update: Promise<boolean>;
+    act(() => {
+      update = result.current.toggleCollection('author:collection1');
+    });
+    mocks.collection1Saved = false;
+    rerender();
+    expect(result.current.collections[0]).toMatchObject({ isSaved: false, isUpdating: true });
+    mocks.completionReadPending = true;
+    await act(async () => {
+      pending.reject(
+        new AppError({
+          category: ErrorCategory.Validation,
+          code: ValidationErrorCode.INVALID_INPUT,
+          message: 'Save rejected',
+          service: ErrorService.Local,
+          operation: 'test-rollback',
+        }),
+      );
+      await update;
+    });
+    expect(result.current.collections[0].isUpdating).toBe(true);
+    expect(result.current.collections[1].isUpdating).toBe(false);
+    mocks.collection1Saved = true;
+    mocks.completionReadPending = false;
+    rerender();
+    expect(result.current.collections[0]).toMatchObject({ isSaved: true, isUpdating: false });
+    mocks.collection1Saved = false;
+    rerender();
+    expect(result.current.collections[0]).toMatchObject({ isSaved: false, isUpdating: false });
+  });
+
+  it('keeps the other collections interactive while a completed toggle waits for its fresh read', async () => {
+    const { result, rerender } = renderHook(() => usePostSaveTargets('author:post1'));
+    mocks.completionReadPending = true;
+    await act(async () => {
+      await result.current.toggleCollection('author:collection1');
+    });
+    expect(result.current.collections.map((collection) => collection.isUpdating)).toEqual([true, false]);
+
+    await act(async () => {
+      expect(await result.current.toggleCollection('author:collection1')).toBe(false);
+    });
+    expect(mocks.commitUpdateCollectionItem).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await result.current.toggleCollection('author:collection2');
+    });
+    expect(mocks.commitUpdateCollectionItem).toHaveBeenLastCalledWith({
+      collectionId: 'author:collection2',
+      postId: 'author:post1',
+      shouldAdd: true,
+    });
+    // The mocked list now reflects the first toggle's read; only the second waits.
+    expect(result.current.collections.map((collection) => collection.isUpdating)).toEqual([false, true]);
+    mocks.completionReadPending = false;
+    rerender();
+    expect(result.current.collections.map((collection) => collection.isUpdating)).toEqual([false, false]);
+  });
+
   it('creates a collection with the current post URI as first item', async () => {
     const { result } = renderHook(() => usePostSaveTargets('author:post1'));
 
@@ -173,3 +273,8 @@ describe('usePostSaveTargets', () => {
     });
   });
 });
+
+// These tests exercise the mutation after auth readiness; restore races use the real store in auth-wait tests.
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ waitForAuth: async () => true }),
+}));

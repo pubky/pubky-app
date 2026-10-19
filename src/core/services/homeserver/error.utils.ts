@@ -172,6 +172,7 @@ export const handleError = ({
   statusCode = HttpStatusCode.INTERNAL_SERVER_ERROR,
   alwaysUseHomeserverError = false,
 }: THandleErrorParams): never => {
+  if (error instanceof Error && error.name === AUTH_FLOW_CANCELED_ERROR_NAME) throw error;
   // Re-throw existing AppErrors as-is
   if (error instanceof AppError) {
     throw error;

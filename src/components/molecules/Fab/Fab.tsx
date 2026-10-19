@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Plus } from 'lucide-react';
+import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { useFabAction } from '@/hooks/useFabAction/useFabAction';
@@ -33,6 +34,7 @@ import { useCollectionReorderStore } from '@/stores/collectionReorder/collection
  *   (Back/Continue) that the FAB would overlap, and creating posts
  *   mid-onboarding is out of flow (reachable once fully authenticated,
  *   e.g. the tags step)
+ * - Hidden on Shop routes, which provide their own commerce actions
  * - Hidden while a collection is in reorder mode (reorder mode is for
  *   reordering, not adding posts; the flag bridges from the page via the
  *   `collectionReorder` store since the FAB lives outside the page tree)
@@ -53,9 +55,10 @@ export function Fab() {
   const isReorderActive = useCollectionReorderStore((state) => state.activeCollectionId !== null);
 
   const isOnboardingRoute = pathname?.startsWith('/onboarding') ?? false;
+  const isShopRoute = pathname === APP_ROUTES.SHOP || pathname?.startsWith(`${APP_ROUTES.SHOP}/`);
   // Show FAB for authenticated users OR unauthenticated users on public explore routes
   const shouldShow = isFullyAuthenticated || isPublicExploreRoute;
-  if (isLoading || !shouldShow || isReorderActive || isOnboardingRoute) {
+  if (isLoading || !shouldShow || isReorderActive || isOnboardingRoute || isShopRoute) {
     return null;
   }
   const buttonClasses = cn(

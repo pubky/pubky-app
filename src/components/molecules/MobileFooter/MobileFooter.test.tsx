@@ -12,6 +12,7 @@ import {
   resetRuntimeConfigForTests,
   RUNTIME_CONFIG_WINDOW_KEY,
 } from '@/libs/runtime-config/runtime-config';
+import type { AuthState } from '@/stores/auth/auth.types';
 import { MobileFooter } from './MobileFooter';
 
 const collectionsDiscoveryMock = vi.hoisted(() => ({
@@ -19,6 +20,7 @@ const collectionsDiscoveryMock = vi.hoisted(() => ({
 }));
 
 let mockCurrentUserPubky: string | null = 'pk:test-user-pubky';
+let mockRestoreStatus: AuthState['restoreStatus'] = 'ready';
 let mockIsPublicRoute = false;
 let mockIsCoreExploreRoute = false;
 
@@ -91,6 +93,7 @@ vi.mock('@/app/routes', async () => {
       HOME: '/home',
       SEARCH: '/search',
       HOT: '/hot',
+      SHOP: '/shop',
       COLLECTIONS: '/collections',
       SETTINGS: '/settings',
       PROFILE: '/profile',
@@ -135,9 +138,16 @@ vi.mock('@/controllers/file/file', () => ({
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(
-    (selector: (state: { currentUserPubky: string | null; setShowSignInDialog: (open: boolean) => void }) => unknown) =>
+    (
+      selector: (state: {
+        currentUserPubky: string | null;
+        restoreStatus: AuthState['restoreStatus'];
+        setShowSignInDialog: (open: boolean) => void;
+      }) => unknown,
+    ) =>
       selector({
         currentUserPubky: mockCurrentUserPubky,
+        restoreStatus: mockRestoreStatus,
         setShowSignInDialog: collectionsDiscoveryMock.setShowSignInDialog,
       }),
   ),
@@ -159,6 +169,7 @@ describe('MobileFooter', () => {
     vi.mocked(usePathname).mockReturnValue('/home');
     mockSelectUnread.mockReturnValue(0);
     mockCurrentUserPubky = 'pk:test-user-pubky';
+    mockRestoreStatus = 'ready';
     mockIsPublicRoute = false;
     mockIsCoreExploreRoute = false;
     Object.defineProperty(window, 'sessionStorage', {
@@ -175,21 +186,47 @@ describe('MobileFooter', () => {
     resetRuntimeConfigForTests();
   });
 
-  it.each([true, false])('uses the injected Shop destination (authenticated: %s)', (authenticated) => {
-    mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
-    mockIsCoreExploreRoute = true;
-    window[RUNTIME_CONFIG_WINDOW_KEY] = {
-      ...readServerConfig(),
-      shopUrl: 'https://shop.example.com/marketplace',
-    };
-    render(<MobileFooter />);
-    const link = screen.getByRole('link', { name: 'Shop' });
-    expect(link).toHaveAttribute('href', 'https://shop.example.com/marketplace');
-    expect(link.getAttribute('target')).not.toBe('_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    fireEvent.click(link);
-    expect(collectionsDiscoveryMock.setShowSignInDialog).not.toHaveBeenCalled();
+  describe('default embedded Shop navigation', () => {
+    it.each([true, false])('keeps Shop navigation inside the App (authenticated: %s)', (authenticated) => {
+      mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
+      mockIsCoreExploreRoute = true;
+      window[RUNTIME_CONFIG_WINDOW_KEY] = readServerConfig();
+      render(<MobileFooter />);
+      const link = screen.getByRole('link', { name: 'Shop' });
+      expect(link).toHaveAttribute('href', '/shop');
+      expect(link).not.toHaveAttribute('target');
+      expect(link).not.toHaveAttribute('rel');
+      fireEvent.click(link);
+      expect(collectionsDiscoveryMock.setShowSignInDialog).not.toHaveBeenCalled();
+    });
   });
+
+  it.each(['reauth-required', 'temporary-error'] as const)(
+    'switches retained account navigation to guest mode after %s',
+    (status) => {
+      mockIsCoreExploreRoute = true;
+      mockSelectUnread.mockReturnValue(3);
+      const { rerender } = render(<MobileFooter />);
+      expect(screen.getByRole('link', { name: 'Profile' })).toBeInTheDocument();
+
+      mockRestoreStatus = 'restoring';
+      rerender(<MobileFooter />);
+      expect(screen.getByRole('link', { name: 'Profile' })).toBeInTheDocument();
+
+      mockRestoreStatus = status;
+      rerender(<MobileFooter />);
+      expect(screen.queryByRole('link', { name: 'Profile' })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('avatar-with-fallback')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('mobile-notification-counter')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Join Pubky' }));
+      expect(collectionsDiscoveryMock.setShowSignInDialog).toHaveBeenCalledWith(true);
+
+      mockRestoreStatus = 'ready';
+      rerender(<MobileFooter />);
+      expect(screen.getByRole('link', { name: 'Profile' })).toBeInTheDocument();
+      expect(screen.getByTestId('mobile-notification-counter')).toHaveTextContent('3');
+    },
+  );
 
   it('renders with default props', () => {
     render(<MobileFooter />);
@@ -550,7 +587,7 @@ describe('MobileFooter', () => {
       '/home',
       '/search',
       '/hot',
-      'https://shop.staging.pubky.app/marketplace',
+      '/shop',
       '/collections',
       '/settings/account',
     ]);
@@ -573,6 +610,7 @@ describe('MobileFooter', () => {
 
   it('does not render for guests on non-explore routes', () => {
     mockCurrentUserPubky = null;
+    mockRestoreStatus = 'ready';
     mockIsPublicRoute = false;
     mockIsCoreExploreRoute = false;
 

@@ -64,19 +64,10 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({ isAuthenticated: true, requireAuth: (action: () => void) => action() }),
 }));
-vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => ({
-  usePostSaveTargets: () => ({
-    isBookmarked: true,
-    isBookmarkLoading: false,
-    isBookmarkToggling: false,
-    collections: [],
-    isCollectionsLoading: false,
-    isCreatingCollection: false,
-    toggleBookmark: vi.fn(),
-    toggleCollection: vi.fn(),
-    createCollectionWithPost: vi.fn(),
-  }),
-}));
+vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', async () => {
+  const { idlePostSaveTargets } = await import('@/test/mocks/usePostSaveTargets');
+  return { usePostSaveTargets: () => ({ ...idlePostSaveTargets, isBookmarked: true }) };
+});
 vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   useDeletePost: () => ({ deletePost: vi.fn(), isDeleting: false }),
 }));
@@ -183,6 +174,21 @@ describe('TimelineCardsPosts', () => {
       />,
     );
     expect(screen.getByText('No saved posts')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Post' })).toBeInTheDocument();
+  });
+
+  it('reports a failed load beside the Add Post tile instead of the empty copy', () => {
+    render(
+      <TimelineCardsPosts
+        {...props}
+        postIds={[]}
+        error="Network error"
+        emptyState={<p>No saved posts</p>}
+        trailingSlot={<button>Add Post</button>}
+      />,
+    );
+    expect(screen.getByText('Error: Network error')).toBeInTheDocument();
+    expect(screen.queryByText('No saved posts')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add Post' })).toBeInTheDocument();
   });
 

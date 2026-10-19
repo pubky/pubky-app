@@ -1,7 +1,7 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import type * as Sentry from '@sentry/nextjs';
 import { AppError, hasAppErrorInCauseChain } from '@/libs/error/error';
-import { ClientErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ClientErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import {
@@ -74,6 +74,18 @@ function matchesEndpointPath(error: AppError, pattern: RegExp): boolean {
  */
 const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
   {
+    name: 'unusable-saved-grant',
+    reason:
+      'Known SDK restore outcomes require sign-in or finish pending cleanup (PR #2614). ' +
+      'Unreadable versions, storage failures and generic authentication failures remain reportable.',
+    matches: (error) =>
+      error.service === ErrorService.Homeserver &&
+      error.operation === 'restoreGrant' &&
+      error.category === ErrorCategory.Auth &&
+      error.code === AuthErrorCode.SESSION_EXPIRED &&
+      ['missing_local_grant', 'remote_logout_completed', 'invalid_grant'].includes(String(error.context?.reason)),
+  },
+  {
     name: 'nexus-post-tags-404',
     reason: 'Low-value post-tags telemetry; Nexus retry behavior is preserved and other Nexus errors stay reportable.',
     matches: (error) =>
@@ -105,6 +117,18 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       'Aborts with no signal (browser-driven) and AbortSignal.timeout() TimeoutErrors (mapped to a Network code) ' +
       'stay reportable.',
     matches: (error) => error.code === TimeoutErrorCode.REQUEST_ABORTED && error.context?.signalAborted === true,
+  },
+  {
+    name: 'shop-listing-metadata-transport',
+    reason:
+      'Shop listing previews are best-effort enrichment (PR #2835, review 4292696485). safeFetch constructs transport ' +
+      'errors before the service returns its generic preview, so an unavailable Shop otherwise creates an alert per crawl. ' +
+      'Keep these connection/timeout failures in local logs; Shop readiness, cleanup, auth and payment operations, ' +
+      'and non-transport errors on this operation remain reportable.',
+    matches: (error) =>
+      error.service === ErrorService.Shop &&
+      error.operation === 'fetchListingMetadata' &&
+      (error.category === ErrorCategory.Network || error.category === ErrorCategory.Timeout),
   },
   {
     name: 'homeserver-event-stream-connect',

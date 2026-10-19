@@ -23,6 +23,7 @@ export enum ErrorService {
   Homeserver = 'homeserver',
   Homegate = 'homegate',
   Locks = 'locks',
+  Shop = 'shop',
   Exchangerate = 'exchangerate',
   Chatwoot = 'chatwoot',
   PubkyAppSpecs = 'pubky-app-specs',

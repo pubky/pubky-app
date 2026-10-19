@@ -10,6 +10,7 @@ import { useSearchStreamId } from './useSearchStreamId';
 const mockGet = vi.fn();
 const mockQueryParam = vi.hoisted(() => ({ value: null as string | null }));
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useSearchParams: () => ({
     get: (key: string) => (key === 'q' ? mockQueryParam.value : mockGet(key)),
   }),

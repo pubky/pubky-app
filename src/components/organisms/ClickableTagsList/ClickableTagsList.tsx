@@ -18,7 +18,6 @@ import { PostTagAddButton } from '@/molecules/PostTagAddButton/PostTagAddButton'
 import { PostTagPopoverWrapper } from '@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { TagInputToggle } from '@/molecules/TagInputToggle/TagInputToggle';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import type { ClickableTagsListProps } from './ClickableTagsList.types';
 
 /**
@@ -66,7 +65,6 @@ export function ClickableTagsList({
 
   // Auth requirement for tag actions
   const { isAuthenticated, requireAuth } = useRequireAuth();
-  const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
 
   // Use unified entity tags hook
   const {
@@ -107,13 +105,11 @@ export function ClickableTagsList({
       e.stopPropagation();
       return;
     }
-    requireAuth(() => {
-      if (onTagClick) {
-        onTagClick(tag, index, e);
-      } else {
-        void handleTagToggle(tag);
-      }
-    });
+    if (onTagClick) {
+      onTagClick(tag, index, e);
+    } else {
+      void handleTagToggle(tag);
+    }
   };
 
   // Handle input blur - close input in addMode when empty
@@ -149,7 +145,7 @@ export function ClickableTagsList({
   };
 
   // For unauthenticated users, clicking input opens sign-in dialog
-  const handleInputClick = !isAuthenticated ? () => setShowSignInDialog(true) : undefined;
+  const handleInputClick = !isAuthenticated ? () => requireAuth(() => undefined) : undefined;
 
   return (
     <Container overrideDefaults className="flex flex-col gap-1">

@@ -109,6 +109,16 @@ export class Identity {
     return keypair.publicKey.z32();
   }
 
+  /** Inspect optional recovery material without reporting an expected validation failure. */
+  static tryZ32FromSecret(secretKey: string): Pubky | null {
+    if (!/^[0-9a-f]{64}$/i.test(secretKey)) return null;
+    try {
+      return Keypair.fromSecret(new Uint8Array(Buffer.from(secretKey, 'hex'))).publicKey.z32();
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Converts a keypair to a human-readable pubky string
    * @param keypair - The keypair to convert

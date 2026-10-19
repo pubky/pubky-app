@@ -24,14 +24,14 @@ How the installed-app layer works, what the service worker is allowed to do, and
 
 1. **Precaches the app shell**: every `_next/static` asset the build emits plus a short allow-list of `public/` files (`offline.html`, the manifest, the logos, the manifest icons). See _Precache diet_ below.
 2. **Handles the share target**: a `POST /share` from the OS share sheet is turned into a `303` to `/share?…` with any files stashed in the `share-target-files` cache (see `src/libs/share/shareTarget.ts`).
-3. **Serves an offline fallback for navigations**: same-origin page navigations go to the network (`NetworkOnly`, consuming navigation preload). When the fetch itself fails (offline, DNS), Serwist's `fallbacks` returns the precached `offline.html`. An HTTP error response is passed through untouched.
+3. **Serves an offline fallback for App navigations**: same-origin page navigations outside `/api/` go to the network (`NetworkOnly`, consuming navigation preload). When the fetch itself fails (offline, DNS), Serwist's `fallbacks` returns the precached `offline.html`, except under the separate `/shop-embed` mount. An HTTP error response is passed through untouched.
 
 ## What it must never do
 
 - **Cache data.** Dexie is the app's only data cache and the TTL layer is its only freshness mechanism (`docs/local-first.md`, `docs/data-patterns.md`). A runtime cache in the worker would hand the app a stale response it then stamps as fresh. There is no `defaultCache`, and no `runtimeCaching` entry other than the navigation route.
-- **Touch cross-origin traffic.** Homeserver, pkarr relays, httprelay, Nexus and the CDN are never intercepted. Homeserver writes go through the WASM SDK with a cross-origin cookie and are invisible to the worker anyway. PR #1384 removed `defaultCache` after concurrent pkarr lookups cancelled each other through the cache.
+- **Touch cross-origin traffic.** Homeserver, pkarr relays, httprelay, Nexus and the CDN are excluded from the worker's runtime handlers. Homeserver writes use the WASM SDK's grant authorization; they do not depend on cross-origin session cookies. PR #1384 removed `defaultCache` after concurrent pkarr lookups cancelled each other through the cache.
 - **Take over open tabs on its own.** `skipWaiting` is off; see _Update flow_.
-- **Boot the app when offline.** The fallback is a static file, not a Next route: booting the app offline runs the session restore, which today wipes local state when the homeserver is unreachable.
+- **Boot the app when offline.** The fallback is a static file, not a Next route: it keeps startup, session restore and other network-dependent initialization out of the offline response. Grant restore now retains its reference on temporary network failure; the static fallback does not depend on that recovery path.
 
 ## Update flow
 
@@ -47,7 +47,7 @@ The first install claims open tabs without a reload or a toast. Rollout note: `s
 
 `public/offline.html` is a self-contained page (inline CSS, `#05050A` background, the precached `/pubky-logo.svg`, a Retry button that reloads the page the user actually asked for, and an `online` listener that does the same). Prettier and ESLint ignore `public/`, so keep it hand-formatted. It is in the precache allow-list, and Serwist revisions it by content hash, so edits invalidate automatically.
 
-Do not replace it with a Next route: `/offline` under the root layout would render `DatabaseProvider` → `RouteGuardProvider`, start the session restore, and log the user out in the background. The same rule applies to the Pubky Passport callback page (`public/passport/return.html`), which opens in a popup on the origin the opener is signing into.
+Do not replace it with a Next route: `/offline` under the root layout would render `DatabaseProvider` → `RouteGuardProvider` and start session restoration and account initialization. The same separation applies to the Pubky Passport callback page (`public/passport/return.html`), which opens in a popup on the origin the opener is signing into and must not start a second App lifecycle.
 
 ## Precache diet
 
@@ -85,3 +85,7 @@ await sharp({ create: { width: 512, height: 512, channels: 4, background: '#0000
 - **Offline fallback and precache**: `npm run build && npm run start`, then DevTools → Application → Service Workers → tick _Offline_ → navigate. Check the Manifest panel for colours, shortcuts and the maskable preview.
 - **Update flow**: with `npm run start` running, change any string, `npm run build` again, revisit the tab → "Update available" → Reload.
 - Install prompt, app badge and the OS share sheet need a real HTTPS origin and a device: use a PR preview deploy.
+
+## Embedded Shop
+
+Document navigations to the separate Shop deployment at `/shop-embed` use `NetworkOnly` so the App service worker consumes navigation preload instead of abandoning a parallel preload request. Shop navigations remain excluded from App offline fallback; API/asset subresource requests remain outside the navigation handler. `/shop` remains the App shell. Embedded Shop must not register another service worker. See [Shop embedding](shop-embedding.md).

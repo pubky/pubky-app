@@ -22,6 +22,8 @@ import type {
   TMarkUnreadPostsAsReadParams,
   TStreamIdParams,
 } from '@/controllers/stream/posts/posts.types';
+import { ErrorService } from '@/libs/error/error.types';
+import { toAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { isPostDeleted } from '@/libs/utils/utils';
@@ -37,6 +39,7 @@ import {
   isContentSearchStream,
   isDeletedRetainingStream,
   isDiscoverCollectionsStream,
+  isPostCollectionsStream,
   isSkipPaginatedStream,
   parseContentSearchStreamId,
   type PostStreamId,
@@ -734,6 +737,7 @@ export class PostStreamApplication {
     viewerId,
     isCurrent,
     force,
+    throwOnFailure = false,
   }: TMissingPostsParams): Promise<boolean> {
     try {
       if (isCurrent && !isCurrent()) return false;
@@ -759,8 +763,12 @@ export class PostStreamApplication {
         .map((post) => post.relationships.reposted)
         .filter((uri): uri is string => uri !== null);
       await this.fetchOriginalPostsByUris({ repostedUris, viewerId, isCurrent });
-      return true;
+      // Authors and repost originals stop early on a session change too.
+      return !isCurrent || isCurrent();
     } catch (error) {
+      if (throwOnFailure) {
+        throw toAppError(error, ErrorService.Local, 'PostStreamApplication.fetchMissingPostsFromNexus');
+      }
       Logger.warn('Failed to fetch missing posts from Nexus', { cacheMissPostIds, viewerId, error });
       return false;
     }
@@ -1047,6 +1055,11 @@ export class PostStreamApplication {
     // Profile search inherits the Posts tab contract: collections have their own tab.
     if (isAuthorScopedContentSearchStream(streamId)) {
       return true;
+    }
+
+    // Every post in a post-collections stream is a collection; its third segment is a post id, not a kind.
+    if (isPostCollectionsStream(streamId)) {
+      return false;
     }
 
     // Content search is the one family where `kind=all` means "including

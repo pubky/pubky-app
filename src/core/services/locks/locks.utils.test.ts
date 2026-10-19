@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   getPaykitServerUrl: vi.fn((): string | undefined => 'https://paykit.server'),
   init: vi.fn(async () => {}),
   session: null as unknown,
+  currentUserPubky: 'account' as string | null,
 }));
 
 vi.mock('@/config/network', () => ({
@@ -43,6 +44,10 @@ vi.mock('@synonymdev/locks-sdk', () => {
   };
 });
 
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: { getState: () => ({ currentUserPubky: mocks.currentUserPubky }) },
+}));
+
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
   useLocksAuthStore: { getState: () => ({ selectLocksSession: () => mocks.session }) },
 }));
@@ -53,6 +58,7 @@ describe('locks.utils', () => {
     mocks.getTestnet.mockReturnValue(true);
     mocks.getLockServer.mockReturnValue('lockserverpubky');
     mocks.session = null;
+    mocks.currentUserPubky = 'account';
   });
 
   describe('toLocksError', () => {
@@ -121,9 +127,15 @@ describe('locks.utils', () => {
 
   describe('getLockSession', () => {
     it('returns the live session from the store', () => {
-      const session = { id: 'session-1' };
+      const session = { id: 'session-1', creatorPubky: () => 'pubkyaccount' };
       mocks.session = session;
       expect(getLockSession()).toBe(session);
+    });
+
+    it.each([null, 'different-account'])('rejects the old Locks identity for app account %s', (pubky) => {
+      mocks.currentUserPubky = pubky;
+      mocks.session = { creatorPubky: () => 'pubkyaccount' };
+      expect(() => getLockSession()).toThrow(expect.objectContaining({ category: ErrorCategory.Auth }));
     });
 
     it('throws a typed auth error when there is no session', () => {

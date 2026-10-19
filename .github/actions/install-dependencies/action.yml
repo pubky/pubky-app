@@ -1,0 +1,46 @@
+name: Install dependencies
+description: >-
+  Sets up Node.js and installs node_modules, restoring them from the Actions cache
+  when the manifest, lockfile, Node version and dependency patches are unchanged.
+
+inputs:
+  cache-namespace:
+    description: >-
+      Separates installs that must not be reused. Bare runners pass nothing ("host");
+      a job container passes its image identity, because runner.os inside a container
+      is still the host's and would otherwise share modules with bare-runner jobs.
+    required: false
+    default: host
+
+runs:
+  using: composite
+  steps:
+    - name: Restore node_modules cache
+      id: node-modules
+      uses: actions/cache/restore@v6
+      with:
+        path: node_modules
+        # `v1` is the cache format: bump it when the install layout or policy changes.
+        # `.npmrc` is included so install config is part of the key; a missing file
+        # matches nothing and does not change the hash until one is added.
+        key: node-modules-v1-${{ inputs.cache-namespace }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.nvmrc', 'package.json', 'package-lock.json', '.npmrc', 'patches/*.patch') }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: '.nvmrc'
+        # The npm download cache only pays off when npm ci actually runs.
+        cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
+
+    - name: Install dependencies
+      if: steps.node-modules.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm ci
+
+    # Save right after installing so a later failing step does not cost the next run a reinstall.
+    - name: Save node_modules cache
+      if: steps.node-modules.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: node_modules
+        key: ${{ steps.node-modules.outputs.cache-primary-key }}

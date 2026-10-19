@@ -2,6 +2,7 @@ import { ComponentProps } from 'react';
 import NextLink from 'next/link';
 import { cva } from 'class-variance-authority';
 import { cn } from '@/libs/utils/utils';
+import { InternalLink } from './Link.navigation';
 
 interface LinkProps extends ComponentProps<typeof NextLink> {
   variant?: 'default' | 'muted';
@@ -78,8 +79,8 @@ export function Link({
 
   // For internal links, use Next.js Link
   return (
-    <NextLink className={linkClassName} {...props}>
+    <InternalLink className={linkClassName} {...props}>
       {props.children}
-    </NextLink>
+    </InternalLink>
   );
 }

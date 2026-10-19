@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted, readFromClipboard } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
@@ -36,6 +37,7 @@ interface UseAddContentFormResult {
 const MAX_POST_URL_LENGTH = 2048;
 
 export function useAddContentForm({ target, onSuccess }: UseAddContentFormOptions): UseAddContentFormResult {
+  const { waitForAuth } = useRequireAuth();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const [isPending, setIsPending] = useState(false);
   // Refs, not state: reentrancy guards must flip synchronously — the isPending state a render closure
@@ -124,7 +126,7 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
         }
 
         // The awaits above give the user time to dismiss the dialog; never commit after it closed.
-        if (!mountedRef.current) return false;
+        if (!mountedRef.current || !(await waitForAuth())) return false;
 
         if (target.type === 'bookmarks') {
           await BookmarkController.commitCreate({

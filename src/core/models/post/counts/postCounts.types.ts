@@ -8,4 +8,5 @@ export interface TPostCountsCountChanges {
   reposts?: number;
   tags?: number;
   unique_tags?: number;
+  collections?: number;
 }

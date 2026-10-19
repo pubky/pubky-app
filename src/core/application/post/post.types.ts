@@ -31,3 +31,8 @@ export type TGetDetailsByIdsParams = {
   /** Composite post IDs in format "authorId:postId". */
   compositeIds: string[];
 };
+
+export type TGetRelationshipsByIdsParams = {
+  /** Composite post IDs in format "authorId:postId". */
+  compositeIds: string[];
+};

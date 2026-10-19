@@ -2,7 +2,8 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -64,8 +65,11 @@ vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
     isLoading: false,
     isExpired: false,
     fetchUrl: vi.fn(),
+    copyAuthUrl: vi.fn(),
     isOpeningRing: false,
     onAuthorizeClick: vi.fn(),
+    isOpeningBitkit: false,
+    onAuthorizeBitkitClick: vi.fn(),
   }),
 }));
 
@@ -91,6 +95,8 @@ describe('OnboardingScanPage (onboarding) — visual regression', () => {
   it('renders the scan/QR page at mobile viewport', async () => {
     await preloadImages(SCAN_PAGE_IMAGE_URLS);
     await renderForVRT(<ScanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(page.getByRole('button', { name: 'Authorize with Pubky Ring', exact: true })).toBeEnabled();
+    await expect.element(page.getByRole('button', { name: /Bitkit/ })).not.toBeInTheDocument();
     await matchVrtFrameScreenshot('onboarding-scan-mobile');
   });
 });

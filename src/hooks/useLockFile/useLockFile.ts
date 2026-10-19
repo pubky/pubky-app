@@ -31,7 +31,7 @@ export function useLockFile(lockUrl: string | null | undefined): UseLockFileResu
   const result = isSettled ? entry.result : null;
   return {
     lockFile: result?.lockFile ?? null,
-    priceSats: result?.priceSats ?? null,
+    price: result?.price ?? null,
     isLoading: Boolean(lockUrl) && !isSettled,
   };
 }

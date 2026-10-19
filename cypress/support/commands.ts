@@ -2,8 +2,16 @@
 
 import { backupDownloadFilePath, extendedTimeout } from './common';
 import { goToProfilePageFromHeader } from './header';
+import { confirmLogoutBackupBeforeNavigation } from './logout';
 import { waitForFeedToLoad } from './posts';
-import { BackupType, CheckForNewPosts, OnboardingExperience, PostType, WaitForNewPosts } from './types/enums';
+import {
+  BackupType,
+  CheckForNewPosts,
+  HasBackedUp,
+  OnboardingExperience,
+  PostType,
+  WaitForNewPosts,
+} from './types/enums';
 // ***********************************************
 // This example commands.ts shows you how to
 // create various custom commands and overwrite
@@ -216,11 +224,13 @@ function collectRecoveryPhraseWords(): Cypress.Chainable<string> {
   });
 }
 
-Cypress.Commands.add('signOut', () => {
+Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
   goToProfilePageFromHeader();
 
   cy.get('#profile-logout-btn').click();
   cy.location('pathname').should('eq', '/logout');
+
+  confirmLogoutBackupBeforeNavigation(hasBackedUp, '#logout-navigation-back-btn');
 
   // navigate back to onboarding homepage
   cy.get('#logout-navigation-back-btn').click();
