@@ -51,6 +51,7 @@ import {
   PUBKY_PREFIX,
   resolveOwnedSessionPath,
 } from './homeserver.utils';
+import { retryHomeserverWrite, type THomeserverWriteFence } from './write-retry';
 
 const STORAGE_PATH_PREFIXES = ['/pub/', '/priv/'] as const;
 const DELETE_IDEMPOTENT_MAX_ATTEMPTS = 3;
@@ -102,6 +103,97 @@ export class HomeserverService {
         }
       }
       throw error;
+    }
+  }
+
+  /** Throws once logout begins, the account changes, or the session is replaced after this call. */
+  private static sessionStillCurrent(context: Record<string, unknown>): () => void {
+    const start = useAuthStore.getState();
+    const session = start.selectSession();
+    const generation = start.generation;
+    return () => {
+      const state = useAuthStore.getState();
+      if (!state.isLoggingOut && state.selectSession() === session && state.generation === generation) return;
+      throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session ended before the homeserver write completed.', {
+        service: ErrorService.Homeserver,
+        operation: 'writeRetry',
+        context,
+      });
+    };
+  }
+
+  /**
+   * Fences write retries to the session that started them: a retry never runs after logout
+   * begins, the account changes, or the session is replaced. The first attempt is unguarded,
+   * as before retries existed, unless it belongs to a later pass of a read-check-write (`fence`).
+   */
+  private static writeRetryGuard(
+    url: string,
+    method: HttpMethod,
+    fence: THomeserverWriteFence | undefined,
+  ): (attempt: number) => void {
+    const assertCurrent = this.sessionStillCurrent({ url, method });
+    return (attempt) => {
+      if (attempt === 0) fence?.assertCurrent();
+      else assertCurrent();
+    };
+  }
+
+  /**
+   * The fence for one read-check-write (`retryHomeserverWriteAfterReread`), taken when it starts.
+   * Its first pass runs as any write does; a later pass, and each write in it, throws
+   * `SESSION_EXPIRED` once logout began or the session or account changed. `guardFirstPass`
+   * checks the first pass too, for work that waits in a queue before its first pass or reads
+   * before its first write.
+   */
+  static createWriteFence({ guardFirstPass = false }: { guardFirstPass?: boolean } = {}): THomeserverWriteFence {
+    const assertCurrent = this.sessionStillCurrent({ operation: 'writeAfterReread' });
+    let pass = 0;
+    const guarded = () => guardFirstPass || pass > 0;
+    return {
+      enter: (next) => {
+        pass = next;
+        if (guarded()) assertCurrent();
+      },
+      assertCurrent: () => {
+        if (guarded()) assertCurrent();
+      },
+    };
+  }
+
+  /** The pending owned write per session and path, so writes to one file never overlap. */
+  private static pathWrites = new WeakMap<Session, Map<string, Promise<unknown>>>();
+
+  /**
+   * Runs owned writes to the same file one after another, retries included, so an older
+   * write's retry cannot land after a newer one (a tag removed while its add waits out a 429).
+   * A write with nothing ahead of it starts in the caller's tick. One that waited checks the
+   * session it was queued under before it starts, and throws `SESSION_EXPIRED` if it ended.
+   */
+  private static async inPathOrder<T>(session: Session, path: string, url: string, write: () => Promise<T>) {
+    let pending = this.pathWrites.get(session);
+    if (!pending) {
+      pending = new Map();
+      this.pathWrites.set(session, pending);
+    }
+    const previous = pending.get(path);
+    let run: Promise<T>;
+    if (previous) {
+      const assertCurrent = this.sessionStillCurrent({ url, operation: 'queuedWrite' });
+      run = previous
+        .catch(() => {})
+        .then(() => {
+          assertCurrent();
+          return write();
+        });
+    } else {
+      run = write();
+    }
+    pending.set(path, run);
+    try {
+      return await run;
+    } finally {
+      if (pending.get(path) === run) pending.delete(path);
     }
   }
 
@@ -571,8 +663,10 @@ export class HomeserverService {
    * @param {string} url - Pubky URL.
    * @param {Record<string, unknown>} [bodyJson] - JSON body to serialize and send.
    */
-  static async request<T>({ method, url, bodyJson }: THomeserverRequestParams): Promise<T> {
+  static async request<T>({ method, url, bodyJson, singleAttempt, fence }: THomeserverRequestParams): Promise<T> {
     const owned = this.resolveOwnedSessionPath(url);
+    // A fenced write belongs to a read-check-write, whose loop retries it from the read.
+    const retryOptions = singleAttempt || fence ? { maxRetries: 0 } : {};
 
     // Handle owned session paths
     if (owned) {
@@ -583,16 +677,32 @@ export class HomeserverService {
           const response = await this.withActiveSession(session, () => getOwnedResponse({ session, path, url }));
           return (await parseResponseOrUndefined<T>({ response })) as T;
         }
-        case HttpMethod.PUT:
-          await this.withActiveSession(session, () => session.storage.putJson(path, bodyJson ?? {})).catch((error) =>
-            handleError({ error, additionalContext: { url, method } }),
-          );
+        case HttpMethod.PUT: {
+          // Snapshot once so every retry replays the same body even if the caller mutates its
+          // object meanwhile. structuredClone, not a JSON round-trip: the SDK converts the object
+          // itself (serde_wasm_bindgen), which sends an `undefined` property as `null`.
+          const ownedBody = structuredClone(bodyJson ?? {});
+          const beforeAttempt = this.writeRetryGuard(url, method, fence);
+          await this.inPathOrder(session, path, url, () =>
+            retryHomeserverWrite(
+              HttpMethod.PUT,
+              () => this.withActiveSession(session, () => session.storage.putJson(path, ownedBody)),
+              { beforeAttempt, ...retryOptions },
+            ),
+          ).catch((error) => handleError({ error, additionalContext: { url, method } }));
           return undefined as T;
-        case HttpMethod.DELETE:
-          await this.withActiveSession(session, () => session.storage.delete(path)).catch((error) =>
-            handleError({ error, additionalContext: { url, method } }),
-          );
+        }
+        case HttpMethod.DELETE: {
+          const beforeAttempt = this.writeRetryGuard(url, method, fence);
+          await this.inPathOrder(session, path, url, () =>
+            retryHomeserverWrite(
+              HttpMethod.DELETE,
+              () => this.withActiveSession(session, () => session.storage.delete(path)),
+              { beforeAttempt, ...retryOptions },
+            ),
+          ).catch((error) => handleError({ error, additionalContext: { url, method } }));
           return undefined as T;
+        }
       }
     }
 
@@ -611,12 +721,17 @@ export class HomeserverService {
 
     // Handle public requests
     const pubkySdk = this.getPubkySdk();
+    const serializedBody = bodyJson === undefined ? undefined : JSON.stringify(bodyJson);
     const fetchPromise =
       method === HttpMethod.GET
         ? isHttpUrl(url)
           ? pubkySdk.client.fetch(url)
           : pubkySdk.publicStorage.get(url as Address)
-        : this.fetch({ url, options: { method, body: bodyJson ? JSON.stringify(bodyJson) : undefined } });
+        : retryHomeserverWrite(
+            method,
+            () => this.fetch({ url, options: { method, body: serializedBody } }),
+            retryOptions,
+          );
 
     const response = await fetchPromise.catch((error) => handleError({ error, additionalContext: { url, method } }));
 
@@ -634,11 +749,22 @@ export class HomeserverService {
    * @param {string} url - Pubky URL.
    * @param {Uint8Array} blob - Raw bytes of the blob to upload.
    */
-  static async putBlob({ url, blob }: TPutBlobParams) {
+  static async putBlob({ url, blob, fence }: TPutBlobParams) {
+    const retryOptions = fence ? { maxRetries: 0 } : {};
+    // Uint8Array is mutable; retries must replay the exact original payload.
+    const retryBody = blob.slice();
     const owned = this.resolveOwnedSessionPath(url);
     if (owned) {
+      const { session, path } = owned;
       try {
-        await this.withActiveSession(owned.session, () => owned.session.storage.putBytes(owned.path, blob));
+        const beforeAttempt = this.writeRetryGuard(url, HttpMethod.PUT, fence);
+        await this.inPathOrder(session, path, url, () =>
+          retryHomeserverWrite(
+            HttpMethod.PUT,
+            () => this.withActiveSession(session, () => session.storage.putBytes(path, retryBody.slice())),
+            { beforeAttempt, ...retryOptions },
+          ),
+        );
         return;
       } catch (error) {
         return handleError({ error, additionalContext: { url, method: HttpMethod.PUT } });
@@ -657,7 +783,11 @@ export class HomeserverService {
       );
     }
 
-    const response = await this.fetch({ url, options: { method: HttpMethod.PUT, body: blob } });
+    const response = await retryHomeserverWrite(
+      HttpMethod.PUT,
+      () => this.fetch({ url, options: { method: HttpMethod.PUT, body: retryBody.slice() } }),
+      retryOptions,
+    );
     await assertOk({ response, url, operation: 'putBlob' });
   }
 
@@ -734,9 +864,10 @@ export class HomeserverService {
    * Deletes a file from the homeserver.
    *
    * @param {string} url - Pubky URL of the file to delete.
+   * @param {boolean} [singleAttempt] - One attempt, for a caller that runs its own retry loop.
    */
-  static async delete(url: string) {
-    await this.request({ method: HttpMethod.DELETE, url });
+  static async delete(url: string, { singleAttempt }: { singleAttempt?: boolean } = {}) {
+    await this.request({ method: HttpMethod.DELETE, url, singleAttempt });
     Logger.debug('Delete successful', { url });
   }
 
@@ -745,11 +876,13 @@ export class HomeserverService {
    * ("already gone" is the desired end state) and transient failures retry
    * with a short backoff. Mirrors the hardened delete account deletion uses
    * (Sentry PUBKY-APP-6Y) so a single transport blip doesn't orphan resources.
+   * This loop is the retry: each attempt is a single DELETE, so the write
+   * retry policy's attempts don't multiply with these.
    */
   static async deleteIdempotent(url: string) {
     for (let attempt = 1; ; attempt++) {
       try {
-        await this.delete(url);
+        await this.delete(url, { singleAttempt: true });
         return;
       } catch (error) {
         if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {

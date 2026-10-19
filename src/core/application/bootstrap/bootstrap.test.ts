@@ -7,6 +7,7 @@ import { MuteApplication } from '@/application/mute/mute';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
+import { httpStatusCodeToError } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
@@ -20,6 +21,10 @@ import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import {
+  HOMESERVER_PUBLISH_CONFLICT_MESSAGE,
+  installHomeserverWriteRetryDependenciesForTests,
+} from '@/services/homeserver/write-retry';
 import { LocalHotService } from '@/services/local/hot/hot';
 import { LocalNotificationService } from '@/services/local/notification/notification';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
@@ -365,6 +370,70 @@ describe('BootstrapApplication', () => {
       });
     });
 
+    describe('when creating the missing lastRead hits the publish conflict', () => {
+      const LAST_READ_URL = 'pubky://test-pubky/pub/pubky.app/last-read';
+      const lastReadResult = {
+        last_read: { timestamp: 9876543210, toJson: () => ({ timestamp: 9876543210 }) },
+        meta: { url: LAST_READ_URL },
+      };
+      const publishConflict = () =>
+        httpStatusCodeToError(
+          409,
+          `Request failed: Server responded with an error: 409 Conflict - ${HOMESERVER_PUBLISH_CONFLICT_MESSAGE}`,
+          ErrorService.Homeserver,
+          'request',
+          LAST_READ_URL,
+        );
+
+      const run = async (existsAfterConflict: boolean) => {
+        setupMocks({ bootstrapData: emptyBootstrap() });
+        let puts = 0;
+        const requestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method, url }) => {
+          if (method === HttpMethod.GET) {
+            return Promise.reject(
+              Err.client(ClientErrorCode.NOT_FOUND, 'Not found', {
+                service: ErrorService.Homeserver,
+                operation: 'request',
+                context: { statusCode: HttpStatusCode.NOT_FOUND, url },
+              }),
+            );
+          }
+          puts += 1;
+          return puts === 1 ? Promise.reject(publishConflict()) : Promise.resolve(undefined);
+        });
+        const existsSpy = vi.spyOn(HomeserverService, 'exists').mockResolvedValue(existsAfterConflict);
+        vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(asOpaque<LastReadResult>(lastReadResult));
+        vi.spyOn(Logger, 'info').mockImplementation(() => {});
+
+        await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+        await vi.waitFor(() => expect(existsSpy).toHaveBeenCalledWith(LAST_READ_URL));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        return requestSpy.mock.calls.filter(([params]) => params.method === HttpMethod.PUT);
+      };
+
+      beforeEach(() => {
+        installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {}, random: () => 0 });
+      });
+
+      afterEach(() => {
+        installHomeserverWriteRetryDependenciesForTests(null);
+      });
+
+      it('keeps a lastRead another client created meanwhile instead of overwriting it', async () => {
+        const puts = await run(true);
+
+        expect(puts).toHaveLength(1);
+        expect(puts[0][0]).toMatchObject({ url: LAST_READ_URL, fence: expect.anything() });
+      });
+
+      it('writes again when the lastRead is still missing', async () => {
+        const puts = await run(false);
+
+        expect(puts).toHaveLength(2);
+        expect(puts[1][0]).toEqual(puts[0][0]);
+      });
+    });
+
     it('should handle 404 homeserver error gracefully and create new lastRead', async () => {
       const bootstrapData = emptyBootstrap();
       const MOCK_NORMALIZED_TIMESTAMP = 9876543210;
@@ -408,6 +477,7 @@ describe('BootstrapApplication', () => {
         method: HttpMethod.PUT,
         url: MOCK_NORMALIZED_LAST_READ_URL,
         bodyJson: mockLastReadResult.last_read.toJson(),
+        fence: expect.anything(),
       });
 
       expect(mocks.persistUsers).toHaveBeenCalledWith(

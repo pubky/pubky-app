@@ -17,6 +17,7 @@ import type { Pubky } from '@/models/models.types';
 import type { ProfileChanges } from '@/pipes/pipes.types';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
 import { LocalProfileService } from '@/services/local/profile/profile';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -97,7 +98,9 @@ export class ProfileApplication {
    * field the user didn't change comes from a fresh homeserver read, never from the local
    * cache, which can be older than the last save. A failed read aborts before the PUT, and a
    * missing profile (a deleted account) is refused so it isn't recreated. The whole write
-   * holds the user's profile lock (see `withProfileLock`).
+   * holds the user's profile lock (see `withProfileLock`). A PUT the homeserver refuses with a
+   * retried status (429, 500, 503 or the publish conflict) starts over from the read, so a field
+   * another device changed meanwhile is kept, never replayed from the stale read.
    */
   private static async commitChanges({
     pubky,
@@ -111,24 +114,33 @@ export class ProfileApplication {
     deletedMessage: string;
   }) {
     await this.withProfileLock(pubky, async () => {
-      let publishedJson: unknown;
-      try {
-        publishedJson = await HomeserverService.getFreshJson(userUriBuilder(pubky));
-      } catch (error) {
-        if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
-          throw Err.client(ClientErrorCode.GONE, deletedMessage, {
-            service: ErrorService.Homeserver,
-            operation,
-            context: { pubky },
-            cause: error,
-          });
+      const fence = HomeserverService.createWriteFence();
+      const user = await retryHomeserverWriteAfterReread(fence, async () => {
+        let publishedJson: unknown;
+        try {
+          publishedJson = await HomeserverService.getFreshJson(userUriBuilder(pubky));
+        } catch (error) {
+          if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
+            throw Err.client(ClientErrorCode.GONE, deletedMessage, {
+              service: ErrorService.Homeserver,
+              operation,
+              context: { pubky },
+              cause: error,
+            });
+          }
+          throw error;
         }
-        throw error;
-      }
 
-      const published = UserNormalizer.fromPublished(publishedJson);
-      const { user, meta } = UserNormalizer.to(UserNormalizer.merge(published, changes), pubky);
-      await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: user.toJson() });
+        const published = UserNormalizer.fromPublished(publishedJson);
+        const { user, meta } = UserNormalizer.to(UserNormalizer.merge(published, changes), pubky);
+        await HomeserverService.request({
+          method: HttpMethod.PUT,
+          url: meta.url,
+          bodyJson: user.toJson(),
+          fence,
+        });
+        return user;
+      });
       await LocalProfileService.updateDetails(user, pubky);
     });
   }
@@ -173,12 +185,13 @@ export class ProfileApplication {
    * account — so a single transport blip used to abort the entire flow mid-way
    * (Sentry PUBKY-APP-6Y). Each file gets a few attempts with a short backoff.
    * A 404 counts as success: the file may have been removed by an attempt whose
-   * response was lost, and "file gone" is the desired end state either way.
+   * response was lost, and "file gone" is the desired end state either way. Each attempt is a
+   * single DELETE, so the homeserver write retry policy's attempts don't multiply with these.
    */
   private static async deleteFile(url: string) {
     for (let attempt = 1; ; attempt++) {
       try {
-        await HomeserverService.delete(url);
+        await HomeserverService.delete(url, { singleAttempt: true });
         return;
       } catch (error) {
         if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {

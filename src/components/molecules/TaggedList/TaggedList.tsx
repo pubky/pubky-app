@@ -13,6 +13,7 @@ import type { TaggedListProps } from './TaggedList.types';
 export function TaggedList({
   tags,
   taggedId,
+  mergeTaggedId,
   taggedKind,
   hasMore = false,
   isLoadingMore = false,
@@ -24,6 +25,29 @@ export function TaggedList({
   const viewerId = useAuthStore((state) => state.currentUserPubky);
 
   const { taggerStates, loadTaggers, loadMoreTaggers } = useEntityTaggers(taggedId, taggedKind);
+  // A merged list also shows labels stored on a second entity: expanding one lists both sides' taggers.
+  const mergeTarget = mergeTaggedId && mergeTaggedId !== taggedId ? mergeTaggedId : null;
+  const {
+    taggerStates: mergeTaggerStates,
+    loadTaggers: loadMergeTaggers,
+    loadMoreTaggers: loadMoreMergeTaggers,
+  } = useEntityTaggers(mergeTarget, mergeTarget ? taggedKind : null);
+  const taggerStateFor = (label: string) => {
+    const key = label.toLowerCase();
+    const primary = taggerStates.get(key);
+    const secondary = mergeTarget ? mergeTaggerStates.get(key) : undefined;
+    if (!primary || !secondary) return primary ?? secondary;
+    const fetched = [primary, secondary].filter((state) => state.hasFetched);
+    return {
+      ids: Array.from(new Set(fetched.flatMap((state) => state.ids))),
+      isLoading: primary.isLoading || secondary.isLoading,
+      hasError: primary.hasError || secondary.hasError,
+      hasMore: primary.hasMore || secondary.hasMore,
+      hasFetched: fetched.length > 0,
+      // The viewer stays listed while either side still holds their tag.
+      isViewerTagger: secondary.isViewerTagger ? true : primary.isViewerTagger,
+    };
+  };
 
   const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: onLoadMore || (() => {}),
@@ -45,13 +69,14 @@ export function TaggedList({
   useEffect(() => {
     if (!expandedTagLabel || !taggedId || !taggedKind) return;
     void loadTaggers(expandedTagLabel, expandedTagCount);
-  }, [expandedTagLabel, expandedTagCount, taggedId, taggedKind, loadTaggers]);
+    if (mergeTarget) void loadMergeTaggers(expandedTagLabel, expandedTagCount);
+  }, [expandedTagLabel, expandedTagCount, taggedId, taggedKind, loadTaggers, mergeTarget, loadMergeTaggers]);
 
   return (
     <Container className="gap-2">
       {tags.map((tag) => {
         const isExpanded = expandedTagLabel === tag.label;
-        const taggerState = taggerStates.get(tag.label.toLowerCase());
+        const taggerState = taggerStateFor(tag.label);
         const expandedTaggerIds = isExpanded
           ? mergeTaggerIds({
               fetchedIds: taggerState?.hasFetched ? taggerState.ids : undefined,
@@ -74,7 +99,10 @@ export function TaggedList({
             isLoadingMoreTaggers={isFetching && taggerState?.hasFetched}
             hasMoreTaggers={taggerState?.hasMore}
             hasTaggersError={taggerState?.hasError}
-            onLoadMoreTaggers={() => void loadMoreTaggers(tag.label)}
+            onLoadMoreTaggers={() => {
+              void loadMoreTaggers(tag.label);
+              if (mergeTarget) void loadMoreMergeTaggers(tag.label);
+            }}
           />
         );
       })}

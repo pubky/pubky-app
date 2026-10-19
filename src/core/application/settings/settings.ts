@@ -4,6 +4,7 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { type SettingsJson, SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { retryHomeserverWriteAfterReread, type THomeserverWriteFence } from '@/services/homeserver/write-retry';
 import type { SettingsState } from '@/stores/settings/settings.types';
 
 /**
@@ -30,6 +31,9 @@ export class SettingsApplication {
    * only if the user changes settings again, since sign-in resets the store and session restore
    * does not sync settings. Dropping one toggle beats erasing the field and re-following the bot.
    *
+   * A PUT the homeserver refuses with a retried status (429, 500, 503 or the publish conflict)
+   * starts over from the read, since the remote document may have changed meanwhile.
+   *
    * @param settings, The current settings state to persist
    * @param pubky, The user's public key
    * @param signal, Optional cancellation signal checked when this queued write starts
@@ -38,14 +42,18 @@ export class SettingsApplication {
     await this.enqueueWrite(pubky, async () => {
       if (signal?.aborted) return;
 
-      let resolved = settings;
-      if (settings.privacy.moderationBot === undefined) {
-        const remote = await this.fetchFromHomeserver(pubky);
+      const fence = HomeserverService.createWriteFence();
+      await retryHomeserverWriteAfterReread(fence, async () => {
         if (signal?.aborted) return;
-        resolved = this.withRemoteModerationBot(settings, remote);
-      }
+        let resolved = settings;
+        if (settings.privacy.moderationBot === undefined) {
+          const remote = await this.fetchFromHomeserver(pubky);
+          if (signal?.aborted) return;
+          resolved = this.withRemoteModerationBot(settings, remote);
+        }
 
-      await this.push(resolved, pubky);
+        await this.push(resolved, pubky, fence);
+      });
     });
   }
 
@@ -74,7 +82,7 @@ export class SettingsApplication {
     }
   }
 
-  private static async push(settings: SettingsState, pubky: Pubky): Promise<void> {
+  private static async push(settings: SettingsState, pubky: Pubky, fence: THomeserverWriteFence): Promise<void> {
     const { settings: settingsJson, meta } = SettingsNormalizer.to(settings, pubky);
 
     Logger.info('[Settings] Pushing to homeserver', { url: meta.url, settings: settingsJson });
@@ -83,6 +91,7 @@ export class SettingsApplication {
       method: HttpMethod.PUT,
       url: meta.url,
       bodyJson: settingsJson as unknown as Record<string, unknown>,
+      fence,
     });
 
     Logger.info('[Settings] Push complete');
@@ -125,6 +134,8 @@ export class SettingsApplication {
    * Initializes settings on bootstrap.
    * Fetches settings from homeserver and merges with local settings.
    * Uses version and timestamp for conflict resolution (newer wins).
+   * A push the homeserver refuses with a retried status starts over from the read: the remote
+   * document may have changed after the comparison and may now be the newer one.
    *
    * @param pubky, The user's public key
    * @returns The settings the store should adopt: remote when newer, or local enriched with
@@ -133,13 +144,22 @@ export class SettingsApplication {
    */
   static async initializeSettings(pubky: Pubky, localSettings: SettingsState): Promise<SettingsState | null> {
     Logger.info('[Settings] Initializing settings sync');
+    const fence = HomeserverService.createWriteFence();
+    return await retryHomeserverWriteAfterReread(fence, () => this.reconcileWithRemote(pubky, localSettings, fence));
+  }
+
+  private static async reconcileWithRemote(
+    pubky: Pubky,
+    localSettings: SettingsState,
+    fence: THomeserverWriteFence,
+  ): Promise<SettingsState | null> {
     const remoteSettings = await this.fetchFromHomeserver(pubky);
 
     if (!remoteSettings) {
       Logger.info('[Settings] No remote settings, pushing local to homeserver');
       // Stamp a real timestamp if updatedAt is 0 (initial default), so homeserver has a valid timestamp for future conflict resolution
       const settingsWithTimestamp = { ...localSettings, updatedAt: localSettings.updatedAt || Date.now() };
-      await this.enqueueWrite(pubky, () => this.push(settingsWithTimestamp, pubky));
+      await this.enqueueWrite(pubky, () => this.push(settingsWithTimestamp, pubky, fence));
       return settingsWithTimestamp;
     }
 
@@ -162,7 +182,7 @@ export class SettingsApplication {
     Logger.info('[Settings] Local settings newer, pushing to homeserver');
     // The remote document was just read; reuse it instead of probing again inside commitUpdate.
     const settingsToPush = this.withRemoteModerationBot(localSettings, remoteSettings);
-    await this.enqueueWrite(pubky, () => this.push(settingsToPush, pubky));
+    await this.enqueueWrite(pubky, () => this.push(settingsToPush, pubky, fence));
     return settingsToPush === localSettings ? null : settingsToPush;
   }
 }

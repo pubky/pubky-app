@@ -81,6 +81,21 @@ Differentiate transient errors (`SERVICE_UNAVAILABLE`, `NETWORK_ERROR`) from fat
 
 Pubky SDK (`@synonymdev/pubky`) errors are mapped by their `name` in `src/core/services/homeserver/error.utils.ts`: `InvalidInput` → Validation, `AuthenticationError` (or HTTP 401) → Auth `SESSION_EXPIRED`, `PkarrError` (PKARR lookup failed, absence not proven) → Network `CONNECTION_FAILED` (retryable). Anything else falls through to `httpStatusCodeToError`.
 
+#### Homeserver write retries
+
+Every homeserver PUT and DELETE goes through `HomeserverService` (`request`, `putBlob`, `delete`), which runs it in `retryHomeserverWrite` (`src/core/services/homeserver/write-retry.ts`); `write-call-sites.gate.test.ts` fails on a write that bypasses it. The policy makes up to three attempts with jittered exponential backoff (a 429's `Retry-After` when the response carries one) for:
+
+- 429, 500 and 503;
+- the publish conflict of a homeserver on GCS (0.16.2+): a 409 whose body is exactly `The file changed before the change was published; read it again and retry`. Nothing landed, so the same write is replayed.
+
+Any other 409 (a path collision, an unknown lock token, a 409 without that body), 412 and 423 are real conflicts and are never retried. A retry never runs after logout begins or the session or account changes; it fails with `SESSION_EXPIRED` instead.
+
+A write whose body is built from a read of the same data (a read-check-write) must not replay that body: by the time a retry runs, another client may have changed the data. It takes a fence from `HomeserverService.createWriteFence()`, wraps the read and the write in `retryHomeserverWriteAfterReread(fence, …)`, and passes the `fence` to the write. A fenced write makes one attempt; the loop retries every status the policy retries (429, 500, 503 and the publish conflict) from the read, with the same backoff and cap. Every pass after the first stops with `SESSION_EXPIRED` once logout begins or the session or account changes, before its read and again before its write. In a file that uses the loop, the gate test fails on a write without a fence unless it is listed with its reason. The profile merge, both settings syncs, the missing `last_read` creation, notifications' `last_read` and the lock purchase-file mint do this. A caller with its own retry loop (`deleteIdempotent`, account deletion) passes `singleAttempt` so the attempts don't multiply.
+
+Owned writes to the same file run one after another, retries included, so an older write's retry never lands after a newer one: a tag removed while its add waits out a 429 stays removed. A write with nothing ahead of it starts in the caller's tick; one that waited checks the session it was queued under first and throws `SESSION_EXPIRED` if it ended.
+
+Notifications' `last_read` only moves forward. `NotificationApplication.markAllAsRead` runs one write at a time per account; every pass reads the published value first and keeps it when it is not older, so neither a retry nor a queued mark writes an older timestamp. Its fence is taken when the mark is called with `guardFirstPass`, so a mark still queued or reading when logout begins sends nothing. The controller stores the larger of the published and local values. A lock payment whose retry reuses a saved bundle checks the fence before submitting the proof.
+
 When a specific HTTP status is an expected domain state, handle it before calling `httpResponseToError`.
 For example, a geoblocked availability endpoint can return `{ available: false }` for `403`. Keep these cases
 explicit and narrow:

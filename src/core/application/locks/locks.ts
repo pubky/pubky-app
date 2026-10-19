@@ -9,6 +9,7 @@ import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { retryHomeserverWriteAfterReread, type THomeserverWriteFence } from '@/services/homeserver/write-retry';
 import { LocalLocksService } from '@/services/local/locks/locks';
 import { LocksService } from '@/services/locks/locks';
 import type {
@@ -167,19 +168,30 @@ export class LocksApplication {
     isRetry,
   }: TStartPaymentParams): Promise<TStartPaymentResult> {
     const lockId = this.requireLockId(lockUrl, 'startPayment');
-    const run = async (): Promise<TStartPaymentResult> => {
+    // A purchase-file PUT the homeserver refuses with a retried status starts over from the read:
+    // the reader's purchases may have changed meanwhile, so a saved id may now be reusable.
+    const resolveOrMint = async (fence: THomeserverWriteFence): Promise<TStartPaymentResult | string> => {
       const resolved = await this.fetchResolvedPurchase({ lockFile, lockUrl, readerPubky });
       if (resolved?.kind === 'terminal' && !isRetry) return { bundleId: resolved.bundleId, status: resolved.status };
-      let bundleId = resolved?.kind === 'reusable' ? resolved.bundleId : null;
-      if (!bundleId) {
-        bundleId = await LocksService.generateBundleId();
-        // Saved BEFORE the proof is submitted: a submission that succeeds while the file is missing
-        // leaves a purchase nobody can reach.
-        await HomeserverService.putBlob({
-          url: GuardedContentParser.purchaseUrl(readerPubky, lockId, bundleId),
-          blob: new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId)),
-        });
-      }
+      if (resolved?.kind === 'reusable') return resolved.bundleId;
+      const bundleId = await LocksService.generateBundleId();
+      // Saved BEFORE the proof is submitted: a submission that succeeds while the file is missing
+      // leaves a purchase nobody can reach.
+      await HomeserverService.putBlob({
+        url: GuardedContentParser.purchaseUrl(readerPubky, lockId, bundleId),
+        blob: new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId)),
+        fence,
+      });
+      return bundleId;
+    };
+    const run = async (): Promise<TStartPaymentResult> => {
+      const fence = HomeserverService.createWriteFence();
+      const resolved = await retryHomeserverWriteAfterReread(fence, () => resolveOrMint(fence));
+      if (typeof resolved !== 'string') return resolved;
+      const bundleId = resolved;
+      // A later pass may have returned a reused id after its asynchronous read, without a fenced
+      // write: the session that started this must still be current before anything is submitted.
+      fence.assertCurrent();
       const bundle = LockProofBundler.buildPayment(lockFile, lockUrl, bundleId, readerPubky);
       const task = await LocksService.submitProof(bundle);
       return { bundleId, status: task.status };

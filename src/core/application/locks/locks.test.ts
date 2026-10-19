@@ -1,9 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
+import { httpStatusCodeToError } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import { GuardedContentParser } from '@/pipes/locks/locks.parser';
+import {
+  HOMESERVER_PUBLISH_CONFLICT_MESSAGE,
+  installHomeserverWriteRetryDependenciesForTests,
+} from '@/services/homeserver/write-retry';
 import type { LockFile, ReplicatedPost, TGuardedResource, TUnlockedContent } from '@/services/locks/locks.types';
 import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -41,6 +46,7 @@ vi.mock('@/services/local/locks/locks', () => ({
 
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
+    createWriteFence: () => ({ enter: () => {}, assertCurrent: () => {} }),
     putBlob: mocks.putBlob,
     getBytes: mocks.getBytes,
     getBytesIfExists: mocks.getBytesIfExists,
@@ -689,6 +695,50 @@ describe('LocksApplication (payment unlock)', () => {
 
       await expect(LocksApplication.startPayment(params)).rejects.toThrow();
       expect(mocks.submitProof).not.toHaveBeenCalled();
+    });
+
+    describe('when the homeserver refuses the purchase-file PUT', () => {
+      const homeserverError = (body: string) =>
+        httpStatusCodeToError(
+          409,
+          `Request failed: Server responded with an error: 409 Conflict - ${body}`,
+          ErrorService.Homeserver,
+          'putBlob',
+          purchaseFile(BUNDLE_A),
+        );
+
+      beforeEach(() => {
+        installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {}, random: () => 0 });
+        mocks.generateBundleId.mockResolvedValue(BUNDLE_A);
+      });
+
+      afterEach(() => {
+        installHomeserverWriteRetryDependenciesForTests(null);
+      });
+
+      // The conflict says the purchases changed after they were read; here the late write landed.
+      it('re-reads the purchases after the publish conflict and reuses the id that landed', async () => {
+        const saved: string[] = [];
+        mocks.listAll.mockImplementation(async () => [...saved]);
+        mocks.putBlob.mockImplementationOnce(async ({ url }: { url: string }) => {
+          saved.push(url);
+          throw homeserverError(HOMESERVER_PUBLISH_CONFLICT_MESSAGE);
+        });
+
+        await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: BUNDLE_A, status: 'pending' });
+        expect(mocks.listAll).toHaveBeenCalledTimes(2);
+        expect(mocks.generateBundleId).toHaveBeenCalledOnce();
+        expect(mocks.putBlob).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ fence: expect.anything() }));
+        expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: BUNDLE_A }));
+      });
+
+      it('does not re-read or submit after a path collision', async () => {
+        mocks.putBlob.mockRejectedValueOnce(homeserverError('File/folder path collision'));
+
+        await expect(LocksApplication.startPayment(params)).rejects.toMatchObject({ context: { statusCode: 409 } });
+        expect(mocks.listAll).toHaveBeenCalledOnce();
+        expect(mocks.submitProof).not.toHaveBeenCalled();
+      });
     });
 
     // Fail closed: a saved file that cannot be read means a purchase exists and its id is lost.
