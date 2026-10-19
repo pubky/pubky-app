@@ -17,7 +17,7 @@ const NAME = 'John Carvalho';
 
 const GENERIC = {
   headline: 'Join the conversation',
-  body: 'Join Pubky to reply, tag, and follow the people and topics you care about.',
+  body: 'Join Pubky to discover conversations and follow people and topics you care about.',
 };
 
 const articleContent = (title: string) => JSON.stringify({ title, body: 'Lightning used to be fragile.' });
@@ -45,27 +45,27 @@ const collectionPost = (name = 'AI & Robotics') => makePost({ kind: 'collection'
 
 const postCopy = (name: string) => ({
   headline: 'Join the conversation',
-  body: `Reply to ${name}, tag what resonates, and share where you stand.`,
+  body: `Join Pubky to reply to ${name}, tag this post, and share your perspective.`,
 });
 const articleCopy = (title: string, name: string) => ({
   headline: `Enjoying “${title}”?`,
-  body: `Join Pubky to reply to ${name}, tag this article, and follow more of their writing.`,
+  body: `Join Pubky to reply to ${name}, tag this article, and discover more great writing.`,
 });
 const videoCopy = (name: string) => ({
   headline: 'Enjoying this video?',
-  body: `Join Pubky to reply to ${name}, tag this video, and follow more of their posts.`,
+  body: `Join Pubky to reply to ${name}, tag this video, and discover more posts.`,
 });
 const lockCopy = (name: string) => ({
   headline: "Want to see what's inside?",
-  body: `Join Pubky to unlock posts from ${name} and follow what they share next.`,
+  body: `Join Pubky to unlock posts from ${name} and stay up to date.`,
 });
 const collectionCopy = (collectionName: string) => ({
   headline: `Interested in ${collectionName}?`,
-  body: 'Join Pubky to follow this collection and see what people are talking about.',
+  body: 'Join Pubky to follow this collection and discover more about this topic.',
 });
 const profileCopy = (name: string) => ({
   headline: `Get to know ${name}`,
-  body: `Join Pubky to follow ${name} and join the conversations they're part of.`,
+  body: `Join Pubky to follow ${name} and take part in the conversation.`,
 });
 
 describe('getContextualBannerTarget', () => {
