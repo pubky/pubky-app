@@ -62,8 +62,10 @@ frontend must handle both cases.
 - Auth runs in an iframe loading the Lock Server `/connect` page; the approval posts a one-time code
   back via `postMessage` (origin/source/state validated), which is exchanged for an SDK session.
 - The session's bearer secret persists in a dedicated zustand store (`useLocksAuthStore`, mirroring
-  the homeserver `auth-store`): live SDK session in memory only, secret in localStorage, rebuilt on
-  app load by a hook in `RouteGuardProvider` (alongside the homeserver restore). Restore is offline — expiry is only discovered when a
+  the homeserver `auth-store`): live SDK session in memory only, secret and its creator pubky in
+  localStorage, rebuilt on app load by a hook in `RouteGuardProvider` (alongside the homeserver
+  restore). The SDK's restored session has no creator, so the restore runs only when the saved
+  creator is the signed-in account. Restore is offline — expiry is only discovered when a
   creator call returns 401, which drops the session and reopens sign-in.
 - pubky.app logout tears down the Locks session too. Abandoning a lock in the composer never signs
   the creator out.

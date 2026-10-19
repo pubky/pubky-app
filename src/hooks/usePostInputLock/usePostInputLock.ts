@@ -69,7 +69,7 @@ export function usePostInputLock({
   const needsSessionUpgrade = useSessionNeedsUpgrade();
   /**
    * Signed into the Lock Server, holding a connected Bitkit payout account, and on a homeserver
-   * session that can reach `/priv` (#2373). The first two are per browser session, so this is false
+   * session that can reach `/priv` (#2373). The Paykit answer is in memory only, so this is false
    * again after a reload.
    */
   const isLocksSetUp = () => {

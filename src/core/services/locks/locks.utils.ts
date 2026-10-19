@@ -98,6 +98,8 @@ export function getLockSession(): LocksSdkSession {
   const store = useLocksAuthStore.getState();
   const session = store.selectLocksSession();
   const creatorPubky = store.selectLocksCreatorPubky();
+  // TODO:[Locks] #2283 — a == b check. Change it together with the a == b check in
+  // `LocksController.completeAuthFromCallback`.
   if (!session || !creatorPubky || creatorPubky !== useAuthStore.getState().currentUserPubky) {
     throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No Locks session; sign into the Lock Server first', {
       service: ErrorService.Locks,

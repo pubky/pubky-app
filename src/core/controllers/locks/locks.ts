@@ -236,6 +236,7 @@ export class LocksController {
     const { currentUserPubky } = useAuthStore.getState();
     const secret = store.selectLocksSessionSecret();
     if (!currentUserPubky || !secret || store.selectLocksSession() !== null) return;
+    // TODO:[Locks] #2283 — a == b check. Change it together with the a == b check in `completeAuthFromCallback`.
     if (store.selectLocksCreatorPubky() !== currentUserPubky) {
       this.clearLocalSession();
       return;
