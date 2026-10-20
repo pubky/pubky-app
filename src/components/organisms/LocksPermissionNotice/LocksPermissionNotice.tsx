@@ -43,7 +43,13 @@ export function LocksPermissionNotice({ className }: LocksPermissionNoticeProps)
       <Typography overrideDefaults className="text-base font-medium text-muted-foreground">
         {'Pubky.app needs your permission to read your Locks data on your homeserver.'}
       </Typography>
-      <Button variant={ButtonVariant.OUTLINE} size="lg" className="w-fit" onClick={() => setIsOpen(true)}>
+      {/* Wraps instead of overflowing in a repost preview, whose column is narrower than the label. */}
+      <Button
+        variant={ButtonVariant.OUTLINE}
+        size="lg"
+        className="w-fit text-center whitespace-normal"
+        onClick={() => setIsOpen(true)}
+      >
         {'Authorize with Pubky Ring or Bitkit'}
       </Button>
       <Dialog open={isOpen && needsUpgrade} onOpenChange={setIsOpen}>
