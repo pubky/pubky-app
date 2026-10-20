@@ -31,11 +31,12 @@ describe('LandingFinalSection', () => {
     expect(mockPush).toHaveBeenCalledWith('/onboarding/human');
   });
 
-  it('renders the Pubky Protocol link inside the legal line that underlines its links', () => {
+  it('opens the Pubky Protocol link in a new tab', () => {
     render(<LandingFinalSection />);
 
     const link = screen.getByRole('link', { name: 'Pubky Protocol' });
-    expect(link.closest('p')).toHaveClass('[&_a]:underline');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it.each(LEGAL_DIALOGS)('opens the "$title" dialog when "$trigger" is clicked', async ({ trigger, title }) => {

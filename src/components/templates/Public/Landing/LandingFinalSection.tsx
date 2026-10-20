@@ -42,7 +42,7 @@ export function LandingFinalSection() {
           {'Join now'}
         </Button>
         <Logo noLink width={151} height={50} />
-        <FooterLinks className="max-w-xl text-center">
+        <FooterLinks className="max-w-xl text-center [&_a]:no-underline">
           {'By creating a '}
           {'Pubky'}
           {' account, you agree to the'} <DialogTerms />, <DialogPrivacy />

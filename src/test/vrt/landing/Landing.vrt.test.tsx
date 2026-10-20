@@ -2,12 +2,14 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import { Landing } from '@/templates/Public/Landing/Landing';
+import { LandingFreedomSection } from '@/templates/Public/Landing/LandingFreedomSection';
 
 // Preload images into cache to guarantee they render before snapshot.
 // This ensures the logo and Synonym/"a tether. company" brand mark <img>s are loaded up front,
@@ -95,5 +97,57 @@ describe('Landing — visual regression', () => {
     await preloadImages(LANDING_LOGO_URLS);
     await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await matchVrtFrameScreenshot('landing-mobile');
+  });
+
+  it.each([
+    { name: 'desktop', viewport: VRT_VIEWPORT_DESKTOP },
+    { name: 'tablet', viewport: { width: 768, height: 1024 } },
+    { name: 'mobile', viewport: VRT_VIEWPORT_MOBILE },
+  ])('positions the seven slide dots and arrow on $name', async ({ name, viewport }) => {
+    await preloadImages(['/images/landing-experience7.png']);
+    await renderForVRT(<LandingFreedomSection />, { viewport });
+    const firstHeading = page.getByRole('heading', { name: 'Create without limits' });
+    await expect.element(firstHeading).toBeVisible();
+    const navigation = page.getByRole('group', { name: 'Slide navigation' }).element();
+    expect(navigation.getBoundingClientRect().top).toBeGreaterThan(
+      firstHeading.element().parentElement!.getBoundingClientRect().bottom,
+    );
+
+    await page.getByRole('button', { name: 'Go to slide 7: Make a living' }).click();
+    const heading = page.getByRole('heading', { name: 'Make a living' });
+    await expect.element(heading).toBeVisible();
+    await heading.hover();
+
+    const dots = navigation.querySelectorAll('button > span');
+    const arrow = page.getByRole('button', { name: 'Next slide' }).element().getBoundingClientRect();
+    expect(dots).toHaveLength(7);
+    expect(dots[0].getBoundingClientRect().left).toBeCloseTo(heading.element().getBoundingClientRect().left, 0);
+
+    dots.forEach((dot, index) => {
+      const bounds = dot.getBoundingClientRect();
+      if (name !== 'mobile') {
+        expect(bounds.top + bounds.height / 2).toBeCloseTo(arrow.top + arrow.height / 2, 0);
+        expect(bounds.right).toBeLessThanOrEqual(arrow.left);
+      }
+      expect(getComputedStyle(dot).opacity).toBe(index === 6 ? '1' : '0.3');
+    });
+    if (name === 'mobile') {
+      const article = page.getByRole('article').element();
+      const image = article.querySelector('[style*="background-image"]');
+      expect(image).not.toBeNull();
+      const navigationBounds = navigation.getBoundingClientRect();
+      const copyBounds = heading.element().parentElement!.getBoundingClientRect();
+      expect(navigationBounds.top).toBeGreaterThan(copyBounds.bottom);
+      expect(navigationBounds.bottom).toBeLessThanOrEqual(image!.getBoundingClientRect().top);
+      expect(article.getBoundingClientRect().bottom - arrow.bottom).toBeCloseTo(32, 0);
+      expect(article.getBoundingClientRect().right - arrow.right).toBeCloseTo(32, 0);
+    }
+    expect(navigation.querySelector('[aria-current="true"]')).toHaveAccessibleName('Go to slide 7: Make a living');
+
+    const restingColor = getComputedStyle(dots[6]).backgroundColor;
+    await page.getByRole('button', { name: 'Go to slide 7: Make a living' }).hover();
+    expect(getComputedStyle(dots[6]).backgroundColor).toBe(restingColor);
+    expect(getComputedStyle(dots[6]).opacity).toBe('0.5');
+    expect(getComputedStyle(dots[6]).scale).toBe('1.25');
   });
 });
