@@ -54,6 +54,7 @@ describe('LandingFreedomSection', () => {
     await user.click(screen.getByRole('button', { name: 'Go to slide 7: Make a living' }));
 
     expect(screen.getByRole('heading', { name: 'Make a living' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Create without limits' })).not.toBeInTheDocument();
     expect(
       screen.getByText(
         'Sell products on Pubky Market. Turn your key into a shop and connect directly with buyers.',

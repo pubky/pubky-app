@@ -122,7 +122,11 @@ vi.mock('@/atoms/Container/Container', () => {
 
 vi.mock('@/atoms/FooterLinks/FooterLinks', () => {
   return {
-    FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
+    FooterLinks: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="footer-links" className={className}>
+        {children}
+      </div>
+    ),
   };
 });
 
@@ -297,7 +301,9 @@ describe('HomeFooter', () => {
 
     const link = screen.getByRole('link', { name: 'Pubky Protocol' });
     expect(link).toHaveAttribute('href', 'https://github.com/pubky/pubky-core');
+    expect(link).toHaveClass('font-semibold');
     expect(link.closest('[data-testid="footer-links"]')).toBeInTheDocument();
+    expect(screen.getByTestId('footer-links')).toHaveClass('[&_a]:no-underline');
   });
 
   it('renders Synonym and Tether branding below the agreement text', () => {

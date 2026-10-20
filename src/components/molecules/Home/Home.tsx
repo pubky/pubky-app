@@ -54,12 +54,12 @@ export const HomeActions = () => {
 export const HomeFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   return (
     <Container className={cn('flex-1 flex-col items-start justify-end gap-1', className)} {...props}>
-      <FooterLinks>
+      <FooterLinks className="[&_a]:no-underline">
         {'By joining, continuing, or creating a '}
         {'Pubky'}
         {' account, you agree to the'} <DialogTerms />, <DialogPrivacy />
         {', and confirm you are'} <DialogAge /> {'Pubky is powered by '}
-        <Link href={getPubkyCoreLink()} target="_blank">
+        <Link href={getPubkyCoreLink()} target="_blank" className="font-semibold">
           {'Pubky Protocol'}
         </Link>
         {` and was built by ${LEGAL_ENTITY_NAME} ©2026. All rights reserved.`}

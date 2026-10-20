@@ -97,7 +97,6 @@ export function LandingFreedomSection() {
     return () => window.clearTimeout(timeoutId);
   }, [activeSlide, carouselRun, handleNextSlide, isSectionVisible]);
 
-  const activeFeature = FEATURES[activeSlide];
   const slideNumber = String(activeSlide + 1).padStart(2, '0');
 
   return (
@@ -132,7 +131,7 @@ export function LandingFreedomSection() {
               aria-hidden
             />
           ))}
-          <div className="relative z-10 flex items-start gap-5 md:ml-auto md:w-[30%]">
+          <div className="relative z-10 flex items-start gap-5 md:ml-auto md:w-3/10 md:min-w-80">
             <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-brand/15 text-brand">
               <div
                 key={`${carouselRun}-${activeSlide}`}
@@ -143,25 +142,33 @@ export function LandingFreedomSection() {
                 {slideNumber}
               </Typography>
             </div>
-            <div className="min-w-0">
-              <Typography as="h3" size="lg" className="text-xl">
-                {activeFeature.title}
-              </Typography>
-              <Typography size="sm" className="mt-1 text-muted-foreground sm:text-base">
-                {activeFeature.description}
-              </Typography>
+            <div className="grid min-w-0 flex-1">
+              {FEATURES.map(({ key, title, description }, index) => (
+                <div
+                  key={key}
+                  className={cn('col-start-1 row-start-1', activeSlide !== index && 'invisible')}
+                  aria-hidden={activeSlide !== index}
+                >
+                  <Typography as="h3" size="lg" className="text-xl">
+                    {title}
+                  </Typography>
+                  <Typography size="sm" className="mt-1 text-muted-foreground sm:text-base">
+                    {description}
+                  </Typography>
+                </div>
+              ))}
             </div>
           </div>
           <div className="mt-4 md:absolute md:inset-x-12 md:bottom-10 md:z-10 md:mt-0">
-            <div className="pl-12 md:ml-auto md:w-[30%]">
+            <div className="pl-12 md:ml-auto md:w-3/10 md:min-w-80">
               <div className="-mr-4 ml-5 flex items-center md:-mr-2">
-                <div role="group" aria-label="Slide navigation" className="relative z-10 flex min-w-0 max-w-42 flex-1">
+                <div role="group" aria-label="Slide navigation" className="relative z-10 -ml-2.25 flex w-42 shrink-0">
                   {FEATURES.map(({ key, title }, index) => (
                     <Button
                       key={key}
                       overrideDefaults
                       type="button"
-                      className="group/dot flex h-12 min-w-0 flex-1 cursor-pointer items-center rounded-sm focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                      className="group/dot flex h-12 w-6 shrink-0 cursor-pointer items-center justify-center rounded-sm focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
                       aria-label={`Go to slide ${index + 1}: ${title}`}
                       aria-current={activeSlide === index ? 'true' : undefined}
                       onClick={() => {
@@ -172,8 +179,8 @@ export function LandingFreedomSection() {
                       <span
                         aria-hidden
                         className={cn(
-                          'size-1.5 shrink-0 rounded-full bg-brand transition-all duration-200 group-hover/dot:scale-125 group-hover/dot:opacity-50',
-                          activeSlide === index ? 'opacity-100' : 'opacity-30',
+                          'size-1.5 shrink-0 rounded-full bg-brand transition-all duration-200 group-hover/dot:scale-125',
+                          activeSlide === index ? 'opacity-100' : 'opacity-30 group-hover/dot:opacity-50',
                         )}
                       />
                     </Button>
