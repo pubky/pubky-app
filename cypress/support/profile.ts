@@ -75,9 +75,7 @@ export const editProfileAndVerify = (profileData: Partial<Record<keyof typeof pr
 export const clickFollowButton = () => {
   cy.get('[data-cy="profile-follow-toggle-btn"]')
     .filter(':visible')
-    .should('have.length.at.least', 1)
-    .first()
-    .should('be.visible')
+    .should('have.length', 1)
     .then(($btn) => {
       expect($btn.text().trim()).to.match(/^Follow\b/);
       cy.wrap($btn).click();
@@ -86,9 +84,7 @@ export const clickFollowButton = () => {
   // Check follow button has moved to followed/unfollow state.
   cy.get('[data-cy="profile-follow-toggle-btn"]')
     .filter(':visible')
-    .should('have.length.at.least', 1)
-    .first()
-    .should('be.visible')
+    .should('have.length', 1)
     .invoke('text')
     .should('match', /Following|Unfollow/);
 };
@@ -98,9 +94,7 @@ export const clickUnfollowButton = () => {
   // button's text is not exactly "Following".
   cy.get('[data-cy="profile-follow-toggle-btn"]')
     .filter(':visible')
-    .should('have.length.at.least', 1)
-    .first()
-    .should('be.visible')
+    .should('have.length', 1)
     .and(($btn) => {
       expect($btn.text()).to.match(/Following/);
     })
@@ -108,9 +102,7 @@ export const clickUnfollowButton = () => {
 
   cy.get('[data-cy="profile-follow-toggle-btn"]')
     .filter(':visible')
-    .should('have.length.at.least', 1)
-    .first()
-    .should('be.visible')
+    .should('have.length', 1)
     .and('have.text', 'Follow');
 };
 
@@ -227,13 +219,17 @@ export const reloadUntilOwnFollowingIsEmpty = (attempts = 10) => {
   cy.intercept({ method: 'GET', pathname: '/v0/stream/users/ids', query: { source: 'following' } }).as(
     'followingStream',
   );
-  cy.reload();
-  cy.wait('@followingStream').then(({ response }) => {
-    const ids: unknown[] = response?.statusCode === 200 && Array.isArray(response.body) ? response.body : [];
-    if (ids.length === 0) return;
-    expect(attempts, 'reloads left while Nexus still lists a followed user').to.be.greaterThan(1);
-    reloadUntilOwnFollowingIsEmpty(attempts - 1);
-  });
+  const reloadUntilEmpty = (remaining: number) => {
+    cy.reload();
+    cy.wait('@followingStream').then(({ response }) => {
+      const ids: unknown[] = response?.statusCode === 200 && Array.isArray(response.body) ? response.body : [];
+      if (ids.length === 0) return;
+      expect(remaining, 'reloads left while Nexus still lists a followed user').to.be.greaterThan(1);
+      reloadUntilEmpty(remaining - 1);
+    });
+  };
+
+  reloadUntilEmpty(attempts);
 };
 
 export const waitForPutLastRead = () => {
