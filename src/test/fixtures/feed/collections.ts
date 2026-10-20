@@ -231,7 +231,7 @@ const visualTiles = [
   visualTile(0, 'square', '/images/collections-onboarding.webp', 'Collections arranged on a desk'),
   visualTile(1, 'square', '/images/landing-experience5.png', 'Pubky community portrait'),
   visualTile(2, 'square', '/images/landing-experience2.png', 'Welcome illustration'),
-  visualTile(3, 'square', '/images/landing-experience4.png', 'Moving through a local-first network'),
+  visualTile(3, 'square', '/images/landing-experience4.webp', 'Moving through a local-first network'),
   visualTile(4, 'wide', '/images/landing-move.png', 'Notes travelling through a local-first network'),
 ] as const;
 

@@ -33,7 +33,7 @@ const FEATURES: Array<{ key: string; backgroundImage: string; title: string; des
   },
   {
     key: 'tagging',
-    backgroundImage: '/images/landing-experience4.png',
+    backgroundImage: '/images/landing-experience4.webp',
     title: 'Tag everything',
     description: 'Tag posts, media, and profiles to add context, find better content, discover people, and react quickly.',
   },
@@ -45,13 +45,13 @@ const FEATURES: Array<{ key: string; backgroundImage: string; title: string; des
   },
   {
     key: 'locks',
-    backgroundImage: '/images/landing-experience6.png',
+    backgroundImage: '/images/landing-experience6.webp',
     title: 'Sell your content',
     description: 'Put a price on your content with Pubky Locks. Let people pay to unlock the value you create.',
   },
   {
     key: 'market',
-    backgroundImage: '/images/landing-experience7.png',
+    backgroundImage: '/images/landing-experience7.webp',
     title: 'Make a living',
     description: 'Sell products on Pubky Market. Turn your key into a shop and connect directly with buyers.',
   },

@@ -9,6 +9,7 @@ import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.view
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import { Landing } from '@/templates/Public/Landing/Landing';
+import { LandingFinalSection } from '@/templates/Public/Landing/LandingFinalSection';
 import { LandingFreedomSection } from '@/templates/Public/Landing/LandingFreedomSection';
 
 // Preload images into cache to guarantee they render before snapshot.
@@ -104,7 +105,7 @@ describe('Landing — visual regression', () => {
     { name: 'tablet', viewport: { width: 768, height: 1024 } },
     { name: 'mobile', viewport: VRT_VIEWPORT_MOBILE },
   ])('positions the seven slide dots and arrow on $name', async ({ name, viewport }) => {
-    await preloadImages(['/images/landing-experience7.png']);
+    await preloadImages(['/images/landing-experience7.webp']);
     await renderForVRT(<LandingFreedomSection />, { viewport });
     const firstHeading = page.getByRole('heading', { name: 'Create without limits' });
     await expect.element(firstHeading).toBeVisible();
@@ -149,5 +150,17 @@ describe('Landing — visual regression', () => {
     expect(getComputedStyle(dots[6]).backgroundColor).toBe(restingColor);
     expect(getComputedStyle(dots[6]).opacity).toBe('0.5');
     expect(getComputedStyle(dots[6]).scale).toBe('1.25');
+  });
+
+  it('distinguishes the footer link without relying on colour or underlining', async () => {
+    await renderForVRT(<LandingFinalSection />, { viewport: VRT_VIEWPORT_DESKTOP });
+    const link = page.getByRole('link', { name: 'Pubky Protocol' });
+    const linkStyle = getComputedStyle(link.element());
+    const paragraphStyle = getComputedStyle(link.element().closest('p')!);
+
+    expect(Number(linkStyle.fontWeight)).toBeGreaterThan(Number(paragraphStyle.fontWeight));
+    expect(linkStyle.textDecorationLine).toBe('none');
+    await link.hover();
+    expect(getComputedStyle(link.element()).textDecorationLine).toBe('none');
   });
 });
