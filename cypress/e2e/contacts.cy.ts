@@ -2,7 +2,7 @@ import { slowCypressDown } from 'cypress-slow-down';
 import { BackupType, HasBackedUp } from '../support/types/enums';
 import { goToProfilePageFromHeader } from '../support/header';
 import { searchAndFollowProfile } from '../support/contacts';
-import { clickUnfollowButton, unfollowUserByUsername } from '../support/profile';
+import { clickUnfollowButton, reloadUntilOwnFollowingIsEmpty, unfollowUserByUsername } from '../support/profile';
 
 // cy.visit(`/profile/${pubky}`);
 describe('contacts', () => {
@@ -44,19 +44,21 @@ describe('contacts', () => {
 
     goToProfilePageFromHeader();
     cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '0').click();
+    cy.location('pathname').should('eq', '/profile/following');
+    reloadUntilOwnFollowingIsEmpty();
     cy.get('[data-cy="profile-following-empty"]').should('be.visible');
     cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');
 
     // Follow again and unfollow from the following list. The count drops at once; the row
-    // stays until reload so it can be followed again.
+    // stays until the list is reloaded from Nexus so it can be followed again.
     cy.get(`@${targetAlias}`).then((pubky) => {
       searchAndFollowProfile(`${pubky}`, targetName);
     });
     unfollowUserByUsername(targetName);
     cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '0');
 
-    cy.reload();
-    cy.get('[data-cy="profile-filter-item-following"]').click();
+    cy.location('pathname').should('eq', '/profile/following');
+    reloadUntilOwnFollowingIsEmpty();
     cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', '0');
     cy.get('[data-cy="profile-following-empty"]').should('be.visible');
     cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');

@@ -51,8 +51,12 @@ const submitHomePost = (postContent: string, files?: Cypress.FileReference | Cyp
     });
 };
 
+// A post opened from a feed is an overlay: the feed stays mounted under `display: none`
+// (`(feeds)/layout.tsx`) and its cards carry the same post text. Thread queries take only what is shown.
+const VISIBLE_POST_TEXT = '[data-cy="post-text"]:visible';
+
 const expectPostTextOrder = (ordered: string[]) => {
-  cy.get('[data-cy="post-text"]').should(($texts) => {
+  cy.get(VISIBLE_POST_TEXT).should(($texts) => {
     const values = $texts.toArray().map((el) => el.textContent ?? '');
     let previous = -1;
     ordered.forEach((snippet) => {
@@ -65,9 +69,11 @@ const expectPostTextOrder = (ordered: string[]) => {
 
 const replyOnThread = (parentText: string, replyContent: string) => {
   cy.get('[data-cy="thread-reply"]')
+    .filter(':visible')
     .filter((_, el) => (el.querySelector('[data-cy="post-text"]')?.textContent ?? '').includes(parentText))
     .first()
     .find('[data-cy="post-reply-btn"]')
+    .filter(':visible')
     .first()
     .click();
 
@@ -79,7 +85,7 @@ const replyOnThread = (parentText: string, replyContent: string) => {
     cy.wait('@replyCreated').its('response.statusCode').should('eq', 201);
   });
   cy.get('[data-cy="reply-post-input"]').should('not.exist');
-  cy.contains('[data-cy="post-text"]', replyContent).should('be.visible');
+  cy.contains(VISIBLE_POST_TEXT, replyContent).should('be.visible');
 };
 
 const expectKindVisible = (text: string) => {
@@ -919,14 +925,13 @@ describe('posts', () => {
 
     // One nested reply starts expanded. Collapse hides the chain; expand brings it back.
     cy.get('button[aria-label="Collapse all replies"]').filter(':visible').first().click();
-    cy.contains('[data-cy="post-text"]', level2).should('not.be.visible');
-    cy.contains('[data-cy="post-text"]', level3).should('not.be.visible');
-    cy.contains('[data-cy="post-text"]', level1).should('be.visible');
+    cy.get(VISIBLE_POST_TEXT).should('not.contain.text', level2).and('not.contain.text', level3);
+    cy.contains(VISIBLE_POST_TEXT, level1).should('be.visible');
     cy.get('button[aria-label="Expand all replies"]').filter(':visible').first().click();
-    cy.contains('[data-cy="post-text"]', level2).should('be.visible');
-    cy.contains('[data-cy="post-text"]', level3).should('be.visible');
+    cy.contains(VISIBLE_POST_TEXT, level2).should('be.visible');
+    cy.contains(VISIBLE_POST_TEXT, level3).should('be.visible');
 
-    cy.contains('[data-cy="post-text"]', level3).click();
+    cy.contains(VISIBLE_POST_TEXT, level3).click();
     cy.location('pathname').should('include', '/post/');
     cy.get('[data-testid="post-page-title"]').should('contain.text', 'Reply by').and('contain.text', username);
     cy.get('[data-testid="post-breadcrumb"]').should('be.visible');
@@ -945,12 +950,13 @@ describe('posts', () => {
     cy.get('[data-testid="quick-reply-textarea"]').filter(':visible').click().type(quickReply);
     cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('quickReplyCreated');
     cy.get('[data-testid="quick-reply"]')
+      .filter(':visible')
       .find('[data-cy="post-input-action-bar-reply"]')
       .should('be.visible')
       .and('not.be.disabled')
       .click();
     cy.wait('@quickReplyCreated').its('response.statusCode').should('eq', 201);
-    cy.contains('[data-cy="post-text"]', quickReply).should('be.visible');
+    cy.contains(VISIBLE_POST_TEXT, quickReply).should('be.visible');
     expectPostTextOrder([root, level1, quickReply]);
 
     cy.get('[data-cy="header-logo"]').click();
@@ -983,12 +989,22 @@ describe('posts', () => {
     deletePost({ filterText: postContent });
     cy.signOut(HasBackedUp.Yes);
 
+    // The coordinator's head poll asks for feed posts newer than the head (`end` without `start`;
+    // ascending reply pages also send `end`). Wait for one so a deleted parent would have been
+    // offered as unread if the bug returns.
+    cy.intercept('GET', '**/v0/stream/posts/keys*', (req) => {
+      const { start, end, source } = req.query;
+      if (end !== undefined && start === undefined && source !== 'post_replies') {
+        req.alias = 'streamHeadPoll';
+      }
+    });
     cy.signInWithEncryptedFile(backupDownloadFilePath(viewer));
     waitForFeedToLoad();
-    // Stay through a stream poll so a deleted parent can be offered as unread if the bug returns.
-    cy.wait(12_000);
+    cy.wait('@streamHeadPoll', { timeout: 20_000 });
+    // #993 surfaced the deleted parent as a "deleted by its author" card carrying this reply.
+    // Earlier tests leave that placeholder on reposts of deleted posts, so check this thread only.
     cy.get('[data-cy="timeline-container"]').should('not.contain.text', postContent);
-    cy.get('[data-cy="timeline-container"]').should('not.contain.text', 'This post has been deleted by its author.');
+    cy.get('[data-cy="timeline-container"]').should('not.contain.text', replyContent);
     cy.get('[data-cy="new-posts-button"]').should('not.exist');
     cy.signOut(HasBackedUp.Yes);
   });

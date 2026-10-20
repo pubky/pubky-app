@@ -11,18 +11,25 @@ export const openEditFeedDialog = (feedName: string) => {
   cy.get('[data-testid="custom-feed-dialog-content"]').should('be.visible').and('contain.text', 'Edit Feed');
 };
 
+// The selects are item-aligned: the open list puts the current option over the trigger, and
+// Radix ignores a pointerup within 10px of the press that opened it. A click on the current
+// option is swallowed and the list stays open, so pick the option with the keyboard instead.
 export const chooseCustomFeedOption = (sectionTestId: string, label: string) => {
-  cy.get('[data-testid="custom-feed-dialog-content"]')
-    .find(`[data-testid="${sectionTestId}"]`)
-    .find('button')
-    .first()
-    .click();
+  const trigger = () =>
+    cy.get('[data-testid="custom-feed-dialog-content"]').find(`[data-testid="${sectionTestId}"] [role="combobox"]`);
+
+  trigger().click();
   cy.get('[role="listbox"]')
-    .filter(':visible')
+    .should('be.visible')
     .find('[role="option"]')
     .filter((_, el) => (el.textContent ?? '').trim() === label)
-    .first()
-    .click();
+    .should('have.length', 1)
+    .focus()
+    .type('{enter}');
+  cy.get('[role="listbox"]').should('not.exist');
+  trigger().should(($trigger) => {
+    expect($trigger.text().trim()).to.eq(label);
+  });
 };
 
 export const addCustomFeedTag = (tag: string) => {

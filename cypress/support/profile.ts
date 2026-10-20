@@ -211,13 +211,29 @@ export const unfollowUserByUsername = (username: string) => {
       cy.wrap($btn).click();
     });
   // Own following/friends lists keep an unfollowed row so it can be followed again.
-  // The toggle is what changes immediately; a later reload drops the row.
+  // The toggle is what changes immediately; the row goes once Nexus has indexed the unfollow.
   cy.contains('[data-cy="profile-follower-item-name"]', username)
     .closest('[data-testid^="user-list-item-"]')
     .find('[data-cy="user-list-item-follow-toggle-btn"]')
     .filter(':visible')
     .should('have.attr', 'aria-label')
     .and('match', /^Follow\b/);
+};
+
+// A following list shorter than one page is always loaded from Nexus, once per page load, so a
+// reload straight after an unfollow can still list the user. Run on /profile/following: reloads
+// until Nexus returns an empty following stream.
+export const reloadUntilOwnFollowingIsEmpty = (attempts = 10) => {
+  cy.intercept({ method: 'GET', pathname: '/v0/stream/users/ids', query: { source: 'following' } }).as(
+    'followingStream',
+  );
+  cy.reload();
+  cy.wait('@followingStream').then(({ response }) => {
+    const ids: unknown[] = response?.statusCode === 200 && Array.isArray(response.body) ? response.body : [];
+    if (ids.length === 0) return;
+    expect(attempts, 'reloads left while Nexus still lists a followed user').to.be.greaterThan(1);
+    reloadUntilOwnFollowingIsEmpty(attempts - 1);
+  });
 };
 
 export const waitForPutLastRead = () => {
