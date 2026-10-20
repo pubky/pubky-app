@@ -2,12 +2,14 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import { Human } from '@/templates/Onboarding/Human/Human';
+import { Toaster } from '@/molecules/Toaster/Toaster';
+import { AuthController } from '@/controllers/auth/auth';
 
 // The real app mounts <Header /> from the root layout above every page; on
 // /onboarding/* it renders the "Create account" step bar (1–5). Render it here
@@ -17,6 +19,7 @@ function HumanWithHeader() {
     <>
       <Header />
       <Human />
+      <Toaster />
     </>
   );
 }
@@ -41,7 +44,11 @@ vi.mock('next/navigation', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/toast');
+vi.mock('@/controllers/auth/auth', () => ({
+  AuthController: {
+    verifySignupToken: vi.fn().mockResolvedValue('valid'),
+  },
+}));
 
 // Header reads auth + public-route state. Onboarding step 1 is pre-auth.
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -103,6 +110,10 @@ async function waitForVerificationCards(screen: Awaited<ReturnType<typeof render
 }
 
 describe('Human (onboarding) — visual regression', () => {
+  beforeEach(() => {
+    vi.mocked(AuthController.verifySignupToken).mockReset().mockResolvedValue('valid');
+  });
+
   it('renders the human-verification selection at desktop viewport', async () => {
     await preloadImages(['/images/sms-verification-phone.webp', '/images/bitcoin-payment.webp']);
     const screen = await renderForVRT(<HumanWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
@@ -115,5 +126,67 @@ describe('Human (onboarding) — visual regression', () => {
     const screen = await renderForVRT(<HumanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await waitForVerificationCards(screen);
     await matchVrtFrameScreenshot('onboarding-human-mobile');
+  });
+
+  it('keeps the invite option and verified navigation reachable on mobile', async () => {
+    await preloadImages(['/images/sms-verification-phone.webp', '/images/bitcoin-payment.webp', '/images/gift.webp']);
+    const screen = await renderForVRT(<HumanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
+    await waitForVerificationCards(screen);
+
+    const inviteButton = screen.getByRole('button', { name: 'Enter invite code' });
+    const inviteBounds = inviteButton.element().getBoundingClientRect();
+    expect(inviteBounds.top).toBeGreaterThanOrEqual(0);
+    expect(inviteBounds.bottom).toBeLessThanOrEqual(VRT_VIEWPORT_MOBILE.height);
+    expect(inviteBounds.left).toBeGreaterThanOrEqual(0);
+    expect(inviteBounds.right).toBeLessThanOrEqual(VRT_VIEWPORT_MOBILE.width);
+    await expect.element(inviteButton).toBeVisible();
+    await matchVrtFrameScreenshot('onboarding-human-invite-option-mobile');
+
+    await inviteButton.click();
+    await screen.getByRole('textbox', { name: 'Invite code' }).fill('YVB2-YFRN-GDY0');
+    await expect.element(screen.getByRole('status')).toHaveTextContent('Invite code applied');
+
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    continueButton.element().scrollIntoView({ block: 'end' });
+    await expect.element(continueButton).toBeEnabled();
+    expect(document.querySelector('[data-cy="toast"]')).toBeNull();
+
+    const statusBounds = screen.getByRole('status').element().getBoundingClientRect();
+    for (const name of ['Back', 'Continue']) {
+      const button = screen.getByRole('button', { name }).element();
+      const bounds = button.getBoundingClientRect();
+      expect(bounds.top).toBeGreaterThanOrEqual(statusBounds.bottom);
+      expect(bounds.bottom).toBeLessThanOrEqual(VRT_VIEWPORT_MOBILE.height);
+      expect(
+        button.contains(document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2)),
+      ).toBe(true);
+    }
+    await matchVrtFrameScreenshot('onboarding-human-invite-verified-mobile');
+
+    await screen.getByRole('button', { name: 'Back' }).click();
+    await expect.element(screen.getByTestId('human-verification-cards')).toBeVisible();
+  });
+
+  it('clears an invalid-code toast immediately when the corrected code verifies on mobile', async () => {
+    vi.mocked(AuthController.verifySignupToken).mockResolvedValueOnce('invalid').mockResolvedValueOnce('valid');
+    await preloadImages(['/images/sms-verification-phone.webp', '/images/bitcoin-payment.webp', '/images/gift.webp']);
+    const screen = await renderForVRT(<HumanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
+    await screen.getByRole('button', { name: 'Enter invite code' }).click();
+    const input = screen.getByRole('textbox', { name: 'Invite code' });
+    await input.fill('AAAA-BBBB-CCCC');
+    await expect
+      .poll(() => document.querySelector('[data-cy="toast"][data-state="open"]')?.textContent)
+      .toContain('Invalid invite code');
+
+    await input.fill('YVB2-YFRN-GDY0');
+    // This must finish before the three-second toast expiry could hide the regression.
+    await expect
+      .poll(() => document.querySelector('[data-cy="toast"][data-state="open"]'), { timeout: 500 })
+      .toBeNull();
+    await expect.element(screen.getByText('Invite code applied')).toBeVisible();
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    continueButton.element().scrollIntoView({ block: 'end' });
+    await expect.element(continueButton).toBeEnabled();
+    await continueButton.click();
   });
 });

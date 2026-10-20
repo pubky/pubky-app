@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HumanSelection } from './HumanSelection';
 
@@ -29,18 +29,26 @@ describe('HumanSelection', () => {
     vi.unstubAllEnvs();
   });
 
-  it('renders both verification cards', () => {
+  it('renders all three verification options', () => {
     render(<HumanSelection onClick={() => {}} onInviteCodeClick={() => {}} onDevMode={() => {}} />);
 
     expect(screen.getByTestId('mock-sms-card')).toBeInTheDocument();
     expect(screen.getByTestId('mock-bitcoin-card')).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('human-verification-cards')).getByTestId('invite-code-option-card'),
+    ).toBeInTheDocument();
     expect(screen.getByTestId('mock-human-footer')).toBeInTheDocument();
   });
 
-  it('renders invite code link in subtitle', () => {
-    render(<HumanSelection onClick={() => {}} onInviteCodeClick={() => {}} onDevMode={() => {}} />);
+  it('opens invite code entry from its own verification card', () => {
+    const onInviteCodeClick = vi.fn();
+    const onClick = vi.fn();
+    render(<HumanSelection onClick={onClick} onInviteCodeClick={onInviteCodeClick} onDevMode={() => {}} />);
 
-    expect(screen.getByTestId('invite-code-link')).toBeInTheDocument();
-    expect(screen.getByText('invite code.')).toBeInTheDocument();
+    const card = within(screen.getByTestId('invite-code-option-card'));
+    expect(card.getByRole('heading', { name: 'Invite Code' })).toBeInTheDocument();
+    fireEvent.click(card.getByRole('button', { name: 'Enter invite code' }));
+    expect(onInviteCodeClick).toHaveBeenCalledTimes(1);
+    expect(onClick).not.toHaveBeenCalled();
   });
 });

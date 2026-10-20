@@ -49,6 +49,9 @@ vi.mock('@/coordinators/auth/auth', () => ({
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
   ContentLayout: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
 }));
+// Navigation chrome is exercised with real components by the Shop browser tests.
+vi.mock('@/molecules/MobileHeader/MobileHeader', () => ({ MobileHeader: () => <header /> }));
+vi.mock('@/molecules/MobileFooter/MobileFooter', () => ({ MobileFooter: () => <footer /> }));
 
 function send(
   frame: HTMLIFrameElement,
