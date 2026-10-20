@@ -16,7 +16,7 @@ export const CONNECTION_POLL_INTERVAL_MS = 1000;
 /**
  * When to park the polling, on the wall clock — a frozen background tab skips attempts, so
  * counting them would under-measure. Parking is NOT failing: the purchase and its stored bundle
- * id survive, the screen stays on "awaiting payment", and the tab becoming visible again grants
+ * id survive, the screen stays on "awaiting payment", and returning to the tab grants
  * a fresh window. While the server is still creating the invoice, it counts from the server's
  * deadline for that instead. The content download after a completed payment parks after the same
  * time, but a returning tab does not re-read it: only Check again does.
@@ -44,8 +44,7 @@ const stallNotBeforeFor = (admissionDeadlineAt: string | null): number => {
  *
  * Waiting runs those two reads as separate loops that never wait on each other: the task status
  * decides the payment, the link state decides the QR. Both re-check when the tab becomes visible
- * again (background tabs get frozen while the reader pays in Bitkit) and park together on a
- * wall-clock deadline without failing the purchase.
+ * or regains window focus and park together on a wall-clock deadline without failing the purchase.
  */
 export function usePayToUnlock({
   open,
@@ -79,7 +78,7 @@ export function usePayToUnlock({
   // One generation per modal opening: every async continuation checks it, so a closed (or
   // reopened) modal can't apply stale results or keep polling.
   const generation = useRef(0);
-  // The active poll loop's teardown (timer + visibility listener) — replaced on every loop start,
+  // The active poll loop's teardown (timers + return listeners) — replaced on every loop start,
   // called on close/unmount. The generation makes a leaked loop inert; this makes it absent.
   const stopPolling = useRef<(() => void) | null>(null);
   // The download's own park. The wait's park does not cover it: the wait stops once the payment
@@ -276,8 +275,8 @@ export function usePayToUnlock({
       );
     };
 
-    // The reader pays in Bitkit, so this tab is backgrounded (timers frozen) for most of the wait.
-    // Returning is the real signal: read both now and grant a fresh wall-clock window.
+    // Returning from Bitkit can restore focus without changing visibility on desktop.
+    // Read both now and grant a fresh wall-clock window on either return signal.
     const onVisible = () => {
       if (document.visibilityState !== 'visible' || !active || generation.current !== gen) return;
       setIsStalled(false);
@@ -288,10 +287,12 @@ export function usePayToUnlock({
       });
     };
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
 
     const stop = () => {
       active = false;
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
       loops.forEach((loop) => loop.timer !== null && window.clearTimeout(loop.timer));
       if (stallTimer !== null) window.clearTimeout(stallTimer);
       if (stopPolling.current === stop) stopPolling.current = null;
