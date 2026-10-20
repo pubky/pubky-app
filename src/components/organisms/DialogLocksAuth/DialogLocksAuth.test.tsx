@@ -144,12 +144,15 @@ describe('DialogLocksAuth', () => {
     expect(screen.getByText('Enable Locks')).toBeInTheDocument();
   });
 
-  it('links Pubky Ring from the Enable step in a new tab', () => {
+  it.each([
+    ['Pubky Ring', 'https://pubkyring.app/'],
+    ['Bitkit', BITKIT_WEBSITE_URL],
+  ])('links %s from the Enable step in a new tab', (name, href) => {
     mocks.flow = { status: LocksAuthFlowStatus.CONNECTING, connectUrl: null, session: null, error: null };
     renderDialog();
 
-    const link = screen.getByRole('link', { name: 'Pubky Ring' });
-    expect(link).toHaveAttribute('href', 'https://pubkyring.app/');
+    const link = screen.getByRole('link', { name });
+    expect(link).toHaveAttribute('href', href);
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(link).toHaveClass('text-base', 'font-bold');
