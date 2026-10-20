@@ -1,5 +1,6 @@
-// Consumed by VRT test harness (mockFeedApplication and Home.vrt.test.tsx).
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
+// Consumed by VRT test harness (mockFeedApplication, Home.vrt.test.tsx,
+// CustomFeed.vrt.test.tsx).
+import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { homeInitialState, type HomeState } from '@/stores/home/home.types';
 import { HOUR_MS, VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
@@ -16,10 +17,29 @@ export const VRT_HOME_FILTERS = {
 } satisfies HomeState;
 
 /**
+ * Columns feed with content tags, a profile tag, and a non-default reach,
+ * sort, and content filter. First in the tab strip so the active
+ * `/feed/[id]` tab stays inside the mobile viewport.
+ */
+export const VRT_BITCOIN_FEED = {
+  id: 'vrt-feed-bitcoin',
+  name: 'Bitcoin',
+  icon: 'bitcoin',
+  tags: ['bitcoin', 'lightning'],
+  domain_tags: ['bitcoiner'],
+  reach: PubkyAppFeedReach.Following,
+  sort: PubkyAppFeedSort.Popularity,
+  content: PubkyAppPostKind.Short,
+  layout: PubkyAppFeedLayout.Columns,
+  created_at: VRT_FROZEN_NOW_MS - 7 * 24 * HOUR_MS,
+  updated_at: VRT_FROZEN_NOW_MS - 2 * 24 * HOUR_MS,
+} satisfies FeedModelSchema;
+
+/**
  * The set of saved feeds shown in the FeedNavigation tab strip.
- * The first entry is highlighted as the active feed in the global view.
  */
 export const VRT_FEED_NAVIGATION: readonly FeedModelSchema[] = [
+  VRT_BITCOIN_FEED,
   {
     id: 'vrt-feed-global',
     name: 'Global',
