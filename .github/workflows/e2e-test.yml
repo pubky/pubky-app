@@ -33,16 +33,6 @@ on:
       - '.github/workflows/e2e-test.yml'
       - '.github/workflows/build-docker-image.yml'
 
-# Runs group per branch, so one branch's run never cancels another's. A newer
-# dev push supersedes an in-flight dev push: only the latest commit's result
-# matters there. Manual dispatches get a group per run so every requested run
-# executes and none is ever cancelled or replaced. Master pushes are never
-# cancelled either; GitHub keeps the running run plus the newest pending one,
-# so a burst of master pushes attributes coverage to the latest pending commit.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event_name }}
-  cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
-
 jobs:
   rebuild_images:
     name: Getting images to rebuild
