@@ -135,19 +135,25 @@ export const waitForPopularityOrder = (first: string, second: string, reloads = 
   );
   const check = (remaining: number) => {
     waitForFeedToLoad();
-    cy.get('[data-cy="timeline-posts"]').then(($timeline) => {
-      const { firstIndex, secondIndex } = postOrderIndexes($timeline.find('[data-cy="post-card"]'), first, second);
-      if (firstIndex >= 0 && secondIndex >= 0 && firstIndex < secondIndex) {
-        return;
-      }
-      if (remaining <= 0) {
-        expectOrderIndexes(first, second, firstIndex, secondIndex);
-        return;
-      }
-      cy.reload();
-      cy.wait('@popularityStream');
-      check(remaining - 1);
-    });
+    // Judge the order only once both cards have rendered, so a page still filling in costs no reload.
+    cy.get('[data-cy="timeline-posts"]')
+      .find('[data-cy="post-card"]')
+      .should(($cards) => {
+        const { firstIndex, secondIndex } = postOrderIndexes($cards, first, second);
+        expect(firstIndex, `"${first}" index`).to.be.greaterThan(-1);
+        expect(secondIndex, `"${second}" index`).to.be.greaterThan(-1);
+      })
+      .then(($cards) => {
+        const { firstIndex, secondIndex } = postOrderIndexes($cards, first, second);
+        if (firstIndex < secondIndex) return;
+        if (remaining <= 0) {
+          expectOrderIndexes(first, second, firstIndex, secondIndex);
+          return;
+        }
+        cy.reload();
+        cy.wait('@popularityStream');
+        check(remaining - 1);
+      });
   };
 
   check(reloads);
