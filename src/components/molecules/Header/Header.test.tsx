@@ -193,23 +193,21 @@ describe('Header Components', () => {
     resetRuntimeConfigForTests();
   });
 
-  it.each([
-    { name: 'signed-in', Component: HeaderNavigationButtons },
-    { name: 'guest', Component: HeaderExploreNavigationButtons },
-  ])('uses the injected Shop destination in $name navigation', ({ name, Component }) => {
-    mockCurrentUserPubky = name === 'guest' ? null : 'test-pubky';
-    window[RUNTIME_CONFIG_WINDOW_KEY] = {
-      ...readServerConfig(),
-      shopUrl: 'https://shop.example.com/marketplace',
-    };
-    render(<Component />);
-    const link = screen.getByRole('button', { name: 'Shop' }).closest('a');
-    expect(link).toHaveAttribute('href', 'https://shop.example.com/marketplace');
-    expect(link).toHaveAttribute('target', '_self');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    fireEvent.click(link!);
-    expect(mockSetShowSignInDialog).not.toHaveBeenCalled();
-    expect(mockPush).not.toHaveBeenCalled();
+  describe('default embedded Shop navigation', () => {
+    it.each([
+      { name: 'signed-in', Component: HeaderNavigationButtons },
+      { name: 'guest', Component: HeaderExploreNavigationButtons },
+    ])('keeps $name Shop navigation inside the App', ({ name, Component }) => {
+      mockCurrentUserPubky = name === 'guest' ? null : 'test-pubky';
+      window[RUNTIME_CONFIG_WINDOW_KEY] = readServerConfig();
+      render(<Component />);
+      const link = screen.getByRole('button', { name: 'Shop' }).closest('a');
+      expect(link).toHaveAttribute('href', '/shop');
+      expect(link).not.toHaveAttribute('target');
+      expect(link).not.toHaveAttribute('rel');
+      fireEvent.click(link!);
+      expect(mockSetShowSignInDialog).not.toHaveBeenCalled();
+    });
   });
 
   describe('HeaderContainer', () => {
@@ -554,15 +552,10 @@ describe('Header Components', () => {
 
       // Home, Hot, and Collections are public explore routes → real navigation links.
       const links = screen.getAllByRole('link');
-      expect(links.map((link) => link.getAttribute('href'))).toEqual([
-        '/home',
-        '/hot',
-        'https://shop.staging.pubky.app/marketplace',
-        '/collections',
-      ]);
+      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot', '/shop', '/collections']);
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
 
-      expect(screen.getByRole('button', { name: 'Shop' }).closest('a')).toHaveAttribute('target', '_self');
+      expect(screen.getByRole('button', { name: 'Shop' }).closest('a')).not.toHaveAttribute('target');
       // All five nav icons are shown.
       expect(document.querySelector('.lucide-house')).toBeInTheDocument();
       expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
@@ -680,78 +673,5 @@ describe('Header Components', () => {
       expect(avatar).toBeInTheDocument();
       expect(avatar).toHaveAttribute('data-name', 'Test User');
     });
-  });
-});
-
-describe('Header Components - Snapshots', () => {
-  const mockPush = vi.fn();
-  const mockRouter = {
-    push: mockPush,
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-    bfcacheId: '',
-  };
-
-  beforeEach(() => {
-    vi.mocked(useRouter).mockReturnValue(mockRouter as ReturnType<typeof useRouter>);
-    vi.mocked(usePathname).mockReturnValue('/home');
-    vi.mocked(useAuthStore).mockReturnValue({ currentUserPubky: 'test-pubky' });
-    vi.mocked(useNotificationStore).mockReturnValue({ selectUnread: () => 0 });
-    vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => ({
-      query: deps?.[0],
-      data: { name: 'Test User', image: 'test-image.jpg' },
-    }));
-  });
-
-  it('matches snapshot for HeaderContainer', () => {
-    const { container } = render(
-      <HeaderContainer>
-        <div>Test Content</div>
-      </HeaderContainer>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HeaderTitle', () => {
-    const { container } = render(<HeaderTitle currentTitle="Test Title" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HeaderOnboarding', () => {
-    const { container } = render(<HeaderOnboarding currentStep={3} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HeaderSocialLinks', () => {
-    const { container } = render(<HeaderSocialLinks />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HeaderButtonSignIn', () => {
-    const { container } = render(<HeaderButtonSignIn />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HeaderHome', () => {
-    const { container } = render(<HeaderHome />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HeaderSignIn', () => {
-    const { container } = render(<HeaderSignIn />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HeaderNavigationButtons', () => {
-    const { container } = render(<HeaderNavigationButtons avatarName="TU" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HeaderNavigationButtons with counter', () => {
-    const { container } = render(<HeaderNavigationButtons avatarName="TU" counter={5} />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

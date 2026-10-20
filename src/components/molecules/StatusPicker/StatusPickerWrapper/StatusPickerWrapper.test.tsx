@@ -1,7 +1,18 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { STATUS_LABELS } from '@/libs/status/status.constants';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { StatusPickerWrapper } from './StatusPickerWrapper';
+
+beforeEach(() => {
+  useAuthStore.setState({
+    currentUserPubky: 'account',
+    session: mockSession(),
+    restoreStatus: 'ready',
+    showSignInDialog: false,
+  });
+});
 
 // Mock StatusPickerContent
 vi.mock('../StatusPickerContent/StatusPickerContent', () => ({
@@ -60,6 +71,25 @@ describe('StatusPickerWrapper', () => {
   });
 
   describe('Status Selection', () => {
+    it('requests sign-in before opening a picker for a retained recovery identity', () => {
+      useAuthStore.setState({ session: null, restoreStatus: 'reauth-required' });
+      render(<StatusPickerWrapper emoji="🌴" status="vacationing" onStatusChange={mockOnStatusChange} />);
+      fireEvent.click(screen.getByRole('button'));
+      expect(screen.queryByTestId('status-picker-content')).not.toBeInTheDocument();
+      expect(useAuthStore.getState().showSignInDialog).toBe(true);
+      expect(mockOnStatusChange).not.toHaveBeenCalled();
+    });
+
+    it('does not change the displayed status when the session is lost after opening', async () => {
+      render(<StatusPickerWrapper emoji="🌴" status="vacationing" onStatusChange={mockOnStatusChange} />);
+      fireEvent.click(screen.getByRole('button'));
+      const choice = await screen.findByTestId('select-status-available');
+      useAuthStore.setState({ session: null, restoreStatus: 'reauth-required' });
+      fireEvent.click(choice);
+      expect(mockOnStatusChange).not.toHaveBeenCalled();
+      expect(screen.getByText(STATUS_LABELS.vacationing)).toBeInTheDocument();
+      expect(useAuthStore.getState().showSignInDialog).toBe(true);
+    });
     it('calls onStatusChange when status is selected', async () => {
       render(<StatusPickerWrapper emoji="🌴" status="vacationing" onStatusChange={mockOnStatusChange} />);
 
@@ -216,30 +246,6 @@ describe('StatusPickerWrapper', () => {
       await waitFor(() => {
         expect(screen.getByTestId('status-picker-content')).toBeInTheDocument();
       });
-    });
-  });
-
-  describe('StatusPickerWrapper - Snapshots', () => {
-    it('matches snapshot with predefined status', () => {
-      const { container } = render(<StatusPickerWrapper emoji="🌴" status="vacationing" />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with custom status', () => {
-      const { container } = render(<StatusPickerWrapper emoji="😊" status="😊Working" />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with onStatusChange handler', () => {
-      const { container } = render(
-        <StatusPickerWrapper emoji="🌴" status="vacationing" onStatusChange={mockOnStatusChange} />,
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot with custom sideOffset', () => {
-      const { container } = render(<StatusPickerWrapper emoji="🌴" status="vacationing" sideOffset={-50} />);
-      expect(container.firstChild).toMatchSnapshot();
     });
   });
 });

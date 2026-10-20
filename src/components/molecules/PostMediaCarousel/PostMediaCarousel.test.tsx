@@ -209,10 +209,3 @@ describe('PostMediaCarousel', () => {
     expect(screen.queryByRole('button', { name: 'Next slide' })).not.toBeInTheDocument();
   });
 });
-
-describe('PostMediaCarousel - Snapshots', () => {
-  it('renders a portrait carousel with all navigation controls', () => {
-    const { container } = render(<PostMediaCarousel media={media} onOpenPreview={vi.fn()} isPreviewOpen={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

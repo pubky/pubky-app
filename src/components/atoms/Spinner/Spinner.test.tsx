@@ -45,19 +45,4 @@ describe('Spinner', () => {
     expect(spinner).toHaveAttribute('role', 'status');
     expect(spinner).toHaveAttribute('aria-label', 'Loading');
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<Spinner />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with sm size', () => {
-    const { container } = render(<Spinner size="sm" />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with lg size', () => {
-    const { container } = render(<Spinner size="lg" />);
-    expect(container).toMatchSnapshot();
-  });
 });

@@ -60,6 +60,19 @@ describe('LockContentParser', () => {
     });
   });
 
+  describe('creatorFromUrl', () => {
+    it('returns the valid pubky homeserver from a lock URL', () => {
+      expect(LockContentParser.creatorFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks/lock.json`)).toBe(
+        MOCK_LOCK_AUTHOR_PUBKY,
+      );
+    });
+
+    it('returns null for a URL without a valid pubky homeserver', () => {
+      expect(LockContentParser.creatorFromUrl('https://example.com/lock.json')).toBeNull();
+      expect(LockContentParser.creatorFromUrl('pubky://short/lock.json')).toBeNull();
+    });
+  });
+
   describe('lockIdFromUrl', () => {
     it('takes the lock id from the .json filename', () => {
       expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/app.locks/LOCK1.json`)).toBe(
@@ -75,33 +88,36 @@ describe('LockContentParser', () => {
 });
 
 describe('LockFileParser', () => {
-  describe('resolvePriceSats', () => {
+  describe('resolvePrice', () => {
     const paymentLock = (params: Record<string, unknown>) => ({
       ...MOCK_LOCK_FILE,
       criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params }],
     });
 
-    it('reads the amount of a payment lock', () => {
-      expect(LockFileParser.resolvePriceSats(paymentLock({ amount: '1000' }))).toBe('1000');
+    it.each(['BTC', 'USD'])('reads the amount and %s denomination', (asset) => {
+      expect(LockFileParser.resolvePrice(paymentLock({ amount: '1000', asset }))).toEqual({ amount: '1000', asset });
     });
 
     it('returns null for a lock that is not a payment lock', () => {
-      expect(LockFileParser.resolvePriceSats(null)).toBeNull();
+      expect(LockFileParser.resolvePrice(null)).toBeNull();
       expect(
-        LockFileParser.resolvePriceSats({
+        LockFileParser.resolvePrice({
           ...MOCK_LOCK_FILE,
           criteria: [{ criterion_id: 'criterion-1', verifier_type: 'unsupported', params: {} }],
         }),
       ).toBeNull();
     });
 
-    // Amount shapes are `isPositiveIntegerString`'s own table; here only that the parser defers to it.
+    // Untrusted lock files must include a supported denomination and an exact atomic amount.
     it.each([
       ['missing', {}],
       ['a number rather than the wire string', { amount: 1000 }],
-      ['not a positive integer string', { amount: '007' }],
+      ['not a positive integer string', { amount: '007', asset: 'BTC' }],
+      ['unsupported asset', { amount: '1', asset: 'ETH' }],
+      ['missing asset', { amount: '1' }],
+      ['overflow', { amount: '18446744073709551616', asset: 'USD' }],
     ])('returns null when the amount is %s', (_label, params) => {
-      expect(LockFileParser.resolvePriceSats(paymentLock(params))).toBeNull();
+      expect(LockFileParser.resolvePrice(paymentLock(params))).toBeNull();
     });
   });
 });
@@ -113,7 +129,9 @@ describe('LockProofBundler', () => {
     it('builds one empty-payload proof with the reader pubky at the top level', () => {
       const paymentLock = {
         ...MOCK_LOCK_FILE,
-        criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
+        criteria: [
+          { criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000', asset: 'BTC' } },
+        ],
       };
       expect(LockProofBundler.buildPayment(paymentLock, LOCK_URL, 'bundle-1', 'reader123')).toEqual({
         version: 1,
@@ -133,28 +151,65 @@ describe('LockProofBundler', () => {
 
 describe('GuardedContentParser', () => {
   describe('purchase bundle id file', () => {
-    it('builds the purchase URL beside the replica, not inside it', () => {
-      expect(GuardedContentParser.purchaseUrl('reader123', 'lock1')).toBe(
+    const BUNDLE_A = 'A'.repeat(26);
+    const BUNDLE_B = 'B'.repeat(26);
+
+    it('builds one purchase URL per bundle id, beside the replica, not inside it', () => {
+      expect(GuardedContentParser.purchaseUrl('reader123', 'lock1', BUNDLE_A)).toBe(
+        `pubky://reader123/priv/social/purchases/lock1/${BUNDLE_A}.json`,
+      );
+      expect(GuardedContentParser.purchaseLockRootUrl('reader123', 'lock1')).toBe(
+        'pubky://reader123/priv/social/purchases/lock1/',
+      );
+      expect(GuardedContentParser.legacyPurchaseUrl('reader123', 'lock1')).toBe(
         'pubky://reader123/priv/social/purchases/lock1.json',
       );
     });
 
-    it('lists the purchased lock ids from the purchases root', () => {
+    it('lists the purchased lock ids from the purchases root, in both layouts, once each', () => {
       expect(
         GuardedContentParser.purchasedLockIds([
           'pubky://reader1/priv/social/purchases/lock1.json',
-          'pubky://reader1/priv/social/purchases/lock2.json',
+          `pubky://reader1/priv/social/purchases/lock1/${BUNDLE_A}.json`,
+          `pubky://reader1/priv/social/purchases/lock2/${BUNDLE_A}.json`,
+          `pubky://reader1/priv/social/purchases/lock2/${BUNDLE_B}.json`,
+          'pubky://reader1/priv/social/purchases/lock3.json',
         ]),
-      ).toEqual(['lock1', 'lock2']);
+      ).toEqual(['lock1', 'lock2', 'lock3']);
     });
 
     it.each([
       ['a file outside the purchases root', 'pubky://reader1/priv/social/unlocked/lock1/post.json'],
-      ['a nested path', 'pubky://reader1/priv/social/purchases/lock1/extra.json'],
+      ['a nested file that is not a bundle id', 'pubky://reader1/priv/social/purchases/lock1/extra.json'],
+      ['a path nested twice', `pubky://reader1/priv/social/purchases/lock1/x/${BUNDLE_A}.json`],
       ['a non-json entry', 'pubky://reader1/priv/social/purchases/lock1'],
       ['an empty id', 'pubky://reader1/priv/social/purchases/.json'],
+      ['an empty lock id', `pubky://reader1/priv/social/purchases//${BUNDLE_A}.json`],
     ])('ignores %s', (_label, url) => {
       expect(GuardedContentParser.purchasedLockIds([url])).toEqual([]);
+    });
+
+    it("lists one lock's bundle ids sorted, so every device ranks them the same way", () => {
+      expect(
+        GuardedContentParser.purchaseBundleIds([
+          `pubky://reader1/priv/social/purchases/lock1/${BUNDLE_B}.json`,
+          `pubky://reader1/priv/social/purchases/lock1/${BUNDLE_A}.json`,
+          `pubky://reader1/priv/social/purchases/lock1/${BUNDLE_A}.json`,
+        ]),
+      ).toEqual([BUNDLE_A, BUNDLE_B]);
+    });
+
+    // A name that is not a bundle id may be one in a format this build does not know: skipping it could pay twice.
+    it.each([
+      ['a lowercase id', `pubky://reader1/priv/social/purchases/lock1/${BUNDLE_A.toLowerCase()}.json`],
+      ['a short id', `pubky://reader1/priv/social/purchases/lock1/${BUNDLE_A.slice(1)}.json`],
+      ['a letter outside Crockford base32', `pubky://reader1/priv/social/purchases/lock1/${'U'.repeat(26)}.json`],
+      ['a non-json entry', `pubky://reader1/priv/social/purchases/lock1/${BUNDLE_A}`],
+      ['the legacy lock file', 'pubky://reader1/priv/social/purchases/lock1.json'],
+    ])('returns null for %s under a lock root', (_label, url) => {
+      expect(
+        GuardedContentParser.purchaseBundleIds([`pubky://reader1/priv/social/purchases/lock1/${BUNDLE_B}.json`, url]),
+      ).toBeNull();
     });
 
     it('round-trips a bundle id through build + parse', () => {
@@ -188,6 +243,36 @@ describe('GuardedContentParser', () => {
       expect(GuardedContentParser.attachmentUriToPath('pubky://ownerb/priv/app.locks/content/img1')).toBe(
         '/priv/app.locks/content/img1',
       );
+    });
+  });
+
+  describe('toCachedPost', () => {
+    const url = 'pubky://owner/priv/locks.app/content/img1';
+    const post: GuardedPost = { content: 'secret', kind: 'image', attachments: [url] };
+
+    it('keeps post text and typed attachment references without media bytes', () => {
+      expect(
+        GuardedContentParser.toCachedPost(post, {
+          '/priv/locks.app/content/img1': { content_type: 'image/png' },
+        }),
+      ).toEqual({
+        content: 'secret',
+        kind: 'image',
+        attachments: [{ url, content_type: 'image/png' }],
+      });
+    });
+
+    it('skips caching a post if an attachment has no descriptor', () => {
+      expect(GuardedContentParser.toCachedPost(post, {})).toBeNull();
+      expect(GuardedContentParser.toCachedPost(post)).toBeNull();
+    });
+
+    it('keeps text-only posts when the lock file omits secondary resources', () => {
+      expect(GuardedContentParser.toCachedPost({ ...post, attachments: null })).toEqual({
+        content: 'secret',
+        kind: 'image',
+        attachments: null,
+      });
     });
   });
 
@@ -247,7 +332,7 @@ describe('GuardedContentParser', () => {
     });
   });
 
-  describe('buildUnlockedPost', () => {
+  describe('buildReplicatedPost', () => {
     const ANNOUNCEMENT_URI = 'pubky://author1/pub/pubky.app/posts/POST1';
     const post: GuardedPost = {
       content: 'secret',
@@ -256,14 +341,14 @@ describe('GuardedContentParser', () => {
     };
 
     it('repoints attachments at the reader copy with inline content types', () => {
-      const json = GuardedContentParser.buildUnlockedPost(
+      const replicated = GuardedContentParser.buildReplicatedPost(
         post,
         'readerpubky',
         'LOCK1',
         [{ id: 'img1', contentType: 'image/png', slot: 0 }],
         ANNOUNCEMENT_URI,
       );
-      expect(JSON.parse(json)).toEqual({
+      expect(replicated).toEqual({
         content: 'secret',
         kind: 'image',
         attachments: [
@@ -274,7 +359,7 @@ describe('GuardedContentParser', () => {
     });
 
     it('records the slot of each attachment, so a dropped one leaves a gap an article body can see', () => {
-      const json = GuardedContentParser.buildUnlockedPost(
+      const replicated = GuardedContentParser.buildReplicatedPost(
         post,
         'readerpubky',
         'LOCK1',
@@ -285,18 +370,18 @@ describe('GuardedContentParser', () => {
         ANNOUNCEMENT_URI,
       );
 
-      expect(JSON.parse(json).attachments.map((attachment: { slot: number }) => attachment.slot)).toEqual([0, 2]);
+      expect(replicated.attachments?.map((attachment) => attachment.slot)).toEqual([0, 2]);
     });
 
     it('keeps attachments null when the post has none', () => {
-      const json = GuardedContentParser.buildUnlockedPost(
+      const replicated = GuardedContentParser.buildReplicatedPost(
         { ...post, attachments: null },
         'readerpubky',
         'LOCK1',
         [],
         ANNOUNCEMENT_URI,
       );
-      expect(JSON.parse(json).attachments).toBeNull();
+      expect(replicated.attachments).toBeNull();
     });
   });
 

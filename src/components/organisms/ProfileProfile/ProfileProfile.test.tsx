@@ -74,6 +74,7 @@ vi.mock('@/hooks/useProfileHeader/useProfileHeader', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: vi.fn(() => ({
     isAuthenticated: true,
+    waitForAuth: async () => true,
     requireAuth: vi.fn((callback) => callback()),
   })),
 }));
@@ -330,12 +331,6 @@ describe('ProfileProfile', () => {
       enableStats: true,
     });
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<ProfileProfile />);
-    expect(container).toMatchSnapshot();
-  });
-
   describe('avatar zoom', () => {
     it('does not render the zoom modal before the avatar is clicked', () => {
       render(<ProfileProfile />);

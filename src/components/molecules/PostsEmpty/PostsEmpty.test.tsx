@@ -18,6 +18,7 @@ vi.mock('@/providers/ProfileProvider/ProfileProvider', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
+    waitForAuth: async () => true,
     requireAuth: mocks.requireAuth,
   }),
 }));
@@ -104,22 +105,5 @@ describe('PostsEmpty', () => {
     expect(screen.getByText(/No posts yet/i)).toBeInTheDocument();
     expect(screen.getByText(/This user hasn't posted yet/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Create a Post/i })).not.toBeInTheDocument();
-  });
-});
-
-describe('PostsEmpty - Snapshots', () => {
-  beforeEach(() => {
-    mocks.isOwnProfile = true;
-  });
-
-  it('matches snapshot on own profile', () => {
-    const { container } = render(<PostsEmpty />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot on another user profile', () => {
-    mocks.isOwnProfile = false;
-    const { container } = render(<PostsEmpty />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

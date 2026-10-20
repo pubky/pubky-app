@@ -8,7 +8,11 @@ import type { ProfileChanges, ProfileFields } from '@/pipes/pipes.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 
 vi.mock('@/services/homeserver/homeserver', () => ({
-  HomeserverService: { getFreshJson: vi.fn(), request: vi.fn() },
+  HomeserverService: {
+    getFreshJson: vi.fn(),
+    request: vi.fn(),
+    createWriteFence: () => ({ enter: () => {}, assertCurrent: () => {} }),
+  },
 }));
 vi.mock('@/services/nexus/bootstrap/bootstrap', () => ({ NexusBootstrapService: { ingest: vi.fn() } }));
 
@@ -56,6 +60,7 @@ describe('ProfileApplication published profile repair', () => {
         method: HttpMethod.PUT,
         url: `pubky://${pubky}/pub/pubky.app/profile.json`,
         bodyJson: valid,
+        fence: expect.anything(),
       });
       expect(await UserDetailsModel.findById(pubky)).toMatchObject(valid);
       expect(await UserTtlModel.findById(pubky)).toBeTruthy();

@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { z } from 'zod';
 import withSerwistInit from '@serwist/next';
 import { withSentryConfig } from '@sentry/nextjs';
 import packageJson from './package.json';
@@ -21,6 +22,26 @@ const nextConfig: NextConfig = {
   },
   // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
   ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),
+  async rewrites() {
+    // Development convenience only. Deployed containers use their reverse proxy so the
+    // Shop upstream can change at deploy time without rebuilding the App image.
+    if (process.env.NODE_ENV !== 'development' || !process.env.SHOP_EMBED_PROXY_ORIGIN) return [];
+    const origin = z
+      .url()
+      .refine((value) => {
+        const url = new URL(value);
+        return (
+          ['http:', 'https:'].includes(url.protocol) &&
+          !url.username &&
+          !url.password &&
+          url.pathname === '/' &&
+          !url.search &&
+          !url.hash
+        );
+      })
+      .parse(process.env.SHOP_EMBED_PROXY_ORIGIN);
+    return [{ source: '/shop-embed/:path*', destination: `${new URL(origin).origin}/shop-embed/:path*` }];
+  },
   async redirects() {
     return [
       // /profile/[pubky] is the canonical other-user posts view (see app/profile/[pubky]/page.tsx).

@@ -99,31 +99,3 @@ describe('ButtonFilters', () => {
     expect(screen.queryByTestId('settings2-icon')).not.toBeInTheDocument();
   });
 });
-
-describe('ButtonFilters - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<ButtonFilters />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with left position', () => {
-    const { container } = render(<ButtonFilters position="left" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with right position', () => {
-    const { container } = render(<ButtonFilters position="right" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<ButtonFilters className="custom-filters" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for button element', () => {
-    render(<ButtonFilters />);
-    const button = screen.getByRole('button');
-    expect(button).toMatchSnapshot();
-  });
-});

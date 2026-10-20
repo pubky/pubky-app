@@ -1,8 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FabAction } from '@/hooks/useFabAction/useFabAction.types';
 import { useCollectionReorderStore } from '@/stores/collectionReorder/collectionReorder.store';
+import { useContextualBannerStore } from '@/stores/contextualBanner/contextualBanner.store';
+import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { Fab } from './Fab';
 
 const mockUseAuthStatus = vi.fn(() => ({
@@ -278,32 +280,76 @@ describe('Fab', () => {
       expect(mockRequireAuth).toHaveBeenCalledTimes(1);
     });
   });
-});
 
-describe('Fab - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseKeyboardVisible.mockReturnValue(false);
-    mockUseAuthStatus.mockReturnValue({
-      isFullyAuthenticated: true,
+  describe('guest contextual banner', () => {
+    const guestAuthStatus = {
+      isFullyAuthenticated: false,
       isLoading: false,
-      status: 'AUTHENTICATED',
-      hasKeypair: true,
-      hasProfile: true,
+      status: 'UNAUTHENTICATED',
+      hasKeypair: false,
+      hasProfile: false,
+    };
+
+    beforeEach(() => {
+      useContextualBannerStore.setState({ visible: false });
+      mockUsePathname.mockReturnValue(`/post/${PUBKY_52_STAGING_FIXTURE}/${POST_ID_STAGING_FIXTURE}`);
+      mockIsPublicExploreRoute.mockReturnValue(true);
     });
-    mockIsPublicExploreRoute.mockReturnValue(false);
-    mockRequireAuth.mockImplementation((action: () => void) => action());
-    mockUseFabAction.mockReturnValue({ kind: 'createPost', ariaLabel: 'New post' });
-  });
 
-  it('matches snapshot for the default new post action', () => {
-    const { container } = render(<Fab />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
+    afterEach(() => {
+      useContextualBannerStore.setState({ visible: false });
+    });
 
-  it('matches snapshot for the create collection action', () => {
-    mockUseFabAction.mockReturnValue({ kind: 'createCollection', ariaLabel: 'New collection' });
-    const { container } = render(<Fab />);
-    expect(container.firstChild).toMatchSnapshot();
+    it('hides the FAB for a guest while the banner is visible', () => {
+      mockUseAuthStatus.mockReturnValue(guestAuthStatus);
+      useContextualBannerStore.getState().show();
+
+      const { container } = render(<Fab />);
+
+      expect(container).toBeEmptyDOMElement();
+      expect(screen.queryByTestId('new-post-cta')).not.toBeInTheDocument();
+    });
+
+    it('keeps the FAB for a guest while the banner is hidden', () => {
+      mockUseAuthStatus.mockReturnValue(guestAuthStatus);
+
+      render(<Fab />);
+
+      expect(screen.getByTestId('new-post-cta')).toBeInTheDocument();
+    });
+
+    it('keeps the FAB and its dialog for an authenticated user while the banner is visible', () => {
+      useContextualBannerStore.getState().show();
+
+      render(<Fab />);
+
+      expect(screen.getByTestId('new-post-cta')).toBeInTheDocument();
+      expect(screen.getByTestId('dialog-new-post')).toBeInTheDocument();
+    });
+
+    it('follows the banner store for a guest: back when it hides, gone again when it shows', () => {
+      mockUseAuthStatus.mockReturnValue(guestAuthStatus);
+      useContextualBannerStore.getState().show();
+      render(<Fab />);
+      expect(screen.queryByTestId('new-post-cta')).not.toBeInTheDocument();
+
+      act(() => useContextualBannerStore.getState().hide());
+
+      expect(screen.getByTestId('new-post-cta')).toBeInTheDocument();
+
+      act(() => useContextualBannerStore.getState().show());
+
+      expect(screen.queryByTestId('new-post-cta')).not.toBeInTheDocument();
+    });
   });
 });
+
+it.each(['/shop', '/shop/marketplace/cart'])(
+  'does not cover embedded Shop with the App post button on %s',
+  (pathname) => {
+    mockUsePathname.mockReturnValue(pathname);
+    mockIsPublicExploreRoute.mockReturnValue(true);
+    render(<Fab />);
+    expect(screen.queryByTestId('new-post-cta')).not.toBeInTheDocument();
+  },
+);

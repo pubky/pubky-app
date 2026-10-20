@@ -1,4 +1,4 @@
-import type { LockFile, TUnlockedContent } from '@/services/locks/locks.types';
+import type { LockFile, TPaykitConnectionState, TUnlockedContent } from '@/services/locks/locks.types';
 
 /**
  * What the Pay to Unlock modal shows. Two of these exist for safety rather than display:
@@ -6,8 +6,10 @@ import type { LockFile, TUnlockedContent } from '@/services/locks/locks.types';
  * can never look payable again, and `blocked` is where an unreadable saved bundle id lands — paying again
  * could mean paying twice, so it is not offered. `unopened` is its own stage because the payment
  * succeeded there and only the content download failed: the reader must never be told to go pay.
+ * `finishing` acknowledges that payment while the credential and content are being fetched.
  */
-export type TPayToUnlockStage = 'checking' | 'retry' | 'install' | 'waiting' | 'paid' | 'unopened' | 'blocked';
+export type TPayToUnlockStage =
+  'checking' | 'retry' | 'expired' | 'install' | 'waiting' | 'finishing' | 'paid' | 'unopened' | 'blocked';
 
 export interface UsePayToUnlockParams {
   /** The modal's open state; closed keeps the hook idle (no requests, no polling). */
@@ -20,6 +22,8 @@ export interface UsePayToUnlockParams {
   onCompleted: (content: TUnlockedContent) => void;
   /** Called with the lock id as soon as a purchase is stored, so other cards see it this session. */
   onPurchased: (lockId: string) => void;
+  /** Called after the session-expired toast: the homeserver rejected the session, and no step works without one. */
+  onSessionExpired: () => void;
 }
 
 export interface UsePayToUnlockResult {
@@ -28,8 +32,10 @@ export interface UsePayToUnlockResult {
   isStalled: boolean;
   /** The lock creator's pubky to hand to Bitkit, until the reader's Paykit link with them is `connected`. */
   handshakePubky: string | null;
-  /** A link state the reader cannot fix by waiting or paying — shown as a notice instead of the QR. */
-  connectionIssue: 'recovery_required' | 'blocked' | null;
+  /** Last observed creator-side link state, not an acknowledgement of a scan or payment-request delivery. */
+  connectionState: TPaykitConnectionState | null;
+  /** True until the first link read answers — the wait then says it is checking, not that Bitkit needs a confirm. */
+  isConnectionPending: boolean;
   /** The server is waiting for the reader to finish setting up their wallet — shown as a notice instead of the QR. */
   walletSetupNeeded: boolean;
   /** True while a wallet check started from a button or the proof submission is in flight. */

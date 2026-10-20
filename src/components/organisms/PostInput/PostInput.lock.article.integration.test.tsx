@@ -5,6 +5,15 @@ import type { TGuardedResource } from '@/services/locks/locks.types';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    isAuthenticated: true,
+    isWaiting: false,
+    requireAuth: <T,>(action: () => T) => action(),
+    waitForAuth: async () => true,
+  }),
+}));
+
 /**
  * A locked article with body images, through the real composer hooks: `usePostInput`, `usePost`, the
  * inline image session, `usePostInputLock` and `useCreateLockContent`. Only the IO boundary
@@ -18,6 +27,7 @@ const BODY = `Intro\n\n![shot](${IMAGE_URI})\n\nOutro`;
 
 const mocks = vi.hoisted(() => ({
   createLockContent: vi.fn(),
+  fetchPaykitSetupStatus: vi.fn(),
   commitCreatePost: vi.fn(),
   commitCreateFile: vi.fn(),
   commitDeleteFile: vi.fn(),
@@ -32,7 +42,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/controllers/locks/locks', () => ({
-  LocksController: { createLockContent: mocks.createLockContent, clearSession: vi.fn() },
+  LocksController: {
+    fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    createLockContent: mocks.createLockContent,
+    clearSession: vi.fn(),
+  },
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: { commitCreate: mocks.commitCreatePost, getDetails: vi.fn() },
@@ -64,7 +78,7 @@ vi.mock('@/config/network', () => ({
   getPaykitServerUrl: () => 'https://paykit.server',
 }));
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => mocks.toast(...args) }));
-vi.mock('@/hooks/useLockFile/useLockFile', () => ({ useLockFile: () => ({ lockFile: null, priceSats: null }) }));
+vi.mock('@/hooks/useLockFile/useLockFile', () => ({ useLockFile: () => ({ lockFile: null, price: null }) }));
 vi.mock('@/hooks/useMentionAutocomplete/useMentionAutocomplete', () => ({
   useMentionAutocomplete: () => ({
     users: [],
@@ -98,6 +112,7 @@ vi.mock('pubky-app-specs', () => ({
 vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
   usePostInputAuthHandlers: (params: Record<string, (...args: never[]) => unknown>) => ({
     isAuthenticated: true,
+    isWaiting: false,
     handleExpandWithAuth: params.handleExpand,
     handleSubmitWithAuth: params.handleSubmit,
     setTagsWithAuth: params.setTags,
@@ -123,12 +138,12 @@ vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', async () => {
     MarkdownEditor: (props: {
       markdown: string;
       onChange: (markdown: string, initialMarkdownNormalize: boolean) => void;
-      inlineImages: { upload: (file: File) => Promise<string> };
+      inlineMedia: { upload: (file: File) => Promise<string> };
     }) => {
       mocks.editor = {
         markdown: props.markdown,
         change: (markdown) => props.onChange(markdown, false),
-        upload: props.inlineImages.upload,
+        upload: props.inlineMedia.upload,
       };
       useEffect(
         () => () => {
@@ -172,7 +187,9 @@ vi.mock('../PostInputExpandableSection/PostInputExpandableSection', () => ({
 }));
 vi.mock('@/molecules/DialogLockContent/DialogLockContent', () => ({
   DialogLockContent: (props: { open: boolean; onApplied: (config: TLockConfig) => void }) =>
-    props.open ? <button data-testid="apply-lock" onClick={() => props.onApplied({ amountSats: '1234' })} /> : null,
+    props.open ? (
+      <button data-testid="apply-lock" onClick={() => props.onApplied({ amount: '1234', asset: 'BTC' as const })} />
+    ) : null,
 }));
 vi.mock('@/organisms/DialogLocksAuth/DialogLocksAuth', () => ({ DialogLocksAuth: () => null }));
 vi.mock('@/molecules/LockedPostCard/LockedPostCard', () => ({ LockedPostCard: () => null }));
@@ -199,7 +216,7 @@ const settle = () => act(() => vi.advanceTimersByTime(500));
 const writeArticle = async () => {
   render(<PostInput variant={POST_INPUT_VARIANT.POST} expanded />);
   fireEvent.click(screen.getByTestId('article-button'));
-  fireEvent.change(screen.getByPlaceholderText('Article Title'), { target: { value: 'Essay' } });
+  fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Essay' } });
 
   mocks.commitCreateFile.mockResolvedValueOnce(IMAGE_URI);
   await act(async () => {
@@ -237,6 +254,7 @@ const lockedPost = () => {
 describe('PostInput - locking an article with body images (integration)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
     vi.useFakeTimers({ shouldAdvanceTime: true });
     global.URL.createObjectURL = vi.fn(() => 'blob:preview');
     global.URL.revokeObjectURL = vi.fn();
@@ -307,6 +325,28 @@ describe('PostInput - locking an article with body images (integration)', () => 
     expect(mocks.createLockContent).not.toHaveBeenCalled();
     expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
     expect(mocks.commitDeleteFile).not.toHaveBeenCalled();
+  });
+
+  it('keeps the cover when the lock is abandoned after it was applied', async () => {
+    await writeArticle();
+    fireEvent.click(screen.getByTestId('add-cover'));
+    applyLock();
+
+    fireEvent.click(screen.getByTestId('lock-switch')); // off: the whole draft, cover included, comes back
+
+    expect(mocks.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Articles support one cover image' }),
+    );
+    fireEvent.click(screen.getByTestId('post-button'));
+    await waitFor(() => expect(mocks.commitCreatePost).toHaveBeenCalledTimes(1));
+
+    expect(mocks.commitCreatePost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: JSON.stringify({ title: 'Essay', body: 'Intro\n\n![shot](attachment:1)\n\nOutro' }),
+        attachments: [expect.objectContaining({ name: 'cover.png' })],
+        attachmentUris: [IMAGE_URI],
+      }),
+    );
   });
 
   it('locks what the editor reported last, before the composer state caught up with it', async () => {

@@ -2,9 +2,18 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogSignIn } from './DialogSignIn';
 
+const authState = vi.hoisted(() => ({
+  currentUserPubky: null as string | null,
+  restoreStatus: 'idle',
+  sessionReference: null as object | null,
+}));
 const mockShowSignInDialog = vi.hoisted(() => ({ value: false }));
 const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
 const mockJoinRoute = vi.hoisted(() => ({ value: '/onboarding/human' }));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
 
 // Join entry: fair-access step unless Pubky Passport is enabled on this page.
 vi.mock('@/hooks/useJoinRoute/useJoinRoute', () => ({
@@ -15,7 +24,12 @@ vi.mock('@/hooks/useJoinRoute/useJoinRoute', () => ({
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (
     selector: (state: { showSignInDialog: boolean; setShowSignInDialog: typeof mockSetShowSignInDialog }) => unknown,
-  ) => selector({ showSignInDialog: mockShowSignInDialog.value, setShowSignInDialog: mockSetShowSignInDialog }),
+  ) =>
+    selector({
+      ...authState,
+      showSignInDialog: mockShowSignInDialog.value,
+      setShowSignInDialog: mockSetShowSignInDialog,
+    }),
 }));
 
 // Mock next/link
@@ -30,10 +44,27 @@ vi.mock('next/link', () => ({
 describe('DialogSignIn', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authState.currentUserPubky = null;
+    authState.restoreStatus = 'idle';
+    authState.sessionReference = null;
     mockShowSignInDialog.value = false;
     mockJoinRoute.value = '/onboarding/human';
   });
 
+  it.each(['idle', 'restoring', 'temporary-error', 'reauth-required'])(
+    'offers normal sign-in with a retained account (%s)',
+    (status) => {
+      mockShowSignInDialog.value = true;
+      authState.currentUserPubky = 'retained-account';
+      authState.sessionReference = {};
+      authState.restoreStatus = status;
+      render(<DialogSignIn />);
+      expect(screen.getByRole('heading', { name: 'Join Pubky' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('link', { name: 'Sign In' }));
+      expect(mockSetShowSignInDialog).toHaveBeenCalledWith(false);
+      expect(screen.queryByText(/retry saved session|restoring your session/i)).not.toBeInTheDocument();
+    },
+  );
   describe('rendering', () => {
     it('renders nothing when store has showSignInDialog=false', () => {
       mockShowSignInDialog.value = false;
@@ -132,25 +163,5 @@ describe('DialogSignIn', () => {
       // The DialogTitle provides accessibility for screen readers
       expect(screen.getByRole('heading', { name: 'Join Pubky' })).toBeInTheDocument();
     });
-  });
-});
-
-describe('DialogSignIn - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot when open', () => {
-    mockShowSignInDialog.value = true;
-    render(<DialogSignIn />);
-
-    const dialog = document.querySelector('[role="dialog"]');
-    expect(dialog?.parentElement).toMatchSnapshot();
-  });
-
-  it('matches snapshot when closed', () => {
-    mockShowSignInDialog.value = false;
-    const { container } = render(<DialogSignIn />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

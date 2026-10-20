@@ -4,13 +4,19 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { REACH } from '@/stores/home/home.types';
 import { useSearchStore } from '@/stores/search/search.store';
+import { mockSession } from '@/test-utils/pubky';
 import { useSearchReach } from './useSearchReach';
 
 describe('Search reach', () => {
   beforeEach(() => {
     useSearchStore.getState().reset();
     useHomeStore.getState().reset();
-    useAuthStore.setState({ currentUserPubky: 'viewer', showSignInDialog: false });
+    useAuthStore.setState({
+      currentUserPubky: 'viewer',
+      session: mockSession(),
+      restoreStatus: 'ready',
+      showSignInDialog: false,
+    });
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   });
 

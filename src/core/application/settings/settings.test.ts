@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpStatusCodeToError } from '@/libs/error/error.http';
@@ -9,6 +9,10 @@ import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import {
+  HOMESERVER_PUBLISH_CONFLICT_MESSAGE,
+  installHomeserverWriteRetryDependenciesForTests,
+} from '@/services/homeserver/write-retry';
+import {
   defaultNotificationPreferences,
   defaultPrivacyPreferences,
   type SettingsState,
@@ -18,6 +22,7 @@ import { SettingsApplication } from './settings';
 // Mock the HomeserverService
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
+    createWriteFence: () => ({ enter: () => {}, assertCurrent: () => {} }),
     request: vi.fn(),
   },
 }));
@@ -97,6 +102,7 @@ describe('SettingsApplication', () => {
         method: HttpMethod.PUT,
         url: normalizerResult.meta.url,
         bodyJson: expect.any(Object),
+        fence: expect.anything(),
       });
     });
 
@@ -483,6 +489,112 @@ describe('SettingsApplication', () => {
       requestSpy.mockRejectedValue(new Error('Network error'));
 
       await expect(SettingsApplication.initializeSettings(testPubky, localSettings)).rejects.toThrow('Network error');
+    });
+  });
+
+  describe('when the homeserver refuses the PUT with its publish conflict', () => {
+    const publishConflict = () =>
+      httpStatusCodeToError(
+        409,
+        `Request failed: Server responded with an error: 409 Conflict - ${HOMESERVER_PUBLISH_CONFLICT_MESSAGE}`,
+        ErrorService.Homeserver,
+        'request',
+        settingsUrl,
+      );
+    const putBodies = (requestSpy: ReturnType<typeof setupMocks>['requestSpy']) =>
+      requestSpy.mock.calls.filter(([params]) => params.method === HttpMethod.PUT).map(([params]) => params.bodyJson);
+
+    beforeEach(() => {
+      installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {}, random: () => 0 });
+    });
+
+    afterEach(() => {
+      installHomeserverWriteRetryDependenciesForTests(null);
+    });
+
+    it('re-reads the remote document before writing again when the write carried a remote value', async () => {
+      const settings = createMockSettingsState({ privacy: defaultPrivacyPreferences });
+      const otherBot = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
+      const remoteWithBot = createMockSettingsState({
+        privacy: { ...defaultPrivacyPreferences, moderationBot: otherBot },
+      });
+      const { requestSpy, normalizerToSpy, normalizerFromSpy, normalizerBuildUrlSpy } = setupMocks();
+
+      normalizerBuildUrlSpy.mockReturnValue(settingsUrl);
+      normalizerFromSpy.mockReturnValueOnce(createMockSettingsState({ privacy: defaultPrivacyPreferences }));
+      normalizerFromSpy.mockReturnValueOnce(remoteWithBot);
+      normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+      let puts = 0;
+      requestSpy.mockImplementation(async ({ method }) => {
+        if (method === HttpMethod.GET) return {};
+        puts += 1;
+        if (puts === 1) throw publishConflict();
+        return undefined;
+      });
+
+      await SettingsApplication.commitUpdate(settings, testPubky);
+
+      expect(requestSpy.mock.calls.map(([params]) => params.method)).toEqual([
+        HttpMethod.GET,
+        HttpMethod.PUT,
+        HttpMethod.GET,
+        HttpMethod.PUT,
+      ]);
+      expect(putBodies(requestSpy)[1]).toMatchObject({ privacy: { moderationBot: otherBot } });
+    });
+
+    it('writes again without a read when the write carried no remote value', async () => {
+      const settings = createMockSettingsState();
+      const { requestSpy, normalizerToSpy } = setupMocks();
+
+      normalizerToSpy.mockReturnValue(createMockNormalizerResult(settings));
+      requestSpy.mockRejectedValueOnce(publishConflict()).mockResolvedValueOnce(undefined);
+
+      await SettingsApplication.commitUpdate(settings, testPubky);
+
+      expect(requestSpy.mock.calls.map(([params]) => params.method)).toEqual([HttpMethod.PUT, HttpMethod.PUT]);
+    });
+
+    it('adopts remote settings that became newer instead of overwriting them on bootstrap', async () => {
+      const localSettings = createMockSettingsState({ version: 2, updatedAt: 1800000000000 });
+      const olderRemote = createMockSettingsState({ version: 1, updatedAt: 1700000000000 });
+      const newerRemote = createMockSettingsState({ version: 3, updatedAt: 1900000000000 });
+      const { requestSpy, normalizerBuildUrlSpy, normalizerFromSpy, normalizerToSpy } = setupMocks();
+
+      normalizerBuildUrlSpy.mockReturnValue(settingsUrl);
+      normalizerFromSpy.mockReturnValueOnce(olderRemote).mockReturnValueOnce(newerRemote);
+      normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+      requestSpy.mockImplementation(async ({ method }) => {
+        if (method === HttpMethod.GET) return {};
+        throw publishConflict();
+      });
+
+      const result = await SettingsApplication.initializeSettings(testPubky, localSettings);
+
+      expect(result).toEqual(newerRemote);
+      expect(requestSpy.mock.calls.map(([params]) => params.method)).toEqual([
+        HttpMethod.GET,
+        HttpMethod.PUT,
+        HttpMethod.GET,
+      ]);
+    });
+
+    it('does not re-read or write again after a path collision', async () => {
+      const settings = createMockSettingsState();
+      const { requestSpy, normalizerToSpy } = setupMocks();
+      const collision = httpStatusCodeToError(
+        409,
+        'Request failed: Server responded with an error: 409 Conflict - File/folder path collision',
+        ErrorService.Homeserver,
+        'request',
+        settingsUrl,
+      );
+
+      normalizerToSpy.mockReturnValue(createMockNormalizerResult(settings));
+      requestSpy.mockRejectedValueOnce(collision);
+
+      await expect(SettingsApplication.commitUpdate(settings, testPubky)).rejects.toBe(collision);
+      expect(requestSpy).toHaveBeenCalledOnce();
     });
   });
 });

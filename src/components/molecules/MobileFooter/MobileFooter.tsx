@@ -1,14 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Flame, Home, Library, Search, Settings, Store, UserRoundPlus } from 'lucide-react';
 import { APP_ROUTES, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { InternalLink as Link } from '@/atoms/Link/Link.navigation';
 import { Typography } from '@/atoms/Typography/Typography';
-import { getShopLink } from '@/config/externalLinks';
 import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisible';
@@ -16,6 +15,7 @@ import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
@@ -32,7 +32,7 @@ export interface MobileFooterProps {
  */
 export function MobileFooter({ className }: MobileFooterProps) {
   const pathname = usePathname();
-  const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
+  const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
   const { isPublicExploreRoute } = usePublicRoute();
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
@@ -65,7 +65,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
       icon: Flame,
       label: 'Hot',
     },
-    { href: getShopLink(), icon: Store, label: 'Shop', rel: 'noopener noreferrer' },
+    { href: APP_ROUTES.SHOP, icon: Store, label: 'Shop' },
     {
       href: APP_ROUTES.COLLECTIONS,
       activePrefix: APP_ROUTES.COLLECTIONS,
@@ -105,7 +105,6 @@ export function MobileFooter({ className }: MobileFooterProps) {
             <Link
               key={item.href}
               href={item.href}
-              rel={item.rel}
               // Search prefetch can loop even after leaving a query search (#2755).
               // Active feed links only scroll, so they also skip prefetch.
               prefetch={item.href === APP_ROUTES.SEARCH || (item.isFeedRoute && itemIsActive) ? false : undefined}

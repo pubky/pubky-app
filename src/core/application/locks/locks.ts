@@ -1,15 +1,20 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
+import { PAYKIT_PAYMENT_IN_HOURS } from '@/config/locks';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isNotFound, isValidationError, toAppError } from '@/libs/error/error.utils';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
+import type { LockModelSchema } from '@/models/locks/locks.schema';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { retryHomeserverWriteAfterReread, type THomeserverWriteFence } from '@/services/homeserver/write-retry';
+import { LocalLocksService } from '@/services/local/locks/locks';
 import { LocksService } from '@/services/locks/locks';
 import type {
+  GuardedPost,
   LockFile,
   ReplicatedPost,
   TCreateContentLockResult,
@@ -18,6 +23,7 @@ import type {
   TGenerateConnectUrlParams,
   TGeneratePaykitSetupUrlParams,
   TGuardedResource,
+  TLockPriceAsset,
   TLocksSessionResult,
   TPaykitConnectionState,
   TPaykitSetupStatus,
@@ -38,17 +44,35 @@ import type {
   TLockContentFile,
   TPaymentBundleParams,
   TPaymentLockParams,
-  TPurchaseBundleIdParams,
   TReplicateUnlockedContentParams,
+  TResolvedPurchase,
   TStartPaymentParams,
   TStartPaymentResult,
 } from './locks.types';
 
 // v1 payment locks must hold exactly one criterion, referenced once by the lock logic.
 const CRITERION_ID = 'criterion-1';
-// Only asset the Lock Server's v1 payment verifier takes.
-const PAYMENT_ASSET = 'BTC';
 const CREDENTIAL_TTL_SECONDS = 900;
+
+// Lower wins. A null task beats an ended one because resubmitting it is a safe replay; `failed` beats
+// `expired` because a reported `failed` makes Try again check the wallet.
+// TODO:[Locks] The Lock Server plans to delete ended tasks a few hours after they end (pubky/locks
+// docs/DOMAIN_MODEL.md; not built yet). After that, an ended id also looks up as a null task, so it
+// ranks here as never received and the open path resubmits it without Try again. When the cleanup
+// ships:
+// 1. A null task can be a deleted `completed` one. The entitlement stays on the creator's homeserver
+//    after the cleanup, so request the credential before resubmitting; if it is issued, the reader
+//    has paid.
+// 2. A deleted `failed`/`expired` id gets no credential, so the app cannot tell it from an id the
+//    server never received. The Lock Server must define what a lookup or a resubmit returns for a
+//    deleted task; until then, resubmitting can start a new payment without Try again.
+const purchaseRank = (task: TVerificationTask | null): number => {
+  if (task === null) return 2;
+  if (task.status === 'completed') return 0;
+  if (task.status === 'failed') return 3;
+  if (task.status === 'expired') return 4;
+  return 1;
+};
 
 /**
  * Application layer for the Lock Server: auth (mirrors `AuthApplication`), publishing locked content
@@ -69,8 +93,8 @@ export class LocksApplication {
   }
 
   /** Whether the Paykit payout account of the current Locks session's creator is set up. */
-  static fetchPaykitSetupStatus(): Promise<TPaykitSetupStatus> {
-    return LocksService.lookupPaykitSetupStatus();
+  static fetchPaykitSetupStatus(asset: TLockPriceAsset): Promise<TPaykitSetupStatus> {
+    return LocksService.lookupPaykitSetupStatus(asset);
   }
 
   /** Whether the Lock Server at `origin` is ready to serve — gates the auth flow before the iframe. */
@@ -79,25 +103,50 @@ export class LocksApplication {
   }
 
   /**
-   * Reads `/priv/social/purchases/<lockId>.json` from the reader's own homeserver and returns the
-   * bundle id inside, or null when the file does not exist. A file that exists but cannot be parsed
-   * throws: a purchase was made and its id is lost, so the caller must show an error instead of
-   * offering to pay again with a fresh id, which could charge the reader twice.
+   * Ties go to the lowest id so two devices settle on the same one. Ended ids are kept: one may be the
+   * only handle to a late-paid invoice. A file that is not a readable bundle id throws, and so does a
+   * failed lookup unless another id is `completed`: minting beside a lost or unknown id could charge twice.
    */
-  static async fetchPurchaseBundleId({ lockUrl, readerPubky }: TPurchaseBundleIdParams): Promise<string | null> {
-    const lockId = this.requireLockId(lockUrl, 'fetchPurchaseBundleId');
-    const stored = await HomeserverService.getBytesIfExists(GuardedContentParser.purchaseUrl(readerPubky, lockId));
-    if (!stored) return null;
-
-    const bundleId = GuardedContentParser.parsePurchaseFile(stored.bytes);
-    if (!bundleId) {
+  static async fetchResolvedPurchase({
+    lockFile,
+    lockUrl,
+    readerPubky,
+  }: TPaymentLockParams): Promise<TResolvedPurchase | null> {
+    const lockId = this.requireLockId(lockUrl, 'fetchResolvedPurchase');
+    const [files, legacy] = await Promise.all([
+      HomeserverService.listAll({ baseDirectory: GuardedContentParser.purchaseLockRootUrl(readerPubky, lockId) }),
+      HomeserverService.getBytesIfExists(GuardedContentParser.legacyPurchaseUrl(readerPubky, lockId)),
+    ]);
+    const bundleIds = GuardedContentParser.purchaseBundleIds(files);
+    const legacyId = legacy ? GuardedContentParser.parsePurchaseFile(legacy.bytes) : null;
+    if (!bundleIds || (legacy && !legacyId)) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'purchase bundle id file is unreadable', {
         service: ErrorService.Locks,
-        operation: 'fetchPurchaseBundleId',
+        operation: 'fetchResolvedPurchase',
         context: { lockId },
       });
     }
-    return bundleId;
+    if (legacyId && !bundleIds.includes(legacyId)) {
+      bundleIds.push(legacyId);
+      bundleIds.sort();
+    }
+    if (bundleIds.length === 0) return null;
+
+    const outcomes = await Promise.allSettled(
+      bundleIds.map((bundleId) => this.fetchPaymentStatus({ lockFile, bundleId })),
+    );
+    const tasks = outcomes.map((outcome) => (outcome.status === 'fulfilled' ? outcome.value : null));
+    let best = 0;
+    for (let i = 1; i < tasks.length; i++) {
+      if (purchaseRank(tasks[i]) < purchaseRank(tasks[best])) best = i;
+    }
+    const task = tasks[best];
+    const failed = outcomes.find((outcome) => outcome.status === 'rejected');
+    if (failed?.status === 'rejected' && task?.status !== 'completed') throw failed.reason;
+    if (task?.status === 'failed' || task?.status === 'expired') {
+      return { kind: 'terminal', bundleId: bundleIds[best], status: task.status };
+    }
+    return { kind: 'reusable', bundleId: bundleIds[best], task };
   }
 
   /** Whether the reader's wallet has published a Paykit receiver. */
@@ -106,34 +155,53 @@ export class LocksApplication {
   }
 
   /**
-   * Starts (or restarts) a payment: reuses the bundle id saved on the reader's homeserver, or mints
-   * and saves a fresh one when there is none or the saved one is `rejectBundleId`. Then submits the
-   * proof to the Lock Server, which creates the verification task (or returns the existing one on a
-   * replay of the same id) and afterwards has Paykit deliver the payment request to the reader's wallet.
+   * Starts (or restarts) a payment: reuses a bundle id saved on the reader's homeserver that can
+   * still pay (`fetchResolvedPurchase`), or mints and saves a fresh one when there is none. Then submits
+   * the proof to the Lock Server, which creates the verification task (or returns the existing one
+   * on a replay of the same id) and afterwards has Paykit deliver the payment request to the
+   * reader's wallet. When every saved id ended and `isRetry` is false, nothing is minted or
+   * submitted: the ended status is returned for the modal to show.
    */
   static async startPayment({
     lockFile,
     lockUrl,
     readerPubky,
-    rejectBundleId,
+    isRetry,
   }: TStartPaymentParams): Promise<TStartPaymentResult> {
     const lockId = this.requireLockId(lockUrl, 'startPayment');
+    // A purchase-file PUT the homeserver refuses with a retried status starts over from the read:
+    // the reader's purchases may have changed meanwhile, so a saved id may now be reusable.
+    const resolveOrMint = async (fence: THomeserverWriteFence): Promise<TStartPaymentResult | string> => {
+      const resolved = await this.fetchResolvedPurchase({ lockFile, lockUrl, readerPubky });
+      if (resolved?.kind === 'terminal' && !isRetry) return { bundleId: resolved.bundleId, status: resolved.status };
+      if (resolved?.kind === 'reusable') return resolved.bundleId;
+      const bundleId = await LocksService.generateBundleId();
+      // Saved BEFORE the proof is submitted: a submission that succeeds while the file is missing
+      // leaves a purchase nobody can reach.
+      await HomeserverService.putBlob({
+        url: GuardedContentParser.purchaseUrl(readerPubky, lockId, bundleId),
+        blob: new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId)),
+        fence,
+      });
+      return bundleId;
+    };
     const run = async (): Promise<TStartPaymentResult> => {
-      let bundleId = await this.fetchPurchaseBundleId({ lockUrl, readerPubky });
-      if (!bundleId || bundleId === rejectBundleId) {
-        bundleId = await LocksService.generateBundleId();
-        // Saved BEFORE the proof is submitted: a submission that succeeds while the file is missing
-        // leaves a purchase nobody can reach.
-        await HomeserverService.putBlob({
-          url: GuardedContentParser.purchaseUrl(readerPubky, lockId),
-          blob: new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId)),
-        });
-      }
+      const fence = HomeserverService.createWriteFence();
+      const resolved = await retryHomeserverWriteAfterReread(fence, () => resolveOrMint(fence));
+      if (typeof resolved !== 'string') return resolved;
+      const bundleId = resolved;
+      // A later pass may have returned a reused id after its asynchronous read, without a fenced
+      // write: the session that started this must still be current before anything is submitted.
+      fence.assertCurrent();
       const bundle = LockProofBundler.buildPayment(lockFile, lockUrl, bundleId, readerPubky);
       const task = await LocksService.submitProof(bundle);
       return { bundleId, status: task.status };
     };
     // Every browser Next.js supports has Web Locks; only an insecure context (plain-http dev) lacks it.
+    // TODO:[Locks] The Web Lock covers one browser, so two devices that open at once can each mint an
+    // id and the reader gets two payment requests. pubky SDK 0.16 has `storage.lock`, a homeserver
+    // write lock (423 while another client holds it). Once the production homeserver fully supports
+    // it, hold that lock around `run` to make the second device reuse the first device's id.
     const lockManager = typeof navigator === 'undefined' ? undefined : navigator.locks;
     if (!lockManager) return run();
 
@@ -188,19 +256,13 @@ export class LocksApplication {
 
   /**
    * `fetchPaidContent` for a caller that knows neither the bundle id nor whether the payment went
-   * through: looks up the saved id, checks the verification status, and downloads only when it is
-   * `completed`; null otherwise. Read-only; never mints an id or submits a proof.
+   * through: resolves the saved ids and downloads only when one is `completed`; null otherwise.
+   * Read-only; never mints an id or submits a proof.
    */
-  static async fetchPaidContentIfCompleted({
-    lockFile,
-    lockUrl,
-    readerPubky,
-  }: TPaymentLockParams): Promise<TUnlockedContent | null> {
-    const bundleId = await this.fetchPurchaseBundleId({ lockUrl, readerPubky });
-    if (!bundleId) return null;
-    const task = await this.fetchPaymentStatus({ lockFile, bundleId });
-    if (task?.status !== 'completed') return null;
-    return this.fetchPaidContent({ lockFile, bundleId });
+  static async fetchPaidContentIfCompleted(params: TPaymentLockParams): Promise<TUnlockedContent | null> {
+    const resolved = await this.fetchResolvedPurchase(params);
+    if (resolved?.kind !== 'reusable' || resolved.task?.status !== 'completed') return null;
+    return this.fetchPaidContent({ lockFile: params.lockFile, bundleId: resolved.bundleId });
   }
 
   /** `pubky://…/<lock_id>.json` → `<lock_id>`, or a typed error for a malformed lock URL. */
@@ -326,12 +388,25 @@ export class LocksApplication {
       });
     }
 
+    const post = GuardedContentParser.buildReplicatedPost(
+      content.post,
+      readerPubky,
+      lockId,
+      content.attachments,
+      announcementUri,
+    );
     await HomeserverService.putBlob({
       url: GuardedContentParser.unlockedPostUrl(readerPubky, lockId),
-      blob: new TextEncoder().encode(
-        GuardedContentParser.buildUnlockedPost(content.post, readerPubky, lockId, content.attachments, announcementUri),
-      ),
+      blob: new TextEncoder().encode(JSON.stringify(post)),
     });
+
+    // Cache failure must not turn a completed unlock into a failure.
+    await LocalLocksService.upsertPost({
+      lockId,
+      creator: LockContentParser.creatorFromUrl(lockUrl) ?? undefined,
+      post,
+      unlockedAt: Date.now(),
+    }).catch(() => undefined);
   }
 
   /**
@@ -339,9 +414,6 @@ export class LocksApplication {
    * Only locks whose `post.json` marker exists count — a partial replica has none. A corrupt or
    * concurrently-deleted marker drops that one item so the rest still renders; any other failure
    * rejects the whole list so the caller can retry.
-   *
-   * TODO:[Locks] #2296 — uncached, so every profile visit re-lists the root and re-GETs each marker.
-   * The reader's unlocked content moves to IndexedDB there, which replaces this with a local read.
    */
   static async fetchUnlockedList({ readerPubky }: TFetchUnlockedListParams): Promise<TUnlockedListItem[]> {
     const files = await HomeserverService.listAll({
@@ -353,14 +425,7 @@ export class LocksApplication {
         try {
           const replicatedPost = await this.readReplicatedMarker(readerPubky, lockId, 'fetchUnlockedList');
           if (!replicatedPost) return null;
-          // A marker from before the announcement was recorded, or an unparseable URI, still lists —
-          // it just renders without its announcement post.
-          // Spread rather than an `undefined` value: the key stays absent, which is what the optional
-          // field and the narrowing filter below both expect.
-          const announcementPostId = replicatedPost.post.announcement
-            ? buildCompositeIdFromPubkyUri({ uri: replicatedPost.post.announcement, domain: CompositeIdDomain.POSTS })
-            : null;
-          return { lockId, ...replicatedPost, ...(announcementPostId ? { announcementPostId } : {}) };
+          return this.toUnlockedListItem(lockId, replicatedPost.post, replicatedPost.unlockedAt);
         } catch (error) {
           // Validation = corrupt marker, already reported — drop this item only.
           // So user will see validated locks but not invalid ones.
@@ -370,7 +435,31 @@ export class LocksApplication {
       }),
     );
 
-    return items.filter((item): item is TUnlockedListItem => item !== null).sort((a, b) => b.unlockedAt - a.unlockedAt);
+    const result = items
+      .filter((item): item is TUnlockedListItem => item !== null)
+      .sort((a, b) => b.unlockedAt - a.unlockedAt);
+    await Promise.all(
+      result.map(({ lockId, post, unlockedAt }) =>
+        LocalLocksService.upsertPost({
+          lockId,
+          post,
+          unlockedAt,
+        }),
+      ),
+    ).catch(() => undefined);
+    return result;
+  }
+
+  /**
+   * A marker from before the announcement was recorded, or an unparseable URI, still lists — it just
+   * renders without its announcement post. Spread rather than an `undefined` value: the key stays
+   * absent, which is what the optional field and the list's narrowing filter both expect.
+   */
+  private static toUnlockedListItem(lockId: string, post: ReplicatedPost, unlockedAt: number): TUnlockedListItem {
+    const announcementPostId = post.announcement
+      ? buildCompositeIdFromPubkyUri({ uri: post.announcement, domain: CompositeIdDomain.POSTS })
+      : null;
+    return { lockId, post, unlockedAt, ...(announcementPostId ? { announcementPostId } : {}) };
   }
 
   /**
@@ -411,11 +500,20 @@ export class LocksApplication {
     const replicatedPost = await this.readReplicatedMarker(readerPubky, lockId, 'fetchReplicatedContent');
     if (!replicatedPost) return null;
 
+    // Read without the creator's lock.json on purpose: once replicated, the reader's copy must stay
+    // readable when the creator's homeserver is down or the lock was deleted.
     const { post } = replicatedPost;
     const refs = post.attachments ?? [];
+    const attachments = await this.fetchReplicatedAttachments({ post });
+    await LocalLocksService.upsertPost({
+      lockId,
+      creator: LockContentParser.creatorFromUrl(lockUrl) ?? undefined,
+      post,
+      unlockedAt: replicatedPost.unlockedAt,
+    }).catch(() => undefined);
     return {
       post: { content: post.content, kind: post.kind, attachments: refs.map((ref) => ref.url) },
-      attachments: await this.fetchReplicatedAttachments({ post }),
+      attachments,
     };
   }
 
@@ -452,7 +550,7 @@ export class LocksApplication {
    * Only valid when the lock owner is the signed-in account (a == b); the caller
    * verifies that before calling.
    */
-  static async fetchOwnContent({ lockFile }: TFetchOwnContentParams): Promise<TUnlockedContent> {
+  static async fetchOwnContent({ lockUrl, lockFile }: TFetchOwnContentParams): Promise<TUnlockedContent> {
     const primaryPath = lockFile.primary_resource?.path;
     if (!primaryPath) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'lock file has no readable primary resource', {
@@ -477,6 +575,15 @@ export class LocksApplication {
     const attachments = await this.readAttachments(lockFile, post.attachments ?? [], 'fetchOwnContent', (_path, uri) =>
       HomeserverService.getBytes(uri),
     );
+    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
+    if (lockId) {
+      await this.cacheGuardedOriginal({
+        lockId,
+        creator: lockFile.creator,
+        post,
+        resources: lockFile.secondary_resources,
+      });
+    }
     return { post, attachments };
   }
 
@@ -525,23 +632,57 @@ export class LocksApplication {
       owner = uploaded.creator;
       attachmentResources.push(uploaded.resource);
     }
-    const post = await this.upload(buildPost(attachmentResources, owner));
+    const postFile = buildPost(attachmentResources, owner);
+    const post = await this.upload(postFile);
 
     // The payout recipient has to equal the lock's creator, and the upload response names that
     // account — so the criterion can only be built here, once the primary resource is up.
     const criterion = {
       criterion_id: CRITERION_ID,
       verifier_type: VerifierType.PAYMENT,
-      params: { recipient_pubky: post.creator, amount: lockConfig.amountSats, asset: PAYMENT_ASSET },
+      params: {
+        recipient_pubky: post.creator,
+        amount: lockConfig.amount,
+        asset: lockConfig.asset,
+        payment_in: PAYKIT_PAYMENT_IN_HOURS,
+      },
     };
 
-    return LocksService.createContentLock({
+    const result = await LocksService.createContentLock({
       primaryResource: post.resource,
       secondaryResources: attachmentResources,
       criteria: [criterion],
       lockLogic: { type: 'all', criteria: [CRITERION_ID] },
       accessPolicy: { requested_credential_ttl_seconds: CREDENTIAL_TTL_SECONDS },
     });
+    const lockUrl = `pubky://${stripPubkyPrefix(result.creator)}${result.content_lock_path}`;
+    const parsedPost = GuardedContentParser.parsePost(postFile.bytes);
+    if (parsedPost) {
+      await this.cacheGuardedOriginal({
+        lockId: result.lock_id,
+        creator: result.creator,
+        post: parsedPost,
+        resources: Object.fromEntries(attachmentResources.map((resource) => [resource.path, resource])),
+      });
+    }
+    // Publishing must not wait for a second homeserver read before the announcement can be posted.
+    void this.fetchLockFile({ lockUrl }).catch(() => undefined);
+    return result;
+  }
+
+  private static async cacheGuardedOriginal({
+    lockId,
+    creator,
+    post,
+    resources,
+  }: {
+    lockId: string;
+    creator: string;
+    post: GuardedPost;
+    resources?: Record<string, { content_type: string }>;
+  }): Promise<void> {
+    const cached = GuardedContentParser.toCachedPost(post, resources);
+    if (cached) await LocalLocksService.upsertPost({ lockId, creator, post: cached }).catch(() => undefined);
   }
 
   /**
@@ -570,6 +711,56 @@ export class LocksApplication {
       });
     }
 
-    return (await LocksService.readContentLock(lockUrl)) as LockFile;
+    // TODO:[Locks] locks#22 — replace this cast when the SDK exports its lock-file reader type.
+    const descriptor = (await LocksService.readContentLock(lockUrl)) as LockFile;
+    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
+    if (lockId) {
+      await LocalLocksService.upsertDescriptor({ lockId, descriptor }).catch(() => undefined);
+    }
+    return descriptor;
+  }
+
+  private static async getCachedRecord(lockUrl: string): Promise<LockModelSchema | null> {
+    if (!LockContentParser.isValidLockUrl(lockUrl)) return null;
+    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
+    return lockId ? LocalLocksService.get(lockId) : null;
+  }
+
+  /**
+   * The SDK rejects a lock.json whose `creator` is not the URL host; a cache hit skips that read, so
+   * the row's creator is compared with the host here. A row written from a replica marker alone has
+   * no creator yet and passes.
+   */
+  private static async getCreatorRecord(lockUrl: string): Promise<LockModelSchema | null> {
+    const record = await this.getCachedRecord(lockUrl);
+    if (!record?.creator) return record;
+    return stripPubkyPrefix(record.creator) === LockContentParser.creatorFromUrl(lockUrl) ? record : null;
+  }
+
+  static async getLockFile({ lockUrl }: TFetchLockFileParams): Promise<LockFile | null> {
+    return (await this.getCreatorRecord(lockUrl))?.descriptor ?? null;
+  }
+
+  static async getOrFetchLockFile(params: TFetchLockFileParams): Promise<LockFile | null> {
+    // A broken cache must not prevent a public lock from loading from its source.
+    const cached = await this.getLockFile(params).catch(() => null);
+    return cached ?? this.fetchLockFile(params);
+  }
+
+  /** No creator check: the reader's copy is theirs, and the network read serves it by lock id as well. */
+  static async getUnlockedPost({ lockUrl }: TFetchLockFileParams): Promise<ReplicatedPost | null> {
+    const record = await this.getCachedRecord(lockUrl);
+    // A creator's cached original has no unlock marker. Exposing it on the reader path would let
+    // someone link my public lock.json under their teaser and render my private post there.
+    return record?.unlockedAt !== undefined ? (record.post ?? null) : null;
+  }
+
+  static async getOwnPost({ lockUrl }: TFetchLockFileParams): Promise<ReplicatedPost | null> {
+    return (await this.getCreatorRecord(lockUrl))?.post ?? null;
+  }
+
+  static async getUnlockedList(): Promise<TUnlockedListItem[]> {
+    const items = await LocalLocksService.getUnlockedList();
+    return items.map(({ lockId, post, unlockedAt }) => this.toUnlockedListItem(lockId, post, unlockedAt));
   }
 }

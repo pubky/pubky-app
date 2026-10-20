@@ -222,6 +222,7 @@ describe('DialogReply', () => {
 
     expect(PostInput).toHaveBeenCalledWith(
       {
+        active: false,
         dataCy: 'reply-post-input',
         id: 'reply-post-input',
         variant: POST_INPUT_VARIANT.REPLY,
@@ -312,40 +313,5 @@ describe('DialogReply', () => {
     expect(vi.mocked(DialogContent).mock.calls.at(-1)?.[0]).not.toEqual(
       expect.objectContaining({ onAnimationEnd: expect.any(Function) }),
     );
-  });
-});
-
-describe('DialogReply - Snapshots', () => {
-  const mockHandleContentChange = vi.fn();
-  const mockHandleOpenChange = vi.fn();
-  const mockHandleDiscard = vi.fn();
-  const mockSetShowConfirmDialog = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseConfirmableDialog.mockReturnValue({
-      showConfirmDialog: false,
-      setShowConfirmDialog: mockSetShowConfirmDialog,
-      resetKey: 0,
-      handleContentChange: mockHandleContentChange,
-      handleOpenChange: mockHandleOpenChange,
-      handleDiscard: mockHandleDiscard,
-    });
-  });
-
-  it('matches snapshot with default props', () => {
-    const onOpenChangeAction = vi.fn();
-    const { container } = render(
-      <DialogReply postId="snapshot-post-id" open={false} onOpenChangeAction={onOpenChangeAction} />,
-    );
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with open prop', () => {
-    const onOpenChangeAction = vi.fn();
-    const { container } = render(
-      <DialogReply postId="snapshot-post-id" open={true} onOpenChangeAction={onOpenChangeAction} />,
-    );
-    expect(container).toMatchSnapshot();
   });
 });

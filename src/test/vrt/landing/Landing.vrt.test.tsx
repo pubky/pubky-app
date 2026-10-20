@@ -66,14 +66,6 @@ vi.mock('@/templates/Public/Landing/LandingVideo', async () => {
   };
 });
 
-// `HomeActions` renders "Continue with Google" only when Passport eligibility
-// resolves to `'enabled'`. The VRT page is served over http, so the real hook
-// can only report `'pending'` or `'disabled'` here and the snapshot would miss a
-// button the landing page shows in production.
-vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
-  usePassportEligibility: () => 'enabled',
-}));
-
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: createZustandLikeHook({
     currentUserPubky: null as string | null,

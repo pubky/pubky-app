@@ -150,38 +150,45 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
         </Container>
 
         <Container className="flex-col gap-6">
-          <Container
-            data-testid="human-invite-code-input-field"
-            className={cn(
-              'flex-row items-center gap-3 rounded-md border border-dashed bg-background/20 px-6 py-4 shadow-xs',
-              isVerified && !isVerifying
-                ? 'border-brand'
-                : showDestructiveBorder
-                  ? 'border-destructive'
-                  : 'border-input',
-            )}
-          >
-            <Input
-              data-testid="human-invite-code-input"
-              data-cy="human-invite-code-input"
-              type="text"
-              autoFocus
-              value={inviteCode}
-              onChange={(e) => setInviteCode(formatInviteCode(e.target.value))}
-              placeholder={'XXXX-XXXX-XXXX'}
-              maxLength={14}
+          <Container className="gap-2">
+            <Container
+              data-testid="human-invite-code-input-field"
               className={cn(
-                'h-auto flex-1 border-none bg-transparent p-0 text-base font-medium placeholder:text-muted-foreground focus:ring-0 focus:outline-none',
-                isVerified && !isVerifying ? 'font-bold text-brand' : 'text-foreground',
+                'flex-row items-center gap-3 rounded-md border border-dashed bg-background/20 px-6 py-4 shadow-xs',
+                isVerified && !isVerifying
+                  ? 'border-brand'
+                  : showDestructiveBorder
+                    ? 'border-destructive'
+                    : 'border-input',
               )}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && isVerified && !isVerifying) {
-                  handleSubmit();
-                }
-              }}
-            />
-            {isVerifying && <Loader2 className="h-6 w-6 shrink-0 animate-spin text-brand" />}
-            {isVerified && !isVerifying && <CircleCheck className="h-6 w-6 shrink-0 text-brand" />}
+            >
+              <Input
+                data-testid="human-invite-code-input"
+                data-cy="human-invite-code-input"
+                type="text"
+                autoFocus
+                aria-label="Invite code"
+                aria-describedby={isVerified && !isVerifying ? 'invite-code-status' : undefined}
+                value={inviteCode}
+                onChange={(e) => setInviteCode(formatInviteCode(e.target.value))}
+                placeholder={'XXXX-XXXX-XXXX'}
+                maxLength={14}
+                className={cn(
+                  'h-auto flex-1 border-none bg-transparent p-0 text-base font-medium placeholder:text-muted-foreground focus:ring-0 focus:outline-none',
+                  isVerified && !isVerifying ? 'font-bold text-brand' : 'text-foreground',
+                )}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && isVerified && !isVerifying) {
+                    handleSubmit();
+                  }
+                }}
+              />
+              {isVerifying && <Loader2 className="h-6 w-6 shrink-0 animate-spin text-brand" />}
+              {isVerified && !isVerifying && <CircleCheck className="h-6 w-6 shrink-0 text-brand" />}
+            </Container>
+            <Typography as="p" id="invite-code-status" role="status" className="min-h-5 text-sm font-medium text-brand">
+              {isVerified && !isVerifying ? 'Invite code applied' : ''}
+            </Typography>
           </Container>
 
           <Container className="flex-col items-center gap-4 sm:flex-row">

@@ -106,19 +106,8 @@ describe('CollectionReorderGrid', () => {
 
     expect(onMove).not.toHaveBeenCalled();
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<CollectionReorderGrid entries={entries} onMove={vi.fn()} />);
-    normalizeDndIds(container);
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });
 
 // dnd-kit assigns aria ids from a module-global counter (`DndDescribedBy-N`),
 // so the raw value depends on how many DndContexts mounted earlier in the
 // file. Normalize before snapshotting to keep the baseline order-independent.
-function normalizeDndIds(container: HTMLElement) {
-  container.querySelectorAll('[aria-describedby^="DndDescribedBy"]').forEach((el) => {
-    el.setAttribute('aria-describedby', 'DndDescribedBy');
-  });
-}

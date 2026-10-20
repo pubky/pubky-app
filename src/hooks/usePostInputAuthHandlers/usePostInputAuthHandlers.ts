@@ -31,7 +31,7 @@ export function usePostInputAuthHandlers(options: UsePostInputAuthHandlersOption
     removeExistingAttachment,
   } = options;
 
-  const { isAuthenticated, requireAuth } = useRequireAuth();
+  const { isAuthenticated, requireAuth, waitForAuth, isWaiting } = useRequireAuth(options.active ?? true);
 
   const openSignInDialog = () => {
     requireAuth(() => undefined);
@@ -57,7 +57,9 @@ export function usePostInputAuthHandlers(options: UsePostInputAuthHandlersOption
     requireAuth(handleExpand);
   };
 
-  const handleSubmitWithAuth = () => requireAuth(handleSubmit);
+  const handleSubmitWithAuth = async () => {
+    if (await waitForAuth()) return handleSubmit();
+  };
 
   const handleFileClickWithAuth = () => {
     requireAuth(handleFileClick);
@@ -90,6 +92,7 @@ export function usePostInputAuthHandlers(options: UsePostInputAuthHandlersOption
 
   return {
     isAuthenticated,
+    isWaiting,
     handleExpandWithAuth,
     handleSubmitWithAuth,
     setTagsWithAuth: guard(setTags),

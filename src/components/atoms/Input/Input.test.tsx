@@ -54,67 +54,30 @@ describe('Input', () => {
 
     expect(ref).toHaveBeenCalledWith(expect.any(HTMLInputElement));
   });
-});
 
-describe('Input - Snapshots', () => {
-  it('matches snapshot with default props', () => {
-    const { container } = render(<Input />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('passes through the type attribute', () => {
+    render(<Input type="email" />);
+    expect(screen.getByTestId('input')).toHaveAttribute('type', 'email');
   });
 
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<Input className="custom-input" />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('passes through required and readOnly', () => {
+    render(<Input required readOnly />);
+
+    const input = screen.getByTestId('input');
+    expect(input).toBeRequired();
+    expect(input).toHaveAttribute('readonly');
   });
 
-  it('matches snapshot with placeholder', () => {
-    const { container } = render(<Input placeholder="Enter text" />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('marks the invalid state through aria-invalid', () => {
+    render(<Input aria-invalid />);
+
+    const input = screen.getByTestId('input');
+    expect(input).toBeInvalid();
+    expect(input).toHaveClass('aria-invalid:border-destructive');
   });
 
-  it('matches snapshot for text type', () => {
-    const { container } = render(<Input type="text" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for email type', () => {
-    const { container } = render(<Input type="email" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for password type', () => {
-    const { container } = render(<Input type="password" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for disabled state', () => {
-    const { container } = render(<Input disabled />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for required state', () => {
-    const { container } = render(<Input required />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for readOnly state', () => {
-    const { container } = render(<Input readOnly />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshots for standard input attributes', () => {
-    const { container } = render(
-      <Input
-        data-testid="input"
-        id="test-input"
-        name="testName"
-        required
-        maxLength={100}
-        minLength={5}
-        pattern="[a-z]+"
-        autoComplete="off"
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
+  it('merges a custom className with the base classes', () => {
+    render(<Input className="custom-class" />);
+    expect(screen.getByTestId('input')).toHaveClass('custom-class', 'rounded-md', 'border-input');
   });
 });

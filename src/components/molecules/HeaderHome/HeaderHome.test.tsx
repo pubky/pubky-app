@@ -211,26 +211,3 @@ describe('HeaderHome', () => {
     expect(container).toHaveClass('custom-class');
   });
 });
-
-describe('HeaderHome - Snapshots', () => {
-  beforeEach(() => {
-    vi.mocked(usePathname).mockReturnValue('/');
-  });
-
-  it('matches snapshot for default HeaderHome', () => {
-    const { container } = render(<HeaderHome />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<HeaderHome className="custom-class" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot on the logout page', () => {
-    vi.mocked(usePathname).mockReturnValue(AUTH_ROUTES.LOGOUT);
-
-    const { container } = render(<HeaderHome />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

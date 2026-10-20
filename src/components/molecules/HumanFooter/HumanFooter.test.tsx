@@ -85,7 +85,7 @@ describe('HumanFooter', () => {
   it('renders the company information', () => {
     render(<HumanFooter />);
 
-    expect(screen.getByText(/Synonym Software, S\.A\. DE C\.V\./)).toBeInTheDocument();
+    expect(screen.getByText(/Synonym Software, S\.A\. de C\.V\./)).toBeInTheDocument();
     expect(screen.getByText(/©2026\. All rights reserved\./)).toBeInTheDocument();
   });
 
@@ -94,10 +94,5 @@ describe('HumanFooter', () => {
 
     const footerLinks = screen.getAllByTestId('footer-links');
     expect(footerLinks).toHaveLength(2);
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<HumanFooter />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

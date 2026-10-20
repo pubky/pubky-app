@@ -46,22 +46,3 @@ describe('ControlledTextareaField', () => {
     expect(textarea).toHaveAttribute('rows', '6');
   });
 });
-
-describe('ControlledTextareaField - Snapshots', () => {
-  it('matches snapshot for default state', () => {
-    const { container } = render(
-      <TestWrapper>
-        {(form) => (
-          <ControlledTextareaField<TestFormData>
-            name="testField"
-            control={form.control}
-            label="Test Label"
-            placeholder="Enter text"
-          />
-        )}
-      </TestWrapper>,
-    );
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

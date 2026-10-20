@@ -281,7 +281,7 @@ describe('HomeFooter', () => {
   it('renders copyright', () => {
     render(<HomeFooter />);
 
-    expect(screen.getByText(/Synonym Software, S\.A\. DE C\.V\./)).toBeInTheDocument();
+    expect(screen.getByText(/Synonym Software, S\.A\. de C\.V\./)).toBeInTheDocument();
   });
 
   it('renders terms, privacy and age agreement text', () => {
@@ -347,32 +347,5 @@ describe('HomePageHeading', () => {
     render(<HomePageHeading />);
 
     expect(screen.getByTestId('heading-1')).toBeInTheDocument();
-  });
-});
-
-describe('Home - Snapshots', () => {
-  it('matches snapshot for HomeActions with default props', () => {
-    const { container } = render(<HomeActions />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HomeFooter with default props', () => {
-    const { container } = render(<HomeFooter />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HomeBrandFooter with default props', () => {
-    const { container } = render(<HomeBrandFooter />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HomeSectionTitle with default props', () => {
-    const { container } = render(<HomeSectionTitle />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for HomePageHeading with default props', () => {
-    const { container } = render(<HomePageHeading />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

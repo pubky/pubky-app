@@ -97,6 +97,7 @@ describe('useTagged', () => {
     act(() => {
       action = result.current.handleTagAdd('bitcoin');
     });
+    await waitFor(() => expect(mockMocks.mockTagCreate).toHaveBeenCalled());
     rerender('another-profile');
     rerender(mockUserId);
 
@@ -124,6 +125,7 @@ describe('useTagged', () => {
     act(() => {
       previous = result.current.handleTagToggle(tag);
     });
+    await waitFor(() => expect(mockMocks.mockTagDelete).toHaveBeenCalled());
     rerender('another-profile');
     await act(() => result.current.handleTagToggle(tag));
     mockLocalTags = [];
@@ -465,3 +467,8 @@ describe('useTagged', () => {
     });
   });
 });
+
+// These tests exercise the mutation after auth readiness; restore races use the real store in auth-wait tests.
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ waitForAuth: async () => true }),
+}));

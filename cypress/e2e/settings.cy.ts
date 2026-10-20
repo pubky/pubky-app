@@ -1,6 +1,7 @@
 import { latestPostInFeedContentEq, createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToHomePage } from '../support/header';
+import { confirmLogoutBackupBeforeNavigation } from '../support/logout';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
@@ -20,6 +21,8 @@ describe('settings', () => {
     const profileName = 'MrAccountSettings';
 
     const signInFromLogoutWithRecoveryPhrase = () => {
+      // Sign back in stays hidden while this browser still holds the onboarding key.
+      confirmLogoutBackupBeforeNavigation(HasBackedUp.Yes, '#logout-navigation-continue-btn');
       cy.get('#logout-navigation-continue-btn').should('be.visible').click();
       cy.location('pathname').should('eq', '/sign-in');
       cy.get('#restore-recovery-phrase-btn').click();

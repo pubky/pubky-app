@@ -5,6 +5,7 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
+import type { ComposerDraft } from '@/hooks/usePost/usePost.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -22,6 +23,7 @@ import { POST_INPUT_VARIANT } from './PostInput.constants';
 
 const mocks = vi.hoisted(() => ({
   createLockContent: vi.fn(),
+  fetchPaykitSetupStatus: vi.fn(),
   commitCreate: vi.fn(),
   clearSession: vi.fn(),
   handleSubmit: vi.fn(), // the normal (non-lock) publish path
@@ -42,7 +44,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/controllers/locks/locks', () => ({
-  LocksController: { createLockContent: mocks.createLockContent, clearSession: mocks.clearSession },
+  LocksController: {
+    fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    createLockContent: mocks.createLockContent,
+    clearSession: mocks.clearSession,
+  },
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: { commitCreate: mocks.commitCreate },
@@ -112,6 +118,8 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         existingAttachments: [],
         removeExistingAttachment: vi.fn(),
         uploadingCount: 0,
+        inlineMedia: { upload: vi.fn(), getPreviewUrl: () => null, getMediaType: () => null, getMediaName: () => null },
+        isEditInlineMediaLoading: false,
         serializeArticleForLock: vi.fn(),
         getLatestArticle: () => ({ title: articleTitle, body: content }),
         isArticle,
@@ -119,6 +127,12 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         handleArticleClick: vi.fn(),
         articleTitle,
         setArticleTitle,
+        restoreComposerDraft: (draft: ComposerDraft) => {
+          setContent(draft.content);
+          setAttachments(draft.attachments);
+          setIsArticle(draft.isArticle);
+          setArticleTitle(draft.articleTitle);
+        },
         handleArticleTitleChange: vi.fn(),
         handleArticleBodyChange: vi.fn(),
         isDragging: false,
@@ -154,6 +168,7 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
 vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
   usePostInputAuthHandlers: (params: Record<string, (...args: never[]) => unknown>) => ({
     isAuthenticated: true,
+    isWaiting: false,
     handleExpandWithAuth: params.handleExpand,
     handleSubmitWithAuth: params.handleSubmit,
     setTagsWithAuth: params.setTags,
@@ -208,17 +223,25 @@ vi.mock('../PostHeader/PostHeader', () => ({ PostHeader: () => null }));
 
 const descriptor = (path: string): TGuardedResource => ({ path, hash: 'H', content_type: 'image/png', size: 2 });
 
-const renderComposer = () => {
+const renderComposer = async () => {
   const onSuccess = vi.fn();
-  render(<PostInput variant={POST_INPUT_VARIANT.POST} onSuccess={onSuccess} />);
+  await act(async () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} onSuccess={onSuccess} />);
+  });
   return { onSuccess };
 };
 
 const lockSwitch = () => screen.getByRole('switch', { name: 'Lock content' });
 const postButton = () => screen.getByRole('button', { name: 'Post' });
 
-const fillValidPrice = () =>
-  fireEvent.change(screen.getByLabelText('Bitcoin Amount', { selector: 'input' }), { target: { value: '1000' } });
+const applyValidPrice = async () => {
+  await act(async () => {
+    fireEvent.change(screen.getByLabelText('Bitcoin Amount', { selector: 'input' }), { target: { value: '1000' } });
+  });
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
+  });
+};
 
 /** Locks fully set up: signed into the Lock Server with a connected Bitkit payout account. */
 const setUpLocks = () => {
@@ -227,18 +250,18 @@ const setUpLocks = () => {
 };
 
 /** Seed a body, switch on (already set up), set a valid price and apply it. */
-const configureLock = (body = 'secret body', files: File[] = []) => {
+const configureLock = async (body = 'secret body', files: File[] = []) => {
   setUpLocks();
   act(() => mocks.composer.setContent(body));
   if (files.length > 0) act(() => mocks.composer.setAttachments(files));
   fireEvent.click(lockSwitch());
-  fillValidPrice();
-  fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
+  await applyValidPrice();
 };
 
 describe('PostInput lock flow (integration)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
     mocks.locksAuthed = false;
     mocks.paykitConnected = false;
     mocks.lockServer = 'lockpubky';
@@ -256,15 +279,14 @@ describe('PostInput lock flow (integration)', () => {
     ['a link', 'see https://pubky.app', [] as File[]],
     ['an image', 'holiday pic', [new File(['x'], 'pic.png', { type: 'image/png' })]],
   ])('locks %s and publishes the announcement', async (_name, body, files) => {
-    const { onSuccess } = renderComposer();
+    const { onSuccess } = await renderComposer();
     act(() => mocks.composer.setContent(body));
     if (files.length > 0) act(() => mocks.composer.setAttachments(files));
 
     fireEvent.click(lockSwitch()); // not signed in yet → auth modal first
     fireEvent.click(screen.getByTestId('auth-success'));
 
-    fillValidPrice();
-    fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
+    await applyValidPrice();
 
     // The card stands in for the locked content; the teaser can never become an article.
     expect(screen.getByTestId('locked-post-card')).toBeInTheDocument();
@@ -321,16 +343,16 @@ describe('PostInput lock flow (integration)', () => {
       ],
       [
         'switch is turned off after the lock was configured',
-        () => {
-          configureLock();
+        async () => {
+          await configureLock();
           fireEvent.click(lockSwitch());
         },
       ],
     ])('when the %s', async (_name, cancel) => {
-      renderComposer();
+      await renderComposer();
       act(() => mocks.composer.setContent('secret body'));
 
-      cancel();
+      await cancel();
 
       expect(mocks.composer.content).toBe('secret body'); // draft restored
       fireEvent.click(postButton());
@@ -356,8 +378,8 @@ describe('PostInput lock flow (integration)', () => {
       new File(['tv'], 'trailer.mp4', { type: 'video/mp4' }),
       new File(['ti'], 'cover.png', { type: 'image/png' }),
     ];
-    renderComposer();
-    configureLock('all my media', lockedFiles);
+    await renderComposer();
+    await configureLock('all my media', lockedFiles);
     act(() => mocks.composer.setContent('my teaser'));
     act(() => mocks.composer.setAttachments(teaserFiles));
 
@@ -392,8 +414,8 @@ describe('PostInput lock flow (integration)', () => {
   // unit tests); here we pin what the composer does with it — and that it never falls back to the
   // pubky.app account when it is missing.
   it('points guarded file links at the Lock Server account, never the pubky.app account', async () => {
-    renderComposer();
-    configureLock('secret body', [new File(['x'], 'pic.png', { type: 'image/png' })]);
+    await renderComposer();
+    await configureLock('secret body', [new File(['x'], 'pic.png', { type: 'image/png' })]);
     act(() => mocks.composer.setContent('my teaser'));
     fireEvent.click(postButton());
     await waitFor(() => expect(mocks.createLockContent).toHaveBeenCalledTimes(1));
@@ -408,8 +430,8 @@ describe('PostInput lock flow (integration)', () => {
     expect(() => buildPost([descriptor('/priv/app.locks/content/id-1')])).toThrow();
   });
 
-  it('cannot publish while the Lock Server sign-in is still pending', () => {
-    renderComposer();
+  it('cannot publish while the Lock Server sign-in is still pending', async () => {
+    await renderComposer();
     act(() => mocks.composer.setContent('secret body'));
 
     fireEvent.click(lockSwitch()); // not signed in → sign-in modal opens, body stays in the composer
@@ -423,26 +445,28 @@ describe('PostInput lock flow (integration)', () => {
     expect(mocks.handleSubmit).not.toHaveBeenCalled(); // never leaks the to-be-locked body as a normal post
   });
 
-  it('renders no lock switch when no Lock Server is configured', () => {
+  it('renders no lock switch when no Lock Server is configured', async () => {
     mocks.lockServer = undefined;
-    renderComposer();
+    await renderComposer();
     expect(screen.queryByRole('switch', { name: 'Lock content' })).not.toBeInTheDocument();
   });
 
-  it('keeps Apply Lock disabled for a non-positive price', () => {
-    renderComposer();
+  it('keeps Apply Lock disabled for a non-positive price', async () => {
+    await renderComposer();
     setUpLocks();
     act(() => mocks.composer.setContent('secret body'));
     fireEvent.click(lockSwitch());
 
-    fireEvent.change(screen.getByLabelText('Bitcoin Amount', { selector: 'input' }), { target: { value: '0' } });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Bitcoin Amount', { selector: 'input' }), { target: { value: '0' } });
+    });
 
     expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeDisabled();
   });
 
   it('ignores a second Post click while the publish is in flight', async () => {
-    renderComposer();
-    configureLock();
+    await renderComposer();
+    await configureLock();
     act(() => mocks.composer.setContent('my teaser'));
     mocks.createLockContent.mockReturnValue(new Promise(() => {})); // never settles
 
@@ -464,9 +488,9 @@ describe('PostInput lock flow (integration)', () => {
       });
     const setTitle = (value: string) => fireEvent.change(screen.getByLabelText('Lock title'), { target: { value } });
 
-    it('caps the title and teaser inputs at their budgets', () => {
-      renderComposer();
-      configureLock();
+    it('caps the title and teaser inputs at their budgets', async () => {
+      await renderComposer();
+      await configureLock();
 
       expect(screen.getByLabelText('Lock title')).toHaveAttribute('maxLength', String(LOCK_TITLE_MAX_CHARACTER_LENGTH));
       expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveAttribute(
@@ -476,8 +500,8 @@ describe('PostInput lock flow (integration)', () => {
     });
 
     it('publishes when both fields are filled to their budgets', async () => {
-      renderComposer();
-      configureLock();
+      await renderComposer();
+      await configureLock();
       setTeaser('b'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH));
       setTitle('a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH));
 
@@ -489,8 +513,8 @@ describe('PostInput lock flow (integration)', () => {
     });
 
     it('disables Post and creates no lock when escaping pushes the envelope over', async () => {
-      renderComposer();
-      configureLock();
+      await renderComposer();
+      await configureLock();
       setTeaser('"'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH)); // fits the input, doubles when escaped
 
       expect(postButton()).toBeDisabled();
@@ -501,9 +525,9 @@ describe('PostInput lock flow (integration)', () => {
       expect(mocks.commitCreate).not.toHaveBeenCalled();
     });
 
-    it('re-enables Post once the teaser is trimmed back under the limit', () => {
-      renderComposer();
-      configureLock();
+    it('re-enables Post once the teaser is trimmed back under the limit', async () => {
+      await renderComposer();
+      await configureLock();
       setTeaser('"'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH));
       expect(postButton()).toBeDisabled();
 
@@ -516,11 +540,11 @@ describe('PostInput lock flow (integration)', () => {
   // An empty composer is not always idle — the lock flow holds the draft outside it.
   // Only the signal is checked here: `usePostInput` is faked, so no collapse runs. The composer
   // really staying open on an outside click belongs in an e2e test.
-  it('reports work in progress to the collapse guard while the lock is on', () => {
-    renderComposer();
+  it('reports work in progress to the collapse guard while the lock is on', async () => {
+    await renderComposer();
     expect(mocks.hasExternalContent?.()).toBe(false);
 
-    configureLock();
+    await configureLock();
 
     expect(mocks.composer.content).toBe(''); // the body moved into the lock draft
     expect(mocks.hasExternalContent?.()).toBe(true);
@@ -531,8 +555,8 @@ describe('PostInput lock flow (integration)', () => {
   });
 
   it('reopens sign-in and keeps the draft when the Lock Server rejects the session', async () => {
-    renderComposer();
-    configureLock();
+    await renderComposer();
+    await configureLock();
     act(() => mocks.composer.setContent('my teaser'));
     mocks.createLockContent.mockRejectedValue(
       Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Locks session rejected', {
@@ -548,3 +572,5 @@ describe('PostInput lock flow (integration)', () => {
     expect(mocks.composer.content).toBe('my teaser'); // nothing lost — the creator retries
   });
 });
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({ useRequireAuth: () => ({ waitForAuth: async () => true }) }));

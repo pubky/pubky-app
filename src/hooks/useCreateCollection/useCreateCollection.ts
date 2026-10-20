@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { PostController } from '@/controllers/post/post';
 import { useCoverImagePicker, type UseCoverImagePickerResult } from '@/hooks/useCoverImagePicker/useCoverImagePicker';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
@@ -47,7 +48,8 @@ type UseCreateCollectionResult = {
  *   null>`) so the caller can decide what to do on success (close dialog,
  *   navigate to the collection, etc.)
  */
-export function useCreateCollection(): UseCreateCollectionResult {
+export function useCreateCollection(active = true): UseCreateCollectionResult {
+  const { waitForAuth } = useRequireAuth(active);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const cover = useCoverImagePicker();
 
@@ -67,6 +69,7 @@ export function useCreateCollection(): UseCreateCollectionResult {
 
     let createdCollectionId: string | null = null;
     await form.handleSubmit(async (data) => {
+      if (!(await waitForAuth())) return;
       const name = data[CREATE_COLLECTION_FORM_FIELDS.NAME];
       const description = data[CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION];
       const layout = data[CREATE_COLLECTION_FORM_FIELDS.LAYOUT];

@@ -1,11 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { Logger } from '@/libs/logger/logger';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
-import { toast } from '@/molecules/Toaster/toast';
+import { toast, type ToastHandle } from '@/molecules/Toaster/toast';
 import { HumanInviteCode } from '@/organisms/HumanInviteCode/HumanInviteCode';
 import type { InviteCodeVerificationResult } from '@/organisms/HumanInviteCode/HumanInviteCode.types';
 import { HumanLightningPayment } from '@/organisms/HumanLightningPayment/HumanLightningPayment';
@@ -25,6 +25,8 @@ enum States {
 export function Human() {
   const [state, setState] = useState<States>(States.Selection);
   const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const verificationToastRef = useRef<ToastHandle | null>(null);
+  const verificationRequestRef = useRef(0);
   const { setInviteCode, reset } = useOnboardingStore();
   const router = useRouter();
   useEffect(() => {
@@ -35,42 +37,54 @@ export function Human() {
   // Signup to the homeserver happens later, after the user creates their keypair
   // (browser keys on /onboarding/pubky or Pubky Ring on /onboarding/scan).
   function onSuccess(inviteCode: string) {
+    dismissVerificationToast();
     setInviteCode(inviteCode);
     router.push(ONBOARDING_ROUTES.INSTALL);
+  }
+
+  function dismissVerificationToast() {
+    verificationToastRef.current?.dismiss();
+    verificationToastRef.current = null;
   }
 
   // Manually entered invite codes are verified with the homeserver as soon as the full code is
   // entered. On failure we surface a toast and keep the user on this step so they can try again.
   // Invalid or used codes show an error toast; unreachable homeserver errors use a distinct error title.
   async function onInviteCodeVerify(inviteCode: string): Promise<InviteCodeVerificationResult> {
+    const requestId = ++verificationRequestRef.current;
+    dismissVerificationToast();
     try {
       const status = await AuthController.verifySignupToken(inviteCode);
 
+      // The input ignores superseded results; their toasts must also leave the current request alone.
+      if (requestId !== verificationRequestRef.current) {
+        return status;
+      }
+
       if (status === 'valid') {
-        toast({
-          title: 'Invite code applied',
-        });
         return 'valid';
       }
 
       if (status === 'used') {
-        toast({
+        verificationToastRef.current = toast({
           title: 'Invite code already used',
           variant: 'error',
         });
         return 'used';
       }
 
-      toast({
+      verificationToastRef.current = toast({
         title: 'Invalid invite code',
         variant: 'error',
       });
       return 'invalid';
     } catch {
-      toast({
-        variant: 'error',
-        title: "Couldn't verify invite code",
-      });
+      if (requestId === verificationRequestRef.current) {
+        verificationToastRef.current = toast({
+          variant: 'error',
+          title: "Couldn't verify invite code",
+        });
+      }
       return 'error';
     }
   }

@@ -130,15 +130,3 @@ describe('HeaderSignIn', () => {
     expect(container).toHaveClass('custom-class');
   });
 });
-
-describe('HeaderSignIn - Snapshots', () => {
-  it('matches snapshot for default HeaderSignIn', () => {
-    const { container } = render(<HeaderSignIn />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<HeaderSignIn className="custom-class" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

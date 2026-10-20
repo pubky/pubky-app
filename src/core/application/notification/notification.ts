@@ -14,8 +14,8 @@ import { UserStreamApplication } from '@/application/stream/users/users';
 import { TagCacheApplication } from '@/application/tag/tag-cache';
 import { getTtlPostMs, getTtlUserMs } from '@/config/sync';
 import { POST_TAGS_PER_PAGE, USER_TAGS_PER_PAGE } from '@/config/tags';
-import { isAppError } from '@/libs/error/error.utils';
-import { HttpMethod } from '@/libs/http/http.types';
+import { hasHttpStatus, isAppError } from '@/libs/error/error.utils';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
@@ -23,6 +23,7 @@ import { type FlatNotification, NotificationType } from '@/models/notification/n
 import { getTagCursor } from '@/models/shared/tag/tag.utils';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { retryHomeserverWriteAfterReread, type THomeserverWriteFence } from '@/services/homeserver/write-retry';
 import { LocalNotificationService } from '@/services/local/notification/notification';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
@@ -34,6 +35,9 @@ const MAX_FETCH_ROUNDS = 10;
 
 export class NotificationApplication {
   private constructor() {} // Prevent instantiation
+
+  /** This tab's pending `last_read` write per URL, so writes to it never overlap. */
+  private static lastReadWrites = new Map<string, Promise<number>>();
 
   /**
    * Retrieves notifications from the nexus service and persists them locally,
@@ -61,10 +65,62 @@ export class NotificationApplication {
    * Awaits the write and lets failures propagate so the caller can decide whether to update
    * local state. Callers must ensure an active session that owns the path exists first.
    *
+   * `last_read` only moves forward. This tab's writes to it run one at a time, so a write waiting
+   * out a 429 cannot land after a newer one. Every pass reads the published value first and keeps
+   * it when it is not older (a mark queued ahead of this one, or another device), instead of
+   * writing an older timestamp. The session fence is taken when this is called, so a mark still
+   * queued or reading when logout begins sends nothing.
+   *
    * @param lastRead - The lastRead result (target URL + payload) built for the current user
+   * @returns The timestamp now published: this one, or a newer one already there
    */
-  static async markAllAsRead({ meta, last_read }: LastReadResult): Promise<void> {
-    await HomeserverService.request({ method: HttpMethod.PUT, url: meta.url, bodyJson: last_read.toJson() });
+  static async markAllAsRead({ meta, last_read }: LastReadResult): Promise<number> {
+    const url = meta.url;
+    const timestamp = Number(last_read.timestamp);
+    const bodyJson = last_read.toJson();
+    const fence = HomeserverService.createWriteFence({ guardFirstPass: true });
+    const previous = this.lastReadWrites.get(url) ?? Promise.resolve();
+    const write = previous.catch(() => {}).then(() => this.writeLastReadForward(fence, url, timestamp, bodyJson));
+    this.lastReadWrites.set(url, write);
+    try {
+      return await write;
+    } finally {
+      if (this.lastReadWrites.get(url) === write) this.lastReadWrites.delete(url);
+    }
+  }
+
+  private static async writeLastReadForward(
+    fence: THomeserverWriteFence,
+    url: string,
+    timestamp: number,
+    bodyJson: Record<string, unknown>,
+  ): Promise<number> {
+    return await retryHomeserverWriteAfterReread(fence, async () => {
+      const published = await this.readPublishedLastRead(url);
+      if (published !== null && published >= timestamp) return published;
+      await HomeserverService.request({
+        method: HttpMethod.PUT,
+        url,
+        bodyJson,
+        fence,
+      });
+      return timestamp;
+    });
+  }
+
+  /** The published `last_read` timestamp, or null when the file is missing or unreadable. */
+  private static async readPublishedLastRead(url: string): Promise<number | null> {
+    try {
+      const published = await HomeserverService.request<{ timestamp?: unknown } | undefined>({
+        method: HttpMethod.GET,
+        url,
+      });
+      const value = Number(published?.timestamp);
+      return Number.isFinite(value) ? value : null;
+    } catch (error) {
+      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return null;
+      throw error;
+    }
   }
 
   /**

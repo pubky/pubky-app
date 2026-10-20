@@ -10,6 +10,7 @@ import { StructuredData } from '@/molecules/StructuredData/StructuredData';
 import { Toaster } from '@/molecules/Toaster/Toaster';
 import { CoordinatorsManager } from '@/organisms/CoordinatorsManager/CoordinatorsManager';
 import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
+import { GuestContextualBanner } from '@/organisms/GuestContextualBanner/GuestContextualBanner';
 import { Header } from '@/organisms/Header/Header';
 import { PulseConsentBanner } from '@/organisms/PulseConsent/PulseConsent';
 import { PwaManager } from '@/organisms/PwaManager/PwaManager';
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <Header />
                   {children}
                   <Fab />
+                  <GuestContextualBanner />
                   <DialogSignIn />
                 </RouteGuardProvider>
               </DatabaseProvider>

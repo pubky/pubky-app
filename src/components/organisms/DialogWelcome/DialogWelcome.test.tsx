@@ -263,32 +263,3 @@ describe('DialogWelcome', () => {
     expect(mockGetAvatarUrl).not.toHaveBeenCalled();
   });
 });
-
-describe('DialogWelcome - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(useLiveQuery).mockReturnValue({
-      name: 'Test User',
-      bio: 'Test bio',
-      image: 'test-image.jpg',
-      indexed_at: 1234567890,
-    });
-  });
-
-  it('matches snapshot for default DialogWelcome', () => {
-    const { container } = render(<DialogWelcome />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when user has no image', () => {
-    vi.mocked(useLiveQuery).mockReturnValue({
-      name: 'Test User',
-      bio: 'Test bio',
-      image: null,
-      indexed_at: 1234567890,
-    });
-
-    const { container } = render(<DialogWelcome />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

@@ -91,6 +91,8 @@ function AvatarStackSlot({ pubky, size, offset }: AvatarStackSlotProps) {
  */
 function sizeToChipClass(size: NonNullable<AvatarStackProps['size']>): string {
   switch (size) {
+    case 'xs':
+      return 'size-4';
     case 'sm':
       return 'size-6';
     case 'md':

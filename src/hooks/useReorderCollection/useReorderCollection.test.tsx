@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
 import { useCollectionReorderStore } from '@/stores/collectionReorder/collectionReorder.store';
+import { mockSession } from '@/test-utils/pubky';
 import { useReorderCollection } from './useReorderCollection';
 
 vi.mock('@/controllers/post/post', () => ({
@@ -35,6 +38,13 @@ const renderReorderHook = (envelopeItems: string[] | undefined = [uriA, uriB, ur
 describe('useReorderCollection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      ...authInitialState,
+      hasHydrated: true,
+      currentUserPubky: 'author',
+      session: mockSession(),
+      restoreStatus: 'ready',
+    });
     useCollectionReorderStore.setState({ activeCollectionId: null });
     vi.mocked(StreamPostsController.fetchMissingPostsByUris).mockResolvedValue(undefined);
     vi.mocked(PostController.commitReorderCollectionItems).mockResolvedValue(undefined);

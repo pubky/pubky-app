@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { generateBitkitContactDeeplink, GenerateDeeplinkOptions, generatePubkyRingDeeplink } from './deeplink';
+import {
+  generateBitkitContactDeeplink,
+  GenerateDeeplinkOptions,
+  generatePubkyRingDeeplink,
+  toBitkitIosAuthUrl,
+} from './deeplink';
 
 describe('generatePubkyRingDeeplink', () => {
   describe('basic functionality', () => {
@@ -170,5 +175,26 @@ describe('generateBitkitContactDeeplink', () => {
   // Bitkit rejects a link whose value carries anything outside the key, so the value is always encoded.
   it('encodes the pubky', () => {
     expect(generateBitkitContactDeeplink('key&other=value')).toBe('bitkit://contact?pubky=key%26other%3Dvalue');
+  });
+});
+
+describe('toBitkitIosAuthUrl', () => {
+  it('opens the same grant in Bitkit without changing query order or encoding', () => {
+    const query =
+      'caps=%2Fpub%2Fpubky.app%2F%3Arw%2C%2Fpriv%2Fsocial%2F%3Arw&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=a%2Bb_c&cid=pubky.app&cpk=key&label=a+b%20c&label=%2f';
+
+    expect(toBitkitIosAuthUrl(`pubkyauth://signin_grant?${query}`)).toBe(`bitkit://pubky-auth/signin?${query}`);
+  });
+
+  it.each([
+    ['legacy Ring sign-in', 'pubkyauth://signin?caps=x&secret=s'],
+    ['sign-up', 'pubkyauth://signup?invite=test'],
+    ['grant without a query', 'pubkyauth://signin_grant'],
+    ['grant with an empty query', 'pubkyauth://signin_grant?'],
+    ['web link', 'https://pubky.app/?secret=s'],
+    ['Bitkit link', 'bitkit://pubky-auth/signin?caps=x&secret=s'],
+    ['empty URL', ''],
+  ])('leaves a %s unchanged', (_, url) => {
+    expect(toBitkitIosAuthUrl(url)).toBe(url);
   });
 });

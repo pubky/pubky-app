@@ -4,7 +4,6 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation/useProfileNavigation';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUnlockedList } from '@/hooks/useUnlockedList/useUnlockedList';
 import { isPubkyIdentifier } from '@/libs/utils/utils';
 import { ProfileUserNotFoundDiscoveryView } from '@/organisms/ProfileUserNotFoundDiscoveryView/ProfileUserNotFoundDiscoveryView';
@@ -70,15 +69,12 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
   const { activePage, filterBarActivePage, navigateToPage } = useProfileNavigation();
 
   // Business logic: Handle follow/unfollow for other users' profiles (with auth check)
-  const { requireAuth } = useRequireAuth();
   const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = useFollowUser();
   const { isFollowing } = useIsFollowing(pubky !== null && isPubkyIdentifier(pubky) ? pubky : '');
 
   const handleFollowToggle = () => {
     if (!pubky) return;
-    requireAuth(async () => {
-      await toggleFollow(pubky, isFollowing);
-    });
+    void toggleFollow(pubky, isFollowing);
   };
 
   const mergedActions = {
@@ -95,7 +91,10 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
 
   // `null` on error, not `undefined`: the read has finished, so a spinner would be wrong, and `0`
   // would claim nothing is unlocked.
-  const unlockedCount = unlocked.isError ? null : unlocked.isLoading ? undefined : unlocked.count;
+  // A failed refresh hides the count only when there is nothing to count; the Unlocked screen keeps
+  // showing the cached items, so the sidebar shows their number.
+  const unlockedCount =
+    unlocked.isError && unlocked.count === 0 ? null : unlocked.isLoading ? undefined : unlocked.count;
 
   if (showUserNotFoundDiscovery) {
     return <ProfileUserNotFoundDiscoveryView />;

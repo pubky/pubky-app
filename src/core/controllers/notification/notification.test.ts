@@ -311,6 +311,7 @@ describe('NotificationController', () => {
 
       vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
         mockNotificationStore({
+          lastRead: 0,
           setLastRead,
           setUnread,
           selectUnread: () => unreadCount,
@@ -334,7 +335,7 @@ describe('NotificationController', () => {
       const mockLastReadResult = buildLastReadResult();
 
       vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(mockLastReadResult);
-      const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead').mockResolvedValue(undefined);
+      const applicationSpy = vi.spyOn(NotificationApplication, 'markAllAsRead').mockResolvedValue(mockTimestamp);
 
       await NotificationController.markAllAsRead();
 
@@ -342,6 +343,34 @@ describe('NotificationController', () => {
       expect(applicationSpy).toHaveBeenCalledWith(mockLastReadResult);
       expect(setLastRead).toHaveBeenCalledWith(mockTimestamp);
       expect(setUnread).toHaveBeenCalledWith(0);
+    });
+
+    it('stores the newer timestamp the homeserver already holds', async () => {
+      const { setLastRead } = setupStores(mockUserId);
+      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(buildLastReadResult());
+      vi.spyOn(NotificationApplication, 'markAllAsRead').mockResolvedValue(mockTimestamp + 5_000);
+
+      await NotificationController.markAllAsRead();
+
+      expect(setLastRead).toHaveBeenCalledWith(mockTimestamp + 5_000);
+    });
+
+    it('never moves the local lastRead backward when a newer mark landed while this one waited', async () => {
+      const { setLastRead } = setupStores(mockUserId);
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore({
+          setLastRead,
+          setUnread: vi.fn(),
+          selectUnread: () => 5,
+          lastRead: mockTimestamp + 9_000,
+        }),
+      );
+      vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(buildLastReadResult());
+      vi.spyOn(NotificationApplication, 'markAllAsRead').mockResolvedValue(mockTimestamp);
+
+      await NotificationController.markAllAsRead();
+
+      expect(setLastRead).toHaveBeenCalledWith(mockTimestamp + 9_000);
     });
 
     it('should skip processing when no user is authenticated', async () => {

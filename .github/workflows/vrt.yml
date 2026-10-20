@@ -8,73 +8,108 @@ on:
   # Enable manual trigger
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  playwright-version:
+    name: Resolve Playwright version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout lockfile
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: package-lock.json
+          sparse-checkout-cone-mode: false
+
+      # The Linux container image and the macOS browser cache must match the
+      # installed `playwright` package exactly; read it from the lockfile.
+      - name: Read Playwright version
+        id: version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/playwright'].version")" >> "$GITHUB_OUTPUT"
+
   vrt:
-    name: VRT (${{ matrix.os }})
+    name: VRT (${{ matrix.os }}, ${{ matrix.browser }})
+    needs: playwright-version
     runs-on: ${{ matrix.os }}
-    concurrency:
-      group: vrt-${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
-      cancel-in-progress: true
+    # Linux runs in the official Playwright image for the installed version: every
+    # browser and its system libraries are preinstalled, so nothing is downloaded or
+    # apt-installed per run. An empty string means "no container" (macOS runs on the host).
+    container: ${{ matrix.os == 'ubuntu-latest' && format('mcr.microsoft.com/playwright:v{0}-noble', needs.playwright-version.outputs.version) || '' }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        browser: [chromium, firefox, webkit]
+        # Nobody browses with WebKit on Linux; Safari's engine is covered on macOS.
+        exclude:
+          - os: ubuntu-latest
+            browser: webkit
 
     steps:
+      # Container steps run as root but inherit HOME=/github/home, owned by the
+      # image's pwuser; Firefox refuses to launch as root from a home it does not
+      # own. Exporting here (not in the container block, which the runner overrides)
+      # reaches every later step. Linux browsers live in /ms-playwright, so no
+      # cache path depends on HOME.
+      - name: Use root home in the container
+        if: runner.os == 'Linux'
+        run: echo "HOME=/root" >> "$GITHUB_ENV"
+
       - name: Checkout code
         uses: actions/checkout@v7
 
       - name: Check VRT screenshot folders have sibling tests
         run: bash src/test-utils/vrt.screenshot-siblings.sh
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
       - name: Install dependencies
-        run: npm ci
+        uses: ./.github/actions/install-dependencies
+        with:
+          # Linux jobs install inside the Playwright image; that node_modules must not
+          # be restored on the bare Ubuntu runner (Build, Code Quality), or the reverse.
+          cache-namespace: ${{ matrix.os == 'ubuntu-latest' && format('playwright-{0}-noble', needs.playwright-version.outputs.version) || 'host' }}
 
       - name: Set Playwright browsers path
+        if: runner.os == 'macOS'
         run: echo "PLAYWRIGHT_BROWSERS_PATH=${HOME}/.cache/ms-playwright" >> "$GITHUB_ENV"
 
-      - name: Restore Playwright browsers cache
+      # Keyed on the Playwright version, not the lockfile: unrelated dependency
+      # bumps keep the hit. One cache per browser so each job restores only its own.
+      - name: Restore Playwright browser cache
+        if: runner.os == 'macOS'
         uses: actions/cache/restore@v6
         id: playwright-browsers-cache
         with:
           path: ~/.cache/ms-playwright
-          key: vrt-playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            vrt-playwright-${{ runner.os }}-
+          key: vrt-playwright-${{ runner.os }}-${{ runner.arch }}-${{ matrix.browser }}-${{ needs.playwright-version.outputs.version }}
 
-      - name: Install Playwright browsers
-        if: steps.playwright-browsers-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Install Playwright browser
+        id: playwright-browser
+        if: runner.os == 'macOS' && steps.playwright-browsers-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps ${{ matrix.browser }}
 
-      # On a cache hit the browser binaries are restored, but because Ubuntu runners
-      # are ephemeral, apt libraries installed by --with-deps are not persisted.
-      # Run install-deps only (no re-download) so headless launches still work on Linux.
-      - name: Install Playwright system dependencies
-        if: steps.playwright-browsers-cache.outputs.cache-hit == 'true' && runner.os == 'Linux'
-        run: npx playwright install-deps chromium firefox webkit
-
-      - name: Run visual regression tests
-        run: npm run test:vrt
-
-      # Save even when VRT fails
-      - name: Save Playwright browsers cache
-        if: always() && steps.playwright-browsers-cache.outputs.cache-hit != 'true'
+      # Save only a completed install. A failed or cancelled install leaves a partial
+      # directory, and an exact key is immutable, so the next run would skip the install.
+      # Saving before the tests still keeps the cache when the tests later fail.
+      - name: Save Playwright browser cache
+        if: steps.playwright-browser.outcome == 'success'
         uses: actions/cache/save@v6
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright-browsers-cache.outputs.cache-primary-key }}
 
+      - name: Run visual regression tests
+        run: npx vitest run --project "vrt (${{ matrix.browser }})"
+
       - name: Upload VRT failure screenshots
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: vrt-failures-${{ matrix.os }}
+          name: vrt-failures-${{ matrix.os }}-${{ matrix.browser }}
           path: .vitest-attachments/
           include-hidden-files: true
           if-no-files-found: ignore

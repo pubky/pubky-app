@@ -6,6 +6,7 @@ import { ProfilePageTaggedAs } from './ProfilePageTaggedAs';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({
     push: vi.fn(),
   }),
@@ -151,17 +152,5 @@ describe('ProfilePageTaggedAs - mobile variant', () => {
     expect(screen.getByText('Add Tag')).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('add tag')).not.toBeInTheDocument();
     expect(screen.queryByTestId('tagged-item-avatars')).not.toBeInTheDocument();
-  });
-});
-
-describe('ProfilePageTaggedAs - Snapshots', () => {
-  it('matches snapshot with tags', () => {
-    const { container } = render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with empty tags', () => {
-    const { container } = render(<ProfilePageTaggedAs tags={[]} onTagClick={mockOnTagClick} />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

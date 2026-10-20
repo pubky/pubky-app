@@ -96,11 +96,6 @@ describe('SinglePostLeftSidebar', () => {
 
     expect(useHomeStore.getState().layout).toBe(LAYOUT.WIDE);
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<SinglePostLeftSidebar />);
-    expect(container).toMatchSnapshot();
-  });
 });
 
 describe('SinglePostLeftDrawer', () => {
@@ -129,11 +124,6 @@ describe('SinglePostLeftDrawer', () => {
 
     expect(useHomeStore.getState().layout).toBe(LAYOUT.WIDE);
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<SinglePostLeftDrawer />);
-    expect(container).toMatchSnapshot();
-  });
 });
 
 describe('SinglePostLeftDrawerMobile', () => {
@@ -155,10 +145,5 @@ describe('SinglePostLeftDrawerMobile', () => {
 
     expect(screen.queryByTestId('change-layout')).not.toBeInTheDocument();
     expect(useHomeStore.getState().layout).toBe(LAYOUT.COLUMNS);
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<SinglePostLeftDrawerMobile />);
-    expect(container).toMatchSnapshot();
   });
 });

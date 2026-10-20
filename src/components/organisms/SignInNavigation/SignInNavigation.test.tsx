@@ -89,6 +89,18 @@ describe('SignInNavigation', () => {
     expect(mockPush).toHaveBeenCalledWith(HOME_ROUTES.HOME);
   });
 
+  it.each(['restore-phrase', 'restore-file'])('returns %s sign-in to the original Shop checkout', (testId) => {
+    const returnTo = '/shop/marketplace/listing/abc?checkout=1#payment';
+    window.history.replaceState(null, '', `/sign-in?${new URLSearchParams({ returnTo })}`);
+    try {
+      render(<SignInNavigation />);
+      fireEvent.click(screen.getByTestId(testId));
+      expect(mockPush).toHaveBeenCalledWith(returnTo);
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
   it('does not render when sign-in progress is active', () => {
     mockSignInState.authUrlResolved = true;
 
@@ -96,16 +108,5 @@ describe('SignInNavigation', () => {
 
     expect(screen.queryByTestId('restore-phrase')).not.toBeInTheDocument();
     expect(screen.queryByTestId('restore-file')).not.toBeInTheDocument();
-  });
-});
-
-describe('SignInNavigation - Snapshots', () => {
-  beforeEach(() => {
-    mockSignInState = { authUrlResolved: false };
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<SignInNavigation />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

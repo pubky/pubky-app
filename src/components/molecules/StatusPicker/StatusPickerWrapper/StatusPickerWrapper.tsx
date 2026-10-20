@@ -7,6 +7,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { parseStatus } from '@/libs/status/status';
 import { cn } from '@/libs/utils/utils';
 import { StatusPickerContent } from '../StatusPickerContent/StatusPickerContent';
@@ -22,6 +23,7 @@ export function StatusPickerWrapper({
   const [open, setOpen] = useState(false);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const { requireAuth } = useRequireAuth();
 
   // Use local status if set, otherwise use prop
   const currentStatus = localStatus ?? status;
@@ -29,9 +31,15 @@ export function StatusPickerWrapper({
   // parseStatus resolves predefined statuses to their STATUS_LABELS copy
   const displayText = parsed.text;
   const handleStatusSelect = (selectedStatus: string) => {
-    setLocalStatus(selectedStatus);
-    onStatusChange?.(selectedStatus);
+    requireAuth(() => {
+      setLocalStatus(selectedStatus);
+      onStatusChange?.(selectedStatus);
+    });
     setOpen(false);
+  };
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) requireAuth(() => setOpen(true));
+    else setOpen(false);
   };
   const triggerButton = (
     <Button
@@ -46,7 +54,7 @@ export function StatusPickerWrapper({
   );
   if (isMobile) {
     return (
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetTrigger asChild>{triggerButton}</SheetTrigger>
         <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()}>
           <SheetHeader>
@@ -61,7 +69,7 @@ export function StatusPickerWrapper({
     );
   }
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
       <PopoverContent
         className="w-(--popover-width)"

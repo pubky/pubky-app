@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { isShopHostNavigationPending } from '@/libs/shop-embed/navigation';
 import { HeaderButtonSignIn } from './HeaderButtonSignIn';
 
 // Mock Next.js navigation
@@ -35,13 +36,6 @@ vi.mock('@/atoms/Button/Button', () => {
   };
 });
 
-// Mock app
-vi.mock('@/app/routes', () => ({
-  AUTH_ROUTES: {
-    SIGN_IN: '/sign-in',
-  },
-}));
-
 // Join entry: fair-access step unless Pubky Passport is enabled on this page.
 const mockJoinRoute = vi.hoisted(() => ({ value: '/onboarding/human' }));
 vi.mock('@/hooks/useJoinRoute/useJoinRoute', () => ({
@@ -53,6 +47,18 @@ describe('HeaderButtonSignIn', () => {
     vi.clearAllMocks();
     mockUsePathname.mockReturnValue('/');
     mockJoinRoute.value = '/onboarding/human';
+  });
+
+  it('guards the guest sign-in navigation before leaving Shop', async () => {
+    window.history.replaceState(null, '', '/shop');
+    const pendingDuringNavigation: boolean[] = [];
+    mockPush.mockImplementationOnce(() => pendingDuringNavigation.push(isShopHostNavigationPending()));
+    render(<HeaderButtonSignIn />);
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: /Sign in/i })));
+    expect(mockPush).toHaveBeenCalledWith('/sign-in');
+    expect(pendingDuringNavigation).toEqual([true]);
+    expect(isShopHostNavigationPending()).toBe(false);
+    window.history.replaceState(null, '', '/');
   });
 
   it('renders sign in button with icon and text', () => {
@@ -121,17 +127,5 @@ describe('HeaderButtonSignIn', () => {
 
     const button = screen.getByTestId('custom-button');
     expect(button).toHaveClass('custom-class');
-  });
-});
-
-describe('HeaderButtonSignIn - Snapshots', () => {
-  it('matches snapshot for default HeaderButtonSignIn', () => {
-    const { container } = render(<HeaderButtonSignIn />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with custom className', () => {
-    const { container } = render(<HeaderButtonSignIn className="custom-class" />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

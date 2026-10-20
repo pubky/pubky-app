@@ -2,9 +2,11 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TLockConfig } from '@/application/locks/locks.types';
 import { LOCK_ATTACHMENT_MAX_FILES, LOCK_ATTACHMENT_MAX_SIZE, LOCK_TEASER_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import type { ComposerDraft } from '@/hooks/usePost/usePost.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import type { TLockPrice } from '@/services/locks/locks.types';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
@@ -16,6 +18,7 @@ import { POST_INPUT_VARIANT } from './PostInput.constants';
 
 const mocks = vi.hoisted(() => ({
   createLockContent: vi.fn(),
+  fetchPaykitSetupStatus: vi.fn(),
   commitCreate: vi.fn(),
   clearSession: vi.fn(),
   handleSubmit: vi.fn(), // the normal (non-lock) publish path
@@ -27,7 +30,7 @@ const mocks = vi.hoisted(() => ({
   // What the title and body inputs hold while the composer state still trails them. Null once it caught up.
   latestArticle: null as { title: string; body: string } | null,
   // Last options PostInput handed to usePostInput.
-  postInputOptions: {} as { keepInlineImages?: boolean },
+  postInputOptions: {} as { keepInlineMedia?: boolean },
   // Test handle into the fake composer state, refreshed on every render.
   composer: {} as {
     content: string;
@@ -44,7 +47,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/controllers/locks/locks', () => ({
-  LocksController: { createLockContent: mocks.createLockContent, clearSession: mocks.clearSession },
+  LocksController: {
+    fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    createLockContent: mocks.createLockContent,
+    clearSession: mocks.clearSession,
+  },
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: { commitCreate: mocks.commitCreate },
@@ -67,8 +74,8 @@ vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => moc
 vi.mock('@/hooks/useLockFile/useLockFile', () => ({
   useLockFile: (lockUrl?: string) => ({
     lockFile: null,
-    priceSats: lockUrl ? '4321' : null,
-    hasError: false,
+    price: lockUrl ? { amount: '4321', asset: 'BTC' as const } : null,
+    isLoading: false,
   }),
 }));
 
@@ -78,7 +85,7 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
   return {
     // Everything starts empty on purpose: edit-mode values must arrive through PostInput's own
     // seeding effects, so deleting one of those effects fails a test instead of passing silently.
-    usePostInput: (options: { keepInlineImages?: boolean }) => {
+    usePostInput: (options: { keepInlineMedia?: boolean }) => {
       mocks.postInputOptions = options;
       const [content, setContent] = useState('');
       const [tags, setTags] = useState<string[]>([]);
@@ -112,6 +119,8 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         existingAttachments: [],
         removeExistingAttachment: vi.fn(),
         uploadingCount: mocks.uploadingCount,
+        inlineMedia: { upload: vi.fn(), getPreviewUrl: () => null, getMediaType: () => null, getMediaName: () => null },
+        isEditInlineMediaLoading: false,
         serializeArticleForLock: mocks.serializeArticleForLock,
         getLatestArticle: () => mocks.latestArticle ?? { title: articleTitle, body: content },
         isArticle,
@@ -119,6 +128,12 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         handleArticleClick: vi.fn(),
         articleTitle,
         setArticleTitle,
+        restoreComposerDraft: (draft: ComposerDraft) => {
+          setContent(draft.content);
+          setAttachments(draft.attachments);
+          setIsArticle(draft.isArticle);
+          setArticleTitle(draft.articleTitle);
+        },
         lockTitle,
         setLockTitle,
         handleArticleTitleChange: vi.fn(),
@@ -156,6 +171,7 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
 vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
   usePostInputAuthHandlers: (params: Record<string, (...args: never[]) => unknown>) => ({
     isAuthenticated: true,
+    isWaiting: false,
     handleExpandWithAuth: params.handleExpand,
     handleSubmitWithAuth: params.handleSubmit,
     setTagsWithAuth: params.setTags,
@@ -208,7 +224,7 @@ vi.mock('@/molecules/DialogLockContent/DialogLockContent', () => ({
   }) =>
     props.open ? (
       <div data-testid="lock-dialog">
-        <button data-testid="apply-lock" onClick={() => props.onApplied({ amountSats: '1234' })} />
+        <button data-testid="apply-lock" onClick={() => props.onApplied({ amount: '1234', asset: 'BTC' as const })} />
         <button data-testid="cancel-lock" onClick={() => props.onOpenChange(false)} />
       </div>
     ) : null,
@@ -220,11 +236,11 @@ vi.mock('@/organisms/DialogLocksAuth/DialogLocksAuth', () => ({
 vi.mock('@/molecules/LockedPostCard/LockedPostCard', () => ({
   LockedPostCard: ({
     title,
-    priceSats,
+    price,
     editableTitle,
   }: {
     title?: string;
-    priceSats?: string | null;
+    price?: TLockPrice | null;
     editableTitle?: { value: string; onChange: (value: string) => void };
   }) =>
     editableTitle ? (
@@ -234,7 +250,7 @@ vi.mock('@/molecules/LockedPostCard/LockedPostCard', () => ({
           value={editableTitle.value}
           onChange={(event) => editableTitle.onChange(event.target.value)}
         />
-        <span data-testid="lock-card-price">{priceSats ?? ''}</span>
+        <span data-testid="lock-card-price">{price?.amount ?? ''}</span>
       </>
     ) : (
       <div data-testid="locked-post-card">{title}</div>
@@ -280,6 +296,7 @@ const configureLock = async (body = 'secret body') => {
 describe('PostInput lock wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
     mocks.currentUserPubky = null;
     mocks.uploadingCount = 0;
     mocks.latestArticle = null;
@@ -567,17 +584,17 @@ describe('PostInput lock wiring', () => {
 
     it('keeps the uploaded images for as long as the captured article is held', async () => {
       renderArticle();
-      expect(mocks.postInputOptions.keepInlineImages).toBe(false);
+      expect(mocks.postInputOptions.keepInlineMedia).toBe(false);
 
       fireEvent.click(screen.getByTestId('lock-switch'));
       fireEvent.click(screen.getByTestId('apply-lock'));
       // The composer left article mode here; without the hold the uploads would be deleted now.
-      expect(mocks.postInputOptions.keepInlineImages).toBe(true);
+      expect(mocks.postInputOptions.keepInlineMedia).toBe(true);
 
       act(() => mocks.composer.setContent('my teaser'));
       fireEvent.click(screen.getByTestId('post-button'));
 
-      await waitFor(() => expect(mocks.postInputOptions.keepInlineImages).toBe(false));
+      await waitFor(() => expect(mocks.postInputOptions.keepInlineMedia).toBe(false));
     });
 
     it('lets go of the uploaded images when the lock is abandoned', () => {
@@ -587,14 +604,14 @@ describe('PostInput lock wiring', () => {
 
       fireEvent.click(screen.getByTestId('lock-switch')); // off
 
-      expect(mocks.postInputOptions.keepInlineImages).toBe(false);
+      expect(mocks.postInputOptions.keepInlineMedia).toBe(false);
     });
 
     it('holds nothing for a locked normal post', async () => {
       renderComposer();
       await configureLock();
 
-      expect(mocks.postInputOptions.keepInlineImages).toBe(false);
+      expect(mocks.postInputOptions.keepInlineMedia).toBe(false);
     });
   });
 
@@ -810,3 +827,5 @@ describe('PostInput lock wiring', () => {
     expect(screen.getByTestId('lock-card')).toBeInTheDocument(); // still configured for a retry
   });
 });
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({ useRequireAuth: () => ({ waitForAuth: async () => true }) }));

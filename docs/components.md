@@ -39,7 +39,7 @@ templates/ → Page layouts
 ```
 src/components/atoms/Button/
 ├── Button.tsx           # Main component
-├── Button.test.tsx      # Unit + snapshot tests
+├── Button.test.tsx      # Unit tests
 └── Button.types.ts      # Type definitions
 ```
 
@@ -72,6 +72,7 @@ Guests can open routes that do not require a session:
 
 - **Route guard:** `EXPLORE_ROUTES` is included in `UNAUTHENTICATED_ROUTES`; dynamic public paths are allowed via `isDynamicPublicRoute()` in `RouteGuardProvider`.
 - **UI chrome:** use `usePublicRoute()` for layout (e.g. explore header, mobile footer on `/home`). `isPublicRoute` on the hook result is a **legacy alias** for `isDynamicPublicRoute` only—it is `false` on `/home` even though the page is browsable.
+- **Account identity in the UI:** Header, mobile footer and composers use `selectDisplayUserPubky` from `@/stores/auth/auth.selectors`. Keep the saved identity visible while restoring; show guest chrome after `reauth-required` or `temporary-error`, preserving the stored identity and draft. This selector only controls display; action guards still require a ready session.
 - **Auth-gated actions:** use `useRequireAuth().requireAuth()` for post, reply, follow, filters, etc. Streams for guests should use `REACH.ALL` (see `useStreamIdFromFilters`, `useHotStreamId`).
 
 ## Component Template
@@ -201,6 +202,28 @@ Helpers such as **`getIconFromUrl`** and **`getLabelFromUrl`** live in **`@/libs
 
 Component tests must use **real** `lucide-react` and `@/icons` implementations (no `vi.mock('lucide-react')` / `vi.mock('@/icons')` for icons). See `docs/component-testing.md` — _Icon components: Always Real_.
 
+## Article composer
+
+Article mode in `PostInput` is tabbed. The `Tabs` atom (Radix, underline style) hosts the row rendered by the
+`ArticleComposerTabs` molecule: **Content** (the rich-text editor), **Header** (the cover slot in
+`PostInputAttachments`) and **Preview**; below `lg` the title gets a **Title** tab of its own, and the tabs are
+icon-only. Content, Title and Header panels stay mounted while another tab shows (`forceMount` +
+`data-[state=inactive]:hidden`): the editor imports its markdown once and the title field is uncontrolled, so
+unmounting either would lose what the user typed since the last debounce. Tags and the action bar sit under every
+tab; the author's avatar and a browser fullscreen toggle (`useFullscreen`, document-level because Radix portals
+render on `body`) live in the action bar.
+
+**Preview** is `ArticleComposerPreview`, which renders the draft through the published path (`PostText` with
+`articleMedia`): the body goes through `serializeArticleBody`, and the resulting `attachment:{n}` slots are fed
+`[cover?, ...inline]` local entries built from the composer session (object URLs for this session's uploads, CDN
+URLs for files kept from the published article). It is never a second renderer, and its links are inert.
+
+## Article inline media
+
+`PostText` renders an article body's `![alt](src)` nodes through `ArticleInlineMedia` whenever the surface passes `articleMedia` (the article detail page and unlocked content; feed previews pass nothing and strip them). `ArticleInlineMedia` routes by the resolved kind: images to `ArticleInlineImage`, videos and audio to the `Video` / `Audio` atoms, PDFs to a file card. The kind comes from file metadata, not the markdown (`docs/data-patterns.md`, _Article Inline Media_).
+
+Everything these render sits inside a markdown `<p>`, so it is phrasing content only: `span`, `img`, `video`, `audio`, `a` — never `div`, `Container` or `Typography`'s default `<p>`. External sources use `preload="none"`; media elements have no referrer policy.
+
 ## Toasts
 
 Stack: atom [`Toast`](src/components/atoms/Toast/Toast.tsx) + [`Toast.variants.ts`](src/components/atoms/Toast/Toast.variants.ts) + [`Toast.icons.tsx`](src/components/atoms/Toast/Toast.icons.tsx), molecule [`Toaster`](src/components/molecules/Toaster/Toaster.tsx), public API [`toast()`](src/components/molecules/Toaster/toast.ts). `<Toaster />` is mounted in the app layout.
@@ -246,7 +269,7 @@ toast({ title: 'Reposted', action: { label: 'Undo', altText: 'Undo', onClick: ()
 - `ToastOptions` requires at least one of `title` / `description` (both `string`), and exposes only app concepts: `variant`, `dismissButton`, `action`, `persistent`. Radix lifecycle, duration, open-state, and styling props are not part of the public API.
 - **`variant: 'error'`** for errors — not `className: 'destructive …'`, and **no** `showErrorToast` / `showSuccessToast` wrapper helpers.
 - **`dismissButton: true`** when the toast should show an OK action (brand-styled on default toasts, muted otherwise, via `toastActionVariants`).
-- **`action`** is a plain descriptor `{ label, altText, onClick }` — never a component. The Toaster owns action rendering and styling, and dismisses the toast before invoking `onClick`.
+- **`action`** is a plain descriptor `{ label, altText, onClick }` — never a component. The Toaster owns action rendering and styling, and dismisses the toast before invoking `onClick`. The producing dialog or menu has usually unmounted by then, so an `onClick` that mutates waits with `useRequireAuth`'s `outlivesOwner` (ADR-0024), as the repost Undo does.
 - **`toast()` returns a `ToastHandle`** with `dismiss()` for dismissing that toast programmatically.
 - **`persistent: true`** keeps a toast open until its action, the dismiss button, or a swipe removes it (no auto-dismiss), and it does not count toward the toast limit, so later transient toasts stack next to it instead of evicting it. Reserve it for state the user must resolve, such as the "Update available" toast in `useServiceWorkerUpdate`; normal feedback stays transient.
 
@@ -371,7 +394,7 @@ When migrating/creating a component:
 - [ ] Component imports point at concrete files (e.g. `@/atoms/Button/Button`), not aggregate folder indexes or re-export-only paths
 - [ ] All Figma variants implemented
 - [ ] CVA used for variant management
-- [ ] Tests created (unit + snapshot) — see `docs/component-testing.md`
+- [ ] Unit tests created — see `docs/component-testing.md`; VRT updated when a visual surface changed
 - [ ] Build passes (`npm run build`)
 - [ ] Visual verification in browser
 
@@ -384,6 +407,6 @@ When creating/modifying components:
 - [ ] Using concrete `@/atoms/*`, `@/molecules/*`, `@/organisms/*`, or `@/templates/*` imports?
 - [ ] Design tokens (not hardcoded colors)?
 - [ ] Figma sizing/spacing matched?
-- [ ] Tests created (unit + snapshot)?
+- [ ] Unit tests created, and VRT updated if a visual surface changed?
 - [ ] No re-export-only `index.ts` / `index.tsx` added under `src/components`?
 - [ ] Build passes?

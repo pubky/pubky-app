@@ -21,7 +21,8 @@ Constraints that shaped the frontend design:
 
 - **Guarded bytes live in homeserver private storage** (`/priv/app.locks/content/…`), written and
   read only through the Lock Server. Nexus never indexes them; nothing private may leak into public
-  posts, feeds, or the local database.
+  posts or feeds. Parsed post text and attachment references are cached in the device's IndexedDB
+  after a successful read; media bytes remain on the homeserver. Reader copies are cleared on logout.
 - **Locks is not pubky.app-specific.** The Lock Server stores no preview/marketing metadata and the
   public lock file only carries what unlocking needs. Any human-facing preview text must come from
   the app's announcement.
@@ -61,8 +62,10 @@ frontend must handle both cases.
 - Auth runs in an iframe loading the Lock Server `/connect` page; the approval posts a one-time code
   back via `postMessage` (origin/source/state validated), which is exchanged for an SDK session.
 - The session's bearer secret persists in a dedicated zustand store (`useLocksAuthStore`, mirroring
-  the homeserver `auth-store`): live SDK session in memory only, secret in localStorage, rebuilt on
-  app load by a hook in `RouteGuardProvider` (alongside the homeserver restore). Restore is offline — expiry is only discovered when a
+  the homeserver `auth-store`): live SDK session in memory only, secret and its creator pubky in
+  localStorage, rebuilt on app load by a hook in `RouteGuardProvider` (alongside the homeserver
+  restore). The SDK's restored session has no creator, so the restore runs only when the saved
+  creator is the signed-in account. Restore is offline — expiry is only discovered when a
   creator call returns 401, which drops the session and reopens sign-in.
 - pubky.app logout tears down the Locks session too. Abandoning a lock in the composer never signs
   the creator out.
@@ -109,9 +112,8 @@ frontend must handle both cases.
 ### Positive ✅
 
 - The announcement is an ordinary post, so feeds, tags, notifications, and moderation work unchanged.
-- On the creator side, guarded bytes never touch Nexus, the local database, or public storage;
-  composer gating makes publishing the secret body in the clear structurally hard. (Whether the
-  reader side caches unlocked content locally is a separate, undecided question.)
+- On the creator side, guarded media bytes never touch Nexus, the local database, or public storage;
+  composer gating makes publishing the secret body in the clear structurally hard.
 - Locks auth mirrors homeserver auth, so session persistence/restore/teardown reuse known patterns.
 
 ### Negative ❌
@@ -154,7 +156,7 @@ validates the `lock` URL only, and apps own their preview shape (collections set
 - Publish orchestration: `src/hooks/useCreateLockContent/`; composer phases:
   `src/hooks/usePostInputLock/` + `PostInput`; auth flow: `src/hooks/useLocksAuthFlow/`,
   `DialogLocksAuth` (iframe), `useLocksAuthFlow.utils` (postMessage bridge validator).
-- Layers: `src/core/{controllers,application,services}/locks/`; session
+- Layers: `src/core/{controllers,application,services,models}/locks/`; session
   store: `src/core/stores/locksAuth/`.
 - Naming: `Locks` (plural) refers to the Locks system/domain — auth, session, SDK
   (`useLocksAuthFlow`, `useRestoreLocksAuth`, `LocksService`); `Lock` (singular) refers to one

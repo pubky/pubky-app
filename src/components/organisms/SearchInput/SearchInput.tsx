@@ -10,6 +10,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
+import { useShopNavigation } from '@/hooks/useShopNavigation/useShopNavigation';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { validateContentSearchQuery } from '@/libs/search/contentSearch';
 import type { Pubky } from '@/models/models.types';
@@ -22,6 +23,7 @@ import { SearchInputProps } from './SearchInput.types';
 
 export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const router = useRouter();
+  const navigate = useShopNavigation();
   const pathname = usePathname();
   const { addTagToSearch, removeTagFromSearch, activeTags } = useTagSearch();
   const { setActiveTags, recentUsers, recentTags, recentQueries, addUser, addQuery, clearRecentSearches } =
@@ -44,7 +46,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     // The input keeps the query directly — resubmitting the same query changes
     // no URL, so the sync effect would never put the text back after a clear.
     setInputValue(validation.query);
-    router.push(getContentSearchUrl(validation.query));
+    navigate(() => router.push(getContentSearchUrl(validation.query)));
     setFocus(false);
   };
 
@@ -102,11 +104,11 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     addUser(userId);
     clearInputValue();
     setFocus(false);
-    router.push(getUserProfileUrl(userId, currentUserPubky));
+    navigate(() => router.push(getUserProfileUrl(userId, currentUserPubky)));
   };
 
   const handleTagClick = (tag: string) => {
-    addTagToSearch(tag, { addToRecent: true });
+    navigate(() => addTagToSearch(tag, { addToRecent: true }));
     clearInputValue();
 
     if (isMobile || pathname !== APP_ROUTES.SEARCH) {
@@ -120,7 +122,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     // active search it just clears the draft and closes.
     setInputValue('');
     if (criteria.mode !== 'none') {
-      router.push(APP_ROUTES.SEARCH);
+      navigate(() => router.push(APP_ROUTES.SEARCH));
     }
     setFocus(false);
   };
@@ -139,7 +141,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
         isExpanded={hasSuggestions}
         suggestionsId={hasSuggestions ? suggestionsId : undefined}
         inputRef={inputRef}
-        onTagRemove={removeTagFromSearch}
+        onTagRemove={(tag) => navigate(() => removeTagFromSearch(tag))}
         onInputChange={handleInputChange}
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
