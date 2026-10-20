@@ -6,10 +6,11 @@ export const openCreateFeedDialog = () => {
 };
 
 export const openEditFeedDialog = (feedName: string) => {
-  // The pencil is pointer-events-none until the tab is hovered on a desktop with hover.
-  cy.get('[data-cy="feed-navigation"]')
-    .find(`[data-cy="feed-navigation-edit-btn"][aria-label="Edit ${feedName}"]`)
-    .click({ force: true });
+  const pencil = `[data-cy="feed-navigation-edit-btn"][aria-label="Edit ${feedName}"]`;
+  // On a desktop with hover the pencil stays transparent and ignores the pointer until its tab is
+  // hovered or holds focus, so reveal it with focus as a keyboard user would.
+  cy.get('[data-cy="feed-navigation"]').find(pencil).focus();
+  cy.get('[data-cy="feed-navigation"]').find(pencil).filter(':visible').should('have.length', 1).click();
   cy.get('[data-cy="custom-feed-dialog"]').should('be.visible').and('contain.text', 'Edit Feed');
 };
 
@@ -103,31 +104,51 @@ export const expectTimelineEmpty = () => {
   cy.get('[data-cy="timeline-container"]', { timeout: 20_000 }).should('contain.text', 'No posts found');
 };
 
-// Engagement ordering is computed by Nexus and can lag the tag write. Reload until it settles.
-export const waitForPostOrder = (first: string, second: string, attempts = 8) => {
+const postOrderIndexes = ($cards: JQuery<HTMLElement>, first: string, second: string) => {
+  const texts = $cards.toArray().map((el) => el.textContent ?? '');
+  return {
+    firstIndex: texts.findIndex((text) => text.includes(first)),
+    secondIndex: texts.findIndex((text) => text.includes(second)),
+  };
+};
+
+const expectOrderIndexes = (first: string, second: string, firstIndex: number, secondIndex: number) => {
+  expect(firstIndex, `"${first}" index`).to.be.greaterThan(-1);
+  expect(secondIndex, `"${second}" index`).to.be.greaterThan(-1);
+  expect(firstIndex, `"${first}" before "${second}"`).to.be.lessThan(secondIndex);
+};
+
+export const expectPostOrder = (first: string, second: string) => {
+  cy.get('[data-cy="timeline-posts"]')
+    .find('[data-cy="post-card"]')
+    .should(($cards) => {
+      const { firstIndex, secondIndex } = postOrderIndexes($cards, first, second);
+      expectOrderIndexes(first, second, firstIndex, secondIndex);
+    });
+};
+
+// Popularity order is computed by Nexus and can lag the tag write. Popularity streams are never
+// cached, so every reload fetches a fresh page from Nexus: reload until the order settles.
+export const waitForPopularityOrder = (first: string, second: string, reloads = 8) => {
+  cy.intercept({ method: 'GET', pathname: '/v0/stream/posts/keys', query: { sorting: 'total_engagement' } }).as(
+    'popularityStream',
+  );
   const check = (remaining: number) => {
     waitForFeedToLoad();
     cy.get('[data-cy="timeline-posts"]').then(($timeline) => {
-      const cards = $timeline
-        .find('[data-cy="post-card"]')
-        .toArray()
-        .map((el) => el.textContent ?? '');
-      const firstIndex = cards.findIndex((cardText) => cardText.includes(first));
-      const secondIndex = cards.findIndex((cardText) => cardText.includes(second));
+      const { firstIndex, secondIndex } = postOrderIndexes($timeline.find('[data-cy="post-card"]'), first, second);
       if (firstIndex >= 0 && secondIndex >= 0 && firstIndex < secondIndex) {
         return;
       }
       if (remaining <= 0) {
-        expect(firstIndex, `"${first}" index`).to.be.greaterThan(-1);
-        expect(secondIndex, `"${second}" index`).to.be.greaterThan(-1);
-        expect(firstIndex).to.be.lessThan(secondIndex);
+        expectOrderIndexes(first, second, firstIndex, secondIndex);
         return;
       }
-      cy.wait(3_000);
       cy.reload();
+      cy.wait('@popularityStream');
       check(remaining - 1);
     });
   };
 
-  check(attempts);
+  check(reloads);
 };

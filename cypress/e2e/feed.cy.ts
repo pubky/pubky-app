@@ -15,7 +15,8 @@ import {
   removeCustomFeedTag,
   resetHomeFeedToAllRecent,
   saveCustomFeed,
-  waitForPostOrder,
+  expectPostOrder,
+  waitForPopularityOrder,
 } from '../support/feeds';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
@@ -515,7 +516,9 @@ describe('feed and filters', () => {
     expectTimelineContains(postContent);
 
     openEditFeedDialog(renamed);
+    cy.intercept('DELETE', '**/pub/pubky.app/feeds/**').as('feedDelete');
     cy.get('[data-cy="custom-feed-delete-btn"]').click();
+    cy.wait('@feedDelete').its('response.statusCode').should('be.within', 200, 299);
     cy.location('pathname').should('eq', '/home');
     cy.get('[data-cy="feed-navigation"]')
       .find(`[data-cy="feed-navigation-custom-tab"][aria-label="${renamed}"]`)
@@ -615,17 +618,17 @@ describe('feed and filters', () => {
     saveCustomFeed();
     expectVisibleReachSelected('me-reach-toggle');
     expectVisibleSortSelected('recent-sort-toggle');
-    waitForPostOrder(newer, older);
+    expectPostOrder(newer, older);
 
     openEditFeedDialog(sortFeed);
     chooseCustomFeedOption('sort', 'Popularity');
     saveCustomFeed();
     expectVisibleSortSelected('popularity-sort-toggle');
-    waitForPostOrder(older, newer);
+    waitForPopularityOrder(older, newer);
     cy.reload();
     waitForFeedToLoad();
     expectVisibleSortSelected('popularity-sort-toggle');
-    waitForPostOrder(older, newer);
+    waitForPopularityOrder(older, newer);
 
     // Content: Posts, Articles and Images each keep only that kind. The last edit persists.
     goToHomeFeedTab();
