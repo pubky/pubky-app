@@ -303,6 +303,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
         onCloseAutoFocus={(e) => e.preventDefault()}
         className="w-xl"
         data-testid="custom-feed-dialog-content"
+        data-cy="custom-feed-dialog"
       >
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Create Feed' : 'Edit Feed'}</DialogTitle>
@@ -324,6 +325,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                 disabled={loading}
                 className="h-14 border-dashed bg-background/20"
                 data-testid="feed-name-input"
+                data-cy="custom-feed-name-input"
               />
             )}
           />
@@ -374,18 +376,18 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                   disabled={loading}
                   data-testid="reach-select"
                 >
-                  <SelectTrigger className="w-full sm:w-fit">
+                  <SelectTrigger className="w-full sm:w-fit" data-cy="custom-feed-reach-select">
                     <SelectValue placeholder={'Select a reach'} />
                   </SelectTrigger>
 
-                  <SelectContent>
+                  <SelectContent data-cy="custom-feed-select-options">
                     {unsupportedReach !== null && (
                       <SelectItem disabled value={String(unsupportedReach)}>
                         {UNSUPPORTED_OPTION_LABEL}
                       </SelectItem>
                     )}
                     {reachFilters.map((r) => (
-                      <SelectItem key={r.value} value={String(r.value)}>
+                      <SelectItem key={r.value} value={String(r.value)} data-cy="custom-feed-select-option">
                         <r.icon /> {r.label}
                       </SelectItem>
                     ))}
@@ -408,13 +410,13 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                   disabled={loading}
                   data-testid="sort-select"
                 >
-                  <SelectTrigger className="w-full sm:w-fit">
+                  <SelectTrigger className="w-full sm:w-fit" data-cy="custom-feed-sort-select">
                     <SelectValue placeholder={'Select a sort'} />
                   </SelectTrigger>
 
-                  <SelectContent>
+                  <SelectContent data-cy="custom-feed-select-options">
                     {sortFilters.map((r) => (
-                      <SelectItem key={r.value} value={String(r.value)}>
+                      <SelectItem key={r.value} value={String(r.value)} data-cy="custom-feed-select-option">
                         <r.icon /> {r.label}
                       </SelectItem>
                     ))}
@@ -472,13 +474,13 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                   disabled={loading}
                   data-testid="layout-select"
                 >
-                  <SelectTrigger className="w-full sm:w-fit">
+                  <SelectTrigger className="w-full sm:w-fit" data-cy="custom-feed-layout-select">
                     <SelectValue placeholder={'Select a layout'} />
                   </SelectTrigger>
 
-                  <SelectContent>
+                  <SelectContent data-cy="custom-feed-select-options">
                     {layoutFilters.map((r) => (
-                      <SelectItem key={r.value} value={String(r.value)}>
+                      <SelectItem key={r.value} value={String(r.value)} data-cy="custom-feed-select-option">
                         <r.icon /> {r.label}
                       </SelectItem>
                     ))}
@@ -501,18 +503,18 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                   disabled={loading}
                   data-testid="content-select"
                 >
-                  <SelectTrigger className="w-full sm:w-fit">
+                  <SelectTrigger className="w-full sm:w-fit" data-cy="custom-feed-content-select">
                     <SelectValue placeholder={'Select content'} />
                   </SelectTrigger>
 
-                  <SelectContent>
+                  <SelectContent data-cy="custom-feed-select-options">
                     {unsupportedContent !== null && (
                       <SelectItem disabled value={String(unsupportedContent)}>
                         {UNSUPPORTED_OPTION_LABEL}
                       </SelectItem>
                     )}
                     {contentFilters.map((r) => (
-                      <SelectItem key={r.value} value={String(r.value)}>
+                      <SelectItem key={r.value} value={String(r.value)} data-cy="custom-feed-select-option">
                         <r.icon /> {r.label}
                       </SelectItem>
                     ))}
@@ -625,6 +627,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
               disabled={loading}
               className="h-15 w-full"
               data-testid="delete-feed-button"
+              data-cy="custom-feed-delete-btn"
             >
               <Trash2 className="size-4" />
               {'Delete Feed'}
@@ -638,6 +641,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
             disabled={loading || !form.formState.isValid}
             className="h-15 w-full"
             data-testid="save-feed-button"
+            data-cy="custom-feed-save-btn"
           >
             <Check className="size-4" />
             {'Save Feed'}

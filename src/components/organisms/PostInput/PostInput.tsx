@@ -634,6 +634,7 @@ export function PostInput({
                       <Container overrideDefaults className="relative flex min-w-0 flex-1 items-center">
                         <Textarea
                           name="post-input-textarea"
+                          data-cy="post-input-textarea"
                           ref={textareaRef}
                           placeholder={
                             isLockMode ? 'Write a short announcement to tease your content.' : displayPlaceholder

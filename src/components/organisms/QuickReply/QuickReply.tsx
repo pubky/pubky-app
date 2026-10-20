@@ -166,7 +166,13 @@ export function QuickReply({
   };
 
   return (
-    <Container overrideDefaults className="relative flex" data-testid="quick-reply" aria-busy={isSubmitting}>
+    <Container
+      overrideDefaults
+      className="relative flex"
+      data-testid="quick-reply"
+      data-cy="quick-reply"
+      aria-busy={isSubmitting}
+    >
       <Container overrideDefaults className="relative w-3 shrink-0" data-testid="quick-reply-connector-column">
         <Container overrideDefaults className="absolute -inset-y-px left-0">
           <PostThreadConnector

@@ -30,48 +30,56 @@ export function FilterContent({
         label: 'All',
         icon: Layers,
         disabled: isDisabled(CONTENT.ALL),
+        dataCy: 'all-content-toggle',
       },
       {
         key: CONTENT.SHORT,
         label: 'Posts',
         icon: StickyNote,
         disabled: isDisabled(CONTENT.SHORT),
+        dataCy: 'posts-content-toggle',
       },
       {
         key: CONTENT.LONG,
         label: 'Articles',
         icon: Newspaper,
         disabled: isDisabled(CONTENT.LONG),
+        dataCy: 'articles-content-toggle',
       },
       {
         key: CONTENT.COLLECTIONS,
         label: 'Collections',
         icon: Library,
         disabled: isDisabled(CONTENT.COLLECTIONS),
+        dataCy: 'collections-content-toggle',
       },
       {
         key: CONTENT.IMAGES,
         label: 'Images',
         icon: Image,
         disabled: isDisabled(CONTENT.IMAGES),
+        dataCy: 'images-content-toggle',
       },
       {
         key: CONTENT.VIDEOS,
         label: 'Videos',
         icon: CirclePlay,
         disabled: isDisabled(CONTENT.VIDEOS),
+        dataCy: 'videos-content-toggle',
       },
       {
         key: CONTENT.LINKS,
         label: 'Links',
         icon: Link,
         disabled: isDisabled(CONTENT.LINKS),
+        dataCy: 'links-content-toggle',
       },
       {
         key: CONTENT.FILES,
         label: 'Files',
         icon: Download,
         disabled: isDisabled(CONTENT.FILES),
+        dataCy: 'files-content-toggle',
       },
     ],
     [isDisabled],
@@ -83,6 +91,7 @@ export function FilterContent({
       selectedValue={selectedTab}
       defaultValue={defaultSelectedTab}
       onChange={onTabChange}
+      dataCy="filter-content-radiogroup"
     />
   );
 }
