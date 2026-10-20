@@ -21,6 +21,7 @@ import {
   PostOrReply,
   waitForFeedToLoad,
 } from '../support/posts';
+import { expectTimelineContains, expectTimelineOmits } from '../support/feeds';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 
@@ -93,12 +94,14 @@ const replyOnThread = (parentText: string, replyContent: string) => {
   cy.contains(VISIBLE_POST_TEXT, replyContent).should('be.visible');
 };
 
-const expectKindVisible = (text: string) => {
-  cy.contains('[data-cy="timeline-container"] [data-cy="post-card"]', text, { timeout: 20_000 }).should('be.visible');
-};
-
-const expectKindAbsent = (text: string) => {
-  cy.get('[data-cy="timeline-container"]', { timeout: 20_000 }).should('not.contain.text', text);
+// Waits through head polls until one offers `postId` as newer than the feed head.
+const waitForHeadPollOffering = (postId: string, polls = 8) => {
+  cy.wait('@streamHeadPoll', { timeout: 20_000 }).then(({ response }) => {
+    const keys: string[] = Array.isArray(response?.body?.post_keys) ? response.body.post_keys : [];
+    if (keys.some((key) => key.endsWith(`:${postId}`))) return;
+    expect(polls, `head polls left before Nexus offers deleted post ${postId}`).to.be.greaterThan(1);
+    waitForHeadPollOffering(postId, polls - 1);
+  });
 };
 
 describe('posts', () => {
@@ -982,48 +985,34 @@ describe('posts', () => {
 
   // Regression for https://github.com/pubky/pubky-app/issues/993
   it('see new posts button does not appear after deleting new post that has a reply', () => {
-    // This test creates its own users. Sign out first so / shows the logged-out landing.
-    cy.signOut(HasBackedUp.Yes);
-    const author = 'Delete Author';
-    const viewer = 'Delete Viewer';
     const postContent = `Delete me after a reply ${Date.now()}`;
     const replyContent = `Reply that should not resurrect the post ${Date.now()}`;
 
-    cy.onboardAsNewUser(viewer, 'I watch the feed', [BackupType.EncryptedFile]);
-    waitForFeedToLoad();
-    cy.signOut(HasBackedUp.Yes);
-
-    cy.onboardAsNewUser(author, 'I delete posts', [BackupType.EncryptedFile]);
     createQuickPost(postContent);
+    cy.get('@postCreated')
+      .its('request.url')
+      .then((url: string) => new URL(url).pathname.split('/').pop())
+      .as('deletedPostId', { type: 'static' });
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes);
-    cy.signOut(HasBackedUp.Yes);
-
-    cy.signInWithEncryptedFile(backupDownloadFilePath(viewer));
     replyToPost({ replyContent, filterText: postContent });
-    cy.signOut(HasBackedUp.Yes);
-
-    cy.signInWithEncryptedFile(backupDownloadFilePath(author));
     deletePost({ filterText: postContent });
-    cy.signOut(HasBackedUp.Yes);
 
-    // The coordinator's head poll asks for feed posts newer than the head (`end` without `start`;
-    // ascending reply pages also send `end`). Wait for one so a deleted parent would have been
-    // offered as unread if the bug returns.
+    // The feed stays loaded, as in the issue. Deleting drops the post from the local stream, so the
+    // head poll (`end` without `start`; ascending reply pages also send `end`) starts below it and
+    // Nexus, which keeps a post with replies as a deleted entry, offers it as new. That offer is
+    // what surfaced the "see new posts" button and the deleted card with its reply.
     cy.intercept('GET', '**/v0/stream/posts/keys*', (req) => {
       const { start, end, source } = req.query;
       if (end !== undefined && start === undefined && source !== 'post_replies') {
         req.alias = 'streamHeadPoll';
       }
     });
-    cy.signInWithEncryptedFile(backupDownloadFilePath(viewer));
-    waitForFeedToLoad();
+    cy.get<string>('@deletedPostId').then((postId) => waitForHeadPollOffering(postId));
+    // The next poll starts only after the app has handled the offering one.
     cy.wait('@streamHeadPoll', { timeout: 20_000 });
-    // #993 surfaced the deleted parent as a "deleted by its author" card carrying this reply.
-    // Earlier tests leave that placeholder on reposts of deleted posts, so check this thread only.
-    cy.get('[data-cy="timeline-container"]').should('not.contain.text', postContent);
-    cy.get('[data-cy="timeline-container"]').should('not.contain.text', replyContent);
+
     cy.get('[data-cy="new-posts-button"]').should('not.exist');
-    cy.signOut(HasBackedUp.Yes);
+    cy.get('[data-cy="timeline-container"]').should('not.contain.text', replyContent);
   });
 
   // https://github.com/pubky/pubky-app/issues/416
@@ -1036,21 +1025,28 @@ describe('posts', () => {
     });
     cy.findFirstPostInFeedFiltered(`${filler} 3`, CheckForNewPosts.No, WaitForNewPosts.Yes);
 
-    // Let Cypress scroll the card clear of the sticky header, then go back.
-    // scrollIntoView({ block: 'start' }) parks the text under that header.
+    // Scroll the card below the sticky header ourselves and record where the feed sits, so the
+    // click does not move the page again before the post opens.
     cy.get('[data-cy="timeline-posts"]')
       .find('[data-cy="post-card"]')
       .eq(3)
       .find('[data-cy="post-text"]')
       .first()
-      .click();
+      .as('openedPostText')
+      .scrollIntoView({ offset: { top: -250, left: 0 } })
+      .should('be.visible');
+    cy.window().its('scrollY').should('be.greaterThan', 0).as('feedScrollY', { type: 'static' });
+    cy.get('@openedPostText').click({ scrollBehavior: false });
 
     cy.location('pathname').should('include', '/post/');
     cy.get('[data-cy="single-post-card"]').should('be.visible');
 
     cy.go('back');
     cy.location('pathname').should('eq', '/home');
-    cy.window().its('scrollY').should('be.greaterThan', 80);
+    // Within 1px: scrollY can be fractional at some device pixel ratios.
+    cy.get<number>('@feedScrollY').then((feedScrollY) => {
+      cy.window().its('scrollY').should('be.closeTo', feedScrollY, 1);
+    });
 
     cy.viewport(1920, 1080);
   });
@@ -1083,45 +1079,45 @@ describe('posts', () => {
     applyContentFilter('All');
     [shortPost, articleTitle, imagePost, videoPost, linkPost, filePost, mixedLinkPost, mixedImagePost].forEach(
       (text) => {
-        expectKindVisible(text);
+        expectTimelineContains(text);
       },
     );
 
     applyContentFilter('Posts');
-    expectKindVisible(shortPost);
+    expectTimelineContains(shortPost);
     [articleTitle, imagePost, videoPost, linkPost, filePost, mixedLinkPost, mixedImagePost].forEach((text) => {
-      expectKindAbsent(text);
+      expectTimelineOmits(text);
     });
 
     applyContentFilter('Articles');
-    expectKindVisible(articleTitle);
-    expectKindAbsent(shortPost);
-    expectKindAbsent(linkPost);
+    expectTimelineContains(articleTitle);
+    expectTimelineOmits(shortPost);
+    expectTimelineOmits(linkPost);
 
     applyContentFilter('Images');
-    expectKindVisible(imagePost);
-    expectKindVisible(mixedImagePost);
-    expectKindAbsent(mixedLinkPost);
-    expectKindAbsent(filePost);
-    expectKindAbsent(shortPost);
+    expectTimelineContains(imagePost);
+    expectTimelineContains(mixedImagePost);
+    expectTimelineOmits(mixedLinkPost);
+    expectTimelineOmits(filePost);
+    expectTimelineOmits(shortPost);
 
     applyContentFilter('Videos');
-    expectKindVisible(videoPost);
-    expectKindAbsent(linkPost);
-    expectKindAbsent(imagePost);
+    expectTimelineContains(videoPost);
+    expectTimelineOmits(linkPost);
+    expectTimelineOmits(imagePost);
 
     applyContentFilter('Links');
-    expectKindVisible(linkPost);
-    expectKindVisible(mixedLinkPost);
-    expectKindAbsent(videoPost);
-    expectKindAbsent(articleTitle);
-    expectKindAbsent(imagePost);
+    expectTimelineContains(linkPost);
+    expectTimelineContains(mixedLinkPost);
+    expectTimelineOmits(videoPost);
+    expectTimelineOmits(articleTitle);
+    expectTimelineOmits(imagePost);
 
     applyContentFilter('Files');
-    expectKindVisible(filePost);
-    expectKindAbsent(mixedImagePost);
-    expectKindAbsent(imagePost);
-    expectKindAbsent(shortPost);
+    expectTimelineContains(filePost);
+    expectTimelineOmits(mixedImagePost);
+    expectTimelineOmits(imagePost);
+    expectTimelineOmits(shortPost);
 
     applyContentFilter('All');
   });
