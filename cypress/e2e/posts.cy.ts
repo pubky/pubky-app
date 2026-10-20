@@ -94,13 +94,26 @@ const replyOnThread = (parentText: string, replyContent: string) => {
   cy.contains(VISIBLE_POST_TEXT, replyContent).should('be.visible');
 };
 
+// The app memoizes Nexus GETs per URL for this long (`nexusQueryClient` staleTime). A head poll
+// whose head has not moved repeats its URL, so only the first poll tick after this window reaches
+// the network, and the intercept.
+const NEXUS_STALE_TIME_MS = 20_000;
+
+// Time for the next head poll to reach the network: the first poll tick past the stale window, plus
+// one more interval of slack for the tick's own async work.
+const headPollTimeout = () =>
+  cy
+    .window()
+    .its('__PUBKY_CONFIG__.streamPollIntervalMs')
+    .then((intervalMs: number) => (Math.ceil(NEXUS_STALE_TIME_MS / intervalMs) + 1) * intervalMs);
+
 // Waits through head polls until one offers `postId` as newer than the feed head.
-const waitForHeadPollOffering = (postId: string, polls = 8) => {
-  cy.wait('@streamHeadPoll', { timeout: 20_000 }).then(({ response }) => {
+const waitForHeadPollOffering = (postId: string, timeout: number, polls = 8) => {
+  cy.wait('@streamHeadPoll', { timeout }).then(({ response }) => {
     const keys: string[] = Array.isArray(response?.body?.post_keys) ? response.body.post_keys : [];
     if (keys.some((key) => key.endsWith(`:${postId}`))) return;
     expect(polls, `head polls left before Nexus offers deleted post ${postId}`).to.be.greaterThan(1);
-    waitForHeadPollOffering(postId, polls - 1);
+    waitForHeadPollOffering(postId, timeout, polls - 1);
   });
 };
 
@@ -1007,9 +1020,11 @@ describe('posts', () => {
         req.alias = 'streamHeadPoll';
       }
     });
-    cy.get<string>('@deletedPostId').then((postId) => waitForHeadPollOffering(postId));
-    // The next poll starts only after the app has handled the offering one.
-    cy.wait('@streamHeadPoll', { timeout: 20_000 });
+    headPollTimeout().then((timeout) => {
+      cy.get<string>('@deletedPostId').then((postId) => waitForHeadPollOffering(postId, timeout));
+      // The next poll starts only after the app has handled the offering one.
+      cy.wait('@streamHeadPoll', { timeout });
+    });
 
     cy.get('[data-cy="new-posts-button"]').should('not.exist');
     cy.get('[data-cy="timeline-container"]').should('not.contain.text', replyContent);
