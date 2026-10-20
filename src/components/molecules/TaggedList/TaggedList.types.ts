@@ -6,6 +6,8 @@ export interface TaggedListProps {
   tags: TagWithAvatars[];
   /** Optional tagged entity ID (used for tagger expansion fetch) */
   taggedId?: string;
+  /** Optional second entity whose taggers are combined with `taggedId`'s when a tag expands */
+  mergeTaggedId?: string;
   /** Optional tagged entity kind (used for tagger expansion fetch) */
   taggedKind?: TagKind;
   /** Whether there are more tags to load */

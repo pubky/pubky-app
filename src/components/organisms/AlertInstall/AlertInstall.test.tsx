@@ -92,17 +92,3 @@ describe('AlertInstall', () => {
     expect(prompt.closeIosDialog).toHaveBeenLastCalledWith(true);
   });
 });
-
-describe('AlertInstall - Snapshots', () => {
-  it('matches snapshot for the native install banner', () => {
-    mockPrompt();
-    const { container } = render(<AlertInstall />);
-    expect(container).toMatchSnapshot();
-  });
-
-  it('matches snapshot with the iOS dialog open', () => {
-    mockPrompt({ platform: 'ios', iosDialogOpen: true });
-    const { container } = render(<AlertInstall />);
-    expect(container).toMatchSnapshot();
-  });
-});

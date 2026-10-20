@@ -81,6 +81,11 @@ export interface TMissingPostsParams {
   cacheMissPostIds: string[];
   /** Optional viewer ID for relationship data. Null/undefined for unauthenticated views. */
   viewerId?: Pubky | null;
+  /**
+   * Reject with the failure (as an `AppError`) instead of resolving `false`, for callers
+   * that fail on it. A changed viewer session still resolves `false`.
+   */
+  throwOnFailure?: boolean;
 }
 
 export interface TCacheStreamParams {

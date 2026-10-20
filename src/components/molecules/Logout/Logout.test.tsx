@@ -108,7 +108,7 @@ describe('LogoutHeader', () => {
 
   it('renders subtitle correctly', () => {
     render(<LogoutHeader />);
-    expect(screen.getByText('You have securely signed out.')).toBeInTheDocument();
+    expect(screen.getByText('You have signed out.')).toBeInTheDocument();
   });
 });
 
@@ -140,13 +140,5 @@ describe('LogoutNavigation', () => {
   it('forwards the caller className to the navigation buttons', () => {
     render(<LogoutNavigation className="pb-0 lg:pb-6" />);
     expect(screen.getByTestId('buttons-navigation')).toHaveAttribute('data-class', 'pb-0 lg:pb-6');
-  });
-});
-
-describe('LogoutContent - Snapshots', () => {
-  it('matches the signed-out illustration layout', () => {
-    const { container } = render(<LogoutContent />);
-
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

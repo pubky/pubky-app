@@ -5,6 +5,8 @@ import { PostController } from '@/controllers/post/post';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { useDeletePost } from './useDeletePost';
 
 // Mock dependencies
@@ -53,11 +55,26 @@ describe('useDeletePost', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      currentUserPubky: 'account',
+      session: mockSession(),
+      restoreStatus: 'ready',
+      showSignInDialog: false,
+    });
     vi.mocked(PostController.commitDelete).mockImplementation(mockDelete);
     vi.mocked(PostController.getDetails).mockImplementation(mockGetPostDetails);
     vi.mocked(useTimelineFeedContext).mockReturnValue(mockTimelineFeed);
     // Default: post exists (for tests that expect restoration)
     mockGetPostDetails.mockResolvedValue({ id: mockPostId, content: 'Test post' });
+  });
+
+  it('does not optimistically remove or delete a post after its confirmation loses authorization', async () => {
+    const { result } = renderHook(() => useDeletePost());
+    useAuthStore.setState({ session: null, restoreStatus: 'reauth-required' });
+    await act(async () => result.current.deletePost(mockPostId));
+    expect(mockRemovePosts).not.toHaveBeenCalled();
+    expect(PostController.commitDelete).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().showSignInDialog).toBe(true);
   });
 
   it('returns isDeleting false initially', () => {

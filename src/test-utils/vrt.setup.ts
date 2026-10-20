@@ -23,6 +23,10 @@
 import '@/app/globals.css';
 
 import { vi } from 'vitest';
+import type { UsePassportAuthReturn } from '@/hooks/usePassportAuth/usePassportAuth.types';
+import type { PassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility.types';
+import type { UseUnlockedListResult } from '@/hooks/useUnlockedList/useUnlockedList.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 // Stabilize cross-OS / cross-run rendering for visual snapshots.
 // Applied once per test file at setup time.
@@ -121,6 +125,49 @@ vi.mock('next/image', () => ({
   },
 }));
 
+// 2c. Settle the own-profile sidebar up front. `useUnlockedList` (mounted by
+//     `ProfilePageContainer` for the signed-in user) reads the reader's `/priv`
+//     from the homeserver; the per-file auth mocks supply a session, so without
+//     this it issues a real request from the VRT browser. The Unlocked row then
+//     shows a spinner until that request fails, and whether a capture lands
+//     before or after that is timing. Resolve it synchronously as a successful
+//     empty read so every capture shows the same settled chrome: the row with a
+//     count of 0, like the other rows. A file that needs items overrides this
+//     with its own `vi.mock` (test-file mocks win over setup mocks).
+vi.mock('@/hooks/useUnlockedList/useUnlockedList', () => {
+  const settled: UseUnlockedListResult = { items: [], count: 0, isLoading: false, isError: false };
+  return { useUnlockedList: (): UseUnlockedListResult => settled };
+});
+
+// 2d. Pubky Passport ("Continue with Google") renders as in production but
+//     never reaches Google. Eligibility needs an HTTPS page, so the real hook
+//     only ever reports `'pending'` or `'disabled'` on the http VRT server and
+//     every surface would drop its Google option: resolve it to `'enabled'`.
+//     The attempt hook opens a Passport popup and polls the HTTP relay, so it
+//     is an idle attempt that never starts. A file that captures the waiting
+//     state either overrides it with a pending stand-in (`onboarding/Join`) or
+//     drives the real hook with `AuthController` stubbed (`auth/SignInPage`).
+//     The real hook opens the popup from the click, so `window.open` returns an
+//     inert popup that never closes or navigates: no live origin enters the run
+//     and the attempt stays waiting for as long as the capture needs. A file
+//     that needs a blocked popup overrides it with `vi.spyOn(window, 'open')`.
+vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
+  usePassportEligibility: (): PassportEligibility => 'enabled',
+}));
+vi.mock('@/hooks/usePassportAuth/usePassportAuth', () => {
+  const idle: UsePassportAuthReturn = { startPassportAuth: () => undefined, isPending: false };
+  return { usePassportAuth: (): UsePassportAuthReturn => idle };
+});
+
+const inertPopup = asOpaque<Window>({
+  closed: false,
+  close: () => {},
+  focus: () => {},
+  postMessage: () => {},
+  location: { assign: () => {}, replace: () => {} },
+});
+window.open = () => inertPopup;
+
 // 3. Load Inter Tight from `@fontsource-variable/inter-tight` (committed npm
 //    dep; same font as the real app's `next/font/google` Inter Tight, just
 //    sourced locally so VRT has no network dependency). Vite resolves the
@@ -157,3 +204,26 @@ const fontStyleEl = document.createElement('style');
 fontStyleEl.id = '__vrt_inter_tight__';
 fontStyleEl.textContent = fontFaceCss;
 document.head.appendChild(fontStyleEl);
+
+// Load the faces before any test. `renderForVRT` used to await `document.fonts.ready`
+// inside the test, so the first capture in a file paid the cold load against the
+// 30s test budget. Playwright's screenshot path waits on the same promise. Doing
+// it here keeps that cost out of the test. A hard hang fails the file with this
+// message instead of a generic test timeout.
+const VRT_FONT_PRELOAD_TIMEOUT_MS = 20_000;
+await new Promise<void>((resolve, reject) => {
+  const timer = setTimeout(
+    () => reject(new Error(`VRT fonts were not ready after ${VRT_FONT_PRELOAD_TIMEOUT_MS}ms`)),
+    VRT_FONT_PRELOAD_TIMEOUT_MS,
+  );
+  void Promise.all([document.fonts.load('16px "Inter Tight"'), document.fonts.load('700 16px "Inter Tight"')])
+    .then(() => document.fonts.ready)
+    .then(() => {
+      clearTimeout(timer);
+      resolve();
+    })
+    .catch((error: unknown) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+});

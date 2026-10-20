@@ -9,6 +9,7 @@ import { AuthController } from '@/controllers/auth/auth';
 import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
 import type { TCommitUpdateDetailsParams } from '@/controllers/profile/profile.types';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { AppError } from '@/libs/error/error';
 import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
@@ -109,6 +110,8 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const inFlight = useRef(false);
+  const { waitForAuth } = useRequireAuth();
   // The post-save redirect fetches its route on click (nothing prefetches it), so it runs as a
   // transition: the submit button keeps its loading state until the next screen renders instead
   // of dropping it the moment the save completes.
@@ -340,10 +343,16 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       return;
     }
 
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsSaving(true);
     setSubmitText(PROFILE_SUBMIT_TEXT.saving);
 
     try {
+      if (!(await waitForAuth())) {
+        setSubmitText(idleSubmitText);
+        return;
+      }
       const user = validateUser();
       if (!user) {
         setSubmitText(idleSubmitText);
@@ -455,9 +464,11 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         description: mode === 'create' ? 'Could not refresh profile' : 'Could not update profile',
       });
     } finally {
+      inFlight.current = false;
       setIsSaving(false);
     }
   }, [
+    waitForAuth,
     pubky,
     mode,
     validateUser,

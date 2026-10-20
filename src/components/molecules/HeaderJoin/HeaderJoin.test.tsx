@@ -85,14 +85,3 @@ describe('HeaderJoin', () => {
     expect(containerElement).toHaveClass('flex-1', 'flex-row', 'items-center', 'justify-end');
   });
 });
-
-describe('HeaderJoin - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('matches snapshot for default HeaderJoin', () => {
-    const { container } = render(<HeaderJoin />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

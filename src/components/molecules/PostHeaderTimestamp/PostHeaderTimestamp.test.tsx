@@ -98,30 +98,3 @@ describe('PostHeaderTimestamp', () => {
     });
   });
 });
-
-describe('PostHeaderTimestamp - Snapshots', () => {
-  beforeEach(() => {
-    mockUseIsMobile.mockReset();
-    mockUseIsMobile.mockReturnValue(true);
-  });
-
-  it('matches snapshot with hours', () => {
-    const { container } = render(<PostHeaderTimestamp timeAgo="2h" indexedAt={TEST_DATE} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with minutes', () => {
-    const { container } = render(<PostHeaderTimestamp timeAgo="5m" indexedAt={TEST_DATE} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with days', () => {
-    const { container } = render(<PostHeaderTimestamp timeAgo="3d" indexedAt={TEST_DATE} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with "just now"', () => {
-    const { container } = render(<PostHeaderTimestamp timeAgo="just now" indexedAt={TEST_DATE} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

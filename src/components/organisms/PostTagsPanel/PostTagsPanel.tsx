@@ -12,7 +12,6 @@ import { cn } from '@/libs/utils/utils';
 import { TaggedList } from '@/molecules/TaggedList/TaggedList';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import type { TagInputHandle } from '@/molecules/TagInput/TagInput.types';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import { PostTagsPanelSkeleton } from './PostTagsPanel.skeleton';
 import type { PostTagsPanelHandle, PostTagsPanelProps } from './PostTagsPanel.types';
 
@@ -34,7 +33,7 @@ const INITIAL_VISIBLE_TAGS = 3;
  * Uses the same TaggedSection pattern as ProfileTagged but adapted for posts.
  */
 export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>(function PostTagsPanel(
-  { postId, widthMode = 'fit', autoFocusInput, enableLoadingSkeleton = true, className },
+  { postId, mergePostId, widthMode = 'fit', autoFocusInput, enableLoadingSkeleton = true, className },
   ref,
 ) {
   const tagInputRef = useRef<TagInputHandle>(null);
@@ -46,27 +45,28 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
     // minimum needed when it is not.
     reveal: () => containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }),
   }));
-  const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } = usePostTags(postId);
+  const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } = usePostTags(postId, {
+    mergePostId,
+  });
 
   // Enrich tags with user details for proper avatar fallbacks
   const { enrichedTags } = useEnrichedTags(tags);
 
   // Auth requirement for tag actions
   const { isAuthenticated, requireAuth } = useRequireAuth();
-  const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
 
   // Wrap tag toggle with auth requirement
   const handleTagToggleWithAuth = (tag: Parameters<typeof handleTagToggle>[0]) => {
-    requireAuth(() => handleTagToggle(tag));
+    void handleTagToggle(tag);
   };
 
   // Wrap tag add with auth requirement
   const handleTagAddWithAuth = (label: string) => {
-    return requireAuth(() => handleTagAdd(label));
+    return handleTagAdd(label);
   };
 
   // For unauthenticated users, clicking input opens sign-in dialog
-  const handleInputClick = !isAuthenticated ? () => setShowSignInDialog(true) : undefined;
+  const handleInputClick = !isAuthenticated ? () => requireAuth(() => undefined) : undefined;
 
   // Show skeleton while fetching initial data
   if (isLoading && enableLoadingSkeleton) {
@@ -106,6 +106,7 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
             <TaggedList
               tags={visibleTags}
               taggedId={postId}
+              mergeTaggedId={mergePostId}
               taggedKind={TagKind.POST}
               hasMore={isCollapsedPreview ? false : hasMore}
               isLoadingMore={isCollapsedPreview ? false : isLoadingMore}

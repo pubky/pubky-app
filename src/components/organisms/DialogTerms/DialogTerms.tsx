@@ -4,6 +4,7 @@ import { DialogInlineTrigger } from '@/atoms/DialogInlineTrigger/DialogInlineTri
 import { Link } from '@/atoms/Link/Link';
 import { List } from '@/atoms/List/List';
 import { Typography } from '@/atoms/Typography/Typography';
+import { LEGAL_ENTITY_NAME } from '@/config/legal';
 
 const EMAIL_URL = 'mailto:info@synonym.to';
 const EMAIL_REPORT_URL = 'mailto:report@synonym.to';
@@ -76,7 +77,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
             <Typography className={baseCSS}>
               These Terms constitute the entire agreement and understanding with respect to the access or use of any or
               all of the Platform and any manner of accessing the Platform, between you (referred to as “
-              <strong>you</strong>”, “<strong>your</strong>”, or “<strong>User</strong>”) and Synonym Software Ltd., a
+              <strong>you</strong>”, “<strong>your</strong>”, or “<strong>User</strong>”) and {LEGAL_ENTITY_NAME}, a
               company operating under the laws of the Republic of El Salvador, located at 87 Avenida Norte, Calle El
               Mirador, Edificio Torre Futura, Oficina 06, Nivel 11, Colonia Escalón, Del Municipio de San Salvador,
               Departamento de San Salvador, Código Postal 01101, República de El Salvador (referred to as “

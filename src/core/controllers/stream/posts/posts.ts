@@ -1,3 +1,4 @@
+import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
@@ -9,10 +10,7 @@ import type {
   TStreamIdParams,
 } from '@/controllers/stream/posts/posts.types';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
-import { NetworkErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
-import { isAuthorScopedContentSearchStream } from '@/models/stream/post/postStream.types';
+import { isAuthorScopedContentSearchStream, isCollectionItemsStream } from '@/models/stream/post/postStream.types';
 import type { TStreamResult } from '@/services/local/stream/posts/post.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
@@ -86,24 +84,35 @@ export class StreamPostsController {
     if (!isCurrent()) return { nextPageIds: [], nextCursor: undefined, reachedEnd: false };
     let visibleIds = nextPageIds;
     const isAuthorScopedSearch = isAuthorScopedContentSearchStream(streamId);
+    const isCollection = isCollectionItemsStream(streamId);
+    // Author-scoped search must not degrade a hydration failure into a false
+    // "no results": on a cold cache every id is a miss, and the strict pass below
+    // would drop them all. A collection must not degrade it into false missing posts:
+    // its feed reveals members once pagination settles without an error, and their
+    // cards would fetch one by one against the same outage. Fail the page instead,
+    // rethrowing the hydration's AppError — the feed shows its error state and the
+    // cursor is not consumed, so a retry re-fetches this slice.
+    const failsPageOnHydrationError = isAuthorScopedSearch || isCollection;
     // Query nexus to get the cacheMissPostIds
     if (cacheMissPostIds.length > 0) {
-      // TODO: When TTL is implemented, we can return to void
-      const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
-        cacheMissPostIds,
-        viewerId,
-        isCurrent,
-      });
-      // Author-scoped search must not degrade a hydration failure into a false
-      // "no results": on a cold cache every id is a miss, and the strict pass below
-      // would drop them all. Fail the page instead — the feed shows its error state
-      // and the cursor is not consumed, so a retry re-fetches this slice.
-      if (isAuthorScopedSearch && !hydrated) {
-        throw Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Could not load search results', {
-          service: ErrorService.Nexus,
-          operation: 'StreamPostsController.getOrFetchStreamSlice',
-          context: { streamId, cacheMissCount: cacheMissPostIds.length },
+      let hydrated = false;
+      try {
+        // TODO: When TTL is implemented, we can return to void
+        hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
+          cacheMissPostIds,
+          viewerId,
+          isCurrent,
+          throwOnFailure: failsPageOnHydrationError,
         });
+      } finally {
+        // A failed or discarded page also drops the overflow it buffered, so the retry
+        // re-reads this slice from the caller's cursor instead of serving past it.
+        if (failsPageOnHydrationError && !hydrated) postStreamQueue.remove(streamId);
+      }
+      // Without a failure, an unhydrated page means the viewer session changed meanwhile
+      // (e.g. a restored session). That is no outage: discard the page instead.
+      if (failsPageOnHydrationError && !hydrated) {
+        return { nextPageIds: [], nextCursor: undefined, reachedEnd: false };
       }
     }
     // Second-pass: cache-miss details are now resolved,

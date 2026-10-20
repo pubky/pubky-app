@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import Dexie from 'dexie';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { GRID_FEED_SKELETON_COUNT } from '@/config/feed';
@@ -12,7 +12,6 @@ import { PostMain } from '@/organisms/PostMain/PostMain';
 import { VRT_FEED_POSTS } from '@/test/fixtures/feed/posts';
 import { VRT_AUTHOR_PROFILES } from '@/test/fixtures/feed/profiles';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelineCardsPosts } from './CardsPosts';
 
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({ usePostDetails: vi.fn() }));
@@ -65,19 +64,10 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({ isAuthenticated: true, requireAuth: (action: () => void) => action() }),
 }));
-vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => ({
-  usePostSaveTargets: () => ({
-    isBookmarked: true,
-    isBookmarkLoading: false,
-    isBookmarkToggling: false,
-    collections: [],
-    isCollectionsLoading: false,
-    isCreatingCollection: false,
-    toggleBookmark: vi.fn(),
-    toggleCollection: vi.fn(),
-    createCollectionWithPost: vi.fn(),
-  }),
-}));
+vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', async () => {
+  const { idlePostSaveTargets } = await import('@/test/mocks/usePostSaveTargets');
+  return { usePostSaveTargets: () => ({ ...idlePostSaveTargets, isBookmarked: true }) };
+});
 vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   useDeletePost: () => ({ deletePost: vi.fn(), isDeleting: false }),
 }));
@@ -187,6 +177,21 @@ describe('TimelineCardsPosts', () => {
     expect(screen.getByRole('button', { name: 'Add Post' })).toBeInTheDocument();
   });
 
+  it('reports a failed load beside the Add Post tile instead of the empty copy', () => {
+    render(
+      <TimelineCardsPosts
+        {...props}
+        postIds={[]}
+        error="Network error"
+        emptyState={<p>No saved posts</p>}
+        trailingSlot={<button>Add Post</button>}
+      />,
+    );
+    expect(screen.getByText('Error: Network error')).toBeInTheDocument();
+    expect(screen.queryByText('No saved posts')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Post' })).toBeInTheDocument();
+  });
+
   it('places loading and stalled-pagination controls outside the measured feed', () => {
     vi.mocked(useInfiniteScroll).mockReturnValue({ sentinelRef: vi.fn(), isStalled: true, resumeAutoLoad: resume });
     render(<TimelineCardsPosts {...props} hasMore error="Could not load more posts" />);
@@ -247,21 +252,4 @@ describe('TimelineCardsPosts cold reads', () => {
       }
     },
   );
-});
-
-describe('TimelineCardsPosts - Snapshots', () => {
-  it('renders a complete Cards post', () => {
-    const { container } = render(<TimelineCardsPosts {...snapshotProps} />, { wrapper: TooltipProvider });
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('TimelineCardsPosts - Mobile Snapshots', () => {
-  beforeEach(() => setMobileViewport());
-  afterEach(() => resetViewport());
-
-  it('renders the same complete Cards post on mobile', () => {
-    const { container } = render(<TimelineCardsPosts {...snapshotProps} />, { wrapper: TooltipProvider });
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });

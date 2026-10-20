@@ -1,8 +1,8 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { HomeserverFooter, HomeserverHeader, HomeserverNavigation } from './Homeserver';
 
-// Mock Next.js router
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -10,7 +10,6 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock molecules
 vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
   return {
     ButtonsNavigation: ({
@@ -48,7 +47,6 @@ vi.mock('@/molecules/Page/Page', () => {
   };
 });
 
-// Mock organisms
 vi.mock('@/organisms/DialogAge/DialogAge', () => {
   return {
     DialogAge: () => <span data-testid="dialog-age">over 18 years old.</span>,
@@ -79,41 +77,57 @@ vi.mock('@/atoms/PageSubtitle/PageSubtitle', () => {
   };
 });
 
-describe('Homeserver Components - Snapshots', () => {
-  describe('HomeserverHeader - Snapshots', () => {
-    it('matches snapshot for default HomeserverHeader', () => {
-      const { container } = render(<HomeserverHeader />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
+describe('HomeserverHeader', () => {
+  it('renders the homeserver title and subtitle', () => {
+    render(<HomeserverHeader />);
+
+    expect(screen.getByTestId('page-title')).toHaveTextContent('Choose');
+    expect(screen.getByTestId('page-title')).toHaveTextContent('homeserver.');
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent('Enter your invite code');
+  });
+});
+
+describe('HomeserverFooter', () => {
+  it('renders terms, privacy, and age confirmation links', () => {
+    render(<HomeserverFooter />);
+
+    expect(screen.getByTestId('dialog-terms')).toBeInTheDocument();
+    expect(screen.getByTestId('dialog-privacy')).toBeInTheDocument();
+    expect(screen.getByTestId('dialog-age')).toBeInTheDocument();
+  });
+});
+
+describe('HomeserverNavigation', () => {
+  const defaultProps = {
+    continueButtonDisabled: false,
+    onHandleContinueButton: vi.fn(),
+    continueText: 'Continue',
+  };
+
+  it('calls the continue handler', () => {
+    const onHandleContinueButton = vi.fn();
+    render(<HomeserverNavigation {...defaultProps} onHandleContinueButton={onHandleContinueButton} />);
+
+    fireEvent.click(screen.getByTestId('continue-button'));
+    expect(onHandleContinueButton).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
-  describe('HomeserverFooter - Snapshots', () => {
-    it('matches snapshot for default HomeserverFooter', () => {
-      const { container } = render(<HomeserverFooter />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
+  it('navigates back to the backup step', () => {
+    render(<HomeserverNavigation {...defaultProps} />);
+
+    fireEvent.click(screen.getByTestId('back-button'));
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.BACKUP);
+    expect(defaultProps.onHandleContinueButton).not.toHaveBeenCalled();
   });
 
-  describe('HomeserverNavigation - Snapshots', () => {
-    const defaultProps = {
-      continueButtonDisabled: false,
-      onHandleContinueButton: vi.fn(),
-      continueText: 'Continue',
-    };
+  it('disables the continue button when requested', () => {
+    render(<HomeserverNavigation {...defaultProps} continueButtonDisabled />);
+    expect(screen.getByTestId('continue-button')).toBeDisabled();
+  });
 
-    it('matches snapshot for default HomeserverNavigation', () => {
-      const { container } = render(<HomeserverNavigation {...defaultProps} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot for HomeserverNavigation with disabled continue button', () => {
-      const { container } = render(<HomeserverNavigation {...defaultProps} continueButtonDisabled={true} />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
-
-    it('matches snapshot for HomeserverNavigation with custom continue text', () => {
-      const { container } = render(<HomeserverNavigation {...defaultProps} continueText="Join Server" />);
-      expect(container.firstChild).toMatchSnapshot();
-    });
+  it('renders custom continue text', () => {
+    render(<HomeserverNavigation {...defaultProps} continueText="Join Server" />);
+    expect(screen.getByTestId('continue-button')).toHaveTextContent('Join Server');
   });
 });

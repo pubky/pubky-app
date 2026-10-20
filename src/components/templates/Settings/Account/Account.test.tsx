@@ -6,6 +6,7 @@ import { Account } from './Account';
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({
     push: mockPush,
     replace: vi.fn(),
@@ -26,12 +27,5 @@ describe('Account', () => {
     expect(screen.getByText('Edit your profile')).toBeInTheDocument();
     expect(screen.getByText('Backup your account')).toBeInTheDocument();
     expect(screen.getByText('Delete your account')).toBeInTheDocument();
-  });
-});
-
-describe('Account - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<Account />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -43,7 +43,7 @@ describe('Join', () => {
   });
 
   it('renders both methods (desktop cards and mobile sections) when Passport is enabled', () => {
-    const { container } = render(<Join />);
+    render(<Join />);
 
     expect(screen.getByText('How would you like to create your pubky?')).toBeInTheDocument();
     expect(screen.getByTestId('join-sovereign-card')).toBeInTheDocument();
@@ -52,7 +52,6 @@ describe('Join', () => {
     expect(screen.getAllByTestId('join-manage-own-keys')).toHaveLength(2);
     expect(screen.getByTestId('mock-human-footer')).toBeInTheDocument();
     expect(mockReplace).not.toHaveBeenCalled();
-    expect(container).toMatchSnapshot();
   });
 
   it('routes "Manage your own keys" to the fair-access step', () => {

@@ -9,6 +9,7 @@ import {
   preloadImages,
   renderForVRT,
   VRT_ROOT_TESTID,
+  selectArticleComposerTab,
   waitForMarkdownEditorReady,
 } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
@@ -135,6 +136,7 @@ vi.mock('@/stores/auth/auth.store', async () => {
     useAuthStore: createZustandLikeHook({
       currentUserPubky: f.viewerPubky,
       session: mockRingSession(['/:rw'], f.viewerPubky),
+      restoreStatus: 'ready',
       sessionExport: null,
       hasProfile: true,
       hasHydrated: true,
@@ -223,20 +225,9 @@ vi.mock('@/hooks/usePostCounts/usePostCounts', async () => {
   };
 });
 
-vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => {
-  const noop = async () => {};
-  const result = {
-    isBookmarked: false,
-    isBookmarkLoading: false,
-    isBookmarkToggling: false,
-    collections: [],
-    isCollectionsLoading: false,
-    isCreatingCollection: false,
-    toggleBookmark: noop,
-    toggleCollection: noop,
-    createCollectionWithPost: noop,
-  };
-  return { usePostSaveTargets: () => result };
+vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', async () => {
+  const { idlePostSaveTargets } = await import('@/test/mocks/usePostSaveTargets');
+  return { usePostSaveTargets: () => idlePostSaveTargets };
 });
 
 vi.mock('@/hooks/useUserDetails/useUserDetails', async () => {
@@ -456,6 +447,7 @@ vi.mock('@/hooks/useAttachmentsMetadata/useAttachmentsMetadata', async () => {
         const metadata = f.articleCoverByUri.get(uri);
         return metadata ? [metadata] : [];
       }),
+      isLoading: false,
     }),
   };
 });
@@ -556,13 +548,21 @@ async function renderEditArticle(viewport: { width: number; height: number }) {
 
   await renderForVRT(<EditArticleWithChrome postId={f.article.compositeId} />, { viewport });
   await expect.element(page.getByTestId('dialog-content')).toBeVisible();
-  await expect.element(page.getByPlaceholder('Article Title')).toHaveValue(f.articleTitle);
-  await expect.element(page.getByAltText('Image preview')).toBeVisible();
+  await expect.element(page.getByRole('tablist', { name: 'Article sections' })).toBeVisible();
+  // The title field is in the Title tab on a phone, so only its value is asserted here
+  await expect.element(page.getByPlaceholder('Title')).toHaveValue(f.articleTitle);
   const dialog = document.querySelector('[data-testid="dialog-content"]') ?? document;
   await waitForMarkdownEditorReady(dialog);
 }
 
-describe('Article — editing — visual regression', () => {
+// The dialog mounts the `next/dynamic` markdown editor, and the first test in
+// this file also pays the cold chunk load. On macOS CI the desktop capture has
+// passed at 20-28s and timed out at 33s, the mobile one at up to 17s, so the
+// default 30s budget is too tight for legitimately slow runners. Each wait
+// inside is already bounded; this only raises the sum they may add up to.
+const ARTICLE_EDITOR_TEST_TIMEOUT_MS = 60_000;
+
+describe('Article — editing — visual regression', { timeout: ARTICLE_EDITOR_TEST_TIMEOUT_MS }, () => {
   it('renders the edit article dialog at desktop viewport', async () => {
     await renderEditArticle(VRT_VIEWPORT_DESKTOP);
     await matchVrtFrameScreenshot('article-editing-desktop');
@@ -571,6 +571,40 @@ describe('Article — editing — visual regression', () => {
   it('renders the edit article dialog at mobile viewport', async () => {
     await renderEditArticle(VRT_VIEWPORT_MOBILE);
     await matchVrtFrameScreenshot('article-editing-mobile');
+  });
+
+  it('renders the kept cover in the Header tab at desktop viewport', async () => {
+    await renderEditArticle(VRT_VIEWPORT_DESKTOP);
+    await selectArticleComposerTab('Header');
+    await expect.element(page.getByAltText('Image preview')).toBeVisible();
+    await matchVrtFrameScreenshot('article-editing-header-desktop');
+  });
+
+  it('renders the kept cover in the Header tab at mobile viewport', async () => {
+    await renderEditArticle(VRT_VIEWPORT_MOBILE);
+    await selectArticleComposerTab('Header');
+    await expect.element(page.getByAltText('Image preview')).toBeVisible();
+    await matchVrtFrameScreenshot('article-editing-header-mobile');
+  });
+
+  it('renders the published-form preview at desktop viewport', async () => {
+    const f = await fixtures;
+    await renderEditArticle(VRT_VIEWPORT_DESKTOP);
+    await selectArticleComposerTab('Preview');
+    // Scoped to the panel: the published page behind the dialog shows the same body and cover
+    const preview = page.getByTestId('article-composer-preview');
+    await expect.element(preview.getByText('A feed is a scanning surface, not a document.')).toBeVisible();
+    await expect.element(preview.getByAltText(f.articleCoverName)).toBeVisible();
+    await matchVrtFrameScreenshot('article-editing-preview-desktop');
+  });
+
+  it('renders the published-form preview at mobile viewport', async () => {
+    const f = await fixtures;
+    await renderEditArticle(VRT_VIEWPORT_MOBILE);
+    await selectArticleComposerTab('Preview');
+    const preview = page.getByTestId('article-composer-preview');
+    await expect.element(preview.getByAltText(f.articleCoverName)).toBeVisible();
+    await matchVrtFrameScreenshot('article-editing-preview-mobile');
   });
 });
 

@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
 import { TagController } from '@/controllers/tag/tag';
+import { TagCacheController } from '@/controllers/tag/tag-cache';
 import { NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -11,11 +12,12 @@ import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { mockAuthStore } from '@/test-utils/stores';
-import { usePostTags } from './usePostTags';
+import { mergePostTagLists, usePostTags } from './usePostTags';
 
 // Hoisted I/O and auth mocks
-const { mockGetOrFetchTags, mockAuthStoreSelector } = vi.hoisted(() => ({
+const { mockGetOrFetchTags, mockAuthStoreSelector, mockWaitForAuth } = vi.hoisted(() => ({
   mockGetOrFetchTags: vi.fn().mockResolvedValue(undefined),
+  mockWaitForAuth: vi.fn(async (_key?: string) => true),
   mockAuthStoreSelector: (currentUserPubky: string | null) => {
     return (selector: (state: AuthStore) => unknown) => selector(mockAuthStore({ currentUserPubky }));
   },
@@ -63,6 +65,17 @@ function setupLiveQueryMock(tagsValue: { tags: NexusTag[] } | undefined, countsV
 }
 
 describe('usePostTags', () => {
+  const tag = (label: string): NexusTag => ({ label, taggers: [], taggers_count: 1, relationship: false });
+  it('asks for sign-in when a guest clicks an existing tag without mutating it', async () => {
+    vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(null));
+    mockWaitForAuth.mockResolvedValueOnce(false);
+    const { result } = renderHook(() => usePostTags('author:post123'));
+    await act(async () => result.current.handleTagToggle({ label: 'Bitcoin' }));
+    expect(mockWaitForAuth).toHaveBeenCalledWith('bitcoin');
+    expect(TagController.commitCreate).not.toHaveBeenCalled();
+    expect(TagController.commitDelete).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('mock-user-id'));
@@ -120,6 +133,7 @@ describe('usePostTags', () => {
     act(() => {
       add = result.current.handleTagAdd('slow');
     });
+    await waitFor(() => expect(TagController.commitCreate).toHaveBeenCalled());
     vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('other-viewer'));
     rerender();
     await act(async () => {
@@ -144,6 +158,7 @@ describe('usePostTags', () => {
       removal = result.current.handleTagToggle({ label: 'shared', relationship: true });
     });
 
+    await waitFor(() => expect(TagController.commitDelete).toHaveBeenCalled());
     vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('new-viewer'));
     setupLiveQueryMock({ tags: tags.map((tag) => ({ ...tag, relationship: false })) }, { unique_tags: 2 });
     rerender();
@@ -172,12 +187,31 @@ describe('usePostTags', () => {
     act(() => {
       toggle = result.current.handleTagToggle({ label: 'solo', relationship: true });
     });
+    await waitFor(() => expect(TagController.commitDelete).toHaveBeenCalled());
     unmount();
     await act(async () => {
       pending.reject(new Error('offline'));
       await toggle;
     });
     expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('pages the merge source once the primary is exhausted', async () => {
+    const loadNext = vi.mocked(TagCacheController.getOrFetchNext).mockResolvedValue(undefined);
+    vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => {
+      const id = deps?.[0];
+      if (deps?.length === 2) {
+        const tags = id === 'author:original' ? [tag('o')] : [tag('r1')];
+        return { id, tags, cache: { exhausted: id === 'author:original' } };
+      }
+      if (deps?.length === 1) return id === 'author:original' ? { unique_tags: 1 } : { unique_tags: 3 };
+      return undefined;
+    });
+    const { result } = renderHook(() => usePostTags('author:original', { mergePostId: 'author:repost' }));
+
+    expect(result.current.hasMore).toBe(true);
+    await act(async () => result.current.loadMore());
+    expect(loadNext).toHaveBeenCalledWith({ kind: 'post', id: 'author:repost', viewerId: 'mock-user-id' });
   });
 
   describe('initialization', () => {
@@ -514,3 +548,65 @@ describe('usePostTags', () => {
     });
   });
 });
+
+describe('mergePostTagLists', () => {
+  const tag = (label: string, taggers: string[], relationship = false): NexusTag => ({
+    label,
+    taggers,
+    taggers_count: taggers.length,
+    relationship,
+  });
+
+  it('returns the primary list untouched when the secondary is empty', () => {
+    const primary = [tag('✌️', ['a'])];
+
+    expect(mergePostTagLists(primary, [])).toBe(primary);
+  });
+
+  it('keeps a label only the secondary carries', () => {
+    const merged = mergePostTagLists([tag('✌️', ['a'])], [tag('☮️', ['b'])]);
+
+    expect(merged.map((t) => t.label)).toEqual(['✌️', '☮️']);
+  });
+
+  it('unions the taggers of a label on both ids without duplicates', () => {
+    const merged = mergePostTagLists([tag('✌️', ['a', 'b'])], [tag('✌️', ['b', 'c'])]);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].taggers).toEqual(['a', 'b', 'c']);
+    // Both sides list their complete tagger set, so the union is the exact count.
+    expect(merged[0].taggers_count).toBe(3);
+  });
+
+  it('falls back to the summed totals when a tagger list is truncated', () => {
+    const original: NexusTag = { label: '✌️', taggers: ['a', 'b'], taggers_count: 7, relationship: false };
+    const repost: NexusTag = { label: '✌️', taggers: ['z'], taggers_count: 1, relationship: false };
+
+    const merged = mergePostTagLists([original], [repost]);
+
+    // 5 of the original's 7 taggers are not listed, so the overlap is unknown: the summed
+    // per-id totals are the upper bound.
+    expect(merged[0].taggers_count).toBe(8);
+    expect(merged[0].taggers).toEqual(['a', 'b', 'z']);
+  });
+
+  it("keeps the primary's viewer relationship and leaves the inputs alone", () => {
+    const primary = [tag('both', ['a'], false), tag('mine', ['v'], true)];
+    const secondary = [tag('both', ['b'], true), tag('mine', ['c'], false), tag('repost-only', ['v'], true)];
+
+    const merged = mergePostTagLists(primary, secondary);
+
+    // Writes target the primary id, so a relationship held only on the secondary is not the viewer's here.
+    expect(merged.map((t) => [t.label, t.relationship])).toEqual([
+      ['both', false],
+      ['mine', true],
+      ['repost-only', false],
+    ]);
+    expect(primary[0].taggers).toEqual(['a']);
+    expect(secondary[0].taggers).toEqual(['b']);
+  });
+});
+// These tests exercise the mutation after auth readiness; restore races use the real store in auth-wait tests.
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({ waitForAuth: mockWaitForAuth }),
+}));

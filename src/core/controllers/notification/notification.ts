@@ -72,8 +72,9 @@ export class NotificationController {
     try {
       // Create new lastRead with current timestamp using normalizer
       const lastRead = LastReadNormalizer.to(pubky);
-      await NotificationApplication.markAllAsRead(lastRead);
-      notificationStore.setLastRead(Number(lastRead.last_read.timestamp));
+      const published = await NotificationApplication.markAllAsRead(lastRead);
+      // Never move the local boundary backward: a newer mark may have landed while this one waited.
+      notificationStore.setLastRead(Math.max(useNotificationStore.getState().lastRead, published));
       notificationStore.setUnread(0);
     } catch (error) {
       if (!isAppError(error)) {

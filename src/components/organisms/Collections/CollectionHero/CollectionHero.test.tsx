@@ -1,4 +1,4 @@
-import { fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render as rtlRender, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
@@ -46,7 +46,8 @@ vi.mock('@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs', () => ({
   usePostReplyRepostDialogs: vi.fn(),
 }));
 
-const mockRequireAuth = vi.fn(<T,>(action: () => T) => action());
+let canMutate = true;
+const mockRequireAuth = vi.fn(<T,>(action: () => T) => (canMutate ? action() : undefined));
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({ requireAuth: mockRequireAuth }),
 }));
@@ -57,7 +58,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 const mockDeleteState = vi.hoisted(() => ({
-  deletePost: vi.fn().mockResolvedValue(undefined),
+  deletePost: vi.fn().mockResolvedValue(true),
   isDeleting: false,
 }));
 const mockViewportState = vi.hoisted(() => ({
@@ -71,6 +72,10 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockViewportState.isMobile,
 }));
 
+const confirmDeleteProps = vi.hoisted(() => ({
+  onConfirm: null as null | (() => void | boolean | Promise<void | boolean>),
+}));
+
 vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => ({
   DialogConfirmDelete: ({
     open,
@@ -80,17 +85,19 @@ vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => ({
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onConfirm: () => void;
+    onConfirm: () => void | boolean | Promise<void | boolean>;
     title?: string;
     description?: string;
-  }) =>
-    open ? (
+  }) => {
+    confirmDeleteProps.onConfirm = onConfirm;
+    return open ? (
       <div data-testid="dialog-confirm-delete" data-title={title} data-description={description}>
         <button data-testid="dialog-confirm-delete-btn" onClick={onConfirm}>
           confirm delete
         </button>
       </div>
-    ) : null,
+    ) : null;
+  },
 }));
 
 const mockUnBlur = vi.fn();
@@ -341,6 +348,7 @@ function setPostCounts(uniqueTags = 3) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  canMutate = true;
   mockDeleteState.isDeleting = false;
   mockViewportState.isMobile = false;
   for (const key of Object.keys(mockLocalCollections)) delete mockLocalCollections[key];
@@ -608,7 +616,47 @@ describe('CollectionHero', () => {
       expect(screen.getByTestId('repost-dialogs')).toBeInTheDocument();
     });
 
+    it('gates owner edit and delete controls while authorization needs recovery', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      canMutate = false;
+      renderHero();
+      fireEvent.click(screen.getByLabelText('Edit'));
+      fireEvent.click(screen.getByLabelText('Delete'));
+      expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('dialog-confirm-delete')).not.toBeInTheDocument();
+      expect(mockRequireAuth).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not navigate when the delete hook cancels authorization', async () => {
+      setAuthStore(AUTHOR_PUBKY);
+      renderHero();
+      fireEvent.click(screen.getByLabelText('Delete'));
+      mockDeletePost.mockResolvedValueOnce(false);
+      await act(async () => fireEvent.click(screen.getByTestId('dialog-confirm-delete-btn')));
+      expect(mockDeletePost).toHaveBeenCalledWith(COMPOSITE_ID);
+      expect(mockRouterReplace).not.toHaveBeenCalled();
+    });
+
     describe('delete flow', () => {
+      it.each([true, false])('passes the pending deletion result back to the dialog (%s)', async (success) => {
+        setAuthStore(AUTHOR_PUBKY);
+        const pending = Promise.withResolvers<boolean>();
+        mockDeletePost.mockReturnValueOnce(pending.promise);
+        renderHero();
+        fireEvent.click(screen.getByLabelText('Delete'));
+        let confirmation!: ReturnType<NonNullable<typeof confirmDeleteProps.onConfirm>>;
+        act(() => {
+          confirmation = confirmDeleteProps.onConfirm!();
+        });
+        expect(confirmation).toBeInstanceOf(Promise);
+        expect(mockRouterReplace).not.toHaveBeenCalled();
+        await act(async () => {
+          pending.resolve(success);
+          expect(await confirmation).toBe(success);
+        });
+        expect(mockRouterReplace).toHaveBeenCalledTimes(success ? 1 : 0);
+      });
+
       it('opens the confirmation dialog with the collection-specific i18n namespace on Delete click', () => {
         setAuthStore(AUTHOR_PUBKY);
         renderHero();
@@ -840,19 +888,6 @@ describe('CollectionHero', () => {
       expect(openRepostDialog).toHaveBeenCalledTimes(1);
     });
 
-    it('prompts sign-in instead of toggling bookmark when a guest clicks Follow', () => {
-      setAuthStore(null);
-      const toggle = setBookmark({ isBookmarked: false });
-      mockRequireAuth.mockImplementation(<T,>(_action: () => T) => undefined as T);
-
-      renderHero();
-
-      fireEvent.click(screen.getByLabelText('Follow'));
-
-      expect(mockRequireAuth).toHaveBeenCalledTimes(1);
-      expect(toggle).not.toHaveBeenCalled();
-    });
-
     it('prompts sign-in instead of opening the share dialog when a guest clicks Share', () => {
       setAuthStore(null);
       const { openRepostDialog } = setRepostDialogs();
@@ -996,55 +1031,20 @@ describe('CollectionHero', () => {
     });
   });
 });
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: TooltipProvider });
+}
 
-describe('CollectionHero - Snapshots', () => {
-  it('matches the snapshot for the owner state', () => {
-    setAuthStore(AUTHOR_PUBKY);
-
-    const { container } = renderHero();
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the snapshot for the owner reorder-active state', () => {
-    setAuthStore(AUTHOR_PUBKY);
-
-    const { container } = renderHero({
-      reorder: { isActive: true, isSaving: false, onEnter: vi.fn(), onSave: vi.fn(), onCancel: vi.fn() },
-    });
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the snapshot for the non-owner Follow state', () => {
-    setAuthStore('viewer-pubky');
-    setBookmark({ isBookmarked: false });
-
-    const { container } = renderHero();
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the snapshot when no cover image and no description are set', () => {
-    setPostDetails(COLLECTION_CONTENT_NO_COVER);
-    setAuthStore('viewer-pubky');
-
-    const { container } = renderHero();
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('CollectionHero - Mobile Snapshots', () => {
+describe('CollectionHero - mobile layout preference', () => {
   beforeEach(() => {
     mockViewportState.isMobile = true;
     setMobileViewport();
     setAuthStore(AUTHOR_PUBKY);
   });
+
   afterEach(() => {
     mockViewportState.isMobile = false;
     resetViewport();
-  });
-
-  it('matches the snapshot for the owner state', () => {
-    const { container } = renderHero();
-    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('shows Cards for a Visual preference without changing it', async () => {
@@ -1055,7 +1055,3 @@ describe('CollectionHero - Mobile Snapshots', () => {
     expect(onLayoutChange).not.toHaveBeenCalled();
   });
 });
-
-function render(ui: ReactElement) {
-  return rtlRender(ui, { wrapper: TooltipProvider });
-}

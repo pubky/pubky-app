@@ -11,5 +11,6 @@ export const createLocksAuthSelectors = (get: ZustandGet<LocksAuthStore>) => ({
   selectIsLocksAuthenticated: () => isLocksAuthenticated(get().session),
   selectLocksSession: () => get().session,
   selectLocksSessionSecret: () => get().locksSessionSecret,
+  selectLocksCreatorPubky: () => get().creatorPubky,
   selectIsPaykitConnected: () => get().paykitConnected,
 });

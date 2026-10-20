@@ -1,5 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
+import { mockSession } from '@/test-utils/pubky';
 import { EditProfileForm } from './EditProfileForm';
 
 const mockHandlers = {
@@ -54,6 +57,13 @@ vi.mock('@/config/user', async (importOriginal) => {
 describe('EditProfileForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      ...authInitialState,
+      hasHydrated: true,
+      currentUserPubky: 'test-pubky-123',
+      session: mockSession(),
+      restoreStatus: 'ready',
+    });
     mockUseProfileForm.mockReturnValue({
       state: {
         isLoading: false,
@@ -116,40 +126,13 @@ describe('EditProfileForm', () => {
     render(<EditProfileForm />);
     expect(screen.getByText('Avatar')).toBeInTheDocument();
   });
-});
 
-describe('EditProfileForm - Snapshots', () => {
-  beforeEach(() => {
-    mockUseProfileForm.mockReturnValue({
-      state: {
-        isLoading: false,
-        name: 'Test User',
-        bio: 'Test bio',
-        links: [],
-        avatarPreview: null,
-        avatarFile: null,
-        isSaving: false,
-        submitText: 'Save Profile',
-      },
-      errors: {
-        nameError: null,
-        bioError: null,
-        linkUrlErrors: [],
-        avatarError: null,
-      },
-      handlers: mockHandlers,
-      cropDialog: {
-        cropDialogOpen: false,
-        pendingAvatarPreview: null,
-        pendingAvatarFile: null,
-      },
-      fileInputRef: { current: null },
-      isSubmitDisabled: false,
-    });
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<EditProfileForm />);
-    expect(container.firstChild).toMatchSnapshot();
+  it('delegates saving to the profile hook, which waits for authentication', () => {
+    render(<EditProfileForm />);
+    act(() => useAuthStore.setState({ session: null, restoreStatus: 'restoring' }));
+    fireEvent.click(screen.getByTestId('save-profile-button'));
+    expect(mockHandlers.handleSubmit).toHaveBeenCalledOnce();
+    expect(useAuthStore.getState().showSignInDialog).toBe(false);
+    expect(screen.getByTestId('edit-profile-form')).toBeInTheDocument();
   });
 });

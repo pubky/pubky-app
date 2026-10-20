@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { DialogConfirmDelete } from './DialogConfirmDelete';
@@ -54,6 +54,24 @@ vi.mock('@/atoms/Typography/Typography', () => {
 });
 
 describe('DialogConfirmDelete', () => {
+  it.each([true, false])('waits for confirmation and closes only on success (%s)', async (success) => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<boolean>();
+    const onConfirm = vi.fn(() => pending.promise);
+    const onOpenChange = vi.fn();
+    render(<DialogConfirmDelete open onOpenChange={onOpenChange} onConfirm={onConfirm} />);
+    const button = screen.getByTestId('button-destructive');
+    await user.click(button);
+    expect(button).toBeDisabled();
+    await user.click(button);
+    expect(onConfirm).toHaveBeenCalledOnce();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    await act(async () => pending.resolve(success));
+    expect(button).not.toBeDisabled();
+    if (success) expect(onOpenChange).toHaveBeenCalledWith(false);
+    else expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
   it('renders dialog when open', () => {
     render(<DialogConfirmDelete open={true} onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
 
@@ -120,12 +138,5 @@ describe('DialogConfirmDelete', () => {
     expect(screen.getByTestId('dialog-description')).toHaveTextContent(
       "Are you sure you want to delete 'Proof of Work'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.",
     );
-  });
-});
-
-describe('DialogConfirmDelete - Snapshots', () => {
-  it('matches snapshot when open', () => {
-    const { container } = render(<DialogConfirmDelete open={true} onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

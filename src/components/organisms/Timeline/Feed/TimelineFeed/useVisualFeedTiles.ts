@@ -9,7 +9,7 @@ import { PostController } from '@/controllers/post/post';
 import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
+import { articleHasInlineSlotZero } from '@/libs/post/articleInlineMedia';
 import { isPostDeleted } from '@/libs/utils/utils';
 import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
 import { CompositeIdDomain } from '@/models/models.types';

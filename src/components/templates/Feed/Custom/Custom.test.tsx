@@ -93,10 +93,3 @@ describe('Custom', () => {
     expect(screen.queryByTestId('content-layout')).not.toBeInTheDocument();
   });
 });
-
-describe('Custom - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<Custom />);
-    expect(container).toMatchSnapshot();
-  });
-});

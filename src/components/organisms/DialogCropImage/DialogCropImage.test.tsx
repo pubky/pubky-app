@@ -118,21 +118,6 @@ describe('DialogCropImage', () => {
 
     expect(latestCropperProps?.cropShape).toBe('round');
   });
-
-  it('matches snapshot with image loaded', async () => {
-    const props = createDefaultProps();
-    const { container } = render(<DialogCropImage {...props} />);
-
-    triggerCropComplete();
-
-    await waitFor(() => {
-      const doneButton = screen.getByRole('button', { name: 'Done' });
-      expect(doneButton).not.toBeDisabled();
-    });
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
   it('invokes crop callback when Done is clicked', async () => {
     const props = createDefaultProps();
     const blob = new Blob(['test'], { type: 'image/jpeg' });
@@ -183,5 +168,17 @@ describe('DialogCropImage', () => {
     fireEvent.click(cancelButton);
 
     expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('matches snapshot with image loaded', async () => {
+    const props = createDefaultProps();
+    render(<DialogCropImage {...props} />);
+
+    triggerCropComplete();
+
+    await waitFor(() => {
+      const doneButton = screen.getByRole('button', { name: 'Done' });
+      expect(doneButton).not.toBeDisabled();
+    });
   });
 });

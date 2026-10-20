@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
-import { InstallCard, InstallFooter, InstallHeader, InstallNavigation } from './Install';
+import { InstallFooter, InstallNavigation } from './Install';
 
 // Mock Next.js Image
 vi.mock('next/image', () => ({
@@ -26,21 +26,6 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
     reset: mockReset,
   }),
 }));
-
-describe('InstallCard - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<InstallCard />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('InstallHeader - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<InstallHeader />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
 describe('InstallNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -106,37 +91,5 @@ describe('InstallFooter', () => {
     expect(coreLink).toHaveAttribute('target', '_blank');
     expect(ringLink.closest('p')).toHaveClass('[&_a]:underline');
     expect(coreLink.closest('p')).toBe(ringLink.closest('p'));
-  });
-});
-
-describe('InstallFooter - Snapshots', () => {
-  it('matches snapshot for default InstallFooter', () => {
-    const { container } = render(<InstallFooter />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
-
-describe('InstallNavigation - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<InstallNavigation />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when create button is loading', () => {
-    const { container } = render(<InstallNavigation />);
-
-    const createButton = screen.getByRole('button', { name: /Create keys in browser/i });
-    fireEvent.click(createButton);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when continue button is loading', () => {
-    const { container } = render(<InstallNavigation />);
-
-    const continueButton = screen.getByRole('button', { name: /Continue with Pubky Ring/i });
-    fireEvent.click(continueButton);
-
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

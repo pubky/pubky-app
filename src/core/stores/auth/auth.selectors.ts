@@ -11,6 +11,12 @@ import { AuthState, AuthStore } from './auth.types';
  */
 export const isAuthenticatedState = (state: Pick<AuthState, 'session'>): boolean => state.session !== null;
 
+/** Preserve account chrome during restoration; show guest UI once restoration has failed. Not an action guard. */
+export const selectDisplayUserPubky = (state: Pick<AuthState, 'currentUserPubky' | 'restoreStatus'>) =>
+  state.restoreStatus === 'reauth-required' || state.restoreStatus === 'temporary-error'
+    ? null
+    : state.currentUserPubky;
+
 // Selectors - State access functions with validation
 export const createAuthSelectors = (get: ZustandGet<AuthStore>) => ({
   // call: useAuthStore((state) => state.selectCurrentUserPubky())

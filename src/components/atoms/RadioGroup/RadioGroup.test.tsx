@@ -56,44 +56,63 @@ describe('RadioGroup', () => {
     );
     expect(screen.getByRole('radio')).toBeInTheDocument();
   });
-});
 
-describe('RadioGroup - Snapshots', () => {
-  it('matches snapshot for default group with labels', () => {
-    const { container } = render(
-      <RadioGroup defaultValue="one">
-        <RadioGroupItem value="one" label="One" />
-        <RadioGroupItem value="two" label="Two" />
-      </RadioGroup>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for item with label and description', () => {
-    const { container } = render(
-      <RadioGroup defaultValue="one">
-        <RadioGroupItem value="one" label="One" description="The first option" />
-      </RadioGroup>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for box variant', () => {
-    const { container } = render(
-      <RadioGroup defaultValue="starter">
-        <RadioGroupItem value="starter" label="Starter Plan" description="Perfect for small businesses" variant="box" />
-        <RadioGroupItem value="pro" label="Pro Plan" description="Advanced features" variant="box" />
-      </RadioGroup>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for disabled item', () => {
-    const { container } = render(
+  it('renders the description below the label', () => {
+    render(
       <RadioGroup>
+        <RadioGroupItem value="one" label="One" description="First option" />
+      </RadioGroup>,
+    );
+
+    expect(screen.getByText('First option')).toHaveClass('text-sm', 'text-muted-foreground');
+    expect(screen.getByLabelText('One')).toBeInTheDocument();
+  });
+
+  it('renders the default variant without a bordered card', () => {
+    render(
+      <RadioGroup>
+        <RadioGroupItem value="one" label="One" />
+      </RadioGroup>,
+    );
+
+    const radio = screen.getByRole('radio');
+    expect(radio).toHaveClass('peer', 'size-4', 'rounded-full', 'border-input');
+    expect(radio.closest('.rounded-lg')).toBeNull();
+  });
+
+  it('wraps the box variant in a bordered card that reflects the checked state', () => {
+    render(
+      <RadioGroup defaultValue="one">
+        <RadioGroupItem value="one" label="One" description="First option" variant="box" />
+        <RadioGroupItem value="two" label="Two" variant="box" />
+      </RadioGroup>,
+    );
+
+    const box = screen.getByLabelText('One').closest('.rounded-lg');
+    expect(box).not.toBeNull();
+    expect(box).toHaveClass('border', 'border-border', 'p-4', 'has-[[data-state=checked]]:border-brand');
+    expect(box).toContainElement(screen.getByText('First option'));
+    expect(screen.getByLabelText('One')).toHaveAttribute('data-state', 'checked');
+
+    fireEvent.click(screen.getByLabelText('Two'));
+    expect(screen.getByLabelText('Two')).toHaveAttribute('data-state', 'checked');
+    expect(screen.getByLabelText('One')).toHaveAttribute('data-state', 'unchecked');
+  });
+
+  it('renders a disabled item that cannot be selected', () => {
+    const handleValueChange = vi.fn();
+    render(
+      <RadioGroup onValueChange={handleValueChange}>
         <RadioGroupItem value="one" label="One" disabled />
       </RadioGroup>,
     );
-    expect(container.firstChild).toMatchSnapshot();
+
+    const radio = screen.getByLabelText('One');
+    expect(radio).toBeDisabled();
+    expect(radio).toHaveAttribute('data-disabled');
+
+    fireEvent.click(radio);
+    expect(handleValueChange).not.toHaveBeenCalled();
+    expect(radio).toHaveAttribute('aria-checked', 'false');
   });
 });

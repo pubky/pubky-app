@@ -20,37 +20,46 @@ describe('useLocksAuthStore', () => {
   });
 
   it('init stores the session + secret and marks authenticated', () => {
-    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc', creatorPubky: 'account' });
     const state = useLocksAuthStore.getState();
     expect(state.selectIsLocksAuthenticated()).toBe(true);
     expect(state.selectLocksSession()).toBe(fakeSession);
     expect(state.selectLocksSessionSecret()).toBe('secret-abc');
+    expect(state.selectLocksCreatorPubky()).toBe('account');
   });
 
-  it('persists only the secret and restores hydration state on rehydrate', async () => {
-    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+  it('persists only the secret and its creator, and restores hydration state on rehydrate', async () => {
+    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc', creatorPubky: 'account' });
 
     const persisted = JSON.parse(localStorage.getItem(LOCKS_AUTH_PERSIST_KEY) ?? '{}') as {
       state?: Record<string, unknown>;
     };
-    expect(persisted.state).toMatchObject({ locksSessionSecret: 'secret-abc', hasHydrated: false });
+    expect(persisted.state).toMatchObject({
+      locksSessionSecret: 'secret-abc',
+      creatorPubky: 'account',
+      hasHydrated: false,
+    });
     expect(persisted.state).not.toHaveProperty('session');
 
     useLocksAuthStore.setState(locksAuthInitialState);
     localStorage.setItem(
       LOCKS_AUTH_PERSIST_KEY,
-      JSON.stringify({ state: { locksSessionSecret: 'secret-abc', hasHydrated: false }, version: 0 }),
+      JSON.stringify({
+        state: { locksSessionSecret: 'secret-abc', creatorPubky: 'account', hasHydrated: false },
+        version: 0,
+      }),
     );
     await useLocksAuthStore.persist.rehydrate();
 
     const state = useLocksAuthStore.getState();
     expect(state.selectLocksSession()).toBeNull();
     expect(state.selectLocksSessionSecret()).toBe('secret-abc');
+    expect(state.selectLocksCreatorPubky()).toBe('account');
     expect(state.hasHydrated).toBe(true);
   });
 
   it('setSession sets the live session while keeping the persisted secret', () => {
-    useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
+    useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc', creatorPubky: 'account' });
     expect(useLocksAuthStore.getState().selectIsLocksAuthenticated()).toBe(false); // secret only, no live session
 
     useLocksAuthStore.getState().setSession(fakeSession);
@@ -62,13 +71,13 @@ describe('useLocksAuthStore', () => {
   it('init clears a Paykit connection left over from the previous session', () => {
     useLocksAuthStore.getState().setPaykitConnected(true);
 
-    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc', creatorPubky: 'account' });
 
     expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(false);
   });
 
   it('keeps the Paykit connection out of storage', () => {
-    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc', creatorPubky: 'account' });
     useLocksAuthStore.getState().setPaykitConnected(true);
 
     const persisted = JSON.parse(localStorage.getItem(LOCKS_AUTH_PERSIST_KEY) ?? '{}') as {
@@ -78,12 +87,13 @@ describe('useLocksAuthStore', () => {
   });
 
   it('reset clears the session and secret', () => {
-    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc', creatorPubky: 'account' });
     useLocksAuthStore.getState().setPaykitConnected(true);
     useLocksAuthStore.getState().reset();
     const state = useLocksAuthStore.getState();
     expect(state.selectIsLocksAuthenticated()).toBe(false);
     expect(state.selectLocksSessionSecret()).toBeNull();
+    expect(state.selectLocksCreatorPubky()).toBeNull();
     expect(state.selectIsPaykitConnected()).toBe(false);
   });
 });

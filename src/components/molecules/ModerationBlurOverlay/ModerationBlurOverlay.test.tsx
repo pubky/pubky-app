@@ -32,11 +32,3 @@ describe('ModerationBlurOverlay', () => {
     expect(overlay).toHaveClass('absolute', 'inset-0');
   });
 });
-
-describe('ModerationBlurOverlay - Snapshots', () => {
-  it('matches the snapshot', () => {
-    const { container } = render(<ModerationBlurOverlay label="Collection content moderated." />);
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

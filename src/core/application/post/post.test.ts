@@ -37,6 +37,7 @@ vi.mock('@/services/local/post/post', () => ({
     readDetailsByIds: vi.fn(),
     readCounts: vi.fn(),
     readRelationships: vi.fn(),
+    readRelationshipsByIds: vi.fn(),
   },
 }));
 
@@ -1248,6 +1249,22 @@ describe('Post Application', () => {
 
       expect(readSpy).toHaveBeenCalledWith({ postId: 'nonexistent:post' });
       expect(result).toBeNull();
+    });
+  });
+
+  describe('getRelationshipsByIds', () => {
+    it('should delegate to LocalPostService.readRelationshipsByIds', async () => {
+      const compositeIds = ['author:post1', 'author:post2'];
+      const relationships: (PostRelationshipsModelSchema | undefined)[] = [
+        { id: 'author:post1', replied: null, reposted: null, mentioned: [] },
+        undefined,
+      ];
+      const readSpy = vi.spyOn(LocalPostService, 'readRelationshipsByIds').mockResolvedValue(relationships);
+
+      const result = await PostApplication.getRelationshipsByIds({ compositeIds });
+
+      expect(readSpy).toHaveBeenCalledWith(compositeIds);
+      expect(result).toBe(relationships);
     });
   });
 

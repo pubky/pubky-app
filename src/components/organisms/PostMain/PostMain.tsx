@@ -11,7 +11,10 @@ import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
-import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
+import {
+  getDisplayedPostId,
+  getInteractionPostId,
+} from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
@@ -129,6 +132,10 @@ export function PostMain({
   const repostedPostId = showRepostHeader ? originalPostId : null;
   const displayedPostId = getDisplayedPostId(postId, headerVisibility);
   const showDisplayedPostHeader = repostedPostId !== null || shouldShowPostHeader;
+  // Tags and replies of a contentless repost go to the original for every viewer; tags already
+  // stored on the repost id are merged into the panel so they stay visible.
+  const interactionPostId = getInteractionPostId(postId, headerVisibility);
+  const tagsMergePostId = interactionPostId !== postId ? postId : undefined;
   // Contentless collection shares get a distinct full-bleed treatment (#2121):
   // repost header + flush CollectionCard, no post chrome (header, actions, tags).
   // The original's details query stays disabled unless the header is showing.
@@ -136,7 +143,7 @@ export function PostMain({
   const isOriginalMissing = repostedPostId !== null && originalPostDetails === null && !isOriginalLoading;
   const isOriginalDeleted = repostedPostId !== null && isPostDeleted(originalPostDetails);
   const isCollectionShare = repostedPostId !== null && originalPostDetails?.kind === 'collection';
-  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(displayedPostId);
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(interactionPostId);
 
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
@@ -248,12 +255,13 @@ export function PostMain({
                         >
                           <PostTagsPanel
                             ref={mobileTagsPanelRef}
-                            postId={displayedPostId}
+                            postId={interactionPostId}
+                            mergePostId={tagsMergePostId}
                             widthMode="full"
                             className="lg:hidden"
                           />
                           <PostActionsBar
-                            postId={displayedPostId}
+                            postId={interactionPostId}
                             savePostId={postId}
                             onTagClick={() => {
                               // The tag button only reveals the tags. On mobile that reveal must not
@@ -280,7 +288,8 @@ export function PostMain({
                       >
                         <PostTagsPanel
                           ref={desktopTagsPanelRef}
-                          postId={displayedPostId}
+                          postId={interactionPostId}
+                          mergePostId={tagsMergePostId}
                           widthMode="full"
                           className="w-full"
                         />
@@ -292,7 +301,8 @@ export function PostMain({
                       <PostContent postId={displayedPostId} mediaVariant={isCards ? 'cards' : 'default'} />
                       <PostInlineTagsActions
                         presentation={presentation}
-                        postId={displayedPostId}
+                        postId={interactionPostId}
+                        tagsMergePostId={tagsMergePostId}
                         savePostId={postId}
                         onReplyClick={openReplyDialog}
                         onRepostClick={openRepostDialog}

@@ -30,6 +30,7 @@ export enum APP_ROUTES {
   PROFILE = '/profile',
   WHO_TO_FOLLOW = '/who-to-follow',
   SHARE = '/share',
+  SHOP = '/shop',
 }
 
 /**
@@ -171,6 +172,7 @@ export function isDynamicPublicRoute(pathname: string): boolean {
   const segments = pathname.split('/').filter(Boolean);
 
   switch (true) {
+    case segments[0] === 'shop':
     case segments[0] === 'invite' && segments.length === 2:
     case segments[0] === 'post' && segments.length === 3:
     case segments[0] === 'profile' && segments.length === 2 && isPubkyIdentifier(segments[1]):
@@ -223,6 +225,20 @@ export function matchPostRoute(pathname: string): { userId: string; postId: stri
   }
   const [, userId, postId] = segments;
   return { userId, postId };
+}
+
+/**
+ * Matches another user's profile route `/profile/[pubky]` and returns its pubky,
+ * or `null` for any other path: the own `/profile`, profile sub-tabs, and
+ * prefixed (`pk:`) or malformed identifiers. Uses the same raw identifier check
+ * as `isDynamicPublicRoute`, so it only matches profiles a guest can open.
+ */
+export function matchProfileRoute(pathname: string): { pubky: string } | null {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] !== 'profile' || segments.length !== 2 || !isPubkyIdentifier(segments[1])) {
+    return null;
+  }
+  return { pubky: segments[1] };
 }
 
 /** `/post/[userId]/[postId]` — browsable without auth; uses explore header chrome for guests. */

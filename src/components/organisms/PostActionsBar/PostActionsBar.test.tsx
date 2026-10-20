@@ -22,6 +22,7 @@ vi.mock('@/hooks/useBookmark/useBookmark', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: () => ({
     isAuthenticated: true,
+    waitForAuth: async () => true,
     requireAuth: <T,>(action: () => T) => action(),
   }),
 }));
@@ -263,37 +264,5 @@ describe('PostActionsBar', () => {
       'hover:bg-black/70',
     );
     expect(screen.getAllByTestId('typography')[0]).toHaveClass('text-white/80');
-  });
-});
-
-describe('PostActionsBar - Snapshots', () => {
-  beforeEach(() => {
-    mockUseBookmark.mockReturnValue({
-      isBookmarked: false,
-      isLoading: false,
-      isToggling: false,
-      toggle: vi.fn(),
-    });
-    mockUsePostDetails.mockReturnValue({
-      postDetails: { kind: 'short' },
-      isLoading: false,
-    });
-  });
-
-  it('matches snapshot with counts', () => {
-    mockUsePostCounts.mockReturnValue({
-      postCounts: { tags: 7, unique_tags: 3, replies: 8, reposts: 9 },
-      isLoading: false,
-    });
-
-    const { container } = render(<PostActionsBar postId="post-4" className="extra" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot loading', () => {
-    mockUsePostCounts.mockReturnValue({ postCounts: null, isLoading: true });
-
-    const { container } = render(<PostActionsBar postId="post-5" />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

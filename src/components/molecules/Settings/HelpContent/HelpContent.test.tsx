@@ -78,10 +78,3 @@ describe('HelpContent', () => {
     expect(mockWindowOpen).toHaveBeenCalledWith('https://t.me/pubkychat', '_blank', 'noopener,noreferrer');
   });
 });
-
-describe('HelpContent - Snapshots', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<HelpContent />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

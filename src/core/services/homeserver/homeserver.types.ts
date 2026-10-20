@@ -1,6 +1,7 @@
 import type { Capabilities, PublicKey, Session, XCallbackParams } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import type { THomeserverWriteFence } from './write-retry';
 
 export type FetchOptions = {
   method?: HttpMethod;
@@ -27,10 +28,8 @@ export type TGenerateAuthUrlResult = {
   authorizationUrl: string;
   awaitApproval: Promise<Session>;
   cancelAuthFlow: () => void;
-};
-
-export type THomeserverRestoreSessionParams = {
-  sessionExport: string;
+  /** Drop resumable material only after the completed session has been persisted. */
+  completeAuthFlow?: () => void;
 };
 
 export type CancelableAuthApproval = {
@@ -56,13 +55,8 @@ type PrivPath<T extends string = string> = `/priv/${T}`;
 /** The only roots the homeserver accepts writes under — mirrors its `STORAGE_ROOTS`. */
 export type StoragePath<T extends string = string> = PubPath<T> | PrivPath<T>;
 
-export type TGenerateSignupAuthUrlParams = {
-  inviteCode: string;
-  caps?: Capabilities;
-};
-
 /**
- * Pubky Passport auth request: a plain sign-in cookie flow decorated with x-callback-url metadata
+ * Pubky Passport auth request: a sign-in grant flow decorated with x-callback-url metadata
  * (`xSource` label plus same-origin HTTPS success/error/cancel destinations) that Passport shows
  * and navigates to. Passport creates the identity itself when the Google account has none, so
  * sign-up and sign-in share this single request kind.
@@ -81,11 +75,21 @@ export type THomeserverRequestParams = {
   method: HttpMethod;
   url: string;
   bodyJson?: Record<string, unknown>;
+  /** One attempt, for a caller that runs its own retry loop around this write. */
+  singleAttempt?: boolean;
+  /**
+   * The fence of the read-check-write this write belongs to (`HomeserverService.createWriteFence`).
+   * A fenced write makes one attempt: its body was built from a read, so
+   * `retryHomeserverWriteAfterReread` retries it from that read instead of replaying it.
+   */
+  fence?: THomeserverWriteFence;
 };
 
 export type TPutBlobParams = {
   url: string;
   blob: Uint8Array;
+  /** See {@link THomeserverRequestParams.fence}. */
+  fence?: THomeserverWriteFence;
 };
 
 export type THomeserverListParams = {

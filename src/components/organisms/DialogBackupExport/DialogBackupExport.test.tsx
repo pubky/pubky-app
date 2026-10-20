@@ -326,36 +326,3 @@ describe('DialogBackupExport', () => {
     });
   });
 });
-
-describe('DialogBackupExport - Snapshots', () => {
-  beforeEach(() => {
-    Object.defineProperty(window, 'open', {
-      configurable: true,
-      value: mockWindowOpen,
-    });
-  });
-
-  afterEach(() => {
-    Object.defineProperty(window, 'open', {
-      configurable: true,
-      value: originalOpen,
-    });
-  });
-
-  it('matches snapshot for default DialogBackupExport', () => {
-    const { container } = render(<DialogBackupExport />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for DialogBackupExport with mnemonic', () => {
-    const testMnemonic = 'wood fox silver drive march fee palace flame earn door case almost';
-    const { container } = render(<DialogBackupExport mnemonic={testMnemonic} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for DialogBackupExport with special mnemonic', () => {
-    const specialMnemonic = 'test phrase with spaces & symbols!';
-    const { container } = render(<DialogBackupExport mnemonic={specialMnemonic} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});

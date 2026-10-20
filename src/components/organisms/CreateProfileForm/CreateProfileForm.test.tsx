@@ -16,6 +16,15 @@ import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { CreateProfileForm } from './CreateProfileForm';
 
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    isAuthenticated: true,
+    isWaiting: false,
+    requireAuth: <T,>(action: () => T) => action(),
+    waitForAuth: async () => true,
+  }),
+}));
+
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
     Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
@@ -103,6 +112,7 @@ vi.mock('@/controllers/auth/auth', () => ({
 // Mock Next.js router
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/test',
   useRouter: () => ({
     push: mockPush,
   }),

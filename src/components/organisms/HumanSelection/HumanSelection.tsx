@@ -1,5 +1,7 @@
 import React from 'react';
+import { Ticket } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
+import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
@@ -21,23 +23,37 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
           {"Prove you're "}
           <span className="text-brand">{'not a Robot.'}</span>
         </PageTitle>
-        <PageSubtitle>
-          {'Verify quickly using your phone number or a small payment. Or use an'}{' '}
+        <PageSubtitle>{'Verify quickly using your phone number, a small payment, or an invite code.'}</PageSubtitle>
+      </PageHeader>
+
+      <Container data-testid="human-verification-cards" className="gap-6">
+        <Card
+          data-testid="invite-code-option-card"
+          className="gap-4 rounded-md p-6 lg:flex-row lg:items-center lg:justify-between"
+        >
+          <Container className="gap-3">
+            <Typography as="h3" className="text-xl leading-7 font-bold text-foreground lg:text-2xl lg:leading-8">
+              {'Invite Code'}
+            </Typography>
+            <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
+              {'Already have an invite? Use your code to continue.'}
+            </Typography>
+          </Container>
           <Button
-            overrideDefaults
+            variant="secondary"
             onClick={onInviteCodeClick}
-            className="inline cursor-pointer text-brand transition-all hover:font-bold"
+            className="w-full shrink-0 rounded-full lg:w-auto"
             data-testid="invite-code-link"
             data-cy="invite-code-link"
           >
-            {'invite code.'}
+            <Ticket className="mr-2 size-4" aria-hidden="true" />
+            {'Enter invite code'}
           </Button>
-        </PageSubtitle>
-      </PageHeader>
-
-      <Container data-testid="human-verification-cards" className="gap-6 lg:flex-row lg:items-stretch lg:gap-6">
-        <HumanSmsCard onClick={() => onClick('sms')} />
-        <HumanBitcoinCard onClick={() => onClick('payment')} />
+        </Card>
+        <Container className="gap-6 lg:flex-row lg:items-stretch">
+          <HumanSmsCard onClick={() => onClick('sms')} />
+          <HumanBitcoinCard onClick={() => onClick('payment')} />
+        </Container>
       </Container>
       {isDevMode && (
         <Container className="relative mt-6 flex items-start rounded border px-4 py-6">

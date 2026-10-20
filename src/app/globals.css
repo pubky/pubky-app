@@ -383,6 +383,24 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  /*
+    Keep keyboard focus and scroll targets clear of the fixed guest contextual banner (WCAG 2.4.11).
+    Below lg it sits on the 72/80px mobile footer: a card up to 144px, or a 72px row on landscape
+    phones. From lg the bar (up to 108px) sits at the viewport bottom under its 112px fading scrim.
+  */
+  html:has([data-slot='contextual-banner']) {
+    scroll-padding-bottom: 15rem;
+  }
+  @media (max-width: 1023.98px) and (orientation: landscape) {
+    html:has([data-slot='contextual-banner']) {
+      scroll-padding-bottom: 10rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    html:has([data-slot='contextual-banner']) {
+      scroll-padding-bottom: 14rem;
+    }
+  }
 }
 
 @layer components {
@@ -397,6 +415,40 @@ body {
   }
   .hover\:bg-brand\/90:hover {
     background-color: oklch(from var(--brand) calc(l * 0.9) c h);
+  }
+
+  /**
+   * MDXEditor rich-text toolbar: its controls have to fit the feed composer's width on one row.
+   * The block-type select is sized to its label instead of MDXEditor's fixed 9rem, and the toolbar
+   * groups drop their outer margins (the toolbar's own gap already separates them).
+   */
+  .mdxeditor-toolbar [class*='toolbarGroupOfGroups'],
+  .mdxeditor-toolbar > button {
+    margin: 0 !important;
+  }
+  .mdxeditor-toolbar [class*='selectTrigger'] {
+    width: auto !important;
+  }
+
+  /**
+   * The inline media node's delete/settings toolbar is the image node's toolbar: same MDXEditor
+   * variables for the card and toolbar background, the radius and the icon colours, so the two
+   * never drift apart.
+   */
+  .mdxeditor [data-inline-media-node],
+  .mdxeditor [data-inline-media-toolbar] {
+    background-color: var(--baseBase);
+  }
+  .mdxeditor [data-inline-media-toolbar] {
+    border-bottom-left-radius: var(--radius-base);
+  }
+  .mdxeditor [data-inline-media-toolbar] button {
+    color: var(--baseText);
+  }
+  @media (hover: hover) {
+    .mdxeditor [data-inline-media-toolbar] button:hover {
+      color: var(--baseTextContrast);
+    }
   }
 
   /**

@@ -143,6 +143,8 @@ describe('DialogTerms', () => {
     expect(screen.getAllByText(/TERMS AND CONDITIONS/)).toHaveLength(2); // Appears twice
     expect(screen.getByText(/Effective Date: January 29, 2026/)).toBeInTheDocument();
     expect(screen.getByText(/PLEASE REVIEW THE ARBITRATION PROVISION/)).toBeInTheDocument();
+    expect(screen.getByTestId('dialog-content')).toHaveTextContent('Synonym Software, S.A. de C.V.');
+    expect(screen.getByTestId('dialog-content')).not.toHaveTextContent('Synonym Software Ltd.');
   });
 
   it('exposes the default trigger as a keyboard focusable button', () => {
@@ -180,12 +182,5 @@ describe('DialogTerms with the real Dialog', () => {
     await user.keyboard('{Enter}');
 
     expect(screen.getByRole('dialog', { name: 'Terms of Service' })).toBeInTheDocument();
-  });
-});
-
-describe('DialogTerms - Snapshots', () => {
-  it('matches snapshot for default DialogTerms', () => {
-    const { container } = render(<DialogTerms />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

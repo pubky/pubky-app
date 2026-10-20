@@ -82,11 +82,6 @@ describe('FilterTimeframe', () => {
     fireEvent.click(screen.getByText('This Month'));
     expect(onTabChange).toHaveBeenCalledWith(TIMEFRAME.THIS_MONTH);
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<FilterTimeframe selectedTab={TIMEFRAME.TODAY} />);
-    expect(container).toMatchSnapshot();
-  });
 });
 
 describe('HotFeedSidebar', () => {
@@ -104,11 +99,6 @@ describe('HotFeedSidebar', () => {
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
   });
-
-  it('matches snapshot', () => {
-    const { container } = render(<HotFeedSidebar />);
-    expect(container).toMatchSnapshot();
-  });
 });
 
 describe('HotFeedDrawer', () => {
@@ -117,10 +107,5 @@ describe('HotFeedDrawer', () => {
 
     expect(screen.getByTestId('filter-reach')).toBeInTheDocument();
     expect(screen.getByText('Today')).toBeInTheDocument();
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<HotFeedDrawer />);
-    expect(container).toMatchSnapshot();
   });
 });

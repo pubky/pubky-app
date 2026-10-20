@@ -97,6 +97,7 @@ vi.mock('@/hooks/useProfileNavigation/useProfileNavigation', () => ({
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   useRequireAuth: vi.fn(() => ({
     isAuthenticated: true,
+    waitForAuth: async () => true,
     requireAuth: vi.fn((callback) => callback()),
   })),
 }));
@@ -281,15 +282,6 @@ describe('ProfilePageContainer', () => {
       </ProfilePageContainer>,
     );
     expect(screen.getByTestId('custom-child')).toBeInTheDocument();
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(
-      <ProfilePageContainer>
-        <div>Test Content</div>
-      </ProfilePageContainer>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
   });
 });
 
@@ -587,5 +579,17 @@ describe('ProfilePageContainer - Unlocked count', () => {
     );
 
     expect(screen.getByTestId('profile-page-layout')).toHaveAttribute('data-unlocked-count', 'null');
+  });
+
+  it('passes the cached count when the refresh fails, matching the items the Unlocked screen keeps', () => {
+    vi.mocked(useUnlockedList).mockReturnValue({ ...UNLOCKED_LIST_SETTLED, count: 2, isError: true });
+
+    render(
+      <ProfilePageContainer>
+        <div>Test</div>
+      </ProfilePageContainer>,
+    );
+
+    expect(screen.getByTestId('profile-page-layout')).toHaveAttribute('data-unlocked-count', '2');
   });
 });

@@ -9,8 +9,12 @@ import {
 } from './locksAuth.types';
 
 export const createLocksAuthActions = (set: ZustandSet<LocksAuthStore>): LocksAuthActions => ({
-  init: ({ session, secret }: LocksAuthInitParams) => {
-    set({ session, locksSessionSecret: secret, paykitConnected: false }, false, LocksAuthActionTypes.INIT);
+  init: ({ session, secret, creatorPubky }: LocksAuthInitParams) => {
+    set(
+      { session, locksSessionSecret: secret, creatorPubky, paykitConnected: false },
+      false,
+      LocksAuthActionTypes.INIT,
+    );
   },
   reset: () => {
     set((state) => ({ ...locksAuthInitialState, hasHydrated: state.hasHydrated }), false, LocksAuthActionTypes.RESET);

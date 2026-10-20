@@ -1,6 +1,6 @@
 'use client';
 
-import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ROOT_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
@@ -9,16 +9,19 @@ import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { AuthController } from '@/controllers/auth/auth';
+import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
+import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '@/molecules/Content/Content';
 import { LogoutContent, LogoutNavigation } from '@/molecules/Logout/Logout';
 import { PageTitle } from '@/molecules/Page/Page';
+import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
-type LogoutViewState = 'idle' | 'loading' | 'success' | 'error';
+type LogoutViewState = 'idle' | 'loading' | 'success' | 'error' | 'canceled';
 
 // The `.onboarding-nav` wrapper already supplies the bottom inset on mobile (1.5rem, or the
 // safe-area inset when larger), and drops to 0 at `lg`. The nav itself therefore only needs its
@@ -31,10 +34,12 @@ async function handleRouteLogout(setViewState: Dispatch<SetStateAction<LogoutVie
     await AuthController.logout();
     setViewState('success');
   } catch (error) {
+    if (isAuthFlowCanceledError(error)) {
+      setViewState('canceled');
+      return;
+    }
     Logger.error('Failed to logout from /logout route', { error });
     setViewState('error');
-  } finally {
-    useAuthStore.getState().setIsLoggingOut(false);
   }
 }
 
@@ -43,37 +48,50 @@ export function Logout() {
   const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const authHasHydrated = useAuthStore((state) => state.hasHydrated);
   const session = useAuthStore((state) => state.session);
-  const sessionExport = useAuthStore((state) => state.sessionExport);
+  const sessionReference = useAuthStore((state) => state.sessionReference);
+  const generation = useAuthStore((state) => state.generation);
+  const logoutIntent = useRef<{ pubky: string | null; generation: string } | null>(null);
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const restoreStatus = useAuthStore((state) => state.restoreStatus);
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
   const [viewState, setViewState] = useState<LogoutViewState>('idle');
 
+  const secretKey = useOnboardingStore((state) => state.secretKey);
+  const needsBackup = Boolean(
+    secretKey && currentUserPubky && Identity.tryZ32FromSecret(secretKey) === currentUserPubky,
+  );
+
   const isHydrated = onboardingHasHydrated && authHasHydrated;
-  const isSignedOut = session === null && sessionExport === null;
+  const isSignedOut =
+    session === null && sessionReference === null && currentUserPubky === null && restoreStatus === 'idle';
 
   useEffect(() => {
-    if (!isHydrated) return;
-
-    if (viewState !== 'idle') return;
+    if (!isHydrated || isLoggingOut || viewState !== 'idle') return;
+    if (!logoutIntent.current) logoutIntent.current = { pubky: currentUserPubky, generation };
+    if (
+      !isSignedOut &&
+      (logoutIntent.current.pubky !== currentUserPubky || logoutIntent.current.generation !== generation)
+    ) {
+      setViewState('canceled');
+      return;
+    }
+    if (needsBackup) return;
 
     if (isSignedOut) {
-      useAuthStore.getState().setIsLoggingOut(false);
       setViewState('success');
       return;
     }
 
-    if (isLoggingOut) {
-      return;
-    }
-
     void handleRouteLogout(setViewState);
-  }, [isHydrated, isLoggingOut, isSignedOut, viewState]);
+  }, [isHydrated, isLoggingOut, isSignedOut, viewState, needsBackup, currentUserPubky, generation]);
 
   const onHandleHome = () => {
     router.push(ROOT_ROUTES);
   };
 
   const onHandleRetry = () => {
-    void handleRouteLogout(setViewState);
+    logoutIntent.current = { pubky: currentUserPubky, generation };
+    setViewState('idle');
   };
 
   const renderLoadingState = () => (
@@ -120,16 +138,71 @@ export function Logout() {
     </>
   );
 
-  const shouldShowLoading = !isHydrated || viewState === 'loading' || (viewState === 'idle' && !isSignedOut);
+  const shouldShowLoading =
+    !isHydrated || isLoggingOut || viewState === 'loading' || (viewState === 'idle' && !isSignedOut);
 
-  const content = shouldShowLoading
-    ? renderLoadingState()
-    : viewState === 'error'
-      ? renderErrorState()
-      : renderSuccessState();
+  const content =
+    needsBackup && isHydrated && viewState !== 'canceled' ? (
+      <>
+        <Container className="gap-6">
+          <PageHeader>
+            <PageTitle size="large">Back up your key before signing out</PageTitle>
+            <PageSubtitle>
+              Your recovery key is still saved in this browser. If you already have a backup, choose Done to confirm and
+              sign out.
+            </PageSubtitle>
+          </PageHeader>
+          <AlertBackup />
+        </Container>
+        <div className="onboarding-nav mt-auto w-full lg:mt-0">
+          <ButtonsNavigation
+            id="logout-backup-navigation"
+            className={LOGOUT_NAV_CLASSNAME}
+            backText="Homepage"
+            hiddenContinueButton
+            onHandleBackButton={onHandleHome}
+          />
+        </div>
+      </>
+    ) : viewState === 'canceled' ? (
+      <>
+        <Container className="gap-6">
+          <PageHeader>
+            <PageTitle size="large">Your account changed</PageTitle>
+            <PageSubtitle>Sign-out was canceled because another tab updated your session.</PageSubtitle>
+          </PageHeader>
+        </Container>
+        <div className="onboarding-nav mt-auto w-full lg:mt-0">
+          <ButtonsNavigation
+            id="logout-canceled-navigation"
+            className={LOGOUT_NAV_CLASSNAME}
+            backText="Homepage"
+            continueText="Sign out"
+            onHandleBackButton={onHandleHome}
+            onHandleContinueButton={onHandleRetry}
+          />
+        </div>
+      </>
+    ) : shouldShowLoading ? (
+      renderLoadingState()
+    ) : viewState === 'error' ? (
+      renderErrorState()
+    ) : (
+      renderSuccessState()
+    );
 
   return (
-    <Container size="container" className={cn('h-screen-without-page-header-auth-pages gap-0', CONTENT_GUTTER_CLASS)}>
+    <Container
+      size="container"
+      className={cn(
+        'gap-0',
+        // The global header is hidden on mobile while this account is still signed in.
+        currentUserPubky
+          ? 'min-h-dvh lg:min-h-[calc(100dvh-var(--header-offset-auth-pages))]'
+          : 'h-screen-without-page-header-auth-pages',
+        CONTENT_GUTTER_CLASS,
+      )}
+    >
       {content}
     </Container>
   );

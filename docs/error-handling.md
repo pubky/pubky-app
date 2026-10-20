@@ -81,6 +81,21 @@ Differentiate transient errors (`SERVICE_UNAVAILABLE`, `NETWORK_ERROR`) from fat
 
 Pubky SDK (`@synonymdev/pubky`) errors are mapped by their `name` in `src/core/services/homeserver/error.utils.ts`: `InvalidInput` → Validation, `AuthenticationError` (or HTTP 401) → Auth `SESSION_EXPIRED`, `PkarrError` (PKARR lookup failed, absence not proven) → Network `CONNECTION_FAILED` (retryable). Anything else falls through to `httpStatusCodeToError`.
 
+#### Homeserver write retries
+
+Every homeserver PUT and DELETE goes through `HomeserverService` (`request`, `putBlob`, `delete`), which runs it in `retryHomeserverWrite` (`src/core/services/homeserver/write-retry.ts`); `write-call-sites.gate.test.ts` fails on a write that bypasses it. The policy makes up to three attempts with jittered exponential backoff (a 429's `Retry-After` when the response carries one) for:
+
+- 429, 500 and 503;
+- the publish conflict of a homeserver on GCS (0.16.2+): a 409 whose body is exactly `The file changed before the change was published; read it again and retry`. Nothing landed, so the same write is replayed.
+
+Any other 409 (a path collision, an unknown lock token, a 409 without that body), 412 and 423 are real conflicts and are never retried. A retry never runs after logout begins or the session or account changes; it fails with `SESSION_EXPIRED` instead.
+
+A write whose body is built from a read of the same data (a read-check-write) must not replay that body: by the time a retry runs, another client may have changed the data. It takes a fence from `HomeserverService.createWriteFence()`, wraps the read and the write in `retryHomeserverWriteAfterReread(fence, …)`, and passes the `fence` to the write. A fenced write makes one attempt; the loop retries every status the policy retries (429, 500, 503 and the publish conflict) from the read, with the same backoff and cap. Every pass after the first stops with `SESSION_EXPIRED` once logout begins or the session or account changes, before its read and again before its write. In a file that uses the loop, the gate test fails on a write without a fence unless it is listed with its reason. The profile merge, both settings syncs, the missing `last_read` creation, notifications' `last_read` and the lock purchase-file mint do this. A caller with its own retry loop (`deleteIdempotent`, account deletion) passes `singleAttempt` so the attempts don't multiply.
+
+Owned writes to the same file run one after another, retries included, so an older write's retry never lands after a newer one: a tag removed while its add waits out a 429 stays removed. A write with nothing ahead of it starts in the caller's tick; one that waited checks the session it was queued under first and throws `SESSION_EXPIRED` if it ended.
+
+Notifications' `last_read` only moves forward. `NotificationApplication.markAllAsRead` runs one write at a time per account; every pass reads the published value first and keeps it when it is not older, so neither a retry nor a queued mark writes an older timestamp. Its fence is taken when the mark is called with `guardFirstPass`, so a mark still queued or reading when logout begins sends nothing. The controller stores the larger of the published and local values. A lock payment whose retry reuses a saved bundle checks the fence before submitting the proof.
+
 When a specific HTTP status is an expected domain state, handle it before calling `httpResponseToError`.
 For example, a geoblocked availability endpoint can return `{ available: false }` for `403`. Keep these cases
 explicit and narrow:
@@ -203,3 +218,47 @@ When handling errors:
 - [ ] Using `safeFetch` for HTTP requests?
 - [ ] Checking `category`/`code` instead of parsing messages?
 - [ ] Using decision helpers (`isRetryable`, `requiresLogin`, `isNotFound`)?
+
+### SDK 0.16 session-store classification exception
+
+`HomeserverService.isMissingSessionRecord` is a narrow boundary exception to message-free error classification. The pinned Pubky SDK exposes both missing records and IndexedDB failures as `ClientStateError`, without a structured reason. Its exact `Stored Pubky session not found: <id>` message is emitted only after a successful read finds no record. `browserSessionStore.list()` cannot establish absence: it catches storage failures and returns an empty list.
+
+Keep this check restricted to the SDK boundary, match the full message and requested ID, and retain the real-SDK contract tests in `session-store.contract.test.ts` when updating the SDK. Replace it with a structured discriminator when the SDK provides one. Downstream code continues to use `AppError` code/context (`SESSION_EXPIRED` with `missing_local_grant`). Unrecognized `ClientStateError` values during restore map to `Database/QUERY_FAILED` and preserve credentials; this does not imply the underlying condition is transient. Database errors do not enter the automatic network-retry loop.
+
+SDK 0.16 also uses exact terminal messages `Browser session was signed out.` (restore completed pending logout) and
+`Browser session is no longer valid.` (failed revalidation). The homeserver adapter maps these to `SESSION_EXPIRED`
+with public reason codes. Keep message matching at this pinned SDK boundary, alongside focused tests; do not map
+all `ClientStateError` values to reauthorization or use `list()` to infer missing credentials.
+
+The same boundary recognizes `Delegated grant key not found: <keyId>` only for `ClientStateError`. SDK 0.16 emits
+this after successfully reading a delegated session whose signing-key record is absent. It maps to
+`missing_local_grant`, requiring sign-in again. The key ID is SDK-owned and differs from the session
+record ID; do not expose it in app errors. `GrantFlowService` uses the same SDK error name and anchored message pattern
+when a pending delegated approval can no longer resume, so it can start a fresh approval. Other storage failures preserve
+the pending flow. Keep the real-SDK missing-key test alongside the pending-flow regression tests.
+
+SDK 0.16 `Unsupported stored session version.` is terminal for restoration by this build; map it to
+`unsupported_stored_session` without deleting or regenerating the record. Legacy cookie revocation separately
+recognizes the exact `AuthenticationError` message `Authentication error: The provided auth request has expired or
+was cancelled.` from `restoreSession(export)`. This means no live cookie was found; it is not a generic network-error
+exception. Keep both contracts covered by the real-SDK tests in `session-store.contract.test.ts` on SDK updates.
+
+### Grant failures during use and sign-in
+
+After SDK refresh/retry has finished, terminal failures from active, owned homeserver storage requests notify
+AuthCoordinator through the controller/application subscription. AuthController requires sign-in again only if the
+captured session and generation still match the active account. The original request error still reaches its caller
+so local-first rollback can run. Network failures, server errors and permission denials do not invalidate the session.
+Public fetches and the separate Lock Server authentication flow do not enter this subscription.
+
+Encrypted-file sign-in distinguishes decryption errors from storage and transport errors by `AppError` metadata.
+`ClientStateError` from the SDK `browserSessionStore.save()` call maps to `Database/WRITE_FAILED`; storage availability
+and app-reference writes keep their own database errors. Report a browser-storage problem for those failures, not an
+invalid password or damaged backup. Unknown errors use a generic sign-in failure message.
+
+### Expected auth control flow
+
+`auth-flow-canceled.ts` is the narrow exception for non-reporting control-flow sentinels: `AuthFlowCanceled` for
+superseded work and `AuthApprovalMismatch` for an approval using the wrong account or capabilities. These are expected
+user choices, not faults to capture with `Err.*`. Use their shared predicates; show actionable UI feedback for a
+mismatch and remain quiet for supersession. Storage, transport and unexpected failures still use the normal factories.

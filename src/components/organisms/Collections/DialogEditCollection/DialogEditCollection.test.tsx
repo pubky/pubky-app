@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { DialogEditCollection } from './DialogEditCollection';
 
 const mocks = vi.hoisted(() => ({
@@ -49,6 +51,12 @@ const collectionContent = (overrides?: {
 describe('DialogEditCollection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({
+      currentUserPubky: 'account',
+      session: mockSession(),
+      restoreStatus: 'ready',
+      showSignInDialog: false,
+    });
     mocks.postDetails = { content: collectionContent() };
   });
 
@@ -162,23 +170,5 @@ describe('DialogEditCollection', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
-  });
-});
-
-describe('DialogEditCollection - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.postDetails = { content: collectionContent() };
-  });
-
-  it('matches snapshot when open with the envelope prefilled', async () => {
-    mocks.postDetails = {
-      content: collectionContent({ name: 'Proof of Work', description: 'Bitcoin essays' }),
-    };
-
-    render(<DialogEditCollection open onOpenChange={vi.fn()} compositeCollectionId={COMPOSITE_ID} />);
-
-    await waitFor(() => expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Proof of Work'));
-    expect(document.body).toMatchSnapshot();
   });
 });

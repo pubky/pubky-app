@@ -205,10 +205,7 @@ export const unfollowUserByUsername = (username: string) => {
 };
 
 export const waitForPutLastRead = () => {
-  cy.intercept({
-    method: 'PUT',
-    url: '/pub/pubky.app/last_read',
-  }).as('putLastRead');
+  cy.intercept('PUT', '**/pub/pubky.app/last_read*').as('putLastRead');
   cy.wait('@putLastRead').should('have.property', 'response').its('statusCode').should('eq', 201);
 };
 

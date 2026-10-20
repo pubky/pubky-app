@@ -1,5 +1,5 @@
 import type { PubkyAppUser } from 'pubky-app-specs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
@@ -37,6 +37,7 @@ vi.mock('pubky-app-specs', () => ({
 // Mock HomeserverService methods
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
+    createWriteFence: () => ({ enter: () => {}, assertCurrent: () => {} }),
     putBlob: vi.fn(),
     request: vi.fn(),
     getFreshJson: vi.fn(),
@@ -197,6 +198,7 @@ describe('ProfileApplication', () => {
               method: HttpMethod.PUT,
               url: 'pubky://test-pubky/pub/pubky.app/profile.json',
               bodyJson: { ...published, status: '🪚building' },
+              fence: expect.anything(),
             },
           ],
         ]);
@@ -235,6 +237,60 @@ describe('ProfileApplication', () => {
         await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
 
         expect((await UserDetailsModel.findById(testPubky))?.deleted).toBe(false);
+      });
+
+      describe('when the homeserver refuses the PUT', () => {
+        const homeserverError = async (statusCode: number, body: string) => {
+          const { httpStatusCodeToError } = await import('@/libs/error/error.http');
+          return httpStatusCodeToError(
+            statusCode,
+            `Request failed: Server responded with an error: ${statusCode} Conflict - ${body}`,
+            ErrorService.Homeserver,
+            'request',
+            profileUrl,
+          );
+        };
+
+        beforeEach(async () => {
+          const { installHomeserverWriteRetryDependenciesForTests } = await import('@/services/homeserver/write-retry');
+          installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {}, random: () => 0 });
+        });
+
+        afterEach(() => {
+          // Drop any queued one-shot answers so a failure here cannot leak into later tests.
+          vi.mocked(HomeserverService.getFreshJson).mockReset();
+          vi.mocked(HomeserverService.request).mockReset();
+        });
+
+        it('re-reads profile.json after the publish conflict and writes on top of the newer copy', async () => {
+          const { HOMESERVER_PUBLISH_CONFLICT_MESSAGE } = await import('@/services/homeserver/write-retry');
+          const edited = { ...published, bio: 'edited on another device' };
+          vi.mocked(HomeserverService.getFreshJson).mockResolvedValueOnce(published).mockResolvedValueOnce(edited);
+          vi.mocked(HomeserverService.request)
+            .mockRejectedValueOnce(await homeserverError(409, HOMESERVER_PUBLISH_CONFLICT_MESSAGE))
+            .mockResolvedValueOnce(undefined);
+
+          await ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
+
+          expect(HomeserverService.getFreshJson).toHaveBeenCalledTimes(2);
+          expect(putCalls().map(([params]) => params.bodyJson)).toEqual([
+            { ...published, status: 'back' },
+            { ...edited, status: 'back' },
+          ]);
+          expect(await UserDetailsModel.findById(testPubky)).toMatchObject({ bio: 'edited on another device' });
+        });
+
+        it('does not re-read or retry a path collision', async () => {
+          vi.mocked(HomeserverService.request).mockRejectedValueOnce(
+            await homeserverError(409, 'File/folder path collision'),
+          );
+
+          await expect(
+            ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' }),
+          ).rejects.toMatchObject({ context: { statusCode: 409 } });
+          expect(HomeserverService.getFreshJson).toHaveBeenCalledOnce();
+          expect(putCalls()).toHaveLength(1);
+        });
       });
 
       it('refuses a deleted profile without writing anything', async () => {
@@ -380,7 +436,9 @@ describe('ProfileApplication', () => {
         );
 
         const deletion = ProfileApplication.commitDelete({ pubky: testPubky });
-        await vi.waitFor(() => expect(HomeserverService.delete).toHaveBeenCalledWith(otherFile));
+        await vi.waitFor(() =>
+          expect(HomeserverService.delete).toHaveBeenCalledWith(otherFile, { singleAttempt: true }),
+        );
         const write = ProfileApplication.commitUpdateStatus({ pubky: testPubky, status: 'back' });
         await settle();
         // The write waits for the deletion instead of reading profile.json while it still exists

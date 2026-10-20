@@ -9,7 +9,6 @@ import { asInvalid } from '@/test-utils/type-assertions';
 import {
   canonicalizeTagLabel,
   canSubmitPost,
-  clearCookies,
   cn,
   copyToClipboard,
   daysAgo,
@@ -26,7 +25,6 @@ import {
   getValidAuthorPubkyFromPostCompositeId,
   hexToRgba,
   hoursAgo,
-  isPositiveIntegerString,
   isPostDeleted,
   isPubkyIdentifier,
   isReservedUserName,
@@ -36,7 +34,6 @@ import {
   isValidPostCompositeId,
   isValidTagLabel,
   minutesAgo,
-  radixIdSerializer,
   readFromClipboard,
   resolveDisplayName,
   resolveUserDisplayName,
@@ -45,55 +42,9 @@ import {
   stripPubkyPrefix,
   truncateString,
 } from './utils';
-import { HASHTAG_IN_TEXT_REGEX, RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
+import { HASHTAG_IN_TEXT_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 
 describe('Utils', () => {
-  describe('radixIdSerializer', () => {
-    describe('regex patterns', () => {
-      it('RADIX_ID_TEST_REGEX matches Radix IDs', () => {
-        expect(RADIX_ID_TEST_REGEX.test('radix-_r_12345')).toBe(true);
-        expect(RADIX_ID_TEST_REGEX.test('_r_12345')).toBe(true);
-        expect(RADIX_ID_TEST_REGEX.test('class="radix-_r_12345"')).toBe(true);
-      });
-
-      it('RADIX_ID_TEST_REGEX does not match other strings', () => {
-        expect(RADIX_ID_TEST_REGEX.test('normal-id')).toBe(false);
-        expect(RADIX_ID_TEST_REGEX.test('radical')).toBe(false);
-      });
-
-      it('RADIX_ID_REGEX matches all occurrences globally', () => {
-        const input = 'id="radix-_r_1" and id="radix-_r_2"';
-        const matches = input.match(RADIX_ID_REGEX);
-        expect(matches).toHaveLength(2);
-        expect(matches).toEqual(['radix-_r_1', 'radix-_r_2']);
-      });
-    });
-
-    describe('test function', () => {
-      it('returns true for strings containing Radix IDs', () => {
-        expect(radixIdSerializer.test('some content with radix-_r_12345 inside')).toBe(true);
-      });
-
-      it('returns false for strings without Radix IDs', () => {
-        expect(radixIdSerializer.test('some content without special ids')).toBe(false);
-      });
-
-      it('returns false for non-string values', () => {
-        expect(radixIdSerializer.test(123)).toBe(false);
-        expect(radixIdSerializer.test(null)).toBe(false);
-        expect(radixIdSerializer.test({})).toBe(false);
-      });
-
-      it('does not have stateful issues with multiple calls (g flag check)', () => {
-        const input = 'radix-_r_123';
-        // If the regex had 'g' flag and was reused, subsequent calls might fail
-        expect(radixIdSerializer.test(input)).toBe(true);
-        expect(radixIdSerializer.test(input)).toBe(true);
-        expect(radixIdSerializer.test(input)).toBe(true);
-      });
-    });
-  });
-
   describe('cn', () => {
     it('should combine multiple class names', () => {
       const result = cn('class1', 'class2', 'class3');
@@ -249,29 +200,6 @@ describe('Utils', () => {
 
     it('returns [DELETED] instead of the public key fallback for a deleted user', () => {
       expect(resolveDisplayName({ name: '', id: PUBKY, deleted: true })).toBe('[DELETED]');
-    });
-  });
-
-  describe('isPositiveIntegerString', () => {
-    it.each(['1', '12', '1000', '9007199254740991'])('accepts the bare integer %s', (value) => {
-      expect(isPositiveIntegerString(value)).toBe(true);
-    });
-
-    it.each([
-      ['zero', '0'],
-      ['leading zeros', '007'],
-      ['signed', '-1'],
-      ['explicitly signed', '+1'],
-      ['decimal', '1.5'],
-      ['grouped', '1,000'],
-      ['exponent notation', '1e3'],
-      ['untrimmed', ' 12 '],
-      ['empty', ''],
-      // Number() would round these and the caller would report a value nobody set.
-      ['one past the safe-integer range', '9007199254740992'],
-      ['far past the safe-integer range', '99999999999999999999'],
-    ])('rejects %s', (_label, value) => {
-      expect(isPositiveIntegerString(value)).toBe(false);
     });
   });
 
@@ -505,73 +433,6 @@ describe('Utils', () => {
       });
 
       await expect(readFromClipboard()).rejects.toThrow('denied');
-    });
-  });
-
-  describe('clearCookies', () => {
-    let originalCookie: string;
-
-    beforeEach(() => {
-      originalCookie = document.cookie;
-      // Clear any existing cookies
-      document.cookie.split(';').forEach((c) => {
-        const eqPos = c.indexOf('=');
-        const name = eqPos > -1 ? c.substr(0, eqPos) : c;
-        document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-      });
-    });
-
-    afterEach(() => {
-      // Restore original cookies if any
-      if (originalCookie) {
-        document.cookie = originalCookie;
-      }
-    });
-
-    it('should clear all cookies', () => {
-      // Set some test cookies
-      document.cookie = 'testCookie1=value1; path=/';
-      document.cookie = 'testCookie2=value2; path=/';
-      document.cookie = 'testCookie3=value3; path=/';
-
-      // Verify cookies are set
-      expect(document.cookie).toContain('testCookie1');
-      expect(document.cookie).toContain('testCookie2');
-      expect(document.cookie).toContain('testCookie3');
-
-      // Clear cookies
-      clearCookies();
-
-      // Note: In test environment, we can't actually verify cookies are cleared
-      // because document.cookie behavior is limited in jsdom
-      // We can only test that the function runs without errors
-      expect(() => clearCookies()).not.toThrow();
-    });
-
-    it('should handle empty cookies gracefully', () => {
-      // Ensure no cookies exist
-      expect(document.cookie).toBe('');
-
-      // Should not throw error
-      expect(() => clearCookies()).not.toThrow();
-    });
-
-    it('should handle cookies with spaces', () => {
-      // Set cookies with various formats
-      document.cookie = ' testCookie1 = value1 ; path=/';
-      document.cookie = '  testCookie2=value2; path=/';
-
-      // Should not throw error
-      expect(() => clearCookies()).not.toThrow();
-    });
-
-    it('should handle cookies with special characters in names', () => {
-      // Set cookies with special characters (that are valid)
-      document.cookie = 'test_cookie-1=value1; path=/';
-      document.cookie = 'test.cookie.2=value2; path=/';
-
-      // Should not throw error
-      expect(() => clearCookies()).not.toThrow();
     });
   });
 

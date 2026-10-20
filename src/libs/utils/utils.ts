@@ -1,11 +1,10 @@
-import type { SnapshotSerializer } from 'vitest';
 import { STARTER_PACK_RESERVED_TAGS } from '@/config/nexus';
 import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
 import { parseCompositeId } from '@/models/models.utils';
 import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import { getSafeExternalUrl } from './safeExternalUrl';
-import { DELETED_USER_NAME, RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
+import { DELETED_USER_NAME, TAG_BANNED_CHARS } from './utils.constants';
 import type {
   CopyToClipboardProps,
   ExtractInitialsProps,
@@ -89,26 +88,6 @@ export function resolveUserDisplayName(user: { name?: string | null; deleted?: b
  */
 export function isPubkyIdentifier(value: string): boolean {
   return /^[a-z0-9]{52}$/.test(value);
-}
-
-/**
- * A bare positive integer written as a string — the shape a Lock Server payment amount travels in.
- *
- * @example
- * ```ts
- * isPositiveIntegerString('1000')                 // true
- * isPositiveIntegerString('0')                    // false — not positive
- * isPositiveIntegerString('007')                  // false — leading zeros
- * isPositiveIntegerString('-1')                   // false — signed
- * isPositiveIntegerString('1.5')                  // false — decimal
- * isPositiveIntegerString('1,000')                // false — grouped
- * isPositiveIntegerString('1e3')                  // false — not bare digits
- * isPositiveIntegerString(' 12 ')                 // false — not trimmed
- * isPositiveIntegerString('99999999999999999999') // false — `Number` would round it
- * ```
- */
-export function isPositiveIntegerString(value: string): boolean {
-  return /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value));
 }
 
 function parseValidPostCompositeId(compositeId: string): { pubky: string; id: string } | null {
@@ -304,16 +283,6 @@ export function formatInviteCode(code: string) {
     // Take only first 12 characters for longer codes
     const truncated = uppercased.slice(0, 12);
     return `${truncated.slice(0, 4)}-${truncated.slice(4, 8)}-${truncated.slice(8, 12)}`;
-  }
-}
-
-export function clearCookies() {
-  if (typeof document !== 'undefined') {
-    document.cookie.split(';').forEach((cookie) => {
-      const eqPos = cookie.indexOf('=');
-      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-      document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-    });
   }
 }
 
@@ -928,23 +897,3 @@ export function focusAdjacentGridItem(button: HTMLButtonElement): void {
     }
   }
 }
-
-/**
- * Snapshot serializer to normalize Radix UI generated IDs.
- * This ensures snapshot tests are consistent across test runs by replacing
- * dynamic Radix IDs (e.g., "radix-_r_12345") with a normalized placeholder.
- *
- * @see https://github.com/pubky/pubky-app/issues/1101
- *
- * @example
- * // In test setup (e.g., vitest.setup.ts):
- * import { radixIdSerializer } from '@/libs/utils/utils';
- * expect.addSnapshotSerializer(radixIdSerializer);
- */
-export const radixIdSerializer: SnapshotSerializer = {
-  test: (val): val is string => typeof val === 'string' && RADIX_ID_TEST_REGEX.test(val),
-  serialize: (val, config, indentation, depth, refs, printer) => {
-    const normalized = (val as string).replace(RADIX_ID_REGEX, 'radix-normalized');
-    return printer(normalized, config, indentation, depth, refs);
-  },
-};

@@ -22,6 +22,8 @@ export type UseAuthUrlOptions =
        * running the sign-in routine (#2373).
        */
       type: 'upgrade';
+      /** Feature-owned scopes; callers cannot change the active account. */
+      requiredCapabilities?: readonly string[];
     };
 
 export interface UseAuthUrlReturn {

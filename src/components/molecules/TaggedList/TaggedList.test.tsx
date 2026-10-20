@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import type { TaggersState, UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
@@ -235,21 +235,46 @@ describe('TaggedList', () => {
 
     expect(mockLoadMoreTaggers).toHaveBeenCalledWith('bitcoin');
   });
-});
 
-describe('TaggedList - Snapshots', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockOnTagToggle.mockClear();
-  });
+  it('expands a merged label with the taggers of both targets', async () => {
+    const repostStates = new Map<string, TaggersState>([
+      ['bitcoin', { ids: ['user2', 'user7'], hasError: false, isLoading: false, hasMore: false, hasFetched: true }],
+    ]);
+    const repostLoadTaggers = vi.fn();
+    onTestFinished(() => {
+      mockTaggerStates.clear();
+      mockUseEntityTaggers.mockImplementation(() => ({
+        taggerStates: mockTaggerStates,
+        loadTaggers: mockLoadTaggers,
+        loadMoreTaggers: mockLoadMoreTaggers,
+      }));
+    });
+    mockTaggerStates.set('bitcoin', {
+      ids: ['user1', 'user2'],
+      hasError: false,
+      isLoading: false,
+      hasMore: false,
+      hasFetched: true,
+    });
+    mockUseEntityTaggers.mockImplementation((id?: string | null) =>
+      id === 'author:repost'
+        ? { taggerStates: repostStates, loadTaggers: repostLoadTaggers, loadMoreTaggers: vi.fn() }
+        : { taggerStates: mockTaggerStates, loadTaggers: mockLoadTaggers, loadMoreTaggers: mockLoadMoreTaggers },
+    );
 
-  it('matches snapshot with tags', () => {
-    const { container } = render(<TaggedList tags={mockTags} onTagToggle={mockOnTagToggle} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
+    render(
+      <TaggedList
+        tags={mockTags}
+        taggedId="author:original"
+        mergeTaggedId="author:repost"
+        taggedKind={TagKind.POST}
+        onTagToggle={mockOnTagToggle}
+      />,
+    );
+    fireEvent.click(screen.getByText('bitcoin'));
 
-  it('matches snapshot with empty tags', () => {
-    const { container } = render(<TaggedList tags={[]} onTagToggle={mockOnTagToggle} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(screen.getByText('bitcoin')).toHaveAttribute('data-expanded-ids', 'user1,user2,user7');
+    await waitFor(() => expect(repostLoadTaggers).toHaveBeenCalledWith('bitcoin', 2));
+    expect(mockLoadTaggers).toHaveBeenCalledWith('bitcoin', 2);
   });
 });

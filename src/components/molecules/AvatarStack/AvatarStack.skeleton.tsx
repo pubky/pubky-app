@@ -49,6 +49,8 @@ export function AvatarStackSkeleton({
 
 function sizeToSkeletonClass(size: AvatarSize): string {
   switch (size) {
+    case 'xs':
+      return 'size-4';
     case 'sm':
       return 'size-6';
     case 'md':
