@@ -145,7 +145,9 @@ describe('Onboarding', () => {
       .should('have.attr', 'data-selected', 'true');
 
     // Choosing interests creates an Interests custom feed (#2508)
-    cy.get('[data-cy="feed-navigation"]').find('a[aria-label="Interests"]', { timeout: 15_000 }).should('be.visible');
+    cy.get('[data-cy="feed-navigation"]')
+      .find('[data-cy="feed-navigation-custom-tab"][aria-label="Interests"]', { timeout: 15_000 })
+      .should('be.visible');
   });
 
   it('shows most active people without interests and lands on the All feed after finishing', () => {
@@ -167,7 +169,9 @@ describe('Onboarding', () => {
       .should('have.attr', 'data-selected', 'true');
 
     // No interest tags means no Interests feed (#2508)
-    cy.get('[data-cy="feed-navigation"]').find('a[aria-label="Interests"]').should('not.exist');
+    cy.get('[data-cy="feed-navigation"]')
+      .find('[data-cy="feed-navigation-custom-tab"][aria-label="Interests"]')
+      .should('not.exist');
   });
 
   it('can use Explore mode without signing in and shows Join Pubky dialog when clicking new post button', () => {

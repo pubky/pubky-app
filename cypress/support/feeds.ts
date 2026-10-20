@@ -1,32 +1,33 @@
 import { waitForFeedToLoad } from './posts';
 
 export const openCreateFeedDialog = () => {
-  cy.get('[data-cy="feed-navigation"]').find('[aria-label="Create feed"]').should('be.visible').click();
-  cy.get('[data-testid="custom-feed-dialog-content"]').should('be.visible').and('contain.text', 'Create Feed');
+  cy.get('[data-cy="feed-navigation"]').find('[data-cy="feed-navigation-create-btn"]').should('be.visible').click();
+  cy.get('[data-cy="custom-feed-dialog"]').should('be.visible').and('contain.text', 'Create Feed');
 };
 
 export const openEditFeedDialog = (feedName: string) => {
   // The pencil is pointer-events-none until the tab is hovered on a desktop with hover.
-  cy.get('[data-cy="feed-navigation"]').find(`[aria-label="Edit ${feedName}"]`).click({ force: true });
-  cy.get('[data-testid="custom-feed-dialog-content"]').should('be.visible').and('contain.text', 'Edit Feed');
+  cy.get('[data-cy="feed-navigation"]')
+    .find(`[data-cy="feed-navigation-edit-btn"][aria-label="Edit ${feedName}"]`)
+    .click({ force: true });
+  cy.get('[data-cy="custom-feed-dialog"]').should('be.visible').and('contain.text', 'Edit Feed');
 };
 
 // The selects are item-aligned: the open list puts the current option over the trigger, and
 // Radix ignores a pointerup within 10px of the press that opened it. A click on the current
 // option is swallowed and the list stays open, so pick the option with the keyboard instead.
-export const chooseCustomFeedOption = (sectionTestId: string, label: string) => {
-  const trigger = () =>
-    cy.get('[data-testid="custom-feed-dialog-content"]').find(`[data-testid="${sectionTestId}"] [role="combobox"]`);
+export const chooseCustomFeedOption = (select: 'reach' | 'sort' | 'content', label: string) => {
+  const trigger = () => cy.get('[data-cy="custom-feed-dialog"]').find(`[data-cy="custom-feed-${select}-select"]`);
 
   trigger().click();
-  cy.get('[role="listbox"]')
+  cy.get('[data-cy="custom-feed-select-options"]')
     .should('be.visible')
-    .find('[role="option"]')
+    .find('[data-cy="custom-feed-select-option"]')
     .filter((_, el) => (el.textContent ?? '').trim() === label)
     .should('have.length', 1)
     .focus()
     .type('{enter}');
-  cy.get('[role="listbox"]').should('not.exist');
+  cy.get('[data-cy="custom-feed-select-options"]').should('not.exist');
   trigger().should(($trigger) => {
     expect($trigger.text().trim()).to.eq(label);
   });
@@ -34,33 +35,30 @@ export const chooseCustomFeedOption = (sectionTestId: string, label: string) => 
 
 export const addCustomFeedTag = (tag: string) => {
   const label = tag.toLowerCase();
-  // TagInput does not forward data-testid; the field is the shared add-tag input.
-  cy.get('[data-testid="custom-feed-dialog-content"]').find('[data-cy="add-tag-input"]').type(`${label}{enter}`);
-  cy.get('[data-testid="custom-feed-dialog-content"]')
-    .find(`[data-cy="post-tag"][data-tag-label="${label}"]`)
-    .should('be.visible');
+  cy.get('[data-cy="custom-feed-dialog"]').find('[data-cy="add-tag-input"]').type(`${label}{enter}`);
+  cy.get('[data-cy="custom-feed-dialog"]').find(`[data-cy="post-tag"][data-tag-label="${label}"]`).should('be.visible');
 };
 
 export const removeCustomFeedTag = (tag: string) => {
   const label = tag.toLowerCase();
-  cy.get('[data-testid="custom-feed-dialog-content"]')
+  cy.get('[data-cy="custom-feed-dialog"]')
     .find(`[data-cy="post-tag"][data-tag-label="${label}"]`)
     .find('[data-cy="post-tag-remove-btn"]')
     .click();
-  cy.get('[data-testid="custom-feed-dialog-content"]')
-    .find(`[data-cy="post-tag"][data-tag-label="${label}"]`)
-    .should('not.exist');
+  cy.get('[data-cy="custom-feed-dialog"]').find(`[data-cy="post-tag"][data-tag-label="${label}"]`).should('not.exist');
 };
 
 export const saveCustomFeed = () => {
-  cy.get('[data-testid="save-feed-button"]').should('not.be.disabled').click();
-  cy.get('[data-testid="custom-feed-dialog-content"]').should('not.exist');
+  cy.get('[data-cy="custom-feed-save-btn"]').should('not.be.disabled').click();
+  cy.get('[data-cy="custom-feed-dialog"]').should('not.exist');
   cy.location('pathname').should('match', /^\/feed\/.+/);
   waitForFeedToLoad();
 };
 
 export const expectFeedTab = (feedName: string) => {
-  cy.get('[data-cy="feed-navigation"]').find(`a[aria-label="${feedName}"]`).should('be.visible');
+  cy.get('[data-cy="feed-navigation"]')
+    .find(`[data-cy="feed-navigation-custom-tab"][aria-label="${feedName}"]`)
+    .should('be.visible');
 };
 
 // The home filters persist, and the test before this one leaves Following + Popularity on.
@@ -73,7 +71,7 @@ export const resetHomeFeedToAllRecent = () => {
 };
 
 export const goToHomeFeedTab = () => {
-  cy.get('[data-cy="feed-navigation"]').find('a[href="/home"]').click();
+  cy.get('[data-cy="feed-navigation"]').find('[data-cy="feed-navigation-home-tab"]').click();
   cy.location('pathname').should('eq', '/home');
   waitForFeedToLoad();
 };
@@ -87,9 +85,9 @@ export const expectVisibleSortSelected = (dataCy: string) => {
 };
 
 export const expectVisibleContentSelected = (label: string) => {
-  cy.get('[data-testid="filter-content-radiogroup"]')
+  cy.get('[data-cy="filter-content-radiogroup"]')
     .filter(':visible')
-    .find(`[aria-label="${label}"]`)
+    .find(`[data-cy="${label.toLowerCase()}-content-toggle"]`)
     .should('have.attr', 'data-selected', 'true');
 };
 

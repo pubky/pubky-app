@@ -202,7 +202,7 @@ export const unfollowUserByUsername = (username: string) => {
   cy.get('[data-cy="profile-filter-item-following"]').closest('[data-selected="true"]').should('exist');
   // Find the user by name and click their follow toggle button
   cy.contains('[data-cy="profile-follower-item-name"]', username)
-    .closest('[data-testid^="user-list-item-"]')
+    .closest('[data-cy="user-list-item"]')
     .find('[data-cy="user-list-item-follow-toggle-btn"]')
     .filter(':visible') // Filter to only the visible button (desktop or mobile)
     .should('be.visible')
@@ -213,7 +213,7 @@ export const unfollowUserByUsername = (username: string) => {
   // Own following/friends lists keep an unfollowed row so it can be followed again.
   // The toggle is what changes immediately; the row goes once Nexus has indexed the unfollow.
   cy.contains('[data-cy="profile-follower-item-name"]', username)
-    .closest('[data-testid^="user-list-item-"]')
+    .closest('[data-cy="user-list-item"]')
     .find('[data-cy="user-list-item-follow-toggle-btn"]')
     .filter(':visible')
     .should('have.attr', 'aria-label')

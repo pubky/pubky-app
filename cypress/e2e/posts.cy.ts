@@ -38,16 +38,16 @@ const submitHomePost = (postContent: string, files?: Cypress.FileReference | Cyp
   cy.get('[data-cy="home-post-input"]')
     .should('be.visible')
     .within(() => {
-      cy.get('textarea').click();
+      cy.get('[data-cy="post-input-textarea"]').click();
       if (files) {
-        cy.get('input[type="file"]').selectFile(files, { force: true });
+        cy.get('[data-cy="post-input-file-input"]').selectFile(files, { force: true });
         cy.get('[data-cy="post-input-attachment-remove"]').should('have.length.at.least', 1);
       }
-      cy.get('textarea').type(postContent);
+      cy.get('[data-cy="post-input-textarea"]').type(postContent);
       cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
       cy.get('[data-cy="post-input-action-bar-post"]').click();
       cy.wait('@postCreated').its('response.statusCode').should('eq', 201);
-      cy.get('textarea').should('have.value', '');
+      cy.get('[data-cy="post-input-textarea"]').should('have.value', '');
     });
 };
 
@@ -84,7 +84,7 @@ const replyOnThread = (parentText: string, replyContent: string) => {
 
   cy.get('[data-cy="reply-post-input"]').should('be.visible');
   cy.get('[data-cy="reply-post-input"]').within(() => {
-    cy.get('textarea').should('have.value', '').type(replyContent);
+    cy.get('[data-cy="post-input-textarea"]').should('have.value', '').type(replyContent);
     cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('replyCreated');
     cy.get('[data-cy="post-input-action-bar-reply"]').click();
     cy.wait('@replyCreated').its('response.statusCode').should('eq', 201);
@@ -922,41 +922,45 @@ describe('posts', () => {
     });
     cy.location('pathname').should('include', '/post/');
     cy.get('[data-cy="single-post-card"]').should('contain.text', root);
-    cy.get('[data-testid="post-page-title"]').should('contain.text', 'Post by').and('contain.text', username);
+    cy.get('[data-cy="post-page-title"]').should('contain.text', 'Post by').and('contain.text', username);
 
     replyOnThread(level1, level2);
     replyOnThread(level2, level3);
     expectPostTextOrder([root, level1, level2, level3]);
 
     // One nested reply starts expanded. Collapse hides the chain; expand brings it back.
-    threadReplyControl(level1, 'button[aria-label="Collapse all replies"]').click();
+    threadReplyControl(level1, '[data-cy="thread-expand-toggle"][aria-label="Collapse all replies"]').click();
     cy.get(VISIBLE_POST_TEXT).should('not.contain.text', level2).and('not.contain.text', level3);
     cy.contains(VISIBLE_POST_TEXT, level1).should('be.visible');
-    threadReplyControl(level1, 'button[aria-label="Expand all replies"]').click();
+    threadReplyControl(level1, '[data-cy="thread-expand-toggle"][aria-label="Expand all replies"]').click();
     cy.contains(VISIBLE_POST_TEXT, level2).should('be.visible');
     cy.contains(VISIBLE_POST_TEXT, level3).should('be.visible');
 
     cy.contains(VISIBLE_POST_TEXT, level3).click();
     cy.location('pathname').should('include', '/post/');
-    cy.get('[data-testid="post-page-title"]').should('contain.text', 'Reply by').and('contain.text', username);
-    cy.get('[data-testid="post-breadcrumb"]').should('be.visible');
-    cy.get('[data-testid="breadcrumb-item-0"]').should('contain.text', username);
+    cy.get('[data-cy="post-page-title"]').should('contain.text', 'Reply by').and('contain.text', username);
+    cy.get('[data-cy="post-breadcrumb"]').should('be.visible');
+    cy.get('[data-cy="breadcrumb-item-0"]').should('contain.text', username);
     // Root, level 1, level 2 and level 3 is more than three ancestors, so the middle is an ellipsis.
-    cy.get('[data-testid="breadcrumb-ellipsis-trigger"]').should('be.visible').click();
-    cy.get('[data-testid="breadcrumb-dropdown-content"]').should('be.visible');
+    cy.get('[data-cy="breadcrumb-ellipsis-trigger"]').should('be.visible').click();
     // The dropdown holds the ancestors between the root and the last two: here only level 1.
-    cy.get('[data-testid^="breadcrumb-dropdown-item-"]').should('have.length', 1).and('contain.text', username).click();
+    cy.get('[data-cy="breadcrumb-dropdown-content"]')
+      .should('be.visible')
+      .find('[data-cy="breadcrumb-dropdown-item"]')
+      .should('have.length', 1)
+      .and('contain.text', username)
+      .click();
     cy.get('[data-cy="single-post-card"]').should('contain.text', level1);
 
-    cy.get('[data-testid="breadcrumb-item-0"]').click();
+    cy.get('[data-cy="breadcrumb-item-0"]').click();
     cy.get('[data-cy="single-post-card"]').should('contain.text', root);
-    cy.get('[data-testid="post-page-title"]').should('contain.text', 'Post by');
-    cy.get('[data-testid="post-breadcrumb"]').should('not.exist');
+    cy.get('[data-cy="post-page-title"]').should('contain.text', 'Post by');
+    cy.get('[data-cy="post-breadcrumb"]').should('not.exist');
 
     // The hidden feed under the post overlay has its own quick reply on the same post.
-    cy.get('[data-testid="quick-reply"]').filter(':visible').should('have.length', 1).as('postQuickReply');
+    cy.get('[data-cy="quick-reply"]').filter(':visible').should('have.length', 1).as('postQuickReply');
     cy.get('@postQuickReply')
-      .find('[data-testid="quick-reply-textarea"]')
+      .find('[data-cy="quick-reply-textarea"]')
       .filter(':visible')
       .should('have.length', 1)
       .click()
@@ -971,8 +975,8 @@ describe('posts', () => {
     cy.contains(VISIBLE_POST_TEXT, quickReply).should('be.visible');
     expectPostTextOrder([root, level1, quickReply]);
 
-    // Each page layout also renders a MobileHeader logo (`lg:hidden`); the desktop one is in <header>.
-    cy.get('header [data-cy="header-logo"]').should('have.length', 1).click();
+    // Each page layout also renders a MobileHeader logo (`lg:hidden`), and the feed under the overlay is hidden.
+    cy.get('[data-cy="header-logo"]:visible').should('have.length', 1).click();
     cy.location('pathname').should('eq', '/home');
   });
 

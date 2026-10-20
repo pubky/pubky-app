@@ -483,7 +483,7 @@ describe('feed and filters', () => {
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes);
 
     openCreateFeedDialog();
-    cy.get('[data-testid="feed-name-input"]').type(feedName);
+    cy.get('[data-cy="custom-feed-name-input"]').type(feedName);
     addCustomFeedTag(tag);
     saveCustomFeed();
 
@@ -494,15 +494,17 @@ describe('feed and filters', () => {
 
     cy.location('pathname').as('feedPath');
     openEditFeedDialog(feedName);
-    cy.get('[data-testid="feed-name-input"]').clear().type(renamed);
-    cy.get('[data-testid="save-feed-button"]').should('not.be.disabled').click();
-    cy.get('[data-testid="custom-feed-dialog-content"]').should('not.exist');
+    cy.get('[data-cy="custom-feed-name-input"]').clear().type(renamed);
+    cy.get('[data-cy="custom-feed-save-btn"]').should('not.be.disabled').click();
+    cy.get('[data-cy="custom-feed-dialog"]').should('not.exist');
     // A rename does not change the feed id.
     cy.get('@feedPath').then((feedPath) => {
       cy.location('pathname').should('eq', feedPath);
     });
     expectFeedTab(renamed);
-    cy.get('[data-cy="feed-navigation"]').find(`a[aria-label="${feedName}"]`).should('not.exist');
+    cy.get('[data-cy="feed-navigation"]')
+      .find(`[data-cy="feed-navigation-custom-tab"][aria-label="${feedName}"]`)
+      .should('not.exist');
 
     cy.reload();
     waitForFeedToLoad();
@@ -513,13 +515,17 @@ describe('feed and filters', () => {
     expectTimelineContains(postContent);
 
     openEditFeedDialog(renamed);
-    cy.get('[data-testid="delete-feed-button"]').click();
+    cy.get('[data-cy="custom-feed-delete-btn"]').click();
     cy.location('pathname').should('eq', '/home');
-    cy.get('[data-cy="feed-navigation"]').find(`a[aria-label="${renamed}"]`).should('not.exist');
+    cy.get('[data-cy="feed-navigation"]')
+      .find(`[data-cy="feed-navigation-custom-tab"][aria-label="${renamed}"]`)
+      .should('not.exist');
 
     cy.reload();
     waitForFeedToLoad();
-    cy.get('[data-cy="feed-navigation"]').find(`a[aria-label="${renamed}"]`).should('not.exist');
+    cy.get('[data-cy="feed-navigation"]')
+      .find(`[data-cy="feed-navigation-custom-tab"][aria-label="${renamed}"]`)
+      .should('not.exist');
     cy.signOut(HasBackedUp.Yes);
   });
 
@@ -549,7 +555,7 @@ describe('feed and filters', () => {
     cy.findFirstPostInFeedFiltered(newer, CheckForNewPosts.No, WaitForNewPosts.Yes);
     fastTagPostInFeed(['sorta', 'sortb', 'sortc'], older);
     cy.findFirstPostInFeedFiltered(older).within(() => {
-      cy.contains('button', 'sortc').should('be.visible');
+      cy.get('[data-cy="post-tag"][data-tag-label="sortc"]').filter(':visible').should('have.length.at.least', 1);
     });
 
     createQuickPost(shortPost, [kindTag]);
@@ -563,9 +569,9 @@ describe('feed and filters', () => {
 
     // Reach: All includes profile 4, Following does not, Following does include profile 2.
     openCreateFeedDialog();
-    cy.get('[data-testid="feed-name-input"]').type(reachFeed);
+    cy.get('[data-cy="custom-feed-name-input"]').type(reachFeed);
     addCustomFeedTag(reachTag);
-    chooseCustomFeedOption('reach-filter-section', 'All');
+    chooseCustomFeedOption('reach', 'All');
     saveCustomFeed();
     expectFeedTab(reachFeed);
     expectVisibleReachSelected('all-reach-toggle');
@@ -573,7 +579,7 @@ describe('feed and filters', () => {
     expectTimelineOmits(profile2.postText);
 
     openEditFeedDialog(reachFeed);
-    chooseCustomFeedOption('reach-filter-section', 'Following');
+    chooseCustomFeedOption('reach', 'Following');
     saveCustomFeed();
     expectVisibleReachSelected('following-reach-toggle');
     expectTimelineEmpty();
@@ -588,7 +594,7 @@ describe('feed and filters', () => {
     expectTimelineOmits(profile3.postText);
 
     openEditFeedDialog(reachFeed);
-    chooseCustomFeedOption('reach-filter-section', 'Friends');
+    chooseCustomFeedOption('reach', 'Friends');
     saveCustomFeed();
     expectVisibleReachSelected('friends-reach-toggle');
     expectTimelineEmpty();
@@ -597,22 +603,22 @@ describe('feed and filters', () => {
     waitForFeedToLoad();
     expectVisibleReachSelected('friends-reach-toggle');
     expectTimelineEmpty();
-    cy.get('[data-testid="custom-feed-post-tags"]').should('contain.text', 'p2tag1');
+    cy.get('[data-cy="custom-feed-post-tags"]').should('contain.text', 'p2tag1');
 
     // Sort: Recent is newest first. Popularity puts the more-tagged post first, and that survives reload.
     goToHomeFeedTab();
     openCreateFeedDialog();
-    cy.get('[data-testid="feed-name-input"]').type(sortFeed);
+    cy.get('[data-cy="custom-feed-name-input"]').type(sortFeed);
     addCustomFeedTag(sortTag);
-    chooseCustomFeedOption('reach-filter-section', 'Me');
-    chooseCustomFeedOption('sort-filter-section', 'Recent');
+    chooseCustomFeedOption('reach', 'Me');
+    chooseCustomFeedOption('sort', 'Recent');
     saveCustomFeed();
     expectVisibleReachSelected('me-reach-toggle');
     expectVisibleSortSelected('recent-sort-toggle');
     waitForPostOrder(newer, older);
 
     openEditFeedDialog(sortFeed);
-    chooseCustomFeedOption('sort-filter-section', 'Popularity');
+    chooseCustomFeedOption('sort', 'Popularity');
     saveCustomFeed();
     expectVisibleSortSelected('popularity-sort-toggle');
     waitForPostOrder(older, newer);
@@ -624,10 +630,10 @@ describe('feed and filters', () => {
     // Content: Posts, Articles and Images each keep only that kind. The last edit persists.
     goToHomeFeedTab();
     openCreateFeedDialog();
-    cy.get('[data-testid="feed-name-input"]').type(kindFeed);
+    cy.get('[data-cy="custom-feed-name-input"]').type(kindFeed);
     addCustomFeedTag(kindTag);
-    chooseCustomFeedOption('reach-filter-section', 'Me');
-    chooseCustomFeedOption('content-filter-section', 'Posts');
+    chooseCustomFeedOption('reach', 'Me');
+    chooseCustomFeedOption('content', 'Posts');
     saveCustomFeed();
     expectVisibleContentSelected('Posts');
     expectTimelineContains(shortPost);
@@ -635,7 +641,7 @@ describe('feed and filters', () => {
     expectTimelineOmits(imagePost);
 
     openEditFeedDialog(kindFeed);
-    chooseCustomFeedOption('content-filter-section', 'Articles');
+    chooseCustomFeedOption('content', 'Articles');
     saveCustomFeed();
     expectVisibleContentSelected('Articles');
     expectTimelineContains(articleTitle);
@@ -643,7 +649,7 @@ describe('feed and filters', () => {
     expectTimelineOmits(imagePost);
 
     openEditFeedDialog(kindFeed);
-    chooseCustomFeedOption('content-filter-section', 'Images');
+    chooseCustomFeedOption('content', 'Images');
     saveCustomFeed();
     expectVisibleContentSelected('Images');
     expectTimelineContains(imagePost);
@@ -657,12 +663,12 @@ describe('feed and filters', () => {
     expectTimelineOmits(shortPost);
 
     openEditFeedDialog(kindFeed);
-    cy.get('[data-testid="feed-name-input"]').should('have.value', kindFeed);
-    cy.get('[data-testid="content-filter-section"]').should('contain.text', 'Images');
-    cy.get('[data-testid="reach-filter-section"]').should('contain.text', 'Me');
+    cy.get('[data-cy="custom-feed-name-input"]').should('have.value', kindFeed);
+    cy.get('[data-cy="custom-feed-content-select"]').should('contain.text', 'Images');
+    cy.get('[data-cy="custom-feed-reach-select"]').should('contain.text', 'Me');
     cy.get(`[data-cy="post-tag"][data-tag-label="${kindTag}"]`).should('be.visible');
-    cy.get('[data-testid="dialog-close"]').filter(':visible').click();
-    cy.get('[data-testid="custom-feed-dialog-content"]').should('not.exist');
+    cy.get('[data-cy="custom-feed-dialog"]').find('[data-cy="dialog-close"]').filter(':visible').click();
+    cy.get('[data-cy="custom-feed-dialog"]').should('not.exist');
 
     cy.signOut(HasBackedUp.Yes);
   });
