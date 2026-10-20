@@ -26,6 +26,7 @@ export function Human() {
   const [state, setState] = useState<States>(States.Selection);
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const verificationToastRef = useRef<ToastHandle | null>(null);
+  const verificationRequestRef = useRef(0);
   const { setInviteCode, reset } = useOnboardingStore();
   const router = useRouter();
   useEffect(() => {
@@ -50,12 +51,17 @@ export function Human() {
   // entered. On failure we surface a toast and keep the user on this step so they can try again.
   // Invalid or used codes show an error toast; unreachable homeserver errors use a distinct error title.
   async function onInviteCodeVerify(inviteCode: string): Promise<InviteCodeVerificationResult> {
+    const requestId = ++verificationRequestRef.current;
     dismissVerificationToast();
     try {
       const status = await AuthController.verifySignupToken(inviteCode);
 
+      // The input ignores superseded results; their toasts must also leave the current request alone.
+      if (requestId !== verificationRequestRef.current) {
+        return status;
+      }
+
       if (status === 'valid') {
-        dismissVerificationToast();
         return 'valid';
       }
 
@@ -73,10 +79,12 @@ export function Human() {
       });
       return 'invalid';
     } catch {
-      verificationToastRef.current = toast({
-        variant: 'error',
-        title: "Couldn't verify invite code",
-      });
+      if (requestId === verificationRequestRef.current) {
+        verificationToastRef.current = toast({
+          variant: 'error',
+          title: "Couldn't verify invite code",
+        });
+      }
       return 'error';
     }
   }

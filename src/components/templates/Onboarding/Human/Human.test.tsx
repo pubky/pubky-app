@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { toast } from '@/molecules/Toaster/toast';
@@ -147,6 +147,61 @@ describe('Human template', () => {
         await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Invite code applied'));
         expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled();
         expect(toast).toHaveBeenCalledTimes(2);
+      },
+    );
+
+    it('preserves the current error when an older verification succeeds after it', async () => {
+      const olderVerification = Promise.withResolvers<'valid'>();
+      mockVerifySignupToken.mockReturnValueOnce(olderVerification.promise).mockResolvedValueOnce('invalid');
+      const dismissCurrentError = vi.fn();
+      vi.mocked(toast).mockReturnValueOnce({ dismiss: dismissCurrentError });
+      render(<Human />);
+
+      goToInviteCodeAndVerify();
+      fireEvent.change(screen.getByRole('textbox', { name: 'Invite code' }), {
+        target: { value: 'AAAA-BBBB-CCCC' },
+      });
+      await waitFor(() => expect(toast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.invalid));
+      expect(mockVerifySignupToken).toHaveBeenNthCalledWith(1, INVITE_CODE);
+      expect(mockVerifySignupToken).toHaveBeenNthCalledWith(2, 'AAAA-BBBB-CCCC');
+
+      await act(async () => olderVerification.resolve('valid'));
+
+      expect(dismissCurrentError).not.toHaveBeenCalled();
+      expect(toast).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('status')).toBeEmptyDOMElement();
+      expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(mockSetInviteCode).not.toHaveBeenCalled();
+    });
+
+    it.each(['invalid', 'used', 'error'] as const)(
+      'does not leave an older %s toast over a newer successful verification',
+      async (outcome) => {
+        const olderVerification = Promise.withResolvers<'invalid' | 'used'>();
+        const currentVerification = Promise.withResolvers<'valid'>();
+        mockVerifySignupToken
+          .mockReturnValueOnce(olderVerification.promise)
+          .mockReturnValueOnce(currentVerification.promise);
+        render(<Human />);
+
+        goToInviteCodeAndVerify();
+        fireEvent.change(screen.getByRole('textbox', { name: 'Invite code' }), {
+          target: { value: 'AAAA-BBBB-CCCC' },
+        });
+
+        await act(async () => {
+          if (outcome === 'error') {
+            olderVerification.reject(new Error('network error'));
+          } else {
+            olderVerification.resolve(outcome);
+          }
+        });
+        await act(async () => currentVerification.resolve('valid'));
+
+        expect(toast).not.toHaveBeenCalled();
+        expect(screen.getByRole('status')).toHaveTextContent('Invite code applied');
+        expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled();
       },
     );
 
