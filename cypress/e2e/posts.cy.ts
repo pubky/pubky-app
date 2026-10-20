@@ -67,15 +67,20 @@ const expectPostTextOrder = (ordered: string[]) => {
   });
 };
 
+// A thread reply wraps its nested replies, so a control belongs to the reply whose own text
+// (the first post text under its nearest `thread-reply`) matches.
+const threadReplyControl = (replyText: string, selector: string) =>
+  cy
+    .get(`[data-cy="thread-reply"] ${selector}`)
+    .filter(':visible')
+    .filter((_, el) => {
+      const reply = el.closest('[data-cy="thread-reply"]');
+      return (reply?.querySelector('[data-cy="post-text"]')?.textContent ?? '').includes(replyText);
+    })
+    .should('have.length', 1);
+
 const replyOnThread = (parentText: string, replyContent: string) => {
-  cy.get('[data-cy="thread-reply"]')
-    .filter(':visible')
-    .filter((_, el) => (el.querySelector('[data-cy="post-text"]')?.textContent ?? '').includes(parentText))
-    .first()
-    .find('[data-cy="post-reply-btn"]')
-    .filter(':visible')
-    .first()
-    .click();
+  threadReplyControl(parentText, '[data-cy="post-reply-btn"]').click();
 
   cy.get('[data-cy="reply-post-input"]').should('be.visible');
   cy.get('[data-cy="reply-post-input"]').within(() => {
@@ -924,10 +929,10 @@ describe('posts', () => {
     expectPostTextOrder([root, level1, level2, level3]);
 
     // One nested reply starts expanded. Collapse hides the chain; expand brings it back.
-    cy.get('button[aria-label="Collapse all replies"]').filter(':visible').first().click();
+    threadReplyControl(level1, 'button[aria-label="Collapse all replies"]').click();
     cy.get(VISIBLE_POST_TEXT).should('not.contain.text', level2).and('not.contain.text', level3);
     cy.contains(VISIBLE_POST_TEXT, level1).should('be.visible');
-    cy.get('button[aria-label="Expand all replies"]').filter(':visible').first().click();
+    threadReplyControl(level1, 'button[aria-label="Expand all replies"]').click();
     cy.contains(VISIBLE_POST_TEXT, level2).should('be.visible');
     cy.contains(VISIBLE_POST_TEXT, level3).should('be.visible');
 
@@ -939,7 +944,8 @@ describe('posts', () => {
     // Root, level 1, level 2 and level 3 is more than three ancestors, so the middle is an ellipsis.
     cy.get('[data-testid="breadcrumb-ellipsis-trigger"]').should('be.visible').click();
     cy.get('[data-testid="breadcrumb-dropdown-content"]').should('be.visible');
-    cy.get('[data-testid^="breadcrumb-dropdown-item-"]').should('contain.text', username).first().click();
+    // The dropdown holds the ancestors between the root and the last two: here only level 1.
+    cy.get('[data-testid^="breadcrumb-dropdown-item-"]').should('have.length', 1).and('contain.text', username).click();
     cy.get('[data-cy="single-post-card"]').should('contain.text', level1);
 
     cy.get('[data-testid="breadcrumb-item-0"]').click();
@@ -947,10 +953,16 @@ describe('posts', () => {
     cy.get('[data-testid="post-page-title"]').should('contain.text', 'Post by');
     cy.get('[data-testid="post-breadcrumb"]').should('not.exist');
 
-    cy.get('[data-testid="quick-reply-textarea"]').filter(':visible').click().type(quickReply);
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('quickReplyCreated');
-    cy.get('[data-testid="quick-reply"]')
+    // The hidden feed under the post overlay has its own quick reply on the same post.
+    cy.get('[data-testid="quick-reply"]').filter(':visible').should('have.length', 1).as('postQuickReply');
+    cy.get('@postQuickReply')
+      .find('[data-testid="quick-reply-textarea"]')
       .filter(':visible')
+      .should('have.length', 1)
+      .click()
+      .type(quickReply);
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('quickReplyCreated');
+    cy.get('@postQuickReply')
       .find('[data-cy="post-input-action-bar-reply"]')
       .should('be.visible')
       .and('not.be.disabled')
@@ -959,7 +971,8 @@ describe('posts', () => {
     cy.contains(VISIBLE_POST_TEXT, quickReply).should('be.visible');
     expectPostTextOrder([root, level1, quickReply]);
 
-    cy.get('[data-cy="header-logo"]').click();
+    // Each page layout also renders a MobileHeader logo (`lg:hidden`); the desktop one is in <header>.
+    cy.get('header [data-cy="header-logo"]').should('have.length', 1).click();
     cy.location('pathname').should('eq', '/home');
   });
 
