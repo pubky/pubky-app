@@ -1,5 +1,7 @@
 import { webcrypto } from 'node:crypto';
+import { setImmediate } from 'node:timers';
 import type { Keypair, PublicKey, Session } from '@synonymdev/pubky';
+import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDefaultHttpRelay } from '@/config/network';
 import { AppError } from '@/libs/error/error';
@@ -20,6 +22,7 @@ import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observabilit
 import { shouldDropAppErrorFromSentry } from '@/libs/observability/sentry.utils';
 import { mockGrantReference } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { createTestWebLocks } from '@/test-utils/web-locks';
 
 // =============================================================================
 // HOISTED MOCKS - Must be hoisted to run before module imports
@@ -241,6 +244,10 @@ describe('HomeserverService', () => {
 
     // Setup default successful behaviors
     vi.stubGlobal('crypto', webcrypto);
+    vi.stubGlobal('setImmediate', setImmediate);
+    vi.stubGlobal('indexedDB', new IDBFactory());
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: createTestWebLocks() });
+    localStorage.clear();
     sessionStorage.clear();
     mockState.signup.mockResolvedValue(undefined);
     mockState.signin.mockResolvedValue(createMockSession());
@@ -275,6 +282,13 @@ describe('HomeserverService', () => {
     // Reset module cache and re-import
     vi.resetModules();
     ({ HomeserverService } = await import('@/services/homeserver/homeserver'));
+  });
+
+  afterEach(async () => {
+    const { GrantFlowService } = await import('./grant-flow');
+    GrantFlowService.clear();
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(navigator, 'locks');
   });
 
   // ===========================================================================
@@ -754,7 +768,7 @@ describe('HomeserverService', () => {
       });
 
       it('should cancel polling before first poll when cancelAuthFlow is called immediately', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         try {
           const tryPollOnce = vi.fn().mockResolvedValue(undefined);
           const free = vi.fn();
@@ -788,7 +802,7 @@ describe('HomeserverService', () => {
       it.each(['local', 'delegated'] as const)(
         'resumes the %s grant on the same relay channel after returning from Ring',
         async (mode) => {
-          vi.useFakeTimers();
+          vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
           const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
           try {
             const session = createMockSession();
@@ -839,7 +853,7 @@ describe('HomeserverService', () => {
       );
 
       it('settles a cancelled approval at once when the relay poll dropped while the page is hidden', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
         try {
           const transportError = new Error('Request failed: HTTP transport error: error sending request');
@@ -881,7 +895,7 @@ describe('HomeserverService', () => {
       });
 
       it('does not resume an abandoned grant when the page becomes visible again', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
         try {
           const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
@@ -916,7 +930,7 @@ describe('HomeserverService', () => {
       it.each(['cancel', 'clear', 'replace'] as const)(
         'frees a delegated resume that finishes after %s without polling or clearing a newer flow',
         async (action) => {
-          vi.useFakeTimers();
+          vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
           try {
             const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
             const deadFlow = {
@@ -978,7 +992,7 @@ describe('HomeserverService', () => {
       );
 
       it('gives up after the resume cap while the page stays visible', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         try {
           const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
           const deadFlow = () => ({ tryPollOnce: vi.fn().mockRejectedValue(transportError), free: vi.fn() });
@@ -1008,7 +1022,7 @@ describe('HomeserverService', () => {
       });
 
       it('rejects with SESSION_EXPIRED when the relay channel cannot be resumed', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         try {
           const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
           const deadFlow = {
@@ -1043,7 +1057,7 @@ describe('HomeserverService', () => {
       });
 
       it('does not resume once the relay no longer holds the approval when the page is visible again', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
         try {
           const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
@@ -1095,7 +1109,7 @@ describe('HomeserverService', () => {
           HomeserverService.startGrantFlow({ purpose: 'signin', capabilities: '/pub/pubky.app/:rw', generation: '' });
 
         beforeEach(() => {
-          vi.useFakeTimers();
+          vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
           visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
           userAgent = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(IPHONE_UA);
         });
@@ -1474,7 +1488,7 @@ describe('HomeserverService', () => {
       });
 
       it('preserves a network failure when grant polling fails', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         try {
           const relayError = { name: 'RequestError', message: 'Gateway Timeout', data: { statusCode: 504 } };
           const tryPollOnce = vi.fn().mockRejectedValue(relayError);
@@ -1600,7 +1614,7 @@ describe('HomeserverService', () => {
       });
 
       it('cancels polling when cancelAuthFlow is called', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         try {
           const tryPollOnce = vi.fn().mockResolvedValue(undefined);
           const free = vi.fn();

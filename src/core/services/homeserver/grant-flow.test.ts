@@ -3,6 +3,7 @@ import type { GrantAuthFlow, Pubky } from '@synonymdev/pubky';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_CAPABILITIES } from '@/config/auth';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { createTestWebLocks } from '@/test-utils/web-locks';
 import { type GrantFlowRequest, GrantFlowService } from './grant-flow';
 
 vi.mock('@/config/network', async (original) => ({
@@ -33,11 +34,13 @@ function makeSdk(flow = makeFlow()) {
 }
 beforeEach(() => {
   vi.stubGlobal('crypto', webcrypto);
+  Object.defineProperty(navigator, 'locks', { configurable: true, value: createTestWebLocks() });
   sessionStorage.clear();
   GrantFlowService.clear();
 });
 afterEach(() => {
   vi.restoreAllMocks();
+  GrantFlowService.clear();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -95,9 +98,7 @@ describe('pending Ring grant flow', () => {
   it('expires pending serialization after the bounded resume window', async () => {
     const sdk = makeSdk();
     await GrantFlowService.start(sdk, request);
-    const record = JSON.parse(sessionStorage.getItem(savedKey)!);
-    record.createdAt -= 180_001;
-    sessionStorage.setItem(savedKey, JSON.stringify(record));
+    vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 180_001);
     await GrantFlowService.start(sdk, request);
     expect(sdk.startGrantAuthFlow).toHaveBeenCalledTimes(2);
   });
