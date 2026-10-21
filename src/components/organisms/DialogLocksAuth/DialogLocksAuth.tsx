@@ -8,7 +8,8 @@
  *  2. Enable Locks   — iframe loads the Lock Server `/connect` page. On approval it posts the code
  *                      to the parent and `useLocksAuthFlow` exchanges it.
  *  2b. Enable Locks  — only for a session from before the app requested `/priv` (#2373): Pubky Ring
- *                      approves a session with today's capability list and it replaces the stored one.
+ *                      or Bitkit approves a session with today's capability list and it replaces the
+ *                      stored one.
  *                      Steps 2 and 2b are numbered (1/2) and (2/2) when both are pending at open.
  *  3. Enable Payments — iframe loads Paykit's `/setup` page, where the creator connects the account
  *                      that receives payments. The Lock Server is asked first whether this creator's
@@ -166,6 +167,10 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
         {'Use '}
         <Link href={getPubkyRingLink()} className="text-base font-bold">
           {'Pubky Ring'}
+        </Link>
+        {' or '}
+        <Link href={BITKIT_WEBSITE_URL} className="text-base font-bold">
+          {'Bitkit'}
         </Link>
         {' to authorize Locks server to manage your Locks data.'}
       </>
