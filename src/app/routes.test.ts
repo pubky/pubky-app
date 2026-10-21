@@ -21,6 +21,7 @@ import {
   isNavItemActive,
   isPostRoute,
   isPublicExploreRoute,
+  LEGAL_ROUTES,
   LOGO_LANDING_ROUTES,
   matchesAllowedRoute,
   matchPostRoute,
@@ -28,6 +29,7 @@ import {
   matchSingleCollectionRoute,
   ONBOARDING_ROUTES,
   PROFILE_ROUTES,
+  PUBLIC_ROUTES,
   SETTINGS_ROUTES,
   UNAUTHENTICATED_ROUTES,
 } from './routes';
@@ -241,6 +243,21 @@ describe('route access matrix', () => {
 
     expect(isDynamicPublicRoute(pathname)).toBe(true);
     expect(isRouteAccessible(pathname, UNAUTHENTICATED_ROUTES.allowedRoutes, true)).toBe(false);
+  });
+});
+
+describe('LEGAL_ROUTES', () => {
+  it('serves the Terms of Service and the Privacy Policy at their public paths', () => {
+    expect(LEGAL_ROUTES.TERMS_OF_USE).toBe('/terms-of-use');
+    expect(LEGAL_ROUTES.PRIVACY_POLICY).toBe('/privacy-policy');
+  });
+
+  it.each(Object.values(LEGAL_ROUTES))('keeps %s public for every auth state', (route) => {
+    expect(PUBLIC_ROUTES).toContain(route);
+  });
+
+  it.each(Object.values(LEGAL_ROUTES))('points the header logo on %s at the landing page', (route) => {
+    expect(isLogoLandingRoute(route)).toBe(true);
   });
 });
 

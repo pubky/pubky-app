@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { AUTH_ROUTES, HOME_ROUTES, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
+import { AUTH_ROUTES, HOME_ROUTES, LEGAL_ROUTES, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
 import { Header } from './Header';
 
 // Mock Next.js navigation
@@ -837,6 +837,36 @@ describe('Header', () => {
       expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
     });
+
+    it.each([LEGAL_ROUTES.TERMS_OF_USE, LEGAL_ROUTES.PRIVACY_POLICY])(
+      'renders HeaderHome for a signed-out visitor on %s',
+      (pathname) => {
+        mockCurrentUserPubky = null;
+        mockIsPublicRoute.mockReturnValue(false);
+        mockIsCoreExploreRoute.mockReturnValue(false);
+        mockUsePathname.mockReturnValue(pathname);
+
+        render(<Header />);
+
+        expect(screen.getByTestId('header-home')).toBeInTheDocument();
+        expect(screen.getByTestId('header-container')).toHaveAttribute('data-class-name', '');
+      },
+    );
+
+    it.each([LEGAL_ROUTES.TERMS_OF_USE, LEGAL_ROUTES.PRIVACY_POLICY])(
+      'keeps the header on mobile when signed in on %s, which has no mobile app shell',
+      (pathname) => {
+        mockCurrentUserPubky = 'test-pubky-123';
+        mockIsPublicRoute.mockReturnValue(false);
+        mockIsCoreExploreRoute.mockReturnValue(false);
+        mockUsePathname.mockReturnValue(pathname);
+
+        render(<Header />);
+
+        expect(screen.getByTestId('header-sign-in')).toBeInTheDocument();
+        expect(screen.getByTestId('header-container')).toHaveAttribute('data-class-name', '');
+      },
+    );
 
     it('prioritizes onboarding header over public route state', () => {
       mockCurrentUserPubky = null;

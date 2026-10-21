@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { LEGAL_ROUTES } from '@/app/routes';
 import { SettingsInfo } from './SettingsInfo';
 
 vi.mock('@/config/app', () => ({
@@ -21,6 +22,17 @@ describe('SettingsInfo', () => {
 
     expect(screen.getByText('Terms of Service & Privacy')).toBeInTheDocument();
     expect(screen.getByText('FAQ')).toBeInTheDocument();
+  });
+
+  it('links Terms of service and Privacy policy to their pages in the same tab', () => {
+    render(<SettingsInfo />);
+
+    const terms = screen.getByRole('link', { name: 'Terms of service' });
+    expect(terms).toHaveAttribute('href', LEGAL_ROUTES.TERMS_OF_USE);
+    expect(terms).not.toHaveAttribute('target');
+    const privacy = screen.getByRole('link', { name: 'Privacy policy' });
+    expect(privacy).toHaveAttribute('href', LEGAL_ROUTES.PRIVACY_POLICY);
+    expect(privacy).not.toHaveAttribute('target');
   });
 
   it('renders subtitle for Terms section', () => {

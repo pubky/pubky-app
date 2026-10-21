@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
-import { ONBOARDING_ROUTES } from '@/app/routes';
+import { LEGAL_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
 import {
@@ -26,6 +26,7 @@ export function Header() {
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
   const isLandingPage = pathname === '/';
   const isCopyrightPage = pathname === '/copyright';
+  const isLegalPage = pathname === LEGAL_ROUTES.TERMS_OF_USE || pathname === LEGAL_ROUTES.PRIVACY_POLICY;
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
   const currentTitle = stepConfig?.title;
@@ -41,8 +42,10 @@ export function Header() {
   // - User is on a core explore route (/home, /hot, /search, /collections) — MobileHeader + MobileFooter
   // - Any user on a dynamic public route (/post/..., /profile/[pubky], /collections/[userId]/[postId]) — page shell owns mobile chrome
   // - Authenticated on standard app routes — MobileHeader + MobileFooter
+  // Legal pages have no mobile app shell, so their header (and its way back) stays on every viewport.
   const shouldHideHeaderOnMobile =
-    isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
+    !isLegalPage &&
+    (isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute));
   // Show the step title on every onboarding page regardless of auth state: sign-up happens on the
   // pubky step, so the later key steps (pubky, backup) and the post-auth steps (profile, experience)
   // are all reached while authenticated. Outside onboarding (i.e. /logout) the title is only for

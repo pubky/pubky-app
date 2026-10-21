@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { UserRoundPlus } from 'lucide-react';
+import { LEGAL_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
@@ -15,8 +16,6 @@ import { cn } from '@/libs/utils/utils';
 import { HomeBrandFooter } from '@/molecules/Home/Home';
 import { Logo } from '@/molecules/Logo/Logo';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
-import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
-import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 import { LANDING_FINAL_SECTION_ID } from './Landing.constants';
 
 export function LandingFinalSection() {
@@ -45,7 +44,8 @@ export function LandingFinalSection() {
         <FooterLinks className="max-w-xl text-center [&_a]:no-underline">
           {'By creating a '}
           {'Pubky'}
-          {' account, you agree to the'} <DialogTerms />, <DialogPrivacy />
+          {' account, you agree to the'} <Link href={LEGAL_ROUTES.TERMS_OF_USE}>{'Terms of Service'}</Link>,{' '}
+          <Link href={LEGAL_ROUTES.PRIVACY_POLICY}>{'Privacy Policy'}</Link>
           {', and confirm you are'} <DialogAge />{' '}
           {'Pubky is powered by '}
           <Link href={getPubkyCoreLink()} target="_blank" className="font-semibold">

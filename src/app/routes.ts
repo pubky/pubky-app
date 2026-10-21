@@ -81,6 +81,12 @@ export enum COPYRIGHT_ROUTES {
   COPYRIGHT = '/copyright',
 }
 
+/** Public pages for the legal texts every sign-up, footer and Settings link points to. */
+export enum LEGAL_ROUTES {
+  TERMS_OF_USE = '/terms-of-use',
+  PRIVACY_POLICY = '/privacy-policy',
+}
+
 export enum DEV_ROUTES {
   /** Sentry verification harness — gated to non-production by the page itself. */
   SENTRY_TEST = '/sentry-test',
@@ -101,6 +107,8 @@ export const PUBLIC_ROUTES: string[] = [
   APP_ROUTES.PROFILE,
   // Copyright page should be accessible without authentication
   COPYRIGHT_ROUTES.COPYRIGHT,
+  // The Terms of Service and Privacy Policy must open for anyone, in any auth state (app stores link to them).
+  ...Object.values(LEGAL_ROUTES),
   // Sentry verification harness must be reachable without a session on preview deploys.
   // The page returns 404 in production via isSentryTestHarnessEnabled().
   DEV_ROUTES.SENTRY_TEST,
@@ -265,6 +273,7 @@ export const LOGO_LANDING_ROUTES: readonly string[] = [
   ROOT_ROUTES,
   ...Object.values(AUTH_ROUTES),
   COPYRIGHT_ROUTES.COPYRIGHT,
+  ...Object.values(LEGAL_ROUTES),
   ...Object.values(ONBOARDING_ROUTES),
 ];
 
