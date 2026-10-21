@@ -5,6 +5,7 @@ import {
   AUTH_ROUTES,
   COLLECTION_ROUTES,
   EXPLORE_ROUTES,
+  LEGAL_ROUTES,
   ONBOARDING_ROUTES,
   ROOT_ROUTES,
 } from '@/app/routes';
@@ -247,4 +248,54 @@ describe('mounted recovery context', () => {
       expect(screen.getByText('Preparing your account')).toBeInTheDocument();
     },
   );
+});
+
+describe('RouteGuardProvider legal pages with real route and auth rules', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthStore.setState({ ...authInitialState, hasHydrated: true });
+    useOnboardingStore.setState({ ...onboardingInitialState, hasHydrated: true });
+    useMigrationStore.getState().reset();
+  });
+
+  it.each(Object.values(LEGAL_ROUTES))('renders %s for a signed-out visitor without redirecting', (pathname) => {
+    mocks.pathname = pathname;
+    renderRoute();
+    expect(screen.getByText('Public content')).toBeInTheDocument();
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it.each(Object.values(LEGAL_ROUTES))('renders %s before the session has been restored', (pathname) => {
+    mocks.pathname = pathname;
+    useAuthStore.setState({ hasHydrated: false });
+    renderRoute();
+    expect(screen.getByText('Public content')).toBeInTheDocument();
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it.each(Object.values(LEGAL_ROUTES))('renders %s for a new account still in sign-up', (pathname) => {
+    mocks.pathname = pathname;
+    useAuthStore.setState({
+      currentUserPubky: 'new-account',
+      session: mockSession(),
+      hasProfile: false,
+      restoreStatus: 'ready',
+    });
+    renderRoute();
+    expect(screen.getByText('Public content')).toBeInTheDocument();
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it.each(Object.values(LEGAL_ROUTES))('renders %s for a signed-in member', (pathname) => {
+    mocks.pathname = pathname;
+    useAuthStore.setState({
+      currentUserPubky: 'member',
+      session: mockSession(),
+      hasProfile: true,
+      restoreStatus: 'ready',
+    });
+    renderRoute();
+    expect(screen.getByText('Public content')).toBeInTheDocument();
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
 });
