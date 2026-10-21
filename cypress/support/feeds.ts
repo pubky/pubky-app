@@ -111,7 +111,9 @@ export const expectVisibleSortSelected = (dataCy: string) => {
 
 export const expectVisibleContentSelected = (label: string) => {
   inSidebar('left', () => {
-    cy.get('[data-cy="filter-content-radiogroup"]')
+    // The custom feed drawer lists Content last, below the fold of the drawer's scroll container on phones.
+    const group = cy.get('[data-cy="filter-content-radiogroup"]');
+    (isMobile() ? group.scrollIntoView() : group)
       .filter(':visible')
       .find(`[data-cy="${label.toLowerCase()}-content-toggle"]`)
       .should('have.attr', 'data-selected', 'true');
