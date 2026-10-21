@@ -77,6 +77,15 @@ export const waitForNexusFollow = (follower: SeededUser, followee: SeededUser) =
     arrayBody<string>(response).includes(follower.id),
   );
 
+// The post view only carries the viewer's bookmark when asked for that viewer
+export const waitForNexusBookmark = (user: SeededUser, post: SeededPost) =>
+  waitForNexus(
+    `'${user.name}' bookmarking post ${post.id}`,
+    `/v0/post/${post.authorId}/${post.id}`,
+    (response) => response.status === 200 && Boolean((response.body as { bookmark?: unknown } | null)?.bookmark),
+    { viewer_id: user.id },
+  );
+
 const hasTagLabels = (response: NexusResponse, labels: string[]) => {
   const indexed = arrayBody<{ label: string }>(response).map((tag) => tag.label);
   return labels.every((label) => indexed.includes(label));
