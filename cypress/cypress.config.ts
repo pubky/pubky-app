@@ -32,6 +32,8 @@ export default defineConfig({
       commandDelay: defaultMs,
       ci: process.env['CI'],
       isMobile: false,
+      // Origin of the stubbed Lock Server (locks.cy.ts); the e2e workflow gives the app the same value.
+      locksStubUrl: process.env['PUBKY_RUNTIME_E2E_LOCKS_STUB_URL'] || 'http://lock-server.e2e.test',
     },
 
     // Plugins

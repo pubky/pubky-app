@@ -553,6 +553,12 @@ Never commit either.
   lives in `src/test-utils/locks.ts` (`mockLockFile()`, `MOCK_LOCK_AUTHOR_PUBKY`).
 - No integration test spans UI → application → SDK for the unlock flow; the local stack
   (testnet + Lock Server + nexus) is driven manually.
+- `cypress/e2e/locks.cy.ts` covers publish, owner view and payment unlock against the real Nexus and
+  homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
+  (the Locks CI job only, never a deploy) makes `initLockClient()` and `getLocksReads()` return
+  `locks.e2eStub.ts`: it sends each Lock Server call as `POST <stub>/e2e/<operation>`, which the spec
+  answers with `cy.intercept`, and writes the guarded bytes and `lock.json` to the creator's homeserver
+  itself. The pubky-e2e project will replace it with real end-to-end coverage.
 
 ## References
 
