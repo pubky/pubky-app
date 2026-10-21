@@ -8,6 +8,7 @@
  * purchase file and replica) and every Nexus read stay real.
  */
 import { userIdFromPubky } from './common';
+import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
 /** Same value as `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL` in the e2e workflow; the host never resolves. */
 export const locksStubUrl = (): string => String(Cypress.expose('locksStubUrl'));
@@ -293,9 +294,27 @@ export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
   });
 };
 
-export const visitPost = (authorPubky: string, postId: string) => {
-  cy.visit(`/post/${userIdFromPubky(authorPubky)}/${postId}`);
-  cy.get('[data-cy="single-post-card"]').filter(':visible').should('have.length', 1);
+export const singlePostCard = () => cy.get('[data-cy="single-post-card"]').filter(':visible');
+
+/**
+ * Opens the post from the home feed by navigating inside the app. A full page load would make the
+ * app restore the session from storage rather than keep the one the sign-in has just created.
+ */
+export const openPostFromHomeFeed = (authorPubky: string, postId: string, teaser: string) => {
+  cy.location('pathname').should('eq', '/home');
+  cy.findFirstPostInFeedFiltered(teaser, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+    cy.get('[data-cy="post-text"]').filter(':visible').first().click();
+  });
+  cy.location('pathname').should('eq', `/post/${userIdFromPubky(authorPubky)}/${postId}`);
+  singlePostCard().should('have.length', 1);
 };
 
-export const singlePostCard = () => cy.get('[data-cy="single-post-card"]').filter(':visible');
+/** The header shows the profile button only while the app treats the account as signed in. */
+export const expectSignedIn = (message: string) => {
+  const profileBtn = Cypress.expose('isMobile')
+    ? '[data-cy="footer-nav-profile-btn"]'
+    : '[data-cy="header-nav-profile-btn"]';
+  cy.get('body').should(($body) => {
+    expect($body.find(profileBtn).filter(':visible'), message).to.have.length(1);
+  });
+};

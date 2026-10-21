@@ -32,7 +32,9 @@ import {
   createLockServerState,
   editLockedArticleBody,
   editLockedPostText,
+  expectSignedIn,
   fillLockAnnouncement,
+  openPostFromHomeFeed,
   publishLock,
   registeredGuardedPosts,
   singlePostCard,
@@ -40,7 +42,6 @@ import {
   turnLockOff,
   turnLockOn,
   turnLockOnAndSetUpLocks,
-  visitPost,
   waitForNexusLockPost,
   writeLockedArticle,
   writeLockedPost,
@@ -87,10 +88,13 @@ const expectLockCriterion = (body: unknown) => {
 const payToUnlock = () => {
   cy.intercept('PUT', '**/priv/social/unlocked/**/post.json').as('replicaMarker');
   singlePostCard().find('[data-cy="locked-post-price"]').should('have.text', CARD_PRICE_LABEL);
-  singlePostCard().find('[data-cy="locked-post-unlock-btn"]').should('not.be.disabled').click();
+  singlePostCard().find('[data-cy="locked-post-unlock-btn"]').should('not.be.disabled');
+  // A reader the app has signed out gets the sign-in dialog instead of Pay to Unlock.
+  expectSignedIn('the reader is still signed in when pressing Unlock');
+  singlePostCard().find('[data-cy="locked-post-unlock-btn"]').click();
 
-  cy.get('[data-cy="pay-to-unlock-price"]').filter(':visible').should('have.text', DIALOG_PRICE_LABEL);
   cy.wait('@paykitHasData');
+  cy.get('[data-cy="pay-to-unlock-price"]').filter(':visible').should('have.text', DIALOG_PRICE_LABEL);
   cy.wait('@submitProof').then(({ request }) => {
     const bundle = (typeof request.body === 'string' ? JSON.parse(request.body) : request.body) as {
       bundle_id: string;
@@ -166,7 +170,7 @@ describe('locks', () => {
       waitForNexusLockPost(creatorPubky(), postId);
 
       cy.log('3. The owner sees the locked image and text, with the title and teaser');
-      visitPost(creatorPubky(), postId);
+      openPostFromHomeFeed(creatorPubky(), postId, teaser);
       singlePostCard().should('contain.text', teaser).and('not.contain.text', draftTeaser);
       singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
       singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'My locked content');
@@ -182,7 +186,7 @@ describe('locks', () => {
       cy.log('4. Another reader sees only the title and teaser');
       cy.signOut(HasBackedUp.Yes);
       signInAs(reader);
-      visitPost(creatorPubky(), postId);
+      openPostFromHomeFeed(creatorPubky(), postId, teaser);
       singlePostCard().should('contain.text', teaser).and('not.contain.text', lockedText);
       singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
       singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('not.exist');
@@ -202,6 +206,7 @@ describe('locks', () => {
 
       // A later visit reads the reader's own replica: no further payment or Lock Server read.
       cy.reload();
+      expectSignedIn('the reader is still signed in after a reload');
       singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('contain.text', lockedText);
       singlePostCard().find('[data-cy="post-attachment-image"]').should('be.visible');
     });
@@ -244,7 +249,7 @@ describe('locks', () => {
       waitForNexusLockPost(creatorPubky(), postId);
 
       cy.log('3. The owner sees the locked article body, with the title and teaser');
-      visitPost(creatorPubky(), postId);
+      openPostFromHomeFeed(creatorPubky(), postId, teaser);
       singlePostCard().should('contain.text', teaser).and('not.contain.text', draftTeaser);
       singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
       singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'My locked content');
@@ -257,7 +262,7 @@ describe('locks', () => {
       cy.log('4. Another reader sees only the title and teaser');
       cy.signOut(HasBackedUp.Yes);
       signInAs(reader);
-      visitPost(creatorPubky(), postId);
+      openPostFromHomeFeed(creatorPubky(), postId, teaser);
       singlePostCard().should('contain.text', teaser).and('not.contain.text', body);
       singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
       singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('not.exist');
@@ -273,6 +278,7 @@ describe('locks', () => {
         .and('contain.text', body);
 
       cy.reload();
+      expectSignedIn('the reader is still signed in after a reload');
       singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('contain.text', body);
     });
   });
