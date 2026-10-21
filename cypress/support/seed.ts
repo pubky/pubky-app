@@ -1,0 +1,126 @@
+import { backupDownloadFilePath } from './common';
+import { waitForNexusPost, waitForNexusUser } from './nexus';
+import type { SeedCreatePostArgs, SeededPost, SeededUser } from './types/seed';
+
+// Spec-side helpers for the seed tasks in cypress/plugins/seed.ts.
+//
+// They create the users and activity a test only observes (followers, other people's posts,
+// notifications to receive) through the homeserver API instead of driving the UI for every
+// precondition. Each UI flow they replace keeps its own focused test in the spec that owns it,
+// so seeding saves wall-clock time without dropping coverage.
+
+/**
+ * Signs a new user up on the test homeserver and writes their profile, the API equivalent of UI
+ * onboarding (covered by onboarding.cy.ts), then waits until Nexus has indexed them.
+ * With `withRecoveryFile`, also saves their encrypted recovery file where the UI backup would land,
+ * so the spec can sign in as them with `cy.signInWithEncryptedFile(backupDownloadFilePath(name))`.
+ */
+export const seedUserViaApi = (name: string, { bio = '', withRecoveryFile = false } = {}) =>
+  cy
+    .task<SeededUser>('seedCreateUser', {
+      name,
+      bio,
+      recoveryFilePath: withRecoveryFile ? backupDownloadFilePath(name) : undefined,
+    })
+    .then((user) => waitForNexusUser(user).then(() => user));
+
+// Nexus orders timelines and threads by indexing time, so every post-creating helper below waits for
+// its post to be indexed: posts seeded one after another keep that order, with no tied scores.
+const createIndexedPost = (args: SeedCreatePostArgs) =>
+  cy.task<SeededPost>('seedCreatePost', args).then((post) => waitForNexusPost(post).then(() => post));
+
+/**
+ * Publishes a short post as `author` (the composer is covered in posts.cy.ts). `tags` are added by
+ * the author right after, as tagging in the composer does. Resolves once Nexus has indexed the post.
+ */
+export const createPostViaApi = (author: SeededUser, content: string, { tags }: { tags?: string[] } = {}) =>
+  createIndexedPost({ authorId: author.id, content, kind: 'short', tags });
+
+/** Publishes an article (a `long` post with the app's `{ title, body }` content) as `author`. */
+export const createArticleViaApi = (
+  author: SeededUser,
+  title: string,
+  body: string,
+  { tags }: { tags?: string[] } = {},
+) => createIndexedPost({ authorId: author.id, content: JSON.stringify({ title, body }), kind: 'long', tags });
+
+/** Uploads a fixture image and publishes an image post attaching it, as the composer's image upload does. */
+export const createImagePostViaApi = (
+  author: SeededUser,
+  content: string,
+  { tags, fixture = 'mustache-you.png' }: { tags?: string[]; fixture?: string } = {},
+) =>
+  createIndexedPost({
+    authorId: author.id,
+    content,
+    kind: 'image',
+    imageFixturePath: `${Cypress.config('fixturesFolder')}/${fixture}`,
+    tags,
+  });
+
+/** Replies to `parent` as `author` (the reply dialogs are covered in posts.cy.ts). */
+export const replyViaApi = (author: SeededUser, parent: SeededPost, content: string) =>
+  createIndexedPost({ authorId: author.id, content, kind: 'short', parentUri: parent.uri });
+
+/** Reposts `original` as `author`, with optional quote `content` (the repost dialog is covered in posts.cy.ts). */
+export const repostViaApi = (author: SeededUser, original: SeededPost, content = '') =>
+  createIndexedPost({ authorId: author.id, content, kind: 'short', embed: { uri: original.uri, kind: original.kind } });
+
+/** The text the @mention autocomplete inserts for `user`; Nexus turns it into a mention of them. */
+export const mentionOf = (user: SeededUser) => user.pubky;
+
+/** Rewrites `post` with new `content`, as editing it in the app does. Wait on the effect you need. */
+export const editPostViaApi = (author: SeededUser, post: SeededPost, content: string) =>
+  cy.task('seedEditPost', { authorId: author.id, postId: post.id, content });
+
+/** Deletes `post` from the author's homeserver, as deleting it in the app does. */
+export const deletePostViaApi = (author: SeededUser, post: SeededPost) =>
+  cy.task('seedDeletePost', { authorId: author.id, postId: post.id });
+
+/** Tags `post` with each label as `tagger` (tagging in the UI is covered in posts.cy.ts). */
+export const tagPostViaApi = (tagger: SeededUser, post: SeededPost, labels: string[]) => {
+  labels.forEach((label) => cy.task('seedTag', { taggerId: tagger.id, uri: post.uri, label }));
+};
+
+/** Tags `user`'s profile with each label as `tagger` (profile tagging is covered in profile.cy.ts). */
+export const tagUserViaApi = (tagger: SeededUser, user: SeededUser, labels: string[]) => {
+  labels.forEach((label) => cy.task('seedTag', { taggerId: tagger.id, uri: user.uri, label }));
+};
+
+/** `follower` follows `followee` (following from a profile or a post menu is covered in contacts.cy.ts). */
+export const followUserViaApi = (follower: SeededUser, followee: SeededUser) =>
+  cy.task('seedFollow', { followerId: follower.id, followeeId: followee.id });
+
+/**
+ * Creates a collection holding `items` as `author` (creating one in the UI is covered in
+ * collections.cy.ts). Resolves once Nexus has indexed it.
+ */
+export const createCollectionViaApi = (
+  author: SeededUser,
+  name: string,
+  { description = '', items = [] }: { description?: string; items?: SeededPost[] } = {},
+) =>
+  cy
+    .task<SeededPost>('seedCreateCollection', {
+      authorId: author.id,
+      name,
+      description,
+      items: items.map((item) => item.uri),
+    })
+    .then((collection) => waitForNexusPost(collection).then(() => collection));
+
+/** Adds `post` to `collection`, rewriting the collection post as saving into it in the app does. */
+export const addPostToCollectionViaApi = (author: SeededUser, collection: SeededPost, post: SeededPost) =>
+  cy.task('seedAddToCollection', { authorId: author.id, collectionId: collection.id, itemUri: post.uri });
+
+/** `user` follows `collection`, which the app stores as a bookmark of the collection post. */
+export const followCollectionViaApi = (user: SeededUser, collection: SeededPost) =>
+  cy.task('seedBookmark', { userId: user.id, uri: collection.uri });
+
+/**
+ * Moves `user`'s last-read marker to now, so only notifications created afterwards count as unread.
+ * Without one, the app's first sign-in creates the marker at sign-in time and would mark as read
+ * every notification seeded before it.
+ */
+export const markNotificationsReadViaApi = (user: SeededUser) =>
+  cy.task('seedMarkNotificationsRead', { userId: user.id });
