@@ -1,6 +1,5 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
-import { userIdFromPubky } from '../support/common';
 import {
   assertNoRepeatedStreamRequests,
   assertScorePagesReadToEnd,
@@ -8,19 +7,16 @@ import {
   isPagingRequest,
   keyMatchesPostId,
   POSTS_PAGE_SIZE,
-  postIdFromWriteUrl,
   recordStreamPages,
   scrollTimelineToEnd,
   THREAD_INITIAL_REPLIES,
   waitForNexusStream,
 } from '../support/pagination';
-import { createQuickPost } from '../support/posts';
-import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
+import { createPostViaApi, replyViaApi, seedUserViaApi } from '../support/seed';
 
-type SeededPost = { id: string; text: string };
+type SeededText = { id: string; text: string };
 
 const username = 'Mr Pagination';
-const authorAlias = 'paginationAuthor';
 const runId = Date.now().toString();
 const tag = `page${runId.slice(-8)}`;
 const postPrefix = `pagination ${runId} post `;
@@ -35,8 +31,8 @@ const TIMELINE = '[data-cy="timeline-posts"]:visible';
 const SEARCH_TIMELINE = '[data-cy="post-search-results"] [data-cy="timeline-posts"]:visible';
 const THREAD_REPLY = '[data-cy="thread-reply"]:visible';
 
-const seededPosts: SeededPost[] = [];
-const seededReplies: SeededPost[] = [];
+const seededPosts: SeededText[] = [];
+const seededReplies: SeededText[] = [];
 let authorId = '';
 let rootId = '';
 let homeKeys: string[] = [];
@@ -53,66 +49,32 @@ const isPostTimelineQuery = (query: Record<string, string>) =>
   query['kind'] === undefined && query['sorting'] !== 'total_engagement' && isPagingRequest(query);
 
 describe('pagination', () => {
+  // Seeded through the API: this spec pages through the streams, and posting and replying in the UI
+  // are covered in posts.cy.ts. Nothing is signed in, so every surface below pages from Nexus.
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
-    cy.onboardAsNewUser(username, 'I post one page at a time', [BackupType.EncryptedFile], authorAlias);
-    cy.get<string>(`@${authorAlias}`).then((pubky) => {
-      authorId = userIdFromPubky(pubky);
-    });
 
-    Cypress._.times(POST_COUNT, (index) => {
-      const text = `${postPrefix}${pad(index)}`;
-      createQuickPost(text, [tag]);
-      cy.get<{ request: { url: string } }>('@postCreated')
-        .its('request.url')
-        .then((url) => {
-          seededPosts.push({ id: postIdFromWriteUrl(url), text });
+    // Each post is indexed before the next is written, so the streams order them as seeded
+    seedUserViaApi(username, { bio: 'I post one page at a time' }).then((author) => {
+      authorId = author.id;
+
+      Cypress._.times(POST_COUNT, (index) => {
+        const text = `${postPrefix}${pad(index)}`;
+        createPostViaApi(author, text, { tags: [tag] }).then((post) => {
+          seededPosts.push({ id: post.id, text });
         });
-    });
-
-    createQuickPost(rootText);
-    cy.get<{ request: { url: string } }>('@postCreated')
-      .its('request.url')
-      .then((url) => {
-        rootId = postIdFromWriteUrl(url);
       });
-    // Open the thread from the feed: a fresh `cy.visit` lets the click below land on the
-    // server-rendered composer before it hydrates, and the composer then never expands
-    cy.findFirstPostInFeedFiltered(rootText, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
-      cy.get('[data-cy="post-text"]').click();
-    });
-    // Built inside `.then()`: the ids are only set once the commands above have run
-    cy.then(() => {
-      cy.location('pathname').should('eq', `/post/${authorId}/${rootId}`);
-    });
-    cy.get('[data-cy="single-post-card"]:visible').should('have.length', 1);
-    cy.get('[data-cy="quick-reply"]').filter(':visible').should('have.length', 1).as('quickReply');
-    Cypress._.times(REPLY_COUNT, (index) => {
-      const text = `${replyPrefix}${pad(index)}`;
-      cy.get('@quickReply')
-        .find('[data-cy="quick-reply-textarea"]')
-        .filter(':visible')
-        .should('have.length', 1)
-        .should('have.value', '')
-        .click();
-      // The composer collapses after every reply; the click above expands it again
-      cy.get('@quickReply').find('[data-cy="post-input-action-bar-reply"]').filter(':visible').should('have.length', 1);
-      cy.get('@quickReply').find('[data-cy="quick-reply-textarea"]').filter(':visible').type(text);
-      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('replyCreated');
-      cy.get('@quickReply')
-        .find('[data-cy="post-input-action-bar-reply"]')
-        .filter(':visible')
-        .should('not.be.disabled')
-        .click();
-      cy.wait('@replyCreated').then(({ request, response }) => {
-        expect(response?.statusCode).to.eq(201);
-        seededReplies.push({ id: postIdFromWriteUrl(request.url), text });
+
+      createPostViaApi(author, rootText).then((root) => {
+        rootId = root.id;
+        Cypress._.times(REPLY_COUNT, (index) => {
+          const text = `${replyPrefix}${pad(index)}`;
+          replyViaApi(author, root, text).then((reply) => {
+            seededReplies.push({ id: reply.id, text });
+          });
+        });
       });
     });
-
-    // Signing out clears the local database, so every surface below pages from Nexus
-    cy.signOut(HasBackedUp.Yes);
 
     // The replies are the last writes: once they are indexed, every earlier post is too
     cy.then(() =>
