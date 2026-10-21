@@ -26,7 +26,13 @@ import {
   PostOrReply,
   waitForFeedToLoad,
 } from '../support/posts';
-import { expectTimelineContains, expectTimelineOmits } from '../support/feeds';
+import {
+  expectTimelineContains,
+  expectTimelineOmits,
+  expectVisibleReachSelected,
+  expectVisibleSortSelected,
+  resetHomeFeedToAllRecent,
+} from '../support/feeds';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 
@@ -524,9 +530,13 @@ describe('posts', () => {
 
     seedUserViaApi(`Tag Target ${String(stamp).slice(-6)}`).then((author) => {
       createPostViaApi(author, postContent).then((post) => {
-        // * tag the post from the home feed
-        cy.reload();
-        waitForFeedToLoad();
+        // * tag the post from the home feed. Reach All lists authors the viewer does not follow. The
+        // feed loaded before the post existed, so it arrives through 'See new posts' unless the
+        // reach change already refetched it.
+        resetHomeFeedToAllRecent();
+        expectVisibleReachSelected('all-reach-toggle');
+        expectVisibleSortSelected('recent-sort-toggle');
+        cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.Yes);
         fastTagPostInFeed([feedTag], postContent);
         expectTagsOnPost([feedTag]);
 
