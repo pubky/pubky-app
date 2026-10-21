@@ -105,6 +105,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
             <Link
               key={item.href}
               href={item.href}
+              data-cy={`footer-nav-${item.label.toLowerCase()}-btn`}
               // Search prefetch can loop even after leaving a query search (#2755).
               // Active feed links only scroll, so they also skip prefetch.
               prefetch={item.href === APP_ROUTES.SEARCH || (item.isFeedRoute && itemIsActive) ? false : undefined}

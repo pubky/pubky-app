@@ -54,6 +54,7 @@ export function SideDrawer({ open, onOpenChangeAction, children, position = 'lef
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
+        data-cy={`side-drawer-${position}-backdrop`}
         className={cn(
           'absolute inset-0 bg-black transition-opacity duration-300',
           isAnimating ? 'opacity-70' : 'opacity-0',
@@ -63,6 +64,7 @@ export function SideDrawer({ open, onOpenChangeAction, children, position = 'lef
 
       {/* Drawer */}
       <div
+        data-cy={`side-drawer-${position}`}
         className={cn(
           'fixed top-0 z-50 h-full',
           'bg-background p-4 shadow-xl sm:p-4 md:p-12',
