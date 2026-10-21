@@ -150,7 +150,7 @@ export function LockedPostContent({
         <>
           {/* Own lock: keep the (now inert) lock card above the content so the price/terms stay visible. */}
           {isOwnLock && <LockedPostCard title={lockContent.lock_title} price={price} />}
-          <div className="flex w-full flex-col gap-4">
+          <div className="flex w-full flex-col gap-4" data-cy="locked-post-unlocked-content">
             <div className="border-t border-border" />
             {/* Access indicator: the creator's own content vs. a lock the reader unlocked. */}
             <div className="flex items-center gap-1.5 text-brand">
@@ -159,7 +159,10 @@ export function LockedPostContent({
               ) : (
                 <Check className="size-4 shrink-0" aria-hidden />
               )}
-              <span className="text-xs leading-4 font-medium tracking-[1.2px] uppercase">
+              <span
+                className="text-xs leading-4 font-medium tracking-[1.2px] uppercase"
+                data-cy="locked-post-access-label"
+              >
                 {isOwnLock ? 'My locked content' : 'Unlocked'}
               </span>
             </div>

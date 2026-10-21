@@ -436,6 +436,7 @@ export default function InitializedMDXEditor({
           variant="inline"
           className="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
           data-testid="markdown-textarea"
+          data-cy="markdown-textarea"
           // Suppress the iOS keyboard autofill accessory bar (passwords/cards/contacts)
           autoComplete="off"
         />
@@ -487,6 +488,7 @@ export default function InitializedMDXEditor({
                   </ButtonWithTooltip>
                   <ButtonWithTooltip
                     title={'Markdown'}
+                    data-cy="markdown-mode-btn"
                     onClick={switchToMarkdownMode}
                     // Mode switches while an upload is in flight would insert the
                     // async result into the hidden editor pane
