@@ -23,8 +23,6 @@
  * The separate pubky-e2e project (in progress) will cover Locks end to end with a real Lock Server,
  * Paykit and Bitkit; this spec covers the app's own flow until then.
  */
-import { slowCypressDown } from 'cypress-slow-down';
-import 'cypress-slow-down/commands';
 import { backupDownloadFilePath } from '../support/auth';
 import { userIdFromPubky } from '../support/common';
 import {
@@ -81,6 +79,18 @@ const expectLockCriterion = (body: unknown) => {
   });
 };
 
+/** One payment poll interval, plus headroom for a slow runner. */
+const PAYMENT_POLL_TIMEOUT_MS = 10_000;
+
+const expectTaskStatus = (status: 'pending' | 'completed') => {
+  cy.wait('@lookupVerificationTask', { requestTimeout: PAYMENT_POLL_TIMEOUT_MS }).then(({ response }) => {
+    const reply = (typeof response?.body === 'string' ? JSON.parse(response.body) : response?.body) as {
+      status: string;
+    };
+    expect(reply.status, 'the verification task status').to.eq(status);
+  });
+};
+
 /**
  * Opens Pay to Unlock as the reader and pays through the stubbed wallet. The payment request must
  * be for this lock (the creator's `lock.json`), delivered to this reader, at the lock's price.
@@ -110,6 +120,10 @@ const payToUnlock = () => {
     expect(bundle.proofs[0]).to.include({ criterion_id: 'criterion-1', verifier_type: 'paykit-payment' });
     expect(bundle.bundle_id).to.not.eq('');
   });
+  // The wallet pays on the second lookup: the first one runs as the proof is submitted and reads
+  // `pending`, the next comes one payment poll (3 s) later and reads `completed`.
+  expectTaskStatus('pending');
+  expectTaskStatus('completed');
   cy.wait('@issueAccessCredential');
   cy.get('[data-cy="pay-to-unlock-view-content"]').filter(':visible').click();
   cy.get('[data-cy="pay-to-unlock-view-content"]').should('not.exist');
@@ -118,7 +132,6 @@ const payToUnlock = () => {
 
 describe('locks', () => {
   before(() => {
-    slowCypressDown();
     cy.deleteDownloadsFolder();
 
     cy.onboardAsNewUser(reader.username, '', [BackupType.EncryptedFile], reader.pubkyAlias);
