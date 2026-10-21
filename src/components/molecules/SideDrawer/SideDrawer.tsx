@@ -51,10 +51,9 @@ export function SideDrawer({ open, onOpenChangeAction, children, position = 'lef
         : 'translate-x-full';
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-50" data-cy={`side-drawer-${position}-overlay`}>
       {/* Backdrop */}
       <div
-        data-cy={`side-drawer-${position}-backdrop`}
         className={cn(
           'absolute inset-0 bg-black transition-opacity duration-300',
           isAnimating ? 'opacity-70' : 'opacity-0',
