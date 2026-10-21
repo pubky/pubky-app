@@ -40,6 +40,7 @@ const mocks = vi.hoisted(() => {
     getTestnet: vi.fn(() => true),
     getLockServer: vi.fn((): string | undefined => 'lockserverpubky'),
     getPaykitServerUrl: vi.fn((): string | undefined => 'https://paykit.server'),
+    getE2eLocksStubUrl: vi.fn((): string | undefined => undefined),
     setLockServicePointer,
     paykitSetupStatus,
     fakeSession,
@@ -65,6 +66,7 @@ vi.mock('@/config/network', () => ({
   getHomeserver: () => 'homeservertestpubky',
   getLockServer: mocks.getLockServer,
   getPaykitServerUrl: mocks.getPaykitServerUrl,
+  getE2eLocksStubUrl: mocks.getE2eLocksStubUrl,
 }));
 
 vi.mock('@synonymdev/locks-sdk', () => {

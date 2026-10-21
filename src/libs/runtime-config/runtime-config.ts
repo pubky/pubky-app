@@ -174,6 +174,9 @@ export const getLockServer = (): string | undefined => getRuntimeConfig().lockSe
 // Optional Paykit Server address for the creator's payout setup (undefined = Locks disabled).
 export const getPaykitServerUrl = (): string | undefined => getRuntimeConfig().paykitServerUrl;
 
+// Cypress E2E only: the stubbed Lock Server origin (undefined = the real Locks SDK).
+export const getE2eLocksStubUrl = (): string | undefined => getRuntimeConfig().e2eLocksStubUrl;
+
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
 export const getPulseClientKey = (): string | undefined => getRuntimeConfig().pulseClientKey;
 export const getPulseEndpoint = (): string | undefined => getRuntimeConfig().pulseEndpoint;

@@ -111,6 +111,7 @@ export function LockedPostCard({
         className,
       )}
       data-testid="locked-post-card"
+      data-cy="locked-post-card"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-4">
         <div className={cn('flex items-center gap-2', editableTitle && 'group')}>
@@ -146,7 +147,10 @@ export function LockedPostCard({
           ) : (
             <>
               <StickyNote className="size-6 shrink-0 text-muted-foreground" aria-hidden />
-              <h4 className="line-clamp-2 min-w-0 flex-1 text-xl leading-7 font-bold wrap-anywhere text-foreground">
+              <h4
+                className="line-clamp-2 min-w-0 flex-1 text-xl leading-7 font-bold wrap-anywhere text-foreground"
+                data-cy="locked-post-title"
+              >
                 {title?.trim() || DEFAULT_LOCK_TITLE}
               </h4>
             </>
@@ -171,6 +175,7 @@ export function LockedPostCard({
               'relative z-10 h-10 gap-2 rounded-full px-4 transition-transform ease-out disabled:opacity-100',
               isLoading && 'invisible',
             )}
+            data-cy="locked-post-unlock-btn"
           >
             <LockOpen className="size-4 shrink-0" aria-hidden />
             {'Unlock'}
@@ -178,7 +183,9 @@ export function LockedPostCard({
           {/* `invisible`, not removed: the hidden contents keep the pill at its loaded width. */}
           <div ref={lockInfoRef} className={cn('flex items-center gap-1.5 px-4 text-brand', isLoading && 'invisible')}>
             <Wallet className="size-4 shrink-0" aria-hidden />
-            <span className="text-xs leading-4 font-medium tracking-[1.2px]">{priceLabel}</span>
+            <span className="text-xs leading-4 font-medium tracking-[1.2px]" data-cy="locked-post-price">
+              {priceLabel}
+            </span>
           </div>
           {isLoading && <Spinner size="sm" className="absolute inset-0 m-auto" />}
         </div>

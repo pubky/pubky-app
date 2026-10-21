@@ -137,7 +137,7 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chrome]
-        spec: ["contacts.cy.ts", "feed.cy.ts", "notifications.cy.ts", "onboarding.cy.ts", "posts.cy.ts", "profile.cy.ts", "search.cy.ts", "settings.cy.ts", "collections.cy.ts"]
+        spec: ["contacts.cy.ts", "feed.cy.ts", "notifications.cy.ts", "onboarding.cy.ts", "posts.cy.ts", "profile.cy.ts", "search.cy.ts", "settings.cy.ts", "collections.cy.ts", "locks.cy.ts"]
 
     steps:
       - name: Validate envs from rebuild_images job
@@ -248,6 +248,13 @@ jobs:
               environment:
                 PUBKY_RUNTIME_NOTIFICATION_POLL_INTERVAL_MS: "2000"
           EOF
+
+      # Locks needs Pubky Ring, Bitkit and a Lock / Paykit Server, none of which run in CI: the Locks
+      # spec alone runs the app against a stubbed Lock Server (see the script and locks.cy.ts).
+      - name: Enable the stubbed Locks boundary for the Locks spec
+        if: matrix.spec == 'locks.cy.ts'
+        working-directory: pubky-stack/docker
+        run: bash ../../pubky-app/.github/scripts/e2e-enable-locks-stub.sh
 
       # pubky-stack@staging pins a homeserver that defaults to signup_mode = "open".
       # Open mode rejects signup token generation, so the invite continue button stays disabled.
