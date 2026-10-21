@@ -3,7 +3,7 @@ import {
   ConnectUrlOptions,
   CreateContentLockRequestBuilder,
   ExchangeFrontendSessionCodeOptions,
-  Locks,
+  type Locks,
   RegisterGuardedResourceOptions,
   type Session as LocksSdkSession,
   SetLockServicePointerOptions,
@@ -41,10 +41,10 @@ import {
   verificationTaskResponseSchema,
 } from './locks.types';
 import {
-  buildLocksOptions,
   ensureLocksSdkReady,
   getLockServerPubky,
   getLockSession,
+  getLocksReads,
   getPaykitServerOrigin,
   initLockClient,
   toLocksError,
@@ -131,7 +131,7 @@ export class LocksService {
       await ensureLocksSdkReady();
       // `readContentLock` rejects the `pubky://` scheme — pass the bare `<pubky>/pub/...` resource.
       const resource = lockUrl.replace(/^pubky:\/\//, '');
-      return await Locks.readContentLockWithOptions(resource, buildLocksOptions());
+      return await getLocksReads().readContentLock(resource);
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksService.readContentLock');
     }
@@ -196,7 +196,7 @@ export class LocksService {
   static async hasPaykitReceiver(readerPubky: string): Promise<boolean> {
     try {
       await ensureLocksSdkReady();
-      return await Locks.hasPaykitDataWithOptions(withPubkyPrefix(readerPubky), buildLocksOptions());
+      return await getLocksReads().hasPaykitData(withPubkyPrefix(readerPubky));
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksService.hasPaykitReceiver');
     }
