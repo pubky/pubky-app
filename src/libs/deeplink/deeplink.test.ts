@@ -1,12 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { DeployEnv } from '@/libs/runtime-config/runtime-config.schema';
 import {
   generateBitkitContactDeeplink,
   GenerateDeeplinkOptions,
   generatePubkyRingDeeplink,
-  getAndroidAuthPackage,
   toAndroidAuthIntentUrl,
   toBitkitIosAuthUrl,
 } from './deeplink';
+
+const { network } = vi.hoisted(() => ({ network: { deployEnv: 'production' as DeployEnv } }));
+vi.mock('@/config/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/network')>()),
+  getDeployEnv: () => network.deployEnv,
+}));
 
 describe('generatePubkyRingDeeplink', () => {
   describe('basic functionality', () => {
@@ -201,17 +207,28 @@ describe('toBitkitIosAuthUrl', () => {
   });
 });
 
-describe('getAndroidAuthPackage', () => {
-  it('returns to.pubky.ring for Pubky Ring and to.bitkit for Bitkit', () => {
-    expect(getAndroidAuthPackage('ring')).toBe('to.pubky.ring');
-    expect(getAndroidAuthPackage('bitkit')).toBe('to.bitkit');
-  });
-});
-
 describe('toAndroidAuthIntentUrl', () => {
   const grantQuery =
     'caps=%2Fpub%2Fpubky.app%2F%3Arw%2C%2Fpriv%2Fsocial%2F%3Arw&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=a%2Bb_c&cid=pubky.app&cpk=key&label=a+b%20c&label=%2f';
   const grantUrl = `pubkyauth://signin_grant?${grantQuery}`;
+
+  afterEach(() => {
+    network.deployEnv = 'production';
+  });
+
+  it.each([
+    { deployEnv: 'production', ring: 'to.pubky.ring', bitkit: 'to.bitkit' },
+    { deployEnv: 'staging', ring: 'to.pubky.ring', bitkit: 'to.bitkit.dev' },
+  ] as const)('targets the $deployEnv signer packages', ({ deployEnv, ring, bitkit }) => {
+    network.deployEnv = deployEnv;
+
+    expect(toAndroidAuthIntentUrl(grantUrl, 'ring')).toBe(
+      `intent://signin_grant?${grantQuery}#Intent;scheme=pubkyauth;package=${ring};end`,
+    );
+    expect(toAndroidAuthIntentUrl(grantUrl, 'bitkit')).toBe(
+      `intent://signin_grant?${grantQuery}#Intent;scheme=pubkyauth;package=${bitkit};end`,
+    );
+  });
 
   it('names the signer package and preserves the grant payload byte for byte', () => {
     expect(toAndroidAuthIntentUrl(grantUrl, 'ring')).toBe(

@@ -1,3 +1,5 @@
+import { getDeployEnv } from '@/config/network';
+
 export interface GenerateDeeplinkOptions {
   encode?: boolean;
 }
@@ -7,6 +9,8 @@ export type MobileAuthSigner = 'ring' | 'bitkit';
 const PUBKYAUTH_PREFIX = 'pubkyauth://';
 const PUBKY_RING_ANDROID_PACKAGE = 'to.pubky.ring';
 const BITKIT_ANDROID_PACKAGE = 'to.bitkit';
+// Staging pairs with the regtest Bitkit build so its payments are compatible.
+const BITKIT_REGTEST_ANDROID_PACKAGE = 'to.bitkit.dev';
 const CANONICAL_GRANT_URL = /^pubkyauth:\/\/(signin_grant|signup_grant)(?:\/[^\s?#]*)?(?:\?[^\s#]+)?$/;
 
 export const generatePubkyRingDeeplink = (value: string, options: GenerateDeeplinkOptions = {}): string => {
@@ -27,14 +31,17 @@ export const toBitkitIosAuthUrl = (url: string): string => {
   return query ? `bitkit://pubky-auth/signin?${query}` : url;
 };
 
-/** Android application ID for the chosen signer (`to.pubky.ring` or `to.bitkit`). */
-export const getAndroidAuthPackage = (signer: MobileAuthSigner): string =>
-  signer === 'ring' ? PUBKY_RING_ANDROID_PACKAGE : BITKIT_ANDROID_PACKAGE;
+const getAndroidAuthPackage = (signer: MobileAuthSigner): string => {
+  if (signer === 'ring') return PUBKY_RING_ANDROID_PACKAGE;
+  return getDeployEnv() === 'staging' ? BITKIT_REGTEST_ANDROID_PACKAGE : BITKIT_ANDROID_PACKAGE;
+};
 
 /**
  * Wraps a canonical `pubkyauth://` grant URL in an Android `intent://` URI targeting the signer's
  * package, so Android opens that app directly without an app chooser or a saved "Always" default.
  * Everything after `pubkyauth://` is preserved byte for byte; non-canonical URLs keep the plain link.
+ * No `S.browser_fallback_url` is set: when the package cannot handle the link (not installed, or
+ * Bitkit without a local Pubky key), Chrome opens that package's Play Store listing.
  */
 export const toAndroidAuthIntentUrl = (url: string, signer: MobileAuthSigner): string => {
   if (!CANONICAL_GRANT_URL.test(url)) return url;
