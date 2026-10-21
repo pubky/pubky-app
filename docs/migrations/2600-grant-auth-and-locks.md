@@ -128,12 +128,21 @@ release blocker for this migration. App-owned raw public HTTP calls omit cookies
 
 ## Ring, Passport and signup
 
-Pending authorization is tab-scoped in `sessionStorage` under `pubky-app-pending-grant-v1`. A saved attempt can resume
-for three minutes when its purpose, account, generation, full scopes, app identity, environment, homeserver, relay,
-callback metadata and signup-invite hash match.
+Ordinary Ring/Bitkit sign-in saves delegated pending authorization in a separate App-owned IndexedDB store, with
+`pubky-app-pending-grant-v1` in `sessionStorage` identifying the tab's preferred attempt. If Safari loses its process
+and sessionStorage, the next page can recover an unowned attempt with exactly the same context. A per-attempt Web
+Lock prevents two live tabs from consuming the same approval and remains held until session adoption finishes.
+Local-key serialization, Passport popups, signup and capability upgrades remain tab-scoped.
+A saved attempt can resume for three minutes when its purpose, account, generation, full scopes, app identity,
+environment, homeserver, relay, callback metadata and signup-invite hash match. Resuming does not extend that window.
 This is the app's resume window, not a grant/bearer lifetime or a hard deadline for live approval polling.
 The SDK serialization mode selects the resume API. Explicit QR regeneration starts a new attempt; page reload can
-resume a matching saved attempt. Unmount alone preserves mobile handoff. Treat pending serializations as sensitive.
+resume a matching saved attempt. Unmount alone preserves mobile handoff. Cancel/completion removes only the owned
+attempt, using an id-only cancellation marker while the IndexedDB delete finishes. Expired/canceled entries are
+pruned when the store is next read. Storage failure does not silently start a different channel.
+Treat pending serializations as sensitive: delegated state includes relay/HPKE secrets, and local state also contains
+a proof key. Neither is public metadata. See [ADR 0024](../adr/0024-grant-authentication.md) for the bounded durable
+sign-in exception to the earlier sessionStorage-only policy.
 
 Completed approvals rejected after approval (including insufficient scopes, an account mismatch, and losing races)
 are retained without becoming active. Permission upgrades reject a different identity; retained

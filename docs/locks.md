@@ -329,9 +329,9 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    **3 seconds**, the link read every **1 second**. Each skips a tick while its own call is still out,
    so a link read that hangs cannot delay a finished payment. The task lookup is the only lifecycle
    truth. `connected` and `blocked` end the link loop; a terminal task status ends both. Visibility
-   return and **Check again** restart the pair, and both park together after 3 wall-clock minutes
-   without failing the purchase. While the invoice does not exist yet, those 3 minutes count from the
-   server's invoice deadline instead; once it exists, they start again.
+   return, window focus while visible and **Check again** restart the pair, and both park together
+   after 3 wall-clock minutes without failing the purchase. While the invoice does not exist yet, those
+   3 minutes count from the server's invoice deadline instead; once it exists, they start again.
    An `expired` task stops waiting and shows "The payment was not completed. You can try again."
    in both the dialog and toast. This covers rejected, canceled and timed-out requests without
    interpreting `terminal_reason`. **Try again** starts a new payment as in step 3;

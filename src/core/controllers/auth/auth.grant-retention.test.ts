@@ -1,5 +1,6 @@
 import { webcrypto } from 'node:crypto';
 import { type GrantAuthFlow, Pubky, type Session } from '@synonymdev/pubky';
+import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { getAuthClientId } from '@/config/auth';
@@ -14,6 +15,7 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
 import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { createTestWebLocks } from '@/test-utils/web-locks';
 import { AuthController } from './auth';
 
 vi.mock('@/database/franky/franky.helpers', () => ({ clearDatabase: vi.fn().mockResolvedValue(undefined) }));
@@ -104,9 +106,10 @@ function failReferenceReads() {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal('crypto', webcrypto);
+  vi.stubGlobal('indexedDB', new IDBFactory());
   Object.defineProperty(navigator, 'locks', {
     configurable: true,
-    value: { request: async (_name: string, callback: () => void) => callback() },
+    value: createTestWebLocks(),
   });
   localStorage.clear();
   sessionStorage.clear();
@@ -206,15 +209,21 @@ describe('completed grant retention', () => {
 
   it('reuses the saved candidate when superseded while waiting for the reference lock', async () => {
     const lock = deferred<void>();
-    const request = vi.fn(async (_name: string, callback: () => void) => {
-      await lock.promise;
-      callback();
+    const originalRequest = navigator.locks.request.bind(navigator.locks);
+    const referenceLockRequested = vi.fn();
+    vi.spyOn(navigator.locks, 'request').mockImplementation(async (name, optionsOrCallback, callback) => {
+      if (name === AUTH_PERSIST_KEY) {
+        referenceLockRequested();
+        await lock.promise;
+      }
+      return typeof optionsOrCallback === 'function'
+        ? originalRequest(name, optionsOrCallback)
+        : originalRequest(name, optionsOrCallback, callback);
     });
-    Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
     const old = nextFlow();
     const result = await AuthController.getAuthUrl();
     old.poll.resolve(candidate);
-    await vi.waitFor(() => expect(request).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(referenceLockRequested).toHaveBeenCalledOnce());
     nextFlow();
     await AuthController.getAuthUrl(true);
     const pending = sessionStorage.getItem(PENDING_KEY);
@@ -333,14 +342,12 @@ describe('completed grant retention', () => {
           return asOpaque({ id: 'candidate', storageMode: 'delegated' });
         });
       } else {
-        Object.defineProperty(navigator, 'locks', {
-          configurable: true,
-          value: {
-            request: async (_name: string, callback: () => void) => {
-              readFailure = failReferenceReads();
-              callback();
-            },
-          },
+        const originalRequest = navigator.locks.request.bind(navigator.locks);
+        vi.spyOn(navigator.locks, 'request').mockImplementation(async (name, optionsOrCallback, callback) => {
+          if (name === AUTH_PERSIST_KEY) readFailure = failReferenceReads();
+          return typeof optionsOrCallback === 'function'
+            ? originalRequest(name, optionsOrCallback)
+            : originalRequest(name, optionsOrCallback, callback);
         });
       }
       old.poll.resolve(candidate);

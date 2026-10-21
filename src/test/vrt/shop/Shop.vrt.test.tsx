@@ -4,7 +4,7 @@
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
 import { cdp, page, server } from 'vitest/browser';
-import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook, mockSettingsStore } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
@@ -15,6 +15,7 @@ const routeState = vi.hoisted(() => ({
   pathname: '/shop',
   unavailable: false,
   upgradeOpen: false,
+  signedIn: true,
 }));
 
 const SHOP_CHROME_IMAGE_URLS = [
@@ -98,7 +99,9 @@ vi.mock('@/stores/auth/auth.store', async () => {
   const { mockRingSession } = await import('@/test-utils/pubky');
   return {
     useAuthStore: createZustandLikeHook({
-      currentUserPubky: f.viewerPubky,
+      get currentUserPubky() {
+        return routeState.signedIn ? f.viewerPubky : null;
+      },
       session: mockRingSession(['/:rw'], f.viewerPubky),
       sessionExport: null,
       hasProfile: true,
@@ -160,10 +163,10 @@ vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   usePublicRoute: () => ({
-    isPublicRoute: false,
+    isPublicRoute: true,
     isCoreExploreRoute: false,
-    isDynamicPublicRoute: false,
-    isPublicExploreRoute: false,
+    isDynamicPublicRoute: true,
+    isPublicExploreRoute: true,
   }),
 }));
 
@@ -247,9 +250,15 @@ vi.mock('@/hooks/useShopEmbed/useShopEmbed', () => ({
     handleFrameLoad: () => {},
   }),
 }));
-async function renderShop(viewport: { width: number; height: number }, unavailable = false, upgradeOpen = false) {
+async function renderShop(
+  viewport: { width: number; height: number },
+  unavailable = false,
+  upgradeOpen = false,
+  signedIn = true,
+) {
   routeState.unavailable = unavailable;
   routeState.upgradeOpen = upgradeOpen;
+  routeState.signedIn = signedIn;
   await preloadImages(SHOP_CHROME_IMAGE_URLS);
   return renderForVRT(
     <>
@@ -270,6 +279,60 @@ describe('embedded Shop shell — visual regression', () => {
     const screen = await renderShop(VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByTitle('Pubky Shop')).toBeVisible();
     await matchVrtFrameScreenshot('shop-mobile');
+  });
+  it.each([
+    { name: 'portrait', viewport: VRT_VIEWPORT_MOBILE, signedIn: true },
+    { name: 'landscape', viewport: { width: 844, height: 390 }, signedIn: true },
+    { name: 'guest portrait', viewport: VRT_VIEWPORT_MOBILE, signedIn: false },
+    { name: 'guest landscape', viewport: { width: 844, height: 390 }, signedIn: false },
+  ])('keeps one reachable Shop scroll area in $name', async ({ viewport, signedIn }) => {
+    const screen = await renderShop(viewport, false, false, signedIn);
+    const root = screen.getByTestId(VRT_ROOT_TESTID).element();
+    const frame = screen.getByTitle('Pubky Shop').element() as HTMLIFrameElement;
+    const shell = screen.getByTestId('shop-shell').element();
+    const footer = screen.getByRole('link', { name: 'Home', exact: true }).element().parentElement!.parentElement!;
+    const originalStyles = [root, document.documentElement, document.body].map((element) => element.style.cssText);
+    try {
+      // Undo the screenshot harness's clipping. This must prove a real document
+      // fits, not merely that an overflowing page can be cropped to the viewport.
+      root.style.height = 'auto';
+      root.style.overflow = 'visible';
+      document.documentElement.style.setProperty('overflow', 'visible', 'important');
+      document.body.style.setProperty('overflow-y', 'auto', 'important');
+      frame.srcdoc = `<!doctype html><html><body style="margin:0;min-width:375px">
+        <main style="box-sizing:border-box;padding:24px">
+          <h1>Long marketplace listing</h1>
+          <div style="height:2400px">Listing details</div>
+          <button id="checkout">Continue to checkout</button>
+        </main></body></html>`;
+      await expect.poll(() => Boolean(frame.contentDocument?.getElementById('checkout'))).toBe(true);
+      const frameBounds = frame.getBoundingClientRect();
+      const footerBounds = footer.getBoundingClientRect();
+      expect(frameBounds.left).toBeCloseTo(0, 0);
+      expect(frameBounds.width).toBeCloseTo(viewport.width, 0);
+      expect(frameBounds.top).toBeGreaterThan(0);
+      expect(frameBounds.height).toBeGreaterThan(0);
+      expect(frameBounds.bottom).toBeCloseTo(footerBounds.top, 0);
+      expect(footerBounds.bottom).toBeCloseTo(viewport.height, 0);
+      expect(shell.scrollHeight).toBeLessThanOrEqual(viewport.height + 1);
+      expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(viewport.height + 1);
+      expect(frame.contentDocument!.documentElement.scrollWidth).toBeLessThanOrEqual(frame.clientWidth);
+      if (!signedIn) await expect.element(screen.getByRole('button', { name: 'Join Pubky' })).toBeVisible();
+
+      const child = frame.contentWindow!;
+      child.scrollTo(0, frame.contentDocument!.documentElement.scrollHeight);
+      await expect.poll(() => child.scrollY).toBeGreaterThan(viewport.height);
+      const checkout = frame.contentDocument!.getElementById('checkout')!.getBoundingClientRect();
+      expect(checkout.top).toBeGreaterThanOrEqual(0);
+      expect(checkout.bottom).toBeLessThanOrEqual(frame.clientHeight);
+      expect(frameBounds.top + checkout.bottom).toBeLessThanOrEqual(footerBounds.top);
+      expect(window.scrollY).toBe(0);
+      expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(viewport.height + 1);
+    } finally {
+      [root, document.documentElement, document.body].forEach((element, index) => {
+        element.style.cssText = originalStyles[index];
+      });
+    }
   });
   it('renders the unavailable Shop in the desktop App shell', async () => {
     const screen = await renderShop(VRT_VIEWPORT_DESKTOP, true);

@@ -844,9 +844,9 @@ describe('usePayToUnlock (waiting)', () => {
       await vi.advanceTimersByTimeAsync(ms);
     });
 
-  const returnToTab = (ms = 0) =>
+  const returnToTab = (ms = 0, event: 'visibilitychange' | 'focus' = 'visibilitychange') =>
     act(async () => {
-      document.dispatchEvent(new Event('visibilitychange'));
+      (event === 'focus' ? window : document).dispatchEvent(new Event(event));
       await vi.advanceTimersByTimeAsync(ms);
     });
 
@@ -1252,9 +1252,11 @@ describe('usePayToUnlock (waiting)', () => {
     await advance(0);
     expect(connectionCalls()).toBe(1);
 
-    // Every visibility event asks both loops to read now; the ones already out must not be doubled.
+    // Both return signals ask the loops to read now; the ones already out must not be doubled.
     await advance(POLL_INTERVAL_MS);
+    await returnToTab(0, 'focus');
     await returnToTab();
+    await returnToTab(0, 'focus');
     await returnToTab();
     expect(statusCalls()).toBe(2);
     expect(connectionCalls()).toBe(1);
@@ -1281,7 +1283,7 @@ describe('usePayToUnlock (waiting)', () => {
     await advance(STALL_AFTER_MS);
     expect(result.current.isStalled).toBe(true);
 
-    await returnToTab();
+    await returnToTab(0, 'focus');
     expect(statusCalls()).toBe(3);
 
     await act(async () => {
@@ -1354,7 +1356,7 @@ describe('usePayToUnlock (waiting)', () => {
     expect(statusCalls()).toBe(3);
   });
 
-  it('parks both loops at the stall deadline and resumes them on tab focus', async () => {
+  it.each(['visibilitychange', 'focus'] as const)('parks both loops and resumes them on %s', async (event) => {
     vi.mocked(LocksController.fetchPaykitConnectionState).mockResolvedValue('none');
 
     const { result } = renderPay();
@@ -1369,10 +1371,15 @@ describe('usePayToUnlock (waiting)', () => {
     expect(statusCalls()).toBe(callsWhenParked.status);
     expect(connectionCalls()).toBe(callsWhenParked.connection);
 
-    await returnToTab(POLL_INTERVAL_MS);
+    expect(document.visibilityState).toBe('visible');
+    await returnToTab(POLL_INTERVAL_MS, event);
     expect(result.current.isStalled).toBe(false);
     expect(statusCalls()).toBeGreaterThan(callsWhenParked.status);
     expect(connectionCalls()).toBeGreaterThan(callsWhenParked.connection);
+    expect(LocksController.startPayment).not.toHaveBeenCalled();
+
+    await advance(STALL_AFTER_MS);
+    expect(result.current.isStalled).toBe(true);
   });
 
   it('parks at the wall-clock deadline even when a read never settles', async () => {
@@ -1518,6 +1525,7 @@ describe('usePayToUnlock (waiting)', () => {
     const returnToTabMidLookup = async () => {
       await advance(POLL_INTERVAL_MS);
       await returnToTab();
+      await returnToTab(0, 'focus');
     };
 
     it('keeps one lookup per interval', async () => {
@@ -1610,6 +1618,7 @@ describe('usePayToUnlock (waiting)', () => {
     const callsWhenClosed = { status: statusCalls(), connection: connectionCalls() };
     await advance(POLL_INTERVAL_MS * 3);
     await returnToTab();
+    await returnToTab(0, 'focus');
     expect(statusCalls()).toBe(callsWhenClosed.status);
     expect(connectionCalls()).toBe(callsWhenClosed.connection);
   });

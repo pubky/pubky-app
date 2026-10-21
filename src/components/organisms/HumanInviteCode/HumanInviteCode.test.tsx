@@ -171,6 +171,25 @@ describe('HumanInviteCode', () => {
     });
   });
 
+  it('announces successful verification inline and clears it when the code changes', async () => {
+    renderHumanInviteCode();
+
+    const input = await enterCompleteInviteCode();
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Invite code applied');
+    });
+    expect(input).toHaveAccessibleDescription('Invite code applied');
+
+    fireEvent.change(input, { target: { value: 'N76Q' } });
+
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+    expect(input).not.toHaveAttribute('aria-describedby');
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Back' })).toBeEnabled();
+  });
+
   it('keeps continue button disabled when verification fails', async () => {
     const handleVerify = vi.fn().mockResolvedValue('invalid');
     renderHumanInviteCode({ onVerify: handleVerify });
