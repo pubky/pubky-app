@@ -22,6 +22,8 @@ import {
   waitForFeedToLoad,
 } from '../support/posts';
 import { expectTimelineContains, expectTimelineOmits } from '../support/feeds';
+import { goToCollectionsPage } from '../support/header';
+import { itDesktopOnly } from '../support/mobile';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 
@@ -540,7 +542,8 @@ describe('posts', () => {
     });
   });
 
-  it('can tag and remove tags from existing post on post page (wide layout)', () => {
+  // Switches layout through the post page's layout filter, which phones do not offer.
+  itDesktopOnly('can tag and remove tags from existing post on post page (wide layout)', () => {
     const postContent = `I can add and remove tags from my existing post on the post page! ${Date.now()}`;
     const tag1 = 'açorda';
     const tag2 = 'cassava';
@@ -640,8 +643,7 @@ describe('posts', () => {
     createQuickPost(postContent2);
     bookmarkPost(postContent2);
 
-    cy.get('[data-cy="header-collections-btn"]').click();
-    cy.location('pathname').should('eq', '/collections');
+    goToCollectionsPage();
     cy.get('[data-cy="collection-bookmark-card"]').click();
     cy.location('pathname').should('eq', '/collections/bookmarks');
 
@@ -1032,7 +1034,7 @@ describe('posts', () => {
 
   // https://github.com/pubky/pubky-app/issues/416
   it('can navigate back to feed from post view', () => {
-    cy.viewport(1920, 640);
+    cy.viewport(Cypress.config('viewportWidth'), 640);
 
     const filler = `Scroll anchor ${Date.now()}`;
     [0, 1, 2, 3].forEach((index) => {
@@ -1063,11 +1065,11 @@ describe('posts', () => {
       cy.window().its('scrollY').should('be.closeTo', feedScrollY, 1);
     });
 
-    cy.viewport(1920, 1080);
+    cy.viewport(Cypress.config('viewportWidth'), Cypress.config('viewportHeight'));
   });
 
   it('can filter the feed by post kind', () => {
-    cy.viewport(1920, 1080);
+    cy.viewport(Cypress.config('viewportWidth'), Cypress.config('viewportHeight'));
     applyContentFilter('All');
 
     const stamp = Date.now();

@@ -1,12 +1,34 @@
+import { inSidebar, isMobile } from './mobile';
 import { waitForFeedToLoad } from './posts';
 
+export type FeedFilterGroup = 'reach' | 'sort' | 'content' | 'layout';
+
+// pick a home feed filter (e.g. 'following-reach-toggle') from the left sidebar, or the filters drawer on phones
+export const selectFeedFilter = (group: FeedFilterGroup, toggleDataCy: string) => {
+  inSidebar('left', () => {
+    cy.get(`[data-cy="filter-${group}-radiogroup"]`).filter(':visible').find(`[data-cy="${toggleDataCy}"]`).click();
+  });
+};
+
+// The feed tab strip scrolls horizontally on phones, so bring a tab into view before using it.
+export const getFeedNavigationItem = (selector: string) => {
+  const item = cy.get('[data-cy="feed-navigation"]').find(selector);
+  return isMobile() ? item.scrollIntoView() : item;
+};
+
 export const openCreateFeedDialog = () => {
-  cy.get('[data-cy="feed-navigation"]').find('[data-cy="feed-navigation-create-btn"]').should('be.visible').click();
+  getFeedNavigationItem('[data-cy="feed-navigation-create-btn"]').should('be.visible').click();
   cy.get('[data-cy="custom-feed-dialog"]').should('be.visible').and('contain.text', 'Create Feed');
 };
 
 export const openEditFeedDialog = (feedName: string) => {
   const pencil = `[data-cy="feed-navigation-edit-btn"][aria-label="Edit ${feedName}"]`;
+  // Phones only render the pencil on the active tab.
+  if (isMobile()) {
+    const tab = `[data-cy="feed-navigation-custom-tab"][aria-label="${feedName}"]`;
+    getFeedNavigationItem(tab).click();
+    cy.get('[data-cy="feed-navigation"]').find(tab).should('have.attr', 'aria-current', 'page');
+  }
   // On a desktop with hover the pencil stays transparent and ignores the pointer until its tab is
   // hovered or holds focus, so reveal it with focus as a keyboard user would.
   cy.get('[data-cy="feed-navigation"]').find(pencil).focus();
@@ -57,39 +79,43 @@ export const saveCustomFeed = () => {
 };
 
 export const expectFeedTab = (feedName: string) => {
-  cy.get('[data-cy="feed-navigation"]')
-    .find(`[data-cy="feed-navigation-custom-tab"][aria-label="${feedName}"]`)
-    .should('be.visible');
+  getFeedNavigationItem(`[data-cy="feed-navigation-custom-tab"][aria-label="${feedName}"]`).should('be.visible');
 };
 
 // The home filters persist, and the test before this one leaves Following + Popularity on.
 // Own posts are hidden on Following, so reset before creating posts the test has to see.
 export const resetHomeFeedToAllRecent = () => {
-  cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="all-reach-toggle"]').click();
+  selectFeedFilter('reach', 'all-reach-toggle');
   waitForFeedToLoad();
-  cy.get('[data-cy="filter-sort-radiogroup"]').find('[data-cy="recent-sort-toggle"]').click();
+  selectFeedFilter('sort', 'recent-sort-toggle');
   waitForFeedToLoad();
 };
 
 export const goToHomeFeedTab = () => {
-  cy.get('[data-cy="feed-navigation"]').find('[data-cy="feed-navigation-home-tab"]').click();
+  getFeedNavigationItem('[data-cy="feed-navigation-home-tab"]').click();
   cy.location('pathname').should('eq', '/home');
   waitForFeedToLoad();
 };
 
 export const expectVisibleReachSelected = (dataCy: string) => {
-  cy.get(`[data-cy="${dataCy}"]`).filter(':visible').should('have.attr', 'data-selected', 'true');
+  inSidebar('left', () => {
+    cy.get(`[data-cy="${dataCy}"]`).filter(':visible').should('have.attr', 'data-selected', 'true');
+  });
 };
 
 export const expectVisibleSortSelected = (dataCy: string) => {
-  cy.get(`[data-cy="${dataCy}"]`).filter(':visible').should('have.attr', 'data-selected', 'true');
+  inSidebar('left', () => {
+    cy.get(`[data-cy="${dataCy}"]`).filter(':visible').should('have.attr', 'data-selected', 'true');
+  });
 };
 
 export const expectVisibleContentSelected = (label: string) => {
-  cy.get('[data-cy="filter-content-radiogroup"]')
-    .filter(':visible')
-    .find(`[data-cy="${label.toLowerCase()}-content-toggle"]`)
-    .should('have.attr', 'data-selected', 'true');
+  inSidebar('left', () => {
+    cy.get('[data-cy="filter-content-radiogroup"]')
+      .filter(':visible')
+      .find(`[data-cy="${label.toLowerCase()}-content-toggle"]`)
+      .should('have.attr', 'data-selected', 'true');
+  });
 };
 
 export const expectTimelineContains = (text: string) => {

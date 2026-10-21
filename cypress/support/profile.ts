@@ -1,5 +1,74 @@
 import { goToProfilePageFromHeader } from './header';
+import { isMobile } from './mobile';
 import { LatestNotificationReadState } from './types/enums';
+
+export type ProfileTab =
+  | 'profile'
+  | 'notifications'
+  | 'posts'
+  | 'replies'
+  | 'followers'
+  | 'following'
+  | 'friends'
+  | 'tagged'
+  | 'collections'
+  | 'unlocked';
+
+// Desktop uses the profile filter bar; phones use the icon-only tab bar, keyed by page type,
+// which also has a Profile tab because the profile header is hidden on the other own-profile tabs.
+const profileTab = (tab: ProfileTab) => {
+  const selector = isMobile()
+    ? `[data-cy="profile-mobile-tab-${tab === 'tagged' ? 'unique_tags' : tab}"]`
+    : `[data-cy="profile-filter-item-${tab}"]`;
+  return cy.get(selector).filter(':visible').should('have.length', 1);
+};
+
+export const expectProfileTabActive = (tab: ProfileTab) => {
+  if (isMobile()) {
+    profileTab(tab).should('have.attr', 'aria-current', 'page');
+  } else {
+    profileTab(tab).closest('[data-selected="true"]').should('exist');
+  }
+};
+
+export const openProfileTab = (tab: ProfileTab) => {
+  profileTab(tab).click();
+  expectProfileTabActive(tab);
+};
+
+export const expectProfileTabLabel = (tab: ProfileTab, label: string) => {
+  if (isMobile()) {
+    profileTab(tab).should('have.attr', 'aria-label', label);
+  } else {
+    profileTab(tab).should('have.text', label);
+  }
+};
+
+// Phones show no per-tab counts, so the count is only asserted on desktop.
+export const expectProfileTabCount = (tab: ProfileTab, count: number) => {
+  if (isMobile()) return;
+  cy.get(`[data-cy="profile-filter-item-${tab}-count"]`).should('have.text', `${count}`);
+};
+
+// Phones hide the profile header (follow, edit, copy pubky, sign out) on every tab but Profile,
+// apart from another user's Posts tab.
+export const showProfileHeader = () => {
+  if (isMobile()) openProfileTab('profile');
+};
+
+// The tagged section sits in the desktop sidebar beside every tab, but only on the Profile tab on phones.
+export const showProfileTaggedSection = (desktopTab: ProfileTab) => {
+  openProfileTab(isMobile() ? 'profile' : desktopTab);
+};
+
+export const getProfileTaggedSection = () =>
+  cy.get('[data-cy="profile-tagged-section"]').filter(':visible').should('have.length', 1);
+
+export const openEditProfile = () => {
+  showProfileHeader();
+  cy.get('[data-cy="profile-edit-btn"]').filter(':visible').should('have.length', 1).click();
+  cy.location('pathname').should('eq', '/settings/edit');
+};
 
 interface ProfileField {
   editSelector: string;
@@ -55,19 +124,22 @@ export const editProfileAndVerify = (profileData: Partial<Record<keyof typeof pr
 
   // Verify redirection to the profile page
   cy.location('pathname').should('eq', '/profile');
+  showProfileHeader();
 
   // Verify the changes for each field in profileData
   Object.entries(profileData).forEach(([field, value]) => {
     const { verifySelector, verifyBy } = profileFields[field];
 
     if (verifyBy === 'href') {
-      cy.get(verifySelector).should('have.attr', 'href', value);
+      cy.get(verifySelector).filter(':visible').should('have.length', 1).and('have.attr', 'href', value);
     } else {
       // This is the equivalent of Selenium's getText() method, which returns the innerText of a visible element.
       // This approach is necessary for bio due to additional space inserted before final word.
-      cy.get(verifySelector).should(($elem) => {
-        expect($elem.get(0).innerText).to.eq(value);
-      });
+      cy.get(verifySelector)
+        .filter(':visible')
+        .should(($elem) => {
+          expect($elem.get(0).innerText).to.eq(value);
+        });
     }
   });
 };
@@ -180,18 +252,16 @@ export const checkLatestNotification = (
 export const addProfileTags = (tags: string[]) => {
   // add the tag - TagInput submits on Enter key
   for (const tag of tags) {
-    cy.get('[data-cy="add-tag-input"]').type(`${tag}{enter}`);
+    cy.get('[data-cy="add-tag-input"]').filter(':visible').should('have.length', 1).type(`${tag}{enter}`);
   }
 
   // wait for the tags to be added (check that the input is cleared)
-  cy.get('[data-cy="add-tag-input"]').should('have.value', '');
+  cy.get('[data-cy="add-tag-input"]').filter(':visible').should('have.value', '');
 };
 
 export const unfollowUserByUsername = (username: string) => {
   goToProfilePageFromHeader();
-  cy.get('[data-cy="profile-filter-item-following"]').click();
-  // Wait for the following filter to become active
-  cy.get('[data-cy="profile-filter-item-following"]').closest('[data-selected="true"]').should('exist');
+  openProfileTab('following');
   // Find the user by name and click their follow toggle button
   cy.contains('[data-cy="profile-follower-item-name"]', username)
     .closest('[data-cy="user-list-item"]')
@@ -239,8 +309,6 @@ export const waitForPutLastRead = () => {
 
 // cause last_read to be updated by clicking posts and notifications tabs
 export const causeNotificationsToBeRead = () => {
-  cy.get('[data-cy="profile-filter-item-posts"]').click();
-  // Wait for posts filter item to become active before clicking notifications
-  cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
-  cy.get('[data-cy="profile-filter-item-notifications"]').click();
+  openProfileTab('posts');
+  profileTab('notifications').click();
 };

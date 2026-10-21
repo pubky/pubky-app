@@ -1,5 +1,6 @@
 // import { CheckIndexed } from '../support/types/enums';
 
+import { isMobile } from './mobile';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
 export const MAX_POST_LENGTH = 2000;
@@ -137,15 +138,27 @@ const ARTICLE_MARKDOWN_MODE_BUTTON = 'button[aria-label="Markdown"]';
 const ARTICLE_SUBMIT_BUTTON = '[data-cy="post-input-action-bar-publish-article"]';
 const ARTICLE_ADD_BUTTON = '[data-cy="post-input-action-bar-add-article"]';
 const ARTICLE_HEADER_TAB = '[data-cy="article-composer-tab-header"]';
+const ARTICLE_TITLE_TAB = '[data-cy="article-composer-tab-title"]';
+const ARTICLE_CONTENT_TAB = '[data-cy="article-composer-tab-content"]';
 // Cover picker only. It is the file input in the Header tab. The markdown toolbar
 // mounts its own inputs (markdown-image-input, markdown-video-input,
 // markdown-audio-input, markdown-pdf-input) inside the Content panel.
 const ARTICLE_COVER_FILE_INPUT = '[data-testid="article-composer-panel-header"] input[type="file"]';
 const ARTICLE_FIELD_DEBOUNCE_MS = 600;
 
+// Phones put the title on its own composer tab; desktop shows it above the tabs.
+const showArticleTitle = () => {
+  if (isMobile()) cy.get(ARTICLE_TITLE_TAB).should('be.visible').click();
+  cy.get(ARTICLE_TITLE_INPUT).should('be.visible');
+};
+
+const showArticleContent = () => {
+  if (isMobile()) cy.get(ARTICLE_CONTENT_TAB).should('be.visible').click();
+};
+
 const switchToArticleMode = () => {
   cy.get(ARTICLE_ADD_BUTTON).should('be.visible').click();
-  cy.get(ARTICLE_TITLE_INPUT).should('be.visible');
+  showArticleTitle();
   cy.get('.mdxeditor-root-contenteditable').should('exist');
 };
 
@@ -177,10 +190,12 @@ const fillArticleFields = ({
   imageAction?: { action: 'add' } | { action: 'replace' } | { action: 'remove' };
 }) => {
   if (title !== undefined) {
+    showArticleTitle();
     cy.get(ARTICLE_TITLE_INPUT).clear().type(title, { delay: 0 });
   }
 
   if (body !== undefined) {
+    showArticleContent();
     // Markdown mode uses a real textarea. delay: 0 types the full body before the
     // 500ms onChange debounce; we then wait so React state has the complete text.
     setArticleBody(body);
@@ -276,7 +291,7 @@ export const editArticle = ({
   cy.get('[data-cy="edit-post-input"]')
     .should('be.visible')
     .within(() => {
-      cy.get(ARTICLE_TITLE_INPUT).should('be.visible');
+      showArticleTitle();
       cy.get('.mdxeditor-root-contenteditable').should('exist');
 
       fillArticleFields({ title: newTitle, body: newBody, imageAction });

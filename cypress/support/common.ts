@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { notificationCounterSelector } from './header';
 
 export const defaultBackupFilename = (): string => {
   // return `pubky_recovery_${moment().utc().format('YYYY-MM-DD')}.pkarr`
@@ -49,11 +50,9 @@ export const verifyNotificationCounter = (expectedCount?: number) => {
   if (expectedCount === 0) {
     cy.intercept({ method: 'GET', url: '**/v0/user/*/notifications*' }).as('getNextNotifications');
     cy.wait('@getNextNotifications', { timeout: 30_000 });
-    cy.get('[data-cy="header-notification-counter"]').should('not.exist');
+    cy.get(notificationCounterSelector()).should('not.exist');
   } else {
-    cy.get('[data-cy="header-notification-counter"]', { timeout: 30_000 })
-      .should('be.visible')
-      .should('have.text', expectedCount);
+    cy.get(notificationCounterSelector(), { timeout: 30_000 }).should('be.visible').should('have.text', expectedCount);
   }
 };
 

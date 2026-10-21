@@ -23,7 +23,9 @@ import {
 } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToCollectionsPage, goToHomePage } from '../support/header';
+import { isMobile, itDesktopOnly } from '../support/mobile';
 import { createQuickPost, replyToPost, waitForFeedToLoad } from '../support/posts';
+import { openProfileTab } from '../support/profile';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 
@@ -224,13 +226,16 @@ describe('collections', () => {
     cy.get(`@${curator.pubkyAlias}`).then((pubky) => {
       searchForProfileByPubky(String(pubky), curator.username);
     });
-    cy.get('[data-cy="profile-filter-item-collections"]').click();
+    openProfileTab('collections');
     cy.location('pathname').should('match', /^\/profile\/[^/]+\/collections$/);
-    cy.get('[data-cy="profile-filter-item-collections-count"]')
-      .invoke('text')
-      .then((text) => {
-        expect(Number(text), 'profile collections count').to.be.at.least(1);
-      });
+    // phones show no per-tab counts
+    if (!isMobile()) {
+      cy.get('[data-cy="profile-filter-item-collections-count"]')
+        .invoke('text')
+        .then((text) => {
+          expect(Number(text), 'profile collections count').to.be.at.least(1);
+        });
+    }
     cy.contains('[data-cy="collection-card"]', collectionName).should('be.visible');
 
     // * unfollowing from the dedicated page header returns the collection to Discover Collections
@@ -277,7 +282,8 @@ describe('collections', () => {
     cy.signOut(HasBackedUp.Yes);
   });
 
-  it('list layout: creator default, hidden replies, home post layout, temporary viewer override', () => {
+  // Sets the Home layout through the layout filter, which the phone filters drawer does not offer.
+  itDesktopOnly('list layout: creator default, hidden replies, home post layout, temporary viewer override', () => {
     const collectionName = `List collection ${Date.now()}`;
     const postContent = `A post in List layout ${Date.now()}`;
     const replyContent = `A reply hidden from the collection ${Date.now()}`;

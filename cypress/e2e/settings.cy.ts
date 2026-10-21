@@ -1,6 +1,7 @@
 import { latestPostInFeedContentEq, createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { searchForProfileByPubky } from '../support/contacts';
-import { goToHomePage } from '../support/header';
+import { goToHomePage, goToSettingsPage, goToProfilePageFromHeader, openSettingsSection } from '../support/header';
+import { showProfileHeader } from '../support/profile';
 import { confirmLogoutBackupBeforeNavigation } from '../support/logout';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
@@ -36,7 +37,7 @@ describe('settings', () => {
     };
 
     cy.onboardAsNewUser(profileName, 'I like to test account settings', [BackupType.RecoveryPhraseWithConfirmation]);
-    cy.get('[data-cy="header-settings-btn"]').click();
+    goToSettingsPage();
 
     // Check sign out button
     cy.get('#sign-out-btn').click();
@@ -46,14 +47,14 @@ describe('settings', () => {
     signInFromLogoutWithRecoveryPhrase();
     cy.location('pathname').should('eq', '/home');
     waitForFeedToLoad();
-    cy.get('[data-cy="header-settings-btn"]').click();
+    goToSettingsPage();
 
     // Check edit profile button shows edit page
     cy.get('#edit-profile-btn').click();
     cy.get('#profile-name-input').should('be.visible');
 
     // Navigate back to account settings page
-    cy.get('[data-cy="header-settings-btn"]').click();
+    goToSettingsPage();
 
     // Check delete account button shows modal, confirming deletes the account and redirects to logout
     cy.get('#delete-account-btn').click();
@@ -85,8 +86,9 @@ describe('settings', () => {
     createQuickPost(postContent);
 
     // Copy and store pubky for account 1
-    cy.get('[data-cy="header-nav-profile-btn"]').click();
-    cy.get('[data-cy="profile-copy-pubkey-btn"]').click();
+    goToProfilePageFromHeader();
+    showProfileHeader();
+    cy.get('[data-cy="profile-copy-pubkey-btn"]').filter(':visible').should('have.length', 1).click();
     cy.saveCopiedPubkyToAlias('pubky1');
     cy.get('@pubky1').then((ss) => {
       cy.log(`pubky1: ${ss}`);
@@ -103,8 +105,8 @@ describe('settings', () => {
     latestPostInFeedContentEq(postContent);
 
     // Confirm that no users are muted yet in settings page
-    cy.get('[data-cy="header-settings-btn"]').click();
-    cy.get('[data-cy="settings-menu-item-mutedUsers"]').click();
+    goToSettingsPage();
+    openSettingsSection('mutedUsers');
     cy.get('[data-cy="muted-users-root"]').within(() => {
       cy.contains('No muted users yet').should('be.visible');
     });
@@ -121,9 +123,8 @@ describe('settings', () => {
     cy.get('[data-cy="timeline-container"]').should('not.contain.text', postContent);
 
     // Confirm user 1 is now muted in settings page and unmute them
-    cy.get('[data-cy="header-settings-btn"]').click();
-    cy.location('pathname').should('eq', '/settings/account');
-    cy.get('[data-cy="settings-menu-item-mutedUsers"]').should('be.visible').click();
+    goToSettingsPage();
+    openSettingsSection('mutedUsers');
     cy.get('[data-cy="muted-users-root"]').within(() => {
       cy.contains('Mr Muted').should('be.visible');
       cy.get('#unmute-btn').click();
@@ -139,9 +140,8 @@ describe('settings', () => {
     cy.onboardAsNewUser('MrNotifications', 'I like to test notification settings', [BackupType.EncryptedFile]);
 
     const navigateToNotificationsPage = () => {
-      cy.get('[data-cy="header-settings-btn"]').click();
-      cy.location('pathname').should('eq', '/settings/account');
-      cy.get('[data-cy="settings-menu-item-notifications"]').click();
+      goToSettingsPage();
+      openSettingsSection('notifications');
       cy.location('pathname').should('eq', '/settings/notifications');
     };
 

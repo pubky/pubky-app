@@ -17,6 +17,7 @@ import {
   checkNotificationAt,
   addProfileTags,
   causeNotificationsToBeRead,
+  openProfileTab,
 } from '../support/profile';
 import {
   BackupType,
@@ -33,7 +34,12 @@ import {
   findCollectionCardInSection,
   openCollectionFromMyCollections,
 } from '../support/collections';
-import { goToCollectionsPage, goToProfilePageFromHeader } from '../support/header';
+import {
+  goToCollectionsPage,
+  goToProfilePageFromHeader,
+  goToSettingsPage,
+  openSettingsSection,
+} from '../support/header';
 
 const uniqueSuffix = String(Date.now()).slice(-5);
 
@@ -142,7 +148,7 @@ describe('notifications', () => {
     });
 
     // add one tag to profile
-    cy.get('[data-cy="profile-tag-btn"]').click();
+    cy.get('[data-cy="profile-tag-btn"]').filter(':visible').should('have.length', 1).click();
     const profileTag = 'nice';
     addProfileTags([profileTag]);
 
@@ -164,8 +170,7 @@ describe('notifications', () => {
     });
     verifyNotificationCounter(0);
     // click Posts tab to show profile 1's posts
-    cy.get('[data-cy="profile-filter-item-posts"]').click();
-    cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+    openProfileTab('posts');
     const postTag = 'first-world-problem';
     // tag the first post on profile 1's profile
     fastTagPostInFeed([postTag], postContent);
@@ -221,9 +226,8 @@ describe('notifications', () => {
     // * profile 3 signs in and disables mention notifications
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
-    cy.get('[data-cy="header-settings-btn"]').click();
-    cy.location('pathname').should('eq', '/settings/account');
-    cy.get('[data-cy="settings-menu-item-notifications"]').click();
+    goToSettingsPage();
+    openSettingsSection('notifications');
     cy.location('pathname').should('eq', '/settings/notifications');
     cy.get('#notification-switch-mention').click();
 
@@ -306,8 +310,7 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     // Go to profile page and click Posts tab to see own posts (home feed shows followed users' posts)
     goToProfilePageFromHeader();
-    cy.get('[data-cy="profile-filter-item-posts"]').click();
-    cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+    openProfileTab('posts');
     deletePost({ postIdx: 0, filterText: postContent });
 
     // * profile 2 checks for notification for post (1) being deleted
@@ -348,8 +351,7 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     // Go to profile page and click Posts tab to see own posts (home feed shows followed users' posts)
     goToProfilePageFromHeader();
-    cy.get('[data-cy="profile-filter-item-posts"]').click();
-    cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+    openProfileTab('posts');
     deletePost({ postIdx: 0, filterText: firstPostContent });
     deletePost({ postIdx: 0, filterText: secondPostContent });
 
@@ -391,8 +393,7 @@ describe('notifications', () => {
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     goToProfilePageFromHeader();
-    cy.get('[data-cy="profile-filter-item-posts"]').click();
-    cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+    openProfileTab('posts');
     editPost({ newPostContent: editedContent, postIdx: 0, filterText: postContent });
 
     // * profile 2 checks for notification for post (1) being edited
@@ -433,8 +434,7 @@ describe('notifications', () => {
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     goToProfilePageFromHeader();
-    cy.get('[data-cy="profile-filter-item-posts"]').click();
-    cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+    openProfileTab('posts');
     editPost({ newPostContent: `This post has been edited! ${timestamp}`, postIdx: 0, filterText: firstPostContent });
     editPost({
       newPostContent: `This post has also been edited! ${timestamp}`,
