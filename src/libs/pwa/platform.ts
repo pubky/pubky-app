@@ -22,13 +22,14 @@ export function isIosDevice(): boolean {
 
 /**
  * Android browser where an `intent://` deep link can name a specific app package.
- * Firefox for Android (`Firefox/` or `FxiOS/` in the user agent) is excluded because
- * its `intent://` handling is less reliable, so callers fall back to the plain scheme.
+ * Firefox for Android (`Firefox/` in the user agent) is excluded because its `intent://`
+ * handling is less reliable, so callers fall back to the plain scheme. Chrome's "Desktop site"
+ * mode drops `Android` from the user agent, so it also falls back to the plain scheme.
  */
 export function isAndroidIntentDevice(): boolean {
   if (typeof navigator === 'undefined') return false;
   const { userAgent } = navigator;
-  return /Android/i.test(userAgent) && !/Firefox|FxiOS/i.test(userAgent);
+  return /Android/i.test(userAgent) && !/Firefox\//.test(userAgent);
 }
 
 export function isAppBadgeSupported(): boolean {
