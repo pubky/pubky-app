@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ChevronRight, FileText, LockKeyhole, MessageCircleQuestion } from 'lucide-react';
-import { SETTINGS_ROUTES } from '@/app/routes';
+import { LEGAL_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { FilterHeader, FilterList, FilterRoot } from '@/atoms/Filter/Filter';
 import { Image } from '@/atoms/Image/Image';
@@ -12,8 +12,6 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { APP_VERSION } from '@/config/app';
 import { APP_RELEASE_URL } from '@/config/externalLinks';
 import { cn } from '@/libs/utils/utils';
-import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
-import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 import { FeedbackCard } from '@/organisms/FeedbackCard/FeedbackCard';
 import { COPYRIGHT_TEXT, FAQ_QUESTIONS } from './SettingsInfo.constants';
 import type { SettingsInfoProps } from './SettingsInfo.types';
@@ -25,8 +23,12 @@ export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) 
       <FilterRoot>
         <FilterHeader title={'Terms of Service & Privacy'} subtitle={'Please read our terms carefully.'} />
         <FilterList className="gap-2">
-          <DialogTerms trigger={<SidebarButton icon={FileText}>{'Terms of service'}</SidebarButton>} />
-          <DialogPrivacy trigger={<SidebarButton icon={LockKeyhole}>{'Privacy policy'}</SidebarButton>} />
+          <Link href={LEGAL_ROUTES.TERMS_OF_USE} className="w-full">
+            <SidebarButton icon={FileText}>{'Terms of service'}</SidebarButton>
+          </Link>
+          <Link href={LEGAL_ROUTES.PRIVACY_POLICY} className="w-full">
+            <SidebarButton icon={LockKeyhole}>{'Privacy policy'}</SidebarButton>
+          </Link>
         </FilterList>
       </FilterRoot>
 

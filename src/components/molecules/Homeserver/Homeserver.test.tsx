@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { ONBOARDING_ROUTES } from '@/app/routes';
+import { LEGAL_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { HomeserverFooter, HomeserverHeader, HomeserverNavigation } from './Homeserver';
 
 const mockPush = vi.fn();
@@ -53,18 +53,6 @@ vi.mock('@/organisms/DialogAge/DialogAge', () => {
   };
 });
 
-vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', () => {
-  return {
-    DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
-  };
-});
-
-vi.mock('@/organisms/DialogTerms/DialogTerms', () => {
-  return {
-    DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
-  };
-});
-
 vi.mock('@/atoms/PageHeader/PageHeader', () => {
   return {
     PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
@@ -88,12 +76,17 @@ describe('HomeserverHeader', () => {
 });
 
 describe('HomeserverFooter', () => {
-  it('renders terms, privacy, and age confirmation links', () => {
+  it('opens the Terms of Service and Privacy Policy in a new tab, beside the age confirmation', () => {
     render(<HomeserverFooter />);
 
-    expect(screen.getByTestId('dialog-terms')).toBeInTheDocument();
-    expect(screen.getByTestId('dialog-privacy')).toBeInTheDocument();
+    const terms = screen.getByRole('link', { name: 'Terms of Service' });
+    expect(terms).toHaveAttribute('href', LEGAL_ROUTES.TERMS_OF_USE);
+    expect(terms).toHaveAttribute('target', '_blank');
+    const privacy = screen.getByRole('link', { name: 'Privacy Policy' });
+    expect(privacy).toHaveAttribute('href', LEGAL_ROUTES.PRIVACY_POLICY);
+    expect(privacy).toHaveAttribute('target', '_blank');
     expect(screen.getByTestId('dialog-age')).toBeInTheDocument();
+    expect(terms.parentElement).toHaveClass('[&_a]:no-underline');
   });
 });
 

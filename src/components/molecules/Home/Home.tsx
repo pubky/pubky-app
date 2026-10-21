@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { APP_ROUTES } from '@/app/routes';
+import { APP_ROUTES, LEGAL_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Heading } from '@/atoms/Heading/Heading';
@@ -15,8 +15,6 @@ import { usePassportAuth } from '@/hooks/usePassportAuth/usePassportAuth';
 import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
 import { cn } from '@/libs/utils/utils';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
-import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
-import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 import { LANDING_NEXT_SECTION_ID } from '@/templates/Public/Landing/Landing.constants';
 import { ActionButtons } from '../ActionButtons/ActionButtons';
 import { HeaderSocialLinks } from '../Header/Header';
@@ -57,7 +55,8 @@ export const HomeFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
       <FooterLinks className="[&_a]:no-underline">
         {'By joining, continuing, or creating a '}
         {'Pubky'}
-        {' account, you agree to the'} <DialogTerms />, <DialogPrivacy />
+        {' account, you agree to the'} <Link href={LEGAL_ROUTES.TERMS_OF_USE}>{'Terms of Service'}</Link>,{' '}
+        <Link href={LEGAL_ROUTES.PRIVACY_POLICY}>{'Privacy Policy'}</Link>
         {', and confirm you are'} <DialogAge /> {'Pubky is powered by '}
         <Link href={getPubkyCoreLink()} target="_blank" className="font-semibold">
           {'Pubky Protocol'}
