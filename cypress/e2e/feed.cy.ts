@@ -21,20 +21,20 @@ import {
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
 import 'cypress-slow-down/commands';
+import { cannotFindPostInFeed, checkPostIsAtIndexInFeed, countPostsInFeed, waitForFeedToLoad } from '../support/posts';
+import { waitForNexusFollow, waitForNexusPostTags, waitForNexusUserTags } from '../support/nexus';
 import {
-  cannotFindPostInFeed,
-  checkPostIsAtIndexInFeed,
-  countPostsInFeed,
-  createQuickArticle,
-  createQuickPost,
-  createQuickPostWithImage,
-  fastTagPostInFeed,
-  repostPost,
-  waitForFeedToLoad,
-} from '../support/posts';
-import { followFromPostMenu, searchAndFollowProfile, searchForProfileByPubky } from '../support/contacts';
-import { addProfileTags } from '../support/profile';
-import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
+  createArticleViaApi,
+  createImagePostViaApi,
+  createPostViaApi,
+  followUserViaApi,
+  repostViaApi,
+  seedUserViaApi,
+  tagPostViaApi,
+  tagUserViaApi,
+} from '../support/seed';
+import { CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
+import type { SeededPost, SeededUser } from '../support/types/seed';
 import { defaultMs, fastMs, slowMs } from '../support/slow-down';
 
 // Temporary extra delay around filtered-feed sign-in/clicks (https://github.com/pubky/pubky-app/issues/2142).
@@ -47,7 +47,6 @@ const filteredFeedWorkaroundMs = () => (Cypress.expose('ci') ? fastMs * 2 : slow
 const profile1 = {
   username: 'Profile #1',
   bio: 'Follows Profile #2',
-  pubkyAlias: 'pubky_1',
   postText1: `Profile 1's post ${Date.now()}`,
   postText2: `Profile 1's post to be reposted ${Date.now()}`,
   postText3: `Profile 1's third post ${Date.now()}`,
@@ -58,7 +57,6 @@ const profile1 = {
 const profile2 = {
   username: 'Profile #2',
   bio: 'Follows Profile #1',
-  pubkyAlias: 'pubky_2',
   postText: `Profile 2's post ${Date.now()}`,
   repostText: "Repost of Profile 1's post",
 };
@@ -66,14 +64,12 @@ const profile2 = {
 const profile3 = {
   username: 'Profile #3',
   bio: 'Follows Profile #2',
-  pubkyAlias: 'pubky_3',
   postText: `Profile 3's post ${Date.now()}`,
 };
 // Profile 4 follows no-one and is followed by no-one
 const profile4 = {
   username: 'Profile #4',
   bio: 'Follows no-one',
-  pubkyAlias: 'pubky_4',
   postText: `Profile 4's post ${Date.now()}`,
 };
 
@@ -85,66 +81,85 @@ const taggedAsLabelInNetwork = 'taggedbyp1';
 const taggedAsLabelOutsideNetwork = 'taggedbyp4';
 
 describe('feed and filters', () => {
+  let user1: SeededUser;
+  let user2: SeededUser;
+  let user3: SeededUser;
+  let user4: SeededUser;
+  let profile1Post2: SeededPost;
+  let profile2Post: SeededPost;
+  let profile3Post: SeededPost;
+  let profile4Post: SeededPost;
+
+  // Seeded through the API: these profiles and their activity are only observed through the feed filters here.
+  // Onboarding, posting, reposting, following and tagging in the UI are covered by their own specs.
   before(() => {
     slowCypressDown();
     cy.deleteDownloadsFolder();
 
-    // * create profile 1 of 4 and post
-    cy.onboardAsNewUser(profile1.username, profile1.bio, [BackupType.EncryptedFile], profile1.pubkyAlias);
-    createQuickPost(profile1.postText1);
-    createQuickPost(profile1.postText2);
-    createQuickPost(profile1.postText3);
-    createQuickPost(profile1.postText4);
-    createQuickPost(profile1.postText5);
-    cy.signOut(HasBackedUp.Yes);
-
-    // * create profile 2 of 4, post and repost profile 1's post
-    cy.onboardAsNewUser(profile2.username, profile2.bio, [BackupType.EncryptedFile], profile2.pubkyAlias);
-    createQuickPost(profile2.postText);
-    // find Profile 1's latest post and repost it
-    repostPost({ repostContent: profile2.repostText, filterText: profile1.postText2 });
-    // follow Profile 1 from the original post card rather than the repost card
-    followFromPostMenu(profile1.postText2, PostType.Post);
-    cy.signOut(HasBackedUp.Yes);
-
-    // * create profile 3 of 4, post and follow profile 2
-    cy.onboardAsNewUser(profile3.username, profile3.bio, [BackupType.EncryptedFile], profile3.pubkyAlias);
-    createQuickPost(profile3.postText);
-    // follow profile 2
-    cy.get(`@${profile2.pubkyAlias}`).then((pubky) => {
-      searchAndFollowProfile(`${pubky}`, profile2.username);
+    seedUserViaApi(profile1.username, { bio: profile1.bio, withRecoveryFile: true }).then((user) => {
+      user1 = user;
     });
-    cy.signOut(HasBackedUp.Yes);
-
-    // * create profile 4 of 4 and post
-    cy.onboardAsNewUser(profile4.username, profile4.bio, [BackupType.EncryptedFile], profile4.pubkyAlias);
-    createQuickPost(profile4.postText);
-    // tag profile 3's post 5 times for max popularity
-    fastTagPostInFeed(['p3tag1', 'p3tag2', 'p3tag3', 'p3tag4', 'p3tag5'], profile3.postText);
-    // tag profile 2's post 4 times to make it the second most popular
-    fastTagPostInFeed(['p2tag1', 'p2tag2', 'p2tag3', 'p2tag4'], profile2.postText);
-    // profile 4 is outside profile 3's 2-hop network, so tagging profile 1's profile here
-    // proves 'Tagged as' does not consider taggers outside the viewer's web of trust
-    cy.get(`@${profile1.pubkyAlias}`).then((pubky) => {
-      searchForProfileByPubky(`${pubky}`, profile1.username);
+    seedUserViaApi(profile2.username, { bio: profile2.bio, withRecoveryFile: true }).then((user) => {
+      user2 = user;
     });
-    cy.get('[data-cy="profile-tag-btn"]').click();
-    addProfileTags([taggedAsLabelOutsideNetwork]);
-    cy.signOut(HasBackedUp.Yes);
+    seedUserViaApi(profile3.username, { bio: profile3.bio, withRecoveryFile: true }).then((user) => {
+      user3 = user;
+    });
+    seedUserViaApi(profile4.username, { bio: profile4.bio, withRecoveryFile: true }).then((user) => {
+      user4 = user;
+    });
 
-    // * sign back in as profile 1 and follow profile 2, 3 and 4.
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
-    [profile2, profile3, profile4].forEach((profile) => {
-      cy.get(`@${profile.pubkyAlias}`).then((pubky) => {
-        searchAndFollowProfile(`${pubky}`, profile.username);
+    // Posts are created (and indexed) in the order the recency assertions expect, oldest first
+    cy.then(() => {
+      createPostViaApi(user1, profile1.postText1);
+      createPostViaApi(user1, profile1.postText2).then((post) => {
+        profile1Post2 = post;
+      });
+      createPostViaApi(user1, profile1.postText3);
+      createPostViaApi(user1, profile1.postText4);
+      createPostViaApi(user1, profile1.postText5);
+      createPostViaApi(user2, profile2.postText).then((post) => {
+        profile2Post = post;
       });
     });
-    // profile 1 is 2 hops from profile 3, so tagging profile 4's profile here (already on
-    // their page after the follow loop above) proves 'Tagged as' considers taggers within
-    // the viewer's web of trust
-    cy.get('[data-cy="profile-tag-btn"]').click();
-    addProfileTags([taggedAsLabelInNetwork]);
-    cy.signOut(HasBackedUp.Yes);
+    cy.then(() => {
+      repostViaApi(user2, profile1Post2, profile2.repostText);
+      createPostViaApi(user3, profile3.postText).then((post) => {
+        profile3Post = post;
+      });
+      createPostViaApi(user4, profile4.postText).then((post) => {
+        profile4Post = post;
+      });
+
+      followUserViaApi(user2, user1);
+      followUserViaApi(user3, user2);
+      followUserViaApi(user1, user2);
+      followUserViaApi(user1, user3);
+      followUserViaApi(user1, user4);
+    });
+
+    cy.then(() => {
+      // tag profile 3's post 5 times for max popularity
+      tagPostViaApi(user4, profile3Post, ['p3tag1', 'p3tag2', 'p3tag3', 'p3tag4', 'p3tag5']);
+      // tag profile 2's post 4 times to make it the second most popular
+      tagPostViaApi(user4, profile2Post, ['p2tag1', 'p2tag2', 'p2tag3', 'p2tag4']);
+      // profile 4 is outside profile 3's 2-hop network, so this tag on profile 1's profile
+      // proves 'Tagged as' does not consider taggers outside the viewer's web of trust
+      tagUserViaApi(user4, user1, [taggedAsLabelOutsideNetwork]);
+      // profile 1 is 2 hops from profile 3, so this tag on profile 4's profile
+      // proves 'Tagged as' considers taggers within the viewer's web of trust
+      tagUserViaApi(user1, user4, [taggedAsLabelInNetwork]);
+
+      waitForNexusFollow(user2, user1);
+      waitForNexusFollow(user3, user2);
+      waitForNexusFollow(user1, user2);
+      waitForNexusFollow(user1, user3);
+      waitForNexusFollow(user1, user4);
+      waitForNexusPostTags(profile3Post, ['p3tag1', 'p3tag2', 'p3tag3', 'p3tag4', 'p3tag5']);
+      waitForNexusPostTags(profile2Post, ['p2tag1', 'p2tag2', 'p2tag3', 'p2tag4']);
+      waitForNexusUserTags(user1, [taggedAsLabelOutsideNetwork]);
+      waitForNexusUserTags(user4, [taggedAsLabelInNetwork]);
+    });
   });
 
   beforeEach(() => {
@@ -478,9 +493,10 @@ describe('feed and filters', () => {
     const tag = `night${String(stamp).slice(-6)}`;
     const postContent = `Custom feed post ${stamp}`;
 
+    createPostViaApi(user1, postContent, { tags: [tag] }).then((post) => waitForNexusPostTags(post, [tag]));
+
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     resetHomeFeedToAllRecent();
-    createQuickPost(postContent, [tag]);
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes);
 
     openCreateFeedDialog();
@@ -548,27 +564,26 @@ describe('feed and filters', () => {
     const kindFeed = `Kind ${stamp}`;
 
     // Profile 3 follows only profile 2, and is friends with nobody.
+    tagPostViaApi(user3, profile4Post, [reachTag]);
+    createPostViaApi(user3, older, { tags: [sortTag] }).then((olderPost) => {
+      createPostViaApi(user3, newer, { tags: [sortTag] }).then((newerPost) =>
+        waitForNexusPostTags(newerPost, [sortTag]),
+      );
+      tagPostViaApi(user3, olderPost, ['sorta', 'sortb', 'sortc']);
+      waitForNexusPostTags(olderPost, [sortTag, 'sorta', 'sortb', 'sortc']);
+    });
+    createPostViaApi(user3, shortPost, { tags: [kindTag] }).then((post) => waitForNexusPostTags(post, [kindTag]));
+    createArticleViaApi(user3, articleTitle, articleBody, { tags: [kindTag] }).then((post) =>
+      waitForNexusPostTags(post, [kindTag]),
+    );
+    createImagePostViaApi(user3, imagePost, { tags: [kindTag] }).then((post) => waitForNexusPostTags(post, [kindTag]));
+    cy.then(() => waitForNexusPostTags(profile4Post, [reachTag]));
+
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     resetHomeFeedToAllRecent();
-    fastTagPostInFeed([reachTag], profile4.postText);
-
-    createQuickPost(older, [sortTag]);
-    cy.findFirstPostInFeedFiltered(older, CheckForNewPosts.No, WaitForNewPosts.Yes);
-    createQuickPost(newer, [sortTag]);
-    cy.findFirstPostInFeedFiltered(newer, CheckForNewPosts.No, WaitForNewPosts.Yes);
-    fastTagPostInFeed(['sorta', 'sortb', 'sortc'], older);
     cy.findFirstPostInFeedFiltered(older).within(() => {
       cy.get('[data-cy="post-tag"][data-tag-label="sortc"]').filter(':visible').should('have.length.at.least', 1);
     });
-
-    createQuickPost(shortPost, [kindTag]);
-    cy.findFirstPostInFeedFiltered(shortPost, CheckForNewPosts.No, WaitForNewPosts.Yes);
-    createQuickArticle(articleTitle, articleBody);
-    cy.findFirstPostInFeedFiltered(articleTitle, CheckForNewPosts.No, WaitForNewPosts.Yes);
-    fastTagPostInFeed([kindTag], articleTitle);
-    createQuickPostWithImage(imagePost);
-    cy.findFirstPostInFeedFiltered(imagePost, CheckForNewPosts.No, WaitForNewPosts.Yes);
-    fastTagPostInFeed([kindTag], imagePost);
 
     // Reach: All includes profile 4, Following does not, Following does include profile 2.
     openCreateFeedDialog();
@@ -689,18 +704,22 @@ describe('visual layout', () => {
     const imagePostContent3 = `Image post 3 ${Date.now()}`;
     const textOnlyPostContent = `Text-only post ${Date.now()}`;
 
-    cy.onboardAsNewUser('Pete the Photographer', 'I post photos');
+    const photographer = 'Pete the Photographer';
 
-    // create 2 posts with images
-    [imagePostContent1, imagePostContent2].forEach((postContent) => {
-      createQuickPostWithImage(postContent);
+    seedUserViaApi(photographer, { bio: 'I post photos', withRecoveryFile: true }).then((user) => {
+      // create 2 posts with images
+      [imagePostContent1, imagePostContent2].forEach((postContent) => {
+        createImagePostViaApi(user, postContent);
+      });
+
+      // create post with just text
+      createPostViaApi(user, textOnlyPostContent);
+
+      // create another post with image (3 posts with images in total)
+      createImagePostViaApi(user, imagePostContent3);
     });
 
-    // create post with just text
-    createQuickPost(textOnlyPostContent);
-
-    // create another post with image (3 posts with images in total)
-    createQuickPostWithImage(imagePostContent3);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(photographer));
 
     // switch to visual layout
     cy.get('[data-cy="filter-layout-radiogroup"]').find('[data-cy="visual-layout-toggle"]').click();

@@ -68,7 +68,12 @@ export function DialogSignIn() {
 
             <Container className="px-6">
               <Button asChild className="w-full gap-2 font-bold">
-                <Link href={joinRoute} onClick={handleClose} onNavigate={(event) => handleNavigate(event, joinRoute)}>
+                <Link
+                  href={joinRoute}
+                  onClick={handleClose}
+                  onNavigate={(event) => handleNavigate(event, joinRoute)}
+                  data-cy="sign-in-dialog-join-btn"
+                >
                   <UserRoundPlus className="size-4" />
                   {'Join Pubky'}
                 </Link>
@@ -100,6 +105,7 @@ export function DialogSignIn() {
                   href={AUTH_ROUTES.SIGN_IN}
                   onClick={handleClose}
                   onNavigate={(event) => handleNavigate(event, AUTH_ROUTES.SIGN_IN)}
+                  data-cy="sign-in-dialog-sign-in-btn"
                 >
                   <ArrowRight className="size-4" />
                   {'Sign In'}

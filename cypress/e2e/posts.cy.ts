@@ -1,11 +1,16 @@
 import { backupDownloadFilePath } from '../support/auth';
 import { applyContentFilter } from '../support/collections';
+import { searchForProfileByPubky } from '../support/contacts';
+import { goToProfilePageFromHeader } from '../support/header';
+import { waitForNexusNotifications, waitForNexusPostTags, waitForNexusUserSearch } from '../support/nexus';
+import { createPostViaApi, seedUserViaApi } from '../support/seed';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
 import 'cypress-slow-down/commands';
 import {
   latestPostInFeedContentEq,
   createQuickPost,
+  createQuickPostWithMention,
   createPostFromDialog,
   createQuickArticle,
   createArticleFromDialog,
@@ -21,7 +26,13 @@ import {
   PostOrReply,
   waitForFeedToLoad,
 } from '../support/posts';
-import { expectTimelineContains, expectTimelineOmits } from '../support/feeds';
+import {
+  expectTimelineContains,
+  expectTimelineOmits,
+  expectVisibleReachSelected,
+  expectVisibleSortSelected,
+  resetHomeFeedToAllRecent,
+} from '../support/feeds';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 
@@ -335,6 +346,21 @@ describe('posts', () => {
     });
   });
 
+  it('can mention a profile picked from the @ autocomplete', () => {
+    // todo: use space in username after bug fixed https://github.com/pubky/pubky-app/issues/1638
+    seedUserViaApi(`Mentionable${String(Date.now()).slice(-6)}`).then((mentioned) => {
+      waitForNexusUserSearch(mentioned);
+
+      createQuickPostWithMention(mentioned.name);
+
+      cy.findFirstPostInFeed().within(() => {
+        cy.get('[data-cy="post-text"]').should('contain.text', mentioned.name);
+      });
+      // The autocomplete inserted a real mention, not just the name
+      waitForNexusNotifications(mentioned, 'mention');
+    });
+  });
+
   it('can delete a post', () => {
     const postContent = `I can delete this post! ${Date.now()}`;
     createQuickPost(postContent);
@@ -348,6 +374,26 @@ describe('posts', () => {
     // Reload and check post is still deleted
     cy.reload();
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
+  });
+
+  it('can edit and delete a post from the profile posts tab', () => {
+    const postContent = `I can edit this post from my profile! ${Date.now()}`;
+    const editedContent = `I have edited this post from my profile! ${Date.now()}`;
+    createQuickPost(postContent);
+
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-filter-item-posts"]').click();
+    cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+
+    editPost({ newPostContent: editedContent, filterText: postContent });
+    cy.findFirstPostInFeedFiltered(editedContent).should('be.visible');
+
+    deletePost({ filterText: editedContent });
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', editedContent);
+
+    // Reload and check post is still deleted
+    cy.reload();
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', editedContent);
   });
 
   it("cannot delete other profile's post", () => {
@@ -465,6 +511,45 @@ describe('posts', () => {
     cy.findFirstPostInFeed().within(() => {
       [tag1, tag2, tag3].forEach((tag) => {
         cy.contains('button', tag).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
+      });
+    });
+  });
+
+  it("can tag another profile's post from the feed and from their profile", () => {
+    const stamp = Date.now();
+    const postContent = `Tag my post from anywhere! ${stamp}`;
+    const feedTag = `feed${String(stamp).slice(-6)}`;
+    const profileTag = `prof${String(stamp).slice(-6)}`;
+    const expectTagsOnPost = (tags: string[]) => {
+      cy.findFirstPostInFeedFiltered(postContent).within(() => {
+        tags.forEach((tag) => {
+          cy.get(`[data-cy="post-tag"][data-tag-label="${tag}"]`).filter(':visible').should('have.length.at.least', 1);
+        });
+      });
+    };
+
+    seedUserViaApi(`Tag Target ${String(stamp).slice(-6)}`).then((author) => {
+      createPostViaApi(author, postContent).then((post) => {
+        // * tag the post from the home feed. Reach All lists authors the viewer does not follow. The
+        // feed loaded before the post existed, so it arrives through 'See new posts' unless the
+        // reach change already refetched it.
+        resetHomeFeedToAllRecent();
+        expectVisibleReachSelected('all-reach-toggle');
+        expectVisibleSortSelected('recent-sort-toggle');
+        cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.Yes);
+        fastTagPostInFeed([feedTag], postContent);
+        expectTagsOnPost([feedTag]);
+
+        // * tag the same post from the Posts tab of the author's profile
+        searchForProfileByPubky(author.pubky, author.name);
+        cy.get('[data-cy="profile-filter-item-posts"]').click();
+        cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+        fastTagPostInFeed([profileTag], postContent);
+        expectTagsOnPost([feedTag, profileTag]);
+
+        waitForNexusPostTags(post, [feedTag, profileTag]);
+        cy.reload();
+        expectTagsOnPost([feedTag, profileTag]);
       });
     });
   });
