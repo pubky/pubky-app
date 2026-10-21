@@ -147,7 +147,7 @@ const ARTICLE_COVER_FILE_INPUT = '[data-testid="article-composer-panel-header"] 
 const ARTICLE_FIELD_DEBOUNCE_MS = 600;
 
 // Phones put the title on its own composer tab; desktop shows it above the tabs.
-const showArticleTitle = () => {
+export const showArticleTitle = () => {
   if (isMobile()) cy.get(ARTICLE_TITLE_TAB).should('be.visible').click();
   cy.get(ARTICLE_TITLE_INPUT).should('be.visible');
 };

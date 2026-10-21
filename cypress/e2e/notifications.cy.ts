@@ -18,6 +18,7 @@ import {
   addProfileTags,
   causeNotificationsToBeRead,
   openProfileTab,
+  openProfileTagging,
 } from '../support/profile';
 import {
   BackupType,
@@ -27,6 +28,7 @@ import {
   WaitForNewPosts,
 } from '../support/types/enums';
 import { verifyNotificationCounter } from '../support/common';
+import { toggleNotificationSwitch } from '../support/settings';
 import {
   createCollection,
   createPostInCollection,
@@ -148,7 +150,7 @@ describe('notifications', () => {
     });
 
     // add one tag to profile
-    cy.get('[data-cy="profile-tag-btn"]').filter(':visible').should('have.length', 1).click();
+    openProfileTagging();
     const profileTag = 'nice';
     addProfileTags([profileTag]);
 
@@ -229,7 +231,7 @@ describe('notifications', () => {
     goToSettingsPage();
     openSettingsSection('notifications');
     cy.location('pathname').should('eq', '/settings/notifications');
-    cy.get('#notification-switch-mention').click();
+    toggleNotificationSwitch('mention');
 
     // * profile 1 signs in and creates a post mentioning profile 3 via @username lookup
     cy.signOut(HasBackedUp.Yes);

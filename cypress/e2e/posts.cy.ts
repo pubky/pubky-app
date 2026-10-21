@@ -20,6 +20,7 @@ import {
   createQuickPostWithImage,
   PostOrReply,
   waitForFeedToLoad,
+  showArticleTitle,
 } from '../support/posts';
 import { expectTimelineContains, expectTimelineOmits } from '../support/feeds';
 import { goToCollectionsPage } from '../support/header';
@@ -828,14 +829,15 @@ describe('posts', () => {
 
     cy.get('[data-cy="new-post-input"]').within(() => {
       cy.get('[data-cy="post-input-action-bar-add-article"]').should('be.visible').click();
-      cy.get('[data-cy="article-title-input"]').should('be.visible');
+      showArticleTitle();
     });
 
     cy.get('[data-cy="dialog-content"]').should('be.visible').and('contain.text', 'New Article');
 
     // Title field is interactable, so the article composer is in front of the post modal
     cy.get('[data-cy="new-post-input"]').within(() => {
-      cy.get('[data-cy="article-title-input"]').should('be.visible').click();
+      showArticleTitle();
+      cy.get('[data-cy="article-title-input"]').click();
       cy.get('[data-cy="post-input-action-bar-publish-article"]').should('be.visible');
     });
 

@@ -80,8 +80,10 @@ describe('profile', () => {
     // cancel the changes
     cy.get('[data-cy="edit-profile-cancel-btn"]').click();
 
-    // verify redirection to the profile page
-    cy.location('pathname').should('eq', '/profile');
+    // verify redirection to the profile page the edit was opened from
+    cy.get<string>('@editProfileOrigin').then((origin) => {
+      cy.location('pathname').should('eq', origin);
+    });
 
     // reload the page to ensure changes are not persisted
     cy.waitReload(500);

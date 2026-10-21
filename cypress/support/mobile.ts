@@ -5,9 +5,11 @@ export const itDesktopOnly: Mocha.TestFunction | Mocha.PendingTestFunction = isM
 
 export type DrawerSide = 'left' | 'right';
 
-// The drawer panel covers the backdrop on its own side, so click the backdrop's far edge.
+// The drawer has no close button and ignores Escape; a phone user taps the dimmed area beside it.
+// The tap targets the overlay (backdrop plus panel), since Cypress judges a fixed backdrop by its
+// centre, which the panel covers. The far edge is outside the panel, so the tap lands on the backdrop.
 export const closeSideDrawer = (side: DrawerSide) => {
-  cy.get(`[data-cy="side-drawer-${side}-backdrop"]`).click(side === 'left' ? 'right' : 'left');
+  cy.get(`[data-cy="side-drawer-${side}-overlay"]`).click(side === 'left' ? 'right' : 'left');
   cy.get(`[data-cy="side-drawer-${side}"]`).should('not.exist');
 };
 

@@ -35,7 +35,7 @@ import {
 } from '../support/posts';
 import { followFromPostMenu, searchAndFollowProfile, searchForProfileByPubky } from '../support/contacts';
 import { inSidebar, itDesktopOnly } from '../support/mobile';
-import { addProfileTags } from '../support/profile';
+import { addProfileTags, openProfileTagging } from '../support/profile';
 import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
 import { defaultMs, fastMs, slowMs } from '../support/slow-down';
 
@@ -130,7 +130,7 @@ describe('feed and filters', () => {
     cy.get(`@${profile1.pubkyAlias}`).then((pubky) => {
       searchForProfileByPubky(`${pubky}`, profile1.username);
     });
-    cy.get('[data-cy="profile-tag-btn"]').filter(':visible').should('have.length', 1).click();
+    openProfileTagging();
     addProfileTags([taggedAsLabelOutsideNetwork]);
     cy.signOut(HasBackedUp.Yes);
 
@@ -144,7 +144,7 @@ describe('feed and filters', () => {
     // profile 1 is 2 hops from profile 3, so tagging profile 4's profile here (already on
     // their page after the follow loop above) proves 'Tagged as' considers taggers within
     // the viewer's web of trust
-    cy.get('[data-cy="profile-tag-btn"]').filter(':visible').should('have.length', 1).click();
+    openProfileTagging();
     addProfileTags([taggedAsLabelInNetwork]);
     cy.signOut(HasBackedUp.Yes);
   });

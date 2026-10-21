@@ -7,6 +7,7 @@ import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 import { backupDownloadFilePath, extendedTimeout } from '../support/common';
+import { getNotificationSwitch, leaveEditProfileForSettings, toggleNotificationSwitch } from '../support/settings';
 
 describe('settings', () => {
   before(() => {
@@ -54,7 +55,7 @@ describe('settings', () => {
     cy.get('#profile-name-input').should('be.visible');
 
     // Navigate back to account settings page
-    goToSettingsPage();
+    leaveEditProfileForSettings();
 
     // Check delete account button shows modal, confirming deletes the account and redirects to logout
     cy.get('#delete-account-btn').click();
@@ -148,10 +149,10 @@ describe('settings', () => {
     navigateToNotificationsPage();
 
     // Disable some notifications
-    cy.get('#notification-switch-follow').click();
-    cy.get('#notification-switch-tagProfile').click();
-    cy.get('#notification-switch-reply').click();
-    cy.get('#notification-switch-postDeleted').click();
+    toggleNotificationSwitch('follow');
+    toggleNotificationSwitch('tagProfile');
+    toggleNotificationSwitch('reply');
+    toggleNotificationSwitch('postDeleted');
 
     // Sign out, sign back in, and navigate to notification settings page
     cy.signOut(HasBackedUp.Yes);
@@ -167,24 +168,24 @@ describe('settings', () => {
     };
 
     // Check notifications remain enabled
-    cy.get('#notification-switch-newFriend').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-tagPost').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-mention').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-repost').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-postEdited').then(checkNotificationIsEnabled);
+    getNotificationSwitch('newFriend').then(checkNotificationIsEnabled);
+    getNotificationSwitch('tagPost').then(checkNotificationIsEnabled);
+    getNotificationSwitch('mention').then(checkNotificationIsEnabled);
+    getNotificationSwitch('repost').then(checkNotificationIsEnabled);
+    getNotificationSwitch('postEdited').then(checkNotificationIsEnabled);
 
     // Check some notifications remain disabled
-    cy.get('#notification-switch-follow').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-tagProfile').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-reply').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-postDeleted').then(checkNotificationIsDisabled);
+    getNotificationSwitch('follow').then(checkNotificationIsDisabled);
+    getNotificationSwitch('tagProfile').then(checkNotificationIsDisabled);
+    getNotificationSwitch('reply').then(checkNotificationIsDisabled);
+    getNotificationSwitch('postDeleted').then(checkNotificationIsDisabled);
 
     // Disable remaining enabled notifications
-    cy.get('#notification-switch-newFriend').click();
-    cy.get('#notification-switch-tagPost').click();
-    cy.get('#notification-switch-mention').click();
-    cy.get('#notification-switch-repost').click();
-    cy.get('#notification-switch-postEdited').click();
+    toggleNotificationSwitch('newFriend');
+    toggleNotificationSwitch('tagPost');
+    toggleNotificationSwitch('mention');
+    toggleNotificationSwitch('repost');
+    toggleNotificationSwitch('postEdited');
 
     // Sign out, sign back in, and navigate to notification settings page
     cy.signOut(HasBackedUp.Yes);
@@ -192,20 +193,20 @@ describe('settings', () => {
     navigateToNotificationsPage();
 
     // Check all notifications are disabled
-    cy.get('#notification-switch-newFriend').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-follow').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-tagPost').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-tagProfile').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-mention').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-repost').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-reply').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-postEdited').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-postDeleted').then(checkNotificationIsDisabled);
+    getNotificationSwitch('newFriend').then(checkNotificationIsDisabled);
+    getNotificationSwitch('follow').then(checkNotificationIsDisabled);
+    getNotificationSwitch('tagPost').then(checkNotificationIsDisabled);
+    getNotificationSwitch('tagProfile').then(checkNotificationIsDisabled);
+    getNotificationSwitch('mention').then(checkNotificationIsDisabled);
+    getNotificationSwitch('repost').then(checkNotificationIsDisabled);
+    getNotificationSwitch('reply').then(checkNotificationIsDisabled);
+    getNotificationSwitch('postEdited').then(checkNotificationIsDisabled);
+    getNotificationSwitch('postDeleted').then(checkNotificationIsDisabled);
 
     // Enable some notifications
-    cy.get('#notification-switch-follow').click();
-    cy.get('#notification-switch-tagProfile').click();
-    cy.get('#notification-switch-postDeleted').click();
+    toggleNotificationSwitch('follow');
+    toggleNotificationSwitch('tagProfile');
+    toggleNotificationSwitch('postDeleted');
 
     // Sign out, sign back in, and navigate to notification settings page
     cy.signOut(HasBackedUp.Yes);
@@ -213,16 +214,16 @@ describe('settings', () => {
     navigateToNotificationsPage();
 
     // Check some notifications remain enabled
-    cy.get('#notification-switch-follow').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-tagProfile').then(checkNotificationIsEnabled);
-    cy.get('#notification-switch-postDeleted').then(checkNotificationIsEnabled);
+    getNotificationSwitch('follow').then(checkNotificationIsEnabled);
+    getNotificationSwitch('tagProfile').then(checkNotificationIsEnabled);
+    getNotificationSwitch('postDeleted').then(checkNotificationIsEnabled);
 
     // Check some notifications remain disabled
-    cy.get('#notification-switch-newFriend').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-tagPost').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-mention').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-repost').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-reply').then(checkNotificationIsDisabled);
-    cy.get('#notification-switch-postEdited').then(checkNotificationIsDisabled);
+    getNotificationSwitch('newFriend').then(checkNotificationIsDisabled);
+    getNotificationSwitch('tagPost').then(checkNotificationIsDisabled);
+    getNotificationSwitch('mention').then(checkNotificationIsDisabled);
+    getNotificationSwitch('repost').then(checkNotificationIsDisabled);
+    getNotificationSwitch('reply').then(checkNotificationIsDisabled);
+    getNotificationSwitch('postEdited').then(checkNotificationIsDisabled);
   });
 });
