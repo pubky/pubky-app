@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PWA_STANDALONE_MEDIA_QUERY } from '@/config/pwa';
-import { isAppBadgeSupported, isIosDevice, isStandaloneDisplayMode } from './platform';
+import { isAndroidIntentDevice, isAppBadgeSupported, isIosDevice, isStandaloneDisplayMode } from './platform';
 
 function defineNavigator(overrides: Record<string, unknown>) {
   for (const [key, value] of Object.entries(overrides)) {
@@ -65,6 +65,32 @@ describe('platform', () => {
         maxTouchPoints: 0,
       });
       expect(isIosDevice()).toBe(false);
+      restore();
+    });
+  });
+
+  describe('isAndroidIntentDevice', () => {
+    it('detects Android Chrome user agents', () => {
+      const restore = defineNavigator({
+        userAgent: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/140.0 Mobile',
+      });
+      expect(isAndroidIntentDevice()).toBe(true);
+      restore();
+    });
+
+    it('excludes Firefox for Android so callers fall back to the plain link', () => {
+      const restore = defineNavigator({
+        userAgent: 'Mozilla/5.0 (Android 15; Mobile; rv:136.0) Gecko/136.0 Firefox/136.0',
+      });
+      expect(isAndroidIntentDevice()).toBe(false);
+      restore();
+    });
+
+    it('does not flag iOS or desktop user agents', () => {
+      const restore = defineNavigator({
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15',
+      });
+      expect(isAndroidIntentDevice()).toBe(false);
       restore();
     });
   });
