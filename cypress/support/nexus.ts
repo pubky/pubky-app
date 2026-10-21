@@ -63,15 +63,6 @@ export const waitForNexusUserSearch = (user: SeededUser) =>
 export const waitForNexusPost = (post: SeededPost) =>
   waitForNexus(`post ${post.id}`, `/v0/post/${post.authorId}/${post.id}`, (response) => response.status === 200);
 
-export const waitForNexusPostContent = (post: SeededPost, content: string) =>
-  waitForNexus(
-    `the edit of post ${post.id}`,
-    `/v0/post/${post.authorId}/${post.id}`,
-    (response) =>
-      response.status === 200 &&
-      (response.body as { details?: { content?: string } } | null)?.details?.content === content,
-  );
-
 export const waitForNexusFollow = (follower: SeededUser, followee: SeededUser) =>
   waitForNexus(`'${follower.name}' following '${followee.name}'`, `/v0/user/${followee.id}/followers`, (response) =>
     arrayBody<string>(response).includes(follower.id),
