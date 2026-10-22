@@ -85,11 +85,12 @@ export interface UsePostInputReturn {
   setShowEmojiPicker: (show: boolean) => void;
   /** Article inline media editor surface for the MarkdownEditor */
   inlineMedia: {
+    /** Stages a picked file and resolves with the URI the body references; the upload happens at publish */
     upload: (file: File) => Promise<string>;
     getPreviewUrl: (src: string) => string | null;
     /** MIME type of a file URI from this session or the edited post's attachments; null otherwise */
     getMediaType: (uri: string) => string | null;
-    /** File name of a URI the composer knows: uploaded this session, or an attachment of the edited post */
+    /** File name of a URI the composer knows: staged this session, or an attachment of the edited post */
     getMediaName: (uri: string) => string | null;
   };
   /**
@@ -98,8 +99,6 @@ export interface UsePostInputReturn {
    * image would mount as a broken picture. Always false outside article edits.
    */
   isEditInlineMediaLoading: boolean;
-  /** Inline media uploads in flight; submit stays disabled while > 0 */
-  uploadingCount: number;
   serializeArticleForLock: UsePostReturn['serializeArticleForLock'];
   /** The article as the inputs hold it now. `articleTitle` and `content` trail them by the debounce. */
   getLatestArticle: () => { title: string; body: string };

@@ -602,7 +602,6 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
       getMediaName: vi.fn(() => null),
     },
     isEditInlineMediaLoading: false,
-    uploadingCount: 0,
     serializeArticleForLock: vi.fn(() => null),
     getLatestArticle: vi.fn(() => ({ title: '', body: '' })),
     mentionUsers: [],

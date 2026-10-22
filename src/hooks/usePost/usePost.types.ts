@@ -124,17 +124,16 @@ export interface UsePostReturn {
   repost: (options: UsePostRepostOptions) => Promise<void>;
   edit: (options: UsePostEditOptions) => Promise<void>;
   isSubmitting: boolean;
-  /** Article inline media editor surface (upload at insert time, session preview and type lookup). */
+  /** Article inline media editor surface (staging at insert time, session preview and type lookup). */
   inlineMedia: {
+    /** Stages a picked file and resolves with the URI the body references; the upload happens at publish */
     upload: (file: File) => Promise<string>;
     getPreviewUrl: (src: string) => string | null;
-    /** MIME type of a file uploaded this session; null for any other URI */
+    /** MIME type of a file staged this session; null for any other URI */
     getMediaType: (uri: string) => string | null;
-    /** File name of a URI uploaded this session; null for anything else. */
+    /** File name of a URI staged this session; null for anything else. */
     getMediaName: (uri: string) => string | null;
   };
-  /** Inline media uploads currently in flight; publishing is blocked while > 0. */
-  uploadingCount: number;
   /** Null, after a toast, when a normal publish would refuse the body too. */
   serializeArticleForLock: (body: string) => SerializedArticle | null;
 }

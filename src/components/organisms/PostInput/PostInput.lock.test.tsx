@@ -25,7 +25,6 @@ const mocks = vi.hoisted(() => ({
   toast: vi.fn(),
   // Null by default, which keeps PostHeader (db-backed) out of the render.
   currentUserPubky: null as string | null,
-  uploadingCount: 0,
   serializeArticleForLock: vi.fn(),
   // What the title and body inputs hold while the composer state still trails them. Null once it caught up.
   latestArticle: null as { title: string; body: string } | null,
@@ -118,7 +117,6 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         setAttachments,
         existingAttachments: [],
         removeExistingAttachment: vi.fn(),
-        uploadingCount: mocks.uploadingCount,
         inlineMedia: { upload: vi.fn(), getPreviewUrl: () => null, getMediaType: () => null, getMediaName: () => null },
         isEditInlineMediaLoading: false,
         serializeArticleForLock: mocks.serializeArticleForLock,
@@ -298,7 +296,6 @@ describe('PostInput lock wiring', () => {
     vi.clearAllMocks();
     mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
     mocks.currentUserPubky = null;
-    mocks.uploadingCount = 0;
     mocks.latestArticle = null;
     mocks.serializeArticleForLock.mockReset();
     mocks.createLockContent.mockResolvedValue({
@@ -562,14 +559,6 @@ describe('PostInput lock wiring', () => {
       });
       expect(screen.getByTestId('lock-switch')).toHaveAttribute('data-checked', 'false');
       expect(mocks.serializeArticleForLock).not.toHaveBeenCalled();
-    });
-
-    it('keeps the switch disabled while a body image is still uploading', () => {
-      mocks.uploadingCount = 1;
-
-      renderArticle();
-
-      expect(screen.getByTestId('lock-switch')).toBeDisabled();
     });
 
     it('does not serialize a normal post', () => {

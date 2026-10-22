@@ -28,6 +28,7 @@ import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -210,13 +211,57 @@ export class PostApplication {
     return await this.getAuthoredCollections({ authorId, viewerId });
   }
 
+  /**
+   * Rolls freshly uploaded files back after a failed create or edit: uses the
+   * known record + blob URLs so it also cleans up partial uploads (blob PUT
+   * ok, record PUT failed) that a record-based delete cannot reach.
+   * Best-effort — the triggering error is what the caller rethrows.
+   */
+  private static async rollbackUploadedFiles({
+    fileAttachments,
+    compositePostId,
+    operation,
+  }: {
+    fileAttachments: TFileAttachmentResult[];
+    compositePostId: string;
+    operation: 'commitCreate' | 'commitEdit';
+  }) {
+    if (fileAttachments.length === 0) return;
+    await FileApplication.commitDeleteUploaded(fileAttachments).catch((fileRollbackError) => {
+      Logger.error(`[PostApplication.${operation}] Failed to rollback file attachments`, {
+        compositePostId,
+        fileRollbackError,
+      });
+    });
+  }
+
   static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags, isCurrent }: TCreatePostInput) {
     const hasFiles = fileAttachments != null && fileAttachments.length > 0;
+    const rollbackUploadedFiles = () =>
+      this.rollbackUploadedFiles({
+        fileAttachments: hasFiles ? fileAttachments : [],
+        compositePostId,
+        operation: 'commitCreate',
+      });
 
     if (hasFiles) {
-      await FileApplication.commitCreate({ fileAttachments });
+      try {
+        await FileApplication.commitCreate({ fileAttachments });
+      } catch (error) {
+        // Uploads run in parallel and can partially succeed (an article sends
+        // its cover and body files as one batch); sweep everything before
+        // rethrowing, so nothing of the unpublished post stays behind.
+        await rollbackUploadedFiles();
+        throw error;
+      }
     }
-    await LocalPostService.create({ compositePostId, post });
+
+    try {
+      await LocalPostService.create({ compositePostId, post });
+    } catch (error) {
+      await rollbackUploadedFiles();
+      throw error;
+    }
 
     try {
       await HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
@@ -229,20 +274,7 @@ export class PostApplication {
           rollbackError,
         });
       }
-
-      if (hasFiles) {
-        try {
-          // Known record + blob URLs: also cleans up partial uploads (blob PUT
-          // ok, record PUT failed) that a record-based delete cannot reach
-          await FileApplication.commitDeleteUploaded(fileAttachments);
-        } catch (fileRollbackError) {
-          Logger.error('[PostApplication.commitCreate] Failed to rollback file attachments', {
-            compositePostId,
-            fileRollbackError,
-          });
-        }
-      }
-
+      await rollbackUploadedFiles();
       throw error;
     }
 
@@ -329,20 +361,12 @@ export class PostApplication {
     const originalPost = await LocalPostService.readDetails({ postId: compositePostId });
 
     const hasNewFiles = fileAttachments != null && fileAttachments.length > 0;
-
-    // Rollback helper for freshly uploaded files: uses the known record + blob
-    // URLs so it also cleans up partial uploads (blob PUT ok, record PUT failed)
-    // that a record-based delete cannot reach. Best-effort — the triggering
-    // error is what gets rethrown.
-    const rollbackUploadedFiles = async () => {
-      if (!hasNewFiles) return;
-      await FileApplication.commitDeleteUploaded(fileAttachments).catch((cleanupError) => {
-        Logger.error('[PostApplication.commitEdit] Failed to rollback new file attachments', {
-          compositePostId,
-          cleanupError,
-        });
+    const rollbackUploadedFiles = () =>
+      this.rollbackUploadedFiles({
+        fileAttachments: hasNewFiles ? fileAttachments : [],
+        compositePostId,
+        operation: 'commitEdit',
       });
-    };
 
     if (hasNewFiles) {
       try {
