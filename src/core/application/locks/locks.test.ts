@@ -546,6 +546,51 @@ describe('LocksApplication (payment unlock)', () => {
       await expect(LocksApplication.fetchResolvedPurchase(params)).rejects.toThrow();
     });
 
+    // The Lock Server refuses a viewer's lookup for the region as it refuses their submission (HTTP 451).
+    describe("when the Lock Server refuses the lookup for the reader's region", () => {
+      const blocked = { regionBlocked: true };
+
+      it('reports region-blocked for a saved id, not a failed check', async () => {
+        mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
+        mocks.lookupVerificationTask.mockResolvedValue(blocked);
+
+        await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({ kind: 'region-blocked' });
+      });
+
+      it('reports region-blocked when every saved id is refused', async () => {
+        mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+        mocks.lookupVerificationTask.mockResolvedValue(blocked);
+
+        await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({ kind: 'region-blocked' });
+        expect(lookedUp()).toEqual([BUNDLE_A, BUNDLE_B]);
+      });
+
+      it('reports region-blocked over another lookup that merely failed', async () => {
+        mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+        mocks.lookupVerificationTask.mockResolvedValueOnce(blocked).mockRejectedValueOnce(new Error('HTTP 503'));
+
+        await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({ kind: 'region-blocked' });
+      });
+
+      it('does not rank a refused id: a completed one still wins', async () => {
+        mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+        mocks.lookupVerificationTask.mockResolvedValueOnce(blocked).mockResolvedValueOnce(task('completed'));
+
+        await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({
+          kind: 'reusable',
+          bundleId: BUNDLE_B,
+          task: task('completed'),
+        });
+      });
+
+      it('does not treat a refused id as one the server never received', async () => {
+        mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
+        mocks.lookupVerificationTask.mockResolvedValueOnce(blocked).mockResolvedValueOnce(task('pending'));
+
+        await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({ kind: 'region-blocked' });
+      });
+    });
+
     // Nothing outranks `completed`, so a paid id still unlocks while another id's lookup is down.
     it('returns a completed id even when another lookup fails', async () => {
       mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A), purchaseFile(BUNDLE_B)]);
@@ -607,6 +652,21 @@ describe('LocksApplication (payment unlock)', () => {
       });
       // The id stays saved: from a supported region the same unlock replays it and creates one payment.
       expect(mocks.putBlob).toHaveBeenCalledTimes(1);
+    });
+
+    // Second attempt after a 451: the id saved by the first attempt is now looked up, and the Lock Server
+    // refuses that lookup too. Nothing may be minted, written or submitted, and nothing may throw.
+    it('returns regionBlocked without minting, writing or submitting when the saved id lookup is refused', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
+      mocks.lookupVerificationTask.mockResolvedValue({ regionBlocked: true });
+
+      await expect(LocksApplication.startPayment(params)).resolves.toEqual({ regionBlocked: true });
+      await expect(LocksApplication.startPayment({ ...params, isRetry: true })).resolves.toEqual({
+        regionBlocked: true,
+      });
+      expect(mocks.generateBundleId).not.toHaveBeenCalled();
+      expect(mocks.putBlob).not.toHaveBeenCalled();
+      expect(mocks.submitProof).not.toHaveBeenCalled();
     });
 
     it('submits a saved id with no task again after a region refusal, and mints nothing new', async () => {
@@ -906,6 +966,13 @@ describe('LocksApplication (payment unlock)', () => {
       const task = { status: 'pending', walletSetupNeeded: true, admissionDeadlineAt: '2026-10-08T12:10:00Z' };
       mocks.lookupVerificationTask.mockResolvedValue(task);
       await expect(LocksApplication.fetchPaymentStatus({ lockFile, bundleId: 'bundle-1' })).resolves.toEqual(task);
+    });
+
+    // Mid-wait a refused lookup is no news, like a failed one: the wait goes on rather than throwing.
+    it('reads a lookup the Lock Server refused for the region as no news', async () => {
+      mocks.lookupVerificationTask.mockResolvedValue({ regionBlocked: true });
+
+      await expect(LocksApplication.fetchPaymentStatus({ lockFile, bundleId: 'bundle-1' })).resolves.toBeNull();
     });
 
     // Only a 404 means "no task"; an outage shown as null would pass for a submission that never landed.

@@ -312,6 +312,11 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    modal lands on `region-blocked`: "Paid unlocks aren't available in your region yet." with an info
    icon, no Try again, no Bitkit badges, no toast, and the lock is not marked purchased. The saved
    bundle id stays, so the next opening replays it, and from a supported region it creates one payment.
+   That next opening first looks the saved id up, and the Lock Server refuses that lookup for the region
+   too (every viewer call is its own POST). `LocksService.lookupVerificationTask` therefore returns
+   `{ regionBlocked: true }` the same way, `fetchResolvedPurchase` resolves to `region-blocked`, and the
+   modal lands on the same `region-blocked` stage instead of "This purchase could not be checked". That
+   screen is left for a lookup that failed for another reason. Mid-wait a refused lookup reads as no news.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
    created; with nothing submitted, the install screen has no link state. Until the first read
    answers, the modal says "Checking your Bitkit connection…". A failed first read keeps it there

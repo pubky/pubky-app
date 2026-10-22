@@ -421,6 +421,13 @@ export function usePayToUnlock({
         const resolved = await LocksController.fetchResolvedPurchase({ lockFile, lockUrl, readerPubky });
         if (generation.current !== gen) return;
 
+        // The Lock Server refused to look the saved id up for the reader's region (HTTP 451), as it refuses
+        // a submission. That is the same expected answer, not a purchase that "could not be checked": nothing
+        // was lost, nothing can be retried from here, and the saved id stays for a supported region.
+        if (resolved?.kind === 'region-blocked') {
+          setStage('region-blocked');
+          return;
+        }
         // An ended payment is settled by the lookup alone: submitting it again would only echo the
         // same status back.
         if (resolved?.kind === 'terminal') {

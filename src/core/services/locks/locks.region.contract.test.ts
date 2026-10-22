@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { initSync, Locks, LocksOptions } from '@synonymdev/locks-sdk';
+import { initSync, Locks, LocksOptions, VerificationTaskHandleOptions } from '@synonymdev/locks-sdk';
 import { Pulse } from '@synonymdev/pubky-pulse-web';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorService } from '@/libs/error/error.types';
@@ -62,7 +62,11 @@ afterAll(() => {
 });
 
 /** Only HTTP is replaced: the service, SDK/WASM, request building and PKARR validation run unchanged. */
-function stubTransport(status: number | 'network-failure', body = '{}') {
+function stubTransport(
+  status: number | 'network-failure',
+  body = '{}',
+  route = { method: 'POST', path: '/proof-bundles' },
+) {
   const submissions: Request[] = [];
   vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : new Request(input, init);
@@ -72,9 +76,11 @@ function stubTransport(status: number | 'network-failure', body = '{}') {
       expect(request.method).toBe('GET');
       response = new Response(Buffer.from(ROUTING_PACKET, 'base64'));
     } else {
-      expect(request.url).toBe('https://legacy-cookie.test/proof-bundles');
-      expect(request.method).toBe('POST');
-      expect(await request.clone().json()).toEqual({ submitted_proof_bundle: bundle });
+      expect(request.url).toBe(`https://legacy-cookie.test${route.path}`);
+      expect(request.method).toBe(route.method);
+      if (route.path === '/proof-bundles') {
+        expect(await request.clone().json()).toEqual({ submitted_proof_bundle: bundle });
+      }
       submissions.push(request);
       if (status === 'network-failure') throw new TypeError('offline');
       response = new Response(body, { status, headers: { 'Content-Type': 'application/json' } });
@@ -169,5 +175,59 @@ describe('pinned Locks SDK 0.1.0 region error contract', () => {
     expect(Logger.error).not.toHaveBeenCalled();
     expect(sentry.captureAppError).not.toHaveBeenCalled();
     expect(Pulse.captureException).not.toHaveBeenCalled();
+  });
+});
+
+// The second tap on the same lock looks the saved bundle id up before it submits anything. The pinned SDK
+// sends that lookup as its own POST, and a region refusal reaches it with the same error as the submission.
+describe('pinned Locks SDK 0.1.0 region error contract for the saved bundle id lookup', () => {
+  const lookupRoute = { method: 'POST', path: '/verification-task-lookups' };
+  const creator = `pubky${SERVER}`;
+
+  it('exposes HTTP 451 on the lookup as the same InvalidInput Error the submission raises', async () => {
+    const lookups = stubTransport(451, '{}', lookupRoute);
+    const options = new LocksOptions().addPkarrRelay(RELAY);
+    const client = Locks.forServerWithOptions(creator, options);
+    const viewer = client.viewer;
+    try {
+      const error: unknown = await viewer
+        .lookupVerificationTask(new VerificationTaskHandleOptions(creator, bundle.bundle_id))
+        .catch((caught: unknown) => caught);
+      expect(lookups).toHaveLength(1);
+      expect(error).toMatchObject({ name: 'InvalidInput', message: 'Lock Server viewer request failed with HTTP 451' });
+      expect(isLockServerRegionBlocked(error)).toBe(true);
+    } finally {
+      viewer.free();
+      client.free();
+      options.free();
+    }
+  });
+
+  it('returns regionBlocked through the real service without logging, Sentry or Pulse capture', async () => {
+    const lookups = stubTransport(451, '{}', lookupRoute);
+
+    await expect(LocksService.lookupVerificationTask(creator, bundle.bundle_id)).resolves.toEqual({
+      regionBlocked: true,
+    });
+    expect(lookups).toHaveLength(1);
+    expect(Logger.error).not.toHaveBeenCalled();
+    expect(sentry.captureAppError).not.toHaveBeenCalled();
+    expect(Pulse.captureException).not.toHaveBeenCalled();
+  });
+
+  it('still reads a 404 as no task, and keeps other failures on the reported path', async () => {
+    stubTransport(404, '{}', lookupRoute);
+    await expect(LocksService.lookupVerificationTask(creator, bundle.bundle_id)).resolves.toBeNull();
+    expect(Logger.error).not.toHaveBeenCalled();
+
+    for (const status of [401, 403, 429, 500] as const) {
+      stubTransport(status, '{}', lookupRoute);
+      const error: unknown = await LocksService.lookupVerificationTask(creator, bundle.bundle_id).catch(
+        (caught: unknown) => caught,
+      );
+      expect(isAppError(error)).toBe(true);
+      expect(error).toMatchObject({ service: ErrorService.Locks, operation: 'LocksService.lookupVerificationTask' });
+    }
+    expect(sentry.captureAppError).toHaveBeenCalledTimes(4);
   });
 });

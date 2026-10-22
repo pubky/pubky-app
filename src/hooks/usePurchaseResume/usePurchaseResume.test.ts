@@ -163,6 +163,8 @@ describe('usePurchaseResume', () => {
     { kind: 'reusable' as const, bundleId: 'saved-bundle', task: null },
     { kind: 'terminal' as const, bundleId: 'saved-bundle', status: 'failed' as const },
     { kind: 'terminal' as const, bundleId: 'saved-bundle', status: 'expired' as const },
+    // The Lock Server refused the lookup for the region (HTTP 451): not "unknown", which keeps Unlock live.
+    { kind: 'region-blocked' as const },
   ])('does not exempt a saved id without a running/completed task: %j', async (purchase) => {
     vi.mocked(LocksController.fetchResolvedPurchase).mockResolvedValue(purchase);
     const { result } = renderResume();
