@@ -6,7 +6,7 @@ export async function generateMetadata({ params }: { params: Promise<{ path?: st
   const preview = await ShopMetadataController.fetch(path);
   const { title, description, openGraph, twitter, alternates } = Metadata({
     ...preview,
-    siteName: 'Pubky Marketplace',
+    siteName: 'Pubky Market',
   });
   return { title, description, openGraph, twitter, alternates };
 }
