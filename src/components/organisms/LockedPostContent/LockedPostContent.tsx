@@ -7,6 +7,7 @@ import { matchPostRoute } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
+import { usePaidUnlockAvailability } from '@/hooks/usePaidUnlockAvailability/usePaidUnlockAvailability';
 import { usePayToUnlock } from '@/hooks/usePayToUnlock/usePayToUnlock';
 import { usePurchasedLocks } from '@/hooks/usePurchasedLocks/usePurchasedLocks';
 import { usePurchaseResume } from '@/hooks/usePurchaseResume/usePurchaseResume';
@@ -19,6 +20,7 @@ import { parseCompositeId } from '@/models/models.utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { DialogPayToUnlock } from '@/molecules/DialogPayToUnlock/DialogPayToUnlock';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
+import { LocksRegionNotice } from '@/molecules/LocksRegionNotice/LocksRegionNotice';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { LocksPermissionNotice } from '@/organisms/LocksPermissionNotice/LocksPermissionNotice';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
@@ -90,9 +92,9 @@ export function LockedPostContent({
 
   // Paid but never received: the payment completed while the reader was away, so nothing on screen
   // would otherwise say so. Resolves itself, without the reader pressing anything.
-  const { hasPurchase, markPurchased } = usePurchasedLocks({ enabled: price !== null });
+  const { hasPurchase, markPurchased, status: purchasesStatus } = usePurchasedLocks({ enabled: price !== null });
   const lockId = lock ? LockContentParser.lockIdFromUrl(lock) : null;
-  usePurchaseResume({
+  const purchaseStatus = usePurchaseResume({
     lock,
     lockFile,
     // The open modal owns status polling and completion. In particular, markPurchased must not
@@ -103,6 +105,23 @@ export function LockedPostContent({
     isResolvingContent: isResolvingReplica,
     onResumed: showUnlockedContent,
   });
+
+  // A bundle file can predate any server task or outlive a failed payment. Only the read-only
+  // resolver can establish the in-flight exemption. An unreadable listing/task keeps the modal
+  // available for recovery, with new submissions guarded independently inside the pay hook.
+  const paidUnlocks = usePaidUnlockAvailability();
+  const isPayableReader = Boolean(price) && !isOwnLock;
+  const canRecover = purchasesStatus === 'error' || purchaseStatus === 'unknown' || purchaseStatus === 'recoverable';
+  const isPurchaseChecking = purchasesStatus === 'loading' || purchaseStatus === 'checking';
+  const isRegionChecking =
+    isPayableReader &&
+    !canRecover &&
+    paidUnlocks.status !== 'available' &&
+    (paidUnlocks.status === 'checking' || isPurchaseChecking);
+  const regionBlock =
+    isPayableReader && purchaseStatus !== 'recoverable' && !isRegionChecking && paidUnlocks.status === 'blocked'
+      ? paidUnlocks
+      : null;
 
   const {
     stage,
@@ -117,6 +136,7 @@ export function LockedPostContent({
     viewContent,
   } = usePayToUnlock({
     open: isPayOpen,
+    paymentAvailability: paidUnlocks.status,
     lockUrl: lock ?? '',
     lockFile,
     onPurchased: markPurchased,
@@ -130,7 +150,7 @@ export function LockedPostContent({
   // reader gets the sign-in dialog instead. Unsupported legacy locks have no unlock handler, and
   // neither does the creator's own lock: it stays inert even if reading the original failed.
   const handleUnlock =
-    price && !showPermissionNotice && !isOwnLock
+    price && !showPermissionNotice && !isOwnLock && (!regionBlock || canRecover) && !isRegionChecking
       ? async () => {
           if (await waitForAuth()) setIsPayOpen(true);
         }
@@ -187,10 +207,11 @@ export function LockedPostContent({
       ) : (
         <>
           {showPermissionNotice && <LocksPermissionNotice />}
+          {regionBlock && <LocksRegionNotice cause={regionBlock.cause} />}
           <LockedPostCard
             title={lockContent.lock_title}
             price={price}
-            isLoading={isLockFileLoading}
+            isLoading={isLockFileLoading || isRegionChecking}
             unlockOpen={isPayOpen}
             onUnlock={handleUnlock}
             // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal

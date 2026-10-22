@@ -24,7 +24,7 @@ export const COMPLETE_PUBKY_LENGTH = 52;
  * Regex pattern for an @username typed up to the caret
  *
  * Display names can hold spaces, so the query runs over the words typed after `@`
- * instead of stopping at the first space (#1638): `@John Carvalho` searches for the
+ * instead of stopping at the first space (#1638): `@Jane Whitlock` searches for the
  * whole name. Letters, numbers, symbols (including emoji), combining marks and joiners
  * are supported. A bare `@ ` is not a mention. Newlines and sentence delimiters
  * such as commas end the query, keeping it within the current name. A trailing space

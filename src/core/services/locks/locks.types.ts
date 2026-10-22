@@ -363,6 +363,23 @@ export const submitProofResultSchema = z.object({
 });
 export type TSubmitProofResult = z.infer<typeof submitProofResultSchema>;
 
+/**
+ * What a proof submission came back with: the task's status, or `regionBlocked` when the Lock Server
+ * refused with HTTP 451 because paid unlocks are not available in the reader's region. The refusal is
+ * a result, not an error, so it is neither logged nor reported.
+ */
+export type TSubmitProofOutcome = (TSubmitProofResult & { regionBlocked?: false }) | { regionBlocked: true };
+
+/**
+ * What a task lookup came back with: the task, null when the server has none for the bundle id, or
+ * `regionBlocked` when the Lock Server refused the lookup with HTTP 451. A server that refuses a region
+ * does so for its viewer calls alike, so the lookup of a saved bundle id is refused as well.
+ */
+export type TVerificationLookup = TVerificationTask | null | { regionBlocked: true };
+
+export const isRegionBlockedLookup = (lookup: TVerificationLookup): lookup is { regionBlocked: true } =>
+  lookup !== null && 'regionBlocked' in lookup;
+
 /** Bearer credential issued after a completed verification; shown once. */
 export interface TAccessCredential {
   credential: string;

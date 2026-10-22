@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseRegionModes } from '@/libs/region/regionModes';
 
 /**
  * Shared, zod-only schema for the environment-specific values that must be configurable at
@@ -13,7 +14,7 @@ import { z } from 'zod';
  *  - OPTIONAL/DEFAULTED app/deployer values: public operational, moderation, metadata,
  *    analytics, Prelude, and external-link values that deployers may override without rebuilding.
  *
- * This module is a leaf (zod only, no `Env`, no logger) so the runtime-config resolver never
+ * This module is a leaf (zod and the pure region parser only, no `Env`, no logger) so the runtime-config resolver never
  * pulls in the heavy `env -> libs/error -> logger -> env` import cycle.
  *
  * Two schemas are intentionally provided because the two inputs differ in shape:
@@ -42,6 +43,14 @@ const testnetValue = z.boolean();
 const sampleRateValue = z.number().min(0).max(1);
 const positiveIntValue = z.number().int().positive();
 const nonEmptyStringValue = z.string().min(1);
+/** The `SELECTOR=MODE` region list, validated with the parser the app evaluates it with; a bad list fails loudly. */
+const regionModesValue = z
+  .string()
+  .trim()
+  .superRefine((val, ctx) => {
+    const parsed = parseRegionModes(val);
+    if (!parsed.ok) ctx.addIssue({ code: 'custom', message: `Invalid REGION_MODES value: ${parsed.error}` });
+  });
 const pubkyValue = z
   .string()
   .trim()
@@ -293,6 +302,11 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   lockServer: nonEmptyStringValue.optional(),
   /** Paykit Server address, where a creator connects the account that receives payments. Absent = Locks disabled. */
   paykitServerUrl: urlValue.optional(),
+  /**
+   * Regions where paid unlocks are held, as `SELECTOR=MODE` entries (`EU=blocked,GB=blocked,US=blocked`), the
+   * same value the Shop reads as `PUBKY_RUNTIME_REGION_MODES`. Absent = no region check and no request.
+   */
+  regionModes: regionModesValue.optional(),
 });
 
 const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
@@ -323,6 +337,7 @@ export const runtimeEnvInputSchema = z
     authClientId: optionalTrimmedString,
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
+    regionModes: optionalTrimmedString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -408,6 +423,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     authClientId: optionalTrimmedString,
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
+    regionModes: optionalTrimmedString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -490,6 +506,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   authClientId: 'PUBKY_RUNTIME_AUTH_CLIENT_ID',
   lockServer: 'PUBKY_RUNTIME_LOCK_SERVER',
   paykitServerUrl: 'PUBKY_RUNTIME_PAYKIT_SERVER_URL',
+  regionModes: 'PUBKY_RUNTIME_REGION_MODES',
   pulseClientKey: 'PUBKY_RUNTIME_PULSE_CLIENT_KEY',
   pulseEndpoint: 'PUBKY_RUNTIME_PULSE_ENDPOINT',
   sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',

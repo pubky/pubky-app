@@ -16,6 +16,7 @@ import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
 import { formatLockPrice } from '@/libs/utils/lockPrice';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 import { AppDownload } from '@/molecules/AppDownload/AppDownload';
+import { LocksRegionNotice } from '@/molecules/LocksRegionNotice/LocksRegionNotice';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
 import { QR_HOVER_OPACITY } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import type { DialogPayToUnlockProps } from './DialogPayToUnlock.types';
@@ -271,6 +272,9 @@ export function DialogPayToUnlock({
               </Container>
             )}
 
+            {/* Not retryable and nothing to do with Bitkit: no Try again, no store badges, just the why. */}
+            {stage === 'region-blocked' && <LocksRegionNotice />}
+
             {stage === 'blocked' && (
               <Typography className="text-base text-secondary-foreground">
                 {'This purchase could not be checked. Close the dialog and try again.'}
@@ -332,7 +336,7 @@ export function DialogPayToUnlock({
               data-cy="pay-to-unlock-cancel"
             >
               {/* Past submission there is nothing to cancel — the purchase continues server-side. */}
-              {stage === 'waiting' || isPaid ? 'Close' : 'Cancel'}
+              {stage === 'waiting' || stage === 'region-blocked' || isPaid ? 'Close' : 'Cancel'}
             </Button>
           )}
           {showPrimary && (

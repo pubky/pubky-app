@@ -14,3 +14,6 @@ export interface UsePurchaseResumeParams {
   /** Called with the recovered content once it has been read. */
   onResumed: (content: TUnlockedContent) => void;
 }
+
+/** Only a running/completed server task permits recovery without starting a new payment. */
+export type PurchaseResumeStatus = 'checking' | 'recoverable' | 'none' | 'unknown';

@@ -608,7 +608,7 @@ describe('Utils', () => {
   describe('truncateString', () => {
     it('should truncate strings longer than maxLength', () => {
       expect(truncateString('VeryLongUserName', 10)).toBe('VeryLongUs...');
-      expect(truncateString('Miguel Medeiros', 10)).toBe('Miguel Med...');
+      expect(truncateString('Jane Doe Example', 10)).toBe('Jane Doe E...');
     });
 
     it('should not truncate strings shorter than maxLength', () => {

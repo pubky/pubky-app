@@ -173,6 +173,8 @@ export const getLockServer = (): string | undefined => getRuntimeConfig().lockSe
 
 // Optional Paykit Server address for the creator's payout setup (undefined = Locks disabled).
 export const getPaykitServerUrl = (): string | undefined => getRuntimeConfig().paykitServerUrl;
+/** The `SELECTOR=MODE` list of regions where paid unlocks are held; `undefined` = no region check. */
+export const getRegionModes = (): string | undefined => getRuntimeConfig().regionModes;
 
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
 export const getPulseClientKey = (): string | undefined => getRuntimeConfig().pulseClientKey;

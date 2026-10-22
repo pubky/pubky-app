@@ -64,8 +64,10 @@ export interface UsePostInputLockReturn {
   lockSwitch?: {
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;
-    /** Disabled while the composer is empty — nothing to lock yet. */
+    /** Disabled while the composer is empty — nothing to lock yet — and while paid unlocks are held for the creator's region. */
     disabled: boolean;
+    /** Paid unlocks are not offered where the creator is: the composer explains it beside the switch. Locking stays off. */
+    regionNotice?: 'region' | 'unknown';
   };
   /** The lock switch is on: this post must never be published as a normal, public post. */
   isLockEnabled: boolean;

@@ -34,14 +34,14 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
             <Typography className={baseCSS}>
               TERMS AND CONDITIONS
               <br />
-              Effective Date: January 29, 2026
+              Effective Date: October 22, 2026
             </Typography>
             <Typography className={baseCSS}>
               Thank you for using the Pubky platform and the products, services and features we make available to you as
-              part of the platform, including the Pubky App (collectively, the &quot;Platform&quot;). The terms and
-              conditions set forth below (as updated and amended from time to time, and collectively with the Privacy
-              Policy and any other materials explicitly incorporated by us, these &quot;Terms&quot;) govern your access
-              to and use of the Platform.
+              part of the platform, including the Pubky App and Pubky Shop (collectively, the &quot;Platform&quot;). The
+              terms and conditions set forth below (as updated and amended from time to time, and collectively with the
+              Privacy Policy and any other materials explicitly incorporated by us, these &quot;Terms&quot;) govern your
+              access to and use of the Platform.
             </Typography>
             <Typography className={baseCSS}>
               <strong>
@@ -248,6 +248,15 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               based on your location.
             </Typography>
             <Typography className={baseCSS}>
+              <strong>Commerce features:</strong> Buying, selling, and paid unlocks of digital content (together, “
+              <strong>commerce features</strong>”) are not available in the European Union (including each EU Member
+              State), the United Kingdom, or the United States. This is a restriction on specific features based on your
+              location, as described above. We may apply it based on the location of the buyer, the seller or creator,
+              or the item, as we determine from the information available to us (including IP address and declared
+              country), and we may refuse or restrict any commerce feature accordingly. It applies to commerce features
+              only: the rest of the Platform remains available in those places.
+            </Typography>
+            <Typography className={baseCSS}>
               The Platform is not available to users in Prohibited Jurisdictions as defined below.
             </Typography>
 
@@ -338,12 +347,16 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               <li>
                 If your complaint concerns the activities of other Users/visitors on the Platform, identify the specific
                 type of inappropriate or offensive behaviour engaged in and, insofar as possible, the identity of the
-                offending person; and
+                offending person;
               </li>
               <li>
                 If your complaint concerns particular Content, please provide the URL for the Content that is the
                 subject of your complaint, timestamps within the video where the alleged violative Content appears, and
-                the reason for your Complaint.
+                the reason for your Complaint; and
+              </li>
+              <li>
+                If your complaint concerns any particular listing on Pubky Shop, please provide the listing information
+                identifying the specific reasons for your complaint (e.g., fraud).
               </li>
             </List>
             <Typography className={baseCSS}>
@@ -368,7 +381,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               the Platform from any location do so on their own initiative, at their own risk, and are responsible for
               compliance with all applicable Laws. If you use the Platform in a jurisdiction that prohibits or restricts
               such use, your use will be subject to any other provision of these Terms, and Synonym shall not have any
-              liability with respect to such use.
+              liability with respect to such use. Further, you agree to not access the Platform from Prohibited
+              Jurisdictions as defined herein.
             </Typography>
             <Typography className={baseCSS}>
               You further agree to comply with all state, provincial and/or federal regulations with respect to the
@@ -432,6 +446,111 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
             </Typography>
 
             {/** Section 14 */}
+            <Typography className={baseCSS}>PUBKY SHOP AND PUBKY MARKETPLACE</Typography>
+            <Typography className={baseCSSItalic}>
+              This section explains Pubky Shop. It does not replace the rest of these Terms. Listings and related
+              material remain Content. Prohibited Uses still apply, including to goods and services offered for sale.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>What Pubky Shop is:</strong>
+              <br />
+              Pubky Shop is our marketplace client. Sellers may publish listings. Buyers may browse, bid, make offers,
+              join timed drops, place orders, and pay the seller. We operate the Shop website, a catalog index, a
+              transaction service (including stock, auction close, and drop timing), payment verification, and a Lock
+              Server for gated digital content. We are not the seller of listed goods or services unless a listing is
+              made by an account we operate and that listing says so.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>What Pubky Marketplace is:</strong>
+              <br />
+              Pubky Marketplace is the name we use for commerce on Pubky. These Terms govern Pubky Shop. They do not
+              automatically govern some other operator’s marketplace.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>Not a party to the sale:</strong>
+              <br />A contract of sale (if any) is between buyer and seller. We are not the merchant, carrier, insurer,
+              escrow, or dispute tribunal. We do not guarantee authenticity, condition, delivery, returns, or that the
+              other party will perform. Seller return policies and shipping terms are the seller’s, except where Law
+              says otherwise and cannot be disapplied.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>Listings and the index:</strong>
+              <br />
+              Listings are published by the seller. Our catalog is an index and a cache. Auction ends, drop clocks, and
+              remaining stock for a sale we coordinate are determined by our transaction service, not by a copy on your
+              device. Removing a listing from our index or blocking an order on our transaction service does not delete
+              the origin copy on a Homeserver.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>Prohibited goods:</strong>
+              <br />
+              You must not list or buy through Pubky Shop anything that is illegal to offer or acquire in a place that
+              applies to you, or that otherwise breaches these Terms or our Community Guidelines. We may refuse, unlist,
+              or restrict listings and orders. We operate moderation for prohibited goods. Moderation on our services is
+              not a promise that every listing is lawful or that origin copies are gone.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>Payments: no Synonym fee:</strong>
+              <br />
+              We do not charge a fee for Pubky Shop in these Terms. You do not pay Synonym the price of the listed item.
+              We do not custody the purchase amount. We are not the PayPal merchant of record for the sale.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>How buyers pay sellers:</strong>
+              <br />
+              Payment is from buyer to seller, by a method the seller has enabled:
+            </Typography>
+            <List>
+              <li>
+                <strong>Bitcoin:</strong> payment is requested through Paykit and settles to the seller’s own bitcoin
+                wallet. We and Paykit Server may hold only watch-only information (such as a BIP84 account xpub) to
+                create invoices and see that payment arrived. Spending keys stay in the seller’s wallet (for example
+                Bitkit). We do not store your recovery phrase.
+              </li>
+              <li>
+                <strong>PayPal:</strong> the buyer pays the seller’s PayPal address. PayPal confirms payment, not Pubky
+                Shop.
+              </li>
+            </List>
+            <Typography className={baseCSS}>
+              PayPal, Bitkit, and similar tools are Third-Party Materials. Their terms and privacy policies apply to
+              that payment.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>Verification and Locks:</strong>
+              <br />
+              We may verify that a payment appears to have been made before we mark an order paid or before a Lock
+              Server grants access to gated digital content. Verification is not a guarantee of funds, a refund, or
+              lasting access. Access credentials can be lost if you lose keys, change operators, or the Lock Server is
+              unavailable. We do not promise perpetual unlock across every operator or device.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>Orders, shipping, and messages:</strong>
+              <br />
+              Checkout may collect a delivery address and other order details to pass between buyer and seller. You are
+              responsible for the accuracy of what you submit. Shop may include messages about an order. We are not a
+              party to those messages. Do not treat Shop messages as legal notice to Synonym.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>Purchase guarantees:</strong>
+              <br />
+              Any in-app control labelled as a purchase guarantee is not a guarantee by Synonym unless we say so in
+              writing in that feature. If the control does nothing beyond a label, it creates no extra obligation on us.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>Taxes:</strong>
+              <br />
+              You remain responsible for taxes on your sales and purchases, as already stated in these Terms. No Synonym
+              fee does not mean no tax for you as buyer or seller.
+            </Typography>
+            <Typography className={baseCSS}>
+              <strong>Your keys:</strong>
+              <br />
+              The Recovery Phrase rules in these Terms still apply. Do not enter a recovery phrase into Pubky Shop, a
+              Lock Server page, PayPal, or setup except through Pubky Ring or the wallet itself as designed.
+            </Typography>
+
+            {/** Section 15 */}
             <Typography className={baseCSS}>THIRD-PARTY MATERIALS</Typography>
             <Typography className={baseCSSItalic}>
               This section explains the risks of websites and other services provided by parties other than Synonym.
@@ -487,7 +606,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               software.
             </Typography>
 
-            {/** Section 15 */}
+            {/** Section 16 */}
             <Typography className={baseCSS}>PUBLISHING AND DISTRIBUTION OF CONTENT VIA THE PLATFORM</Typography>
             <Typography className={baseCSSItalic}>
               This section explains that while the Platform may choose to publish user content across different media
@@ -500,7 +619,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               decline or reject any Content submitted to the Platform in our sole discretion.
             </Typography>
 
-            {/** Section 16 */}
+            {/** Section 17 */}
             <Typography className={baseCSS}>PROHIBITED USES</Typography>
             <Typography className={baseCSSItalic}>
               This section sets out what you must not use the Platform for, and the actions we might take if you breach
@@ -540,7 +659,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               whole, including the amount of taxes or penalties that might be imposed on Synonym or the Associate.
             </Typography>
 
-            {/** Section 17 */}
+            {/** Section 18 */}
             <Typography className={baseCSS}>NO REPRESENTATION BY SYNONYM</Typography>
             <Typography className={baseCSSItalic}>
               This section explains that we do not make any promises about the Platform and that we are providing the
@@ -562,7 +681,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               covenants or guarantees to you in respect of any Third-Party Materials.
             </Typography>
 
-            {/** Section 18 */}
+            {/** Section 19 */}
             <Typography className={baseCSS}>PUBKY IS A PROGRESSIVE WEB APPLICATION</Typography>
             <Typography className={baseCSSItalic}>
               This section explains certain requirements and restrictions because the Pubky App is a progressive web
@@ -581,7 +700,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               these Terms will apply to all such upgrades.
             </Typography>
 
-            {/** Section 19 */}
+            {/** Section 20 */}
             <Typography className={baseCSS}>TAX</Typography>
             <Typography className={baseCSSItalic}>
               This section makes it clear that you are responsible for any taxes in relation to any transactions you
@@ -597,7 +716,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               Platform.
             </Typography>
 
-            {/** Section 20 */}
+            {/** Section 21 */}
             <Typography className={baseCSS}>RESPONSIBILITIES, LIMITATION OF LIABILITY AND INDEMNITY</Typography>
             <Typography className={baseCSSItalic}>
               In this section, we limit our liability to you and require you to release claims against us and indemnify
@@ -628,7 +747,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               relation to which the liability has arisen.
             </Typography>
 
-            {/** Section 21 */}
+            {/** Section 22 */}
             <Typography className={baseCSS}>FORCE MAJEURE</Typography>
             <Typography className={baseCSSItalic}>
               This section explains that we cannot be held responsible for things outside of our control.
@@ -643,7 +762,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               foreseen or provided against by Synonym.
             </Typography>
 
-            {/** Section 22 */}
+            {/** Section 23 */}
             <Typography className={baseCSS}>MANDATORY RESOLUTION OF DISPUTES THROUGH ARBITRATION</Typography>
             <Typography className={baseCSSItalic}>
               This Section requires that most disputes relating to the Platform be resolved through individual
@@ -723,7 +842,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               required by Law or judicial decision.
             </Typography>
 
-            {/** Section 23 */}
+            {/** Section 24 */}
             <Typography className={baseCSS}>
               <strong>JURY TRIAL WAIVER:</strong>
               <br />
@@ -735,7 +854,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               </strong>
             </Typography>
 
-            {/** Section 24 */}
+            {/** Section 25 */}
             <Typography className={baseCSS}>DEFINITIONS</Typography>
             <Typography className={baseCSSItalic}>
               In this section, we define certain terms used throughout these Terms. If a word is capitalised in these
@@ -754,7 +873,8 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               </li>
               <li>
                 “<strong>Content</strong>” means user-generated text, images, videos and other content provided on the
-                Platform;
+                Platform, listings, listing photographs, shop profiles, reviews, bids, offers, order messages, and other
+                Pubky Shop material.;
               </li>
               <li>
                 “<strong>Law</strong>” means all laws, statutes, orders, regulations, rules, treaties, and/or official
@@ -783,13 +903,29 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               </li>
               <li>
                 “<strong>Prohibited Jurisdiction</strong>” means any of: Cuba, Democratic People’s Republic of Korea
-                (North Korea), Iran, Syria, Crimea (a region of Ukraine annexed by the Russian Federation), the
-                self-proclaimed Donetsk People’s Republic (a region of Ukraine) and the self-proclaimed Luhansk People’s
-                Republic (a region of Ukraine);
+                (North Korea), Iran, Syria, Russia, Belarus, Crimea (a region of Ukraine annexed by the Russian
+                Federation), the self-proclaimed Donetsk People’s Republic (a region of Ukraine) and the self-proclaimed
+                Luhansk People’s Republic (a region of Ukraine);
               </li>
               <li>
                 “<strong>Pubky App</strong>” means the progressive web application software named Pubky as provided by
-                Synonym;
+                Synonym. Pubky App may display a control that opens Pubky Shop. Use of Pubky Shop is use of the Platform
+                under these Terms;
+              </li>
+              <li>
+                &quot;<strong>Pubky Shop</strong>&quot; means the Synonym-operated commerce client and related services
+                at shop.pubky.app (including catalog, cart, checkout, orders, seller studio, and associated transaction,
+                index, Lock Server, and payment-verification services we operate).
+              </li>
+              <li>
+                &quot;<strong>Pubky Marketplace</strong>&quot; means the concept of commerce among Pubky identities.
+                Pubky Shop is the Synonym-operated instance of that concept. Pubky Marketplace is not a separate product
+                or a second set of Terms.
+              </li>
+              <li>
+                &quot;<strong>Lock Server</strong>&quot; means a service that applies access conditions (including proof
+                of payment) to digital content a seller has chosen to gate. Synonym operates a Lock Server used by Pubky
+                Shop. A Lock Server does not receive your identity secret (recovery phrase or root key).
               </li>
               <li>
                 “<strong>Third-Party Material(s)</strong>” means sites on the Internet, software application, content
@@ -801,7 +937,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               </li>
             </List>
 
-            {/** Section 25 */}
+            {/** Section 26 */}
             <Typography className={baseCSS}>MISCELLANEOUS</Typography>
             <Typography className={baseCSSItalic}>
               This section contains provisions relating to which law governs these Terms, our relationship and whether

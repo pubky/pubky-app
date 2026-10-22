@@ -1,8 +1,9 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { ErrorCategory } from '@/libs/error/error.types';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
@@ -491,6 +492,52 @@ describe('LocksService (reader unlock)', () => {
     expect(task).toEqual({ status: 'pending' });
   });
 
+  describe('submitProof when the Lock Server answers 451', () => {
+    const bundle = { version: 1, bundle_id: 'b1', pubky_lock_resource: 'creator/pub/l.json', proofs: [] };
+
+    it('returns a region-blocked result instead of throwing', async () => {
+      mocks.fakeViewer.submitProofBundle.mockRejectedValueOnce(
+        Object.assign(new Error('Lock Server viewer request failed with HTTP 451'), { name: 'InvalidInput' }),
+      );
+
+      await expect(LocksService.submitProof(bundle)).resolves.toEqual({ regionBlocked: true });
+    });
+
+    it('reports a bare string because it does not match the pinned SDK error contract', async () => {
+      mocks.fakeViewer.submitProofBundle.mockRejectedValueOnce('Lock Server viewer request failed with HTTP 451');
+
+      await expect(LocksService.submitProof(bundle)).rejects.toMatchObject({
+        service: ErrorService.Locks,
+        operation: 'LocksService.submitProof',
+      });
+    });
+
+    it('builds no AppError, so nothing is logged or sent to Sentry', async () => {
+      const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      mocks.fakeViewer.submitProofBundle.mockRejectedValueOnce(
+        Object.assign(new Error('Lock Server viewer request failed with HTTP 451'), { name: 'InvalidInput' }),
+      );
+
+      await LocksService.submitProof(bundle);
+
+      expect(logError).not.toHaveBeenCalled();
+      logError.mockRestore();
+    });
+
+    it.each(['HTTP 429', 'HTTP 500', 'HTTP 403', 'HTTP 4510'])('still reports a %s as an error', async (statusText) => {
+      const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      mocks.fakeViewer.submitProofBundle.mockRejectedValueOnce(
+        new Error(`Lock Server viewer request failed with ${statusText}`),
+      );
+
+      const error = await LocksService.submitProof(bundle).catch((caught: unknown) => caught);
+
+      expect(isAppError(error)).toBe(true);
+      expect(logError).toHaveBeenCalled();
+      logError.mockRestore();
+    });
+  });
+
   it('lookupPaykitConnectionState returns the state the server reports', async () => {
     await expect(LocksService.lookupPaykitConnectionState('creator-b', 'b1')).resolves.toBe('handshake');
   });
@@ -524,6 +571,39 @@ describe('LocksService (reader unlock)', () => {
   it('lookupVerificationTask reads the 404 from a non-Error rejection too', async () => {
     mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce('HTTP 404');
     await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toBeNull();
+  });
+
+  describe('lookupVerificationTask when the Lock Server answers 451', () => {
+    const refused = () =>
+      Object.assign(new Error('Lock Server viewer request failed with HTTP 451'), { name: 'InvalidInput' });
+
+    it('returns a region-blocked result instead of throwing, as submitProof does', async () => {
+      mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce(refused());
+
+      await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toEqual({ regionBlocked: true });
+    });
+
+    it('builds no AppError, so nothing is logged or sent to Sentry', async () => {
+      const logError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce(refused());
+
+      await LocksService.lookupVerificationTask('creator-b', 'b1');
+
+      expect(logError).not.toHaveBeenCalled();
+      logError.mockRestore();
+    });
+
+    it('is not mistaken for a missing task, and other failures are still reported', async () => {
+      mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce(refused());
+      await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.not.toBeNull();
+
+      mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce(
+        Object.assign(new Error('Lock Server viewer request failed with HTTP 500'), { name: 'InvalidInput' }),
+      );
+      await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).rejects.toMatchObject({
+        operation: 'LocksService.lookupVerificationTask',
+      });
+    });
   });
 
   it('lookupVerificationTask does not treat other 4xx as missing', async () => {
