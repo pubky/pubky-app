@@ -89,6 +89,7 @@ vi.mock('@/hooks/useMentionAutocomplete/useMentionAutocomplete', () => ({
 vi.mock('@/hooks/useUndoRepost/useUndoRepost', () => ({ useUndoRepost: () => ({ undoRepost: vi.fn() }) }));
 vi.mock('pubky-app-specs', () => ({
   PubkyAppPostKind: { Short: 0, Long: 1, Image: 2, Video: 3, Link: 4, File: 5, Collection: 6 },
+  fileUriBuilder: (author: string, fileId: string) => `pubky://${author}/pub/pubky.app/files/${fileId}`,
   PubkyAppPost: class {
     constructor(
       public content: string,
@@ -124,7 +125,8 @@ vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
   }),
 }));
 // The editor cannot run in jsdom. The stand-in hands the test what the real one hands the composer:
-// a change report, which rich text and markdown mode share, and the upload of an inserted image. Like
+// a change report, which rich text and markdown mode share, and the staging of an inserted image (its
+// bytes go up when the article is saved). Like
 // the real wrapper it swaps the editor for a skeleton while the inline attachments load, so a composer
 // that re-reads the row shows up as a new editor node.
 vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', async () => {
@@ -248,17 +250,23 @@ describe('PostInput - editing while the post row changes under the dialog (integ
     expect(mocks.editor?.markdown).toBe(EDITOR_BODY);
     expect(mocks.useAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [CLIP_URI] });
 
-    mocks.commitCreateFile.mockResolvedValueOnce(NEW_URI);
+    // The insert stages the file under a draft URI of the author's; nothing is uploaded yet
+    let stagedUri = '';
     await act(async () => {
-      await mocks.editor?.upload(image);
+      stagedUri = (await mocks.editor?.upload(image)) ?? '';
     });
-    const editedBody = `${EDITOR_BODY}\n\n![new](${NEW_URI})`;
+    expect(stagedUri).toMatch(/\/pub\/pubky\.app\/files\/draft-[0-9a-f]{7}$/);
+    expect(mocks.commitCreateFile).not.toHaveBeenCalled();
+    const editedBody = `${EDITOR_BODY}\n\n![new](${stagedUri})`;
     act(() => mocks.editor?.change(editedBody));
     settle();
 
+    // The save uploads the staged file first; the refused post write leaves it in the session
+    mocks.commitCreateFile.mockResolvedValueOnce(NEW_URI);
     refuseNextSave();
     await save(1);
     await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' })));
+    expect(mocks.commitCreateFile).toHaveBeenCalledTimes(1);
     // The failed save's local write carries the new slot and file, then the rollback takes them back
     const writtenArticle = JSON.stringify({ title: 'Essay', body: `${PUBLISHED_BODY}\n\n![new](attachment:2)` });
     rerender(editArticle(writtenArticle, [COVER_URI, CLIP_URI, NEW_URI]));
@@ -270,6 +278,7 @@ describe('PostInput - editing while the post row changes under the dialog (integ
     // The inline slots the editor waits on are the mount-time ones: the row round trip never asks for the new file
     expect(mocks.useAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [CLIP_URI] });
     expect(mocks.useAttachmentsMetadata).not.toHaveBeenCalledWith({ fileUris: expect.arrayContaining([NEW_URI]) });
+    expect(mocks.useAttachmentsMetadata).not.toHaveBeenCalledWith({ fileUris: expect.arrayContaining([stagedUri]) });
 
     await save(2);
     expect(mocks.commitEdit).toHaveBeenLastCalledWith(
@@ -279,6 +288,8 @@ describe('PostInput - editing while the post row changes under the dialog (integ
         attachments: expect.objectContaining({ nextOrder: [COVER_URI, CLIP_URI, NEW_URI] }),
       }),
     );
+    // The retry reuses the upload of the refused save instead of sending the file again
+    expect(mocks.commitCreateFile).toHaveBeenCalledTimes(1);
     expect(mocks.commitDeleteFile).not.toHaveBeenCalled();
   });
 });
