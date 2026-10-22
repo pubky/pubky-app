@@ -3460,6 +3460,224 @@ describe('usePostInput', () => {
       expect(pasteEvent.preventDefault).not.toHaveBeenCalled();
       expect(mockSetAttachments).not.toHaveBeenCalled();
     });
+    it('converts a pasted raw pubky key into a mention', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({
+          items: [],
+          getData: () => validPubky,
+        }),
+        preventDefault: vi.fn(),
+      });
+
+      act(() => {
+        result.current.handlePaste(pasteEvent);
+      });
+
+      expect(pasteEvent.preventDefault).toHaveBeenCalled();
+      expect(mockSetContent).toHaveBeenCalledWith(`pubky${validPubky} `);
+    });
+
+    it('converts a pasted pubky:// URL into a mention', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({
+          items: [],
+          getData: () => `pubky://${validPubky}`,
+        }),
+        preventDefault: vi.fn(),
+      });
+
+      act(() => {
+        result.current.handlePaste(pasteEvent);
+      });
+
+      expect(pasteEvent.preventDefault).toHaveBeenCalled();
+      expect(mockSetContent).toHaveBeenCalledWith(`pubky${validPubky} `);
+    });
+
+    it('does not convert a non-key text paste', () => {
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({
+          items: [],
+          getData: () => 'hello world',
+        }),
+        preventDefault: vi.fn(),
+      });
+
+      act(() => {
+        result.current.handlePaste(pasteEvent);
+      });
+
+      expect(pasteEvent.preventDefault).not.toHaveBeenCalled();
+      expect(mockSetContent).not.toHaveBeenCalled();
+    });
+
+    it('routes the mention through execCommand so the paste is undoable', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      const focus = vi.fn();
+      const setSelectionRange = vi.fn();
+      result.current.textareaRef.current = asOpaque<HTMLTextAreaElement>({
+        selectionStart: 0,
+        selectionEnd: 0,
+        focus,
+        setSelectionRange,
+      });
+
+      // jsdom does not define document.execCommand at all, so vi.spyOn fails. Assign
+      // it directly so the production guard (`typeof document.execCommand === 'function'`)
+      // takes the native-insertion branch. Restore whatever was there afterwards.
+      const doc = document as typeof document & {
+        execCommand?: (cmd: string, ui?: boolean, value?: string) => boolean;
+      };
+      const original = doc.execCommand;
+      const execCommand = vi.fn().mockReturnValue(true);
+      doc.execCommand = execCommand;
+
+      try {
+        const pasteEvent = mockClipboardEvent({
+          clipboardData: asOpaque<DataTransfer>({ items: [], getData: () => validPubky }),
+          preventDefault: vi.fn(),
+        });
+
+        act(() => {
+          result.current.handlePaste(pasteEvent);
+        });
+
+        expect(focus).toHaveBeenCalled();
+        expect(setSelectionRange).toHaveBeenCalledWith(0, 0);
+        expect(execCommand).toHaveBeenCalledWith('insertText', false, `pubky${validPubky} `);
+      } finally {
+        if (original === undefined) {
+          Reflect.deleteProperty(doc, 'execCommand');
+        } else {
+          doc.execCommand = original;
+        }
+      }
+    });
+
+    it('passes selectionStart and selectionEnd to the native insertion', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      const setSelectionRange = vi.fn();
+      result.current.textareaRef.current = asOpaque<HTMLTextAreaElement>({
+        selectionStart: 6,
+        selectionEnd: 11,
+        focus: vi.fn(),
+        setSelectionRange,
+      });
+
+      const doc = document as Document & {
+        execCommand?: (cmd: string, ui?: boolean, value?: string) => boolean;
+      };
+      const original = doc.execCommand;
+      doc.execCommand = vi.fn().mockReturnValue(true);
+
+      try {
+        const pasteEvent = mockClipboardEvent({
+          clipboardData: asOpaque<DataTransfer>({ items: [], getData: () => validPubky }),
+          preventDefault: vi.fn(),
+        });
+
+        act(() => {
+          result.current.handlePaste(pasteEvent);
+        });
+
+        expect(setSelectionRange).toHaveBeenCalledWith(6, 11);
+      } finally {
+        if (original === undefined) {
+          Reflect.deleteProperty(doc, 'execCommand');
+        } else {
+          doc.execCommand = original;
+        }
+      }
+    });
+    it('does not intercept the paste when the normalized mention would exceed maxLength', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      // Fill the composer so a 58-char `pubky<key> ` cannot fit, but the 55-char
+      // `pk:<key>` form could. 1985 + 58 > 2000, 1985 + 55 = 2040 (still over) —
+      // just needs to be within 58 of the limit.
+      mockContent = 'a'.repeat(1985);
+
+      const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+      result.current.textareaRef.current = asOpaque<HTMLTextAreaElement>({
+        selectionStart: 1985,
+        selectionEnd: 1985,
+        maxLength: 2000,
+        focus: vi.fn(),
+        setSelectionRange: vi.fn(),
+      });
+
+      const pasteEvent = mockClipboardEvent({
+        clipboardData: asOpaque<DataTransfer>({ items: [], getData: () => validPubky }),
+        preventDefault: vi.fn(),
+      });
+
+      act(() => {
+        result.current.handlePaste(pasteEvent);
+      });
+
+      // The handler let the native paste happen.
+      expect(pasteEvent.preventDefault).not.toHaveBeenCalled();
+      expect(mockSetContent).not.toHaveBeenCalled();
+    });
+
+    it('adds the separator when the textarea value differs from content by CRLF normalization', () => {
+      const validPubky = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+      // content still holds the CRLF share-target draft; the DOM value has been
+      // normalized to LF by the browser.
+      mockContent = 'A\r\nB';
+
+      const { result } = renderHook(() =>
+        usePostInput({ variant: 'post' }),
+      );
+
+      result.current.textareaRef.current = asOpaque<HTMLTextAreaElement>({
+        value: 'A\nB',
+        selectionStart: 3,
+        selectionEnd: 3,
+        maxLength: 2000,
+        focus: vi.fn(),
+        setSelectionRange: vi.fn(),
+      });
+
+      const doc = document as Document & {
+        execCommand?: (cmd: string, ui?: boolean, value?: string) => boolean;
+      };
+      const original = doc.execCommand;
+      const execCommand = vi.fn().mockReturnValue(true);
+      doc.execCommand = execCommand;
+
+      try {
+        const pasteEvent = mockClipboardEvent({
+          clipboardData: asOpaque<DataTransfer>({ items: [], getData: () => validPubky }),
+          preventDefault: vi.fn(),
+        });
+
+        act(() => {
+          result.current.handlePaste(pasteEvent);
+        });
+
+        // Separator must be present — the char before the caret is `B`, not whitespace.
+        expect(execCommand).toHaveBeenCalledWith('insertText', false, ` pubky${validPubky} `);
+      } finally {
+        if (original === undefined) {
+          Reflect.deleteProperty(doc, 'execCommand');
+        } else {
+          doc.execCommand = original;
+        }
+      }
+    });
   });
   describe('mention autocomplete', () => {
     /** A real textarea so the hook can read the live selection, as the composer does */

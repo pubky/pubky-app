@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { extractMentionQuery, getContentWithMention } from './useMentionAutocomplete.utils';
+import {
+  buildMentionText,
+  extractMentionQuery,
+  getContentWithMention,
+  insertMentionAtRange,
+} from './useMentionAutocomplete.utils';
 
 describe('extractMentionQuery', () => {
   describe('@ pattern extraction', () => {
@@ -553,5 +558,59 @@ describe('getContentWithMention', () => {
       expect(result.content).toBe(`Hello pubky${userId} `);
       expect(result.caret).toBe(`Hello pubky${userId} `.length);
     });
+  });
+});
+
+describe('insertMentionAtRange', () => {
+  const userId = 'user123';
+
+  it('inserts at the caret when nothing is selected', () => {
+    const result = insertMentionAtRange('hello', 5, 5, userId);
+    expect(result.content).toBe('hello pubkyuser123 ');
+    expect(result.caret).toBe('hello pubkyuser123 '.length);
+  });
+
+  it('replaces a selected range', () => {
+    const result = insertMentionAtRange('hello WORLD', 6, 11, userId);
+    expect(result.content).toBe('hello pubkyuser123 ');
+  });
+
+  it('does not double the space when the character before the range is whitespace', () => {
+    const result = insertMentionAtRange('hello ', 6, 6, userId);
+    expect(result.content).toBe('hello pubkyuser123 ');
+  });
+
+  it('does not write over an earlier @name', () => {
+    const content = 'Thanks @bob for the help ';
+    const result = insertMentionAtRange(content, content.length, content.length, userId);
+    expect(result.content).toBe('Thanks @bob for the help pubkyuser123 ');
+  });
+
+  it('clamps a stale end below start to start', () => {
+    const result = insertMentionAtRange('hello', 5, 2, userId);
+    expect(result.content).toBe('hello pubkyuser123 ');
+  });
+});
+
+describe('buildMentionText', () => {
+  const userId = 'user123';
+
+  it('adds a leading space when the preceding character is not whitespace', () => {
+    expect(buildMentionText('hi', 2, userId)).toBe(' pubkyuser123 ');
+  });
+
+  it('does not add a space at the very start of the composer', () => {
+    expect(buildMentionText('', 0, userId)).toBe('pubkyuser123 ');
+  });
+
+  it('does not double the space when the preceding character is whitespace', () => {
+    expect(buildMentionText('hello ', 6, userId)).toBe('pubkyuser123 ');
+  });
+  it('does not add a space when the preceding character is a newline', () => {
+    expect(buildMentionText('hello\n', 6, userId)).toBe('pubkyuser123 ');
+  });
+
+  it('does not add a space when the preceding character is a tab', () => {
+    expect(buildMentionText('hello\t', 6, userId)).toBe('pubkyuser123 ');
   });
 });
