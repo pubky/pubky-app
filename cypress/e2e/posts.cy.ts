@@ -1,3 +1,4 @@
+import type { Interception } from 'cypress/types/net-stubbing';
 import { backupDownloadFilePath } from '../support/auth';
 import { applyContentFilter } from '../support/collections';
 import { slowCypressDown } from 'cypress-slow-down';
@@ -18,9 +19,14 @@ import {
   repostPost,
   MAX_POST_LENGTH,
   createQuickPostWithImage,
+  expectSessionExpiredWithoutRetryLoop,
+  fillArticleFields,
   PostOrReply,
+  restoreSessionByReload,
+  switchToArticleMode,
   waitForFeedToLoad,
 } from '../support/posts';
+import { taggedPostFromInterception, waitForNexusPostTags } from '../support/nexus';
 import { expectTimelineContains, expectTimelineOmits } from '../support/feeds';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
@@ -454,8 +460,10 @@ describe('posts', () => {
 
     fastTagPostInFeed([tag1, tag2, tag3], postContent);
 
-    // todo: remove wait workaround once bug is fixed, see https://github.com/pubky/pubky-app/issues/805
-    cy.wait(Cypress.expose('ci') ? 3_000 : 500);
+    cy.get<Interception>('@putTag').then((interception) => {
+      const { authorId, postId } = taggedPostFromInterception(interception);
+      waitForNexusPostTags(authorId, postId, [tag1, tag2, tag3]);
+    });
 
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       [tag1, tag2, tag3].forEach((tag) => {
@@ -1150,8 +1158,128 @@ describe('posts', () => {
     applyContentFilter('All');
   });
 
-  // todo: check if we want this functionality
-  it.skip('signout when 401 response from homeserver when creating new post');
-  it.skip('signout when 401 response from homeserver when creating new article');
-  it.skip('signout when 401 response from homeserver when tagging a post');
+  it('prompts to sign in again when homeserver responds 401 to creating new post', () => {
+    const postContent = `This post is rejected as unauthenticated! ${Date.now()}`;
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 401 }).as('postUnauthorized');
+
+    cy.get('[data-cy="home-post-input"]').within(() => {
+      cy.get('[data-cy="post-input-textarea"]').type(postContent);
+      cy.get('[data-cy="post-input-action-bar-post"]').click();
+    });
+    cy.wait('@postUnauthorized');
+
+    expectSessionExpiredWithoutRetryLoop('@postUnauthorized');
+    cy.get('[data-cy="home-post-input"]').find('[data-cy="post-input-textarea"]').should('have.value', postContent);
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
+
+    restoreSessionByReload();
+  });
+
+  it('prompts to sign in again when homeserver responds 401 to creating new article', () => {
+    const title = `Unauthenticated article ${Date.now()}`;
+    const body = `This article is rejected as unauthenticated! ${Date.now()}`;
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 401 }).as('articleUnauthorized');
+
+    cy.get('[data-cy="home-post-input"]').within(() => {
+      cy.get('[data-cy="post-input-textarea"]').click();
+      switchToArticleMode();
+      fillArticleFields({ title, body });
+      cy.get('[data-cy="post-input-action-bar-publish-article"]').should('not.be.disabled').click();
+    });
+    cy.wait('@articleUnauthorized');
+
+    expectSessionExpiredWithoutRetryLoop('@articleUnauthorized');
+    cy.get('[data-cy="home-post-input"]').within(() => {
+      cy.get('[data-cy="article-title-input"]').should('have.value', title);
+      cy.get('[data-cy="article-markdown-textarea"]').filter(':visible').should('have.value', body);
+    });
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', title);
+
+    restoreSessionByReload();
+  });
+
+  // TODO: https://github.com/pubky/pubky-app/issues/2890
+  // usePostTags still shows the generic 'Could not add tag' toast for a 401, so the session-expired
+  // prompt never appears. Re-enable once tag writes show the session-expired prompt.
+  it.skip('prompts to sign in again when homeserver responds 401 to tagging a post', () => {
+    const postContent = `This post will be tagged while unauthenticated! ${Date.now()}`;
+    const tag = 'unauthed';
+    createQuickPost(postContent);
+
+    cy.intercept('PUT', '**/pub/pubky.app/tags/**', { statusCode: 401 }).as('tagUnauthorized');
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-tag-add-button"]').filter(':visible').click();
+      cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
+    });
+    cy.wait('@tagUnauthorized');
+
+    expectSessionExpiredWithoutRetryLoop('@tagUnauthorized');
+    // A failed tag is rolled back from the post; the tag input clears on submit, failed or not.
+    cy.findFirstPostInFeedFiltered(postContent).within(() => {
+      cy.get(`[data-cy="post-tag"][data-tag-label="${tag}"]`).should('not.exist');
+    });
+
+    restoreSessionByReload();
+  });
+
+  it('warns that storage is full and keeps the draft when homeserver responds 507 to a new post', () => {
+    const postContent = `This post does not fit in storage! ${Date.now()}`;
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 507 }).as('postInsufficientStorage');
+
+    cy.get('[data-cy="home-post-input"]').within(() => {
+      cy.get('[data-cy="post-input-textarea"]').type(postContent);
+      cy.get('[data-cy="post-input-action-bar-post"]').click();
+    });
+    cy.wait('@postInsufficientStorage');
+
+    cy.get('[data-cy="toast"]')
+      .filter(':visible')
+      .should('contain.text', 'You have reached your storage limit. Contact support to request more space.');
+    // 507 is not retryable
+    cy.get('@postInsufficientStorage.all').should('have.length', 1);
+    cy.get('[data-cy="home-post-input"]').find('[data-cy="post-input-textarea"]').should('have.value', postContent);
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
+  });
+
+  it('keeps the quick reply draft when the reply is rolled back', () => {
+    const postContent = `This post gets a reply that fails! ${Date.now()}`;
+    const replyContent = `This reply never reaches the homeserver! ${Date.now()}`;
+    createQuickPost(postContent);
+
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-text"]').click();
+    });
+    cy.location('pathname').should('contain', '/post/');
+    cy.get('[data-cy="single-post-card"]').should('contain.text', postContent);
+
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 500 }).as('replyFailed');
+    // The hidden feed under the post overlay has its own quick reply on the same post.
+    cy.get('[data-cy="quick-reply"]').filter(':visible').should('have.length', 1).as('postQuickReply');
+    cy.get('@postQuickReply')
+      .find('[data-cy="quick-reply-textarea"]')
+      .filter(':visible')
+      .should('have.length', 1)
+      .click()
+      .type(replyContent);
+    cy.get('@postQuickReply')
+      .find('[data-cy="post-input-action-bar-reply"]')
+      .should('be.visible')
+      .and('not.be.disabled')
+      .click();
+
+    cy.get('[data-cy="toast"]').filter(':visible').should('contain.text', 'Could not post reply. Try again.');
+    // homeserver writes retry a 500 twice before giving up
+    cy.get('@replyFailed.all').should('have.length', 3);
+    // the first reply flips the thread's reply list 0 -> 1 -> 0 on rollback; the composer must survive it
+    cy.get('@postQuickReply')
+      .find('[data-cy="quick-reply-textarea"]')
+      .filter(':visible')
+      .should('have.value', replyContent);
+
+    cy.visit('/home');
+    waitForFeedToLoad();
+  });
+
+  //todo: implement once retaining scroll position is implemented, see https://github.com/pubky/franky/issues/416
+  it.skip('can navigate back to feed from post view');
 });
