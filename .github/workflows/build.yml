@@ -24,6 +24,42 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          # Blobless partial clone. The negation drops only VRT baseline PNGs
+          # under src/test/vrt/**/__screenshots__. VRT workflows still fetch them.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
+
+      # Fails the build if the sparse pattern drops a shipped asset or a
+      # non-baseline test image, or if it fails to exclude the VRT PNGs.
+      - name: Check non-baseline files survived checkout
+        run: |
+          missing=0
+          for path in \
+            public/manifest.json \
+            public/franky.png \
+            public/pubky-logo.svg \
+            public/images/manifest/web-app-manifest-512x512.png \
+            src/test/vrt/images/vrt-golden-hour.webp \
+            src/test/vrt/feed/Home.vrt.test.tsx \
+            cypress/fixtures/mustache-you.png
+          do
+            if [ ! -e "$path" ]; then
+              echo "Sparse checkout dropped a non-baseline file: $path"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          if find src/test/vrt -path '*/__screenshots__/*.png' | grep -q .; then
+            echo "Sparse checkout included VRT baseline screenshots."
+            exit 1
+          fi
+          git count-objects -vH
 
       # Clean install on purpose: this job is the proof that the production build
       # works with no Actions cache, no npm download cache and no Next.js build cache.
