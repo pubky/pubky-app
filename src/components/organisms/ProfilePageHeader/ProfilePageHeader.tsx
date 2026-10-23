@@ -234,6 +234,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 size="sm"
                 onClick={onSignOut}
                 id="profile-logout-btn"
+                data-cy="profile-logout-btn"
                 disabled={isLoggingOut}
               >
                 {isLoggingOut ? (

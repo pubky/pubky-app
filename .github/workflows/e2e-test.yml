@@ -6,6 +6,15 @@ env:
 
 on:
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Viewport(s) to run the specs against'
+        type: choice
+        options:
+          - desktop
+          - mobile
+          - both
+        default: desktop
   push:
     branches:
       - master
@@ -137,6 +146,8 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chrome]
+        # Push runs have no inputs, so they resolve to desktop only.
+        viewport: ${{ fromJSON(inputs.target == 'both' && '["desktop","mobile"]' || format('["{0}"]', inputs.target || 'desktop')) }}
         spec: ["contacts.cy.ts", "feed.cy.ts", "notifications.cy.ts", "onboarding.cy.ts", "posts.cy.ts", "profile.cy.ts", "search.cy.ts", "settings.cy.ts", "collections.cy.ts"]
 
     steps:
@@ -308,6 +319,7 @@ jobs:
 
       - name: Run e2e tests - Desktop (${{ matrix.browser }}) - Spec (${{matrix.spec}})
         id: test-desktop
+        if: matrix.viewport == 'desktop'
         uses: cypress-io/github-action@v7
         env:
           DEBUG: '@cypress/github-action'
@@ -323,7 +335,7 @@ jobs:
           wait-on-timeout: 180
 
       - name: Upload screenshots - ${{ matrix.browser }} - Desktop
-        if: ${{ always() }}
+        if: always() && matrix.viewport == 'desktop'
         uses: actions/upload-artifact@v7
         with:
           name: screenshots-${{ matrix.browser }}-${{ matrix.spec }}-desktop
@@ -339,26 +351,25 @@ jobs:
           path: pubky-app/cypress/videos/${{ matrix.spec }}.mp4
           if-no-files-found: ignore
 
-      # TODO: Skipped due to bug https://github.com/pubky/pubky-app/issues/372
-      # - name: Run e2e tests - Mobile (${{ matrix.browser }})
-      #   id: test-mobile
-      #   uses: cypress-io/github-action@v7
-      #   env:
-      #     DEBUG: '@cypress/github-action'
-      #   with:
-      #     working-directory: pubky-app/cypress
-      #     config-file: cypress.config.mobile.ts
-      #     spec: e2e/**/*.cy.ts
-      #     browser: ${{ matrix.browser }}
-      #     headed: false
-      #     summary-title: ${{ matrix.browser }} - Mobile
-      #     install: false
-      #     # no need to start the server, it's already running
-      #     wait-on: 'http://localhost:3000'
-      #     wait-on-timeout: 180
+      - name: Run e2e tests - Mobile (${{ matrix.browser }}) - Spec (${{matrix.spec}})
+        id: test-mobile
+        if: matrix.viewport == 'mobile'
+        uses: cypress-io/github-action@v7
+        env:
+          DEBUG: '@cypress/github-action'
+        with:
+          working-directory: pubky-app/cypress
+          config-file: cypress.config.mobile.ts
+          spec: e2e/${{ matrix.spec }}
+          browser: ${{ matrix.browser }}
+          headed: false
+          summary-title: ${{ matrix.browser }} - Mobile
+          install: false
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 180
 
       - name: Upload screenshots - ${{ matrix.browser }} - Mobile
-        if: ${{ always() }}
+        if: always() && matrix.viewport == 'mobile'
         uses: actions/upload-artifact@v7
         with:
           name: screenshots-${{ matrix.browser }}-${{ matrix.spec }}-mobile
@@ -379,7 +390,9 @@ jobs:
         uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
-          name: cypress-log-${{ matrix.browser }}-${{ matrix.spec }}
+          # Desktop keeps its historical artifact name; mobile is suffixed so a
+          # `both` dispatch does not collide on the same spec.
+          name: cypress-log-${{ matrix.browser }}-${{ matrix.spec }}${{ matrix.viewport == 'mobile' && '-mobile' || '' }}
           path: pubky-app/cypress/cypress.log
           if-no-files-found: ignore
 

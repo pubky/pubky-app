@@ -60,7 +60,7 @@ export function MobileHeader({
       >
         <SideSlot>
           {showLeftIcon ? (
-            <Button variant="ghost" size="icon" onClick={onLeftIconClick}>
+            <Button variant="ghost" size="icon" onClick={onLeftIconClick} data-cy="mobile-header-left-btn">
               <SlidersHorizontal className="size-6" />
             </Button>
           ) : null}
@@ -82,6 +82,7 @@ export function MobileHeader({
               onRightIconClick?.();
             }}
             aria-label={rightButtonLabel}
+            data-cy="mobile-header-right-btn"
           >
             <Lightbulb className="size-6" />
           </Button>

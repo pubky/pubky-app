@@ -2,6 +2,7 @@
 
 import { backupDownloadFilePath, extendedTimeout } from './common';
 import { goToProfilePageFromHeader } from './header';
+import { showProfileHeader } from './profile';
 import { confirmLogoutBackupBeforeNavigation } from './logout';
 import { waitForFeedToLoad } from './posts';
 import {
@@ -226,8 +227,9 @@ function collectRecoveryPhraseWords(): Cypress.Chainable<string> {
 
 Cypress.Commands.add('signOut', (hasBackedUp: HasBackedUp) => {
   goToProfilePageFromHeader();
+  showProfileHeader();
 
-  cy.get('#profile-logout-btn').click();
+  cy.get('[data-cy="profile-logout-btn"]').filter(':visible').should('have.length', 1).click();
   cy.location('pathname').should('eq', '/logout');
 
   confirmLogoutBackupBeforeNavigation(hasBackedUp, '#logout-navigation-back-btn');
