@@ -29,7 +29,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
           <DialogTitle>Terms of Service</DialogTitle>
         </DialogHeader>
         <Container className="h-[320px] overflow-y-auto pr-4">
-          <Container className="flex-col gap-4">
+          <Container className="flex-col gap-4 [&_a]:underline">
             {/** Section 1 */}
             <Typography className={baseCSS}>
               TERMS AND CONDITIONS
@@ -446,7 +446,7 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
             </Typography>
 
             {/** Section 14 */}
-            <Typography className={baseCSS}>PUBKY SHOP AND PUBKY MARKETPLACE</Typography>
+            <Typography className={baseCSS}>PUBKY SHOP AND PUBKY MARKET</Typography>
             <Typography className={baseCSSItalic}>
               This section explains Pubky Shop. It does not replace the rest of these Terms. Listings and related
               material remain Content. Prohibited Uses still apply, including to goods and services offered for sale.
@@ -461,9 +461,9 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
               made by an account we operate and that listing says so.
             </Typography>
             <Typography className={baseCSS}>
-              <strong>What Pubky Marketplace is:</strong>
+              <strong>What Pubky Market is:</strong>
               <br />
-              Pubky Marketplace is the name we use for commerce on Pubky. These Terms govern Pubky Shop. They do not
+              Pubky Market is the name we use for commerce on Pubky. These Terms govern Pubky Shop. They do not
               automatically govern some other operator’s marketplace.
             </Typography>
             <Typography className={baseCSS}>
@@ -918,9 +918,9 @@ export function DialogTerms({ trigger }: DialogTermsProps) {
                 index, Lock Server, and payment-verification services we operate).
               </li>
               <li>
-                &quot;<strong>Pubky Marketplace</strong>&quot; means the concept of commerce among Pubky identities.
-                Pubky Shop is the Synonym-operated instance of that concept. Pubky Marketplace is not a separate product
-                or a second set of Terms.
+                &quot;<strong>Pubky Market</strong>&quot; means the concept of commerce among Pubky identities. Pubky
+                Shop is the Synonym-operated instance of that concept. Pubky Market is not a separate product or a
+                second set of Terms.
               </li>
               <li>
                 &quot;<strong>Lock Server</strong>&quot; means a service that applies access conditions (including proof

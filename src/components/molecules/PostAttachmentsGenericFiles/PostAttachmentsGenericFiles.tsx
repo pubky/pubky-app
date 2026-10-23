@@ -1,4 +1,4 @@
-import { Download, FileText } from 'lucide-react';
+import { Eye, FileText } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
@@ -30,8 +30,8 @@ export const PostAttachmentsGenericFiles = ({ genericFiles }: PostAttachmentsGen
           </Container>
 
           <Button asChild variant="dark" size="icon" className="h-8 w-10 shrink-0 border-none bg-card hover:bg-card/70">
-            <Link overrideDefaults href={pdf.urls.main}>
-              <Download className="size-4" />
+            <Link overrideDefaults href={pdf.urls.main} aria-label="Preview file">
+              <Eye className="size-4" />
             </Link>
           </Button>
         </Container>

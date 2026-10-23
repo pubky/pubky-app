@@ -6,7 +6,7 @@ const SELLER = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 const PATH = ['marketplace', 'listing', SELLER, 'handmade-bag_1'];
 const OUTER_PATH = `/shop/${PATH.join('/')}`;
 const EMBED_PATH = `/shop-embed/${PATH.join('/')}`;
-const TITLE = 'Handmade leather bag with brass buckles — 25,000 SAT | Pubky Marketplace';
+const TITLE = 'Handmade leather bag with brass buckles — 25,000 SAT | Pubky Market';
 const DESCRIPTION = 'Listing paused. A handmade bag with original brass buckles.';
 
 function listingHtml(title = TITLE, description = DESCRIPTION) {
@@ -58,10 +58,10 @@ describe('Shop listing metadata', () => {
   });
 
   it('preserves Shop fallback copy for removed or unavailable listings', async () => {
-    vi.mocked(fetch).mockResolvedValue(listingHtml('Pubky Marketplace', 'Shop supplies this fallback.'));
+    vi.mocked(fetch).mockResolvedValue(listingHtml('Pubky Market', 'Shop supplies this fallback.'));
     const result = await generateMetadata({ params: Promise.resolve({ path: PATH }) });
 
-    expect(result.title).toBe('Pubky Marketplace');
+    expect(result.title).toBe('Pubky Market');
     expect(result.description).toBe('Shop supplies this fallback.');
     expect(result.alternates.canonical).toBe(OUTER_PATH);
   });
@@ -75,12 +75,18 @@ describe('Shop listing metadata', () => {
     expect(result.twitter.description).toBe('');
   });
 
-  it.each([404, 503])('uses a Marketplace fallback on HTTP %s and keeps the listing canonical', async (status) => {
+  it.each([404, 503])('uses a Market fallback on HTTP %s and keeps the listing canonical', async (status) => {
     vi.mocked(fetch).mockResolvedValue(new Response(null, { status }));
     const result = await generateMetadata({ params: Promise.resolve({ path: PATH }) });
 
-    expect(result.title).toBe('Pubky Marketplace');
-    expect(result.description).toBe('Buy and sell on Pubky Marketplace.');
+    expect(result.title).toBe('Pubky Market');
+    expect(result.description).toBe('Buy and sell on Pubky Market.');
+    expect(result.openGraph).toMatchObject({
+      title: 'Pubky Market',
+      description: 'Buy and sell on Pubky Market.',
+      siteName: 'Pubky Market',
+    });
+    expect(result.twitter).toMatchObject({ title: 'Pubky Market', description: 'Buy and sell on Pubky Market.' });
     expect(result.alternates.canonical).toBe(OUTER_PATH);
     expect(result.twitter.images).toEqual(['/shop-embed/marketplace/opengraph-image']);
   });
@@ -107,7 +113,7 @@ describe('Shop listing metadata', () => {
     const result = await generateMetadata({ params: Promise.resolve({ path }) });
 
     expect(fetch).not.toHaveBeenCalled();
-    expect(result.title).toBe('Pubky Marketplace');
+    expect(result.title).toBe('Pubky Market');
     expect(result.alternates.canonical).toBe('/shop');
   });
 });

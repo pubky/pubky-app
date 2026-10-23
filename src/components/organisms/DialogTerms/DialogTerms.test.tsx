@@ -147,6 +147,16 @@ describe('DialogTerms', () => {
     expect(screen.getByTestId('dialog-content')).not.toHaveTextContent('Synonym Software Ltd.');
   });
 
+  it('underlines every link inside the body', () => {
+    render(<DialogTerms />);
+
+    const links = screen.getAllByRole('link');
+    const body = links[0].closest('[data-testid="container"]');
+
+    expect(body).toHaveClass('flex-col', '[&_a]:underline');
+    links.forEach((link) => expect(body).toContainElement(link));
+  });
+
   it('exposes the default trigger as a keyboard focusable button', () => {
     render(<DialogTerms />);
 
@@ -197,10 +207,22 @@ describe('DialogTerms - regional availability', () => {
     const { container } = render(<DialogTerms />);
     const text = container.textContent ?? '';
 
-    expect(text).toContain('PUBKY SHOP AND PUBKY MARKETPLACE');
+    expect(text).toContain('PUBKY SHOP AND PUBKY MARKET');
     expect(text).toContain('We are not the PayPal merchant of record for the sale.');
     expect(text).toContain('PayPal, Bitkit, and similar tools are Third-Party Materials.');
     expect(text).not.toMatch(/stripe/i);
+  });
+
+  it('names the product Pubky Market, never Pubky Marketplace', () => {
+    const { container } = render(<DialogTerms />);
+    const text = container.textContent ?? '';
+
+    expect(text).toContain('What Pubky Market is:');
+    expect(text).toContain('Pubky Market is the name we use for commerce on Pubky.');
+    expect(text).toContain('"Pubky Market" means the concept of commerce among Pubky identities.');
+    expect(text).toContain('Pubky Market is not a separate product or a second set of Terms.');
+    expect(text).not.toMatch(/Pubky Marketplace/i);
+    expect(text).not.toContain('PUBKY MARKETPLACE');
   });
 });
 

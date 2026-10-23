@@ -26,8 +26,8 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
           <DialogDescription className="sr-only">{'Reply dialog'}</DialogDescription>
         </DialogHeader>
         <Container className="min-h-0 flex-1 gap-3 overflow-x-hidden overscroll-contain pr-1">
-          {/* Post being replied to */}
-          <PostPreviewCard postId={postId} />
+          {/* Post being replied to — never a link, so the route cannot change behind the open modal */}
+          <PostPreviewCard postId={postId} navigable={false} />
 
           {/* Reply input */}
           <Container className="relative w-full min-w-0 pl-6" overrideDefaults>

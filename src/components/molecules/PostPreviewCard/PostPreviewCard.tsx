@@ -27,6 +27,13 @@ interface PostPreviewCardProps {
    * under the RepostHeader bar in full-bleed contentless collection shares.
    */
   flush?: boolean;
+  /**
+   * Non-collection posts only: when `false`, the card is a plain surface — no
+   * link role, focus stop, pointer cursor or click/Enter/Space navigation.
+   * The reply dialog passes `false` so clicking the quoted post cannot change
+   * the route behind the open modal. Feed previews default to `true`.
+   */
+  navigable?: boolean;
 }
 
 /**
@@ -59,9 +66,16 @@ interface PostPreviewCardProps {
  * **Usage:**
  * - Repost previews: original post in `PostContent` (collections use embed `CollectionCard`)
  * - Share dialog: original post in `PostInput` repost variant
- * - Reply previews: post being replied to in `DialogReply` (non-collection posts only)
+ * - Reply previews: post being replied to in `DialogReply` (non-collection posts only,
+ *   rendered with `navigable={false}` so the modal stays the only surface in play)
  */
-export function PostPreviewCard({ postId, className, interactiveActions = true, flush = false }: PostPreviewCardProps) {
+export function PostPreviewCard({
+  postId,
+  className,
+  interactiveActions = true,
+  flush = false,
+  navigable = true,
+}: PostPreviewCardProps) {
   const { navigateToPost } = usePostNavigation();
   const { postDetails, isLoading } = usePostDetails(postId);
   const { ref: ttlRef } = useTtlSubscription({
@@ -114,14 +128,15 @@ export function PostPreviewCard({ postId, className, interactiveActions = true, 
         ref={ttlRef}
         data-cy="post-preview-card"
         className={cn(
-          'w-full max-w-full min-w-0 cursor-pointer rounded-md py-0 transition-colors hover:bg-accent/50',
+          'w-full max-w-full min-w-0 rounded-md py-0',
+          navigable && 'cursor-pointer transition-colors hover:bg-accent/50',
           className,
         )}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        role="link"
-        tabIndex={0}
-        aria-label="View original post"
+        onClick={navigable ? handleClick : undefined}
+        onKeyDown={navigable ? handleKeyDown : undefined}
+        role={navigable ? 'link' : undefined}
+        tabIndex={navigable ? 0 : undefined}
+        aria-label={navigable ? 'View original post' : undefined}
       >
         {isMissing ? (
           <PostUnavailable message={'Post not found.'} />

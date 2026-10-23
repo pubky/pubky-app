@@ -86,6 +86,14 @@ describe('ArticleInlineMedia', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
+  it('renders the Eye preview icon in the PDF card, not a download icon', () => {
+    renderMedia('attachment:3');
+
+    const link = screen.getByRole('link', { name: 'Open PDF' });
+    expect(link.querySelector('.lucide-eye.size-4')).toBeInTheDocument();
+    expect(document.querySelector('.lucide-download')).not.toBeInTheDocument();
+  });
+
   it('labels the PDF card with the author description when there is one', () => {
     renderMedia('attachment:3', { alt: 'Quarterly report' });
 

@@ -182,6 +182,12 @@ describe('PostPreviewCard', () => {
     expect(card).toHaveAttribute('aria-label', 'View original post');
   });
 
+  it('shows link affordances by default', () => {
+    render(<PostPreviewCard postId="test-post-123" />);
+
+    expect(screen.getByTestId('card')).toHaveClass('cursor-pointer', 'hover:bg-accent/50');
+  });
+
   it('navigates to post page on click', () => {
     render(<PostPreviewCard postId="test-post-123" />);
 
@@ -219,6 +225,54 @@ describe('PostPreviewCard', () => {
     fireEvent.keyDown(card, { key: 'Tab' });
 
     expect(mockNavigateToPost).not.toHaveBeenCalled();
+  });
+
+  describe('navigable={false}', () => {
+    it('still renders the post header and content', () => {
+      render(<PostPreviewCard postId="test-post-123" navigable={false} />);
+
+      expect(screen.getByTestId('card')).toBeInTheDocument();
+      expect(screen.getByTestId('post-header')).toHaveAttribute('data-post-id', 'test-post-123');
+      expect(screen.getByTestId('post-content-base')).toHaveAttribute('data-post-id', 'test-post-123');
+    });
+
+    it('drops the link role, focus stop and label', () => {
+      render(<PostPreviewCard postId="test-post-123" navigable={false} />);
+
+      const card = screen.getByTestId('card');
+      expect(card).not.toHaveAttribute('role');
+      expect(card).not.toHaveAttribute('tabIndex');
+      expect(card).not.toHaveAttribute('aria-label');
+    });
+
+    it('drops the pointer cursor and hover background', () => {
+      render(<PostPreviewCard postId="test-post-123" navigable={false} />);
+
+      const card = screen.getByTestId('card');
+      expect(card).not.toHaveClass('cursor-pointer');
+      expect(card).not.toHaveClass('hover:bg-accent/50');
+      expect(card).toHaveClass('w-full', 'max-w-full', 'min-w-0');
+    });
+
+    it('does not navigate on click', () => {
+      render(<PostPreviewCard postId="test-post-123" navigable={false} />);
+
+      fireEvent.click(screen.getByTestId('card'));
+
+      expect(mockNavigateToPost).not.toHaveBeenCalled();
+      expect(mockNavigateToCollection).not.toHaveBeenCalled();
+    });
+
+    it('does not navigate on Enter or Space', () => {
+      render(<PostPreviewCard postId="test-post-123" navigable={false} />);
+
+      const card = screen.getByTestId('card');
+      fireEvent.keyDown(card, { key: 'Enter' });
+      fireEvent.keyDown(card, { key: ' ' });
+
+      expect(mockNavigateToPost).not.toHaveBeenCalled();
+      expect(mockNavigateToCollection).not.toHaveBeenCalled();
+    });
   });
 
   it('renders PostUnavailable (not header/content) when the original post is not found', () => {

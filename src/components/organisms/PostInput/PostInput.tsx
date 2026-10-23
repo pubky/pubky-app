@@ -745,9 +745,14 @@ export function PostInput({
                   attachmentsInput
                 )}
 
-                {/* Show original post preview for reposts */}
+                {/* Show original post preview for reposts — never a link, so the route cannot change behind the open repost dialog */}
                 {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
-                  <PostPreviewCard postId={originalPostId} className="bg-card" interactiveActions={false} />
+                  <PostPreviewCard
+                    postId={originalPostId}
+                    className="bg-card"
+                    interactiveActions={false}
+                    navigable={false}
+                  />
                 )}
 
                 <AnimatePresence initial={false} mode="popLayout">

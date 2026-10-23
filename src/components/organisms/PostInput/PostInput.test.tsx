@@ -431,15 +431,18 @@ vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
         postId,
         className,
         interactiveActions,
+        navigable,
       }: {
         postId: string;
         className?: string;
         interactiveActions?: boolean;
+        navigable?: boolean;
       }) => (
         <div
           data-testid="post-preview-card"
           data-post-id={postId}
           data-interactive-actions={String(interactiveActions ?? true)}
+          data-navigable={String(navigable ?? true)}
           className={className}
         >
           {`Original Post: ${postId}`}
@@ -1302,6 +1305,12 @@ describe('PostInput', () => {
     expect(screen.getByPlaceholderText('Optional comment')).toBeInTheDocument();
     expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-interactive-actions', 'false');
     expect(screen.getByTestId('post-preview-card')).toHaveClass('bg-card');
+  });
+
+  it('renders the repost preview as non-navigating so the route cannot change behind the repost dialog', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.REPOST} originalPostId="test-post-123" />);
+
+    expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-navigable', 'false');
   });
 
   it('renders with reply variant', () => {
