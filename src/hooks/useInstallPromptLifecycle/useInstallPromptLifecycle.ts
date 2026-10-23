@@ -6,7 +6,7 @@ import {
   getServerInstallPromptSnapshot,
   subscribeToInstallPrompt,
 } from '@/libs/pwa/installPrompt';
-import { markInstallReminderDone } from '@/libs/pwa/installReminder';
+import { installReminder } from '@/libs/pwa/installReminder';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 /**
@@ -23,6 +23,6 @@ export function useInstallPromptLifecycle() {
   );
 
   useEffect(() => {
-    if (installed && currentUserPubky) markInstallReminderDone(currentUserPubky);
+    if (installed && currentUserPubky) installReminder.markDone(currentUserPubky);
   }, [installed, currentUserPubky]);
 }

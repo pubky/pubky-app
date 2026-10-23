@@ -49,6 +49,9 @@ export const getEmailLink = (): string => `mailto:${getEmail()}`;
 export const getAppStoreLink = getAppStoreUrl;
 export const getPlayStoreLink = getPlayStoreUrl;
 
+// Pubky Vibes — experimental features, promoted from the Home alert and sidebars.
+export const PUBKY_VIBES_URL = 'https://vibes.pubky.app';
+
 // Bitkit store links — the wallet a creator connects for payouts.
 export const BITKIT_WEBSITE_URL = 'https://bitkit.to/';
 export const BITKIT_APP_STORE_URL = 'https://get.bitkit.to/iOS';

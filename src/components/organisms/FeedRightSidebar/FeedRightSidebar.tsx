@@ -5,21 +5,23 @@
 /**
  * HomeFeedContent
  *
- * Shared content for Home feed sidebars - WhoToFollow, ActiveUsers, HotTags, FeedbackCard.
+ * Shared content for regular feed sidebars - WhoToFollow, ActiveUsers, HotTags, FeedbackCard.
  * Used by both HomeFeedRightSidebar (desktop) and HomeFeedRightDrawer (tablet).
  */
 import { Container } from '@/atoms/Container/Container';
 import { ActiveUsers } from '../ActiveUsers/ActiveUsers';
 import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
 import { HotTags } from '../HotTags/HotTags';
+import { VibesCard } from '../VibesCard/VibesCard';
 import { WhoToFollowSidebar } from '../WhoToFollowSidebar/WhoToFollowSidebar';
 
-function HomeFeedContent() {
+function HomeFeedContent({ showVibes = false }: { showVibes?: boolean }) {
   return (
     <>
       <WhoToFollowSidebar />
       <ActiveUsers />
       <HotTags />
+      {showVibes && <VibesCard />}
       <FeedbackCard />
     </>
   );
@@ -35,8 +37,8 @@ function HomeFeedContent() {
  * Right sidebar for Home feed - displays WhoToFollow, ActiveUsers, HotTags, FeedbackCard.
  * Desktop version.
  */
-export function HomeFeedRightSidebar() {
-  return <HomeFeedContent />;
+export function HomeFeedRightSidebar({ showVibes = false }: { showVibes?: boolean }) {
+  return <HomeFeedContent showVibes={showVibes} />;
 }
 
 /**
@@ -44,20 +46,21 @@ export function HomeFeedRightSidebar() {
  *
  * Right drawer for Home feed (tablet) - displays WhoToFollow, ActiveUsers, HotTags, FeedbackCard.
  */
-export function HomeFeedRightDrawer() {
+export function HomeFeedRightDrawer({ showVibes = false }: { showVibes?: boolean }) {
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
-      <HomeFeedContent />
+      <HomeFeedContent showVibes={showVibes} />
     </Container>
   );
 }
 
 /** Phone feed drawer content; ActiveUsers remains in the tablet and desktop sidebars. */
-export function HomeFeedRightDrawerMobile() {
+export function HomeFeedRightDrawerMobile({ showVibes = false }: { showVibes?: boolean }) {
   return (
     <Container overrideDefaults className="flex w-(--filter-bar-width) flex-col gap-6">
       <WhoToFollowSidebar />
       <HotTags />
+      {showVibes && <VibesCard />}
       <FeedbackCard />
     </Container>
   );
@@ -77,7 +80,8 @@ export function HotFeedRightSidebar() {
   return (
     <>
       <WhoToFollowSidebar />
-      <Container overrideDefaults className="sticky top-[100px] self-start">
+      <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
+        <VibesCard />
         <FeedbackCard />
       </Container>
     </>
@@ -93,6 +97,7 @@ export function HotFeedRightDrawer() {
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
       <WhoToFollowSidebar />
+      <VibesCard />
       <FeedbackCard />
     </Container>
   );

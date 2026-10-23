@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildFeatureDiscoveryStorageKey } from '@/config/featureDiscovery';
 import { PWA_INSTALL_STORAGE_ID } from '@/config/pwa';
 import { promptInstall } from '@/libs/pwa/installPrompt';
-import { resetInstallReminderMemory } from '@/libs/pwa/installReminder';
+import { installReminder } from '@/libs/pwa/installReminder';
 import { useInstallPrompt } from './useInstallPrompt';
 
 const PUBKY = 'pk:alice';
@@ -51,7 +51,7 @@ function readStored() {
 describe('useInstallPrompt', () => {
   beforeEach(() => {
     window.localStorage.clear();
-    resetInstallReminderMemory();
+    installReminder.resetMemory();
     mocks.currentUserPubky = PUBKY;
     mocks.secretKey = null;
     mocks.isStandalone = false;
