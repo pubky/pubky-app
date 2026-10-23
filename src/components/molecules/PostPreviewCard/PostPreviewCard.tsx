@@ -28,10 +28,12 @@ interface PostPreviewCardProps {
    */
   flush?: boolean;
   /**
-   * Non-collection posts only: when `false`, the card is a plain surface — no
-   * link role, focus stop, pointer cursor or click/Enter/Space navigation.
-   * The reply dialog passes `false` so clicking the quoted post cannot change
-   * the route behind the open modal. Feed previews default to `true`.
+   * When `false`, the preview is a plain surface: the card loses its link role,
+   * focus stop, pointer cursor and click/Enter/Space navigation, a collection
+   * original renders without its link wrapper, and the author, mentions and
+   * hashtags inside render as text. The Reply and Repost dialogs pass `false`
+   * so nothing in the quoted post can change the route behind the open modal.
+   * Feed previews default to `true`.
    */
   navigable?: boolean;
 }
@@ -49,7 +51,9 @@ interface PostPreviewCardProps {
  * another PostPreviewCard, creating an infinite loop.
  * Both branches also provide PostPreviewNestingContext so PostLinkEmbeds suppresses
  * in-app link embeds inside the preview — mutually-linking posts would otherwise
- * recurse through PostContentBase → PostLinkEmbeds → PostPreviewCard.
+ * recurse through PostContentBase → PostLinkEmbeds → PostPreviewCard. The same
+ * provider carries `navigable` down to the mention and hashtag renderers, which
+ * sit too deep in the markdown render for a prop.
  *
  * Collection originals skip the post-card shell and render `CollectionCard` with
  * `presentation="embed"`. Pass `interactiveActions={false}` from share/repost
@@ -65,7 +69,7 @@ interface PostPreviewCardProps {
  *
  * **Usage:**
  * - Repost previews: original post in `PostContent` (collections use embed `CollectionCard`)
- * - Share dialog: original post in `PostInput` repost variant
+ * - Share dialog: original post in `PostInput` repost variant (`navigable={false}`)
  * - Reply previews: post being replied to in `DialogReply` (non-collection posts only,
  *   rendered with `navigable={false}` so the modal stays the only surface in play)
  */
@@ -108,13 +112,14 @@ export function PostPreviewCard({
   if (postDetails?.kind === 'collection' && !isDeleted) {
     const { pubky, id } = parseCompositeId(postId);
     return (
-      <PostPreviewNestingProvider>
+      <PostPreviewNestingProvider navigable={navigable}>
         <Container ref={ttlRef} data-cy="post-preview-card" overrideDefaults className="min-w-0">
           <CollectionCard
             authorPubky={pubky}
             postId={id}
             presentation="embed"
             interactiveActions={interactiveActions}
+            navigable={navigable}
             className={cn('w-full', flush && 'rounded-t-none rounded-b-md')}
           />
         </Container>
@@ -123,7 +128,7 @@ export function PostPreviewCard({
   }
 
   return (
-    <PostPreviewNestingProvider>
+    <PostPreviewNestingProvider navigable={navigable}>
       <Card
         ref={ttlRef}
         data-cy="post-preview-card"
@@ -144,7 +149,7 @@ export function PostPreviewCard({
           <PostUnavailable message={'This post has been deleted by its author.'} />
         ) : (
           <CardContent className="flex w-full max-w-full min-w-0 flex-col gap-4 p-6">
-            <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" />
+            <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" navigable={navigable} />
             <PostContentBase postId={postId} />
           </CardContent>
         )}

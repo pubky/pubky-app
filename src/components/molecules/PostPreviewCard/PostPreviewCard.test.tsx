@@ -31,23 +31,35 @@ vi.mock('@/molecules/PostUnavailable/PostUnavailable', () => ({
 }));
 
 // Mock organisms
-vi.mock('@/organisms/PostContentBase/PostContentBase', () => {
+vi.mock('@/organisms/PostContentBase/PostContentBase', async () => {
+  const { useIsPostPreviewNavigable } = await import('@/molecules/PostPreviewCard/PostPreviewNestingContext');
   return {
-    PostContentBase: vi.fn(({ postId }: { postId: string }) => (
-      <div data-testid="post-content-base" data-post-id={postId}>
-        PostContentBase {postId}
-      </div>
-    )),
+    PostContentBase: vi.fn(({ postId }: { postId: string }) => {
+      // Mentions and hashtags read this context several layers below PostContentBase.
+      const navigable = useIsPostPreviewNavigable();
+      return (
+        <div data-testid="post-content-base" data-post-id={postId} data-navigable={String(navigable)}>
+          PostContentBase {postId}
+        </div>
+      );
+    }),
   };
 });
 
 vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
-    PostHeader: vi.fn(({ postId, timeAgoPlacement }: { postId: string; timeAgoPlacement?: string }) => (
-      <div data-testid="post-header" data-post-id={postId} data-time-ago-placement={timeAgoPlacement}>
-        PostHeader {postId}
-      </div>
-    )),
+    PostHeader: vi.fn(
+      ({ postId, timeAgoPlacement, navigable }: { postId: string; timeAgoPlacement?: string; navigable?: boolean }) => (
+        <div
+          data-testid="post-header"
+          data-post-id={postId}
+          data-time-ago-placement={timeAgoPlacement}
+          data-navigable={String(navigable ?? true)}
+        >
+          PostHeader {postId}
+        </div>
+      ),
+    ),
   };
 });
 
@@ -59,12 +71,14 @@ vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => {
         postId,
         presentation,
         interactiveActions,
+        navigable,
         className,
       }: {
         authorPubky: string;
         postId: string;
         presentation?: string;
         interactiveActions?: boolean;
+        navigable?: boolean;
         className?: string;
       }) => (
         <div
@@ -73,6 +87,7 @@ vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => {
           data-post-id={postId}
           data-presentation={presentation}
           data-interactive-actions={String(interactiveActions ?? true)}
+          data-navigable={String(navigable ?? true)}
           className={className}
         />
       ),
@@ -188,6 +203,13 @@ describe('PostPreviewCard', () => {
     expect(screen.getByTestId('card')).toHaveClass('cursor-pointer', 'hover:bg-accent/50');
   });
 
+  it('keeps the author header and the body links navigable by default (feed repost preview)', () => {
+    render(<PostPreviewCard postId="test-post-123" />);
+
+    expect(screen.getByTestId('post-header')).toHaveAttribute('data-navigable', 'true');
+    expect(screen.getByTestId('post-content-base')).toHaveAttribute('data-navigable', 'true');
+  });
+
   it('navigates to post page on click', () => {
     render(<PostPreviewCard postId="test-post-123" />);
 
@@ -273,6 +295,27 @@ describe('PostPreviewCard', () => {
       expect(mockNavigateToPost).not.toHaveBeenCalled();
       expect(mockNavigateToCollection).not.toHaveBeenCalled();
     });
+
+    it('renders the author header without profile links', () => {
+      render(<PostPreviewCard postId="test-post-123" navigable={false} />);
+
+      expect(screen.getByTestId('post-header')).toHaveAttribute('data-navigable', 'false');
+    });
+
+    it('marks the body non-navigating so mentions and hashtags render as text', () => {
+      render(<PostPreviewCard postId="test-post-123" navigable={false} />);
+
+      expect(screen.getByTestId('post-content-base')).toHaveAttribute('data-navigable', 'false');
+    });
+
+    it('renders a collection original without its link wrapper', () => {
+      mockUsePostDetails.mockReturnValue(collectionPost);
+
+      render(<PostPreviewCard postId={COLLECTION_COMPOSITE_ID} navigable={false} />);
+
+      expect(screen.getByTestId('collection-card')).toHaveAttribute('data-navigable', 'false');
+      expect(screen.getByTestId('collection-card')).toHaveAttribute('data-presentation', 'embed');
+    });
   });
 
   it('renders PostUnavailable (not header/content) when the original post is not found', () => {
@@ -335,6 +378,7 @@ describe('PostPreviewCard', () => {
 
     expect(screen.getByTestId('collection-card')).toHaveAttribute('data-presentation', 'embed');
     expect(screen.getByTestId('collection-card')).toHaveAttribute('data-interactive-actions', 'true');
+    expect(screen.getByTestId('collection-card')).toHaveAttribute('data-navigable', 'true');
     expect(screen.getByTestId('collection-card')).toHaveAttribute('data-author-pubky', AUTHOR_PUBKY);
     expect(screen.getByTestId('collection-card')).toHaveAttribute('data-post-id', COLLECTION_POST_ID);
     expect(screen.getByTestId('collection-card')).toHaveClass('w-full');

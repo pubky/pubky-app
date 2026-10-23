@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { PostMentions } from './PostMentions';
 
 // Valid test pubky key (52 lowercase alphanumeric characters)
@@ -42,7 +43,9 @@ vi.mock('@/stores/auth/auth.store', () => ({
 
 vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => {
   return {
-    UserInfoPopover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    UserInfoPopover: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="user-info-popover">{children}</div>
+    ),
   };
 });
 
@@ -148,6 +151,57 @@ describe('PostMentions', () => {
       fireEvent.click(link);
 
       expect(parentClickHandler).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Non-navigating post preview (reply/repost dialog)', () => {
+    it('renders the mention as styled text without the profile link or popover', () => {
+      mockUseUserProfile.mockReturnValue({ profile: { name: 'TestUser' }, isLoading: false });
+
+      const { container } = render(
+        <PostPreviewNestingProvider navigable={false}>
+          <PostMentions href={`/profile/${validPubkyKey}`} data-type="mention">
+            {`pk:${validPubkyKey}`}
+          </PostMentions>
+        </PostPreviewNestingProvider>,
+      );
+
+      expect(screen.queryByTestId('link')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('user-info-popover')).not.toBeInTheDocument();
+      expect(container.querySelector('a')).not.toBeInTheDocument();
+
+      const mention = screen.getByText('@TestUser');
+      expect(mention.tagName).toBe('SPAN');
+      expect(mention).toHaveAttribute('data-type', 'mention');
+      expect(mention).toHaveClass('text-brand', 'text-base');
+      expect(mention).not.toHaveClass('uppercase');
+    });
+
+    it('uppercases the truncated pubky fallback as text when the profile has no name', () => {
+      mockUseUserProfile.mockReturnValue({ profile: null, isLoading: false });
+
+      render(
+        <PostPreviewNestingProvider navigable={false}>
+          <PostMentions href={`/profile/${validPubkyKey}`}>{`pk:${validPubkyKey}`}</PostMentions>
+        </PostPreviewNestingProvider>,
+      );
+
+      const mention = screen.getByText(/\.\.\./);
+      expect(mention.tagName).toBe('SPAN');
+      expect(mention).toHaveClass('uppercase');
+    });
+
+    it('keeps the profile link and popover inside a navigable preview (feed repost)', () => {
+      mockUseUserProfile.mockReturnValue({ profile: { name: 'TestUser' }, isLoading: false });
+
+      render(
+        <PostPreviewNestingProvider>
+          <PostMentions href={`/profile/${validPubkyKey}`}>{`pk:${validPubkyKey}`}</PostMentions>
+        </PostPreviewNestingProvider>,
+      );
+
+      expect(screen.getByTestId('link')).toHaveAttribute('href', `/profile/${validPubkyKey}`);
+      expect(screen.getByTestId('user-info-popover')).toBeInTheDocument();
     });
   });
 
