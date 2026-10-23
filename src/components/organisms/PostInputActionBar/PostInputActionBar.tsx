@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { Expand, Image, Loader2, Lock, LockOpen, Newspaper, Send, Shrink, Smile } from 'lucide-react';
+import { Expand, Image, Info, Loader2, Lock, LockOpen, Newspaper, Send, Shrink, Smile } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
 import { Switch } from '@/atoms/Switch/Switch';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
@@ -12,6 +13,8 @@ import { LocksRegionNotice } from '@/molecules/LocksRegionNotice/LocksRegionNoti
 import type { PostInputActionBarProps } from './PostInputActionBar.types';
 
 const COMMON_BUTTON_PROPS = { variant: 'secondary', size: 'sm' } as const;
+const LOCK_HELP_MESSAGE = 'Lock your post so readers pay to unlock it.';
+const LOCK_HELP_INFO = 'Add text or attachments first, then turn on the lock.';
 
 interface ActionButtonContentProps {
   Icon: React.ComponentType<{
@@ -108,7 +111,35 @@ export function PostInputActionBar({
               aria-label="Lock content"
               className="data-[state=unchecked]:bg-accent"
             />
-            {lockSwitch.regionNotice ? <LocksRegionNotice variant="icon" cause={lockSwitch.regionNotice} /> : null}
+            {lockSwitch.regionNotice ? (
+              <LocksRegionNotice variant="icon" cause={lockSwitch.regionNotice} />
+            ) : (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 text-muted-foreground"
+                    aria-label={LOCK_HELP_MESSAGE}
+                    data-testid="lock-switch-help"
+                  >
+                    <Info aria-hidden />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="start" sideOffset={6} className="flex flex-col gap-2 p-3">
+                  <Typography overrideDefaults className="text-sm font-medium text-popover-foreground">
+                    {LOCK_HELP_MESSAGE}
+                  </Typography>
+                  <Typography
+                    overrideDefaults
+                    className="text-sm text-popover-foreground"
+                    data-testid="lock-switch-help-info"
+                  >
+                    {LOCK_HELP_INFO}
+                  </Typography>
+                </PopoverContent>
+              </Popover>
+            )}
           </Container>
         ) : null}
       </Container>

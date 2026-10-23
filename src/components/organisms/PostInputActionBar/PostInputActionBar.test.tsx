@@ -97,6 +97,8 @@ vi.mock('@/molecules/LocksRegionNotice/LocksRegionNotice', () => ({
   ),
 }));
 
+const LOCK_HELP_MESSAGE = 'Lock your post so readers pay to unlock it.';
+
 describe('PostInputActionBar', () => {
   const mockUseIsMobile = vi.mocked(useIsMobile);
 
@@ -271,6 +273,15 @@ describe('PostInputActionBar', () => {
     expect(screen.queryByTestId('locks-region-notice')).not.toBeInTheDocument();
   });
 
+  it('shows the lock help beside a lock switch that is available, explaining it on open', async () => {
+    render(<PostInputActionBar hideArticleButton={false} lockSwitch={{ checked: false, onCheckedChange: vi.fn() }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: LOCK_HELP_MESSAGE }));
+
+    expect(await screen.findByText('Add text or attachments first, then turn on the lock.')).toBeInTheDocument();
+    expect(screen.getByText(LOCK_HELP_MESSAGE, { selector: 'p' })).toBeInTheDocument();
+  });
+
   it.each(['region', 'unknown'] as const)(
     'disables the lock switch and shows the icon-only region notice when held (%s)',
     (cause) => {
@@ -286,6 +297,7 @@ describe('PostInputActionBar', () => {
       expect(lockSwitch).toBeDisabled();
       expect(screen.getByTestId('locks-region-notice')).toHaveAttribute('data-cause', cause);
       expect(screen.getByTestId('locks-region-notice')).toHaveAttribute('data-variant', 'icon');
+      expect(screen.queryByRole('button', { name: LOCK_HELP_MESSAGE })).not.toBeInTheDocument();
       fireEvent.click(lockSwitch);
       expect(onCheckedChange).not.toHaveBeenCalled();
     },
