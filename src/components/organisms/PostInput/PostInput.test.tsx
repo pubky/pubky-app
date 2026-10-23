@@ -1722,6 +1722,106 @@ describe('PostInput', () => {
     );
   });
 
+  it('seeds the composer from the post once: a changed editContent after mount does not re-seed it', () => {
+    const editPost = (content: string) => (
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="test-post-123"
+        editContent={content}
+        editIsArticle={false}
+        editAttachments={[]}
+      />
+    );
+    const { rerender } = render(editPost('Published'));
+    expect(mockSetContent).toHaveBeenCalledTimes(1);
+    expect(mockSetContent).toHaveBeenCalledWith('Published');
+
+    // A failed save writes the live row with the edit and rolls it back (#2877); another device can
+    // change the row under the dialog as well. Neither may touch what the user is editing.
+    rerender(editPost('Edited'));
+    // Asserted while the row still holds the intermediate value, so a pass-through of the live prop fails here
+    expect(mockUsePostInput).toHaveBeenLastCalledWith(expect.objectContaining({ editContent: 'Published' }));
+    rerender(editPost('Published'));
+
+    expect(mockSetContent).toHaveBeenCalledTimes(1);
+    expect(mockUsePostInput).not.toHaveBeenCalledWith(expect.objectContaining({ editContent: 'Edited' }));
+  });
+
+  it('keeps the mount-time article body and attachment list when the post row changes under the dialog', () => {
+    const cover = 'pubky://author/pub/pubky.app/files/cover';
+    const added = 'pubky://author/pub/pubky.app/files/added';
+    const editArticle = (content: string, attachments: string[]) => (
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="author:post-1"
+        editContent={content}
+        editIsArticle={true}
+        editAttachments={attachments}
+      />
+    );
+    const { rerender } = render(editArticle('{"title":"T","body":"Body"}', [cover]));
+    expect(mockSetArticleTitle).toHaveBeenCalledTimes(1);
+    expect(mockSetContent).toHaveBeenCalledTimes(1);
+    expect(mockSetContent).toHaveBeenCalledWith('Body');
+
+    // The failed save's local write references the new file in a new slot, then the rollback undoes it
+    rerender(editArticle('{"title":"T","body":"Body ![a](attachment:1)"}', [cover, added]));
+    // Asserted while the row still holds the intermediate value, so a pass-through of the live props fails here
+    expect(mockUsePostInput).toHaveBeenLastCalledWith(
+      expect.objectContaining({ editContent: '{"title":"T","body":"Body"}', editAttachmentUris: [cover] }),
+    );
+    rerender(editArticle('{"title":"T","body":"Body"}', [cover]));
+
+    expect(mockSetArticleTitle).toHaveBeenCalledTimes(1);
+    expect(mockSetContent).toHaveBeenCalledTimes(1);
+    expect(mockUsePostInput).not.toHaveBeenCalledWith(expect.objectContaining({ editAttachmentUris: [cover, added] }));
+  });
+
+  it('warns once, at the seed, about a reference the attachments cannot resolve', () => {
+    const cover = 'pubky://author/pub/pubky.app/files/cover';
+    const editArticle = (content: string) => (
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="author:post-1"
+        editContent={content}
+        editIsArticle={true}
+        editAttachments={[cover]}
+      />
+    );
+    const { rerender } = render(editArticle('{"title":"T","body":"Body ![a](attachment:5)"}'));
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: 'warning',
+        description: 'An attachment with a broken reference was removed from the article.',
+      }),
+    );
+
+    // The row changing under the dialog seeds nothing again, so it warns nothing again
+    rerender(editArticle('{"title":"T","body":"Body ![a](attachment:5) ![b](attachment:6)"}'));
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+  });
+
+  it('counts the broken references it removed', () => {
+    render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="author:post-1"
+        editContent='{"title":"T","body":"![a](attachment:5) ![b](attachment:6)"}'
+        editIsArticle={true}
+        editAttachments={['pubky://author/pub/pubky.app/files/cover']}
+      />,
+    );
+
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: 'warning',
+        description: '2 attachments with broken references were removed from the article.',
+      }),
+    );
+  });
+
   it('shows PostInputAttachments without existing attachments for non-edit variants', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 

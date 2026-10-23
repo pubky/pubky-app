@@ -624,9 +624,10 @@ describe('PostInput lock wiring', () => {
     expect(screen.queryByTestId('lock-switch')).not.toBeInTheDocument();
   });
 
-  // Both fields come from the same stored row, so a live change to either one reseeds both. Reverting
-  // only one would let the next save write the new title over the old body.
-  it('reseeds the teaser and the title together when the stored row changes', () => {
+  // Both fields are seeded from the stored row once, when the composer mounts. A later change to the
+  // row (another device, a background refresh) never reaches the fields the user is editing, so the
+  // next save writes the user's title with the user's teaser (#2877).
+  it('keeps the teaser and the title the user typed when the stored row changes under the dialog', () => {
     const view = renderEditLock();
 
     fireEvent.change(screen.getByPlaceholderText('Write a short announcement to tease your content.'), {
@@ -647,14 +648,15 @@ describe('PostInput lock wiring', () => {
     );
 
     expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveValue(
-      'Public teaser',
+      'Draft teaser',
     );
-    expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveValue('Remote title');
+    expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveValue('Draft title');
   });
 
   // A failed save writes the draft locally first and rolls it back after the homeserver rejects it.
-  // Both versions reach the composer through the live row, so the title has to follow the teaser.
-  it('reverts the title with the teaser when a failed save rolls the row back', () => {
+  // Both versions reach the composer through the live row; neither may overwrite the draft, or the
+  // retry would write the stored teaser and title back over the user's edit (#2877).
+  it('keeps the draft teaser and title when a failed save rolls the row back', () => {
     const view = renderEditLock();
     const teaserInput = screen.getByPlaceholderText('Write a short announcement to tease your content.');
     const titleInput = screen.getByRole('textbox', { name: 'Lock title' });
@@ -679,9 +681,9 @@ describe('PostInput lock wiring', () => {
     rerenderRow('Public teaser', 'Private note');
 
     expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveValue(
-      'Public teaser',
+      'Draft teaser',
     );
-    expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveValue('Private note');
+    expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveValue('Draft title');
   });
 
   it('disables save when the edit lock title is cleared', () => {

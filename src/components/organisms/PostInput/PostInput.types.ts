@@ -123,17 +123,25 @@ export type PostInputProps =
       originalPostId?: never;
       /** Edit post ID (required for edit) */
       editPostId: string;
-      /** Editable content (required for edit) */
+      /**
+       * Editable content (required for edit). Read once, when the composer mounts: a later value never
+       * re-seeds the composer, so a save that fails after its local-first write (and the rollback that
+       * follows) cannot overwrite what the user is editing.
+       */
       editContent: string;
-      /** Editable article mode (required for edit) */
+      /** Editable article mode (required for edit). Read once at mount, like `editContent`. */
       editIsArticle: boolean;
       /**
        * The post's current attachment URIs, in display order (required for
        * edit — pass `[]` for a post without attachments). Omitting it would
        * make an attachment-adding edit silently drop the post's existing
-       * attachments, so the type forces every edit surface to provide it.
+       * attachments, so the type forces every edit surface to provide it. Read
+       * once at mount, like `editContent`.
        */
       editAttachments: string[];
-      /** Existing lock announcement metadata. Omitted for normal post edits. */
+      /**
+       * Existing lock announcement metadata. Omitted for normal post edits. Read once at mount, like
+       * `editContent`: the title seeds the lock title field, the URL names the lock file.
+       */
       editLock?: EditLock;
     });
