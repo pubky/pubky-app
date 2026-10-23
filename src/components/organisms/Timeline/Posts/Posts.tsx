@@ -119,7 +119,9 @@ export function TimelinePosts({
               more posts to observe for and auto-loading is not stalled, mirroring
               TimelineCardsPosts. Once the feed is fully loaded the observer detaches, so
               rendering it would just leave dead space below the list. */}
-          {hasMore && !isStalled && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
+          {hasMore && !isStalled && (
+            <Container overrideDefaults className="h-5" ref={sentinelRef} data-cy="timeline-sentinel" />
+          )}
         </Container>
       </Container>
     </TimelineStateWrapper>

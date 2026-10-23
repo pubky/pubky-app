@@ -212,6 +212,7 @@ export function PostMainListRow({
               <Typography
                 className={cn('min-w-0 flex-1 truncate text-secondary-foreground', LIST_POST_BODY_TEXT_CLASS)}
                 overrideDefaults
+                data-cy="post-list-snippet"
               >
                 {snippet}
               </Typography>
