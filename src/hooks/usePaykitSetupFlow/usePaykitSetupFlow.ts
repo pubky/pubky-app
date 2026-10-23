@@ -9,21 +9,37 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import type { TLockPriceAsset, TPaykitSetupStatus } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
-import { PaykitSetupFlowStatus, type UsePaykitSetupFlowReturn } from './usePaykitSetupFlow.types';
+import { PaykitSetupFlowStatus, type PaykitSetupMode, type UsePaykitSetupFlowReturn } from './usePaykitSetupFlow.types';
 import { readPaykitSetupBridgeMessage } from './usePaykitSetupFlow.utils';
+
+/**
+ * Asks the Paykit Server whether it already holds the signed-in creator. `held` is `null` when it
+ * could not answer, which says nothing about the creator.
+ */
+async function readPaykitHeld(operation: string): Promise<{ held: boolean | null; failure: AppError | null }> {
+  try {
+    return { held: await LocksController.fetchPaykitCreatorHeld(), failure: null };
+  } catch (caught) {
+    return { held: null, failure: toAppError(caught, ErrorService.Locks, operation) };
+  }
+}
 
 /**
  * Drives the iframe-based Paykit setup flow, where a creator connects the account that receives
  * payments.
  *
  * `check()` asks the Lock Server first whether this creator's Paykit setup is already done, so a
- * returning creator is not sent through it again (#2627). `start()` generates a CSRF `state` and the
- * `/setup` URL for the modal to load in an iframe. The Paykit page posts the outcome back to the
- * parent; the message is validated (origin / iframe source / schema), `state` is checked, and a
- * success is recorded on the Locks session.
+ * returning creator is not sent through it again (#2627). When it is not, Paykit is asked whether it
+ * already holds the creator: it refuses the initial `/setup` for one it holds, so that creator is sent
+ * to `/setup/reconnect` instead (`RECONNECT_REQUIRED`, then `reconnect()`). The same question is asked
+ * after a setup fails, because the failure callback carries no reason. `start()` generates a CSRF
+ * `state` and the `/setup` URL for the modal to load in an iframe. The Paykit page posts the outcome
+ * back to the parent; the message is validated (origin / iframe source / schema), `state` is checked,
+ * and a success is recorded on the Locks session.
  */
 export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowReturn {
   const [status, setStatus] = useState<PaykitSetupFlowStatus>(PaykitSetupFlowStatus.IDLE);
+  const [mode, setMode] = useState<PaykitSetupMode>('setup');
   const [setupUrl, setSetupUrl] = useState<string | null>(null);
   const [error, setError] = useState<AppError | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -47,28 +63,73 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
     sessionSecretRef.current = null;
     setSetupUrl(null);
     setError(null);
+    setMode('setup');
     setStatus(PaykitSetupFlowStatus.IDLE);
   }, []);
 
-  const start = useCallback(() => {
+  const open = useCallback((nextMode: PaykitSetupMode) => {
     setError(null);
+    setMode(nextMode);
     const setupState = crypto.randomUUID();
     stateRef.current = setupState;
     sessionSecretRef.current = useLocksAuthStore.getState().selectLocksSessionSecret();
 
     try {
-      const url = LocksController.getPaykitSetupUrl({ state: setupState });
+      const url =
+        nextMode === 'reconnect'
+          ? LocksController.getPaykitReconnectUrl({ state: setupState })
+          : LocksController.getPaykitSetupUrl({ state: setupState });
       paykitOriginRef.current = new URL(url).origin;
       setSetupUrl(url);
       setStatus(PaykitSetupFlowStatus.AWAITING_APPROVAL);
     } catch (caught) {
-      setError(toAppError(caught, ErrorService.Locks, 'usePaykitSetupFlow.start'));
+      setError(
+        toAppError(
+          caught,
+          ErrorService.Locks,
+          `usePaykitSetupFlow.${nextMode === 'reconnect' ? 'reconnect' : 'start'}`,
+        ),
+      );
       setStatus(PaykitSetupFlowStatus.ERROR);
     }
   }, []);
 
+  const start = useCallback(() => open('setup'), [open]);
+  const reconnect = useCallback(() => open('reconnect'), [open]);
+
+  // True when an awaited answer no longer applies: the flow was reset or a newer check started, or the
+  // session that asked was signed out or replaced (the next session is then checked from idle).
+  const isOutdated = useCallback((run: number, sessionSecret: string | null) => {
+    if (run !== checkRef.current) return true;
+    if (useLocksAuthStore.getState().selectLocksSessionSecret() !== sessionSecret) {
+      setStatus(PaykitSetupFlowStatus.IDLE);
+      return true;
+    }
+    return false;
+  }, []);
+
+  // The failure callback only says `setup-failed`, so ask Paykit why it can matter: a held creator is
+  // refused `/setup` and needs the reconnect; one it does not hold has nothing to reconnect.
+  const diagnoseFailedSetup = useCallback(async () => {
+    const run = (checkRef.current += 1);
+    const sessionSecret = sessionSecretRef.current;
+    setSetupUrl(null);
+    setStatus(PaykitSetupFlowStatus.CHECKING);
+
+    const { held, failure } = await readPaykitHeld('usePaykitSetupFlow.diagnoseFailedSetup');
+    if (isOutdated(run, sessionSecret)) return;
+
+    if (held === null) {
+      setError(failure);
+      setStatus(PaykitSetupFlowStatus.UNAVAILABLE);
+    } else {
+      setStatus(held ? PaykitSetupFlowStatus.RECONNECT_REQUIRED : PaykitSetupFlowStatus.SETUP_INCOMPLETE);
+    }
+  }, [isOutdated]);
+
   // Only `setup_required` opens the setup: `unavailable` or a failed check never does, because Paykit
-  // may already hold this creator's account.
+  // may already hold this creator's account. A creator Paykit is known to hold goes to the reconnect
+  // instead; if Paykit cannot say, the setup opens and a failure is diagnosed again.
   const check = useCallback(async () => {
     const run = (checkRef.current += 1);
     const sessionSecret = useLocksAuthStore.getState().selectLocksSessionSecret();
@@ -84,24 +145,23 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
     } catch (caught) {
       failure = toAppError(caught, ErrorService.Locks, 'usePaykitSetupFlow.check');
     }
-    if (run !== checkRef.current) return;
     // The answer is about the session that asked. After a sign-out, another sign-in or a rejected
     // session (cleared by the controller), go back to idle so the next session is checked.
-    if (useLocksAuthStore.getState().selectLocksSessionSecret() !== sessionSecret) {
-      setStatus(PaykitSetupFlowStatus.IDLE);
-      return;
-    }
+    if (isOutdated(run, sessionSecret)) return;
 
     if (setupStatus === 'ready') {
       LocksController.markPaykitConnected();
       setStatus(PaykitSetupFlowStatus.SUCCESS);
     } else if (setupStatus === 'setup_required') {
-      start();
+      const { held } = await readPaykitHeld('usePaykitSetupFlow.check');
+      if (isOutdated(run, sessionSecret)) return;
+      if (held) setStatus(PaykitSetupFlowStatus.RECONNECT_REQUIRED);
+      else start();
     } else {
       setError(failure);
       setStatus(PaykitSetupFlowStatus.UNAVAILABLE);
     }
-  }, [start, asset]);
+  }, [start, asset, isOutdated]);
 
   useEffect(() => {
     if (status !== PaykitSetupFlowStatus.AWAITING_APPROVAL) return;
@@ -125,7 +185,11 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
         if (!stateRef.current || message.state !== stateRef.current) {
           throw fail('Paykit setup callback state mismatch');
         }
-        if (message.error) throw fail(`Paykit setup failed: ${message.error}`);
+        if (message.error) {
+          if (mode === 'reconnect') throw fail(`Paykit reconnect failed: ${message.error}`);
+          void diagnoseFailedSetup();
+          return;
+        }
         if (useLocksAuthStore.getState().selectLocksSessionSecret() !== sessionSecretRef.current) {
           throw fail('Locks session changed while Paykit setup was open');
         }
@@ -140,7 +204,7 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
 
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [status, check]);
+  }, [status, mode, check, diagnoseFailedSetup]);
 
-  return { status, setupUrl, error, iframeRef, check, start, reset };
+  return { status, mode, setupUrl, error, iframeRef, check, start, reconnect, reset };
 }

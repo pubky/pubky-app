@@ -502,6 +502,27 @@ the selected denomination. Setup is Bitcoin-only when Paykit Server's optional `
 configuration is absent. USD pricing by itself does not request a USDT address. An approval
 callback is checked against the server before setup is marked ready.
 
+Paykit Server refuses the initial `/setup` for a creator it already holds (`422 setup_failed`, which its
+setup page posts as `setup-failed`), for example after an earlier approval stopped before it finished. The
+failure callback carries no reason, and the Lock Server's `setup_required` is the same answer for a held
+and an unknown creator, so the Enable Payments step asks Paykit directly through `GET /api/paykit-creator`:
+a server-side read of Paykit's public `GET /setup/reconnect` (200 when Paykit holds the creator, 400 when it
+does not), needed because Paykit sends no CORS headers. It is asked before `/setup` opens and again when a
+setup fails:
+
+- Paykit holds the creator: the dialog offers **Reconnect Bitkit** as its main action (no **Try again**), which
+  loads `/setup/reconnect?creator=…&return_to=…&state=…` in the same iframe. A reconnect moves Bitcoin receiving
+  to a new Bitcoin account, so it only opens on that click. A failed reconnect offers the reconnect again, never
+  `/setup`.
+- Paykit does not hold the creator, after a failed setup: the dialog says nothing was set up and offers
+  **Connect Bitkit**, which checks again and opens `/setup`.
+- Paykit cannot say: before `/setup` the setup opens as before; after a failed setup the dialog says payments
+  are unavailable.
+
+The probe opens a throwaway in-memory flow on Paykit and counts against its per-IP rate limit, which all callers
+of the route share. Paykit also checks `return_to`, so a rejected origin reads as "not held". A `reconnect_required`
+value in the Lock Server's setup status would make the probe unnecessary; until then the probe is the signal.
+
 Locks unlocks after Paykit Server verifies a full, on-time payment on one accepted method.
 USDT requires successful Arbitrum block inclusion. Pubky App does not query Arbitrum or verify
 transaction hashes. Retry, stored purchase IDs, and content recovery use the same flow for

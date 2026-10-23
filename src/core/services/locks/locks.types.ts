@@ -42,6 +42,23 @@ export type TGetPaykitSetupUrlParams = {
   state: string;
 };
 
+/** Params to build the Paykit `/setup/reconnect` URL: the flow for a creator the Paykit Server already holds. */
+export type TGeneratePaykitReconnectUrlParams = TGeneratePaykitSetupUrlParams & {
+  /** The creator's pubky; `/setup/reconnect` requires it and parses only the `pubky<z32>` form. */
+  creator: string;
+};
+
+/** Params to ask whether the Paykit Server already holds a creator. */
+export type TLookupPaykitCreatorHeldParams = {
+  /** The creator's pubky, with or without the `pubky` prefix. */
+  creator: string;
+  /** Parent (pubky-app) origin: Paykit checks it, so the probe must send the one the iframe sends. */
+  returnTo: string;
+};
+
+/** The same-origin probe's answer: `true` when the Paykit Server holds the creator. */
+export const paykitCreatorHeldResponseSchema = z.object({ held: z.boolean() });
+
 /**
  * Whether the creator's Paykit payout account is set up, as the Lock Server reports it. `unavailable`
  * means Paykit could not answer, which says nothing about the setup.

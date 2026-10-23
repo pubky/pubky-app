@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   reset: vi.fn(),
   checkPaykit: vi.fn(),
   startPaykit: vi.fn(),
+  reconnectPaykit: vi.fn(),
   resetPaykit: vi.fn(),
   flow: {
     status: 'idle' as string,
@@ -30,6 +31,7 @@ const mocks = vi.hoisted(() => ({
   },
   paykitFlow: {
     status: 'idle' as string,
+    mode: 'setup' as 'setup' | 'reconnect',
     setupUrl: null as string | null,
     error: null as unknown,
   },
@@ -64,6 +66,7 @@ vi.mock('@/hooks/usePaykitSetupFlow/usePaykitSetupFlow', () => ({
     iframeRef: { current: null },
     check: mocks.checkPaykit,
     start: mocks.startPaykit,
+    reconnect: mocks.reconnectPaykit,
     reset: mocks.resetPaykit,
   }),
 }));
@@ -94,7 +97,7 @@ describe('DialogLocksAuth', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.flow = { status: LocksAuthFlowStatus.IDLE, connectUrl: null, session: null, error: null };
-    mocks.paykitFlow = { status: PaykitSetupFlowStatus.IDLE, setupUrl: null, error: null };
+    mocks.paykitFlow = { status: PaykitSetupFlowStatus.IDLE, mode: 'setup', setupUrl: null, error: null };
     useLocksAuthStore.setState(locksAuthInitialState);
     useAuthStore.setState(authInitialState);
   });
@@ -262,7 +265,7 @@ describe('DialogLocksAuth', () => {
 
   it('shows a spinner instead of the QR while it checks the Paykit setup', () => {
     signIn();
-    mocks.paykitFlow = { status: PaykitSetupFlowStatus.CHECKING, setupUrl: null, error: null };
+    mocks.paykitFlow = { status: PaykitSetupFlowStatus.CHECKING, mode: 'setup', setupUrl: null, error: null };
     renderDialog();
 
     expect(screen.getByText('Checking whether your Bitkit wallet is connected.')).toBeInTheDocument();
@@ -276,6 +279,7 @@ describe('DialogLocksAuth', () => {
     signIn();
     mocks.paykitFlow = {
       status: PaykitSetupFlowStatus.AWAITING_APPROVAL,
+      mode: 'setup',
       setupUrl: 'https://paykit.server/setup?state=STATE',
       error: null,
     };
@@ -292,6 +296,7 @@ describe('DialogLocksAuth', () => {
     signIn();
     mocks.paykitFlow = {
       status: PaykitSetupFlowStatus.AWAITING_APPROVAL,
+      mode: 'setup',
       setupUrl: 'https://paykit.server/setup?state=STATE',
       error: null,
     };
@@ -306,6 +311,7 @@ describe('DialogLocksAuth', () => {
     signIn();
     mocks.paykitFlow = {
       status: PaykitSetupFlowStatus.AWAITING_APPROVAL,
+      mode: 'setup',
       setupUrl: 'https://paykit.server/setup?state=STATE',
       error: null,
     };
@@ -325,7 +331,12 @@ describe('DialogLocksAuth', () => {
       session: null,
       error: { message: 'locks-boom' },
     };
-    mocks.paykitFlow = { status: PaykitSetupFlowStatus.ERROR, setupUrl: null, error: { message: 'paykit-boom' } };
+    mocks.paykitFlow = {
+      status: PaykitSetupFlowStatus.ERROR,
+      mode: 'setup',
+      setupUrl: null,
+      error: { message: 'paykit-boom' },
+    };
     renderDialog();
 
     expect(screen.getByText('paykit-boom')).toBeInTheDocument();
@@ -340,7 +351,7 @@ describe('DialogLocksAuth', () => {
 
   it('retries only the setup-status check when payments are unavailable', () => {
     signIn();
-    mocks.paykitFlow = { status: PaykitSetupFlowStatus.UNAVAILABLE, setupUrl: null, error: null };
+    mocks.paykitFlow = { status: PaykitSetupFlowStatus.UNAVAILABLE, mode: 'setup', setupUrl: null, error: null };
     renderDialog();
 
     expect(screen.getByText('Payments are unavailable right now. Please try again later.')).toBeInTheDocument();
@@ -390,5 +401,97 @@ describe('DialogLocksAuth', () => {
 
     expect(mocks.reset).toHaveBeenCalled();
     expect(mocks.resetPaykit).toHaveBeenCalled();
+  });
+  describe('Paykit already holds the creator', () => {
+    it('makes Reconnect Bitkit the main action and drops Try again', () => {
+      signIn();
+      mocks.paykitFlow = {
+        status: PaykitSetupFlowStatus.RECONNECT_REQUIRED,
+        mode: 'setup',
+        setupUrl: null,
+        error: null,
+      };
+      renderDialog();
+      mocks.checkPaykit.mockClear();
+
+      expect(screen.getByRole('heading', { name: 'Reconnect Bitkit' })).toBeInTheDocument();
+      expect(screen.getByText(/Paykit already has a Bitkit setup for your account/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Bitkit payout account setup')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Reconnect Bitkit' }));
+
+      expect(mocks.reconnectPaykit).toHaveBeenCalledTimes(1);
+      expect(mocks.checkPaykit).not.toHaveBeenCalled();
+    });
+
+    it('warns that a reconnect moves Bitcoin receiving to a new account', () => {
+      signIn();
+      mocks.paykitFlow = {
+        status: PaykitSetupFlowStatus.RECONNECT_REQUIRED,
+        mode: 'setup',
+        setupUrl: null,
+        error: null,
+      };
+      renderDialog();
+
+      expect(screen.getByText(/new Bitcoin account/)).toBeInTheDocument();
+    });
+
+    it('renders the reconnect iframe with the reconnect copy', () => {
+      signIn();
+      mocks.paykitFlow = {
+        status: PaykitSetupFlowStatus.AWAITING_APPROVAL,
+        mode: 'reconnect',
+        setupUrl: 'https://paykit.server/setup/reconnect?creator=pubkyX&state=STATE',
+        error: null,
+      };
+      renderDialog();
+
+      const iframe = screen.getByTitle('Bitkit payout account reconnect');
+      expect(iframe).toHaveAttribute('src', 'https://paykit.server/setup/reconnect?creator=pubkyX&state=STATE');
+      expect(iframe).toHaveAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
+      expect(screen.getByRole('heading', { name: 'Reconnect Bitkit' })).toBeInTheDocument();
+      expect(screen.getByText(/wallet to reconnect payments\./)).toBeInTheDocument();
+      expect(screen.queryByTitle('Bitkit payout account setup')).not.toBeInTheDocument();
+    });
+
+    it('offers the reconnect again, not a setup retry, when the reconnect failed', () => {
+      signIn();
+      mocks.paykitFlow = {
+        status: PaykitSetupFlowStatus.ERROR,
+        mode: 'reconnect',
+        setupUrl: null,
+        error: { message: 'Paykit reconnect failed: setup-failed' },
+      };
+      renderDialog();
+
+      expect(screen.getByText('Reconnecting Bitkit failed.')).toBeInTheDocument();
+      expect(screen.queryByText(/Paykit reconnect failed/)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Reconnect Bitkit' }));
+
+      expect(mocks.reconnectPaykit).toHaveBeenCalledTimes(1);
+      expect(mocks.startPaykit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a failed setup Paykit holds no creator for', () => {
+    it('says nothing was set up and makes Connect Bitkit the single main action', () => {
+      signIn();
+      mocks.paykitFlow = { status: PaykitSetupFlowStatus.SETUP_INCOMPLETE, mode: 'setup', setupUrl: null, error: null };
+      renderDialog();
+      mocks.checkPaykit.mockClear();
+
+      expect(screen.getByText(/nothing was set up yet/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Reconnect Bitkit' })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Connect Bitkit' }));
+
+      expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+      expect(mocks.reconnectPaykit).not.toHaveBeenCalled();
+    });
   });
 });

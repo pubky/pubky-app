@@ -1,5 +1,5 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
@@ -659,5 +659,110 @@ describe('LocksService.generatePaykitSetupUrl', () => {
     expect(new URL(LocksService.generatePaykitSetupUrl({ returnTo: 'https://app.example', state: 'S' })).pathname).toBe(
       '/setup',
     );
+  });
+});
+
+describe('LocksService.generatePaykitReconnectUrl', () => {
+  const creator = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
+
+  it('builds the /setup/reconnect URL on the configured origin with creator, return_to and state', () => {
+    mocks.getPaykitServerUrl.mockReturnValue('https://paykit.server');
+
+    const url = new URL(
+      LocksService.generatePaykitReconnectUrl({ returnTo: 'https://app.example', state: 'STATE', creator }),
+    );
+
+    expect(url.origin).toBe('https://paykit.server');
+    expect(url.pathname).toBe('/setup/reconnect');
+    expect(url.searchParams.get('creator')).toBe(`pubky${creator}`);
+    expect(url.searchParams.get('return_to')).toBe('https://app.example');
+    expect(url.searchParams.get('state')).toBe('STATE');
+  });
+
+  it('does not double the pubky prefix on a creator that already has it', () => {
+    mocks.getPaykitServerUrl.mockReturnValue('https://paykit.server');
+
+    const url = new URL(
+      LocksService.generatePaykitReconnectUrl({
+        returnTo: 'https://app.example',
+        state: 'S',
+        creator: `pubky${creator}`,
+      }),
+    );
+
+    expect(url.searchParams.get('creator')).toBe(`pubky${creator}`);
+  });
+
+  it('drops any path on the configured Paykit URL', () => {
+    mocks.getPaykitServerUrl.mockReturnValue('https://paykit.server/setup');
+
+    expect(
+      new URL(LocksService.generatePaykitReconnectUrl({ returnTo: 'https://app.example', state: 'S', creator }))
+        .pathname,
+    ).toBe('/setup/reconnect');
+  });
+
+  it('fails when no Paykit Server is configured', () => {
+    mocks.getPaykitServerUrl.mockReturnValue(undefined);
+
+    expect(() =>
+      LocksService.generatePaykitReconnectUrl({ returnTo: 'https://app.example', state: 'S', creator }),
+    ).toThrow('No Paykit Server configured');
+  });
+});
+
+describe('LocksService.lookupPaykitCreatorHeld', () => {
+  const creator = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
+  const params = { creator, returnTo: 'https://app.example' };
+
+  beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('asks the same-origin probe with the prefixed creator and the return origin', async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ held: true }));
+
+    await expect(LocksService.lookupPaykitCreatorHeld(params)).resolves.toBe(true);
+
+    const url = new URL(String(vi.mocked(fetch).mock.calls[0][0]));
+    expect(url.origin).toBe(window.location.origin);
+    expect(url.pathname).toBe('/api/paykit-creator');
+    expect(url.searchParams.get('creator')).toBe(`pubky${creator}`);
+    expect(url.searchParams.get('return_to')).toBe('https://app.example');
+    expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({ method: 'GET', credentials: 'omit', cache: 'no-store' });
+  });
+
+  it('answers false when Paykit does not hold the creator', async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ held: false }));
+
+    await expect(LocksService.lookupPaykitCreatorHeld(params)).resolves.toBe(false);
+  });
+
+  it('throws on a failed probe instead of reading it as "not held"', async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ error: 'Internal server error' }, { status: 502 }));
+
+    await expect(LocksService.lookupPaykitCreatorHeld(params)).rejects.toMatchObject({
+      category: ErrorCategory.Server,
+    });
+  });
+
+  it('throws on a network failure', async () => {
+    vi.mocked(fetch).mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(LocksService.lookupPaykitCreatorHeld(params)).rejects.toMatchObject({
+      category: ErrorCategory.Network,
+    });
+  });
+
+  it('throws a validation error on a response that is not { held: boolean }', async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ held: 'yes' }));
+
+    await expect(LocksService.lookupPaykitCreatorHeld(params)).rejects.toMatchObject({
+      category: ErrorCategory.Validation,
+    });
   });
 });

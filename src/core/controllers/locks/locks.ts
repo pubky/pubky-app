@@ -87,6 +87,40 @@ export class LocksController {
   }
 
   /**
+   * Builds the Paykit `/setup/reconnect` URL for the signed-in creator, to load in the payout-account
+   * iframe's src when Paykit already holds them.
+   */
+  static getPaykitReconnectUrl({ state }: TGetPaykitSetupUrlParams): string {
+    return LocksApplication.generatePaykitReconnectUrl({
+      returnTo: window.location.origin,
+      state,
+      creator: this.requireCreatorPubky('LocksController.getPaykitReconnectUrl'),
+    });
+  }
+
+  /**
+   * Whether the Paykit Server already holds the signed-in creator. Throws when Paykit cannot answer,
+   * which says nothing about the creator.
+   */
+  static async fetchPaykitCreatorHeld(): Promise<boolean> {
+    return LocksApplication.fetchPaykitCreatorHeld({
+      creator: this.requireCreatorPubky('LocksController.fetchPaykitCreatorHeld'),
+      returnTo: window.location.origin,
+    });
+  }
+
+  private static requireCreatorPubky(operation: string): string {
+    const creator = useLocksAuthStore.getState().selectLocksCreatorPubky();
+    if (!creator) {
+      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No Locks creator to look up Paykit for', {
+        service: ErrorService.Locks,
+        operation,
+      });
+    }
+    return creator;
+  }
+
+  /**
    * True when the Lock Server is reachable + ready.
    *
    * `/readyz` needs the server's HTTP origin, which the SDK only exposes by building a connect URL —
