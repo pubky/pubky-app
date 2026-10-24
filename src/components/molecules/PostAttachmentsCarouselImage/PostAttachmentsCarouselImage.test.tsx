@@ -282,3 +282,51 @@ describe('local attachment fallback', () => {
     expect(images.every((image) => image.getAttribute('src') === '/local.png')).toBe(true);
   });
 });
+
+describe('PostAttachmentsCarouselImage zoom', () => {
+  it('lets the frame own touch gestures and starts fitted', () => {
+    render(<PostAttachmentsCarouselImage image={createMockImage()} id="test-id" />);
+
+    const frame = screen.getByTestId('carousel-image-zoom-frame');
+    expect(frame).toHaveClass('touch-none');
+    expect(frame).toHaveAttribute('data-zoomed', 'false');
+    expect(screen.getByTestId('carousel-image-zoom-content').style.transform).toBe('translate(0px, 0px) scale(1)');
+  });
+
+  it('zooms on a double tap and reports it, then reports false when the slide stops being active', () => {
+    const onZoomChange = vi.fn();
+    const image = createMockImage();
+    const { rerender } = render(
+      <PostAttachmentsCarouselImage image={image} id="test-id" onZoomChange={onZoomChange} />,
+    );
+
+    const frame = screen.getByTestId('carousel-image-zoom-frame');
+    for (let i = 0; i < 2; i++) {
+      fireEvent.pointerDown(frame, { pointerId: 1, clientX: 0, clientY: 0, pointerType: 'touch' });
+      fireEvent.pointerUp(frame, { pointerId: 1, clientX: 0, clientY: 0, pointerType: 'touch' });
+    }
+
+    expect(frame).toHaveAttribute('data-zoomed', 'true');
+    expect(onZoomChange).toHaveBeenLastCalledWith(true);
+
+    rerender(<PostAttachmentsCarouselImage image={image} id="test-id" isActive={false} onZoomChange={onZoomChange} />);
+    expect(frame).toHaveAttribute('data-zoomed', 'false');
+    expect(onZoomChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it('reports not zoomed when it unmounts while zoomed, so the carousel swipes again on reopen', () => {
+    const onZoomChange = vi.fn();
+    const { unmount } = render(
+      <PostAttachmentsCarouselImage image={createMockImage()} id="test-id" onZoomChange={onZoomChange} />,
+    );
+    const frame = screen.getByTestId('carousel-image-zoom-frame');
+    for (let i = 0; i < 2; i++) {
+      fireEvent.pointerDown(frame, { pointerId: 1, clientX: 0, clientY: 0, pointerType: 'touch' });
+      fireEvent.pointerUp(frame, { pointerId: 1, clientX: 0, clientY: 0, pointerType: 'touch' });
+    }
+    expect(onZoomChange).toHaveBeenLastCalledWith(true);
+
+    unmount();
+    expect(onZoomChange).toHaveBeenLastCalledWith(false);
+  });
+});

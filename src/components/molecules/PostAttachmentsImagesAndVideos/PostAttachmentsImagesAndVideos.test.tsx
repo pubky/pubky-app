@@ -91,14 +91,20 @@ vi.mock('@/molecules/PostAttachmentsCarouselImage/PostAttachmentsCarouselImage',
     PostAttachmentsCarouselImage: ({
       id,
       image,
+      isActive,
+      onZoomChange,
       'data-testid': dataTestId,
     }: {
       id: string;
       image: AttachmentConstructed;
+      isActive?: boolean;
+      onZoomChange?: (isZoomed: boolean) => void;
       'data-testid'?: string;
     }) => (
-      <div data-testid={dataTestId || 'carousel-image'} id={id}>
+      <div data-testid={dataTestId || 'carousel-image'} id={id} data-active={isActive}>
         <img src={image.urls.main} alt={image.name} />
+        <button data-testid={`zoom-in-${id}`} onClick={() => onZoomChange?.(true)} />
+        <button data-testid={`zoom-out-${id}`} onClick={() => onZoomChange?.(false)} />
       </div>
     ),
   };
@@ -150,9 +156,20 @@ vi.mock('@/atoms/Button/Button', () => {
 
 // Controllable carousel API state so tests can drive embla events ('select',
 // 'reInit') and the selected snap position
-const carouselApiState: { handlers: Record<string, () => void>; selectedSnap: number } = {
+type WatchDrag = boolean | ((api: unknown, event: MouseEvent | TouchEvent) => boolean | void);
+const carouselApiState: {
+  handlers: Record<string, () => void>;
+  selectedSnap: number;
+  opts?: { watchDrag?: WatchDrag };
+} = {
   handlers: {},
   selectedSnap: 0,
+};
+
+/** What embla would decide for a drag starting now: watchDrag is read per pointer down, as embla does. */
+const canSwipe = (event: MouseEvent | TouchEvent = new MouseEvent('mousedown')) => {
+  const watchDrag = carouselApiState.opts?.watchDrag ?? true;
+  return typeof watchDrag === 'function' ? watchDrag(undefined, event) !== false : watchDrag;
 };
 
 vi.mock('@/atoms/Carousel/Carousel', () => {
@@ -166,12 +183,13 @@ vi.mock('@/atoms/Carousel/Carousel', () => {
       tabIndex = 0,
     }: {
       children: React.ReactNode;
-      opts?: { startIndex?: number; loop?: boolean; duration?: number; watchDrag?: boolean };
+      opts?: { startIndex?: number; loop?: boolean; duration?: number; watchDrag?: WatchDrag };
       setApi?: (api: unknown) => void;
       className?: string;
       ref?: React.Ref<HTMLDivElement>;
       tabIndex?: number;
     }) => {
+      carouselApiState.opts = opts;
       // Simulate setting the API in useEffect to avoid infinite re-renders
       useEffect(() => {
         if (setApi) {
@@ -192,7 +210,6 @@ vi.mock('@/atoms/Carousel/Carousel', () => {
           data-start-index={opts?.startIndex}
           data-loop={opts?.loop}
           data-duration={opts?.duration}
-          data-watch-drag={opts?.watchDrag}
           className={className}
         >
           {children}
@@ -343,6 +360,7 @@ describe('PostAttachmentsImagesAndVideos', () => {
     dialogOpenStateSetByTest = false;
     carouselApiState.handlers = {};
     carouselApiState.selectedSnap = 0;
+    carouselApiState.opts = undefined;
     // Mock fullscreenEnabled
     Object.defineProperty(document, 'fullscreenEnabled', {
       value: true,
@@ -770,8 +788,7 @@ describe('PostAttachmentsImagesAndVideos', () => {
       Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
       fireEvent(document, new Event('fullscreenchange'));
 
-      const carousel = screen.getByTestId('carousel');
-      expect(carousel).toHaveAttribute('data-watch-drag', 'true');
+      expect(canSwipe()).toBe(true);
     });
 
     it('sets watchDrag to false when entering fullscreen', () => {
@@ -786,8 +803,95 @@ describe('PostAttachmentsImagesAndVideos', () => {
       });
       fireEvent(document, new Event('fullscreenchange'));
 
-      const carousel = screen.getByTestId('carousel');
-      expect(carousel).toHaveAttribute('data-watch-drag', 'false');
+      expect(canSwipe()).toBe(false);
+    });
+
+    it('turns swiping off while the visible image is zoomed, so a drag pans it', () => {
+      setDialogOpen(true);
+      const imagesAndVideos = [createMockImage(), createMockImage()];
+      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+
+      expect(canSwipe()).toBe(true);
+
+      fireEvent.click(screen.getByTestId('zoom-in-media-item-0'));
+      expect(canSwipe()).toBe(false);
+
+      fireEvent.click(screen.getByTestId('zoom-out-media-item-0'));
+      expect(canSwipe()).toBe(true);
+    });
+
+    it('keeps swiping off when a slide other than the visible one reports not zoomed, e.g. it is removed', () => {
+      setDialogOpen(true);
+      const imagesAndVideos = [createMockImage(), createMockImage(), createMockImage()];
+      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+
+      fireEvent.click(screen.getByTestId('zoom-in-media-item-0'));
+      expect(canSwipe()).toBe(false);
+
+      // A hidden slide's unmount cleanup reports false; the zoomed visible slide still owns the drag
+      fireEvent.click(screen.getByTestId('zoom-out-media-item-2'));
+      expect(canSwipe()).toBe(false);
+    });
+
+    it('decides swiping per drag, so zooming in or out never re-initialises the carousel', () => {
+      setDialogOpen(true);
+      const imagesAndVideos = [createMockImage(), createMockImage()];
+      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+      const before = carouselApiState.opts?.watchDrag;
+
+      fireEvent.click(screen.getByTestId('zoom-in-media-item-0'));
+      const after = carouselApiState.opts?.watchDrag;
+      expect(canSwipe()).toBe(false);
+      // embla re-initialises when an option changes, and compares a function option by its source text
+      expect(typeof after).toBe('function');
+      expect(String(after)).toBe(String(before));
+    });
+
+    it('does not start a swipe on the second finger of a pinch at the fitted size', () => {
+      setDialogOpen(true);
+      const imagesAndVideos = [createMockImage(), createMockImage()];
+      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+      // jsdom has TouchEvent but no Touch constructor, so the finger list is set on the event directly
+      const touchStart = (fingers: number) => {
+        const event = new TouchEvent('touchstart');
+        Object.defineProperty(event, 'touches', { value: { length: fingers } });
+        return event;
+      };
+
+      expect(canSwipe(touchStart(1))).toBe(true);
+      expect(canSwipe(touchStart(2))).toBe(false);
+    });
+
+    it('gives a slide a fresh image component when another attachment takes its place, so no zoom carries over', () => {
+      setDialogOpen(true);
+      const first = createMockImage({ urls: { main: 'https://example.com/first.jpg' } });
+      const second = createMockImage({ urls: { main: 'https://example.com/second.jpg' } });
+      const { rerender } = render(<PostAttachmentsImagesAndVideos imagesAndVideos={[first, second]} />);
+      const before = screen.getAllByTestId('carousel-image')[0];
+
+      rerender(<PostAttachmentsImagesAndVideos imagesAndVideos={[second]} />);
+      const after = screen.getAllByTestId('carousel-image')[0];
+      expect(after.querySelector('img')).toHaveAttribute('src', 'https://example.com/second.jpg');
+      expect(after).not.toBe(before);
+    });
+
+    it('lets only the visible slide zoom, and none in fullscreen', () => {
+      setDialogOpen(true);
+      const imagesAndVideos = [createMockImage(), createMockImage()];
+      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+
+      const slides = screen.getAllByTestId('carousel-image');
+      expect(slides[0]).toHaveAttribute('data-active', 'true');
+      expect(slides[1]).toHaveAttribute('data-active', 'false');
+
+      Object.defineProperty(document, 'fullscreenElement', {
+        value: document.createElement('div'),
+        configurable: true,
+      });
+      fireEvent(document, new Event('fullscreenchange'));
+      expect(screen.getAllByTestId('carousel-image')[0]).toHaveAttribute('data-active', 'false');
+      Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
+      fireEvent(document, new Event('fullscreenchange'));
     });
 
     it('adds fullscreenchange event listener on mount', () => {
