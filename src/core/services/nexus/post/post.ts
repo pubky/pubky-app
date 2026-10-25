@@ -2,6 +2,7 @@ import type { TFetchPostTaggersParams } from '@/controllers/post/post.types';
 import { parseCompositeId } from '@/models/models.utils';
 import type { NexusPost, NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
+import type { TQueryNexusParams } from '@/services/nexus/nexus.utils.types';
 import { postApi } from '@/services/nexus/post/post.api';
 import type { TCompositeId, TFetchPostTagsParams } from '@/services/nexus/post/post.types';
 
@@ -50,6 +51,7 @@ export class NexusPostService {
    * @param skip - Number of taggers to skip (pagination)
    * @param limit - Maximum number of taggers to return
    * @param viewerId - Optional viewer ID for relationship data
+   * @param notFoundRetries - 404 attempts allowed after the first, overriding the shared budget
    * @returns Tagger payload for the label ({ users, relationship })
    */
   static async getPostTaggers({
@@ -58,7 +60,8 @@ export class NexusPostService {
     skip,
     limit,
     viewerId,
-  }: TFetchPostTaggersParams): Promise<NexusTaggers> {
+    notFoundRetries,
+  }: TFetchPostTaggersParams & Pick<TQueryNexusParams, 'notFoundRetries'>): Promise<NexusTaggers> {
     const { pubky: author_id, id: post_id } = parseCompositeId(compositeId);
 
     const url = postApi.taggers({
@@ -70,6 +73,6 @@ export class NexusPostService {
       viewer_id: viewerId,
     });
     // Tagger lists revalidate after local mutations or count changes.
-    return await queryNexus<NexusTaggers>({ url, staleTime: 0 });
+    return await queryNexus<NexusTaggers>({ url, staleTime: 0, notFoundRetries });
   }
 }
