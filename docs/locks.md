@@ -579,7 +579,10 @@ Never commit either.
   (the Locks CI job only, never a deploy) makes `initLockClient()` and `getLocksReads()` return
   `locks.e2eStub.ts`: it sends each Lock Server call as `POST <stub>/e2e/<operation>`, which the spec
   answers with `cy.intercept`, and writes the guarded bytes and `lock.json` to the creator's homeserver
-  itself. The pubky-e2e project will replace it with real end-to-end coverage.
+  itself. The pubky-e2e project will replace it with real end-to-end coverage. Every stubbed answer is
+  a `[locks-stub]` entry in the Cypress command log, with the redacted request and response in its
+  console details, and the same lines are printed in the terminal after each `[locks-step]` marker
+  (`cypress/support/locks-log.ts`).
 
 ## References
 
