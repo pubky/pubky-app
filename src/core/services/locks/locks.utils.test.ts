@@ -7,6 +7,7 @@ import {
   ensureLocksSdkReady,
   getLockServerPubky,
   getLockSession,
+  getLocksReads,
   getPaykitServerOrigin,
   initLockClient,
   isLockServerRegionBlocked,
@@ -20,6 +21,11 @@ const mocks = vi.hoisted(() => ({
   getTestnet: vi.fn(() => true),
   getLockServer: vi.fn((): string | undefined => 'lockserverpubky'),
   getPaykitServerUrl: vi.fn((): string | undefined => 'https://paykit.server'),
+  getE2eLocksStubUrl: vi.fn((): string | undefined => undefined),
+  createE2eLocksClient: vi.fn(() => ({ viewer: { id: 'e2e-viewer' } })),
+  createE2eLocksReads: vi.fn(() => ({ id: 'e2e-reads' })),
+  readContentLockWithOptions: vi.fn(async () => ({ version: 1 })),
+  hasPaykitDataWithOptions: vi.fn(async () => true),
   init: vi.fn(async () => {}),
   session: null as unknown,
   creatorPubky: 'account' as string | null,
@@ -32,6 +38,12 @@ vi.mock('@/config/network', () => ({
   getHomeserver: () => 'homeservertestpubky',
   getLockServer: mocks.getLockServer,
   getPaykitServerUrl: mocks.getPaykitServerUrl,
+  getE2eLocksStubUrl: mocks.getE2eLocksStubUrl,
+}));
+
+vi.mock('./locks.e2eStub', () => ({
+  createE2eLocksClient: mocks.createE2eLocksClient,
+  createE2eLocksReads: mocks.createE2eLocksReads,
 }));
 
 vi.mock('@synonymdev/locks-sdk', () => {
@@ -42,7 +54,11 @@ vi.mock('@synonymdev/locks-sdk', () => {
   return {
     default: mocks.init, // the real web-build SDK default-exports its wasm init()
     LocksOptions,
-    Locks: { forServerWithOptions: mocks.forServerWithOptions },
+    Locks: {
+      forServerWithOptions: mocks.forServerWithOptions,
+      readContentLockWithOptions: mocks.readContentLockWithOptions,
+      hasPaykitDataWithOptions: mocks.hasPaykitDataWithOptions,
+    },
   };
 });
 
@@ -214,6 +230,42 @@ describe('locks.utils', () => {
       initLockClient();
 
       expect(mocks.setLocalTestnetHomeserver).not.toHaveBeenCalled();
+    });
+
+    it('builds the E2E stub instead of the SDK client only when the stub URL is configured', () => {
+      mocks.getE2eLocksStubUrl.mockReturnValueOnce('http://lock-server.e2e.test');
+
+      const client = initLockClient();
+
+      expect(mocks.createE2eLocksClient).toHaveBeenCalledWith('http://lock-server.e2e.test');
+      expect(mocks.forServerWithOptions).not.toHaveBeenCalled();
+      expect(client).toBe(mocks.createE2eLocksClient.mock.results[0]?.value);
+    });
+  });
+
+  describe('getLocksReads', () => {
+    it('reads through the SDK statics with the configured relays', async () => {
+      const reads = getLocksReads();
+
+      await expect(reads.readContentLock('creator/pub/app.locks/lock.json')).resolves.toEqual({ version: 1 });
+      await expect(reads.hasPaykitData('reader')).resolves.toBe(true);
+      expect(mocks.readContentLockWithOptions).toHaveBeenCalledWith(
+        'creator/pub/app.locks/lock.json',
+        expect.anything(),
+      );
+      expect(mocks.hasPaykitDataWithOptions).toHaveBeenCalledWith('reader', expect.anything());
+      expect(mocks.addPkarrRelay).toHaveBeenCalledTimes(4);
+      expect(mocks.createE2eLocksReads).not.toHaveBeenCalled();
+    });
+
+    it('returns the E2E stub reads only when the stub URL is configured', () => {
+      mocks.getE2eLocksStubUrl.mockReturnValueOnce('http://lock-server.e2e.test');
+
+      const reads = getLocksReads();
+
+      expect(mocks.createE2eLocksReads).toHaveBeenCalledWith('http://lock-server.e2e.test');
+      expect(reads).toBe(mocks.createE2eLocksReads.mock.results[0]?.value);
+      expect(mocks.readContentLockWithOptions).not.toHaveBeenCalled();
     });
   });
 

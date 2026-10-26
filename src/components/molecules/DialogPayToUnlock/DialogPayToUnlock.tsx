@@ -163,7 +163,7 @@ export function DialogPayToUnlock({
               <Typography className={cn(FIELD_LABEL_CLASS, isPaid && 'text-brand')}>
                 {isPaid ? 'PAYMENT RECEIVED' : 'COST TO UNLOCK'}
               </Typography>
-              <Typography className="text-2xl font-bold text-foreground">
+              <Typography className="text-2xl font-bold text-foreground" data-cy="pay-to-unlock-price">
                 {formatLockPrice(price, { space: true })}
               </Typography>
             </Container>

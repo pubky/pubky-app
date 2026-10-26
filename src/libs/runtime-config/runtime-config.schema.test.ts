@@ -199,6 +199,15 @@ describe('runtimeEnvInputSchema', () => {
     });
   });
 
+  it('leaves the E2E Locks stub off unless a valid URL is set', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).e2eLocksStubUrl).toBeUndefined();
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, e2eLocksStubUrl: '  ' }).e2eLocksStubUrl).toBeUndefined();
+    expect(
+      runtimeEnvInputSchemaWithDefaults.parse({ e2eLocksStubUrl: 'http://lock-server.e2e.test' }).e2eLocksStubUrl,
+    ).toBe('http://lock-server.e2e.test');
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, e2eLocksStubUrl: 'not-a-url' })).toThrow();
+  });
+
   it('throws on invalid optional boolean values', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, notificationPollOnStart: 'tru' })).toThrow();
     expect(() => runtimeEnvInputSchemaWithDefaults.parse({ streamPollOnStart: 'yes' })).toThrow();

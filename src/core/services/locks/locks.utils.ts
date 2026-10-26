@@ -1,11 +1,12 @@
 import { Locks, LocksOptions, type Session as LocksSdkSession } from '@synonymdev/locks-sdk';
-import { getLockServer, getPaykitServerUrl, getPkarrRelays } from '@/config/network';
+import { getE2eLocksStubUrl, getLockServer, getPaykitServerUrl, getPkarrRelays } from '@/config/network';
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
+import { createE2eLocksClient, createE2eLocksReads, type TLocksReads } from './locks.e2eStub';
 
 /**
  * The SDK reports HTTP failures as `Lock Server request failed with HTTP <status>` and exposes no
@@ -143,5 +144,17 @@ export function buildLocksOptions(): LocksOptions {
  * the reader must use each lock's `lock_server.override`; take the server pubky as a param again then.
  */
 export function initLockClient(): Locks {
+  const e2eStubUrl = getE2eLocksStubUrl();
+  if (e2eStubUrl) return createE2eLocksClient(e2eStubUrl);
   return Locks.forServerWithOptions(getLockServerPubky(), buildLocksOptions());
+}
+
+/** The SDK's session-less static reads, swapped like `initLockClient` when the E2E stub is on. */
+export function getLocksReads(): TLocksReads {
+  const e2eStubUrl = getE2eLocksStubUrl();
+  if (e2eStubUrl) return createE2eLocksReads(e2eStubUrl);
+  return {
+    readContentLock: (resource) => Locks.readContentLockWithOptions(resource, buildLocksOptions()),
+    hasPaykitData: (user) => Locks.hasPaykitDataWithOptions(user, buildLocksOptions()),
+  };
 }

@@ -307,6 +307,11 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
    * same value the Shop reads as `PUBKY_RUNTIME_REGION_MODES`. Absent = no region check and no request.
    */
   regionModes: regionModesValue.optional(),
+  /**
+   * Cypress E2E only: origin of the stubbed Lock Server that replaces the Locks SDK client
+   * (`locks.e2eStub.ts`). Never set in a deploy; absent = the real SDK.
+   */
+  e2eLocksStubUrl: urlValue.optional(),
 });
 
 const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
@@ -338,6 +343,7 @@ export const runtimeEnvInputSchema = z
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
     regionModes: optionalTrimmedString,
+    e2eLocksStubUrl: optionalUrlFromString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -424,6 +430,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
     regionModes: optionalTrimmedString,
+    e2eLocksStubUrl: optionalUrlFromString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -507,6 +514,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   lockServer: 'PUBKY_RUNTIME_LOCK_SERVER',
   paykitServerUrl: 'PUBKY_RUNTIME_PAYKIT_SERVER_URL',
   regionModes: 'PUBKY_RUNTIME_REGION_MODES',
+  e2eLocksStubUrl: 'PUBKY_RUNTIME_E2E_LOCKS_STUB_URL',
   pulseClientKey: 'PUBKY_RUNTIME_PULSE_CLIENT_KEY',
   pulseEndpoint: 'PUBKY_RUNTIME_PULSE_ENDPOINT',
   sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',

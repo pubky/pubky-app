@@ -313,6 +313,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
               className="flex-1 disabled:pointer-events-auto disabled:cursor-not-allowed"
               disabled={locksStatus !== LocksAuthFlowStatus.IDLE}
               onClick={startLocks}
+              data-cy="locks-auth-intro-continue"
             >
               {isCheckingServer ? <LoaderCircle className="size-5 animate-spin" /> : 'Continue'}
             </Button>
@@ -332,6 +333,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
                 onSuccess();
                 close();
               }}
+              data-cy="locks-auth-success-continue"
             >
               {'Continue'}
             </Button>

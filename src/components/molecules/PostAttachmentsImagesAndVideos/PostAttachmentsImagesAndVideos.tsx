@@ -160,6 +160,7 @@ export const PostAttachmentsImagesAndVideos = ({
                   <Image
                     src={getAttachmentPreviewUrl(media)}
                     alt={media.name}
+                    data-cy="post-attachment-image"
                     fill={!isOnlyMedia}
                     className={cn(
                       'rounded-md',
