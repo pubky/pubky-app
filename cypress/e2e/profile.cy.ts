@@ -134,6 +134,28 @@ describe('profile', () => {
     cy.get('[data-cy="profile-tagged-section"]').contains('them-2');
   });
 
+  it('rolls back the follow state when homeserver fails to save the follow', () => {
+    const profileToFollowName = `${Cypress._.random(100_000)}-Follow Me`;
+    cy.signOut(HasBackedUp.Yes);
+    cy.onboardAsNewUser(profileToFollowName, 'This profile is never actually followed');
+    cy.signOut(HasBackedUp.No);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
+
+    searchForProfileByName(profileToFollowName);
+
+    cy.intercept('PUT', '**/pub/pubky.app/follows/**', { statusCode: 507 }).as('followFailed');
+    cy.get('[data-cy="profile-follow-toggle-btn"]').filter(':visible').should('have.text', 'Follow').click();
+    cy.wait('@followFailed');
+
+    cy.get('[data-cy="toast"]').filter(':visible').should('contain.text', 'Could not follow user. Try again.');
+    cy.get('[data-cy="profile-follow-toggle-btn"]').filter(':visible').should('have.text', 'Follow');
+
+    // the rolled back local follow does not come back from Dexie after a reload
+    cy.reload();
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', profileToFollowName);
+    cy.get('[data-cy="profile-follow-toggle-btn"]').filter(':visible').should('have.text', 'Follow');
+  });
+
   // todo: enable once decided on correct behaviour for searching using pubky of non-existent user
   it.skip('should not add non-existent user to recent history when visiting their profile', () => {
     // search for a non-existent user

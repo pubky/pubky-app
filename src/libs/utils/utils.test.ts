@@ -608,7 +608,7 @@ describe('Utils', () => {
   describe('truncateString', () => {
     it('should truncate strings longer than maxLength', () => {
       expect(truncateString('VeryLongUserName', 10)).toBe('VeryLongUs...');
-      expect(truncateString('Miguel Medeiros', 10)).toBe('Miguel Med...');
+      expect(truncateString('Jane Doe Example', 10)).toBe('Jane Doe E...');
     });
 
     it('should not truncate strings shorter than maxLength', () => {
@@ -1312,19 +1312,6 @@ describe('Utils', () => {
         expect(canSubmitPost('reply', 'Hello', [], true)).toBe(false);
         expect(canSubmitPost('repost', '', [], true)).toBe(false);
         expect(canSubmitPost('edit', 'Hello', [], true)).toBe(false);
-      });
-    });
-
-    describe('when inline image uploads are in flight', () => {
-      it('blocks an otherwise-valid post', () => {
-        expect(canSubmitPost('post', 'Hello', [], false, false, undefined, true)).toBe(false);
-        expect(canSubmitPost('post', 'Body', [], false, true, 'Title', true)).toBe(false);
-        expect(canSubmitPost('repost', '', [], false, false, undefined, true)).toBe(false);
-      });
-
-      it('preserves prior behavior when false or omitted', () => {
-        expect(canSubmitPost('post', 'Hello', [], false, false, undefined, false)).toBe(true);
-        expect(canSubmitPost('post', 'Body', [], false, true, 'Title')).toBe(true);
       });
     });
 

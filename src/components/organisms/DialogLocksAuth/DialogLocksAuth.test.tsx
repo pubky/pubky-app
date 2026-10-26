@@ -147,15 +147,39 @@ describe('DialogLocksAuth', () => {
   it.each([
     ['Pubky Ring', 'https://pubkyring.app/'],
     ['Bitkit', BITKIT_WEBSITE_URL],
-  ])('links %s from the Enable step in a new tab', (name, href) => {
+  ])('links %s from the Enable step text and logo in a new tab', (name, href) => {
     mocks.flow = { status: LocksAuthFlowStatus.CONNECTING, connectUrl: null, session: null, error: null };
     renderDialog();
 
-    const link = screen.getByRole('link', { name });
-    expect(link).toHaveAttribute('href', href);
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(link).toHaveClass('text-base', 'font-bold');
+    const links = screen.getAllByRole('link', { name });
+    expect(links).toHaveLength(2);
+    const [textLink, logoLink] = links;
+    expect(textLink).toHaveClass('text-base', 'font-bold');
+    expect(logoLink).toContainElement(screen.getByAltText(name));
+    for (const link of [textLink, logoLink]) {
+      expect(link).toHaveAttribute('href', href);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    }
+  });
+
+  it('asks to scan the QR or to use the signer apps on the Enable step', () => {
+    mocks.flow = { status: LocksAuthFlowStatus.CONNECTING, connectUrl: null, session: null, error: null };
+    renderDialog();
+
+    expect(screen.getByText('Scan this QR with')).toBeInTheDocument();
+    expect(screen.getByText('Use')).toBeInTheDocument();
+    expect(
+      screen.getByText(/to authorize Locks server to manage your data\. Use the same pubky you signed in with\./),
+    ).toBeInTheDocument();
+  });
+
+  it('shows no store badges on the Enable step', () => {
+    mocks.flow = { status: LocksAuthFlowStatus.CONNECTING, connectUrl: null, session: null, error: null };
+    renderDialog();
+
+    expect(screen.queryByRole('link', { name: 'App Store' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Google Play' })).not.toBeInTheDocument();
   });
 
   it.each([LocksAuthFlowStatus.CONNECTING, LocksAuthFlowStatus.EXCHANGING])(

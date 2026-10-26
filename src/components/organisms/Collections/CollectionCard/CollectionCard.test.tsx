@@ -582,5 +582,40 @@ describe('CollectionCard', () => {
       expect(getAddTagButton()).not.toBeInTheDocument();
       expect(screen.queryByLabelText(/^Tag post/)).not.toBeInTheDocument();
     });
+
+    it('stays a link to the collection route by default', () => {
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" />);
+
+      expect(screen.getByRole('link', { name: 'Based Bitcoin' })).toHaveAttribute(
+        'href',
+        `/collections/${AUTHOR_PUBKY}/${POST_ID}`,
+      );
+    });
+
+    it('renders a non-link wrapper when navigable is false (repost/share dialog)', () => {
+      const { container } = render(
+        <CollectionCard
+          authorPubky={AUTHOR_PUBKY}
+          postId={POST_ID}
+          presentation="embed"
+          interactiveActions={false}
+          navigable={false}
+        />,
+      );
+
+      const wrapper = container.querySelector('[data-cy="collection-card"]');
+
+      expect(wrapper?.tagName).toBe('DIV');
+      expect(wrapper).not.toHaveAttribute('href');
+      expect(container.querySelector('a[data-cy="collection-card"]')).not.toBeInTheDocument();
+      expect(container.querySelector(`a[href="/collections/${AUTHOR_PUBKY}/${POST_ID}"]`)).not.toBeInTheDocument();
+      // Same box and data contract as the link wrapper, so the embed chrome is unchanged.
+      expect(wrapper).toHaveClass('relative', 'block', 'h-full', 'w-full', 'overflow-hidden', 'rounded-md');
+      expect(wrapper).toHaveAttribute('data-presentation', 'embed');
+      expect(wrapper).toHaveAttribute('data-interactive-actions', 'false');
+      expect(mockTtlRef).toHaveBeenCalledWith(wrapper);
+      expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
+      expect(getTagsList()).toBeInTheDocument();
+    });
   });
 });

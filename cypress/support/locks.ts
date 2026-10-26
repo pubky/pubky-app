@@ -191,9 +191,9 @@ export const editLockedPostText = (text: string) => {
 };
 
 const typeArticleBody = (body: string) => {
-  homeComposer().find('[data-cy="markdown-mode-btn"]').filter(':visible').click();
+  homeComposer().find('button[aria-label="Markdown"]').filter(':visible').click();
   homeComposer()
-    .find('[data-cy="markdown-textarea"]')
+    .find('[data-cy="article-markdown-textarea"]')
     .filter(':visible')
     .clear()
     .type(body, { delay: 0 })

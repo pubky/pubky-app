@@ -597,6 +597,37 @@ describe('PostHeaderUserInfo - Navigation', () => {
     profileLinks.forEach((link) => {
       expect(link).toHaveAttribute('href', '/profile/testuser123');
     });
+    expect(screen.getByText('Test User')).toHaveClass('cursor-pointer');
+  });
+
+  it('renders the avatar and username as text when navigable is false (dialog preview)', () => {
+    render(<PostHeaderUserInfo userId="testuser123" userName="Test User" showPopover={false} navigable={false} />);
+
+    expect(screen.queryByTestId('profile-link')).not.toBeInTheDocument();
+    expect(document.querySelector('a')).not.toBeInTheDocument();
+    expect(screen.getByTestId('avatar')).toBeInTheDocument();
+    expect(screen.getByText('Test User')).toBeInTheDocument();
+    expect(screen.getByText('Test User')).not.toHaveClass('cursor-pointer');
+    expect(screen.getByText('Test User')).toHaveClass('truncate', 'font-bold', 'text-foreground');
+  });
+
+  it('skips the user info popover when navigable is false even if showPopover is on', () => {
+    render(<PostHeaderUserInfo userId="testuser123" userName="Test User" navigable={false} />);
+
+    expect(screen.queryByTestId('popover-trigger')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('profile-link')).not.toBeInTheDocument();
+    expect(screen.getByText('Test User')).toBeInTheDocument();
+  });
+
+  it('keeps the username layout box when navigable is false so long names still truncate', () => {
+    const longName = 'This is an extremely long profile name that should truncate instead of expanding the post header';
+
+    render(<PostHeaderUserInfo userId="testuser123" userName={longName} showPopover={false} navigable={false} />);
+
+    const userName = screen.getByText(longName);
+    expect(userName).toHaveClass('w-full', 'truncate', 'max-w-full');
+    expect(userName.parentElement).toHaveClass('block', 'w-fit', 'min-w-0', 'max-w-full', 'overflow-hidden');
+    expect(screen.getByTestId('avatar').parentElement).toHaveClass('shrink-0');
   });
 
   it('does not underline the username on hover', () => {

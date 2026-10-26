@@ -1,13 +1,15 @@
-import { backupDownloadFilePath } from '../support/common';
+import { backupDownloadFilePath, userIdFromPubky } from '../support/common';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { addTagsToCollectionHero, createCollection, findCollectionCardInSection } from '../support/collections';
 import { goToCollectionsPage, goToProfilePageFromHeader } from '../support/header';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { addProfileTags } from '../support/profile';
-import { BackupType, CheckForNewPosts } from '../support/types/enums';
+import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 
 const username = 'Mr Search';
+// second author, whose posts share a word with one of Mr Search's posts
+const otherPoster = { username: 'Mr Elsewhere', pubkyAlias: 'search_other_pubky' };
 
 // unique suffix shared by all tags and posts created in the `before` hook so
 // that each test can rely on the same fixture data
@@ -18,18 +20,42 @@ const tag3 = `tag3-${uniqueId}`;
 // letters-only unique word so full-text search matches exactly one post even if
 // the index tokenizer splits terms on letter/digit boundaries
 // (content query limits: min 2 chars, max 30 chars, max 4 terms)
-const uniqueWord = `findme${Date.now()
+const lettersOnlyStamp = Date.now()
   .toString()
-  .replace(/\d/g, (digit) => 'abcdefghij'[Number(digit)])}`;
+  .replace(/\d/g, (digit) => 'abcdefghij'[Number(digit)]);
+const uniqueWord = `findme${lettersOnlyStamp}`;
+// in one of Mr Search's posts and one of the other poster's posts
+const sharedWord = `shared${lettersOnlyStamp}`;
+const noMatchWord = `nomatch${lettersOnlyStamp}`;
 const postTag1 = `Post with tag1 ${uniqueWord}`;
-const postTag2 = `Post with tag2 ${Date.now()}`;
+const postTag2 = `Post with tag2 ${Date.now()} ${sharedWord}`;
 const postTags2and3 = `Post with tag2 and tag3 ${Date.now()}`;
 const postNoTags = `Post with no tags ${Date.now()}`;
+const searchUserPosts = [postTag1, postTag2, postTags2and3, postNoTags];
+const otherPostWithSharedWord = `Elsewhere post ${sharedWord}`;
+const otherPostWithoutSharedWord = `Elsewhere post without it ${Date.now()}`;
+
+const profileTabContent = () => cy.get('[data-cy="profile-tab-content"]').filter(':visible');
+const profilePostCards = () => profileTabContent().find('[data-cy="post-card"]').filter(':visible');
+const profileFilterInput = () => cy.get('[data-cy="profile-filter-posts-input"]').filter(':visible');
+
+const filterProfilePosts = (query: string) => {
+  profileFilterInput().clear();
+  profileFilterInput().type(query);
+  profileFilterInput().should('have.value', query);
+};
 
 describe('search', () => {
   before(() => {
     slowCypressDown();
     cy.deleteDownloadsFolder();
+
+    // created first so they are indexed before Mr Search's posts
+    cy.onboardAsNewUser(otherPoster.username, '', undefined, otherPoster.pubkyAlias);
+    createQuickPost(otherPostWithSharedWord);
+    createQuickPost(otherPostWithoutSharedWord);
+    cy.signOut(HasBackedUp.No);
+
     cy.onboardAsNewUser(username, 'I like to search', [BackupType.EncryptedFile]);
 
     // create the posts searched for by the tests below
@@ -152,6 +178,42 @@ describe('search', () => {
 
     // a post without the word is not in the results
     cy.get('[data-cy="post-search-results"]').innerTextShouldNotContain(postNoTags);
+  });
+
+  // the profile filter reads the same Nexus full-text index as the test above
+  it('can filter own profile posts by text', () => {
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-filter-item-posts"]').filter(':visible').click();
+    cy.location('pathname').should('eq', '/profile/posts');
+    profilePostCards().should('have.length', searchUserPosts.length);
+
+    // a matching term leaves only the matching post
+    filterProfilePosts(uniqueWord);
+    profilePostCards().should('have.length', 1).first().innerTextShouldContain(postTag1);
+    profileTabContent().innerTextShouldNotContain(postNoTags);
+
+    // a term with no matches shows the empty state
+    filterProfilePosts(noMatchWord);
+    cy.get('[data-cy="profile-filter-posts-empty"]').filter(':visible').should('have.length', 1);
+    profileTabContent().find('[data-cy="post-card"]').should('not.exist');
+
+    // clearing the filter brings every post back
+    profileFilterInput().clear();
+    profilePostCards().should('have.length', searchUserPosts.length);
+    searchUserPosts.forEach((post) => profileTabContent().innerTextShouldContain(post));
+    cy.get('[data-cy="profile-filter-posts-empty"]').should('not.exist');
+  });
+
+  it('only filters the posts of the profile being viewed', () => {
+    const otherUserId = userIdFromPubky(String(Cypress.expose(otherPoster.pubkyAlias)));
+    cy.visit(`/profile/${otherUserId}`);
+    cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', otherPoster.username);
+    profilePostCards().should('have.length', 2);
+
+    // Mr Search's post with the same word stays out of this profile's results
+    filterProfilePosts(sharedWord);
+    profilePostCards().should('have.length', 1).first().innerTextShouldContain(otherPostWithSharedWord);
+    profileTabContent().innerTextShouldNotContain(postTag2).innerTextShouldNotContain(otherPostWithoutSharedWord);
   });
 
   it('can search people by tag', () => {

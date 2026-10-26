@@ -39,10 +39,10 @@ const uniqueSuffix = String(Date.now()).slice(-5);
 
 // Profiles use a unique suffix so @mention autocomplete does not match stale accounts from earlier runs.
 // profile 1 and 2 are used for enabled notifications, profile 3 is used for disabled notifications
-// todo: use space in username after bug fixed https://github.com/pubky/pubky-app/issues/1638
-const profile1 = { username: `Notif#1${uniqueSuffix}`, pubkyAlias: 'pubky_1' };
-const profile2 = { username: `Notif#2${uniqueSuffix}`, pubkyAlias: 'pubky_2' };
-const profile3 = { username: `Notif#3${uniqueSuffix}`, pubkyAlias: 'pubky_3' };
+// Usernames contain a space to cover multiword mention lookup (https://github.com/pubky/pubky-app/issues/1638)
+const profile1 = { username: `Notif #1${uniqueSuffix}`, pubkyAlias: 'pubky_1' };
+const profile2 = { username: `Notif #2${uniqueSuffix}`, pubkyAlias: 'pubky_2' };
+const profile3 = { username: `Notif #3${uniqueSuffix}`, pubkyAlias: 'pubky_3' };
 
 describe('notifications', () => {
   before(() => {
@@ -198,7 +198,10 @@ describe('notifications', () => {
     }
   });
 
-  it('can be notified for profile being mentioned in a post', () => {
+  // TODO: https://github.com/pubky/pubky-nexus/issues/1149. Nexus sometimes falsely queues the
+  // mention post as MissingDependency, and the retry's recovery path skips notifications, so the
+  // mention notification is never created. Re-enable this test once #1149 is fixed.
+  it.skip('can be notified for profile being mentioned in a post', () => {
     // * profile 1 creates a post mentioning profile 2 via @username lookup
     createQuickPostWithMention(profile2.username);
 

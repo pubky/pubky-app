@@ -35,13 +35,7 @@ import {
 import { followFromPostMenu, searchAndFollowProfile, searchForProfileByPubky } from '../support/contacts';
 import { addProfileTags } from '../support/profile';
 import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
-import { defaultMs, fastMs, slowMs } from '../support/slow-down';
-
-// Temporary extra delay around filtered-feed sign-in/clicks (https://github.com/pubky/pubky-app/issues/2142).
-// Must be applied with cy.slowDown / cy.slowDownEnd: slowCypressDown() is synchronous and
-// cannot change delay mid-test, and a bare slowCypressDown() reuses the last delay instead of defaultMs.
-const filteredFeedWorkaroundMs = () => (Cypress.expose('ci') ? fastMs * 2 : slowMs);
-
+import { defaultMs } from '../support/slow-down';
 // Profile 1 follows Profile 2 and is friends with Profile 2. Profile 1 also follows Profile 3 and Profile 4.
 // Needs 5 posts to be suggested in "who to follow"
 const profile1 = {
@@ -206,18 +200,11 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view only posts and reposts of following', () => {
-    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    // slow down execution locally to avoid seeing wrong profile in filtered feed
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 2 and view Reach Following, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     // click the Following filter
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="following-reach-toggle"]').click();
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
@@ -230,16 +217,10 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
-    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 3 and view Reach Following, only profile 2's post can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="following-reach-toggle"]').click();
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
@@ -252,16 +233,10 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
-    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 4 and view Reach Following, no posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile4.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="following-reach-toggle"]').click();
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cannotFindPostInFeed(profile1.postText1);
     cannotFindPostInFeed(profile1.postText2);
@@ -274,17 +249,10 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view only posts and reposts of friends', () => {
-    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    // slow down execution more locally to avoid seeing wrong profile in filtered feed
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 1 and view Reach Friends, only profile 2's post can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="friends-reach-toggle"]').click();
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
     cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
@@ -298,16 +266,10 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
-    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 2 and view Reach Friends, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="friends-reach-toggle"]').click();
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
@@ -320,16 +282,10 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
-    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 3 and view Reach Friends, no posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="friends-reach-toggle"]').click();
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cannotFindPostInFeed(profile1.postText1);
     cannotFindPostInFeed(profile1.postText2);
@@ -359,17 +315,10 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view posts from your web of trust', () => {
-    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    // slow down execution locally to avoid seeing wrong profile in filtered feed
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 3 and view Reach My network
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="network-reach-toggle"]').click();
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     // profile 1 is 2 hops away (profile 3 -> profile 2 -> profile 1) so their posts are included
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
@@ -387,10 +336,6 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view posts by users tagged as chosen profile tags', () => {
-    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    // slow down execution locally to avoid seeing wrong profile in filtered feed
-    cy.slowDown(filteredFeedWorkaroundMs());
-
     // * sign in as profile 3 and view Reach Tagged as
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="tagged-as-reach-toggle"]').click();
@@ -407,9 +352,6 @@ describe('feed and filters', () => {
       .click();
     cy.get('[data-cy="add-tag-input"]').type(`${taggedAsLabelInNetwork}{enter}`);
     waitForFeedToLoad();
-
-    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
-    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile4.postText).should('be.visible');
     cannotFindPostInFeed(profile1.postText1);
@@ -718,5 +660,44 @@ describe('visual layout', () => {
         // check overlay post content text is not visible whilst not hovering over the tile
         cy.wrap($tile).find('[data-testid="visual-overlay-content-stack"]').should('exist').and('not.be.visible');
       });
+  });
+});
+
+describe('custom feed write failures', () => {
+  before(() => {
+    slowCypressDown();
+    cy.deleteDownloadsFolder();
+  });
+
+  it('rolls back the new feed tab when homeserver fails to save the feed', () => {
+    const stamp = Date.now();
+    const feedName = `Doomed feed ${stamp}`;
+    const tag = `doomed${String(stamp).slice(-6)}`;
+    const feedTab = `[data-cy="feed-navigation-custom-tab"][aria-label="${feedName}"]`;
+
+    cy.onboardAsNewUser('Feed Rollback', 'My feeds fail to save');
+
+    cy.get('[data-cy="feed-navigation"]').find('[data-cy="feed-navigation-create-btn"]').should('be.visible').click();
+    cy.get('[data-cy="custom-feed-dialog"]').should('be.visible').and('contain.text', 'Create Feed');
+    cy.get('[data-cy="custom-feed-name-input"]').type(feedName);
+    cy.get('[data-cy="custom-feed-dialog"]').find('[data-cy="add-tag-input"]').type(`${tag}{enter}`);
+    cy.get('[data-cy="custom-feed-dialog"]').find(`[data-cy="post-tag"][data-tag-label="${tag}"]`).should('be.visible');
+
+    cy.intercept('PUT', '**/pub/pubky.app/feeds/**', { statusCode: 500 }).as('feedFailed');
+    cy.get('[data-cy="custom-feed-save-btn"]').should('not.be.disabled').click();
+
+    cy.get('[data-cy="toast"]').filter(':visible').should('contain.text', 'Could not create feed. Try again.');
+    // homeserver writes retry a 500 twice before giving up
+    cy.get('@feedFailed.all').should('have.length', 3);
+    // the dialog stays open with the typed values so the user can retry
+    cy.get('[data-cy="custom-feed-dialog"]').should('be.visible');
+    cy.get('[data-cy="custom-feed-name-input"]').should('have.value', feedName);
+    cy.location('pathname').should('eq', '/home');
+    cy.get('[data-cy="feed-navigation"]').find(feedTab).should('not.exist');
+
+    // the rolled back local feed row does not come back from Dexie after a reload
+    cy.reload();
+    cy.get('[data-cy="feed-navigation"]').find('[data-cy="feed-navigation-create-btn"]').should('be.visible');
+    cy.get('[data-cy="feed-navigation"]').find(feedTab).should('not.exist');
   });
 });

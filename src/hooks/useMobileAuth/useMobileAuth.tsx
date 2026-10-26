@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { toBitkitIosAuthUrl } from '@/libs/deeplink/deeplink';
-import { isIosDevice } from '@/libs/pwa/platform';
+import { type MobileAuthSigner, toAndroidAuthIntentUrl, toBitkitIosAuthUrl } from '@/libs/deeplink/deeplink';
+import { isAndroidIntentDevice, isIosDevice } from '@/libs/pwa/platform';
 import { useAuthUrl } from '../useAuthUrl/useAuthUrl';
 import type { UseAuthUrlOptions } from '../useAuthUrl/useAuthUrl.types';
 
@@ -24,7 +24,7 @@ type UseMobileAuthReturn = {
  */
 export function useMobileAuth(options: UseAuthUrlOptions = {}): UseMobileAuthReturn {
   const { url, isLoading, isExpired, fetchUrl, copyAuthUrl } = useAuthUrl(options);
-  const [openingSigner, setOpeningSigner] = useState<'ring' | 'bitkit' | null>(null);
+  const [openingSigner, setOpeningSigner] = useState<MobileAuthSigner | null>(null);
   const visibilityHandlerRef = useRef<(() => void) | null>(null);
 
   const cleanup = useCallback(() => {
@@ -46,7 +46,7 @@ export function useMobileAuth(options: UseAuthUrlOptions = {}): UseMobileAuthRet
     };
   }, [cleanup]);
 
-  const authorize = (signer: 'ring' | 'bitkit') => {
+  const authorize = (signer: MobileAuthSigner) => {
     if (isLoading) return;
 
     if (!url || isExpired) {
@@ -69,7 +69,13 @@ export function useMobileAuth(options: UseAuthUrlOptions = {}): UseMobileAuthRet
 
     document.addEventListener('visibilitychange', onVisibilityChange, { once: true });
     // Launch synchronously from the tap, using the same request as Ring and the QR.
-    window.location.href = signer === 'bitkit' && isIosDevice() ? toBitkitIosAuthUrl(url) : url;
+    let targetUrl = url;
+    if (signer === 'bitkit' && isIosDevice()) {
+      targetUrl = toBitkitIosAuthUrl(url);
+    } else if (isAndroidIntentDevice()) {
+      targetUrl = toAndroidAuthIntentUrl(url, signer);
+    }
+    window.location.href = targetUrl;
   };
 
   return {

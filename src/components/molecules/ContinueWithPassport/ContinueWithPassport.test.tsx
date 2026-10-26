@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ContinueWithPassport } from './ContinueWithPassport';
 
@@ -39,6 +39,41 @@ describe('ContinueWithPassport', () => {
 
     expect(screen.getByTestId('continue-with-google')).toBeDisabled();
     expect(screen.getByRole('button', { name: HELP_LABEL })).toBeEnabled();
+  });
+
+  it.each([
+    { state: 'idle', isPending: false, label: 'Continue with Google' },
+    { state: 'pending', isPending: true, label: 'Waiting for Passport...' },
+  ])('centres the help mark with the icon and label as one group while $state', ({ isPending, label }) => {
+    render(<ContinueWithPassport onContinue={vi.fn()} isPending={isPending} />);
+
+    const pill = screen.getByTestId('continue-with-google');
+    const help = screen.getByRole('button', { name: HELP_LABEL });
+    const overlay = screen.getByTestId('passport-help-overlay');
+
+    // 32px padding on both sides; the label no longer clears a corner-positioned mark.
+    expect(pill).toHaveClass('px-8');
+    expect(pill).not.toHaveClass('px-12');
+
+    // The pill reserves the mark's slot after its label so the centred group includes it.
+    const slot = within(pill).getByTestId('passport-help-slot');
+    expect(slot).toHaveClass('size-8');
+    expect(slot).toHaveAttribute('aria-hidden', 'true');
+    expect(pill.lastElementChild).toBe(slot);
+    expect(pill).toHaveAccessibleName(label);
+
+    // The overlay mirrors the group invisibly and lets clicks through, except on the mark itself.
+    expect(pill).not.toContainElement(overlay);
+    expect(overlay).toContainElement(help);
+    expect(overlay).toHaveClass('pointer-events-none', 'absolute', 'inset-0', 'justify-center', 'gap-2', 'px-8');
+    expect(help).toHaveClass('pointer-events-auto');
+
+    const [realLabel, mirroredLabel] = screen.getAllByText(label);
+    expect(pill).toContainElement(realLabel);
+    expect(overlay).toContainElement(mirroredLabel);
+    expect(mirroredLabel).toHaveClass('invisible');
+    expect(mirroredLabel).toHaveAttribute('aria-hidden', 'true');
+    expect(overlay.lastElementChild).toBe(help);
   });
 
   it('renders the Google button and fires onContinue', () => {

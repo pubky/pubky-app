@@ -7,8 +7,8 @@ export class ShopMetadataApplication {
   static async fetch(route: TShopListingMetadataRoute | null): Promise<TShopMetadata> {
     const listing = route ? await ShopMetadataService.fetch(route) : null;
     return {
-      title: listing?.title ?? 'Pubky Marketplace',
-      description: listing?.description ?? 'Buy and sell on Pubky Marketplace.',
+      title: listing?.title ?? 'Pubky Market',
+      description: listing?.description ?? 'Buy and sell on Pubky Market.',
       image: listing?.image ?? '/shop-embed/marketplace/opengraph-image',
       url: route?.hostPath ?? '/shop',
     };

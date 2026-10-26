@@ -5,6 +5,7 @@ import type { TLockConfig } from '@/application/locks/locks.types';
 import { getLockServer, getPaykitServerUrl } from '@/config/network';
 import { PostController } from '@/controllers/post/post';
 import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
+import { usePaidUnlockAvailability } from '@/hooks/usePaidUnlockAvailability/usePaidUnlockAvailability';
 import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { Logger } from '@/libs/logger/logger';
 import { buildArticleContent } from '@/libs/post/articleContent';
@@ -67,6 +68,9 @@ export function usePostInputLock({
   const paykitServerUrl = getPaykitServerUrl() ?? '';
 
   const needsSessionUpgrade = useSessionNeedsUpgrade();
+  // A lock is a paid unlock, so a creator where paid unlocks are held is told before the switch, not after
+  // the setup dialogs. Only the switch is held: the composer and every normal post stay as they are.
+  const paidUnlocks = usePaidUnlockAvailability();
   /**
    * Signed into the Lock Server, holding a connected Bitkit payout account, and on a homeserver
    * session that can reach `/priv` (#2373). The Paykit answer is in memory only, so this is false
@@ -154,6 +158,8 @@ export function usePostInputLock({
 
     // Defensive: the switch is disabled while empty, but never wrap an empty body in a lock.
     if (!canEnable) return;
+    // Likewise while paid unlocks are held for the creator's region: the switch is disabled and says why.
+    if (paidUnlocks.status !== 'available') return;
 
     // The composer currently holds the content to be locked. Snapshot it, but leave it on screen so the
     // creator still sees their draft behind the auth/lock dialogs — it is only swapped for the
@@ -238,7 +244,13 @@ export function usePostInputLock({
     // Locks needs both servers (Lock Server and Paykit Server), so a missing one → No Locks feature.
     lockSwitch:
       isEnabled && lockServerPubky && paykitServerUrl
-        ? { checked: lockEnabled, onCheckedChange, disabled: !lockEnabled && !canEnable }
+        ? {
+            checked: lockEnabled,
+            onCheckedChange,
+            // A lock already switched on stays operable, so a creator can always take it back off.
+            disabled: !lockEnabled && (!canEnable || paidUnlocks.status !== 'available'),
+            regionNotice: !lockEnabled && paidUnlocks.status === 'blocked' ? paidUnlocks.cause : undefined,
+          }
         : undefined,
     isLockEnabled: lockEnabled,
     isLockConfigured,

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PaidUnlockAvailability } from '@/libs/region/paidUnlockAvailability';
 import { usePostInputLock } from './usePostInputLock';
 import type { TLockDraft } from './usePostInputLock.types';
 
@@ -28,8 +29,14 @@ const sessionNeedsUpgrade = vi.hoisted(() => ({ value: false }));
 vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
   useSessionNeedsUpgrade: () => sessionNeedsUpgrade.value,
 }));
+// The availability hook has its own tests; here only what the composer does with each answer matters.
+const paidUnlocks = vi.hoisted(() => ({ value: { status: 'available' } as PaidUnlockAvailability }));
+vi.mock('@/hooks/usePaidUnlockAvailability/usePaidUnlockAvailability', () => ({
+  usePaidUnlockAvailability: () => paidUnlocks.value,
+}));
 afterEach(() => {
   sessionNeedsUpgrade.value = false;
+  paidUnlocks.value = { status: 'available' };
 });
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
   useLocksAuthStore: {
@@ -196,6 +203,73 @@ describe('usePostInputLock', () => {
 
   it('enables the switch once the composer has content', () => {
     expect(setup(true, true).result.current.lockSwitch?.disabled).toBe(false);
+  });
+
+  describe("paid unlocks held for the creator's region", () => {
+    it.each([
+      ['region', { status: 'blocked', cause: 'region' }],
+      ['unknown', { status: 'blocked', cause: 'unknown' }],
+    ] as const)('holds the switch off and says why up front (%s)', (cause, availability) => {
+      paidUnlocks.value = availability;
+      setUpLocks();
+      const { result, captureComposer } = setup(true, true);
+
+      expect(result.current.lockSwitch).toMatchObject({ checked: false, disabled: true, regionNotice: cause });
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+      // The held switch must not capture the draft or open any Locks dialog.
+      expect(captureComposer).not.toHaveBeenCalled();
+      expect(result.current.isLockEnabled).toBe(false);
+      expect(result.current.isLockDialogOpen).toBe(false);
+      expect(result.current.isAuthDialogOpen).toBe(false);
+    });
+
+    it('keeps the switch off while the region is still being read, without a notice', () => {
+      paidUnlocks.value = { status: 'checking' };
+      const { result } = setup(true, true);
+
+      expect(result.current.lockSwitch).toMatchObject({ disabled: true, regionNotice: undefined });
+    });
+
+    it('leaves the switch exactly as it is when paid unlocks are available', () => {
+      const { result } = setup(true, true);
+
+      expect(result.current.lockSwitch).toMatchObject({ checked: false, disabled: false, regionNotice: undefined });
+    });
+
+    it('still publishes a normal post: only the lock switch is held', async () => {
+      paidUnlocks.value = { status: 'blocked', cause: 'region' };
+      const { result, onNormalSubmit } = setup(true, true);
+
+      await act(async () => result.current.submitOrPublish());
+
+      expect(onNormalSubmit).toHaveBeenCalledTimes(1);
+      expect(mocks.publish).not.toHaveBeenCalled();
+    });
+
+    it('does not trap a lock that is already on: the creator can still switch it off', () => {
+      setUpLocks();
+      const view = setup(true, true);
+      const { result, restoreComposer } = view;
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+      expect(result.current.isLockEnabled).toBe(true);
+
+      paidUnlocks.value = { status: 'blocked', cause: 'region' };
+      view.rerender();
+      expect(result.current.lockSwitch?.disabled).toBe(false);
+      expect(result.current.lockSwitch?.regionNotice).toBeUndefined();
+      act(() => result.current.lockSwitch?.onCheckedChange(false));
+
+      expect(restoreComposer).toHaveBeenCalledTimes(1);
+      expect(result.current.isLockEnabled).toBe(false);
+    });
+
+    it('exposes no switch at all when Locks is not configured, whatever the region says', () => {
+      paidUnlocks.value = { status: 'blocked', cause: 'region' };
+      mocks.lockServer = undefined;
+
+      expect(setup().result.current.lockSwitch).toBeUndefined();
+    });
   });
 
   describe('switching on', () => {

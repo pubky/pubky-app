@@ -148,7 +148,6 @@ export function PostInput({
     handlePaste,
     inlineMedia,
     isEditInlineMediaLoading,
-    uploadingCount,
     serializeArticleForLock,
     getLatestArticle,
     // Mention autocomplete
@@ -177,8 +176,7 @@ export function PostInput({
     onContentChange,
     onArticleModeChange,
     hasExternalContent: () => isLockEnabled,
-    // TODO:[Locks] #2684 — once this goes false the public copies are deleted best-effort; a failed
-    // deletion leaves paid images public and nobody is told.
+    // The captured article's body files stay in the session: the lock takes its bytes from there.
     keepInlineMedia: lockDraft?.isArticle === true,
   });
 
@@ -267,10 +265,9 @@ export function PostInput({
     isEnabled: isPostVariant,
     // Something to lock: any body text or at least one attachment. An article needs a title and a
     // body, as it does to be published.
-    canEnable:
-      (isArticle
-        ? articleTitle.trim().length > 0 && content.trim().length > 0
-        : content.trim().length > 0 || attachments.length > 0) && uploadingCount === 0,
+    canEnable: isArticle
+      ? articleTitle.trim().length > 0 && content.trim().length > 0
+      : content.trim().length > 0 || attachments.length > 0,
     lockDraft,
     setLockDraft,
     captureComposer: () => {
@@ -320,7 +317,6 @@ export function PostInput({
         isSubmitting || isPublishingLock,
         isArticle,
         articleTitle,
-        uploadingCount > 0,
       ) &&
       // Validate the serialized announcement envelope before publish or edit reaches its write. The
       // title is required like an article's: the card only shows a placeholder when it is blank, so an
@@ -690,7 +686,7 @@ export function PostInput({
                         markdown={sanitizeCodeBlockLanguages(content)}
                         onChange={handleArticleBodyChangeWithAuth}
                         readOnly={isSubmitting || !isAuthenticated}
-                        inlineMedia={{ ...inlineMedia, uploadingCount }}
+                        inlineMedia={inlineMedia}
                         isLoading={isEditInlineMediaLoading}
                       />
                     </TabsContent>
@@ -737,9 +733,14 @@ export function PostInput({
                   attachmentsInput
                 )}
 
-                {/* Show original post preview for reposts */}
+                {/* Show original post preview for reposts — never a link, so the route cannot change behind the open repost dialog */}
                 {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
-                  <PostPreviewCard postId={originalPostId} className="bg-card" interactiveActions={false} />
+                  <PostPreviewCard
+                    postId={originalPostId}
+                    className="bg-card"
+                    interactiveActions={false}
+                    navigable={false}
+                  />
                 )}
 
                 <AnimatePresence initial={false} mode="popLayout">
