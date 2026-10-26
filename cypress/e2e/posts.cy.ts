@@ -58,8 +58,8 @@ const submitHomePost = (postContent: string, files?: Cypress.FileReference | Cyp
         cy.get('[data-cy="post-input-attachment-remove"]:visible').should('have.length', attachments.length);
       }
       cy.get('[data-cy="post-input-textarea"]:visible').type(postContent).should('have.value', postContent);
-      // `*` stops at `/`, so blob and file uploads under `/blobs/` and `/files/` never match.
-      cy.intercept('PUT', '**/pub/pubky.app/posts/*', (req) => {
+      // A version is posts/<id>/<editId>.json; media uploads go under files/ and never match.
+      cy.intercept('PUT', '**/pub/social/v1/posts/**', (req) => {
         const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
         if (body.includes(postContent)) req.alias = alias;
       });
@@ -103,7 +103,7 @@ const replyOnThread = (parentText: string, replyContent: string) => {
   cy.get('[data-cy="reply-post-input"]').should('be.visible');
   cy.get('[data-cy="reply-post-input"]').within(() => {
     cy.get('[data-cy="post-input-textarea"]').should('have.value', '').type(replyContent);
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('replyCreated');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**').as('replyCreated');
     cy.get('[data-cy="post-input-action-bar-reply"]').click();
     cy.wait('@replyCreated').its('response.statusCode').should('eq', 201);
   });
@@ -1000,7 +1000,7 @@ describe('posts', () => {
       .should('have.length', 1)
       .click()
       .type(quickReply);
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('quickReplyCreated');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**').as('quickReplyCreated');
     cy.get('@postQuickReply')
       .find('[data-cy="post-input-action-bar-reply"]')
       .should('be.visible')
@@ -1160,7 +1160,7 @@ describe('posts', () => {
 
   it('prompts to sign in again when homeserver responds 401 to creating new post', () => {
     const postContent = `This post is rejected as unauthenticated! ${Date.now()}`;
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 401 }).as('postUnauthorized');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**', { statusCode: 401 }).as('postUnauthorized');
 
     cy.get('[data-cy="home-post-input"]').within(() => {
       cy.get('[data-cy="post-input-textarea"]').type(postContent);
@@ -1178,7 +1178,7 @@ describe('posts', () => {
   it('prompts to sign in again when homeserver responds 401 to creating new article', () => {
     const title = `Unauthenticated article ${Date.now()}`;
     const body = `This article is rejected as unauthenticated! ${Date.now()}`;
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 401 }).as('articleUnauthorized');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**', { statusCode: 401 }).as('articleUnauthorized');
 
     cy.get('[data-cy="home-post-input"]').within(() => {
       cy.get('[data-cy="post-input-textarea"]').click();
@@ -1206,7 +1206,7 @@ describe('posts', () => {
     const tag = 'unauthed';
     createQuickPost(postContent);
 
-    cy.intercept('PUT', '**/pub/pubky.app/tags/**', { statusCode: 401 }).as('tagUnauthorized');
+    cy.intercept('PUT', '**/pub/social/v1/tags/**', { statusCode: 401 }).as('tagUnauthorized');
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       cy.get('[data-cy="post-tag-add-button"]').filter(':visible').click();
       cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
@@ -1224,7 +1224,7 @@ describe('posts', () => {
 
   it('warns that storage is full and keeps the draft when homeserver responds 507 to a new post', () => {
     const postContent = `This post does not fit in storage! ${Date.now()}`;
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 507 }).as('postInsufficientStorage');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**', { statusCode: 507 }).as('postInsufficientStorage');
 
     cy.get('[data-cy="home-post-input"]').within(() => {
       cy.get('[data-cy="post-input-textarea"]').type(postContent);
@@ -1252,7 +1252,7 @@ describe('posts', () => {
     cy.location('pathname').should('contain', '/post/');
     cy.get('[data-cy="single-post-card"]').should('contain.text', postContent);
 
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 500 }).as('replyFailed');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**', { statusCode: 500 }).as('replyFailed');
     // The hidden feed under the post overlay has its own quick reply on the same post.
     cy.get('[data-cy="quick-reply"]').filter(':visible').should('have.length', 1).as('postQuickReply');
     cy.get('@postQuickReply')

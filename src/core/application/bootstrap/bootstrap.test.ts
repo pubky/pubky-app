@@ -359,11 +359,8 @@ describe('BootstrapApplication', () => {
     });
 
     describe('when creating the missing lastRead hits the publish conflict', () => {
-      const LAST_READ_URL = 'pubky://test-pubky/pub/pubky.app/last-read';
-      const lastReadResult = {
-        last_read: { timestamp: 9876543210, toJson: () => ({ timestamp: 9876543210 }) },
-        meta: { url: LAST_READ_URL },
-      };
+      const LAST_READ_URL = 'pubky://test-pubky/priv/app.pubky/v1/last_read.json';
+      const lastReadResult = { lastRead: { timestamp: 9876543210 }, url: LAST_READ_URL };
       const publishConflict = () =>
         httpStatusCodeToError(
           409,
@@ -390,7 +387,7 @@ describe('BootstrapApplication', () => {
           return puts === 1 ? Promise.reject(publishConflict()) : Promise.resolve(undefined);
         });
         const existsSpy = vi.spyOn(HomeserverService, 'exists').mockResolvedValue(existsAfterConflict);
-        vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(asOpaque<LastReadResult>(lastReadResult));
+        vi.spyOn(LastReadNormalizer, 'to').mockReturnValue(lastReadResult);
         vi.spyOn(Logger, 'info').mockImplementation(() => {});
 
         await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));

@@ -7,13 +7,15 @@ const ROOT = join(__dirname, '../../../..');
 const SRC = join(ROOT, 'src');
 const HOMESERVER_SERVICE = 'src/core/services/homeserver/homeserver.ts';
 
+const TEST_UTILS = join(SRC, 'test-utils');
 const SDK_STORAGE_WRITE = /\bstorage\.(?:putJson|putBytes|putText|delete)\w*\s*\(/g;
 const RETRY_CALL = /\bretryHomeserverWrite\s*\(/g;
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
     const path = join(dir, entry);
-    if (statSync(path).isDirectory()) return entry === 'node_modules' ? [] : sourceFiles(path);
+    // Test helpers fake the homeserver like test files do, and ship in no build
+    if (statSync(path).isDirectory()) return entry === 'node_modules' || path === TEST_UTILS ? [] : sourceFiles(path);
     if (!/\.(ts|tsx)$/.test(entry) || /\.test\.(ts|tsx)$/.test(entry)) return [];
     return [path];
   });

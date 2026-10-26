@@ -104,13 +104,17 @@ describe('usePostSaveTargets', () => {
       'another-user:collection3',
     ];
 
-    const open = renderHook(() => usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4', { isPickerOpen: true }));
+    const open = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4', { isPickerOpen: true }),
+    );
 
     expect(mocks.postCollectionsEnabled).toBe(true);
     expect(open.result.current.otherCollectionIds).toEqual(['other-user:collection9', 'another-user:collection3']);
     expect(open.result.current.isOtherCollectionsLoading).toBe(false);
 
-    renderHook(() => usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4', { isPickerOpen: false }));
+    renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4', { isPickerOpen: false }),
+    );
     expect(mocks.postCollectionsEnabled).toBe(false);
   });
 
@@ -212,7 +216,9 @@ describe('usePostSaveTargets', () => {
   it('stays busy until the live query acknowledges a rollback, then accepts subsequent membership changes', async () => {
     const pending = Promise.withResolvers<void>();
     mocks.commitUpdateCollectionItem.mockReturnValueOnce(pending.promise);
-    const { result, rerender } = renderHook(() => usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4'));
+    const { result, rerender } = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4'),
+    );
     let update: Promise<boolean>;
     act(() => {
       update = result.current.toggleCollection('author:collection1');
@@ -245,7 +251,9 @@ describe('usePostSaveTargets', () => {
   });
 
   it('keeps the other collections interactive while a completed toggle waits for its fresh read', async () => {
-    const { result, rerender } = renderHook(() => usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4'));
+    const { result, rerender } = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4'),
+    );
     mocks.completionReadPending = true;
     await act(async () => {
       await result.current.toggleCollection('author:collection1');
@@ -262,7 +270,7 @@ describe('usePostSaveTargets', () => {
     });
     expect(mocks.commitUpdateCollectionItem).toHaveBeenLastCalledWith({
       collectionId: 'author:collection2',
-      postId: 'author:post1',
+      postId: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4',
       shouldAdd: true,
     });
     // The mocked list now reflects the first toggle's read; only the second waits.

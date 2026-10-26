@@ -941,13 +941,13 @@ describe('LocalPostService', () => {
   });
 
   describe('curated item collections counts', () => {
-    const itemA = buildCompositeId({ pubky: testData.authorPubky, id: 'item-a' });
+    const itemA = buildCompositeId({ pubky: testData.authorPubky, id: '0033SSE3B1FA0' });
     const itemB = buildCompositeId({
       pubky: 'kyz8rbbeguh56w195ntf65xkdn7kks1pyukogjnpixy8aq4ood7y' as Pubky,
-      id: 'item-b',
+      id: '0033SSE3B1FB0',
     });
-    const itemC = buildCompositeId({ pubky: testData.authorPubky, id: 'item-c' });
-    const collectionId = buildCompositeId({ pubky: testData.authorPubky, id: 'collection-1' });
+    const itemC = buildCompositeId({ pubky: testData.authorPubky, id: '0033SSE3B1FC0' });
+    const collectionId = buildCompositeId({ pubky: testData.authorPubky, id: '0033SSE3B1FD0' });
 
     const collectionsCount = async (postId: string) => (await getSavedCounts(postId))?.collections;
 
@@ -1010,7 +1010,7 @@ describe('LocalPostService', () => {
       const baseParams = createSaveParams(collectionEnvelope([itemA, itemB, itemB]), collectionId);
       await LocalPostService.create({
         ...baseParams,
-        post: new PubkyAppPost(baseParams.post.content, 'collection', undefined, undefined, undefined),
+        post: { ...baseParams.post, object: { ...baseParams.post.object, kind: 'collection' } },
       });
 
       // The duplicate item counts once; an uncurated post is untouched.

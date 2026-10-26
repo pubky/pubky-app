@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { PostController } from '@/controllers/post/post';
@@ -17,10 +17,10 @@ import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { buildCollectionItemsStreamId } from '@/models/stream/post/postStream.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
-import { HomeserverService } from '@/services/homeserver/homeserver';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { stubMemoryHomeserver } from '@/test-utils/homeserver';
 import { useCollectionStreamMembership } from './useCollectionStreamMembership';
 
 const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
@@ -78,7 +78,7 @@ describe('useCollectionStreamMembership', () => {
     });
     postStreamQueue.clear();
     useAuthStore.setState({ currentUserPubky: AUTHOR });
-    vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    stubMemoryHomeserver(AUTHOR);
     vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
     vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({ post_keys: [], last_post_score: null });
   });
@@ -260,7 +260,7 @@ describe('useCollectionStreamMembership', () => {
         name: 'Paginated collection',
         items: members.map((postId) => {
           const { pubky, id } = parseCompositeId(postId);
-          return postUriBuilder(pubky, id);
+          return buildUri(pubky, 'post', id);
         }),
       });
       let indexed = [...indexedIds];

@@ -292,11 +292,10 @@ describe('Post Application', () => {
           createMockFileAttachment('body-2'),
         ];
 
-        const mockPost = new PubkyAppPost('Article', PubkyAppPostKind.Long, undefined, undefined, undefined);
+        const mockPost = builtPost('Article', 'article');
         const mockData: TCreatePostInput = {
           compositePostId: 'author:article-partial-upload',
           post: mockPost,
-          postUrl: 'pubky://author/pub/pubky.app/posts/article-partial-upload',
           fileAttachments: mockFileAttachments,
         };
 
@@ -314,11 +313,10 @@ describe('Post Application', () => {
       it('should roll back the uploads when the local post write fails', async () => {
         const mockFileAttachments = [createMockFileAttachment('cover'), createMockFileAttachment('body-1')];
 
-        const mockPost = new PubkyAppPost('Article', PubkyAppPostKind.Long, undefined, undefined, undefined);
+        const mockPost = builtPost('Article', 'article');
         const mockData: TCreatePostInput = {
           compositePostId: 'author:article-local-write-fail',
           post: mockPost,
-          postUrl: 'pubky://author/pub/pubky.app/posts/article-local-write-fail',
           fileAttachments: mockFileAttachments,
         };
 
@@ -336,11 +334,10 @@ describe('Post Application', () => {
       it('should propagate the upload error when the batch rollback also fails', async () => {
         const mockFileAttachments = [createMockFileAttachment('cover'), createMockFileAttachment('body-1')];
 
-        const mockPost = new PubkyAppPost('Article', PubkyAppPostKind.Long, undefined, undefined, undefined);
+        const mockPost = builtPost('Article', 'article');
         const mockData: TCreatePostInput = {
           compositePostId: 'author:article-rollback-fail',
           post: mockPost,
-          postUrl: 'pubky://author/pub/pubky.app/posts/article-rollback-fail',
           fileAttachments: mockFileAttachments,
         };
 

@@ -143,7 +143,7 @@ describe('profile', () => {
 
     searchForProfileByName(profileToFollowName);
 
-    cy.intercept('PUT', '**/pub/pubky.app/follows/**', { statusCode: 507 }).as('followFailed');
+    cy.intercept('PUT', '**/pub/social/v1/follows/**', { statusCode: 507 }).as('followFailed');
     cy.get('[data-cy="profile-follow-toggle-btn"]').filter(':visible').should('have.text', 'Follow').click();
     cy.wait('@followFailed');
 
