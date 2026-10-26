@@ -7,7 +7,7 @@ import { BootstrapApplication, type BootstrapProgressCallback } from '@/applicat
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
-import { APP_CAPABILITIES, LOCKS_CAPABILITIES } from '@/config/auth';
+import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
 import { getDeployEnv, getHomeserver, getHomeserverCapabilities } from '@/config/network';
 import type {
@@ -1120,7 +1120,9 @@ export class AuthController {
         operation: 'requestCapabilities',
       });
     const capabilities = validateCapabilities(
-      [APP_CAPABILITIES, ...(state.session?.info.capabilities ?? []), ...required].join(','),
+      [...SOCIAL_V1_APP_CAPABILITIES, APP_CAPABILITIES, ...(state.session?.info.capabilities ?? []), ...required].join(
+        ',',
+      ),
     ) as Capabilities;
     return this.wrapAuthFlow({
       purpose: 'upgrade',

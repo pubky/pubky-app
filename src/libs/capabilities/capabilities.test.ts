@@ -14,7 +14,7 @@ describe('hasRequiredCapabilities', () => {
   });
 
   it('recognizes split read/write coverage so Locks does not ask for an unnecessary upgrade', () => {
-    const capabilities = ['/pub/pubky.app/:rw', '/priv/:r', '/priv/social/:w'];
+    const capabilities = ['/pub/:rw', '/priv/:r', '/priv/social/:w', '/priv/app.pubky/v1/:w'];
     expect(hasRequiredCapabilities(capabilities, REQUIRED)).toBe(true);
     expect(sessionNeedsUpgrade(mockRingSession(capabilities))).toBe(false);
   });

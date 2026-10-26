@@ -1,5 +1,5 @@
 import type { Capabilities } from '@synonymdev/pubky';
-import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SHOP_CAPABILITIES } from '@/config/auth';
+import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SHOP_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import {
   getDefaultHttpRelay,
   getDeployEnv,
@@ -68,7 +68,6 @@ export function isStagingHomeserverDeploy(): boolean {
 // - /priv/app.pubky/v1/:rw      - the app's own files (settings, last read)
 // /priv/social/:rw also holds the private social tree (feeds, bookmarks, mutes under `v1/`), and
 // /pub/pubky.app/:rw stays for the legacy tree, still read and reachable for deletions of migrated objects.
-const SOCIAL_V1_APP_CAPABILITIES = ['/pub/social/v1/:rw', '/priv/app.pubky/v1/:rw'] as const;
 export const HOMESERVER_CAPABILITIES = [...SOCIAL_V1_APP_CAPABILITIES, APP_CAPABILITIES, ...LOCKS_CAPABILITIES].join(
   ',',
 ) as Capabilities;
