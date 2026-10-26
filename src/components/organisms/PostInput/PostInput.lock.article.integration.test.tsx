@@ -259,7 +259,7 @@ describe('PostInput - locking an article with body images (integration)', () => 
 
   it('locks the image bytes and the slot that points at them, without ever touching public storage', async () => {
     await writeArticle();
-    expect(imageUri).toMatch(new RegExp(`^pubky://${AUTHOR}/pub/pubky\\.app/files/draft-`));
+    expect(imageUri).toMatch(new RegExp(`^pubky://${AUTHOR}/pub/social/v1/files/[0-9A-Z]{26}\\.png$`));
     applyLock();
     // The composer left article mode to take the teaser; the staged file must outlive that.
     expect(mocks.editor).toBeNull();

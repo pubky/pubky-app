@@ -32,7 +32,7 @@ export interface UseInlineMediaUploadReturn {
   /**
    * MDXEditor `imageUploadHandler` shape, for every inline media kind: validates
    * the file and resolves with the author-owned file URI the body references
-   * (`pubky://…/files/draft-…`). Nothing is uploaded here — the bytes stay in
+   * (`pubky://…/files/{random media id}.{ext}`). Nothing is uploaded here, the bytes stay in
    * the session until the article is published. Rejects (after toasting) on
    * validation or budget failure so the editor inserts nothing.
    */
