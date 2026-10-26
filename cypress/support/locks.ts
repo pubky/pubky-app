@@ -7,7 +7,9 @@
  * intercepted: the homeserver writes (guarded bytes, `lock.json`, the announcement, the reader's
  * purchase file and replica) and every Nexus read stay real.
  */
+import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { userIdFromPubky } from './common';
+import { logLocksStub, redactLocksStubUrl, shortPubky } from './locks-log';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
 /** Same value as `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL` in the e2e workflow; the host never resolves. */
@@ -16,6 +18,7 @@ export const locksStubUrl = (): string => String(Cypress.expose('locksStubUrl'))
 const GUARDED_CONTENT_PATH = '/priv/app.locks/content/';
 const AUTH_MESSAGE_TYPE = 'locks-auth-callback';
 const AUTH_CODE = 'e2e-locks-code';
+const ACCESS_CREDENTIAL = 'e2e-credential';
 
 type TGuardedResource = { path: string; hash: string; content_type: string; size: number };
 
@@ -28,26 +31,46 @@ type TContentLockRequest = {
   lock_server?: unknown;
 };
 
+/** What a payment for a lock must be, from the content lock the creator published. */
+export type TLockPrice = { amount: string; asset: string; recipient: string };
+
 /** Everything the stand-in Lock Server holds; it lives for the whole spec, across sign-ins. */
 export type TLockServerState = {
   /** The account the `/connect` approval signs in, z32 without the `pubky` prefix. */
   creatorPubky: string;
   /** Guarded bytes (base64) by path tail, as the creator registered them. */
   guarded: Record<string, string>;
-  /** Bundle ids the reader submitted, with the number of task lookups each has had. */
-  tasks: Record<string, number>;
+  /** The price of each content lock the creator published, by lock id. */
+  locks: Record<string, TLockPrice>;
+  /** Bundle ids the reader submitted: the lock each pays for, and the task lookups it has had. */
+  tasks: Record<string, { lockId: string; lookups: number }>;
 };
 
-export const createLockServerState = (): TLockServerState => ({ creatorPubky: '', guarded: {}, tasks: {} });
+export const createLockServerState = (): TLockServerState => ({
+  creatorPubky: '',
+  guarded: {},
+  locks: {},
+  tasks: {},
+});
 
 /** The stub client sends `text/plain` so no request needs a CORS preflight; Cypress leaves it a string. */
-const parseBody = <T>(body: unknown): T => (typeof body === 'string' ? JSON.parse(body) : body) as T;
+const parseBody = <T>(body: unknown): T => (typeof body === 'string' && body ? JSON.parse(body) : body) as T;
 
-const json = (body: unknown, statusCode = 200) => ({
-  statusCode,
-  body,
-  headers: { 'access-control-allow-origin': '*' },
-});
+const CORS_HEADERS = { 'access-control-allow-origin': '*' };
+
+type TStubRequest = CyHttpMessages.IncomingHttpRequest;
+
+/**
+ * Answers one stand-in call and logs it as a `[locks-stub]` entry: `summary` names the key
+ * parameters, and the entry's console details hold the (redacted) request and response.
+ */
+const answer = (req: TStubRequest, operation: string, summary: string, body: unknown, statusCode = 200) => {
+  logLocksStub(operation, `${summary} → ${statusCode}`, {
+    Request: { method: req.method, url: redactLocksStubUrl(req.url), body: parseBody(req.body) },
+    Response: { statusCode, body },
+  });
+  req.reply({ statusCode, body, headers: CORS_HEADERS });
+};
 
 const toSecondaryRecord = (resources: TContentLockRequest['secondary_resources']) => {
   if (!Array.isArray(resources)) return resources ?? {};
@@ -55,6 +78,21 @@ const toSecondaryRecord = (resources: TContentLockRequest['secondary_resources']
     resources.map(({ path, hash, content_type, size }) => [path, { hash, content_type, size }]),
   );
 };
+
+const priceOf = (body: TContentLockRequest, owner: string): TLockPrice => {
+  const params = body.criteria[0]?.params ?? {};
+  return {
+    amount: String(params['amount'] ?? ''),
+    asset: String(params['asset'] ?? ''),
+    recipient: String(params['recipient_pubky'] ?? `pubky${owner}`),
+  };
+};
+
+/** `<creator>/pub/app.locks/<lock_id>.json` → `<lock_id>`. */
+const lockIdOf = (lockResource: string) => /\/pub\/app\.locks\/([^/]+)\.json$/.exec(lockResource)?.[1] ?? '';
+
+const describePrice = (price: TLockPrice | undefined) =>
+  price ? `${price.amount} sats (${price.asset}) to ${shortPubky(price.recipient)}` : 'an unknown lock';
 
 /** The `/connect` page: posts the approval back to the app the way the real Lock Server shell does. */
 const connectPage = (state: string) => `<!doctype html>
@@ -70,23 +108,47 @@ const route = (method: 'GET' | 'POST', pathname: string) => ({
 });
 
 /**
- * Registers the stand-in Lock Server routes. Intercepts reset between tests, so call it in
- * `beforeEach`; the state object carries what was published across tests and sign-ins.
+ * Registers the stand-in Lock Server routes, each under an alias the spec waits on and each logged
+ * as a `[locks-stub]` entry. Intercepts reset between tests, so call it in `beforeEach`; the state
+ * object carries what was published across tests and sign-ins.
  */
 export const stubLockServer = (state: TLockServerState) => {
-  cy.intercept(route('GET', '/readyz'), { statusCode: 200, body: 'ok' }).as('locksReadyz');
+  cy.intercept(route('GET', '/readyz'), (req) => {
+    logLocksStub('lock server readiness', 'GET /readyz → 200 ok', { Request: { url: req.url } });
+    req.reply({ statusCode: 200, body: 'ok' });
+  }).as('locksReadyz');
+
+  // Pubky Ring / Bitkit approval: the setup dialog embeds `/connect`, which the signer app approves.
   cy.intercept(route('GET', '/connect'), (req) => {
     const authState = new URL(req.url).searchParams.get('state') ?? '';
+    logLocksStub(
+      'ring/bitkit approval',
+      `signer approves Lock Server access for creator ${shortPubky(state.creatorPubky)} → 200 (posts the auth code)`,
+      {
+        Request: { url: redactLocksStubUrl(req.url) },
+        Response: { statusCode: 200, postMessage: { type: AUTH_MESSAGE_TYPE, code: AUTH_CODE, state: authState } },
+      },
+    );
     req.reply({ statusCode: 200, body: connectPage(authState), headers: { 'content-type': 'text/html' } });
   }).as('locksConnect');
 
   cy.intercept(route('POST', '/e2e/session/exchange'), (req) => {
     const { code } = parseBody<{ code: string }>(req.body);
     expect(code, 'the code the /connect page posted').to.eq(AUTH_CODE);
-    req.reply(json({ creator: `pubky${state.creatorPubky}` }));
+    answer(req, 'session exchange', `creator ${shortPubky(state.creatorPubky)} signed in to the Lock Server`, {
+      creator: `pubky${state.creatorPubky}`,
+    });
   }).as('locksExchange');
-  cy.intercept(route('POST', '/e2e/creator/lock-service-pointer'), json({})).as('locksServicePointer');
-  cy.intercept(route('POST', '/e2e/creator/paykit-setup-status'), json({ status: 'ready' })).as('paykitSetupStatus');
+  cy.intercept(route('POST', '/e2e/creator/lock-service-pointer'), (req) => {
+    const { owner, default_lock_server } = parseBody<{ owner: string; default_lock_server: string }>(req.body);
+    answer(req, 'lock service pointer', `${shortPubky(owner)} → Lock Server ${shortPubky(default_lock_server)}`, {});
+  }).as('locksServicePointer');
+  cy.intercept(route('POST', '/e2e/creator/paykit-setup-status'), (req) => {
+    const { owner, asset } = parseBody<{ owner: string; asset: string }>(req.body);
+    answer(req, 'bitkit payout setup', `creator ${shortPubky(owner)} receives ${asset}: ready (no Bitkit QR)`, {
+      status: 'ready',
+    });
+  }).as('paykitSetupStatus');
 
   cy.intercept(route('POST', '/e2e/creator/guarded-resources'), (req) => {
     const { owner, path, content_type, bytes } = parseBody<{
@@ -96,67 +158,92 @@ export const stubLockServer = (state: TLockServerState) => {
       bytes: string;
     }>(req.body);
     state.guarded[path] = bytes;
-    req.reply(
-      json({
-        creator: `pubky${owner}`,
-        guarded_resource: { path: `${GUARDED_CONTENT_PATH}${path}`, hash: `e2e-${path}`, content_type, size: 0 },
-      }),
-    );
+    answer(req, 'register guarded resource', `${path} (${content_type}, ${bytes.length} base64 chars)`, {
+      creator: `pubky${owner}`,
+      guarded_resource: { path: `${GUARDED_CONTENT_PATH}${path}`, hash: `e2e-${path}`, content_type, size: 0 },
+    });
   }).as('registerGuardedResource');
 
   cy.intercept(route('POST', '/e2e/creator/content-locks'), (req) => {
     const { owner, body } = parseBody<{ owner: string; body: TContentLockRequest }>(req.body);
     const lockId = `e2e${Date.now()}`;
-    req.reply(
-      json({
-        lock_id: lockId,
-        content_lock_path: `/pub/app.locks/${lockId}.json`,
-        content_lock: {
-          version: 1,
-          creator: `pubky${owner}`,
-          primary_resource: body.primary_resource,
-          secondary_resources: toSecondaryRecord(body.secondary_resources),
-          criteria: body.criteria,
-          lock_logic: body.lock_logic,
-          access_policy: body.access_policy,
-          lock_server: body.lock_server ?? { override: null },
-        },
-      }),
-    );
+    const price = priceOf(body, owner);
+    state.locks[lockId] = price;
+    answer(req, 'create content lock', `lock ${lockId} for ${describePrice(price)}`, {
+      lock_id: lockId,
+      content_lock_path: `/pub/app.locks/${lockId}.json`,
+      content_lock: {
+        version: 1,
+        creator: `pubky${owner}`,
+        primary_resource: body.primary_resource,
+        secondary_resources: toSecondaryRecord(body.secondary_resources),
+        criteria: body.criteria,
+        lock_logic: body.lock_logic,
+        access_policy: body.access_policy,
+        lock_server: body.lock_server ?? { override: null },
+      },
+    });
   }).as('createContentLock');
 
   // The reader's Bitkit wallet: it has published Paykit data, it is linked to the creator, and the
   // payment request is paid on the second task lookup (the first one still reads `pending`).
-  cy.intercept(route('POST', '/e2e/paykit/has-data'), json({ has_data: true })).as('paykitHasData');
+  cy.intercept(route('POST', '/e2e/paykit/has-data'), (req) => {
+    const { user } = parseBody<{ user: string }>(req.body);
+    answer(req, 'bitkit wallet', `reader ${shortPubky(user)} has Paykit data`, { has_data: true });
+  }).as('paykitHasData');
   cy.intercept(route('POST', '/e2e/viewer/proof-bundles'), (req) => {
-    const { bundle_id } = parseBody<{ bundle_id: string }>(req.body);
-    state.tasks[bundle_id] = state.tasks[bundle_id] ?? 0;
-    req.reply(json({ status: 'pending' }));
+    const { bundle_id, pubky_lock_resource, reader_public_key } = parseBody<{
+      bundle_id: string;
+      pubky_lock_resource: string;
+      reader_public_key: string;
+    }>(req.body);
+    const lockId = lockIdOf(pubky_lock_resource);
+    state.tasks[bundle_id] = state.tasks[bundle_id] ?? { lockId, lookups: 0 };
+    answer(
+      req,
+      'verify payment',
+      `payment request to reader ${shortPubky(reader_public_key)}'s Bitkit: ${describePrice(state.locks[lockId])}, lock ${lockId}`,
+      { status: 'pending' },
+    );
   }).as('submitProof');
   cy.intercept(route('POST', '/e2e/viewer/verification-tasks'), (req) => {
     const { bundle_id } = parseBody<{ bundle_id: string }>(req.body);
-    const lookups = state.tasks[bundle_id];
-    if (lookups === undefined) {
-      req.reply(json({ error: 'not found' }, 404));
+    const task = state.tasks[bundle_id];
+    if (task === undefined) {
+      answer(req, 'verify payment', `no task for bundle ${bundle_id}`, { error: 'not found' }, 404);
       return;
     }
-    state.tasks[bundle_id] = lookups + 1;
-    req.reply(json({ status: lookups === 0 ? 'pending' : 'completed' }));
+    const status = task.lookups === 0 ? 'pending' : 'completed';
+    task.lookups += 1;
+    const price = describePrice(state.locks[task.lockId]);
+    answer(
+      req,
+      'verify payment',
+      status === 'pending' ? `Bitkit has not paid ${price} yet: pending` : `Bitkit paid ${price}: completed`,
+      { status },
+    );
   }).as('lookupVerificationTask');
-  cy.intercept(route('POST', '/e2e/viewer/paykit-connection-state'), json({ state: 'connected' })).as(
-    'paykitConnectionState',
-  );
+  cy.intercept(route('POST', '/e2e/viewer/paykit-connection-state'), (req) => {
+    const { creator } = parseBody<{ creator: string }>(req.body);
+    answer(req, 'bitkit wallet', `reader linked to creator ${shortPubky(creator)}: connected`, {
+      state: 'connected',
+    });
+  }).as('paykitConnectionState');
   cy.intercept(route('POST', '/e2e/viewer/access-credentials'), (req) => {
-    req.reply(json({ credential: 'e2e-credential', expires_at: new Date(Date.now() + 900_000).toISOString() }));
+    const { bundle_id } = parseBody<{ bundle_id: string }>(req.body);
+    answer(req, 'access credential', `issued for bundle ${bundle_id}, valid 15 min`, {
+      credential: ACCESS_CREDENTIAL,
+      expires_at: new Date(Date.now() + 900_000).toISOString(),
+    });
   }).as('issueAccessCredential');
   cy.intercept(route('POST', '/e2e/viewer/guarded-resources/read'), (req) => {
     const { credential, path } = parseBody<{ credential: string; path: string }>(req.body);
     const bytes = state.guarded[path];
-    if (credential !== 'e2e-credential' || bytes === undefined) {
-      req.reply(json({ error: 'not found' }, 404));
+    if (credential !== ACCESS_CREDENTIAL || bytes === undefined) {
+      answer(req, 'guarded read', `${path}: refused`, { error: 'not found' }, 404);
       return;
     }
-    req.reply(json({ bytes }));
+    answer(req, 'guarded read', `unlock key delivered: ${path} (${bytes.length} base64 chars)`, { bytes });
   }).as('proxyReadGuardedResource');
 };
 
