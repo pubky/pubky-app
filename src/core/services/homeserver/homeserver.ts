@@ -1,4 +1,5 @@
 import { Address, Client, Keypair, Pubky, PublicKey, resolvePubky, Session, Signer } from '@synonymdev/pubky';
+import type { MigrationReport, RunOptions } from 'pubky-social-migrator';
 import { createSocialClient, type SocialClient } from 'pubky-social-specs/client';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { getAuthClientId } from '@/config/auth';
@@ -875,6 +876,38 @@ export class HomeserverService {
     }
     const social = createSocialClient(session, { publicStorage: this.getPubkySdk().publicStorage });
     return operation(social).catch((error) => handleError({ error, additionalContext: { operation: 'social' } }));
+  }
+
+  /**
+   * Copies the signed-in user's 0.x tree to social v1. The run resolves with a report whatever the
+   * outcome, and once a run has finished, the next ones cost one HEAD. The migrator loads a wasm,
+   * so it is imported only here.
+   */
+  static async migrateToSocialV1({
+    signal,
+    onProgress,
+  }: Pick<RunOptions, 'signal' | 'onProgress'>): Promise<MigrationReport> {
+    const session = useAuthStore.getState().selectSession();
+    if (!session) {
+      throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'No signed-in session', {
+        service: ErrorService.Homeserver,
+        operation: 'migrateToSocialV1',
+      });
+    }
+    const [{ runMigration }, { sdkPort }] = await Promise.all([
+      import('pubky-social-migrator'),
+      import('pubky-social-migrator/pubky-sdk'),
+    ]);
+    const locks = globalThis.navigator?.locks;
+    return runMigration({
+      owner: session.info.publicKey.z32(),
+      port: sdkPort(session),
+      caps: session.info.capabilities,
+      // One run per account across tabs; the tab that finds it taken gets ALREADY_RUNNING
+      lock: locks ? async (name, fn) => await locks.request(name, { ifAvailable: true }, fn) : undefined,
+      signal,
+      onProgress,
+    });
   }
 
   /**
