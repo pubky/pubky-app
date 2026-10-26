@@ -16,10 +16,11 @@ const OWNER = 'creatorpubky';
 const mocks = vi.hoisted(() => ({
   putBlob: vi.fn(async () => {}),
   getBytes: vi.fn(async () => new TextEncoder().encode('{"version":1}')),
+  getLockServer: vi.fn((): string | undefined => 'lockserverpubky'),
 }));
 
 vi.mock('@/config/network', () => ({
-  getLockServer: () => 'lockserverpubky',
+  getLockServer: mocks.getLockServer,
 }));
 
 vi.mock('@/services/homeserver/homeserver', () => ({
@@ -81,6 +82,15 @@ describe('locks.e2eStub', () => {
     expect(session.creatorPubky()).toBe(`pubky${OWNER}`);
     expect(session.lockServer()).toBe('lockserverpubky');
     expect(client.restoreSession(session.exportSecret()).creatorPubky()).toBe(`pubky${OWNER}`);
+  });
+
+  it('signs out without a request, and reports no Lock Server when none is configured', async () => {
+    const session = await signIn();
+    mocks.getLockServer.mockReturnValueOnce(undefined);
+
+    expect(session.lockServer()).toBe('');
+    await expect(session.signout()).resolves.toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('rejects a secret it did not mint', () => {
