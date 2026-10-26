@@ -1,4 +1,4 @@
-import validationLimits from 'pubky-app-specs/validationLimits.json';
+import { limits } from 'pubky-social-specs';
 
 /**
  * Regex pattern for parsing H:M:S timestamp format.
@@ -18,7 +18,7 @@ import validationLimits from 'pubky-app-specs/validationLimits.json';
 export const HMS_TIMESTAMP_REGEX = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/;
 
 /**
- * Banned characters for tags per pubky-app-specs.
+ * Banned characters for tags per pubky-social-specs.
  * Colons, commas, spaces, tabs, and newlines are not allowed in tags.
  */
 const escapeTagCharForRegex = (char: string) => {
@@ -34,7 +34,7 @@ const escapeTagCharForRegex = (char: string) => {
   }
 };
 
-const TAG_INVALID_CHARS_FOR_REGEX = validationLimits.tagInvalidChars.map(escapeTagCharForRegex).join('');
+const TAG_INVALID_CHARS_FOR_REGEX = limits.tagInvalidChars.map(escapeTagCharForRegex).join('');
 
 export const TAG_BANNED_CHARS = new RegExp(`[${TAG_INVALID_CHARS_FOR_REGEX}]`, 'g');
 

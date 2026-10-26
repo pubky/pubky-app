@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { PubkyAppPost } from 'pubky-app-specs';
+import { encodeObject, type Post } from 'pubky-social-specs';
 import { LocksController } from '@/controllers/locks/locks';
 import { PostController } from '@/controllers/post/post';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
@@ -23,7 +23,7 @@ import type {
 // The homeserver detects each file's type from its bytes: real media (image/webp, video/mp4, …) is
 // recognized, but JSON is not, so it falls back to `octet-stream`. createContentLock() fails unless our
 // declared type matches what the homeserver detected, so the JSON primary must be declared
-// `octet-stream`. pubky-app still knows the primary is a `PubkyAppPost` — by convention, it always is.
+// `octet-stream`. pubky-app still knows the primary is a post — by convention, it always is.
 const POST_CONTENT_TYPE = 'application/octet-stream';
 
 /**
@@ -104,8 +104,17 @@ export function useCreateLockContent({
           });
         const host = ownerPubky ? stripPubkyPrefix(ownerPubky) : '';
         const uris = attachmentResources.map((resource) => `pubky://${host}${resource.path}`);
-        const post = new PubkyAppPost(lockedPost.content, lockedPost.kind, null, null, uris.length > 0 ? uris : null);
-        return { contentType: POST_CONTENT_TYPE, bytes: new TextEncoder().encode(JSON.stringify(post.toJson())) };
+        // The primary lives in the Locks namespace, a private place no data-model URL names, so it
+        // is encoded by kind alone.
+        const post: Post = {
+          content: lockedPost.content,
+          kind: lockedPost.kind,
+          parent: null,
+          embed: null,
+          attachments: uris.map((uri) => ({ uri, name: null, alt: null })),
+          lock: null,
+        };
+        return { contentType: POST_CONTENT_TYPE, bytes: encodeObject({ kind: 'post', root: 'private' }, post) };
       };
 
       // TODO:[Locks] #2685 — the files go up as the author picked them. A normal upload first removes

@@ -41,8 +41,11 @@ afterEach(() => {
 describe('UserApplication.commitFollow', () => {
   const follower = 'pubky_follower' as Pubky;
   const followee = 'pubky_followee' as Pubky;
-  const followUrl = 'pubky://follower/pub/pubky.app/follow';
-  const followJson = { foo: 'bar' } as Record<string, unknown>;
+  const followUrl = 'pubky://follower/pub/social/v1/follows/followee.json';
+  const followBody = new TextEncoder().encode('{"created_at":1}');
+  const deleteUrls = ['pubky://follower/pub/pubky.app/follows/followee', followUrl];
+  const putParams = { eventType: HttpMethod.PUT as const, followUrl, followBody, follower, followee };
+  const deleteParams = { eventType: HttpMethod.DELETE as const, deleteUrls, follower, followee };
   const homeserverFailure = () =>
     Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'homeserver-down', {
       service: ErrorService.Homeserver,
@@ -52,70 +55,32 @@ describe('UserApplication.commitFollow', () => {
   it('should update local state on PUT and call homeserver', async () => {
     const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
     const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
-    const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    const requestSpy = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
 
-    await UserApplication.commitFollow({
-      eventType: HttpMethod.PUT,
-      followUrl,
-      followJson,
-      follower,
-      followee,
-    });
+    await UserApplication.commitFollow(putParams);
 
     expect(createSpy).toHaveBeenCalledWith({ follower, followee });
     expect(deleteSpy).not.toHaveBeenCalled();
-    expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: followUrl, bodyJson: followJson });
+    expect(requestSpy).toHaveBeenCalledWith({ url: followUrl, blob: followBody });
   });
 
   it('should update local state on DELETE and call homeserver', async () => {
     const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
     const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
-    const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    const requestSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
 
-    await UserApplication.commitFollow({
-      eventType: HttpMethod.DELETE,
-      followUrl,
-      followJson,
-      follower,
-      followee,
-    });
+    await UserApplication.commitFollow(deleteParams);
 
     expect(deleteSpy).toHaveBeenCalledWith({ follower, followee });
     expect(createSpy).not.toHaveBeenCalled();
-    expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: followUrl, bodyJson: followJson });
-  });
-
-  it('should not update local state for non-mutate methods but still call homeserver', async () => {
-    const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
-    const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
-    const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
-
-    await UserApplication.commitFollow({
-      eventType: HttpMethod.GET,
-      followUrl,
-      followJson,
-      follower,
-      followee,
-    });
-
-    expect(createSpy).not.toHaveBeenCalled();
-    expect(deleteSpy).not.toHaveBeenCalled();
-    expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: followUrl, bodyJson: followJson });
+    expect(requestSpy.mock.calls).toEqual(deleteUrls.map((url) => [url]));
   });
 
   it('should propagate error when local create fails on PUT and not call homeserver', async () => {
     const createSpy = vi.spyOn(LocalFollowService, 'create').mockRejectedValue(new Error('local-fail'));
-    const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    const requestSpy = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.PUT,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toThrow('local-fail');
+    await expect(UserApplication.commitFollow(putParams)).rejects.toThrow('local-fail');
 
     expect(createSpy).toHaveBeenCalledOnce();
     expect(requestSpy).not.toHaveBeenCalled();
@@ -123,17 +88,9 @@ describe('UserApplication.commitFollow', () => {
 
   it('should propagate error when local delete fails on DELETE and not call homeserver', async () => {
     const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockRejectedValue(new Error('local-delete-fail'));
-    const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    const requestSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.DELETE,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toThrow('local-delete-fail');
+    await expect(UserApplication.commitFollow(deleteParams)).rejects.toThrow('local-delete-fail');
 
     expect(deleteSpy).toHaveBeenCalledOnce();
     expect(requestSpy).not.toHaveBeenCalled();
@@ -143,19 +100,11 @@ describe('UserApplication.commitFollow', () => {
     const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
     const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
     const homeserverError = homeserverFailure();
-    const requestSpy = vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    const requestSpy = vi.spyOn(HomeserverService, 'putBlob').mockRejectedValue(homeserverError);
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.PUT,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toBe(homeserverError);
+    await expect(UserApplication.commitFollow(putParams)).rejects.toBe(homeserverError);
 
-    expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: followUrl, bodyJson: followJson });
+    expect(requestSpy).toHaveBeenCalledWith({ url: followUrl, blob: followBody });
     expect(createSpy).toHaveBeenCalledOnce();
     expect(deleteSpy).toHaveBeenCalledExactlyOnceWith({ follower, followee });
     expect(createSpy.mock.invocationCallOrder[0]).toBeLessThan(deleteSpy.mock.invocationCallOrder[0]);
@@ -165,17 +114,9 @@ describe('UserApplication.commitFollow', () => {
     const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
     const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'deleteIdempotent').mockRejectedValue(homeserverError);
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.DELETE,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toBe(homeserverError);
+    await expect(UserApplication.commitFollow(deleteParams)).rejects.toBe(homeserverError);
 
     expect(deleteSpy).toHaveBeenCalledOnce();
     expect(createSpy).toHaveBeenCalledExactlyOnceWith({ follower, followee });
@@ -186,17 +127,9 @@ describe('UserApplication.commitFollow', () => {
     vi.spyOn(LocalFollowService, 'create').mockResolvedValue(false);
     const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'putBlob').mockRejectedValue(homeserverError);
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.PUT,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toBe(homeserverError);
+    await expect(UserApplication.commitFollow(putParams)).rejects.toBe(homeserverError);
 
     expect(deleteSpy).not.toHaveBeenCalled();
   });
@@ -205,17 +138,9 @@ describe('UserApplication.commitFollow', () => {
     vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(false);
     const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'deleteIdempotent').mockRejectedValue(homeserverError);
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.DELETE,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toBe(homeserverError);
+    await expect(UserApplication.commitFollow(deleteParams)).rejects.toBe(homeserverError);
 
     expect(createSpy).not.toHaveBeenCalled();
   });
@@ -223,7 +148,7 @@ describe('UserApplication.commitFollow', () => {
   it('accepts a DELETE 404 as an already absent follow without restoring it', async () => {
     const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
     const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(
+    vi.spyOn(HomeserverService, 'delete').mockRejectedValue(
       Err.client(ClientErrorCode.NOT_FOUND, 'Absent', {
         service: ErrorService.Homeserver,
         operation: 'request',
@@ -231,15 +156,7 @@ describe('UserApplication.commitFollow', () => {
       }),
     );
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.DELETE,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).resolves.toBeUndefined();
+    await expect(UserApplication.commitFollow(deleteParams)).resolves.toBeUndefined();
 
     expect(deleteSpy).toHaveBeenCalledOnce();
     expect(createSpy).not.toHaveBeenCalled();
@@ -252,17 +169,9 @@ describe('UserApplication.commitFollow', () => {
       service: ErrorService.Homeserver,
       operation: 'request',
     });
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'deleteIdempotent').mockRejectedValue(homeserverError);
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.DELETE,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toBe(homeserverError);
+    await expect(UserApplication.commitFollow(deleteParams)).rejects.toBe(homeserverError);
 
     expect(createSpy).toHaveBeenCalledExactlyOnceWith({ follower, followee });
   });
@@ -275,17 +184,9 @@ describe('UserApplication.commitFollow', () => {
       operation: 'request',
       context: { statusCode: HttpStatusCode.NOT_FOUND },
     });
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'putBlob').mockRejectedValue(homeserverError);
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.PUT,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toBe(homeserverError);
+    await expect(UserApplication.commitFollow(putParams)).rejects.toBe(homeserverError);
 
     expect(deleteSpy).toHaveBeenCalledExactlyOnceWith({ follower, followee });
   });
@@ -295,18 +196,10 @@ describe('UserApplication.commitFollow', () => {
     const rollbackError = new Error('rollback-fail');
     vi.spyOn(LocalFollowService, 'delete').mockRejectedValue(rollbackError);
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'putBlob').mockRejectedValue(homeserverError);
     const loggerSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.PUT,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toBe(homeserverError);
+    await expect(UserApplication.commitFollow(putParams)).rejects.toBe(homeserverError);
 
     expect(loggerSpy).toHaveBeenCalledExactlyOnceWith(
       'Failed to rollback local follow write',
@@ -319,18 +212,10 @@ describe('UserApplication.commitFollow', () => {
     const rollbackError = new Error('rollback-fail');
     vi.spyOn(LocalFollowService, 'create').mockRejectedValue(rollbackError);
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'deleteIdempotent').mockRejectedValue(homeserverError);
     const loggerSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.DELETE,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toBe(homeserverError);
+    await expect(UserApplication.commitFollow(deleteParams)).rejects.toBe(homeserverError);
 
     expect(loggerSpy).toHaveBeenCalledExactlyOnceWith(
       'Failed to rollback local follow write',
@@ -347,18 +232,10 @@ describe('UserApplication.commitFollow', () => {
     });
     vi.spyOn(LocalFollowService, 'create').mockRejectedValue(rollbackError);
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'deleteIdempotent').mockRejectedValue(homeserverError);
     const loggerSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.DELETE,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toBe(homeserverError);
+    await expect(UserApplication.commitFollow(deleteParams)).rejects.toBe(homeserverError);
 
     expect(loggerSpy).not.toHaveBeenCalled();
   });
@@ -368,21 +245,14 @@ describe('UserApplication.commitFollow', () => {
     const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
     const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockImplementation(async () => {
+    vi.spyOn(HomeserverService, 'putBlob').mockImplementation(async () => {
       controller.abort();
       throw homeserverError;
     });
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.PUT,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-        signal: controller.signal,
-      }),
-    ).rejects.toBe(homeserverError);
+    await expect(UserApplication.commitFollow({ ...putParams, signal: controller.signal })).rejects.toBe(
+      homeserverError,
+    );
 
     expect(createSpy).toHaveBeenCalledOnce();
     expect(deleteSpy).not.toHaveBeenCalled();
@@ -393,21 +263,14 @@ describe('UserApplication.commitFollow', () => {
     const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
     const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockImplementation(async () => {
+    vi.spyOn(HomeserverService, 'deleteIdempotent').mockImplementation(async () => {
       controller.abort();
       throw homeserverError;
     });
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.DELETE,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-        signal: controller.signal,
-      }),
-    ).rejects.toBe(homeserverError);
+    await expect(UserApplication.commitFollow({ ...deleteParams, signal: controller.signal })).rejects.toBe(
+      homeserverError,
+    );
 
     expect(deleteSpy).toHaveBeenCalledOnce();
     expect(createSpy).not.toHaveBeenCalled();
@@ -417,17 +280,9 @@ describe('UserApplication.commitFollow', () => {
     vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
     const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
     const rawError = new Error('homeserver-fail');
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(rawError);
+    vi.spyOn(HomeserverService, 'putBlob').mockRejectedValue(rawError);
 
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.PUT,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toMatchObject({
+    await expect(UserApplication.commitFollow(putParams)).rejects.toMatchObject({
       name: 'AppError',
       code: ServerErrorCode.UNKNOWN_ERROR,
       service: ErrorService.Homeserver,
@@ -447,10 +302,10 @@ describe('UserApplication.commitFollow', () => {
       rejectFirst = reject;
     });
     const requestSpy = vi
-      .spyOn(HomeserverService, 'request')
+      .spyOn(HomeserverService, 'putBlob')
       .mockImplementationOnce(() => firstRequest)
       .mockResolvedValueOnce(undefined);
-    const params = { eventType: HttpMethod.PUT, followUrl, followJson, follower, followee };
+    const params = putParams;
 
     const first = UserApplication.commitFollow(params);
     const second = UserApplication.commitFollow(params);
@@ -478,24 +333,12 @@ describe('UserApplication.commitFollow', () => {
     const firstRequest = new Promise<never>((_, reject) => {
       rejectFirst = reject;
     });
-    vi.spyOn(HomeserverService, 'request')
+    vi.spyOn(HomeserverService, 'putBlob')
       .mockImplementationOnce(() => firstRequest)
       .mockResolvedValueOnce(undefined);
 
-    const first = UserApplication.commitFollow({
-      eventType: HttpMethod.PUT,
-      followUrl,
-      followJson,
-      follower,
-      followee,
-    });
-    const other = UserApplication.commitFollow({
-      eventType: HttpMethod.PUT,
-      followUrl,
-      followJson,
-      follower,
-      followee: otherFollowee,
-    });
+    const first = UserApplication.commitFollow(putParams);
+    const other = UserApplication.commitFollow({ ...putParams, followee: otherFollowee });
 
     await expect(other).resolves.toBeUndefined();
     expect(createSpy).toHaveBeenCalledWith({ follower, followee: otherFollowee });
@@ -503,33 +346,13 @@ describe('UserApplication.commitFollow', () => {
     rejectFirst(homeserverError);
     await expect(first).rejects.toBe(homeserverError);
   });
-
-  it('rethrows a failed non-mutating request without touching local state', async () => {
-    const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
-    const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
-    const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
-
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.GET,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-      }),
-    ).rejects.toBe(homeserverError);
-
-    expect(createSpy).not.toHaveBeenCalled();
-    expect(deleteSpy).not.toHaveBeenCalled();
-  });
 });
 
 describe('UserApplication.commitFollow - Dexie', () => {
   const follower = 'pubky_follower_dexie' as Pubky;
   const followee = 'pubky_followee_dexie' as Pubky;
-  const followUrl = `pubky://${follower}/pub/pubky.app/follows/${followee}`;
-  const followJson = { created_at: 1 } as Record<string, unknown>;
+  const followUrl = `pubky://${follower}/pub/social/v1/follows/${followee}.json`;
+  const followBody = new TextEncoder().encode('{"created_at":1}');
   const emptyCounts: NexusUserCounts = {
     tagged: 0,
     tags: 0,
@@ -547,8 +370,12 @@ describe('UserApplication.commitFollow - Dexie', () => {
       service: ErrorService.Homeserver,
       operation: 'request',
     });
-  const commit = (eventType: HttpMethod) =>
-    UserApplication.commitFollow({ eventType, followUrl, followJson, follower, followee });
+  const commit = (eventType: HttpMethod.PUT | HttpMethod.DELETE) =>
+    UserApplication.commitFollow(
+      eventType === HttpMethod.PUT
+        ? { eventType, followUrl, followBody, follower, followee }
+        : { eventType, deleteUrls: [followUrl], follower, followee },
+    );
   const nexusFollowee = (relationship: NexusUser['relationship']): NexusUser => ({
     details: { id: followee, name: 'Followee', bio: '', links: null, status: null, image: null, indexed_at: 1 },
     counts: { ...emptyCounts, followers: 1 },
@@ -608,7 +435,7 @@ describe('UserApplication.commitFollow - Dexie', () => {
   it('a failed follow restores the relationship, counts, friendship and following stream', async () => {
     await UserRelationshipsModel.table.put({ id: followee, following: false, followed_by: true });
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'putBlob').mockRejectedValue(homeserverError);
     const startedAt = Date.now();
 
     await expect(commit(HttpMethod.PUT)).rejects.toBe(homeserverError);
@@ -627,7 +454,7 @@ describe('UserApplication.commitFollow - Dexie', () => {
     await UserRelationshipsModel.table.put({ id: followee, following: false, followed_by: true });
     await LocalFollowService.create({ follower, followee });
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'deleteIdempotent').mockRejectedValue(homeserverError);
     const startedAt = Date.now();
 
     await expect(commit(HttpMethod.DELETE)).rejects.toBe(homeserverError);
@@ -646,7 +473,7 @@ describe('UserApplication.commitFollow - Dexie', () => {
     await UserRelationshipsModel.table.put({ id: followee, following: true, followed_by: false });
     await seedCounts({ follower: { following: 5 }, followee: { followers: 5 } });
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'putBlob').mockRejectedValue(homeserverError);
 
     await expect(commit(HttpMethod.PUT)).rejects.toBe(homeserverError);
 
@@ -664,7 +491,7 @@ describe('UserApplication.commitFollow - Dexie', () => {
       resolveFirst = () => resolve(undefined as never);
     });
     const requestSpy = vi
-      .spyOn(HomeserverService, 'request')
+      .spyOn(HomeserverService, 'putBlob')
       .mockImplementationOnce(() => firstRequest)
       .mockRejectedValueOnce(homeserverError);
 
@@ -686,7 +513,7 @@ describe('UserApplication.commitFollow - Dexie', () => {
 
   it('a Nexus response started before the rollback cannot overwrite the rolled-back relationship', async () => {
     const homeserverError = homeserverFailure();
-    vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError);
+    vi.spyOn(HomeserverService, 'putBlob').mockRejectedValue(homeserverError);
     const fetchStartedAt = Date.now();
 
     await expect(commit(HttpMethod.PUT)).rejects.toBe(homeserverError);
@@ -703,24 +530,12 @@ describe('UserApplication.ensureModerationFollow', () => {
   const follower = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
   const moderationId = 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro' as Pubky;
   const previousModerationId = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
-  const followUrl = `pubky://${follower}/pub/pubky.app/follows/${moderationId}`;
-  const followJson = { created_at: 1234 };
-
-  const mockFollowNormalizer = () => {
-    const toJson = vi.fn(() => followJson);
-    const normalize = vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
-      asOpaque<ReturnType<typeof FollowNormalizer.to>>({
-        meta: { url: followUrl },
-        follow: { toJson },
-      }),
-    );
-    return { normalize, toJson };
-  };
+  const followUrl = `pubky://${follower}/pub/social/v1/follows/${moderationId}.json`;
 
   it('skips all work when moderation is disabled', async () => {
     const normalize = vi.spyOn(FollowNormalizer, 'to');
     const exists = vi.spyOn(HomeserverService, 'exists');
-    const request = vi.spyOn(HomeserverService, 'request');
+    const request = vi.spyOn(HomeserverService, 'putBlob');
     const localCreate = vi.spyOn(LocalFollowService, 'create');
 
     await UserApplication.ensureModerationFollow({ follower, moderationId: undefined });
@@ -734,7 +549,7 @@ describe('UserApplication.ensureModerationFollow', () => {
   it('skips all work instead of following the signed-in account', async () => {
     const normalize = vi.spyOn(FollowNormalizer, 'to');
     const exists = vi.spyOn(HomeserverService, 'exists');
-    const request = vi.spyOn(HomeserverService, 'request');
+    const request = vi.spyOn(HomeserverService, 'putBlob');
     const localCreate = vi.spyOn(LocalFollowService, 'create');
 
     await UserApplication.ensureModerationFollow({ follower, moderationId: follower });
@@ -760,7 +575,7 @@ describe('UserApplication.ensureModerationFollow', () => {
   it('skips all work when settings already record the current moderation bot', async () => {
     const normalize = vi.spyOn(FollowNormalizer, 'to');
     const exists = vi.spyOn(HomeserverService, 'exists');
-    const request = vi.spyOn(HomeserverService, 'request');
+    const request = vi.spyOn(HomeserverService, 'putBlob');
     const localCreate = vi.spyOn(LocalFollowService, 'create');
 
     const result = await UserApplication.ensureModerationFollow({
@@ -779,10 +594,9 @@ describe('UserApplication.ensureModerationFollow', () => {
   it.each([undefined, previousModerationId])(
     'returns the configured bot when the canonical follow already exists for state %s',
     async (moderationBot) => {
-      mockFollowNormalizer();
       const localCreate = vi.spyOn(LocalFollowService, 'create');
       const exists = vi.spyOn(HomeserverService, 'exists').mockResolvedValue(true);
-      const request = vi.spyOn(HomeserverService, 'request');
+      const request = vi.spyOn(HomeserverService, 'putBlob');
 
       const result = await UserApplication.ensureModerationFollow({ follower, moderationId, moderationBot });
 
@@ -796,7 +610,6 @@ describe('UserApplication.ensureModerationFollow', () => {
 
   it('creates the local and remote follow, then returns the configured bot', async () => {
     const events: string[] = [];
-    const { toJson } = mockFollowNormalizer();
     const localCreate = vi.spyOn(LocalFollowService, 'create').mockImplementation(() => {
       events.push('local-follow');
       return Promise.resolve(true);
@@ -805,8 +618,8 @@ describe('UserApplication.ensureModerationFollow', () => {
       events.push(`${HttpMethod.GET}:${url}`);
       return Promise.resolve(false);
     });
-    const request = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method, url }) => {
-      events.push(`${method}:${url}`);
+    const request = vi.spyOn(HomeserverService, 'putBlob').mockImplementation(({ url }) => {
+      events.push(`${HttpMethod.PUT}:${url}`);
       return Promise.resolve(undefined);
     });
 
@@ -816,23 +629,17 @@ describe('UserApplication.ensureModerationFollow', () => {
     expect(result).toBe(moderationId);
     expect(localCreate).toHaveBeenCalledWith({ follower, followee: moderationId });
     expect(exists).toHaveBeenCalledOnce();
-    expect(toJson).toHaveBeenCalledOnce();
-    expect(request).toHaveBeenCalledWith({
-      method: HttpMethod.PUT,
-      url: followUrl,
-      bodyJson: followJson,
-    });
+    expect(request).toHaveBeenCalledWith({ url: followUrl, blob: expect.toSatisfy(ArrayBuffer.isView) });
   });
 
   it('stops after the follow probe when the bootstrap task is cancelled', async () => {
     const controller = new AbortController();
-    mockFollowNormalizer();
     const exists = vi.spyOn(HomeserverService, 'exists').mockImplementation(() => {
       controller.abort();
       return Promise.resolve(false);
     });
     const localCreate = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
-    const request = vi.spyOn(HomeserverService, 'request');
+    const request = vi.spyOn(HomeserverService, 'putBlob');
 
     const result = await UserApplication.ensureModerationFollow({
       follower,
@@ -848,13 +655,12 @@ describe('UserApplication.ensureModerationFollow', () => {
 
   it('stops between the local and remote follow writes when cancelled', async () => {
     const controller = new AbortController();
-    mockFollowNormalizer();
     vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
     const localCreate = vi.spyOn(LocalFollowService, 'create').mockImplementation(() => {
       controller.abort();
       return Promise.resolve(true);
     });
-    const request = vi.spyOn(HomeserverService, 'request');
+    const request = vi.spyOn(HomeserverService, 'putBlob');
 
     await UserApplication.ensureModerationFollow({ follower, moderationId, signal: controller.signal });
 
@@ -864,10 +670,9 @@ describe('UserApplication.ensureModerationFollow', () => {
 
   it('does not return processed state when cancelled after the remote follow write and retries safely', async () => {
     const controller = new AbortController();
-    mockFollowNormalizer();
     vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
     vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
-    const request = vi.spyOn(HomeserverService, 'request').mockImplementation(({ url }) => {
+    const request = vi.spyOn(HomeserverService, 'putBlob').mockImplementation(({ url }) => {
       if (url === followUrl) controller.abort();
       return Promise.resolve(undefined);
     });
@@ -880,7 +685,7 @@ describe('UserApplication.ensureModerationFollow', () => {
 
     expect(cancelledResult).toBeUndefined();
     expect(request).toHaveBeenCalledOnce();
-    expect(request).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: followUrl, bodyJson: followJson });
+    expect(request).toHaveBeenCalledWith({ url: followUrl, blob: expect.toSatisfy(ArrayBuffer.isView) });
 
     vi.mocked(HomeserverService.exists).mockReset().mockResolvedValueOnce(true);
     request.mockReset().mockResolvedValue(undefined);
@@ -892,16 +697,12 @@ describe('UserApplication.ensureModerationFollow', () => {
   });
 
   it('rejects a normalized follow resource owned by a different account', async () => {
-    const wrongFollowUrl = `pubky://${moderationId}/pub/pubky.app/follows/${moderationId}`;
-    const toJson = vi.fn(() => followJson);
+    const wrongFollowUrl = `pubky://${moderationId}/pub/social/v1/follows/${moderationId}.json`;
     vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
-      asOpaque<ReturnType<typeof FollowNormalizer.to>>({
-        meta: { url: wrongFollowUrl },
-        follow: { toJson },
-      }),
+      asOpaque<ReturnType<typeof FollowNormalizer.to>>({ url: wrongFollowUrl, body: new Uint8Array() }),
     );
     const exists = vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
-    const request = vi.spyOn(HomeserverService, 'request');
+    const request = vi.spyOn(HomeserverService, 'putBlob');
     const localCreate = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
 
     await expect(UserApplication.ensureModerationFollow({ follower, moderationId })).rejects.toMatchObject({
@@ -912,11 +713,9 @@ describe('UserApplication.ensureModerationFollow', () => {
     expect(exists).not.toHaveBeenCalled();
     expect(localCreate).not.toHaveBeenCalled();
     expect(request).not.toHaveBeenCalled();
-    expect(toJson).not.toHaveBeenCalled();
   });
 
   it('aborts without writes when the follow read fails ambiguously', async () => {
-    mockFollowNormalizer();
     const failure = new AppError({
       category: ErrorCategory.Server,
       code: ServerErrorCode.SERVICE_UNAVAILABLE,
@@ -926,7 +725,7 @@ describe('UserApplication.ensureModerationFollow', () => {
       context: { statusCode: HttpStatusCode.SERVICE_UNAVAILABLE },
     });
     const exists = vi.spyOn(HomeserverService, 'exists').mockRejectedValueOnce(failure);
-    const request = vi.spyOn(HomeserverService, 'request');
+    const request = vi.spyOn(HomeserverService, 'putBlob');
     const localCreate = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
 
     await expect(UserApplication.ensureModerationFollow({ follower, moderationId })).rejects.toBe(failure);
@@ -937,11 +736,10 @@ describe('UserApplication.ensureModerationFollow', () => {
   });
 
   it('stops before homeserver writes when the local follow fails', async () => {
-    mockFollowNormalizer();
     const failure = new Error('local follow failed');
     vi.spyOn(LocalFollowService, 'create').mockRejectedValue(failure);
     const exists = vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
-    const request = vi.spyOn(HomeserverService, 'request');
+    const request = vi.spyOn(HomeserverService, 'putBlob');
 
     await expect(UserApplication.ensureModerationFollow({ follower, moderationId })).rejects.toBe(failure);
 
@@ -950,7 +748,6 @@ describe('UserApplication.ensureModerationFollow', () => {
   });
 
   it('propagates a homeserver follow write failure without returning processed state', async () => {
-    mockFollowNormalizer();
     const failure = Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'follow write failed', {
       service: ErrorService.Homeserver,
       operation: 'request',
@@ -958,17 +755,13 @@ describe('UserApplication.ensureModerationFollow', () => {
     vi.spyOn(LocalFollowService, 'create').mockResolvedValue(true);
     const rollback = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(true);
     vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
-    const request = vi.spyOn(HomeserverService, 'request').mockRejectedValueOnce(failure);
+    const request = vi.spyOn(HomeserverService, 'putBlob').mockRejectedValueOnce(failure);
 
     await expect(UserApplication.ensureModerationFollow({ follower, moderationId })).rejects.toBe(failure);
 
     expect(rollback).toHaveBeenCalledExactlyOnceWith({ follower, followee: moderationId });
     expect(request).toHaveBeenCalledOnce();
-    expect(request).toHaveBeenCalledWith({
-      method: HttpMethod.PUT,
-      url: followUrl,
-      bodyJson: followJson,
-    });
+    expect(request).toHaveBeenCalledWith({ url: followUrl, blob: expect.toSatisfy(ArrayBuffer.isView) });
   });
 });
 

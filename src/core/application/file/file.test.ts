@@ -1,25 +1,19 @@
-import type { BlobResult, FileResult } from 'pubky-app-specs';
+import { buildFile } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY } from '@/libs/image/imageUploadSizeLimit';
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
-import { FileDetailsModel } from '@/models/file/fileDetails';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { FileNormalizer } from '@/pipes/file/file.normalizer';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFileService } from '@/services/local/file/file';
 import { filesApi } from '@/services/nexus/file/file.api';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
-
-// Avoid pulling WASM-heavy deps from type-only modules
-vi.mock('pubky-app-specs', () => ({
-  getValidMimeTypes: () => ['image/jpeg', 'image/png'],
-}));
 
 vi.mock('@/libs/image/stripImageMetadata', () => ({
   stripImageMetadata: vi.fn(),
@@ -49,7 +43,7 @@ vi.mock('@/services/local/file/file', () => ({
     create: vi.fn(),
     read: vi.fn(),
     deleteById: vi.fn(),
-    hasOtherBlobReference: vi.fn(),
+    isReferencedElsewhere: vi.fn(),
   },
 }));
 
@@ -76,8 +70,6 @@ vi.mock('@/models/file/fileDetails', () => ({
 
 let FileApplication: typeof import('./file').FileApplication;
 
-const spyOnBuildCompositeIdFromPubkyUri = async () =>
-  vi.spyOn(await import('@/models/models.utils'), 'buildCompositeIdFromPubkyUri');
 const spyOnParseCompositeId = async () => vi.spyOn(await import('@/models/models.utils'), 'parseCompositeId');
 
 const TEST_PUBKY = 'operrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rd0' as Pubky;
@@ -108,20 +100,13 @@ const createFileUri = (fileId: string, pubky: Pubky = TEST_PUBKY) => `pubky://${
 const createMockUrls = (feed: string = 'feed', main: string = 'main', small: string = 'small') =>
   JSON.stringify({ feed, main, small });
 
-const createMockBlobResult = (url: string = 'pubky://user/blob/file') =>
-  asOpaque<BlobResult>({
-    blob: { data: new Uint8Array([1, 2, 3]) },
-    meta: { url },
-  });
+const VALID_OWNER = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
 
-const createMockFileResult = (
-  url: string = 'pubky://user/pub/pubky.app/files/file',
-  fileJson: Record<string, unknown> = { id: 'file-1', kind: 'image' },
-) =>
-  asOpaque<FileResult>({
-    file: { toJson: vi.fn(() => fileJson) },
-    meta: { url },
-  });
+/** A real upload: media built by the package from its bytes. */
+const createAttachment = (byte = 1, type = 'image/png'): TFileAttachmentResult => {
+  const bytes = Uint8Array.of(byte);
+  return { media: buildFile(VALID_OWNER, { bytes, type }), bytes, name: `photo-${byte}.png`, contentType: type };
+};
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -129,8 +114,8 @@ beforeEach(async () => {
 
   ({ FileApplication } = await import('./file'));
 
-  // Default: no other cached record shares the blob, so deletions proceed
-  vi.mocked(LocalFileService.hasOtherBlobReference).mockResolvedValue(false);
+  // Default: no other cached post references the media, so deletions proceed
+  vi.mocked(LocalFileService.isReferencedElsewhere).mockResolvedValue(false);
 });
 
 describe('FileApplication', () => {
@@ -138,10 +123,7 @@ describe('FileApplication', () => {
     it('sanitizes file before normalizing it', async () => {
       const rawFile = new File(['raw'], 'photo.jpg', { type: 'image/jpeg' });
       const sanitizedFile = new File(['sanitized'], 'obfuscated.jpg', { type: 'image/jpeg' });
-      const fileAttachment = {
-        blobResult: createMockBlobResult(),
-        fileResult: createMockFileResult(),
-      };
+      const fileAttachment = createAttachment();
 
       vi.mocked(stripImageMetadata).mockResolvedValueOnce(sanitizedFile);
       vi.mocked(FileNormalizer.toFileAttachment).mockReturnValueOnce(fileAttachment);
@@ -151,7 +133,9 @@ describe('FileApplication', () => {
       expect(stripImageMetadata).toHaveBeenCalledWith(rawFile);
       expect(FileNormalizer.toFileAttachment).toHaveBeenCalledWith({
         file: sanitizedFile,
-        blobData: expect.any(Uint8Array),
+        // The id `hashMedia` reads from the sanitized file, as buildFile would derive it
+        mediaId: buildFile(VALID_OWNER, { bytes: new TextEncoder().encode('sanitized'), type: 'image/jpeg' }).id,
+        blobData: expect.toSatisfy(ArrayBuffer.isView),
         pubky: TEST_PUBKY,
       });
       expect(result).toBe(fileAttachment);
@@ -224,186 +208,59 @@ describe('FileApplication', () => {
   });
 
   describe('commitCreate', () => {
-    it('uploads blob and then file record to homeserver', async () => {
-      const fileJson = { id: 'file-1', kind: 'image' };
-      const blobResult = createMockBlobResult();
-      const fileResult = createMockFileResult(undefined, fileJson);
-
+    it('uploads the media bytes and then persists the local row', async () => {
+      const attachment = createAttachment();
       const putBlobSpy = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
-      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
       const createSpy = vi.spyOn(LocalFileService, 'create').mockResolvedValue(undefined);
 
-      await FileApplication.commitCreate({ fileAttachments: [{ blobResult, fileResult }] });
+      await FileApplication.commitCreate({ fileAttachments: [attachment] });
 
-      expect(putBlobSpy).toHaveBeenCalledWith({ url: blobResult.meta.url, blob: blobResult.blob.data });
-      expect(fileResult.file.toJson).toHaveBeenCalledTimes(1);
-      expect(requestSpy).toHaveBeenNthCalledWith(1, {
-        method: HttpMethod.PUT,
-        url: fileResult.meta.url,
-        bodyJson: fileJson,
-      });
-      expect(createSpy).toHaveBeenCalledWith({ blobResult, fileResult });
-
-      // Ensure blob upload happened before file record request
-      expect(putBlobSpy.mock.invocationCallOrder[0]).toBeLessThan(requestSpy.mock.invocationCallOrder[0]);
-      // Ensure file record request happened before local persistence
-      expect(requestSpy.mock.invocationCallOrder[0]).toBeLessThan(createSpy.mock.invocationCallOrder[0]);
+      expect(putBlobSpy).toHaveBeenCalledExactlyOnceWith({ url: attachment.media.url, blob: attachment.bytes });
+      expect(createSpy).toHaveBeenCalledWith(attachment);
+      expect(putBlobSpy.mock.invocationCallOrder[0]).toBeLessThan(createSpy.mock.invocationCallOrder[0]);
     });
 
-    it('propagates errors if the first upload fails', async () => {
-      const blobResult = createMockBlobResult();
-      const fileResult = createMockFileResult();
-
-      const putBlobSpy = vi.spyOn(HomeserverService, 'putBlob').mockRejectedValueOnce(new Error('blob upload failed'));
-      const requestSpy = vi.spyOn(HomeserverService, 'request');
+    it('propagates an upload failure without persisting', async () => {
+      vi.spyOn(HomeserverService, 'putBlob').mockRejectedValueOnce(new Error('upload failed'));
       const createSpy = vi.spyOn(LocalFileService, 'create');
 
-      await expect(FileApplication.commitCreate({ fileAttachments: [{ blobResult, fileResult }] })).rejects.toThrow(
-        'blob upload failed',
+      await expect(FileApplication.commitCreate({ fileAttachments: [createAttachment()] })).rejects.toThrow(
+        'upload failed',
       );
-      expect(putBlobSpy).toHaveBeenCalledTimes(1);
-      expect(requestSpy).not.toHaveBeenCalled();
-      expect(fileResult.file.toJson).not.toHaveBeenCalled();
       expect(createSpy).not.toHaveBeenCalled();
     });
 
     it('waits for sibling uploads to settle before rejecting on a partial failure', async () => {
-      // On failure the callers sweep the whole batch — rejecting while a
-      // sibling upload is still in flight would race the rollback against it
-      const failing = {
-        blobResult: createMockBlobResult('pubky://user/blob/fail'),
-        fileResult: createMockFileResult(),
-      };
-      const slow = {
-        blobResult: createMockBlobResult('pubky://user/blob/slow'),
-        fileResult: createMockFileResult('pubky://user/pub/pubky.app/files/slow', { id: 'file-slow', kind: 'image' }),
-      };
-
-      let resolveSlowBlob: () => void = () => undefined;
-      const putBlobSpy = vi.spyOn(HomeserverService, 'putBlob').mockImplementation(({ url }) => {
-        if (url === failing.blobResult.meta.url) {
-          return Promise.reject(new Error('blob upload failed'));
-        }
-        return new Promise((resolve) => {
-          resolveSlowBlob = () => resolve(undefined);
-        });
-      });
-      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+      let releaseSlow!: () => void;
+      const [failing, slow] = [createAttachment(1), createAttachment(2)];
+      vi.spyOn(HomeserverService, 'putBlob').mockImplementation(({ url }) =>
+        url === failing.media.url
+          ? Promise.reject(new Error('first failed'))
+          : new Promise<undefined>((resolve) => {
+              releaseSlow = () => resolve(undefined);
+            }),
+      );
       const createSpy = vi.spyOn(LocalFileService, 'create').mockResolvedValue(undefined);
 
       let settled = false;
-      const pending = FileApplication.commitCreate({ fileAttachments: [failing, slow] }).catch((error: Error) => {
+      const commit = FileApplication.commitCreate({ fileAttachments: [failing, slow] }).finally(() => {
         settled = true;
-        return error;
       });
-
-      // The failing upload has rejected, but the slow sibling is still in
-      // flight — commitCreate must NOT have settled yet
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(putBlobSpy).toHaveBeenCalledTimes(2);
+      await Promise.resolve();
       expect(settled).toBe(false);
 
-      resolveSlowBlob();
-      const error = await pending;
-
-      expect(settled).toBe(true);
-      expect(error).toBeInstanceOf(Error);
-      expect((error as Error).message).toBe('blob upload failed');
-      // The slow sibling completed its full chain before the rejection surfaced
-      expect(requestSpy).toHaveBeenCalledWith({
-        method: HttpMethod.PUT,
-        url: slow.fileResult.meta.url,
-        bodyJson: { id: 'file-slow', kind: 'image' },
-      });
-      expect(createSpy).toHaveBeenCalledWith({ blobResult: slow.blobResult, fileResult: slow.fileResult });
-    });
-
-    it('propagates errors if the file record upload fails', async () => {
-      const fileJson = { id: 'file-1', kind: 'image' };
-      const blobResult = createMockBlobResult();
-      const fileResult = createMockFileResult(undefined, fileJson);
-
-      const putBlobSpy = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
-      const requestSpy = vi
-        .spyOn(HomeserverService, 'request')
-        .mockRejectedValueOnce(new Error('file record upload failed'));
-      const createSpy = vi.spyOn(LocalFileService, 'create');
-
-      await expect(FileApplication.commitCreate({ fileAttachments: [{ blobResult, fileResult }] })).rejects.toThrow(
-        'file record upload failed',
-      );
-      expect(putBlobSpy).toHaveBeenCalledTimes(1);
-      expect(fileResult.file.toJson).toHaveBeenCalledTimes(1);
-      expect(requestSpy).toHaveBeenCalledTimes(1);
-      expect(createSpy).not.toHaveBeenCalled();
-    });
-
-    it('uploads multiple files in parallel', async () => {
-      const fileJson1 = { id: 'file-1', kind: 'image' };
-      const fileJson2 = { id: 'file-2', kind: 'video' };
-      const blobResult1 = createMockBlobResult('pubky://user/blob/file1');
-      const blobResult2 = createMockBlobResult('pubky://user/blob/file2');
-      const fileResult1 = createMockFileResult('pubky://user/pub/pubky.app/files/file1', fileJson1);
-      const fileResult2 = createMockFileResult('pubky://user/pub/pubky.app/files/file2', fileJson2);
-
-      const putBlobSpy = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
-      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
-      const createSpy = vi.spyOn(LocalFileService, 'create').mockResolvedValue(undefined);
-
-      await FileApplication.commitCreate({
-        fileAttachments: [
-          { blobResult: blobResult1, fileResult: fileResult1 },
-          { blobResult: blobResult2, fileResult: fileResult2 },
-        ],
-      });
-
-      // Verify both files were uploaded
-      expect(putBlobSpy).toHaveBeenCalledWith({ url: blobResult1.meta.url, blob: blobResult1.blob.data });
-      expect(putBlobSpy).toHaveBeenCalledWith({ url: blobResult2.meta.url, blob: blobResult2.blob.data });
-      expect(fileResult1.file.toJson).toHaveBeenCalledTimes(1);
-      expect(fileResult2.file.toJson).toHaveBeenCalledTimes(1);
-      expect(requestSpy).toHaveBeenCalledWith({
-        method: HttpMethod.PUT,
-        url: fileResult1.meta.url,
-        bodyJson: fileJson1,
-      });
-      expect(requestSpy).toHaveBeenCalledWith({
-        method: HttpMethod.PUT,
-        url: fileResult2.meta.url,
-        bodyJson: fileJson2,
-      });
-      expect(createSpy).toHaveBeenCalledWith({ blobResult: blobResult1, fileResult: fileResult1 });
-      expect(createSpy).toHaveBeenCalledWith({ blobResult: blobResult2, fileResult: fileResult2 });
-
-      // Verify call counts
-      expect(putBlobSpy).toHaveBeenCalledTimes(2);
-      expect(requestSpy).toHaveBeenCalledTimes(2);
-      expect(createSpy).toHaveBeenCalledTimes(2);
+      releaseSlow();
+      await expect(commit).rejects.toThrow('first failed');
+      expect(createSpy).toHaveBeenCalledExactlyOnceWith(slow);
     });
 
     it('propagates errors when LocalFileService.create fails', async () => {
-      const fileJson = { id: 'file-1', kind: 'image' };
-      const blobResult = createMockBlobResult();
-      const fileResult = createMockFileResult(undefined, fileJson);
+      vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
+      vi.spyOn(LocalFileService, 'create').mockRejectedValue(new Error('db failed'));
 
-      const error = new Error('Local persistence failed');
-      const putBlobSpy = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
-      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
-      const createSpy = vi.spyOn(LocalFileService, 'create').mockRejectedValue(error);
-
-      await expect(FileApplication.commitCreate({ fileAttachments: [{ blobResult, fileResult }] })).rejects.toThrow(
-        'Local persistence failed',
+      await expect(FileApplication.commitCreate({ fileAttachments: [createAttachment()] })).rejects.toThrow(
+        'db failed',
       );
-
-      expect(putBlobSpy).toHaveBeenCalledWith({ url: blobResult.meta.url, blob: blobResult.blob.data });
-      expect(fileResult.file.toJson).toHaveBeenCalledTimes(1);
-      expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: fileResult.meta.url, bodyJson: fileJson });
-      expect(createSpy).toHaveBeenCalledWith({ blobResult, fileResult });
-
-      // Verify all homeserver operations completed before error
-      expect(putBlobSpy).toHaveBeenCalledTimes(1);
-      expect(requestSpy).toHaveBeenCalledTimes(1);
-      expect(createSpy).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -652,398 +509,59 @@ describe('FileApplication', () => {
   });
 
   describe('commitDelete', () => {
-    it('deletes blob first, then file record, then local row when file exists locally', async () => {
-      const fileId = 'file-123';
-      const fileUri = createFileUri(fileId);
-      const compositeId = buildCompositeId({ pubky: TEST_PUBKY, id: fileId });
-      const blobUrl = 'pubky://user/blob/abc123';
-
-      const mockFile = createMockFile(compositeId, 'file1.jpg', fileUri, { src: blobUrl });
-
-      const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-      const plainDeleteSpy = vi.spyOn(HomeserverService, 'delete');
-      const readSpy = vi.spyOn(LocalFileService, 'read').mockResolvedValue(mockFile);
-      const hasOtherBlobReferenceSpy = vi.spyOn(LocalFileService, 'hasOtherBlobReference').mockResolvedValue(false);
+    it('deletes the media and its local row', async () => {
+      const { media } = createAttachment();
+      const deleteSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
       const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById').mockResolvedValue(undefined);
 
-      await FileApplication.commitDelete([fileUri]);
+      await FileApplication.commitDelete([media.url], 'author:post');
 
-      // Verify deletion sequence: blob (shared-check first), then record
-      expect(readSpy).toHaveBeenCalledWith(compositeId);
-      expect(hasOtherBlobReferenceSpy).toHaveBeenCalledWith({
-        blobSrc: blobUrl,
-        excludeFileIds: new Set([compositeId]),
+      expect(LocalFileService.isReferencedElsewhere).toHaveBeenCalledWith({
+        uri: media.url,
+        excludePostId: 'author:post',
       });
-      expect(deleteIdempotentSpy).toHaveBeenNthCalledWith(1, blobUrl); // Delete blob
-      expect(deleteIdempotentSpy).toHaveBeenNthCalledWith(2, fileUri); // Delete record
-      expect(deleteLocalSpy).toHaveBeenCalledWith(compositeId);
-      // All homeserver deletes go through the idempotent wrapper
-      expect(plainDeleteSpy).not.toHaveBeenCalled();
-
-      // Verify invocation order: the blob is deleted BEFORE the record — if
-      // the blob delete fails, the surviving record still points at it, so a
-      // retry can find it again (record-first would orphan the blob)
-      expect(readSpy.mock.invocationCallOrder[0]).toBeLessThan(deleteIdempotentSpy.mock.invocationCallOrder[0]);
-      expect(deleteIdempotentSpy.mock.invocationCallOrder[0]).toBeLessThan(
-        deleteIdempotentSpy.mock.invocationCallOrder[1],
-      );
-      expect(deleteIdempotentSpy.mock.invocationCallOrder[1]).toBeLessThan(deleteLocalSpy.mock.invocationCallOrder[0]);
-    });
-
-    it('fetches from homeserver, then deletes blob and record when file not in local storage', async () => {
-      const fileId = 'file-123';
-      const fileUri = createFileUri(fileId);
-      const compositeId = buildCompositeId({ pubky: TEST_PUBKY, id: fileId });
-      const blobUrl = 'pubky://user/blob/abc123';
-
-      const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-      const readSpy = vi.spyOn(LocalFileService, 'read').mockResolvedValue(null);
-      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(asOpaque<void>({ src: blobUrl }));
-      const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById');
-
-      await FileApplication.commitDelete([fileUri]);
-
-      // Verify deletion sequence
-      expect(readSpy).toHaveBeenCalledWith(compositeId);
-      expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: fileUri }); // Fetch from homeserver
-      expect(deleteIdempotentSpy).toHaveBeenNthCalledWith(1, blobUrl); // Delete blob
-      expect(deleteIdempotentSpy).toHaveBeenNthCalledWith(2, fileUri); // Delete record
-      expect(deleteLocalSpy).not.toHaveBeenCalled(); // No local deletion in fallback path
-
-      // Verify invocation order: the fallback GET resolves the blob src first,
-      // then the blob is deleted BEFORE the record
-      expect(readSpy.mock.invocationCallOrder[0]).toBeLessThan(requestSpy.mock.invocationCallOrder[0]);
-      expect(requestSpy.mock.invocationCallOrder[0]).toBeLessThan(deleteIdempotentSpy.mock.invocationCallOrder[0]);
-      expect(deleteIdempotentSpy.mock.invocationCallOrder[0]).toBeLessThan(
-        deleteIdempotentSpy.mock.invocationCallOrder[1],
+      expect(deleteSpy).toHaveBeenCalledExactlyOnceWith(media.url);
+      expect(deleteLocalSpy).toHaveBeenCalledWith(
+        buildCompositeIdFromPubkyUri({ uri: media.url, domain: CompositeIdDomain.FILES }),
       );
     });
 
-    it('handles multiple file deletions in parallel', async () => {
-      const fileId1 = 'file-123';
-      const fileId2 = 'file-456';
-      const uri1 = createFileUri(fileId1);
-      const uri2 = createFileUri(fileId2);
-      const compositeId1 = buildCompositeId({ pubky: TEST_PUBKY, id: fileId1 });
-      const compositeId2 = buildCompositeId({ pubky: TEST_PUBKY, id: fileId2 });
-      const blobUrl1 = 'pubky://user/blob/abc123';
-      const blobUrl2 = 'pubky://user/blob/def456';
+    it('keeps media another cached post still references: identical bytes share one URL', async () => {
+      const { media } = createAttachment();
+      vi.mocked(LocalFileService.isReferencedElsewhere).mockResolvedValue(true);
+      const deleteSpy = vi.spyOn(HomeserverService, 'deleteIdempotent');
 
-      const mockFile1 = createMockFile(compositeId1, 'file1.jpg', uri1, { src: blobUrl1 });
-      const mockFile2 = createMockFile(compositeId2, 'file2.png', uri2, { src: blobUrl2 });
+      await FileApplication.commitDelete([media.url]);
 
-      const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-      const readSpy = vi
-        .spyOn(LocalFileService, 'read')
-        .mockResolvedValueOnce(mockFile1)
-        .mockResolvedValueOnce(mockFile2);
-      const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById').mockResolvedValue(undefined);
-
-      await FileApplication.commitDelete([uri1, uri2]);
-
-      // Verify both files were processed
-      expect(deleteIdempotentSpy).toHaveBeenCalledWith(uri1);
-      expect(deleteIdempotentSpy).toHaveBeenCalledWith(uri2);
-      expect(deleteIdempotentSpy).toHaveBeenCalledWith(blobUrl1);
-      expect(deleteIdempotentSpy).toHaveBeenCalledWith(blobUrl2);
-      expect(readSpy).toHaveBeenCalledWith(compositeId1);
-      expect(readSpy).toHaveBeenCalledWith(compositeId2);
-      expect(deleteLocalSpy).toHaveBeenCalledWith(compositeId1);
-      expect(deleteLocalSpy).toHaveBeenCalledWith(compositeId2);
+      expect(deleteSpy).not.toHaveBeenCalled();
     });
 
-    it('skips deletion gracefully when composite ID cannot be built from invalid URI', async () => {
-      const invalidUri = 'not-a-valid-uri';
+    it('leaves a 0.x file URI and an unparsable URI alone', async () => {
+      const deleteSpy = vi.spyOn(HomeserverService, 'deleteIdempotent');
 
-      (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(null);
-      const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-      const findByIdSpy = vi.spyOn(FileDetailsModel, 'findById');
+      await FileApplication.commitDelete([createFileUri('0035S78QPP4S0'), 'not-a-uri']);
+
+      expect(deleteSpy).not.toHaveBeenCalled();
+    });
+
+    it('propagates a homeserver delete failure and keeps the local row', async () => {
+      const { media } = createAttachment();
+      vi.spyOn(HomeserverService, 'deleteIdempotent').mockRejectedValue(new Error('delete failed'));
       const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById');
 
-      await FileApplication.commitDelete([invalidUri]);
-
-      // Verify record deletion still happens
-      expect(deleteIdempotentSpy).toHaveBeenCalledWith(invalidUri);
-      // But no further operations
-      expect(findByIdSpy).not.toHaveBeenCalled();
+      await expect(FileApplication.commitDelete([media.url])).rejects.toThrow('delete failed');
       expect(deleteLocalSpy).not.toHaveBeenCalled();
-    });
-
-    it('propagates errors when homeserver blob deletion fails, leaving the record intact', async () => {
-      const fileId = 'file-123';
-      const fileUri = createFileUri(fileId);
-      const compositeId = buildCompositeId({ pubky: TEST_PUBKY, id: fileId });
-      const blobUrl = 'pubky://user/blob/abc123';
-
-      const mockFile = createMockFile(compositeId, 'file1.jpg', fileUri, { src: blobUrl });
-
-      const error = new Error('Blob deletion failed');
-      (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(compositeId);
-      const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockImplementation((uri: string) => {
-        return uri === blobUrl ? Promise.reject(error) : Promise.resolve(undefined);
-      });
-      const readSpy = vi.spyOn(LocalFileService, 'read').mockResolvedValue(mockFile);
-      const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById');
-
-      await expect(FileApplication.commitDelete([fileUri])).rejects.toThrow('Blob deletion failed');
-
-      expect(readSpy).toHaveBeenCalledWith(compositeId);
-      // Blob delete failed, so the record (the only pointer to the blob) and
-      // the local row survive for a later retry
-      expect(deleteIdempotentSpy).toHaveBeenCalledTimes(1);
-      expect(deleteIdempotentSpy).toHaveBeenCalledWith(blobUrl);
-      expect(deleteLocalSpy).not.toHaveBeenCalled();
-    });
-
-    it('propagates errors when homeserver record deletion fails after the blob delete', async () => {
-      const fileId = 'file-123';
-      const fileUri = createFileUri(fileId);
-      const compositeId = buildCompositeId({ pubky: TEST_PUBKY, id: fileId });
-      const blobUrl = 'pubky://user/blob/abc123';
-
-      const mockFile = createMockFile(compositeId, 'file1.jpg', fileUri, { src: blobUrl });
-
-      const error = new Error('Record deletion failed');
-      (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(compositeId);
-      const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockImplementation((uri: string) => {
-        return uri === fileUri ? Promise.reject(error) : Promise.resolve(undefined);
-      });
-      vi.spyOn(LocalFileService, 'read').mockResolvedValue(mockFile);
-      const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById');
-
-      await expect(FileApplication.commitDelete([fileUri])).rejects.toThrow('Record deletion failed');
-
-      expect(deleteIdempotentSpy).toHaveBeenNthCalledWith(1, blobUrl);
-      expect(deleteIdempotentSpy).toHaveBeenNthCalledWith(2, fileUri);
-      expect(deleteLocalSpy).not.toHaveBeenCalled(); // Not reached due to error
-    });
-
-    it('propagates errors when local deletion fails', async () => {
-      const fileId = 'file-123';
-      const fileUri = createFileUri(fileId);
-      const compositeId = buildCompositeId({ pubky: TEST_PUBKY, id: fileId });
-      const blobUrl = 'pubky://user/blob/abc123';
-
-      const mockFile = createMockFile(compositeId, 'file1.jpg', fileUri, { src: blobUrl });
-
-      const error = new Error('Local deletion failed');
-      (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(compositeId);
-      vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-      vi.spyOn(LocalFileService, 'read').mockResolvedValue(mockFile);
-      const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById').mockRejectedValue(error);
-
-      await expect(FileApplication.commitDelete([fileUri])).rejects.toThrow('Local deletion failed');
-
-      expect(HomeserverService.deleteIdempotent).toHaveBeenNthCalledWith(1, blobUrl);
-      expect(LocalFileService.read).toHaveBeenCalledWith(compositeId);
-      expect(HomeserverService.deleteIdempotent).toHaveBeenNthCalledWith(2, fileUri);
-      expect(deleteLocalSpy).toHaveBeenCalledWith(compositeId);
-    });
-
-    it('propagates errors when fetching from homeserver fails in fallback path', async () => {
-      const fileId = 'file-123';
-      const fileUri = createFileUri(fileId);
-      const compositeId = buildCompositeId({ pubky: TEST_PUBKY, id: fileId });
-
-      const error = new Error('Homeserver fetch failed');
-      (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(compositeId);
-      vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-      vi.spyOn(LocalFileService, 'read').mockResolvedValue(null);
-      const requestSpy = vi.spyOn(HomeserverService, 'request').mockRejectedValue(error);
-
-      await expect(FileApplication.commitDelete([fileUri])).rejects.toThrow('Homeserver fetch failed');
-
-      expect(LocalFileService.read).toHaveBeenCalledWith(compositeId);
-      expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: fileUri });
-      // Nothing deleted: the blob src could not be resolved, so the record is
-      // preserved (deleting it would orphan the blob); a retry can succeed later
-      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
-    });
-
-    it('resolves without deleting anything when the fallback GET 404s (record and local row both gone)', async () => {
-      const fileId = 'file-123';
-      const fileUri = createFileUri(fileId);
-      const compositeId = buildCompositeId({ pubky: TEST_PUBKY, id: fileId });
-
-      // Built via dynamic import so the AppError comes from the same module
-      // graph as the re-imported FileApplication (the beforeEach
-      // `vi.resetModules()` would otherwise break its `instanceof` check)
-      const { Err } = await import('@/libs/error/error.factories');
-      const notFoundError = Err.client(ClientErrorCode.NOT_FOUND, 'Not found', {
-        service: ErrorService.Homeserver,
-        operation: 'request',
-        context: { statusCode: HttpStatusCode.NOT_FOUND },
-      });
-
-      (await spyOnBuildCompositeIdFromPubkyUri()).mockReturnValue(compositeId);
-      const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-      vi.spyOn(LocalFileService, 'read').mockResolvedValue(null);
-      vi.spyOn(HomeserverService, 'request').mockRejectedValue(notFoundError);
-
-      await expect(FileApplication.commitDelete([fileUri])).resolves.toBeUndefined();
-
-      expect(deleteIdempotentSpy).not.toHaveBeenCalled();
-    });
-
-    describe('shared blobs (content-addressed, referenced by other cached records)', () => {
-      it('skips the blob delete but still deletes the record and local row when the blob is shared', async () => {
-        const fileId = 'file-123';
-        const fileUri = createFileUri(fileId);
-        const compositeId = buildCompositeId({ pubky: TEST_PUBKY, id: fileId });
-        const blobUrl = 'pubky://user/blob/abc123';
-
-        const mockFile = createMockFile(compositeId, 'file1.jpg', fileUri, { src: blobUrl });
-
-        const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-        vi.spyOn(LocalFileService, 'read').mockResolvedValue(mockFile);
-        vi.spyOn(LocalFileService, 'hasOtherBlobReference').mockResolvedValue(true);
-        const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById').mockResolvedValue(undefined);
-
-        await FileApplication.commitDelete([fileUri]);
-
-        // Blob survives (another cached record still points at it); the record
-        // and local row are removed as usual
-        expect(deleteIdempotentSpy).not.toHaveBeenCalledWith(blobUrl);
-        expect(deleteIdempotentSpy).toHaveBeenCalledWith(fileUri);
-        expect(deleteIdempotentSpy).toHaveBeenCalledTimes(1);
-        expect(deleteLocalSpy).toHaveBeenCalledWith(compositeId);
-      });
-
-      it('excludes every record in the batch from the shared-reference check', async () => {
-        const fileId1 = 'file-123';
-        const fileId2 = 'file-456';
-        const uri1 = createFileUri(fileId1);
-        const uri2 = createFileUri(fileId2);
-        const compositeId1 = buildCompositeId({ pubky: TEST_PUBKY, id: fileId1 });
-        const compositeId2 = buildCompositeId({ pubky: TEST_PUBKY, id: fileId2 });
-        // Byte-identical uploads share the same content-addressed blob
-        const sharedBlobUrl = 'pubky://user/blob/shared123';
-
-        const mockFile1 = createMockFile(compositeId1, 'file1.jpg', uri1, { src: sharedBlobUrl });
-        const mockFile2 = createMockFile(compositeId2, 'file2.jpg', uri2, { src: sharedBlobUrl });
-
-        vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-        vi.spyOn(LocalFileService, 'read').mockResolvedValueOnce(mockFile1).mockResolvedValueOnce(mockFile2);
-        const hasOtherBlobReferenceSpy = vi.spyOn(LocalFileService, 'hasOtherBlobReference').mockResolvedValue(false);
-        vi.spyOn(LocalFileService, 'deleteById').mockResolvedValue(undefined);
-
-        await FileApplication.commitDelete([uri1, uri2]);
-
-        // Both rows being deleted in this batch are excluded — otherwise each
-        // sibling would see the other and neither blob would ever be deleted
-        expect(hasOtherBlobReferenceSpy).toHaveBeenCalledTimes(2);
-        for (const call of hasOtherBlobReferenceSpy.mock.calls) {
-          expect(call[0]).toEqual({ blobSrc: sharedBlobUrl, excludeFileIds: new Set([compositeId1, compositeId2]) });
-        }
-      });
     });
   });
 
   describe('commitDeleteUploaded', () => {
-    const blobUrl = 'pubky://user/blob/upload123';
-    const fileUrl = 'pubky://user/pub/pubky.app/files/upload123';
-    const compositeId = 'user:upload123';
+    it('deletes each freshly uploaded media by its URL', async () => {
+      const attachments = [createAttachment(1), createAttachment(2)];
+      const deleteSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
 
-    const createUploadedAttachment = (blob: string = blobUrl, file: string = fileUrl) => ({
-      blobResult: createMockBlobResult(blob),
-      fileResult: createMockFileResult(file),
-    });
+      await FileApplication.commitDeleteUploaded(attachments);
 
-    it('deletes blob then record by their known URLs and removes the local row', async () => {
-      const attachment = createUploadedAttachment();
-
-      const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-      const plainDeleteSpy = vi.spyOn(HomeserverService, 'delete');
-      const requestSpy = vi.spyOn(HomeserverService, 'request');
-      const readSpy = vi.spyOn(LocalFileService, 'read');
-      const hasOtherBlobReferenceSpy = vi.spyOn(LocalFileService, 'hasOtherBlobReference').mockResolvedValue(false);
-      const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById').mockResolvedValue(undefined);
-
-      await FileApplication.commitDeleteUploaded([attachment]);
-
-      expect(hasOtherBlobReferenceSpy).toHaveBeenCalledWith({
-        blobSrc: blobUrl,
-        excludeFileIds: new Set([compositeId]),
-      });
-      expect(deleteIdempotentSpy).toHaveBeenNthCalledWith(1, blobUrl); // Delete blob
-      expect(deleteIdempotentSpy).toHaveBeenNthCalledWith(2, fileUrl); // Delete record
-      expect(deleteLocalSpy).toHaveBeenCalledWith(compositeId);
-
-      // The URLs are already known from the normalized upload results — no
-      // record GET (or local read) is ever needed, which is what lets this
-      // clean up a partial upload whose record PUT failed
-      expect(requestSpy).not.toHaveBeenCalled();
-      expect(readSpy).not.toHaveBeenCalled();
-      expect(plainDeleteSpy).not.toHaveBeenCalled();
-
-      // Blob before record (retriability), record before local row
-      expect(deleteIdempotentSpy.mock.invocationCallOrder[0]).toBeLessThan(
-        deleteIdempotentSpy.mock.invocationCallOrder[1],
-      );
-      expect(deleteIdempotentSpy.mock.invocationCallOrder[1]).toBeLessThan(deleteLocalSpy.mock.invocationCallOrder[0]);
-    });
-
-    it('skips the blob delete but still deletes the record when the blob is shared', async () => {
-      const attachment = createUploadedAttachment();
-
-      const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-      vi.spyOn(LocalFileService, 'hasOtherBlobReference').mockResolvedValue(true);
-      const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById').mockResolvedValue(undefined);
-
-      await FileApplication.commitDeleteUploaded([attachment]);
-
-      expect(deleteIdempotentSpy).not.toHaveBeenCalledWith(blobUrl);
-      expect(deleteIdempotentSpy).toHaveBeenCalledWith(fileUrl);
-      expect(deleteIdempotentSpy).toHaveBeenCalledTimes(1);
-      expect(deleteLocalSpy).toHaveBeenCalledWith(compositeId);
-    });
-
-    it('excludes every uploaded record in the batch from the shared-reference check', async () => {
-      const attachment1 = createUploadedAttachment('pubky://user/blob/up1', 'pubky://user/pub/pubky.app/files/up1');
-      const attachment2 = createUploadedAttachment('pubky://user/blob/up2', 'pubky://user/pub/pubky.app/files/up2');
-
-      vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-      const hasOtherBlobReferenceSpy = vi.spyOn(LocalFileService, 'hasOtherBlobReference').mockResolvedValue(false);
-      vi.spyOn(LocalFileService, 'deleteById').mockResolvedValue(undefined);
-
-      await FileApplication.commitDeleteUploaded([attachment1, attachment2]);
-
-      expect(hasOtherBlobReferenceSpy).toHaveBeenCalledTimes(2);
-      for (const call of hasOtherBlobReferenceSpy.mock.calls) {
-        expect(call[0].excludeFileIds).toEqual(new Set(['user:up1', 'user:up2']));
-      }
-    });
-
-    it('still deletes the homeserver resources when the record URL cannot be parsed to a local row id', async () => {
-      const unparsableFileUrl = 'not-a-valid-uri';
-      const attachment = createUploadedAttachment(blobUrl, unparsableFileUrl);
-
-      const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockResolvedValue(undefined);
-      const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById');
-
-      await FileApplication.commitDeleteUploaded([attachment]);
-
-      expect(deleteIdempotentSpy).toHaveBeenNthCalledWith(1, blobUrl);
-      expect(deleteIdempotentSpy).toHaveBeenNthCalledWith(2, unparsableFileUrl);
-      // No composite id → no local row to delete (there may be none anyway
-      // when the rollback fires before local persistence)
-      expect(deleteLocalSpy).not.toHaveBeenCalled();
-    });
-
-    it('propagates errors when the blob deletion fails, leaving the record for a retry', async () => {
-      const attachment = createUploadedAttachment();
-
-      const error = new Error('Blob deletion failed');
-      const deleteIdempotentSpy = vi.spyOn(HomeserverService, 'deleteIdempotent').mockImplementation((uri: string) => {
-        return uri === blobUrl ? Promise.reject(error) : Promise.resolve(undefined);
-      });
-      const deleteLocalSpy = vi.spyOn(LocalFileService, 'deleteById');
-
-      await expect(FileApplication.commitDeleteUploaded([attachment])).rejects.toThrow('Blob deletion failed');
-
-      expect(deleteIdempotentSpy).toHaveBeenCalledTimes(1);
-      expect(deleteIdempotentSpy).toHaveBeenCalledWith(blobUrl);
-      expect(deleteLocalSpy).not.toHaveBeenCalled();
+      expect(deleteSpy.mock.calls).toEqual(attachments.map(({ media }) => [media.url]));
     });
   });
 });

@@ -1,4 +1,3 @@
-import { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { UserStreamApplication } from '@/application/stream/users/users';
@@ -22,7 +21,7 @@ import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
 import { NexusUserService } from '@/services/nexus/user/user';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { NotificationApplication } from './notification';
 
 const userId = 'pubky_user' as Pubky;
@@ -537,17 +536,9 @@ describe('NotificationApplication.getOrFetchNotifications (filtered pagination)'
 
 describe('NotificationApplication.markAllAsRead', () => {
   const mockTimestamp = 1234567890;
-  const mockLastReadUrl = 'pubky://test-user/pub/pubky.app/last-read';
+  const mockLastReadUrl = 'pubky://test-user/priv/app.pubky/v1/last_read.json';
 
-  const lastReadResult = (timestamp = mockTimestamp) =>
-    asOpaque<LastReadResult>({
-      last_read: {
-        timestamp: BigInt(timestamp),
-        toJson: vi.fn().mockReturnValue({ timestamp }),
-      },
-      meta: { url: mockLastReadUrl },
-      free: vi.fn(),
-    });
+  const lastReadResult = (timestamp = mockTimestamp) => ({ url: mockLastReadUrl, lastRead: { timestamp } });
   const homeserverError = (statusCode: number) =>
     httpStatusCodeToError(statusCode, `status ${statusCode}`, ErrorService.Homeserver, 'request', mockLastReadUrl);
   const putBodies = (spy: { mock: { calls: Array<[{ method: HttpMethod; bodyJson?: unknown }]> } }) =>

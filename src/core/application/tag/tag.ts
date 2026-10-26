@@ -19,7 +19,7 @@ export class TagApplication {
 
   static async commitCreate({ tagList, isCurrent }: TCreateTagListInput) {
     // Sequential: a failed entry leaves no hidden in-flight writes for later tags.
-    for (const { taggerId, taggedId, label, tagUrl, tagJson, taggedKind } of tagList) {
+    for (const { taggerId, taggedId, label, tagUrl, tagBody, taggedKind } of tagList) {
       if (isCurrent && !isCurrent()) return;
       const local = taggedKind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
       const mutationId = createTagMutationId();
@@ -27,7 +27,7 @@ export class TagApplication {
       const changed = await local.create(params);
       if (isCurrent && !isCurrent()) return;
       try {
-        await HomeserverService.request({ method: HttpMethod.PUT, url: tagUrl, bodyJson: tagJson });
+        await HomeserverService.putBlob({ url: tagUrl, blob: tagBody });
       } catch (error) {
         if (changed && (!isCurrent || isCurrent())) {
           try {

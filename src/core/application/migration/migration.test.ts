@@ -7,10 +7,6 @@ import type { Pubky } from '@/models/models.types';
 import type { SettingsState } from '@/stores/settings/settings.types';
 import { MigrationApplication } from './migration';
 
-vi.mock('pubky-app-specs', () => ({
-  baseUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/`,
-}));
-
 vi.mock('@/libs/logger/logger', () => ({
   Logger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));

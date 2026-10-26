@@ -1,6 +1,8 @@
+import { MIGRATION_CAPS } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
+import { HOMESERVER_CAPABILITIES } from '@/config/network';
 import { mockRingSession } from '@/test-utils/pubky';
-import { hasRequiredCapabilities, sessionNeedsUpgrade } from './capabilities';
+import { hasRequiredCapabilities, hasSocialV1Capabilities, sessionNeedsUpgrade } from './capabilities';
 
 const REQUIRED = '/pub/pubky.app/:rw,/priv/social/:rw,/priv/app.locks/content/:r';
 
@@ -12,7 +14,7 @@ describe('hasRequiredCapabilities', () => {
   });
 
   it('recognizes split read/write coverage so Locks does not ask for an unnecessary upgrade', () => {
-    const capabilities = ['/pub/pubky.app/:rw', '/priv/:r', '/priv/social/:w'];
+    const capabilities = ['/pub/:rw', '/priv/:r', '/priv/social/:w', '/priv/app.pubky/v1/:w'];
     expect(hasRequiredCapabilities(capabilities, REQUIRED)).toBe(true);
     expect(sessionNeedsUpgrade(mockRingSession(capabilities))).toBe(false);
   });
@@ -69,5 +71,45 @@ describe('sessionNeedsUpgrade', () => {
     expect(sessionNeedsUpgrade(mockRingSession(['/pub/pubky.app/:rw', '/priv/social/:rw', '/priv/locks.app/:r']))).toBe(
       true,
     );
+  });
+});
+
+describe('hasSocialV1Capabilities', () => {
+  it('is false without a session', () => {
+    expect(hasSocialV1Capabilities(null)).toBe(false);
+  });
+
+  it('is true for a keypair (root) session', () => {
+    expect(hasSocialV1Capabilities(mockRingSession(['/:rw']))).toBe(true);
+  });
+
+  it("is false for a Ring session minted with today's list, which lacks the public v1 tree and the app's own files", () => {
+    expect(
+      hasSocialV1Capabilities(
+        mockRingSession(['/pub/pubky.app/:rw', '/priv/social/:rw', '/priv/app.locks/content/:r']),
+      ),
+    ).toBe(false);
+  });
+
+  it('is true once the migration grant was approved, with or without the locks entries', () => {
+    const migration = ['/pub/social/v1/:rw', '/priv/social/v1/:rw', '/priv/app.pubky/v1/:rw', '/pub/pubky.app/:rw'];
+    expect(hasSocialV1Capabilities(mockRingSession(migration))).toBe(true);
+    expect(
+      hasSocialV1Capabilities(mockRingSession([...migration, '/priv/social/:rw', '/priv/app.locks/content/:r'])),
+    ).toBe(true);
+  });
+
+  it('is false when the legacy tree is read-only, since deleting a migrated object still reaches it', () => {
+    expect(
+      hasSocialV1Capabilities(
+        mockRingSession(['/pub/social/v1/:rw', '/priv/social/v1/:rw', '/priv/app.pubky/v1/:rw', '/pub/pubky.app/:r']),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('the social v1 grant', () => {
+  it('is covered by the grant every session asks for', () => {
+    expect(hasRequiredCapabilities(HOMESERVER_CAPABILITIES.split(','), MIGRATION_CAPS)).toBe(true);
   });
 });

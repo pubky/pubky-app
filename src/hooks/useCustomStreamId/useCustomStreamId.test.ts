@@ -1,8 +1,9 @@
 import { renderHook } from '@testing-library/react';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import type { KnownFeedSort, KnownPostKind } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { useCustomStreamId } from './useCustomStreamId';
 
 const mockUseCustomFeed = vi.hoisted(() => vi.fn());
@@ -18,10 +19,10 @@ const createMockFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSche
   name: 'Bitcoin News',
   tags: ['bitcoin', 'lightning'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.All,
-  sort: PubkyAppFeedSort.Recent,
+  reach: 'all',
+  sort: 'recent',
   content: null,
-  layout: PubkyAppFeedLayout.Columns,
+  layout: 'columns',
   created_at: Date.now(),
   updated_at: Date.now(),
   ...overrides,
@@ -53,7 +54,7 @@ describe('useCustomStreamId', () => {
   // ============================================================================
 
   it('returns undefined when sort cannot be mapped (unknown sort value)', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: 999 as PubkyAppFeedSort }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: asInvalid<KnownFeedSort>('a-newer-name') }));
 
     const { result } = renderHook(() => useCustomStreamId());
 
@@ -61,7 +62,7 @@ describe('useCustomStreamId', () => {
   });
 
   it('returns undefined when content cannot be mapped (unknown post kind)', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: 999 as PubkyAppPostKind }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: asInvalid<KnownPostKind>('a-newer-name') }));
 
     const { result } = renderHook(() => useCustomStreamId());
 
@@ -77,9 +78,7 @@ describe('useCustomStreamId', () => {
   });
 
   it('returns undefined when a malformed feed cannot produce a stream ID', () => {
-    mockUseCustomFeed.mockReturnValue(
-      createMockFeed({ reach: PubkyAppFeedReach.All, tags: [], domain_tags: ['bitcoiner'] }),
-    );
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: 'all', tags: [], domain_tags: ['bitcoiner'] }));
 
     const { result } = renderHook(() => useCustomStreamId());
 
@@ -93,8 +92,8 @@ describe('useCustomStreamId', () => {
   it('builds streamId with CONTENT.ALL when content is null', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'all',
+        sort: 'recent',
         content: null,
         tags: ['bitcoin'],
       }),
@@ -110,9 +109,9 @@ describe('useCustomStreamId', () => {
   it('builds streamId with mapped content when content is not null', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
-        content: PubkyAppPostKind.Short,
+        reach: 'all',
+        sort: 'recent',
+        content: 'note',
         tags: ['crypto'],
       }),
     );
@@ -126,8 +125,8 @@ describe('useCustomStreamId', () => {
   it('joins multiple tags with comma delimiter', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.Following,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'following',
+        sort: 'recent',
         content: null,
         tags: ['bitcoin', 'lightning', 'nostr'],
       }),
@@ -141,8 +140,8 @@ describe('useCustomStreamId', () => {
   it('handles engagement sort correctly', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Popularity,
+        reach: 'all',
+        sort: 'popularity',
         content: null,
         tags: ['trending'],
       }),
@@ -157,8 +156,8 @@ describe('useCustomStreamId', () => {
   it('handles friends reach correctly', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.Friends,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'friends',
+        sort: 'recent',
         content: null,
         tags: ['bitcoin'],
       }),
@@ -172,7 +171,7 @@ describe('useCustomStreamId', () => {
   it('builds a profile-only Network stream', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.Wot,
+        reach: 'wot',
         tags: [],
         domain_tags: ['developer', 'bitcoiner'],
       }),
@@ -184,9 +183,7 @@ describe('useCustomStreamId', () => {
   });
 
   it('builds a sorting-aware Me stream for the current viewer', () => {
-    mockUseCustomFeed.mockReturnValue(
-      createMockFeed({ reach: PubkyAppFeedReach.Me, sort: PubkyAppFeedSort.Popularity, tags: ['bitcoin'] }),
-    );
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: 'me', sort: 'popularity', tags: ['bitcoin'] }));
 
     const { result } = renderHook(() => useCustomStreamId());
 
@@ -196,7 +193,7 @@ describe('useCustomStreamId', () => {
   it('builds a depth-0 Me domain stream when profile tags are set (#2150)', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.Me,
+        reach: 'me',
         tags: [],
         domain_tags: ['developer', 'bitcoiner'],
       }),
@@ -219,9 +216,9 @@ describe('useCustomStreamId', () => {
   it('handles Image content mapping correctly', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
-        content: PubkyAppPostKind.Image,
+        reach: 'all',
+        sort: 'recent',
+        content: 'image',
         tags: ['photography'],
       }),
     );
@@ -234,9 +231,9 @@ describe('useCustomStreamId', () => {
   it('handles Video content mapping correctly', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
-        content: PubkyAppPostKind.Video,
+        reach: 'all',
+        sort: 'recent',
+        content: 'video',
         tags: ['clips'],
       }),
     );
@@ -249,9 +246,9 @@ describe('useCustomStreamId', () => {
   it('handles Long content mapping correctly', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
-        content: PubkyAppPostKind.Long,
+        reach: 'all',
+        sort: 'recent',
+        content: 'article',
         tags: ['articles'],
       }),
     );
@@ -264,9 +261,9 @@ describe('useCustomStreamId', () => {
   it('handles Link content mapping correctly', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
-        content: PubkyAppPostKind.Link,
+        reach: 'all',
+        sort: 'recent',
+        content: 'link',
         tags: ['bookmarks'],
       }),
     );
@@ -279,9 +276,9 @@ describe('useCustomStreamId', () => {
   it('handles File content mapping correctly', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
-        content: PubkyAppPostKind.File,
+        reach: 'all',
+        sort: 'recent',
+        content: 'file',
         tags: ['docs'],
       }),
     );
@@ -294,9 +291,9 @@ describe('useCustomStreamId', () => {
   it('handles Collection content mapping correctly', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
-        content: PubkyAppPostKind.Collection,
+        reach: 'all',
+        sort: 'recent',
+        content: 'collection',
         tags: ['curated'],
       }),
     );
@@ -314,7 +311,7 @@ describe('useCustomStreamId', () => {
   // offers no Followers option in CustomFeedDialog, but feeds are homeserver-stored and
   // portable, so a Followers feed authored by a foreign client must still render.
   it('builds a stream for a foreign-authored Followers feed this client cannot create', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Followers }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: 'followers' }));
 
     const { result } = renderHook(() => useCustomStreamId());
 
@@ -328,9 +325,9 @@ describe('useCustomStreamId', () => {
   it('builds correct streamId for engagement + following + images + multiple tags', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.Following,
-        sort: PubkyAppFeedSort.Popularity,
-        content: PubkyAppPostKind.Image,
+        reach: 'following',
+        sort: 'popularity',
+        content: 'image',
         tags: ['art', 'design'],
       }),
     );
@@ -343,9 +340,9 @@ describe('useCustomStreamId', () => {
   it('builds correct streamId for timeline + friends + videos + single tag', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.Friends,
-        sort: PubkyAppFeedSort.Recent,
-        content: PubkyAppPostKind.Video,
+        reach: 'friends',
+        sort: 'recent',
+        content: 'video',
         tags: ['music'],
       }),
     );
@@ -362,8 +359,8 @@ describe('useCustomStreamId', () => {
   it('recomputes streamId when customFeed changes', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'all',
+        sort: 'recent',
         content: null,
         tags: ['bitcoin'],
       }),
@@ -376,9 +373,9 @@ describe('useCustomStreamId', () => {
     // Update the feed
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.Following,
-        sort: PubkyAppFeedSort.Popularity,
-        content: PubkyAppPostKind.Short,
+        reach: 'following',
+        sort: 'popularity',
+        content: 'note',
         tags: ['nostr', 'pubky'],
       }),
     );
@@ -397,8 +394,8 @@ describe('useCustomStreamId', () => {
 
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'all',
+        sort: 'recent',
         content: null,
         tags: ['bitcoin'],
       }),
@@ -412,8 +409,8 @@ describe('useCustomStreamId', () => {
   it('transitions from a valid streamId to undefined when feed becomes unavailable', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'all',
+        sort: 'recent',
         content: null,
         tags: ['bitcoin'],
       }),

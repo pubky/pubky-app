@@ -1,3 +1,4 @@
+import { isOneOf, postKinds, tryDecodeObject } from 'pubky-social-specs';
 import type { ZodType } from 'zod';
 import { LOCKS_GUARDED_CONTENT_PATH } from '@/config/locks';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
@@ -5,6 +6,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { parseLockTeaserContent } from '@/libs/post/lockTeaser';
 import { isPubkyIdentifier, withPubkyPrefix } from '@/libs/utils/utils';
+import { toLocalPostKind } from '@/pipes/post/post.kind';
 import {
   type GuardedPost,
   guardedPostSchema,
@@ -300,8 +302,19 @@ export class GuardedContentParser {
     return this.parseJsonBytes(bytes, replicatedPostSchema);
   }
 
-  /** Parses the guarded primary bytes (a `PubkyAppPost` JSON) into the reader post shape. */
+  /**
+   * Parses the guarded primary bytes into the reader post shape: a v1 post, or the 0.x post a
+   * primary written before v1 holds. A 0.x post with no `attachments` member also decodes as a
+   * v1 post, of a kind this version does not know, so the kind tells the two apart.
+   */
   static parsePost(bytes: Uint8Array): GuardedPost | null {
-    return this.parseJsonBytes(bytes, guardedPostSchema);
+    const read = tryDecodeObject({ kind: 'post', root: 'private' }, bytes);
+    if (!read.ok || !isOneOf(postKinds, read.value.kind)) return this.parseJsonBytes(bytes, guardedPostSchema);
+    const { content, kind, attachments } = read.value;
+    return {
+      content,
+      kind: toLocalPostKind(kind),
+      attachments: attachments.length > 0 ? attachments.map(({ uri }) => uri) : null,
+    };
   }
 }

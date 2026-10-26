@@ -58,8 +58,8 @@ const submitHomePost = (postContent: string, files?: Cypress.FileReference | Cyp
         cy.get('[data-cy="post-input-attachment-remove"]:visible').should('have.length', attachments.length);
       }
       cy.get('[data-cy="post-input-textarea"]:visible').type(postContent).should('have.value', postContent);
-      // `*` stops at `/`, so blob and file uploads under `/blobs/` and `/files/` never match.
-      cy.intercept('PUT', '**/pub/pubky.app/posts/*', (req) => {
+      // A version is posts/<id>/<editId>.json; media uploads go under files/ and never match.
+      cy.intercept('PUT', '**/pub/social/v1/posts/**', (req) => {
         const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
         if (body.includes(postContent)) req.alias = alias;
       });
@@ -103,7 +103,7 @@ const replyOnThread = (parentText: string, replyContent: string) => {
   cy.get('[data-cy="reply-post-input"]').should('be.visible');
   cy.get('[data-cy="reply-post-input"]').within(() => {
     cy.get('[data-cy="post-input-textarea"]').should('have.value', '').type(replyContent);
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('replyCreated');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**').as('replyCreated');
     cy.get('[data-cy="post-input-action-bar-reply"]').click();
     cy.wait('@replyCreated').its('response.statusCode').should('eq', 201);
   });
@@ -469,11 +469,11 @@ describe('posts', () => {
       [tag1, tag2, tag3].forEach((tag) => {
         cy.contains('button', tag).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
       });
-      cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
+      cy.intercept('DELETE', '**/pub/social/v1/tags/**').as('deleteTag');
       cy.contains('button', tag2).click();
       cy.wait('@deleteTag').its('response.statusCode').should('eq', 204);
       cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '0');
-      cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
+      cy.intercept('PUT', '**/pub/social/v1/tags/**').as('putTag');
       cy.contains('button', tag2).click();
       cy.wait('@putTag').its('response.statusCode').should('eq', 201);
       cy.contains('button', tag2).should('be.visible').find('[data-cy="post-tag-count"]').should('have.text', '1');
@@ -503,7 +503,7 @@ describe('posts', () => {
     cy.location('pathname').should('contain', '/post/');
 
     // add three tags to post
-    cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
+    cy.intercept('PUT', '**/pub/social/v1/tags/**').as('putTag');
     cy.get('[data-cy="single-post-card"]').within(() => {
       cy.get('[data-cy="post-tag-add-button"]').click();
       [tag1, tag2, tag3].forEach((tag) => {
@@ -524,7 +524,7 @@ describe('posts', () => {
     });
 
     // check tags are added to post with count of 1
-    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
+    cy.intercept('DELETE', '**/pub/social/v1/tags/**').as('deleteTag');
     cy.get('[data-cy="single-post-card"]').within(() => {
       cy.get('[data-cy="clickable-tags-list"]')
         .filter(':visible')
@@ -552,7 +552,7 @@ describe('posts', () => {
     });
 
     // untag tag 1 after page reload to cover bug https://github.com/pubky/pubky-app/issues/1721
-    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag1');
+    cy.intercept('DELETE', '**/pub/social/v1/tags/**').as('deleteTag1');
     cy.get('[data-cy="clickable-tags-list"]').within(() => {
       cy.contains('button', tag1).click();
       cy.wait('@deleteTag1').its('response.statusCode').should('eq', 204);
@@ -577,7 +577,7 @@ describe('posts', () => {
     cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').click();
 
     // add three tags to post
-    cy.intercept('PUT', '**/pub/pubky.app/tags/**').as('putTag');
+    cy.intercept('PUT', '**/pub/social/v1/tags/**').as('putTag');
     cy.get('[data-cy="single-post-card"]').within(() => {
       [tag1, tag2, tag3].forEach((tag) => {
         cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
@@ -597,7 +597,7 @@ describe('posts', () => {
     });
 
     // check tags are added to post with count of 1
-    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag');
+    cy.intercept('DELETE', '**/pub/social/v1/tags/**').as('deleteTag');
     cy.get('[data-cy="single-post-card"]').within(() => {
       cy.get('[data-cy="post-tags-panel"]')
         .filter(':visible')
@@ -625,7 +625,7 @@ describe('posts', () => {
     });
 
     // untag tag 1 after page reload to cover bug https://github.com/pubky/pubky-app/issues/1721
-    cy.intercept('DELETE', '**/pub/pubky.app/tags/**').as('deleteTag1');
+    cy.intercept('DELETE', '**/pub/social/v1/tags/**').as('deleteTag1');
     cy.get('[data-cy="single-post-card"]').within(() => {
       cy.get('[data-cy="post-tags-panel"]')
         .filter(':visible')
@@ -645,7 +645,7 @@ describe('posts', () => {
         cy.get('[data-cy="post-bookmark-btn"]').click();
       });
       cy.get('[data-cy="post-save-bookmarks-option"]').should('be.visible');
-      cy.intercept('PUT', '**/pub/pubky.app/bookmarks/**').as('createBookmark');
+      cy.intercept('PUT', '**/priv/social/v1/bookmarks/**').as('createBookmark');
       cy.get('[data-cy="post-save-bookmarks-option"]').click();
       cy.wait('@createBookmark').its('response.statusCode').should('eq', 201);
       // click away to dismiss collections popover list
@@ -674,7 +674,7 @@ describe('posts', () => {
       .then(($posts) => {
         $posts.each((_idx, element) => {
           cy.wrap(element).find('[data-cy="post-bookmark-btn"]').click();
-          cy.intercept('DELETE', '**/pub/pubky.app/bookmarks/**').as('deleteBookmark');
+          cy.intercept('DELETE', '**/priv/social/v1/bookmarks/**').as('deleteBookmark');
           cy.get('[data-cy="post-save-bookmarks-option"]').click();
           cy.wait('@deleteBookmark').its('response.statusCode').should('eq', 204);
           // click away to dismiss collections popover list
@@ -716,7 +716,7 @@ describe('posts', () => {
 
     repostPost({ filterText: postContent });
 
-    cy.intercept('DELETE', '**/pub/pubky.app/posts/**').as('postDeleted');
+    cy.intercept('DELETE', '**/pub/social/v1/posts/**').as('postDeleted');
 
     // After repost, success toast has clickable Undo button
     cy.get('[data-cy="toast"]')
@@ -1000,7 +1000,7 @@ describe('posts', () => {
       .should('have.length', 1)
       .click()
       .type(quickReply);
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('quickReplyCreated');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**').as('quickReplyCreated');
     cy.get('@postQuickReply')
       .find('[data-cy="post-input-action-bar-reply"]')
       .should('be.visible')
@@ -1160,7 +1160,7 @@ describe('posts', () => {
 
   it('prompts to sign in again when homeserver responds 401 to creating new post', () => {
     const postContent = `This post is rejected as unauthenticated! ${Date.now()}`;
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 401 }).as('postUnauthorized');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**', { statusCode: 401 }).as('postUnauthorized');
 
     cy.get('[data-cy="home-post-input"]').within(() => {
       cy.get('[data-cy="post-input-textarea"]').type(postContent);
@@ -1178,7 +1178,7 @@ describe('posts', () => {
   it('prompts to sign in again when homeserver responds 401 to creating new article', () => {
     const title = `Unauthenticated article ${Date.now()}`;
     const body = `This article is rejected as unauthenticated! ${Date.now()}`;
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 401 }).as('articleUnauthorized');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**', { statusCode: 401 }).as('articleUnauthorized');
 
     cy.get('[data-cy="home-post-input"]').within(() => {
       cy.get('[data-cy="post-input-textarea"]').click();
@@ -1206,7 +1206,7 @@ describe('posts', () => {
     const tag = 'unauthed';
     createQuickPost(postContent);
 
-    cy.intercept('PUT', '**/pub/pubky.app/tags/**', { statusCode: 401 }).as('tagUnauthorized');
+    cy.intercept('PUT', '**/pub/social/v1/tags/**', { statusCode: 401 }).as('tagUnauthorized');
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       cy.get('[data-cy="post-tag-add-button"]').filter(':visible').click();
       cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
@@ -1224,7 +1224,7 @@ describe('posts', () => {
 
   it('warns that storage is full and keeps the draft when homeserver responds 507 to a new post', () => {
     const postContent = `This post does not fit in storage! ${Date.now()}`;
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 507 }).as('postInsufficientStorage');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**', { statusCode: 507 }).as('postInsufficientStorage');
 
     cy.get('[data-cy="home-post-input"]').within(() => {
       cy.get('[data-cy="post-input-textarea"]').type(postContent);
@@ -1252,7 +1252,7 @@ describe('posts', () => {
     cy.location('pathname').should('contain', '/post/');
     cy.get('[data-cy="single-post-card"]').should('contain.text', postContent);
 
-    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 500 }).as('replyFailed');
+    cy.intercept('PUT', '**/pub/social/v1/posts/**', { statusCode: 500 }).as('replyFailed');
     // The hidden feed under the post overlay has its own quick reply on the same post.
     cy.get('[data-cy="quick-reply"]').filter(':visible').should('have.length', 1).as('postQuickReply');
     cy.get('@postQuickReply')

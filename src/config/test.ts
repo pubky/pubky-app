@@ -45,11 +45,6 @@ process.env.SUPPORT_ACCOUNT_ID = '123';
 
 const { db } = await import('@/database/franky/franky');
 
-// Resolve pubky-app-specs-backed MIME constants before per-file mocks of that
-// package can take effect. Previously this happened as a side effect of loading
-// the Radix snapshot serializer from `@/libs/utils/utils`.
-await import('@/config/posts');
-
 // Polyfill IntersectionObserver for jsdom
 class MockIntersectionObserver implements IntersectionObserver {
   constructor() {}

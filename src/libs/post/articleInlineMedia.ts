@@ -3,6 +3,7 @@ import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { toMarkdown } from 'mdast-util-to-markdown';
 import { gfm } from 'micromark-extension-gfm';
+import { parseUri } from 'pubky-social-specs';
 import { visit } from 'unist-util-visit';
 import { parsePubkyUri } from '@/models/models.utils';
 
@@ -29,7 +30,8 @@ import { parsePubkyUri } from '@/models/models.utils';
 
 const ATTACHMENT_REF_PATTERN = /^attachment:(0|[1-9][0-9]*)$/;
 const ATTACHMENT_SCHEME_PATTERN = /^attachment:/i;
-const FILE_PATH_PREFIX = '/pub/pubky.app/files/';
+/** 0.x File objects, which existing articles still reference. */
+const LEGACY_FILE_PATH_PREFIX = '/pub/pubky.app/files/';
 const BLOB_PATH_PREFIX = '/pub/pubky.app/blobs/';
 const PUBKY_URI_PATTERN = /pubky:\/\/[^\s"'<>)]+/gi;
 
@@ -95,19 +97,28 @@ export function isAttachmentRefScheme(src: string | null | undefined): boolean {
 }
 
 /**
- * Returns the owner pubky of a strict homeserver file URI
+ * Returns the owner pubky of a strict homeserver media URI, v1
+ * (`pubky://{owner}/pub/social/v1/files/{hash}.{ext}`) or 0.x
  * (`pubky://{owner}/pub/pubky.app/files/{fileId}`), or null for anything else.
  */
 export function parseFileUriOwner(uri: string | null | undefined): string | null {
   if (!uri) return null;
+  const trimmed = uri.trim();
 
-  const parsed = parsePubkyUri(uri.trim());
-  if (!parsed || !parsed.path.startsWith(FILE_PATH_PREFIX)) return null;
+  try {
+    const parsed = parseUri(trimmed);
+    if (parsed.kind === 'file') return parsed.root === 'public' ? parsed.owner : null;
+  } catch {
+    // Not a canonical URI: only the 0.x prefix check below can still accept it
+  }
 
-  const fileId = parsed.path.slice(FILE_PATH_PREFIX.length);
+  const legacy = parsePubkyUri(trimmed);
+  if (!legacy || !legacy.path.startsWith(LEGACY_FILE_PATH_PREFIX)) return null;
+
+  const fileId = legacy.path.slice(LEGACY_FILE_PATH_PREFIX.length);
   if (!fileId || fileId.includes('/')) return null;
 
-  return parsed.authority;
+  return legacy.authority;
 }
 
 /** Returns true when `uri` is a homeserver file URI owned by `authorPubky`. */

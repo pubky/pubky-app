@@ -1,11 +1,10 @@
-import { PubkyAppPost } from 'pubky-app-specs';
 import type { TCreateTagInput } from '@/application/tag/tag.types';
 import type { Pubky } from '@/models/models.types';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import type { TPostEdit } from '@/pipes/pipes.types';
 import type { TLocalSavePostParams } from '@/services/local/post/post.types';
 
 export interface TCreatePostInput extends TLocalSavePostParams {
-  postUrl: string;
   fileAttachments?: TFileAttachmentResult[];
   tags?: TCreateTagInput[];
   isCurrent?: () => boolean;
@@ -13,8 +12,8 @@ export interface TCreatePostInput extends TLocalSavePostParams {
 
 export interface TEditPostInput {
   compositePostId: string;
-  post: PubkyAppPost;
-  postUrl: string;
+  /** What changes, applied to the newest stored version. */
+  edit: TPostEdit;
   /** New attachment files (already normalized). Uploaded before the post PUT; rolled back if the PUT fails. */
   fileAttachments?: TFileAttachmentResult[];
   /** Previously referenced file URIs to delete (best-effort) after a successful PUT. */

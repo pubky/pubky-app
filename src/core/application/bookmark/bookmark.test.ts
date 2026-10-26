@@ -20,6 +20,7 @@ vi.mock('@/services/local/bookmark/bookmark', () => ({
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     request: vi.fn(),
+    putBlob: vi.fn(),
   },
 }));
 
@@ -29,19 +30,20 @@ describe('BookmarkApplication', () => {
   // Test data factory
   const createMockBookmarkData = (): TCreateBookmarkInput => ({
     postId: 'author:post123',
-    bookmarkUrl: 'pubky://user123/pub/pubky.app/bookmarks/abc',
-    bookmarkJson: { uri: 'pubky://author/pub/pubky.app/posts/post123' },
+    bookmarkUrl: 'pubky://user123/priv/social/v1/bookmarks/abc.json',
+    bookmarkBody: new TextEncoder().encode('{"created_at":1}'),
   });
 
   const createMockDeleteData = (): TDeleteBookmarkInput => ({
     postId: 'author:post123',
-    bookmarkUrl: 'pubky://user123/pub/pubky.app/bookmarks/abc',
+    bookmarkUrl: 'pubky://user123/priv/social/v1/bookmarks/abc.json',
   });
 
   // Helper functions
   const setupMocks = () => ({
     persistSpy: vi.spyOn(LocalBookmarkService, 'persist'),
     requestSpy: vi.spyOn(HomeserverService, 'request'),
+    putSpy: vi.spyOn(HomeserverService, 'putBlob'),
     authSpy: vi.spyOn(useAuthStore, 'getState'),
   });
 
@@ -72,11 +74,11 @@ describe('BookmarkApplication', () => {
   describe('persist with PUT action', () => {
     it('should save locally and sync to homeserver successfully', async () => {
       const mockData = createMockBookmarkData();
-      const { persistSpy, requestSpy, authSpy } = setupMocks();
+      const { persistSpy, putSpy, authSpy } = setupMocks();
 
       authSpy.mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => testUserId }));
       persistSpy.mockResolvedValue(undefined);
-      requestSpy.mockResolvedValue(undefined);
+      putSpy.mockResolvedValue(undefined);
 
       await BookmarkApplication.persist(HttpMethod.PUT, mockData);
 
@@ -84,11 +86,7 @@ describe('BookmarkApplication', () => {
         userId: testUserId,
         postId: mockData.postId,
       });
-      expect(requestSpy).toHaveBeenCalledWith({
-        method: HttpMethod.PUT,
-        url: mockData.bookmarkUrl,
-        bodyJson: mockData.bookmarkJson,
-      });
+      expect(putSpy).toHaveBeenCalledWith({ url: mockData.bookmarkUrl, blob: mockData.bookmarkBody });
     });
 
     it('should throw error when user is not authenticated', async () => {
@@ -111,29 +109,29 @@ describe('BookmarkApplication', () => {
 
     it('should throw when local save fails', async () => {
       const mockData = createMockBookmarkData();
-      const { persistSpy, requestSpy, authSpy } = setupMocks();
+      const { persistSpy, putSpy, authSpy } = setupMocks();
 
       authSpy.mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => testUserId }));
       persistSpy.mockRejectedValue(new Error('Database error'));
 
       await expect(BookmarkApplication.persist(HttpMethod.PUT, mockData)).rejects.toThrow('Database error');
       expect(persistSpy).toHaveBeenCalledOnce();
-      expect(requestSpy).not.toHaveBeenCalled();
+      expect(putSpy).not.toHaveBeenCalled();
     });
 
     it('should throw when homeserver sync fails', async () => {
       const mockData = createMockBookmarkData();
-      const { persistSpy, requestSpy, authSpy } = setupMocks();
+      const { persistSpy, putSpy, authSpy } = setupMocks();
 
       authSpy.mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => testUserId }));
       persistSpy.mockResolvedValue(undefined);
-      requestSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
+      putSpy.mockRejectedValue(new Error('Failed to PUT to homeserver: 500'));
 
       await expect(BookmarkApplication.persist(HttpMethod.PUT, mockData)).rejects.toThrow(
         'Failed to PUT to homeserver: 500',
       );
       expect(persistSpy).toHaveBeenCalledOnce();
-      expect(requestSpy).toHaveBeenCalledOnce();
+      expect(putSpy).toHaveBeenCalledOnce();
     });
   });
 
@@ -155,7 +153,6 @@ describe('BookmarkApplication', () => {
       expect(requestSpy).toHaveBeenCalledWith({
         method: HttpMethod.DELETE,
         url: mockData.bookmarkUrl,
-        bodyJson: undefined,
       });
     });
 

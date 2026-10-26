@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TLockConfig } from '@/application/locks/locks.types';
+import { GuardedContentParser } from '@/pipes/locks/locks.parser';
 import type { TGuardedResource } from '@/services/locks/locks.types';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
@@ -33,7 +35,6 @@ const mocks = vi.hoisted(() => ({
   commitCreateFile: vi.fn(),
   commitDeleteFile: vi.fn(),
   toast: vi.fn(),
-  post: vi.fn(), // PubkyAppPost constructor spy: the locked post as it is written
   // Handle into the stand-in editor, refreshed on every render. Null while no editor is mounted.
   editor: null as {
     markdown: string;
@@ -90,25 +91,6 @@ vi.mock('@/hooks/useMentionAutocomplete/useMentionAutocomplete', () => ({
   }),
 }));
 vi.mock('@/hooks/useUndoRepost/useUndoRepost', () => ({ useUndoRepost: () => ({ undoRepost: vi.fn() }) }));
-
-vi.mock('pubky-app-specs', () => ({
-  PubkyAppPostKind: { Short: 0, Long: 1, Image: 2, Video: 3, Link: 4, File: 5, Collection: 6 },
-  fileUriBuilder: (author: string, fileId: string) => `pubky://${author}/pub/pubky.app/files/${fileId}`,
-  PubkyAppPost: class {
-    constructor(
-      public content: string,
-      public kind: number,
-      public parent: string | null,
-      public embed: unknown,
-      public attachments: string[] | null,
-    ) {
-      mocks.post(content, kind, parent, embed, attachments);
-    }
-    toJson() {
-      return { content: this.content, kind: this.kind, attachments: this.attachments };
-    }
-  },
-}));
 
 // Auth wrappers: pass straight through, always authenticated to pubky.app.
 vi.mock('@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers', () => ({
@@ -238,18 +220,20 @@ const publishLock = async () => {
   await waitFor(() => expect(mocks.commitCreatePost).toHaveBeenCalledTimes(1));
 };
 
+const OWNER = fakeOwner(2);
+
 /** The locked post as `useCreateLockContent` builds it from the uploaded attachment descriptors. */
 const lockedPost = () => {
   const { attachments, buildPost } = mocks.createLockContent.mock.calls[0][0] as {
     attachments: { contentType: string; bytes: Uint8Array }[];
-    buildPost: (resources: TGuardedResource[], owner?: string) => unknown;
+    buildPost: (resources: TGuardedResource[], owner?: string) => { bytes: Uint8Array };
   };
-  buildPost(
+  const file = buildPost(
     attachments.map((_, index) => descriptor(`/priv/app.locks/content/file${index}`)),
-    'pubkyowner',
+    `pubky${OWNER}`,
   );
-  const [content, , , , uris] = mocks.post.mock.calls.at(-1) as [string, number, null, null, string[] | null];
-  return { attachments, body: (JSON.parse(content) as { body: string }).body, uris };
+  const post = GuardedContentParser.parsePost(file.bytes)!;
+  return { attachments, body: (JSON.parse(post.content) as { body: string }).body, uris: post.attachments };
 };
 
 describe('PostInput - locking an article with body images (integration)', () => {
@@ -275,7 +259,7 @@ describe('PostInput - locking an article with body images (integration)', () => 
 
   it('locks the image bytes and the slot that points at them, without ever touching public storage', async () => {
     await writeArticle();
-    expect(imageUri).toMatch(new RegExp(`^pubky://${AUTHOR}/pub/pubky\\.app/files/draft-`));
+    expect(imageUri).toMatch(new RegExp(`^pubky://${AUTHOR}/pub/social/v1/files/[0-9A-Z]{26}\\.png$`));
     applyLock();
     // The composer left article mode to take the teaser; the staged file must outlive that.
     expect(mocks.editor).toBeNull();
@@ -286,7 +270,7 @@ describe('PostInput - locking an article with body images (integration)', () => 
     expect(attachments).toHaveLength(1);
     expect(new TextDecoder().decode(attachments[0].bytes)).toBe('image bytes');
     expect(body).toBe('Intro\n\n![shot](attachment:0)\n\nOutro');
-    expect(uris).toEqual(['pubky://owner/priv/app.locks/content/file0']);
+    expect(uris).toEqual([`pubky://${OWNER}/priv/app.locks/content/file0`]);
     // The published lock lets go of the staged file: nothing was uploaded publicly, nothing to delete
     await act(async () => {});
     expect(mocks.commitCreateFile).not.toHaveBeenCalled();
@@ -306,7 +290,10 @@ describe('PostInput - locking an article with body images (integration)', () => 
       'image bytes',
     ]);
     expect(body).toBe('Intro\n\n![shot](attachment:1)\n\nOutro');
-    expect(uris).toEqual(['pubky://owner/priv/app.locks/content/file0', 'pubky://owner/priv/app.locks/content/file1']);
+    expect(uris).toEqual([
+      `pubky://${OWNER}/priv/app.locks/content/file0`,
+      `pubky://${OWNER}/priv/app.locks/content/file1`,
+    ]);
   });
 
   it('publishes the article normally, image included, after the lock is abandoned', async () => {

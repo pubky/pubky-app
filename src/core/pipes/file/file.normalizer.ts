@@ -1,54 +1,30 @@
-import { BlobResult, FileResult } from 'pubky-app-specs';
+import { buildFile, limits } from 'pubky-social-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type {
-  TCreateBlobParams,
-  TFileAttachmentResult,
-  TFileAttachmentWithDataParams,
-  TToFileParams,
-} from '@/pipes/file/file.types';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import type { TFileAttachmentResult, TFileAttachmentWithDataParams } from '@/pipes/file/file.types';
 
 export class FileNormalizer {
   private constructor() {}
 
-  static toFileAttachment({ file, blobData, pubky }: TFileAttachmentWithDataParams): TFileAttachmentResult {
-    try {
-      const blobResult = this.toBlob({ blobData, pubky });
-      const fileResult = this.toFile({ file, url: blobResult.meta.url, pubky });
-      return { blobResult, fileResult };
-    } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
+  static toFileAttachment({ file, mediaId, blobData, pubky }: TFileAttachmentWithDataParams): TFileAttachmentResult {
+    // With an id the builder never sees the bytes, so the size cap is checked here.
+    if (blobData.length === 0 || blobData.length > limits.maxFileSizeBytes) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'File is empty or over the size limit', {
         service: ErrorService.PubkyAppSpecs,
         operation: 'toFileAttachment',
-        context: { file, pubky },
+        context: { size: blobData.length, pubky },
       });
     }
-  }
-
-  private static toBlob({ blobData, pubky }: TCreateBlobParams): BlobResult {
     try {
-      const builder = PubkySpecsSingleton.get(pubky);
-      return builder.createBlob(blobData);
+      const media = buildFile(pubky, { id: mediaId, type: file.type });
+      return { media, bytes: blobData, name: file.name, contentType: file.type };
     } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error instanceof Error ? error.message : String(error), {
         service: ErrorService.PubkyAppSpecs,
-        operation: 'createBlob',
-        context: { pubky },
-      });
-    }
-  }
-
-  private static toFile({ file, url, pubky }: TToFileParams): FileResult {
-    try {
-      const builder = PubkySpecsSingleton.get(pubky);
-      return builder.createFile(file.name, url, file.type, file.size);
-    } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
-        operation: 'createFile',
-        context: { file, url, pubky },
+        operation: 'buildFile',
+        context: { name: file.name, type: file.type, pubky },
+        cause: error,
       });
     }
   }

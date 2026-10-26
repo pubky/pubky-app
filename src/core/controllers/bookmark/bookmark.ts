@@ -1,4 +1,4 @@
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -42,14 +42,9 @@ export class BookmarkController {
    */
   static async commitCreate({ postId, userId }: TBookmarkEventParams) {
     const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
-    const postUri = postUriBuilder(authorId, rawPostId);
-    const { bookmark, meta } = BookmarkNormalizer.to(postUri, userId);
+    const { url, body } = BookmarkNormalizer.to(buildUri(authorId, 'post', rawPostId), userId);
 
-    await BookmarkApplication.persist(HttpMethod.PUT, {
-      postId,
-      bookmarkUrl: meta.url,
-      bookmarkJson: bookmark.toJson(),
-    });
+    await BookmarkApplication.persist(HttpMethod.PUT, { postId, bookmarkUrl: url, bookmarkBody: body });
   }
 
   /**
@@ -60,12 +55,9 @@ export class BookmarkController {
    */
   static async commitDelete({ postId, userId }: TBookmarkEventParams) {
     const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
-    const postUri = postUriBuilder(authorId, rawPostId);
-    const { meta } = BookmarkNormalizer.to(postUri, userId);
+    // The bookmark's path spells its target, so building it again names the file to delete.
+    const { url } = BookmarkNormalizer.to(buildUri(authorId, 'post', rawPostId), userId);
 
-    await BookmarkApplication.persist(HttpMethod.DELETE, {
-      postId,
-      bookmarkUrl: meta.url,
-    });
+    await BookmarkApplication.persist(HttpMethod.DELETE, { postId, bookmarkUrl: url });
   }
 }

@@ -1,4 +1,4 @@
-import { postUriBuilder, TagResult, userUriBuilder } from 'pubky-app-specs';
+import { buildTag, buildUri, type Built, type Tag } from 'pubky-social-specs';
 import { TagKind } from '@/application/tag/tag.types';
 import type { TTagEventParams, TTagFromResponse } from '@/controllers/tag/tag.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
@@ -6,48 +6,49 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 
 export class TagNormalizer {
   private constructor() {}
 
   static from({ taggedKind, taggedId, label, taggerId }: TTagEventParams): TTagFromResponse {
+    let uri: string;
     try {
-      let uri: string;
       if (taggedKind === TagKind.POST) {
         const { pubky, id: postId } = parseCompositeId(taggedId);
-        uri = postUriBuilder(pubky, postId);
+        uri = buildUri(pubky, 'post', postId);
       } else {
-        uri = userUriBuilder(taggedId);
+        // The profile URL, as the migration respells a 0.x user tag, so both land on one target.
+        uri = buildUri(taggedId, 'user');
       }
-      const { tag, meta } = TagNormalizer.to(uri, label.trim(), taggerId);
-
-      return {
-        taggerId,
-        taggedId,
-        label: tag.label.toLowerCase(),
-        taggedKind,
-        tagUrl: meta.url,
-        tagJson: tag.toJson(),
-      };
     } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error instanceof Error ? error.message : String(error), {
         service: ErrorService.PubkyAppSpecs,
         operation: 'createTagFromParams',
         context: { taggedKind, taggedId, label, taggerId },
+        cause: error,
       });
     }
+    const { object, url, body } = TagNormalizer.to(uri, label, taggerId);
+
+    return {
+      taggerId,
+      taggedId,
+      label: object.label,
+      taggedKind,
+      tagUrl: url,
+      tagBody: body,
+    };
   }
 
-  static to(uri: string, label: string, pubky: Pubky): TagResult {
+  static to(uri: string, label: string, pubky: Pubky): Built<Tag> {
     try {
-      const builder = PubkySpecsSingleton.get(pubky);
-      return builder.createTag(uri, label);
+      return buildTag(pubky, uri, label);
     } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error instanceof Error ? error.message : String(error), {
         service: ErrorService.PubkyAppSpecs,
-        operation: 'createTag',
+        operation: 'buildTag',
         context: { uri, label, pubky },
+        cause: error,
       });
     }
   }

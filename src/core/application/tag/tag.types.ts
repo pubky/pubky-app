@@ -2,7 +2,7 @@ import type { TTagEventParams } from '@/controllers/tag/tag.types';
 
 export interface TCreateTagInput extends TTagEventParams {
   tagUrl: string;
-  tagJson: Record<string, unknown>;
+  tagBody: Uint8Array;
 }
 
 export interface TCreateTagListInput {
@@ -10,7 +10,7 @@ export interface TCreateTagListInput {
   isCurrent?: () => boolean;
 }
 
-export type TDeleteTagInput = Omit<TCreateTagInput, 'tagJson'> & { isCurrent?: () => boolean };
+export type TDeleteTagInput = Omit<TCreateTagInput, 'tagBody'> & { isCurrent?: () => boolean };
 
 export enum TagKind {
   USER = 'user',

@@ -51,7 +51,9 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
         content: {
           name: 'Proof of Work',
           description: 'Bitcoin writing',
-          items: mocks.collection1Saved ? ['pubky://author/pub/pubky.app/posts/post1'] : [],
+          items: mocks.collection1Saved
+            ? ['pubky://pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy/pub/pubky.app/posts/0035V9A20WSE4']
+            : [],
         },
       },
       {
@@ -102,18 +104,24 @@ describe('usePostSaveTargets', () => {
       'another-user:collection3',
     ];
 
-    const open = renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: true }));
+    const open = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4', { isPickerOpen: true }),
+    );
 
     expect(mocks.postCollectionsEnabled).toBe(true);
     expect(open.result.current.otherCollectionIds).toEqual(['other-user:collection9', 'another-user:collection3']);
     expect(open.result.current.isOtherCollectionsLoading).toBe(false);
 
-    renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: false }));
+    renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4', { isPickerOpen: false }),
+    );
     expect(mocks.postCollectionsEnabled).toBe(false);
   });
 
   it('paginates authored collections only while the picker is open', async () => {
-    const open = renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: true }));
+    const open = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4', { isPickerOpen: true }),
+    );
 
     expect(mocks.paginationEnabled).toBe(true);
     expect(open.result.current.hasMoreCollections).toBe(true);
@@ -124,12 +132,16 @@ describe('usePostSaveTargets', () => {
     });
     expect(mocks.loadMoreCollections).toHaveBeenCalledTimes(1);
 
-    renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: false }));
+    renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4', { isPickerOpen: false }),
+    );
     expect(mocks.paginationEnabled).toBe(false);
   });
 
   it('combines bookmark state and collection membership', () => {
-    const { result } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result } = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4'),
+    );
 
     expect(result.current.isBookmarked).toBe(true);
     expect(result.current.collections).toEqual([
@@ -139,7 +151,9 @@ describe('usePostSaveTargets', () => {
   });
 
   it('toggles collection membership separately from bookmarks', async () => {
-    const { result } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result } = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4'),
+    );
 
     await act(async () => {
       await result.current.toggleCollection('author:collection1');
@@ -147,7 +161,7 @@ describe('usePostSaveTargets', () => {
 
     expect(mocks.commitUpdateCollectionItem).toHaveBeenCalledWith({
       collectionId: 'author:collection1',
-      postId: 'author:post1',
+      postId: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4',
       shouldAdd: false,
     });
     expect(mocks.toggleBookmark).not.toHaveBeenCalled();
@@ -157,7 +171,9 @@ describe('usePostSaveTargets', () => {
   });
 
   it('shows a generic toast when adding a post to a collection', async () => {
-    const { result } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result } = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4'),
+    );
 
     await act(async () => {
       await result.current.toggleCollection('author:collection2');
@@ -165,7 +181,7 @@ describe('usePostSaveTargets', () => {
 
     expect(mocks.commitUpdateCollectionItem).toHaveBeenCalledWith({
       collectionId: 'author:collection2',
-      postId: 'author:post1',
+      postId: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4',
       shouldAdd: true,
     });
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
@@ -183,7 +199,9 @@ describe('usePostSaveTargets', () => {
         operation: 'validateCollectionContent',
       }),
     );
-    const { result } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result } = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4'),
+    );
 
     await act(async () => {
       await result.current.toggleCollection('author:collection2');
@@ -198,7 +216,9 @@ describe('usePostSaveTargets', () => {
   it('stays busy until the live query acknowledges a rollback, then accepts subsequent membership changes', async () => {
     const pending = Promise.withResolvers<void>();
     mocks.commitUpdateCollectionItem.mockReturnValueOnce(pending.promise);
-    const { result, rerender } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result, rerender } = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4'),
+    );
     let update: Promise<boolean>;
     act(() => {
       update = result.current.toggleCollection('author:collection1');
@@ -231,7 +251,9 @@ describe('usePostSaveTargets', () => {
   });
 
   it('keeps the other collections interactive while a completed toggle waits for its fresh read', async () => {
-    const { result, rerender } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result, rerender } = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4'),
+    );
     mocks.completionReadPending = true;
     await act(async () => {
       await result.current.toggleCollection('author:collection1');
@@ -248,7 +270,7 @@ describe('usePostSaveTargets', () => {
     });
     expect(mocks.commitUpdateCollectionItem).toHaveBeenLastCalledWith({
       collectionId: 'author:collection2',
-      postId: 'author:post1',
+      postId: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4',
       shouldAdd: true,
     });
     // The mocked list now reflects the first toggle's read; only the second waits.
@@ -259,7 +281,9 @@ describe('usePostSaveTargets', () => {
   });
 
   it('creates a collection with the current post URI as first item', async () => {
-    const { result } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result } = renderHook(() =>
+      usePostSaveTargets('pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4'),
+    );
 
     await act(async () => {
       await result.current.createCollectionWithPost('New collection');
@@ -268,7 +292,7 @@ describe('usePostSaveTargets', () => {
     expect(mocks.commitCreateCollection).toHaveBeenCalledWith({
       authorId: 'current-user',
       name: 'New collection',
-      items: ['pubky://author/pub/pubky.app/posts/post1'],
+      items: ['pubky://pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy/pub/social/v1/posts/0035V9A20WSE4'],
       layout: COLLECTION_LAYOUT.CARDS,
     });
   });

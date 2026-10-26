@@ -91,3 +91,23 @@ describe('models.utils (composite id)', () => {
     expect(c2).toBe(c1);
   });
 });
+
+describe('buildCompositeIdFromPubkyUri for media', () => {
+  it('keys v1 media by its hash, as Nexus does, without the extension', () => {
+    expect(
+      buildCompositeIdFromPubkyUri({
+        uri: 'pubky://owner/pub/social/v1/files/AKSZ57W2RFKHV1EHK007FQQ8TW.png',
+        domain: CompositeIdDomain.FILES,
+      }),
+    ).toBe(`owner${COMPOSITE_ID_DELIMITER}AKSZ57W2RFKHV1EHK007FQQ8TW`);
+  });
+
+  it('keeps a 0.x file id as it is', () => {
+    expect(
+      buildCompositeIdFromPubkyUri({
+        uri: 'pubky://owner/pub/pubky.app/files/0035S78QPP4S0',
+        domain: CompositeIdDomain.FILES,
+      }),
+    ).toBe(`owner${COMPOSITE_ID_DELIMITER}0035S78QPP4S0`);
+  });
+});

@@ -13,7 +13,7 @@ const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
 describe('useAuthoredCollections forced local reads', () => {
   beforeEach(() => {
     useAuthStore.setState({ currentUserPubky: AUTHOR });
-    vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
   });
 
   afterEach(() => vi.restoreAllMocks());

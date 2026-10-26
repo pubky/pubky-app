@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { fileUriBuilder } from 'pubky-app-specs';
+import { buildFile } from 'pubky-social-specs';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
   ARTICLE_ATTACHMENT_MAX_FILES,
@@ -32,18 +32,14 @@ const MAX_IMAGE_SIZE_LABEL = getImageUploadSizeLimitLabelMb('raw');
 const MAX_OTHER_SIZE_LABEL = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
 
 /**
- * A staged file is referenced by a file URI of the author's that no homeserver
- * file can have: a homeserver file id is 13 Crockford base32 characters (digits
- * and upper-case letters), this one is `draft-` plus 7 lower-case hex
- * characters. Same length, so the markdown-mode character count is the one a
- * published article's URI would give.
+ * A staged file is referenced by the author's file URI for the media id of 32
+ * random bytes, named for the file's type: a canonical name, so the body reads
+ * it as the author's media, and as long as the published name, so the
+ * markdown-mode character count is the one the published article gives. A
+ * homeserver file has that name only if its bytes hash to it.
  */
-const STAGED_ID_PREFIX = 'draft-';
-const STAGED_ID_RANDOM_LENGTH = 7;
-
-function createStagedUri(pubky: Pubky): string {
-  const random = crypto.randomUUID().slice(0, STAGED_ID_RANDOM_LENGTH);
-  return fileUriBuilder(pubky, `${STAGED_ID_PREFIX}${random}`);
+function createStagedUri(pubky: Pubky, file: File): string {
+  return buildFile(pubky, { bytes: crypto.getRandomValues(new Uint8Array(32)), type: file.type }).url;
 }
 
 /**
@@ -217,9 +213,9 @@ export function useInlineMediaUpload({
             }
             const { entries } = getSession();
             for (const entry of batch) {
-              let uri = createStagedUri(pubky);
-              // 28 random bits per id: a repeat is next to impossible, and must still never replace a file
-              while (entries.has(uri)) uri = createStagedUri(pubky);
+              let uri = createStagedUri(pubky, entry.file);
+              // A repeat is next to impossible, and must still never replace a file
+              while (entries.has(uri)) uri = createStagedUri(pubky, entry.file);
               entries.set(uri, {
                 objectUrl: URL.createObjectURL(entry.file),
                 file: entry.file,

@@ -1,5 +1,5 @@
 import type { Session } from '@synonymdev/pubky';
-import type { LastReadResult } from 'pubky-app-specs';
+import { buildUri, encodeObject, toPath, type User } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksApplication } from '@/application/locks/locks';
 import { ProfileApplication } from '@/application/profile/profile';
@@ -12,7 +12,8 @@ import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
-import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
+import { LastReadNormalizer, type TLastRead } from '@/pipes/lastRead/lastRead.normalizer';
+import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import {
   HOMESERVER_PUBLISH_CONFLICT_MESSAGE,
@@ -62,8 +63,10 @@ vi.mock('@synonymdev/pubky', () => {
 });
 
 const USER = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-const PROFILE_PATH = '/pub/pubky.app/profile.json';
-const LAST_READ_PATH = '/pub/pubky.app/last_read';
+const PROFILE_URL = buildUri(USER, 'user');
+const PROFILE_PATH = toPath(PROFILE_URL);
+const LAST_READ_URL = LastReadNormalizer.buildUrl(USER);
+const LAST_READ_PATH = toPath(LAST_READ_URL);
 
 function logWrite(op: string, path: string) {
   homeserver.writes.push({ op, path, isLoggingOut: useAuthStore.getState().isLoggingOut });
@@ -147,25 +150,31 @@ afterEach(() => {
 const putsTo = (path: string) =>
   homeserver.putJson.mock.calls.filter(([putPath]) => putPath === path).map(([, body]) => body);
 
+const bytesPutTo = (path: string) =>
+  homeserver.putBytes.mock.calls
+    .filter(([putPath]) => putPath === path)
+    .map(([, bytes]) => JSON.parse(new TextDecoder().decode(bytes)));
+
 describe('a profile edit that the homeserver refuses re-reads before retrying', () => {
-  const published = {
+  const published: User = {
     name: 'Alice',
     bio: 'old bio',
-    image: `pubky://${USER}/pub/pubky.app/files/0035S78QPP4S0`,
+    image: null,
     links: [{ title: 'WEBSITE', url: 'https://example.com/' }],
     status: 'working',
   };
+  const stored = (user: User) => new TextDecoder().decode(encodeObject(PROFILE_URL, user));
 
   it.each([429, 500, 503, 409])('keeps a bio another device saved during the backoff after a %i', async (status) => {
-    homeserver.files.set(PROFILE_PATH, JSON.stringify(published));
-    homeserver.putJson.mockRejectedValueOnce(sdkError(status));
+    homeserver.files.set(PROFILE_PATH, stored(published));
+    homeserver.putBytes.mockRejectedValueOnce(sdkError(status));
     onBackoff = () => {
-      homeserver.files.set(PROFILE_PATH, JSON.stringify({ ...published, bio: 'new bio from device B' }));
+      homeserver.files.set(PROFILE_PATH, stored({ ...published, bio: 'new bio from device B' }));
     };
 
     await ProfileApplication.commitUpdateStatus({ pubky: USER, status: 'back' });
 
-    expect(putsTo(PROFILE_PATH)).toEqual([
+    expect(bytesPutTo(PROFILE_PATH)).toEqual([
       expect.objectContaining({ bio: 'old bio', status: 'back' }),
       expect.objectContaining({ bio: 'new bio from device B', status: 'back' }),
     ]);
@@ -177,8 +186,8 @@ describe('a profile edit that the homeserver refuses re-reads before retrying', 
   });
 
   it('does not write again once logout begins during the backoff', async () => {
-    homeserver.files.set(PROFILE_PATH, JSON.stringify(published));
-    homeserver.putJson.mockRejectedValueOnce(sdkError(503));
+    homeserver.files.set(PROFILE_PATH, stored(published));
+    homeserver.putBytes.mockRejectedValueOnce(sdkError(503));
     onBackoff = () => {
       useAuthStore.setState({ isLoggingOut: true });
     };
@@ -186,7 +195,7 @@ describe('a profile edit that the homeserver refuses re-reads before retrying', 
     await expect(ProfileApplication.commitUpdateStatus({ pubky: USER, status: 'back' })).rejects.toMatchObject({
       code: AuthErrorCode.SESSION_EXPIRED,
     });
-    expect(homeserver.putJson).toHaveBeenCalledOnce();
+    expect(homeserver.putBytes).toHaveBeenCalledOnce();
   });
 });
 
@@ -238,12 +247,7 @@ describe('a settings write that the homeserver refuses with the publish conflict
 describe('marking notifications read never moves last_read backward', () => {
   const T1 = 1_000;
   const T2 = 2_000;
-  const lastRead = (timestamp: number) =>
-    asOpaque<LastReadResult>({
-      last_read: { timestamp: BigInt(timestamp), toJson: () => ({ timestamp }) },
-      meta: { url: `pubky://${USER}${LAST_READ_PATH}` },
-      free: vi.fn(),
-    });
+  const lastRead = (timestamp: number): TLastRead => ({ url: LAST_READ_URL, lastRead: { timestamp } });
 
   beforeEach(() => {
     useNotificationStore.getState().setLastRead(0);
@@ -330,20 +334,21 @@ describe('marking notifications read never moves last_read backward', () => {
 
 describe('writes to one tag run in the order the user made them', () => {
   const POST_ID = `${USER}:0033SSE3B1FQ0` as Pubky;
-  const TAG_PATH = '/pub/pubky.app/tags/TAG0001';
+  const built = TagNormalizer.to(buildUri(USER, 'post', '0033SSE3B1FQ0'), 'bitcoin', USER);
+  const TAG_PATH = toPath(built.url);
   const tag = {
     taggerId: USER,
     taggedId: POST_ID,
     label: 'bitcoin',
     taggedKind: TagKind.POST,
-    tagUrl: `pubky://${USER}${TAG_PATH}`,
+    tagUrl: built.url,
   };
-  const tagJson = { uri: `pubky://${USER}/pub/pubky.app/posts/0033SSE3B1FQ0`, label: 'bitcoin', created_at: 1 };
+  const tagBody = built.body;
   const tagOps = () => homeserver.writes.filter(({ path }) => path === TAG_PATH).map(({ op }) => op);
 
   it('keeps a tag removed while its add was retrying removed', async () => {
     let failAdd!: () => void;
-    homeserver.putJson.mockImplementationOnce(
+    homeserver.putBytes.mockImplementationOnce(
       () =>
         new Promise<void>((_, reject) => {
           failAdd = () => reject(sdkError(503));
@@ -351,7 +356,7 @@ describe('writes to one tag run in the order the user made them', () => {
     );
 
     const request = vi.spyOn(HomeserverService, 'request');
-    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
+    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagBody }] });
     await vi.waitFor(() => expect(failAdd).toBeTypeOf('function'));
     const remove = TagApplication.commitDelete(tag);
     // The removal has reached the homeserver service before the add's first attempt fails.
@@ -366,8 +371,8 @@ describe('writes to one tag run in the order the user made them', () => {
   });
 
   it('keeps a tag added back while its removal was retrying present', async () => {
-    homeserver.files.set(TAG_PATH, JSON.stringify(tagJson));
-    await TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
+    homeserver.files.set(TAG_PATH, new TextDecoder().decode(tagBody));
+    await TagApplication.commitCreate({ tagList: [{ ...tag, tagBody }] });
     homeserver.writes = [];
     let releaseRemove!: () => void;
     homeserver.delete.mockRejectedValueOnce(sdkError(429));
@@ -376,11 +381,11 @@ describe('writes to one tag run in the order the user made them', () => {
         releaseRemove = resolve;
       });
 
-    const request = vi.spyOn(HomeserverService, 'request');
+    const putBlob = vi.spyOn(HomeserverService, 'putBlob');
     const remove = TagApplication.commitDelete(tag);
     await vi.waitFor(() => expect(releaseRemove).toBeTypeOf('function'));
-    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
-    await vi.waitFor(() => expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.PUT })));
+    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagBody }] });
+    await vi.waitFor(() => expect(putBlob).toHaveBeenCalledWith(expect.objectContaining({ url: tag.tagUrl })));
     expect(tagOps()).toEqual(['DELETE']);
     releaseRemove();
     await Promise.all([remove, add]);

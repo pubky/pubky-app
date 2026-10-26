@@ -1,8 +1,8 @@
 import type { TMuteParams } from '@/controllers/mute/mute.types';
-import { HttpMethod } from '@/libs/http/http.types';
+import type { HttpMethod } from '@/libs/http/http.types';
 
-export type TMuteApplicationCommitParams = TMuteParams & {
-  eventType: HttpMethod;
-  muteUrl: string;
-  muteJson: Record<string, unknown>;
-};
+export type TMuteApplicationCommitParams = TMuteParams &
+  (
+    | { eventType: HttpMethod.PUT; muteUrl: string; muteBody: Uint8Array }
+    | { eventType: HttpMethod.DELETE; deleteUrls: string[] }
+  );

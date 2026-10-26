@@ -18,10 +18,13 @@ const mockExistingAttachment = (uri: string): ExistingAttachment => ({
   urls: { main: `https://cdn.example/${uri}/main` },
 });
 
+// A valid public key: staged media URIs are built under it
+const TEST_USER_ID = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+
 // Hoist mock data and functions
 const { mockCurrentUserId, setMockCurrentUserId, mockPostControllerCreate, mockPostControllerEdit, mockLoggerError } =
   vi.hoisted(() => {
-    const userId = { current: 'test-user-id' as string | null };
+    const userId = { current: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as string | null };
     const postControllerCreate = vi.fn();
     const postControllerEdit = vi.fn();
     const loggerError = vi.fn();
@@ -79,7 +82,7 @@ vi.mock('@/libs/logger/logger', async () => {
 describe('usePost', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setMockCurrentUserId('test-user-id');
+    setMockCurrentUserId(TEST_USER_ID);
     mockPostControllerCreate.mockResolvedValue('created-post-id');
     mockPostControllerEdit.mockResolvedValue(undefined);
   });
@@ -387,7 +390,7 @@ describe('usePost', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         parentPostId: 'test-post-123',
         content: 'Reply content',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: ['tag1', 'tag2'],
         attachments: undefined,
       });
@@ -421,7 +424,7 @@ describe('usePost', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         parentPostId: 'test-post-123',
         content: 'Reply without tags',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: undefined,
       });
@@ -447,7 +450,7 @@ describe('usePost', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         parentPostId: 'test-post-123',
         content: 'Reply with attachment',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: [mockFile],
       });
@@ -505,7 +508,7 @@ describe('usePost', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         parentPostId: 'test-post-123',
         content: '',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: [mockFile],
       });
@@ -693,7 +696,7 @@ describe('usePost', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         parentPostId: 'test-post-123',
         content: 'Trimmed content',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: undefined,
       });
@@ -724,7 +727,7 @@ describe('usePost', () => {
 
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         content: 'Post content',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: ['tag1'],
         attachments: undefined,
         isArticle: false,
@@ -756,7 +759,7 @@ describe('usePost', () => {
 
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         content: 'Post without tags',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: undefined,
         isArticle: false,
@@ -782,7 +785,7 @@ describe('usePost', () => {
 
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         content: 'Post with attachments',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: [mockFile1, mockFile2],
         isArticle: false,
@@ -837,7 +840,7 @@ describe('usePost', () => {
 
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         content: '',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: [mockFile],
         isArticle: false,
@@ -1023,7 +1026,7 @@ describe('usePost', () => {
 
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         content: 'Trimmed content',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: undefined,
         isArticle: false,
@@ -1049,7 +1052,7 @@ describe('usePost', () => {
 
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         content: JSON.stringify({ title: 'My Article Title', body: 'Article body content' }),
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: ['article', 'test'],
         attachments: undefined,
         isArticle: true,
@@ -1135,7 +1138,7 @@ describe('usePost', () => {
 
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         content: JSON.stringify({ title: 'Trimmed Title', body: 'Trimmed Body' }),
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: undefined,
         isArticle: true,
@@ -1259,7 +1262,7 @@ describe('usePost', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         originalPostId: 'test-post-123',
         content: 'This is great!',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: ['tag1'],
         attachments: undefined,
       });
@@ -1291,7 +1294,7 @@ describe('usePost', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         originalPostId: 'test-post-123',
         content: 'Quote repost',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: [mockFile],
       });
@@ -1322,7 +1325,7 @@ describe('usePost', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         originalPostId: 'test-post-123',
         content: '',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: [mockFile],
       });
@@ -1349,7 +1352,7 @@ describe('usePost', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         originalPostId: 'test-post-123',
         content: '',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: undefined,
       });
@@ -1378,7 +1381,7 @@ describe('usePost', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         originalPostId: 'test-post-123',
         content: 'Repost comment',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: undefined,
       });
@@ -1530,7 +1533,7 @@ describe('usePost', () => {
       expect(mockPostControllerCreate).toHaveBeenCalledWith({
         originalPostId: 'test-post-123',
         content: 'Trimmed repost content',
-        authorId: 'test-user-id',
+        authorId: TEST_USER_ID,
         tags: undefined,
         attachments: undefined,
       });
@@ -2208,7 +2211,7 @@ describe('usePost', () => {
 });
 
 describe('usePost — article inline images', () => {
-  const AUTHOR = 'test-user-id';
+  const AUTHOR = TEST_USER_ID;
   const fileUri = (id: string) => `pubky://${AUTHOR}/pub/pubky.app/files/${id}`;
 
   beforeEach(() => {

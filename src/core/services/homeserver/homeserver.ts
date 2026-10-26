@@ -1,4 +1,5 @@
 import { Address, Client, Keypair, Pubky, PublicKey, resolvePubky, Session, Signer } from '@synonymdev/pubky';
+import { createSocialClient, type SocialClient } from 'pubky-social-specs/client';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { getAuthClientId } from '@/config/auth';
 import {
@@ -861,6 +862,22 @@ export class HomeserverService {
   }
 
   /**
+   * Runs `operation` on the data model's client over the signed-in session, for what takes several
+   * requests: the newest version of a post, the delete of every copy of one.
+   */
+  static async social<T>(operation: (social: SocialClient) => Promise<T>): Promise<T> {
+    const session = useAuthStore.getState().selectSession();
+    if (!session) {
+      throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'No signed-in session', {
+        service: ErrorService.Homeserver,
+        operation: 'social',
+      });
+    }
+    const social = createSocialClient(session, { publicStorage: this.getPubkySdk().publicStorage });
+    return operation(social).catch((error) => handleError({ error, additionalContext: { operation: 'social' } }));
+  }
+
+  /**
    * Deletes a file from the homeserver.
    *
    * @param {string} url - Pubky URL of the file to delete.
@@ -986,6 +1003,23 @@ export class HomeserverService {
   }
 
   /**
+   * Bytes of a resource read past the browser HTTP cache, or null when it is absent (404). For a
+   * read-modify-write, where a heuristically fresh cached copy would undo another device's write.
+   *
+   * @param url - Pubky URL to read.
+   */
+  static async getFreshBytes(url: string): Promise<Uint8Array | null> {
+    try {
+      const response = await this.fetch({ url, options: { method: HttpMethod.GET, cache: 'no-store' } });
+      if (response.status === HttpStatusCode.NOT_FOUND) return null;
+      await assertOk({ response, url, operation: 'getFreshBytes' });
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      throw toAppError(error, ErrorService.Homeserver, 'getFreshBytes');
+    }
+  }
+
+  /**
    * Checks whether a homeserver resource exists without treating an expected 404 as an error.
    * Storage SDK probes return a boolean; plain HTTP URLs retain explicit response handling.
    */
@@ -1067,8 +1101,11 @@ export class HomeserverService {
     try {
       const pubkySdk = this.getPubkySdk();
       const pk = PublicKey.from(params.userZ32);
-      const stream = (await pubkySdk
-        .eventStreamForUser(pk, params.cursor)
+      let builder = pubkySdk.eventStreamForUser(pk, params.cursor);
+      // Events under `/priv/` are served only to a session of their owner.
+      const session = params.pathPrefix.startsWith('/priv/') ? useAuthStore.getState().selectSession() : null;
+      if (session) builder = builder.session(session);
+      const stream = (await builder
         .path(params.pathPrefix)
         .live()
         .subscribe()) as ReadableStream<HomeserverSdkUserEvent>;

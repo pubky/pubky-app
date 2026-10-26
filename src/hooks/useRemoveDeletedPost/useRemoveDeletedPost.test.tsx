@@ -39,8 +39,8 @@ vi.mock('@/molecules/Toaster/toast');
 
 describe('useRemoveDeletedPost', () => {
   const currentUserPubky = 'current-user' as Pubky;
-  const postId = 'post-author:deleted-post';
-  const postUri = 'pubky://post-author/pub/pubky.app/posts/deleted-post';
+  const postId = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4';
+  const postUri = 'pubky://pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy/pub/pubky.app/posts/0035V9A20WSE4';
   const collectionId = `${currentUserPubky}:collection-id`;
   const commitRemoval = vi.fn();
   const rollbackRemoval = vi.fn();

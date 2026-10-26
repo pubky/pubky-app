@@ -1,25 +1,21 @@
-import { BookmarkResult } from 'pubky-app-specs';
+import { type Bookmark, buildBookmark, type Built, type PostRef } from 'pubky-social-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 
 export class BookmarkNormalizer {
   private constructor() {}
 
-  static to(postUri: string, userId: Pubky): BookmarkResult {
+  static to(postRef: PostRef, userId: Pubky): Built<Bookmark> {
     try {
-      const builder = PubkySpecsSingleton.get(userId);
-      const result = builder.createBookmark(postUri);
-      Logger.debug('Bookmark validated', { result });
-      return result;
+      return buildBookmark(userId, postRef);
     } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error instanceof Error ? error.message : String(error), {
         service: ErrorService.PubkyAppSpecs,
-        operation: 'createBookmark',
-        context: { postUri, userId },
+        operation: 'buildBookmark',
+        context: { postRef, userId },
+        cause: error,
       });
     }
   }

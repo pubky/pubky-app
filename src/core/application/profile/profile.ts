@@ -1,16 +1,17 @@
 import JSZip from 'jszip';
-import { baseUriBuilder, userUriBuilder } from 'pubky-app-specs';
+import { buildUri, decodeObject, deletionPaths, encodeObject, listPrefix, type User } from 'pubky-social-specs';
 import type {
   TApplicationCommitUpdateDetailsParams,
   TCreateProfileInput,
   TDeleteAccountParams,
   TDownloadDataParams,
 } from '@/application/profile/profile.types';
-import { ClientErrorCode } from '@/libs/error/error.codes';
+import { APP_PRIVATE_PATH } from '@/config/app-files';
+import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { hasHttpStatus, toAppError } from '@/libs/error/error.utils';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -37,9 +38,10 @@ export class ProfileApplication {
    * @param url - The URL of the profile
    * @param pubky - The public key of the user
    */
-  static async commitCreate({ profile, url, pubky }: TCreateProfileInput) {
+  static async commitCreate({ profile: built, pubky }: TCreateProfileInput) {
+    const profile = built.object;
     try {
-      await HomeserverService.request({ method: HttpMethod.PUT, url, bodyJson: profile.toJson() });
+      await HomeserverService.putBlob({ url: built.url, blob: built.body });
       // Persist the successfully-created profile immediately so onboarding revisit
       // and the welcome dialog do not depend on Nexus indexing catching up first.
       await LocalProfileService.upsertDetails(
@@ -114,11 +116,12 @@ export class ProfileApplication {
     deletedMessage: string;
   }) {
     await this.withProfileLock(pubky, async () => {
+      const url = buildUri(pubky, 'user');
       const fence = HomeserverService.createWriteFence();
       const user = await retryHomeserverWriteAfterReread(fence, async () => {
-        let publishedJson: unknown;
+        let next: { body: Uint8Array; user: User };
         try {
-          publishedJson = await HomeserverService.getFreshJson(userUriBuilder(pubky));
+          next = await this.readAndApply(pubky, changes);
         } catch (error) {
           if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
             throw Err.client(ClientErrorCode.GONE, deletedMessage, {
@@ -131,18 +134,44 @@ export class ProfileApplication {
           throw error;
         }
 
-        const published = UserNormalizer.fromPublished(publishedJson);
-        const { user, meta } = UserNormalizer.to(UserNormalizer.merge(published, changes), pubky);
-        await HomeserverService.request({
-          method: HttpMethod.PUT,
-          url: meta.url,
-          bodyJson: user.toJson(),
-          fence,
-        });
-        return user;
+        await HomeserverService.putBlob({ url, blob: next.body, fence });
+        return next.user;
       });
       await LocalProfileService.updateDetails(user, pubky);
     });
+  }
+
+  /**
+   * The bytes of the profile with `changes` applied, read fresh from the homeserver. The v1 profile
+   * is decoded and edited in place, so members another client added survive. An account whose
+   * only profile is the 0.x one (not migrated yet) gets a fresh v1 profile built from the 0.x
+   * fields: the package has no 0.x reader, so that copy's unknown members cannot be carried.
+   * Rejects with a 404 when neither exists (a deleted account).
+   */
+  private static async readAndApply(pubky: Pubky, changes: ProfileChanges): Promise<{ body: Uint8Array; user: User }> {
+    const url = buildUri(pubky, 'user');
+    const current = await HomeserverService.getFreshBytes(url);
+    if (current) {
+      try {
+        const user = UserNormalizer.applyChanges(decodeObject(url, current, 'user'), changes);
+        return { body: encodeObject(url, user), user };
+      } catch (error) {
+        // The stored profile does not decode, or the edit breaks a profile rule
+        throw Err.validation(
+          ValidationErrorCode.INVALID_INPUT,
+          error instanceof Error ? error.message : String(error),
+          {
+            service: ErrorService.PubkyAppSpecs,
+            operation: 'readAndApply',
+            context: { pubky },
+            cause: error,
+          },
+        );
+      }
+    }
+    const legacyJson = await HomeserverService.getFreshJson(`${listPrefix(pubky, 'legacy')}profile.json`);
+    const built = UserNormalizer.to(UserNormalizer.merge(UserNormalizer.fromPublished(legacyJson), changes), pubky);
+    return { body: built.body, user: built.object };
   }
 
   /**
@@ -218,20 +247,19 @@ export class ProfileApplication {
       // Clear local IndexedDB data first
       await LocalProfileService.deleteAll();
 
-      const baseDirectory = baseUriBuilder(pubky);
-      // Enumerate the full directory before deleting (single list calls are page-limited),
-      // so nothing is missed and progress reporting stays accurate.
-      const dataList = await HomeserverService.listAll({ baseDirectory });
+      // Enumerate every tree before deleting (single list calls are page-limited), so nothing is
+      // missed and progress reporting stays accurate.
+      const dataList = await this.listAllTrees(pubky);
 
-      // Separate profile.json and other files
-      const profileUrl = `${baseDirectory}profile.json`;
-      const filesToDelete = dataList.filter((file) => file !== profileUrl);
+      // The profiles go last, the 0.x one first: deletionPaths orders them so.
+      const profileUrls = deletionPaths({ kind: 'user', id: '' }).map((path) => `pubky://${pubky}${path}`);
+      const filesToDelete = dataList.filter((file) => !profileUrls.includes(file));
 
       // Sort remaining files alphanumerically and reverse
       filesToDelete.sort().reverse();
 
-      // Total files including profile.json for progress calculation
-      const totalFiles = filesToDelete.length + 1;
+      // Total files including the profiles for progress calculation
+      const totalFiles = filesToDelete.length + profileUrls.length;
 
       // Delete each file (excluding profile.json) and update progress
       for (let index = 0; index < filesToDelete.length; index++) {
@@ -244,8 +272,8 @@ export class ProfileApplication {
         setProgress(Math.round(((index + 1) / totalFiles) * 100));
       }
 
-      // Finally, delete profile.json and update progress to 100%
-      await this.deleteFile(profileUrl);
+      // Finally, delete the profiles and update progress to 100%
+      for (const profileUrl of profileUrls) await this.deleteFile(profileUrl);
 
       if (setProgress) {
         setProgress(100);
@@ -264,9 +292,7 @@ export class ProfileApplication {
    * @param params - Parameters containing user's public key and optional progress callback
    */
   static async downloadData({ pubky, setProgress }: TDownloadDataParams) {
-    const baseDirectory = baseUriBuilder(pubky);
-
-    const dataList = await HomeserverService.listAll({ baseDirectory });
+    const dataList = await this.listAllTrees(pubky);
 
     // Create JSZip instance and data folder
     const zip = new JSZip();
@@ -319,5 +345,20 @@ export class ProfileApplication {
 
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Every file of the account this app writes: the v1 public and private trees, the app's own
+   * namespace, and the 0.x tree an un-migrated or migrated account still holds.
+   */
+  private static async listAllTrees(pubky: Pubky): Promise<string[]> {
+    const prefixes = [
+      listPrefix(pubky, 'legacy'),
+      listPrefix(pubky, 'public'),
+      listPrefix(pubky, 'private'),
+      `pubky://${pubky}${APP_PRIVATE_PATH}`,
+    ];
+    const lists = await Promise.all(prefixes.map((baseDirectory) => HomeserverService.listAll({ baseDirectory })));
+    return lists.flat();
   }
 }

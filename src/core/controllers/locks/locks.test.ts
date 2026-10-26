@@ -755,14 +755,14 @@ describe('LocksController.replicateUnlockedContent', () => {
       lockUrl: VALID_LOCK_URL,
       readerPubky: 'pubkyreader',
       content,
-      postId: 'pubkyauthor:POST1',
+      postId: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035V9A20WSE4',
     });
 
     expect(mocks.replicateUnlockedContent).toHaveBeenCalledWith({
       lockUrl: VALID_LOCK_URL,
       readerPubky: 'pubkyreader',
       content,
-      announcementUri: 'pubky://pubkyauthor/pub/pubky.app/posts/POST1',
+      announcementUri: 'pubky://pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy/pub/social/v1/posts/0035V9A20WSE4',
     });
   });
 });

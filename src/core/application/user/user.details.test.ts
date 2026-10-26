@@ -1,4 +1,4 @@
-import type { PubkyAppUser } from 'pubky-app-specs';
+import type { User } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
@@ -48,7 +48,7 @@ const fullUser = (details: NexusUserDetails): NexusUser => ({
   relationship: { following: false, followed_by: false },
 });
 
-const localEdit = asOpaque<PubkyAppUser>({
+const localEdit = asOpaque<User>({
   name: 'Local edit',
   bio: '',
   image: null,

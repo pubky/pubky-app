@@ -1,4 +1,4 @@
-import type { Pubky } from '@/models/models.types';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { COMPOSITE_ID_DELIMITER } from './models.defaults';
 import type { CompositeIdParams, CompositeIdResult } from './models.types';
 
@@ -51,7 +51,9 @@ export function buildCompositeIdFromPubkyUri({ uri, domain }: CompositeIdParams)
   }
   const segments = parsed.path.split('/').filter(Boolean);
   const domainIndex = segments.lastIndexOf(domain);
-  const id = domainIndex !== -1 ? segments[domainIndex + 1] : undefined;
+  const segment = domainIndex !== -1 ? segments[domainIndex + 1] : undefined;
+  // v1 media is `files/{hash}.{ext}`; its id is the hash, as Nexus keys it. A 0.x file id has no dot.
+  const id = domain === CompositeIdDomain.FILES ? segment?.split('.')[0] : segment;
 
   if (!id) {
     return null;

@@ -1,5 +1,5 @@
 import { act, render, waitFor } from '@testing-library/react';
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
@@ -34,14 +34,15 @@ describe('collection batch hydration', () => {
   it('waits for batch hydration before mounting uncached cards', async () => {
     postStreamQueue.clear();
     useAuthStore.setState({ currentUserPubky: AUTHOR });
-    vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
     vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
-    const ids = Array.from({ length: 50 }, (_, i) => `0000000000${String(i).padStart(3, '0')}`);
+    // A canonical id's last character carries a spare zero bit, so it is even.
+    const ids = Array.from({ length: 50 }, (_, i) => `0000000000${String(i * 2).padStart(3, '0')}`);
     const memberIds = ids.map((id) => `${AUTHOR}:${id}`);
     const collectionId = await PostController.commitCreateCollection({
       authorId: AUTHOR,
       name: 'Cold collection',
-      items: ids.map((id) => postUriBuilder(AUTHOR, id)),
+      items: ids.map((id) => buildUri(AUTHOR, 'post', id)),
     });
     route.userId = AUTHOR;
     route.postId = parseCompositeId(collectionId).id;
@@ -66,7 +67,7 @@ describe('collection batch hydration', () => {
   it('keeps cold repost cards behind author and original-post batch hydration', async () => {
     postStreamQueue.clear();
     useAuthStore.setState({ currentUserPubky: AUTHOR });
-    vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
     const users = Promise.withResolvers<Awaited<ReturnType<typeof NexusUserStreamService.fetchByIds>>>();
     const userBatchSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockReturnValue(users.promise);
     vi.spyOn(NexusUserService, 'details').mockResolvedValue({
@@ -78,12 +79,13 @@ describe('collection batch hydration', () => {
       image: null,
       indexed_at: 1,
     });
-    const ids = Array.from({ length: 10 }, (_, i) => `0000000000${String(i).padStart(3, '0')}`);
+    // A canonical id's last character carries a spare zero bit, so it is even.
+    const ids = Array.from({ length: 10 }, (_, i) => `0000000000${String(i * 2).padStart(3, '0')}`);
     const memberIds = ids.map((id) => `${AUTHOR}:${id}`);
     const collectionId = await PostController.commitCreateCollection({
       authorId: AUTHOR,
       name: 'Cold collection',
-      items: ids.map((id) => postUriBuilder(AUTHOR, id)),
+      items: ids.map((id) => buildUri(AUTHOR, 'post', id)),
     });
     route.userId = AUTHOR;
     route.postId = parseCompositeId(collectionId).id;
@@ -99,7 +101,7 @@ describe('collection batch hydration', () => {
       </TooltipProvider>,
     );
     await waitFor(() => expect(streamSpy).toHaveBeenCalledTimes(1));
-    const originals = ids.map((id, i) => `0000000001${String(i).padStart(3, '0')}`);
+    const originals = ids.map((id, i) => `0000000001${String(i * 2).padStart(3, '0')}`);
     const expectedOriginalIds = originals.map((id) => `${AUTHOR}:${id}`);
     const originalResponses = Promise.withResolvers<Awaited<ReturnType<typeof NexusPostStreamService.fetchByIds>>>();
     byIdsSpy.mockImplementation((p) =>
@@ -115,14 +117,14 @@ describe('collection batch hydration', () => {
             author: AUTHOR,
             content: '',
             kind: 'short',
-            uri: postUriBuilder(AUTHOR, id),
+            uri: buildUri(AUTHOR, 'post', id),
             indexed_at: 1,
             attachments: null,
           },
           counts: { replies: 0, tags: 0, unique_tags: 0, reposts: 0 },
           tags: [],
           bookmark: null,
-          relationships: { replied: null, reposted: postUriBuilder(AUTHOR, originals[i]), mentioned: [] },
+          relationships: { replied: null, reposted: buildUri(AUTHOR, 'post', originals[i]), mentioned: [] },
         })),
       ),
     );

@@ -175,7 +175,7 @@ describe('Onboarding', () => {
     cy.get('[data-cy="suggested-user-card"]', extendedTimeout()).should('have.length.greaterThan', 0);
 
     // Finish writes the Interests feed before it navigates, so any feed write happens before /home.
-    cy.intercept('PUT', '**/pub/pubky.app/feeds/**').as('feedPut');
+    cy.intercept('PUT', '**/priv/social/v1/feeds/**').as('feedPut');
     cy.finishFollowBestMatchesStep();
 
     // With zero follows the landing feed stays on All

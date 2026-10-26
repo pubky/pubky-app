@@ -458,7 +458,7 @@ describe('feed and filters', () => {
     expectTimelineContains(postContent);
 
     openEditFeedDialog(renamed);
-    cy.intercept('DELETE', '**/pub/pubky.app/feeds/**').as('feedDelete');
+    cy.intercept('DELETE', '**/priv/social/v1/feeds/**').as('feedDelete');
     cy.get('[data-cy="custom-feed-delete-btn"]').click();
     cy.wait('@feedDelete').its('response.statusCode').should('be.within', 200, 299);
     cy.location('pathname').should('eq', '/home');
@@ -683,7 +683,7 @@ describe('custom feed write failures', () => {
     cy.get('[data-cy="custom-feed-dialog"]').find('[data-cy="add-tag-input"]').type(`${tag}{enter}`);
     cy.get('[data-cy="custom-feed-dialog"]').find(`[data-cy="post-tag"][data-tag-label="${tag}"]`).should('be.visible');
 
-    cy.intercept('PUT', '**/pub/pubky.app/feeds/**', { statusCode: 500 }).as('feedFailed');
+    cy.intercept('PUT', '**/priv/social/v1/feeds/**', { statusCode: 500 }).as('feedFailed');
     cy.get('[data-cy="custom-feed-save-btn"]').should('not.be.disabled').click();
 
     cy.get('[data-cy="toast"]').filter(':visible').should('contain.text', 'Could not create feed. Try again.');

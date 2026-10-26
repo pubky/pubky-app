@@ -1,10 +1,9 @@
+import { hashMedia, parseUri } from 'pubky-social-specs';
 import type { FilesListParams } from '@/application/file/file.types';
 import type { TGetFileUrlParams, TGetMetadataParams, TUploadFileParams } from '@/controllers/file/file.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { hasHttpStatus } from '@/libs/error/error.utils';
-import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import {
   getImageUploadSizeLimitKind,
   IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY,
@@ -46,8 +45,13 @@ export class FileApplication {
       });
     }
     let blobData: Uint8Array;
+    let mediaId: string;
     try {
-      blobData = new Uint8Array(await sanitizedFile.arrayBuffer());
+      // Hashed a chunk at a time so a large file does not freeze the page.
+      [blobData, mediaId] = await Promise.all([
+        sanitizedFile.arrayBuffer().then((buffer) => new Uint8Array(buffer)),
+        hashMedia(sanitizedFile),
+      ]);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to read file content', {
         service: ErrorService.Local,
@@ -55,36 +59,23 @@ export class FileApplication {
         cause: error,
       });
     }
-    return FileNormalizer.toFileAttachment({ file: sanitizedFile, blobData, pubky });
+    return FileNormalizer.toFileAttachment({ file: sanitizedFile, mediaId, blobData, pubky });
   }
 
   /**
-   * Uploads a file to the homeserver and persists it locally and persist it locally.
-   * First uploads the blob data, then creates the file record.
-   *
-   * @param params - Parameters for file upload
-   * @param params.blobResult - Normalized blob result
-   * @param params.fileResult - Normalized file result
+   * Uploads media to the homeserver and persists its metadata locally. v1 media is one
+   * content-addressed file: there is no metadata record to write.
    */
   static async commitCreate({ fileAttachments }: FilesListParams) {
     // allSettled, not all: on a partial failure the callers roll back the whole
     // batch (`commitDeleteUploaded`) — rejecting early would start that sweep
     // while sibling uploads are still in flight, letting a late PUT recreate a
-    // record/blob the sweep already deleted, or finish after it and orphan.
+    // file the sweep already deleted, or finish after it and orphan.
     // Waiting for every upload to settle before throwing keeps rollback safe.
     const results = await Promise.allSettled(
       fileAttachments.map(async (fileAttachment) => {
-        const { blobResult, fileResult } = fileAttachment;
-        // Upload Blob
-        await HomeserverService.putBlob({ url: blobResult.meta.url, blob: blobResult.blob.data });
-        // Create File Record
-        await HomeserverService.request({
-          method: HttpMethod.PUT,
-          url: fileResult.meta.url,
-          bodyJson: fileResult.file.toJson(),
-        });
-        // Persist Files locally
-        await LocalFileService.create({ blobResult, fileResult });
+        await HomeserverService.putBlob({ url: fileAttachment.media.url, blob: fileAttachment.bytes });
+        await LocalFileService.create(fileAttachment);
       }),
     );
 
@@ -95,119 +86,37 @@ export class FileApplication {
   }
 
   /**
-   * Deletes a blob unless a cached file record outside the batch being deleted
-   * still references it — blob ids are content hashes, so byte-identical
-   * uploads share one blob (e.g. removing an attachment while an identical one
-   * is kept, or exists on another post). The check is local-only knowledge;
-   * uncached sibling records are not seen (homeserver-side ref-counting is the
-   * complete fix, tracked as a follow-up).
-   */
-  private static async deleteBlobUnlessShared({
-    blobSrc,
-    excludeFileIds,
-  }: {
-    blobSrc: string;
-    excludeFileIds: Set<string>;
-  }) {
-    const shared = await LocalFileService.hasOtherBlobReference({ blobSrc, excludeFileIds });
-    if (shared) {
-      Logger.debug('[FileApplication] Skipping deletion of shared blob', { blobSrc });
-      return;
-    }
-    await HomeserverService.deleteIdempotent(blobSrc);
-  }
-
-  /**
-   * Commit the delete file operation, this will delete the file from the local database and sync to the homeserver.
+   * Deletes media the caller no longer references. Media is content addressed, so byte-identical
+   * uploads share one file: a URI another cached post of the author still references is kept.
+   * That check is local-only knowledge (posts never cached on this device are not seen). A 0.x
+   * file URI (`/pub/pubky.app/files/`) is left alone: its blob is named by the 0.x File object,
+   * which this client no longer reads.
    *
-   * Per file: the blob src is resolved (local row, or homeserver GET as
-   * fallback), the blob is deleted FIRST, then the record — if the blob delete
-   * fails the record still points at it, so a retry can find it again
-   * (record-first would orphan the blob on partial failure). Shared blobs
-   * (referenced by cached records outside this batch) are skipped, and all
-   * homeserver deletes are idempotent (404 = already gone = success) with
-   * transient-failure retry.
-   *
-   * @param fileAttachments - The file attachment URIs to delete
+   * @param fileAttachments - The media URIs to delete
+   * @param excludePostId - The post giving them up, whose own references do not count
    */
-  static async commitDelete(fileAttachments: string[]) {
-    const batchFileIds = new Set(
-      fileAttachments
-        .map((uri) => buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES }))
-        .filter((id): id is string => id !== null),
-    );
-
+  static async commitDelete(fileAttachments: string[], excludePostId?: string) {
     await Promise.all(
       fileAttachments.map(async (fileUri) => {
-        const fileCompositeId = buildCompositeIdFromPubkyUri({
-          uri: fileUri,
-          domain: CompositeIdDomain.FILES,
-        });
+        const fileCompositeId = buildCompositeIdFromPubkyUri({ uri: fileUri, domain: CompositeIdDomain.FILES });
+        if (!fileCompositeId || !isV1MediaUri(fileUri)) return;
 
-        if (!fileCompositeId) {
-          // Can't resolve the blob without a composite id; delete the record only
-          await HomeserverService.deleteIdempotent(fileUri);
+        if (await LocalFileService.isReferencedElsewhere({ uri: fileUri, excludePostId })) {
+          Logger.debug('[FileApplication] Skipping deletion of shared media', { fileUri });
           return;
         }
-
-        const localFile = await LocalFileService.read(fileCompositeId);
-        let blobSrc = localFile?.src;
-        if (!blobSrc) {
-          try {
-            const remoteFile = (await HomeserverService.request({ method: HttpMethod.GET, url: fileUri })) as {
-              src: string;
-            };
-            blobSrc = remoteFile.src;
-          } catch (error) {
-            // Record already gone with no local row: the blob is unknowable and
-            // there is nothing left to clean up — the end state is reached
-            if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
-              return;
-            }
-            throw error;
-          }
-        }
-
-        // Delete the file blob (unless shared), then the file metadata
-        await this.deleteBlobUnlessShared({ blobSrc, excludeFileIds: batchFileIds });
         await HomeserverService.deleteIdempotent(fileUri);
-        if (localFile) {
-          await LocalFileService.deleteById(fileCompositeId);
-        }
+        await LocalFileService.deleteById(fileCompositeId);
       }),
     );
   }
 
   /**
-   * Deletes freshly uploaded attachments during a rollback, using their known
-   * record and blob URLs from the normalized results. Unlike `commitDelete`,
-   * this never needs the record to discover the blob — so it also cleans up
-   * when the record PUT itself failed (blob uploaded, record missing), which
-   * `commitDelete`'s record-GET fallback cannot reach.
+   * Deletes freshly uploaded media during a rollback. Identical bytes already on the homeserver
+   * share the URI, so the same reference check as `commitDelete` applies.
    */
   static async commitDeleteUploaded(fileAttachments: TFileAttachmentResult[]) {
-    const batchFileIds = new Set(
-      fileAttachments
-        .map((attachment) =>
-          buildCompositeIdFromPubkyUri({ uri: attachment.fileResult.meta.url, domain: CompositeIdDomain.FILES }),
-        )
-        .filter((id): id is string => id !== null),
-    );
-
-    await Promise.all(
-      fileAttachments.map(async ({ blobResult, fileResult }) => {
-        await this.deleteBlobUnlessShared({ blobSrc: blobResult.meta.url, excludeFileIds: batchFileIds });
-        await HomeserverService.deleteIdempotent(fileResult.meta.url);
-
-        const fileCompositeId = buildCompositeIdFromPubkyUri({
-          uri: fileResult.meta.url,
-          domain: CompositeIdDomain.FILES,
-        });
-        if (fileCompositeId) {
-          await LocalFileService.deleteById(fileCompositeId);
-        }
-      }),
-    );
+    await this.commitDelete(fileAttachments.map((attachment) => attachment.media.url));
   }
 
   /**
@@ -298,5 +207,13 @@ export class FileApplication {
 
     const nexusFiles = await NexusFileService.fetchFiles(fileUris);
     await this.persistFiles(nexusFiles);
+  }
+}
+
+function isV1MediaUri(uri: string): boolean {
+  try {
+    return parseUri(uri).kind === 'file';
+  } catch {
+    return false;
   }
 }

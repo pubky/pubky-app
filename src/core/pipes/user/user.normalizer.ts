@@ -1,17 +1,17 @@
-import { UserResult } from 'pubky-app-specs';
+import { buildUser, type Built, type User } from 'pubky-social-specs';
 import { z } from 'zod';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { ProfileChanges, ProfileFields, UserValidatorData } from '@/pipes/pipes.types';
 import type { NexusUserLink } from '@/services/nexus/nexus.types';
 
 export type UiLink = { label: string; url: string };
 
-// Read structure only: an older client may have published values outside today's limits.
-// UserNormalizer.to validates the complete profile after the user's corrections are merged.
+// Read structure only, for a 0.x `profile.json` the package does not read: an older client may have
+// published values outside today's limits. UserNormalizer.to validates the complete profile after the
+// user's corrections are merged.
 const publishedProfileSchema = z.object({
   name: z.string(),
   bio: z.string().nullish(),
@@ -68,16 +68,43 @@ export class UserNormalizer {
     };
   }
 
-  static to(user: UserValidatorData, pubky: Pubky): UserResult {
+  static to(user: UserValidatorData, pubky: Pubky): Built<User> {
     try {
-      const builder = PubkySpecsSingleton.get(pubky);
-      return builder.createUser(user.name, user.bio, user.image, user.links, user.status || undefined);
+      return buildUser(pubky, {
+        name: user.name,
+        bio: user.bio || null,
+        image: user.image || null,
+        links: user.links?.length ? user.links.map((link) => ({ title: link.title, url: link.url })) : null,
+        status: user.status || null,
+      });
     } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error instanceof Error ? error.message : String(error), {
         service: ErrorService.PubkyAppSpecs,
-        operation: 'createUser',
+        operation: 'buildUser',
         context: { user, pubky },
+        cause: error,
       });
     }
+  }
+
+  /**
+   * Applies `changes` onto a stored v1 profile, keeping every member the user did not touch, the
+   * ones another client added included. Display text is trimmed and a blank value clears the
+   * member, as the builder does on create.
+   */
+  static applyChanges(stored: User, changes: ProfileChanges): User {
+    const text = (value: string | null | undefined) => value?.trim() || null;
+    return {
+      ...stored,
+      ...(changes.name !== undefined && { name: changes.name.trim() }),
+      ...(changes.bio !== undefined && { bio: text(changes.bio) }),
+      ...(changes.image !== undefined && { image: text(changes.image) }),
+      ...(changes.status !== undefined && { status: text(changes.status) }),
+      ...(changes.links !== undefined && {
+        links: changes.links?.length
+          ? changes.links.map((link) => ({ title: link.title.trim(), url: link.url }))
+          : null,
+      }),
+    };
   }
 }

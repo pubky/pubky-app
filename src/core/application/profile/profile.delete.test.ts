@@ -4,12 +4,6 @@ import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalProfileService } from '@/services/local/profile/profile';
 
-// Avoid pulling WASM-heavy deps from type-only modules
-vi.mock('pubky-app-specs', () => ({
-  baseUriBuilder: vi.fn((pubky: string) => `pubky://${pubky}/pub/pubky.app/`),
-  getValidMimeTypes: () => ['image/jpeg', 'image/png'],
-}));
-
 // Mock HomeserverService methods
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
@@ -42,9 +36,14 @@ afterEach(() => {
 });
 
 describe('ProfileApplication.commitDelete', () => {
-  const pubky = 'test-pubky' as Pubky;
+  const pubky = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
+  // The files sit in the 0.x tree; the v1 trees and the app namespace list empty
   const baseDirectory = `pubky://${pubky}/pub/pubky.app/`;
   const profileUrl = `${baseDirectory}profile.json`;
+  // Both profiles go last, the 0.x one first
+  const v1ProfileUrl = `pubky://${pubky}/pub/social/v1/profile.json`;
+  const listing = (files: string[]) => (params: { baseDirectory: string }) =>
+    Promise.resolve(params.baseDirectory === baseDirectory ? files : []);
 
   it('deletes all files including profile.json', async () => {
     const fileList = [
@@ -55,33 +54,35 @@ describe('ProfileApplication.commitDelete', () => {
     ];
 
     const localDeleteSpy = vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockImplementation(listing(fileList));
     const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 
     expect(localDeleteSpy).toHaveBeenCalledTimes(1);
     expect(listSpy).toHaveBeenCalledWith({ baseDirectory });
-    expect(deleteSpy).toHaveBeenCalledTimes(4);
+    expect(deleteSpy).toHaveBeenCalledTimes(5);
 
     expect(deleteSpy).toHaveBeenNthCalledWith(1, `${baseDirectory}tags/tag1`, { singleAttempt: true });
     expect(deleteSpy).toHaveBeenNthCalledWith(2, `${baseDirectory}posts/abc123`, { singleAttempt: true });
     expect(deleteSpy).toHaveBeenNthCalledWith(3, `${baseDirectory}follows/user1`, { singleAttempt: true });
     expect(deleteSpy).toHaveBeenNthCalledWith(4, profileUrl, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenNthCalledWith(5, v1ProfileUrl, { singleAttempt: true });
   });
 
   it('calls setProgress with correct percentages', async () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}file2`, `${baseDirectory}profile.json`];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    vi.spyOn(HomeserverService, 'listAll').mockImplementation(listing(fileList));
     vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     const setProgress = vi.fn();
     await ProfileApplication.commitDelete({ pubky, setProgress });
 
-    expect(setProgress).toHaveBeenNthCalledWith(1, 33);
-    expect(setProgress).toHaveBeenNthCalledWith(2, 67);
+    // Two files and two profiles
+    expect(setProgress).toHaveBeenNthCalledWith(1, 25);
+    expect(setProgress).toHaveBeenNthCalledWith(2, 50);
     expect(setProgress).toHaveBeenNthCalledWith(3, 100);
   });
 
@@ -89,7 +90,7 @@ describe('ProfileApplication.commitDelete', () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}profile.json`];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    vi.spyOn(HomeserverService, 'listAll').mockImplementation(listing(fileList));
     const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
@@ -97,18 +98,19 @@ describe('ProfileApplication.commitDelete', () => {
     expect(deleteSpy).toHaveBeenCalled();
   });
 
-  it('handles empty file list and only deletes profile.json', async () => {
+  it('handles empty file list and only deletes the profiles', async () => {
     const fileList = [`${baseDirectory}profile.json`];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockImplementation(listing(fileList));
     const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 
     expect(listSpy).toHaveBeenCalledWith({ baseDirectory });
-    expect(deleteSpy).toHaveBeenCalledTimes(1);
-    expect(deleteSpy).toHaveBeenCalledWith(profileUrl, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenCalledTimes(2);
+    expect(deleteSpy).toHaveBeenNthCalledWith(1, profileUrl, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenNthCalledWith(2, v1ProfileUrl, { singleAttempt: true });
   });
 
   it('propagates errors when local delete fails', async () => {
@@ -132,7 +134,7 @@ describe('ProfileApplication.commitDelete', () => {
 
     await expect(ProfileApplication.commitDelete({ pubky })).rejects.toThrow('list failed');
 
-    expect(listSpy).toHaveBeenCalledTimes(1);
+    expect(listSpy).toHaveBeenCalled();
     expect(deleteSpy).not.toHaveBeenCalled();
   });
 
@@ -141,7 +143,7 @@ describe('ProfileApplication.commitDelete', () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}profile.json`];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    vi.spyOn(HomeserverService, 'listAll').mockImplementation(listing(fileList));
     const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockRejectedValue(new Error('delete failed'));
 
     const commit = ProfileApplication.commitDelete({ pubky });
@@ -159,7 +161,7 @@ describe('ProfileApplication.commitDelete', () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}file2`, `${baseDirectory}profile.json`];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    vi.spyOn(HomeserverService, 'listAll').mockImplementation(listing(fileList));
     const deleteSpy = vi
       .spyOn(HomeserverService, 'delete')
       .mockRejectedValueOnce(new Error('HTTP transport error: error sending request'))
@@ -169,16 +171,16 @@ describe('ProfileApplication.commitDelete', () => {
     await vi.runAllTimersAsync();
     await commit;
 
-    // 3 files + 1 retry for the transient failure
-    expect(deleteSpy).toHaveBeenCalledTimes(4);
-    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl, { singleAttempt: true });
+    // 2 files + 2 profiles + 1 retry for the transient failure
+    expect(deleteSpy).toHaveBeenCalledTimes(5);
+    expect(deleteSpy).toHaveBeenLastCalledWith(v1ProfileUrl, { singleAttempt: true });
   });
 
   it('treats a 404 during delete as already removed and continues', async () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}file2`, `${baseDirectory}profile.json`];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    vi.spyOn(HomeserverService, 'listAll').mockImplementation(listing(fileList));
     const notFound = httpStatusCodeToError(
       404,
       'Not Found',
@@ -194,8 +196,8 @@ describe('ProfileApplication.commitDelete', () => {
     await ProfileApplication.commitDelete({ pubky });
 
     // No retry for the missing file; remaining files still deleted
-    expect(deleteSpy).toHaveBeenCalledTimes(3);
-    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenCalledTimes(4);
+    expect(deleteSpy).toHaveBeenLastCalledWith(v1ProfileUrl, { singleAttempt: true });
   });
 
   it('sorts files correctly before deletion', async () => {
@@ -207,7 +209,7 @@ describe('ProfileApplication.commitDelete', () => {
     ];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    vi.spyOn(HomeserverService, 'listAll').mockImplementation(listing(fileList));
     const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
@@ -216,6 +218,7 @@ describe('ProfileApplication.commitDelete', () => {
     expect(deleteSpy).toHaveBeenNthCalledWith(2, `${baseDirectory}mmm`, { singleAttempt: true });
     expect(deleteSpy).toHaveBeenNthCalledWith(3, `${baseDirectory}aaa`, { singleAttempt: true });
     expect(deleteSpy).toHaveBeenNthCalledWith(4, profileUrl, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenNthCalledWith(5, v1ProfileUrl, { singleAttempt: true });
   });
 
   it('deletes every file when the account has more than one listing page', async () => {
@@ -226,13 +229,13 @@ describe('ProfileApplication.commitDelete', () => {
     ];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(largeFileList);
+    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockImplementation(listing(largeFileList));
     const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 
     expect(listSpy).toHaveBeenCalledWith({ baseDirectory });
-    expect(deleteSpy).toHaveBeenCalledTimes(601);
-    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenCalledTimes(602);
+    expect(deleteSpy).toHaveBeenLastCalledWith(v1ProfileUrl, { singleAttempt: true });
   });
 });

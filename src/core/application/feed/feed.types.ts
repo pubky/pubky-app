@@ -1,4 +1,4 @@
-import { FeedResult } from 'pubky-app-specs';
+import type { Built, Feed } from 'pubky-social-specs';
 import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -20,9 +20,9 @@ export interface FeedPutParams {
 }
 
 export interface PersistAndSyncParams {
-  userId: string;
   feedSchema: FeedModelSchema;
-  normalizedFeed: FeedResult;
+  feedUrl: string;
+  body: Uint8Array;
 }
 
 export interface LocalFeedMigrationParams {
@@ -33,7 +33,7 @@ export interface LocalFeedMigrationParams {
 }
 
 export type TFeedPersistCreateParams = {
-  feed: FeedResult;
+  feed: Built<Feed>;
   existingId?: string;
 };
 
@@ -53,25 +53,6 @@ export type TFeedPersistInput = {
   userId: Pubky;
   params: TFeedPersistParams;
 };
-
-export interface RemoteFeedParams {
-  userId: Pubky;
-  remoteFeed: HomeserverFeedJson;
-}
-
-export interface HomeserverFeedJson {
-  name: string;
-  icon?: string | null;
-  feed: {
-    tags?: string[] | null;
-    domain_tags?: string[] | null;
-    reach: string;
-    layout: string;
-    sort: string;
-    content?: string | null;
-  };
-  created_at: number;
-}
 
 export function isFeedDeleteParams(params: TFeedPersistParams): params is TFeedPersistDeleteParams {
   return 'feedId' in params && !('changes' in params) && !('feed' in params);

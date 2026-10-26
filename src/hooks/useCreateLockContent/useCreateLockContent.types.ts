@@ -1,4 +1,4 @@
-import type { PubkyAppPostKind } from 'pubky-app-specs';
+import type { KnownPostKind } from 'pubky-social-specs';
 import type { TLockConfig } from '@/application/locks/locks.types';
 import type { AppError } from '@/libs/error/error';
 import type { TLockTeaser } from '@/libs/post/lockTeaser';
@@ -7,7 +7,7 @@ import type { TLockTeaser } from '@/libs/post/lockTeaser';
 type TLockedPost = {
   content: string;
   /** Any kind is allowed here — only the announcement is restricted. */
-  kind: PubkyAppPostKind;
+  kind: KnownPostKind;
   attachments: File[];
 };
 

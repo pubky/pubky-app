@@ -172,7 +172,7 @@ const createPatternPlugin = (config: PatternPluginConfig) => {
 };
 
 // Parse hashtags in paragraph text nodes and convert them to links with data-type="hashtag"
-// Pattern follows pubky-app-specs tagInvalidChars; isValidTagLabel gates link conversion (length, etc.)
+// Pattern follows pubky-social-specs tagInvalidChars; isValidTagLabel gates link conversion (length, etc.)
 // Must be at start of text or preceded by whitespace (standalone)
 export const remarkHashtags = createPatternPlugin({
   regex: HASHTAG_IN_TEXT_REGEX,

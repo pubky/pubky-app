@@ -1,5 +1,5 @@
 import type { Capabilities } from '@synonymdev/pubky';
-import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SHOP_CAPABILITIES } from '@/config/auth';
+import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SHOP_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import {
   getDefaultHttpRelay,
   getDeployEnv,
@@ -63,9 +63,18 @@ export function isStagingHomeserverDeploy(): boolean {
 // - /pub/pubky.app/:rw         — the app's public data
 // - /priv/social/:rw           — where unlocked lock content is copied (reader replication)
 // - /priv/app.locks/content/:r — read-only: a creator reads their OWN guarded original here (Ring sessions)
-export const HOMESERVER_CAPABILITIES = [APP_CAPABILITIES, ...LOCKS_CAPABILITIES].join(',') as Capabilities;
+// The social v1 data model adds:
+// - /pub/social/v1/:rw          - the app's public social data
+// - /priv/app.pubky/v1/:rw      - the app's own files (settings, last read)
+// /priv/social/:rw also holds the private social tree (feeds, bookmarks, mutes under `v1/`), and
+// /pub/pubky.app/:rw stays for the legacy tree, still read and reachable for deletions of migrated objects.
+export const HOMESERVER_CAPABILITIES = [...SOCIAL_V1_APP_CAPABILITIES, APP_CAPABILITIES, ...LOCKS_CAPABILITIES].join(
+  ',',
+) as Capabilities;
 
 /** One approval requests the App, Locks and embedded Shop storage scopes. */
 export function getHomeserverCapabilities(): Capabilities {
-  return [...new Set([APP_CAPABILITIES, ...LOCKS_CAPABILITIES, ...SHOP_CAPABILITIES])].join(',') as Capabilities;
+  return [
+    ...new Set([...SOCIAL_V1_APP_CAPABILITIES, APP_CAPABILITIES, ...LOCKS_CAPABILITIES, ...SHOP_CAPABILITIES]),
+  ].join(',') as Capabilities;
 }

@@ -1,6 +1,7 @@
 import { FileDetailsModel } from '@/models/file/fileDetails';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import type { TPersistFilesParams } from '@/services/local/file/file.types';
 import { buildUrls } from '@/services/local/file/file.utils';
@@ -26,55 +27,48 @@ export class LocalFileService {
   }
 
   /**
-   * Whether any cached file record outside `excludeFileIds` points at `blobSrc`.
-   *
-   * Blob ids are content hashes, so byte-identical uploads share one blob —
-   * deletion must skip blobs still referenced by surviving records. This is
-   * local-only knowledge: sibling records never cached on this device are not
-   * seen (the complete fix is homeserver-side ref-counting, tracked as a
-   * follow-up).
+   * Whether a cached post other than `excludePostId` still references the media `uri`, as an
+   * attachment or a collection cover. Local-only knowledge: posts never cached on this device are
+   * not seen (the complete fix is homeserver-side ref-counting, tracked as a follow-up).
    */
-  static async hasOtherBlobReference({
-    blobSrc,
-    excludeFileIds,
+  static async isReferencedElsewhere({
+    uri,
+    excludePostId,
   }: {
-    blobSrc: string;
-    excludeFileIds: Set<string>;
+    uri: string;
+    excludePostId?: string;
   }): Promise<boolean> {
-    const other = await FileDetailsModel.table
-      .filter((file) => file.src === blobSrc && !excludeFileIds.has(file.id))
+    const other = await PostDetailsModel.table
+      .filter((post) => post.id !== excludePostId && (post.attachments?.includes(uri) || post.content.includes(uri)))
       .first();
     return other !== undefined;
   }
 
   /**
-   * Creates a new file record in the local database.
-   * Instead of wait nexus to index the file, we create the file record immediately hardcoding the urls.
-   * NOTE: In the future, if we store the files in another server, the urls might be different,
-   * and we might need to query nexus before persisting the file record.
-   *
-   * @param blobResult - Blob result
-   * @param fileResult - File result
+   * Stores the media record in the local database right away instead of waiting for Nexus,
+   * hardcoding the urls. v1 media has no metadata object: the name and type come from the upload.
+   * Media is content addressed, so uploading bytes already cached replaces their row.
    */
-  static async create({ blobResult, fileResult }: TFileAttachmentResult) {
-    const uri = fileResult.meta.url;
+  static async create({ media, bytes, name, contentType }: TFileAttachmentResult) {
+    const uri = media.url;
     const fileCompositeId = buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.FILES });
 
     if (fileCompositeId) {
+      const now = Date.now();
       const file: NexusFileDetails = {
         id: fileCompositeId,
-        name: fileResult.file.name,
-        src: blobResult.meta.url,
-        uri: fileResult.meta.url,
-        content_type: fileResult.file.content_type,
-        size: fileResult.file.size,
-        created_at: Number(fileResult.file.created_at),
-        indexed_at: Number(fileResult.file.created_at),
+        name,
+        src: uri,
+        uri,
+        content_type: contentType,
+        size: bytes.length,
+        created_at: now,
+        indexed_at: now,
         metadata: {},
         owner_id: fileCompositeId.split(':')[0],
         urls: buildUrls(fileCompositeId),
       };
-      await FileDetailsModel.create(file);
+      await FileDetailsModel.upsert(file);
     }
   }
 }
