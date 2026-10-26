@@ -78,6 +78,7 @@
     "micromark-extension-gfm": "3.0.0",
     "motion": "13.2.0",
     "next": "16.3.6",
+    "pubky-social-migrator": "1.0.0-rc.1",
     "pubky-social-specs": "1.0.0-rc.1",
     "qrcode.react": "4.2.0",
     "radix-ui": "1.6.7",

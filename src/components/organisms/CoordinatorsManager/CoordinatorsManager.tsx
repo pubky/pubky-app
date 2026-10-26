@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
+import { SocialMigrationCoordinator } from '@/coordinators/social-migration/social-migration';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 
@@ -13,6 +14,7 @@ function getAppCoordinators() {
     stream: StreamCoordinator.getInstance(),
     ttl: TtlCoordinator.getInstance(),
     muteListSync: MuteListSyncCoordinator.getInstance(),
+    socialMigration: SocialMigrationCoordinator.getInstance(),
   };
 }
 
@@ -29,6 +31,7 @@ function startAppCoordinators(): void {
   void coordinators.stream.start();
   coordinators.ttl.start();
   coordinators.muteListSync.start();
+  coordinators.socialMigration.start();
 }
 
 function stopAppCoordinators(): void {
@@ -37,6 +40,7 @@ function stopAppCoordinators(): void {
   coordinators.stream.stop();
   coordinators.ttl.stop();
   coordinators.muteListSync.stop();
+  coordinators.socialMigration.stop();
 }
 
 /**
@@ -47,7 +51,7 @@ function stopAppCoordinators(): void {
  *
  * Responsibilities:
  * - Initialize coordinators on mount (NotificationCoordinator, StreamCoordinator,
- *   MuteListSyncCoordinator, TtlCoordinator)
+ *   MuteListSyncCoordinator, TtlCoordinator, SocialMigrationCoordinator)
  * - Start coordination when the component is mounted
  * - Track route changes and inform coordinators
  * - Stop coordination and cleanup when unmounted
