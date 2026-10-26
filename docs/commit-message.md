@@ -2,6 +2,8 @@
 
 Consistent commit message formatting following conventional commits standard.
 
+Commit messages and PR text follow the [People and names policy](development-workflow.md#people-and-names).
+
 ## Format
 
 ```

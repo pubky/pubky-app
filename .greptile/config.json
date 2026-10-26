@@ -122,7 +122,7 @@
     },
     {
       "id": "error-handling-conventions",
-      "rule": "Re-throw AppError unchanged and normalize unknowns with toAppError(); use safeFetch + httpResponseToError (or the service's *.utils.ts wrapper) for HTTP instead of raw fetch; branch on error.category / error.code, never on message strings (only the documented pinned SDK 0.16 error-name/message checks in HomeserverService and GrantFlowService are exceptions, with SDK contract and regression tests required); no raw `throw new Error()` in src/core production code. See docs/error-handling.md.",
+      "rule": "Re-throw AppError unchanged and normalize unknowns with toAppError(); use safeFetch + httpResponseToError (or the service's *.utils.ts wrapper) for HTTP instead of raw fetch. Narrow availability exceptions: ClientRegionService.fetchCountry uses raw fetch for the optional Shop region probe, returning unavailable for every failure without throwing, logging or reporting; LocksService.isServerReady similarly returns a boolean. Do not extend these exceptions to ordinary data reads or writes. Branch on error.category / error.code, never on message strings, except the documented pinned Pubky SDK 0.16 checks in HomeserverService/GrantFlowService and Locks SDK 0.1.0 isLockServerRegionBlocked: only a non-AppError Error named InvalidInput with exact message 'Lock Server viewer request failed with HTTP 451' becomes a regionBlocked result before Err.* construction. SDK contract and regression tests are required. No raw `throw new Error()` in src/core production code. See docs/error-handling.md.",
       "scope": ["src/core/**", "src/hooks/**", "src/libs/**"],
       "severity": "medium"
     },

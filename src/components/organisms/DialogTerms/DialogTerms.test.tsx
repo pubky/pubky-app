@@ -141,10 +141,20 @@ describe('DialogTerms', () => {
     // Check for some key terms content - use getAllByText for elements that appear multiple times
     expect(screen.getByText(/Thank you for using the Pubky platform/)).toBeInTheDocument();
     expect(screen.getAllByText(/TERMS AND CONDITIONS/)).toHaveLength(2); // Appears twice
-    expect(screen.getByText(/Effective Date: January 29, 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Effective Date: October 22, 2026/)).toBeInTheDocument();
     expect(screen.getByText(/PLEASE REVIEW THE ARBITRATION PROVISION/)).toBeInTheDocument();
     expect(screen.getByTestId('dialog-content')).toHaveTextContent('Synonym Software, S.A. de C.V.');
     expect(screen.getByTestId('dialog-content')).not.toHaveTextContent('Synonym Software Ltd.');
+  });
+
+  it('underlines every link inside the body', () => {
+    render(<DialogTerms />);
+
+    const links = screen.getAllByRole('link');
+    const body = links[0].closest('[data-testid="container"]');
+
+    expect(body).toHaveClass('flex-col', '[&_a]:underline');
+    links.forEach((link) => expect(body).toContainElement(link));
   });
 
   it('exposes the default trigger as a keyboard focusable button', () => {
@@ -159,6 +169,60 @@ describe('DialogTerms', () => {
 
     expect(screen.getByRole('button', { name: 'Custom trigger' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Terms of Service' })).not.toBeInTheDocument();
+  });
+});
+
+describe('DialogTerms - regional availability', () => {
+  it('limits the EU, the UK and the US to commerce features, not the whole Platform', () => {
+    const { container } = render(<DialogTerms />);
+    const text = container.textContent ?? '';
+
+    expect(text).toMatch(
+      /Buying, selling, and paid unlocks of digital content \(together, “commerce features”\) are not available in the European Union \(including each EU Member State\), the United Kingdom, or the United States\./,
+    );
+    expect(text).toContain(
+      'It applies to commerce features only: the rest of the Platform remains available in those places.',
+    );
+    expect(text).toContain('We reserve the right to restrict access to specific features based on your location.');
+  });
+
+  it('keeps Prohibited Jurisdiction to the sanctions list plus Russia and Belarus', () => {
+    const { container } = render(<DialogTerms />);
+    const definition = Array.from(container.querySelectorAll('li')).find((li) =>
+      li.textContent?.startsWith('“Prohibited Jurisdiction” means'),
+    );
+
+    expect(definition?.textContent).toBe(
+      '“Prohibited Jurisdiction” means any of: Cuba, Democratic People’s Republic of Korea (North Korea), Iran, Syria, Russia, Belarus, Crimea (a region of Ukraine annexed by the Russian Federation), the self-proclaimed Donetsk People’s Republic (a region of Ukraine) and the self-proclaimed Luhansk People’s Republic (a region of Ukraine);',
+    );
+    expect(container.textContent).toContain(
+      'The Platform is not available to users in Prohibited Jurisdictions as defined below.',
+    );
+    expect(container.textContent).toContain(
+      'you agree to not access the Platform from Prohibited Jurisdictions as defined herein.',
+    );
+  });
+
+  it('describes the Shop without Stripe', () => {
+    const { container } = render(<DialogTerms />);
+    const text = container.textContent ?? '';
+
+    expect(text).toContain('PUBKY SHOP AND PUBKY MARKET');
+    expect(text).toContain('We are not the PayPal merchant of record for the sale.');
+    expect(text).toContain('PayPal, Bitkit, and similar tools are Third-Party Materials.');
+    expect(text).not.toMatch(/stripe/i);
+  });
+
+  it('names the product Pubky Market, never Pubky Marketplace', () => {
+    const { container } = render(<DialogTerms />);
+    const text = container.textContent ?? '';
+
+    expect(text).toContain('What Pubky Market is:');
+    expect(text).toContain('Pubky Market is the name we use for commerce on Pubky.');
+    expect(text).toContain('"Pubky Market" means the concept of commerce among Pubky identities.');
+    expect(text).toContain('Pubky Market is not a separate product or a second set of Terms.');
+    expect(text).not.toMatch(/Pubky Marketplace/i);
+    expect(text).not.toContain('PUBKY MARKETPLACE');
   });
 });
 

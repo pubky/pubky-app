@@ -72,17 +72,16 @@ article button while the lock switch is on (`PostInputExpandableSection`), and
 (`core/pipes/post/post.kind.ts`), which throws on those two kinds. The guard is the
 backstop for the UI rule, so a UI change can't loosen it silently.
 
-_Article body images._ An article uploads each body image to the creator's public storage the
-moment it is inserted, before anyone knows whether the article will be locked, and the editor
-references the image by its public URI. When the switch goes on, the composer captures the body in
-its published form instead (`serializeArticleForLock` in `usePost`), from the latest title and body
-the inputs reported rather than from the debounced composer state: every image becomes an
-`attachment:{n}` slot, the scheme a normal article already uses, and the files behind the slots join
-the lock's attachments after the cover. The bytes come from the composer's upload session, which
-still holds each file as the author picked it, so nothing is read back from public storage. The
-public copies are deleted once the lock is published or the composer closes (best-effort, #2684). They stay until then,
-so that abandoning the lock puts a working article back into the editor. A locked article's images
-are therefore public between the insert and the publish; that window is accepted (#2655).
+_Article body images._ The article editor stages each body file when it is inserted: the file
+stays in the composer's session and the editor references it by a placeholder file URI of the
+author's, so nothing reaches the creator's public storage before a publish (#2684, #2687). When the
+switch goes on, the composer captures the body in its published form (`serializeArticleForLock` in
+`usePost`), from the latest title and body the inputs reported rather than from the debounced
+composer state: every file becomes an `attachment:{n}` slot, the scheme a normal article already
+uses, and the files behind the slots join the lock's attachments after the cover, as the author
+picked them. The session keeps them while the lock draft exists (`keepInlineMedia`), so abandoning
+the lock puts a working article back into the editor; releasing it only revokes the local previews.
+A locked article's images are therefore never public.
 
 _SVG files._ A locked SVG is stored without its image type, so it does not render after an unlock.
 Until that is fixed the switch refuses a draft that holds one, with a toast (`TODO:[Locks] #2683`).
@@ -221,7 +220,7 @@ image, like any article card.
 | `components/organisms/LockedPostContent/LockedPostContent.tsx` | teaser + lock card + unlock dialog; renders the content once unlocked               |
 | `components/organisms/PostBody/PostBody.tsx`                   | shared text + link-embed + attachment renderer (feed post body **and** lock teaser) |
 | `components/molecules/LockedPostCard/LockedPostCard.tsx`       | lock card: title, shield graphic, Unlock control (also used by the composer)        |
-| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx` | Pay to Unlock modal (checking, retry, install, waiting, paid, unopened, blocked)    |
+| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx` | Pay to Unlock modal, one screen per stage (`TPayToUnlockStage`)                     |
 | `hooks/usePayToUnlock/usePayToUnlock.ts`                       | the payment state machine: bundle-id routing, submit, polling, stall/resume         |
 | `hooks/usePurchasedLocks/usePurchasedLocks.ts`                 | one listing of the reader's purchases, shared by every lock post                    |
 | `hooks/usePurchaseResume/usePurchaseResume.ts`                 | finishes a paid purchase whose content never landed, without interaction            |
@@ -243,7 +242,7 @@ LockedPostContent
   │    ├─ 2) my own post (a == b)         → local post, then fetchOwnContent on a miss
   │    ├─ 3) valid payment price → lock card → DialogPayToUnlock (sign-in required first)
   │    └─ 4) no valid price → masked lock card with Unlock disabled
-  └─ 5) saved purchase, no replica → usePurchaseResume → fetchPaidContentIfCompleted
+  └─ 5) saved purchase, no replica → usePurchaseResume → fetchResolvedPurchase → fetchPaidContent (completed only)
 ```
 
 The no-price state covers legacy or unreadable lock files. Their content remains masked and
@@ -305,7 +304,18 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    without a usable wallet or a Paykit outage therefore ends the task `failed`, not the submission.
    While the server waits on the reader's wallet it says so (`status_message`), and the modal shows
    a setup notice in place of the handoff. A failed submission (network, rate limit) shows **Try
-   again**, which keeps the saved id.
+   again**, which keeps the saved id. A submission the Lock Server refuses with **HTTP 451** (paid
+   unlocks are not offered in the reader's region) is not a failure: `LocksService.submitProof` returns
+   `{ regionBlocked: true }` before any `Err.*` is built, so it is not logged and not sent to Sentry
+   (the factories report on construction). `startPayment` passes it up as `regionBlocked`, and the
+   modal lands on `region-blocked`: "Paid unlocks aren't available in your region yet." with an info
+   icon, no Try again, no Bitkit badges, no toast, and the lock is not marked purchased. The saved
+   bundle id stays, so the next opening replays it, and from a supported region it creates one payment.
+   That next opening first looks the saved id up, and the Lock Server refuses that lookup for the region
+   too (every viewer call is its own POST). `LocksService.lookupVerificationTask` therefore returns
+   `{ regionBlocked: true }` the same way, `fetchResolvedPurchase` resolves to `region-blocked`, and the
+   modal lands on the same `region-blocked` stage instead of "This purchase could not be checked". That
+   screen is left for a lookup that failed for another reason. Mid-wait a refused lookup reads as no news.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
    created; with nothing submitted, the install screen has no link state. Until the first read
    answers, the modal says "Checking your Bitkit connection…". A failed first read keeps it there
@@ -412,6 +422,17 @@ Notes:
 - **Single error origin.** Validation throws `Err.validation` in the application (the factory
   logs + reports to Sentry once). Hooks catch and degrade to the lock card.
 - **Read path.** This is a read flow; there is no local-first `commit*` write.
+
+## Region check
+
+Paid unlocks are held in some regions (at launch the EU, the UK and the US), and the Lock Server answers HTTP 451 to a proof submission from one. The reader should hear that before the payment step, so `LockedPostContent` asks `usePaidUnlockAvailability`:
+
+- It is off unless `PUBKY_RUNTIME_REGION_MODES` lists a region ([environment.md](environment.md)). Then free content and every other feature never read the viewer's region, and no request is made.
+- With a region listed it reads the viewer's country once per page load from the Shop's same-origin `/shop-embed/api/marketplace/client-region` route (`ClientRegionService`, through the application and controller into `useClientRegionStore`) and evaluates it with the Shop's rules (`@/libs/region/regionModes`, the same `SELECTOR=MODE` grammar).
+- A blocked reader sees "Paid unlocks aren't available in your region yet." with an info icon above the lock card, and Unlock is disabled for a new payment. While the country or a known purchase's task is being read the card shows its spinner. A saved bundle file alone is not an existing payment: a missing task or a failed/expired task stays held. Only a running/completed server task keeps Unlock for recovery. The creator's own lock and content already unlocked are untouched.
+- Purchase ids still come from one shared listing per reader/session. If that listing or a task read fails, Unlock can open the modal to re-read this lock's saved ids and recover a running/completed payment; the region notice remains visible. The modal checks availability again before every new submission or retry, including after its wallet check. A missing/ended task stops at the region notice without submitting or replacing the saved id. Recovery reuses its status lookup for completed-content downloads rather than looking up the same task twice.
+- A creator in a held region cannot switch **Lock content** on: `usePostInputLock` disables the switch and `PostInputActionBar` shows the info icon beside it (the line and the why open from it), so the creator hears it before the setup dialogs rather than after. Only the switch is held: normal posts, a lock already switched on (so it can be switched off) and everything else in the composer stay as they are. This is the one place a creator is restricted, and it follows the Shop's rule that selling paid unlocks is held where buying them is.
+- A country the edge cannot tell is held like the Shop holds it; a Shop route that cannot answer holds nobody. The check is advisory, and the 451 handling above covers whatever it misses.
 
 ## The Unlocked screen
 

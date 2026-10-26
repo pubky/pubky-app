@@ -3,7 +3,7 @@ import { getLockServer, getPaykitServerUrl, getPkarrRelays } from '@/config/netw
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { toAppError } from '@/libs/error/error.utils';
+import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 
@@ -24,6 +24,23 @@ export function toLocksError(error: unknown, operation: string) {
     });
   }
   return toAppError(error, ErrorService.Locks, operation);
+}
+
+/**
+ * The Lock Server answers a proof submission with HTTP 451 (Unavailable For Legal Reasons) from a
+ * region where paid unlocks are not offered. That is an expected, permanent answer, not a failure:
+ * callers turn it into a state of its own before any `Err.*` is built, because the factories log and
+ * report to Sentry on construction. The pinned SDK 0.1.0 exposes no status field: its browser binding
+ * emits an `InvalidInput` Error with this exact message. Match only that contract, covered by
+ * locks.region.contract.test.ts; an `AppError` was already reported and must be preserved.
+ */
+export function isLockServerRegionBlocked(error: unknown): boolean {
+  if (isAppError(error)) return false;
+  return (
+    error instanceof Error &&
+    error.name === 'InvalidInput' &&
+    error.message === 'Lock Server viewer request failed with HTTP 451'
+  );
 }
 
 /** One-time wasm init promise; see `ensureLocksSdkReady`. */

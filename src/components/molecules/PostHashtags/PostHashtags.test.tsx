@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { PostHashtags } from './PostHashtags';
 
 // Mock @/atoms
@@ -75,6 +76,39 @@ describe('PostHashtags', () => {
       fireEvent.click(link);
 
       expect(parentClickHandler).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Non-navigating post preview (reply/repost dialog)', () => {
+    it('renders the hashtag as styled text instead of a link', () => {
+      const { container } = render(
+        <PostPreviewNestingProvider navigable={false}>
+          <PostHashtags href="/search?tags=bitcoin" data-type="hashtag">
+            #bitcoin
+          </PostHashtags>
+        </PostPreviewNestingProvider>,
+      );
+
+      expect(screen.queryByTestId('link')).not.toBeInTheDocument();
+      expect(container.querySelector('a')).not.toBeInTheDocument();
+
+      const hashtag = screen.getByText('#bitcoin');
+      expect(hashtag.tagName).toBe('SPAN');
+      expect(hashtag).toHaveAttribute('data-type', 'hashtag');
+      expect(hashtag).toHaveClass('text-brand', 'inline-flex', 'items-center', 'gap-x-1', 'text-base');
+      expect(hashtag).not.toHaveClass('cursor-pointer');
+      // The brand icon still renders next to the text.
+      expect(container.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('keeps the link inside a navigable preview (feed repost)', () => {
+      render(
+        <PostPreviewNestingProvider>
+          <PostHashtags href="/search?tags=bitcoin">#bitcoin</PostHashtags>
+        </PostPreviewNestingProvider>,
+      );
+
+      expect(screen.getByTestId('link')).toHaveAttribute('href', '/search?tags=bitcoin');
     });
   });
 

@@ -22,8 +22,9 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
  */
 
 const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
-const IMAGE_URI = `pubky://${AUTHOR}/pub/pubky.app/files/IMAGE1`;
-const BODY = `Intro\n\n![shot](${IMAGE_URI})\n\nOutro`;
+// The URI the editor references the staged body image by; set by `writeArticle`.
+let imageUri = '';
+const bodyWith = (uri: string) => `Intro\n\n![shot](${uri})\n\nOutro`;
 
 const mocks = vi.hoisted(() => ({
   createLockContent: vi.fn(),
@@ -92,6 +93,7 @@ vi.mock('@/hooks/useUndoRepost/useUndoRepost', () => ({ useUndoRepost: () => ({ 
 
 vi.mock('pubky-app-specs', () => ({
   PubkyAppPostKind: { Short: 0, Long: 1, Image: 2, Video: 3, Link: 4, File: 5, Collection: 6 },
+  fileUriBuilder: (author: string, fileId: string) => `pubky://${author}/pub/pubky.app/files/${fileId}`,
   PubkyAppPost: class {
     constructor(
       public content: string,
@@ -212,17 +214,16 @@ const descriptor = (path: string): TGuardedResource => ({ path, hash: 'H', conte
 /** Lets the title and body debounce hand their values to the composer state. */
 const settle = () => act(() => vi.advanceTimersByTime(500));
 
-/** An article with a title and one uploaded body image, as the author leaves it before locking. */
+/** An article with a title and one staged body image, as the author leaves it before locking. */
 const writeArticle = async () => {
   render(<PostInput variant={POST_INPUT_VARIANT.POST} expanded />);
   fireEvent.click(screen.getByTestId('article-button'));
   fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Essay' } });
 
-  mocks.commitCreateFile.mockResolvedValueOnce(IMAGE_URI);
   await act(async () => {
-    await mocks.editor?.upload(image);
+    imageUri = (await mocks.editor?.upload(image)) ?? '';
   });
-  act(() => mocks.editor?.change(BODY));
+  act(() => mocks.editor?.change(bodyWith(imageUri)));
   settle();
 };
 
@@ -272,12 +273,12 @@ describe('PostInput - locking an article with body images (integration)', () => 
     vi.useRealTimers();
   });
 
-  it('locks the image bytes and the slot that points at them, then deletes the public upload', async () => {
+  it('locks the image bytes and the slot that points at them, without ever touching public storage', async () => {
     await writeArticle();
+    expect(imageUri).toMatch(new RegExp(`^pubky://${AUTHOR}/pub/pubky\\.app/files/draft-`));
     applyLock();
-    // The composer left article mode to take the teaser; the public upload must outlive that.
+    // The composer left article mode to take the teaser; the staged file must outlive that.
     expect(mocks.editor).toBeNull();
-    expect(mocks.commitDeleteFile).not.toHaveBeenCalled();
 
     await publishLock();
 
@@ -286,7 +287,10 @@ describe('PostInput - locking an article with body images (integration)', () => 
     expect(new TextDecoder().decode(attachments[0].bytes)).toBe('image bytes');
     expect(body).toBe('Intro\n\n![shot](attachment:0)\n\nOutro');
     expect(uris).toEqual(['pubky://owner/priv/app.locks/content/file0']);
-    await waitFor(() => expect(mocks.commitDeleteFile).toHaveBeenCalledWith({ fileUris: [IMAGE_URI] }));
+    // The published lock lets go of the staged file: nothing was uploaded publicly, nothing to delete
+    await act(async () => {});
+    expect(mocks.commitCreateFile).not.toHaveBeenCalled();
+    expect(mocks.commitDeleteFile).not.toHaveBeenCalled();
   });
 
   it('puts the cover first and numbers the body image after it', async () => {
@@ -311,17 +315,19 @@ describe('PostInput - locking an article with body images (integration)', () => 
 
     fireEvent.click(screen.getByTestId('lock-switch')); // off: the draft goes back into the editor
 
-    expect(mocks.editor?.markdown).toBe(BODY);
+    expect(mocks.editor?.markdown).toBe(bodyWith(imageUri));
     fireEvent.click(screen.getByTestId('post-button'));
     await waitFor(() => expect(mocks.commitCreatePost).toHaveBeenCalledTimes(1));
 
+    // The staged file goes up with the post, as a normal article's would
     expect(mocks.commitCreatePost).toHaveBeenCalledWith(
       expect.objectContaining({
         content: JSON.stringify({ title: 'Essay', body: 'Intro\n\n![shot](attachment:0)\n\nOutro' }),
-        attachmentUris: [IMAGE_URI],
+        attachments: [image],
         isArticle: true,
       }),
     );
+    expect(mocks.commitCreateFile).not.toHaveBeenCalled();
     expect(mocks.createLockContent).not.toHaveBeenCalled();
     expect(mocks.toast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
     expect(mocks.commitDeleteFile).not.toHaveBeenCalled();
@@ -343,8 +349,7 @@ describe('PostInput - locking an article with body images (integration)', () => 
     expect(mocks.commitCreatePost).toHaveBeenCalledWith(
       expect.objectContaining({
         content: JSON.stringify({ title: 'Essay', body: 'Intro\n\n![shot](attachment:1)\n\nOutro' }),
-        attachments: [expect.objectContaining({ name: 'cover.png' })],
-        attachmentUris: [IMAGE_URI],
+        attachments: [expect.objectContaining({ name: 'cover.png' }), image],
       }),
     );
   });
@@ -352,7 +357,7 @@ describe('PostInput - locking an article with body images (integration)', () => 
   it('locks what the editor reported last, before the composer state caught up with it', async () => {
     await writeArticle();
     // Markdown mode and rich text report the same way; no debounce has passed since this change.
-    act(() => mocks.editor?.change(`${BODY}\n\nA late paragraph`));
+    act(() => mocks.editor?.change(`${bodyWith(imageUri)}\n\nA late paragraph`));
 
     applyLock();
     await publishLock();

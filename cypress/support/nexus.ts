@@ -82,7 +82,7 @@ const hasTagLabels = (response: NexusResponse, labels: string[]) => {
   return labels.every((label) => indexed.includes(label));
 };
 
-export const waitForNexusPostTags = (post: SeededPost, labels: string[]) =>
+export const waitForNexusPostTags = (post: Pick<SeededPost, 'id' | 'authorId'>, labels: string[]) =>
   waitForNexus(`tags ${labels.join(', ')} on post ${post.id}`, `/v0/post/${post.authorId}/${post.id}/tags`, (r) =>
     hasTagLabels(r, labels),
   );
@@ -114,3 +114,19 @@ export const waitForNexusNotifications = (
       ).length >= count,
     { limit: String(NOTIFICATIONS_LIMIT) },
   );
+
+// Homeserver write bodies reach the intercept as a string, raw bytes or parsed JSON depending on the browser.
+const parseRequestBody = (body: unknown): unknown => {
+  if (typeof body === 'string') return JSON.parse(body);
+  if (body instanceof ArrayBuffer) return JSON.parse(new TextDecoder().decode(body));
+  if (ArrayBuffer.isView(body)) return JSON.parse(new TextDecoder().decode(body));
+  return body;
+};
+
+// Reads the tagged post's author and id from a homeserver tag PUT interception.
+export const taggedPostFromInterception = (interception: { request: { body: unknown } }) => {
+  const { uri } = parseRequestBody(interception.request.body) as { uri: string };
+  const match = /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/posts\/([^/]+)$/.exec(uri);
+  expect(match, `tagged uri ${uri}`).to.not.equal(null);
+  return { authorId: match![1], postId: match![2] };
+};

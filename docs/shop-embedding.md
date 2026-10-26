@@ -2,6 +2,8 @@
 
 App Shop navigation always opens `/shop`, which embeds a separately deployed Shop. There is no enable flag or external fallback. Both apps must appear on the **same scheme, hostname and port** so the SDK can restore App's exact saved grant record. The iframe uses the relative `/shop-embed` prefix; do not configure a cross-origin iframe or redirect this prefix to Shop's public hostname. [ADR 0025](adr/0025-same-origin-shop-session.md) defines the protocol and session ownership.
 
+The loaded iframe and initial loading skeleton fill the space available below the desktop App header, using `--header-offset-main` for its height. On mobile, the header, frame and bottom navigation share a full-height flex shell. Shop owns scrolling inside the iframe; the outer page should have no unused bottom strip or extra vertical scroll.
+
 ## Configuration
 
 Deploy compatible App and Shop builds, the proxy, and Shop's BFF together. Shop validates embedded BFF configuration at startup, and deployment verification must check its readiness endpoint before promotion. `PUBKY_RUNTIME_AUTH_CLIENT_ID` remains the App identity; do not relabel saved grants as Shop grants.
@@ -51,6 +53,10 @@ Do not cache Shop HTML or auth/API responses at the CDN/proxy. Preserve `Set-Coo
 
 Configure the App origin in marketplace CORS/trusted issuers, Shop BFF/service trust, Paykit setup, Locks return origins, Nexus and fiat verifier as applicable. Initial shared homeserver approval does not replace marketplace service approval or seller Locks connection. Ring/Bitkit and Passport request the App/Locks/Shop scope union, including Chat's public/private paths. Recovery-key sign-in and browser signup obtain root storage grants. Existing grants need only Shop's core storage scopes to open Shop. The replacement Chat consumer and permission upgrades are separate work in Shop #209; the App's scopes and cleanup entries provide compatibility preparation, not verification that Chat works.
 
+## Region check
+
+App reads one other Shop route: `GET /shop-embed/api/marketplace/client-region`, which answers `{ "country": "DE" | null }` from the edge's `X-Client-Region` header. `usePaidUnlockAvailability` calls it, once per page load and only when `PUBKY_RUNTIME_REGION_MODES` lists a region, to tell a viewer before the payment step that paid unlocks are not available where they are ([Locks](locks.md#region-check)). The read is advisory: a deployment without a Shop mount, or a Shop outage, answers with a 404 or an HTML page, which App treats as "unknown, let the Lock Server decide" without logging or reporting anything. Keep the route and its `{ country }` body stable, or change App with it.
+
 ## Outages and logout
 
 App checks the no-store `GET /shop-embed/api/marketplace/health` endpoint. Before the iframe loads, a failed check shows the temporary unavailable state immediately. A loaded iframe remains mounted through transient failures and is replaced only after three consecutive failed checks, at least 10 seconds apart. Success resets that count. Polling pauses while offline or hidden, and resumes with a fresh count on reconnect or visibility return; failures from an interrupted interval are ignored. Recovery reloads Shop automatically at the current URL without clearing the App session. This is outage recovery, not a substitute for deployment verification. Roll back to a compatible App/Shop pair if a release fails verification.
@@ -76,5 +82,7 @@ Check desktop/mobile Shop navigation and direct `/shop` deep links with no App S
 For navigation, set catalog search, filters and sort, scroll down, open a listing, then use Back and Forward. While the same iframe document is alive, traversal must preserve the catalog settings and restore the saved scroll position without another Shop document request. Repeat after reloading the listing: the outer URL must still restore the correct route, including its query and fragment. This reload fallback starts a new Shop document and restores the host session; it cannot recover catalog settings that Shop does not persist. Also check direct outer deep links, replacements without extra Back steps, native fragment links on seller pages (including Back after reload), and top-level signer/PayPal return routes. App owns Shop route history; no matching Shop deployment or bridge version change is required for this history adapter.
 
 Enable Shop VRT covers the desktop dialog in all configured engines and the phone controls with real coarse-pointer emulation in macOS Chromium. The current Linux Chromium CI environment does not restore native pointer/hover media after disabling touch, so the phone case is skipped there to avoid affecting later tests. The macOS case verifies that desktop input media is restored. Real Safari and mobile signer checks remain part of staging QA.
+
+For layout, check both signed-in and guest chrome at desktop and mobile widths, including a short desktop window and both sides of the 1024px breakpoint. The frame should end at the viewport bottom on desktop and directly above mobile navigation. Scroll long Shop content to its final action and verify it remains reachable without scrolling the outer App page. Repeat while loading and after resizing across the breakpoint; resizing should preserve the iframe document.
 
 Protocol and session ownership: [ADR 0025](adr/0025-same-origin-shop-session.md).

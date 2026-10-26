@@ -39,8 +39,6 @@ import {
   BITKIT_APP_STORE_URL,
   BITKIT_PLAY_STORE_URL,
   BITKIT_WEBSITE_URL,
-  getAppStoreLink,
-  getPlayStoreLink,
   getPubkyRingLink,
 } from '@/config/externalLinks';
 import { useLocksAuthFlow } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow';
@@ -162,9 +160,11 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
     description = 'You authorized the Locks server to manage your Locks data.';
   } else if (isEnableStep) {
     title = isNumbered ? 'Enable Locks (1/2)' : 'Enable Locks';
+    // Same `pointer-coarse` switch as the iframe box: the shell shows the QR, or the app buttons on touch.
     description = (
       <>
-        {'Use '}
+        <span className="pointer-coarse:hidden">{'Scan this QR with '}</span>
+        <span className="hidden pointer-coarse:inline">{'Use '}</span>
         <Link href={getPubkyRingLink()} className="text-base font-bold">
           {'Pubky Ring'}
         </Link>
@@ -172,7 +172,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
         <Link href={BITKIT_WEBSITE_URL} className="text-base font-bold">
           {'Bitkit'}
         </Link>
-        {' to authorize Locks server to manage your Locks data.'}
+        {' to authorize Locks server to manage your data. Use the same pubky you signed in with.'}
       </>
     );
   } else if (isSessionStep) {
@@ -230,10 +230,10 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
           // min-h reserves the iframe's height so the loader states (spinner) don't collapse and
           // then jump when the iframe mounts.
           <Container className="flex flex-col items-center justify-center gap-6 py-3">
-            {/* The shell's embed layout is the 192px QR panel, or the deep-link button on touch.
-                It also posts a `locks-auth-resize` height we could adopt instead, but a fixed box
-                keeps the loader from collapsing before the iframe mounts. */}
-            <Container className="flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-15">
+            {/* The shell's embed layout is the 192px QR panel, or two stacked 60px deep-link buttons
+                on touch. It also posts a `locks-auth-resize` height we could adopt instead, but a
+                fixed box keeps the loader from collapsing before the iframe mounts. */}
+            <Container className="flex min-h-48 w-full items-center justify-center pointer-coarse:min-h-33">
               {locksStatus === LocksAuthFlowStatus.AWAITING_APPROVAL && connectUrl ? (
                 <iframe
                   ref={locksIframeRef}
@@ -241,21 +241,23 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess, asset = 'BTC' }
                   title={'Lock Server authorization'}
                   // The parent accepts the auth code only from the configured Lock Server origin.
                   // Without allow-same-origin, sandboxed postMessage uses origin "null" and gets rejected.
-                  // The other flags let /connect run JS, submit its approval form, and open Pubky Ring.
+                  // The other flags let /connect run JS, submit its approval form, and open the signer apps.
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                  className="h-48 w-full pointer-coarse:h-15"
+                  className="h-48 w-full pointer-coarse:h-33"
                 />
               ) : (
                 <LoaderCircle className="size-8 animate-spin text-brand" />
               )}
             </Container>
-            {/* The shell hides its own wordmark on desktop, so the embedder carries it (Figma
-                "Dialog / Lock / EnableLocks"). */}
-            <AppDownload
-              logo={{ src: '/images/logo-pubky-ring.svg', alt: 'Pubky Ring', width: 147 }}
-              appStoreUrl={getAppStoreLink()}
-              playStoreUrl={getPlayStoreLink()}
-            />
+            {/* The embedded shell draws no logos, and on touch its buttons already name each app. */}
+            <Container overrideDefaults className="flex items-center gap-3.5 pointer-coarse:hidden">
+              <Link href={getPubkyRingLink()} overrideDefaults>
+                <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={101} height={22} />
+              </Link>
+              <Link href={BITKIT_WEBSITE_URL} overrideDefaults>
+                <Image src="/images/bitkit-logo.svg" alt="Bitkit" width={75} height={22} />
+              </Link>
+            </Container>
           </Container>
         )}
 

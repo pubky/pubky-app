@@ -355,11 +355,6 @@ export class LocksController {
     return LocksApplication.fetchPaidContent(params);
   }
 
-  /** `fetchPaidContent` for the background recovery, which knows neither the bundle id nor the status; null unless `completed`. */
-  static fetchPaidContentIfCompleted(params: TPaymentLockParams): Promise<TUnlockedContent | null> {
-    return LocksApplication.fetchPaidContentIfCompleted(params);
-  }
-
   /** Copies unlocked content into the reader's own `/priv`, so later reads need no credential. */
   static replicateUnlockedContent({
     postId,

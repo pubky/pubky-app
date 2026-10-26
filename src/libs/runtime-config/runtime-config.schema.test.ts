@@ -170,6 +170,35 @@ describe('runtimeEnvInputSchema', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, paykitServerUrl: 'not-a-url' })).toThrow();
   });
 
+  describe('region modes (PUBKY_RUNTIME_REGION_MODES)', () => {
+    it('is unset by default, and blank counts as unset', () => {
+      expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).regionModes).toBeUndefined();
+      expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, regionModes: '   ' }).regionModes).toBeUndefined();
+      expect(runtimeEnvInputSchemaWithDefaults.parse({}).regionModes).toBeUndefined();
+    });
+
+    it('accepts the launch value, a later outcome and none, trimmed', () => {
+      for (const regionModes of ['EU=blocked,GB=blocked,US=blocked', 'EU=nuanced,US=open', 'none']) {
+        expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, regionModes: ` ${regionModes} ` }).regionModes).toBe(
+          regionModes,
+        );
+      }
+    });
+
+    it('throws at startup on a list the Shop would reject, instead of guessing', () => {
+      for (const regionModes of ['EU', 'UK=blocked', 'EU=closed', 'US=blocked,', 'USA=blocked']) {
+        expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, regionModes })).toThrow(/REGION_MODES/);
+        expect(() => runtimeEnvInputSchemaWithDefaults.parse({ regionModes })).toThrow(/REGION_MODES/);
+      }
+    });
+
+    it('validates the injected browser config the same way', () => {
+      const parsed = runtimeEnvInputSchema.parse(VALID_ENV_INPUT);
+      expect(runtimeConfigValueSchema.parse({ ...parsed, regionModes: 'US=blocked' }).regionModes).toBe('US=blocked');
+      expect(() => runtimeConfigValueSchema.parse({ ...parsed, regionModes: 'US' })).toThrow(/REGION_MODES/);
+    });
+  });
+
   it('throws on invalid optional boolean values', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, notificationPollOnStart: 'tru' })).toThrow();
     expect(() => runtimeEnvInputSchemaWithDefaults.parse({ streamPollOnStart: 'yes' })).toThrow();

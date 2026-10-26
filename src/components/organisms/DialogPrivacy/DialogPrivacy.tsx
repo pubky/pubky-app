@@ -25,7 +25,7 @@ export function DialogPrivacy({ trigger }: DialogPrivacyProps) {
           <DialogTitle>Privacy Policy</DialogTitle>
         </DialogHeader>
         <Container className="h-[320px] overflow-y-auto pr-4">
-          <Container className="flex-col gap-4">
+          <Container className="flex-col gap-4 [&_a]:underline">
             {/** Section 1 */}
             <Typography className={baseCSS}>Effective Date: January 29, 2026</Typography>
             <Typography className={baseCSS}>

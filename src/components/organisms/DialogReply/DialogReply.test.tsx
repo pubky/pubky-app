@@ -160,11 +160,18 @@ vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
 
 vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
   return {
-    PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
-      <div data-testid="post-preview-card" data-post-id={postId} className={className}>
-        PostPreviewCard {postId}
-      </div>
-    )),
+    PostPreviewCard: vi.fn(
+      ({ postId, className, navigable }: { postId: string; className?: string; navigable?: boolean }) => (
+        <div
+          data-testid="post-preview-card"
+          data-post-id={postId}
+          data-navigable={String(navigable ?? true)}
+          className={className}
+        >
+          PostPreviewCard {postId}
+        </div>
+      ),
+    ),
   };
 });
 
@@ -214,6 +221,13 @@ describe('DialogReply', () => {
     render(<DialogReply postId="test-post-123" open={false} onOpenChangeAction={onOpenChangeAction} />);
 
     expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-post-id', 'test-post-123');
+  });
+
+  it('renders the post being replied to as non-navigating so the route cannot change behind the modal', () => {
+    const onOpenChangeAction = vi.fn();
+    render(<DialogReply postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-navigable', 'false');
   });
 
   it('renders PostInput with correct props', () => {

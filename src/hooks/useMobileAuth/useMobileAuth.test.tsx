@@ -14,12 +14,20 @@ const GRANT_QUERY =
   'caps=%2Fpub%2Fpubky.app%2F%3Arw%2C%2Fpriv%2Fsocial%2F%3Arw&relay=https%3A%2F%2Frelay.example%2Finbox%2F&secret=a%2Bb_c&cid=pubky.app&cpk=key';
 const GRANT_URL = `pubkyauth://signin_grant?${GRANT_QUERY}`;
 const BITKIT_IOS_URL = `bitkit://pubky-auth/signin?${GRANT_QUERY}`;
+const RING_ANDROID_INTENT_URL = `intent://signin_grant?${GRANT_QUERY}#Intent;scheme=pubkyauth;package=to.pubky.ring;end`;
+const BITKIT_ANDROID_INTENT_URL = `intent://signin_grant?${GRANT_QUERY}#Intent;scheme=pubkyauth;package=to.bitkit;end`;
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15';
 const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15';
 const ANDROID = 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/140.0 Mobile';
+const ANDROID_FIREFOX = 'Mozilla/5.0 (Android 15; Mobile; rv:136.0) Gecko/136.0 Firefox/136.0';
 const SIGNERS = [
-  { name: 'Ring', action: 'onAuthorizeClick', opening: 'isOpeningRing' },
-  { name: 'Bitkit', action: 'onAuthorizeBitkitClick', opening: 'isOpeningBitkit' },
+  { name: 'Ring', action: 'onAuthorizeClick', opening: 'isOpeningRing', androidUrl: RING_ANDROID_INTENT_URL },
+  {
+    name: 'Bitkit',
+    action: 'onAuthorizeBitkitClick',
+    opening: 'isOpeningBitkit',
+    androidUrl: BITKIT_ANDROID_INTENT_URL,
+  },
 ] as const;
 
 function stubDevice(userAgent: string, platform: string, maxTouchPoints: number) {
@@ -61,7 +69,7 @@ describe('useMobileAuth', () => {
     expect(result.current.onAuthorizeBitkitClick).toBeInstanceOf(Function);
   });
 
-  describe.each(SIGNERS)('$name handoff', ({ action, opening }) => {
+  describe.each(SIGNERS)('$name handoff', ({ action, opening, androidUrl }) => {
     it('refreshes an expired grant without navigating until its URL is ready', () => {
       mockUseAuthUrl.mockReturnValue({ ...defaultAuthUrlReturn, url: '', isExpired: true });
       const { result } = renderHook(() => useMobileAuth());
@@ -85,7 +93,23 @@ describe('useMobileAuth', () => {
       expect(result.current[opening]).toBe(false);
     });
 
-    it('opens the existing grant synchronously without creating another flow on Android', () => {
+    it('opens the existing grant synchronously via an Android intent URL without creating another flow', () => {
+      const { result } = renderHook(() => useMobileAuth());
+
+      act(() => {
+        result.current[action]();
+        expect(window.location.href).toBe(androidUrl);
+      });
+
+      expect(result.current[opening]).toBe(true);
+      expect(result.current.isOpeningRing).toBe(opening === 'isOpeningRing');
+      expect(result.current.isOpeningBitkit).toBe(opening === 'isOpeningBitkit');
+      expect(result.current.url).toBe(GRANT_URL);
+      expect(mockFetchUrl).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the plain grant URL on Firefox for Android', () => {
+      stubDevice(ANDROID_FIREFOX, 'Linux armv8l', 5);
       const { result } = renderHook(() => useMobileAuth());
 
       act(() => {
@@ -94,8 +118,6 @@ describe('useMobileAuth', () => {
       });
 
       expect(result.current[opening]).toBe(true);
-      expect(result.current.isOpeningRing).toBe(opening === 'isOpeningRing');
-      expect(result.current.isOpeningBitkit).toBe(opening === 'isOpeningBitkit');
       expect(result.current.url).toBe(GRANT_URL);
       expect(mockFetchUrl).not.toHaveBeenCalled();
     });
