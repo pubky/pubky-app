@@ -15,6 +15,10 @@
  *   reader's Bitkit wallet (Paykit data present, link `connected`, payment `pending` then
  *   `completed`), the access credential, and the proxied read of the guarded bytes (unlock-key
  *   delivery).
+ * Every stand-in answer is a `[locks-stub]` entry in the command log (`cypress/support/locks-log.ts`):
+ * the operation, its key parameters (amount, recipient, lock id, path) and the reply; clicking one
+ * shows the redacted request and response in DevTools. Headless runs print the same lines in the
+ * terminal, after each `[locks-step]` marker. User A is the creator and user B the reader.
  * Everything else is real: Nexus, the homeserver and Homegate. The stub client writes the bytes and
  * the public `lock.json` to the creator's real homeserver with the creator's own session, exactly
  * where the Lock Server would, so the owner view, the reader's purchase file and the reader's
@@ -44,6 +48,7 @@ import {
   writeLockedArticle,
   writeLockedPost,
 } from '../support/locks';
+import { flushLocksStubLog, locksStep } from '../support/locks-log';
 import { BackupType, HasBackedUp } from '../support/types/enums';
 
 const uniqueSuffix = String(Date.now()).slice(-5);
@@ -119,6 +124,12 @@ const payToUnlock = () => {
     expect(bundle.proofs).to.have.length(1);
     expect(bundle.proofs[0]).to.include({ criterion_id: 'criterion-1', verifier_type: 'paykit-payment' });
     expect(bundle.bundle_id).to.not.eq('');
+    const lockId = /\/pub\/app\.locks\/([^/]+)\.json$/.exec(bundle.pubky_lock_resource)?.[1] ?? '';
+    expect(lockServer.locks[lockId], 'the amount and recipient the Bitkit payment request carries').to.deep.eq({
+      amount: PRICE_SATS,
+      asset: 'BTC',
+      recipient: creatorPubky(),
+    });
   });
   // The wallet pays on the second lookup: the first one runs as the proof is submitted and reads
   // `pending`, the next comes one payment poll (3 s) later and reads `completed`.
@@ -147,6 +158,10 @@ describe('locks', () => {
     signInAs(creator);
   });
 
+  afterEach(() => {
+    flushLocksStubLog();
+  });
+
   it('locks a post with an image: the owner sees it, another reader pays to unlock it', () => {
     const run = Date.now();
     const draftText = `Locked post draft ${run}`;
@@ -156,13 +171,13 @@ describe('locks', () => {
     const draftTeaser = `Draft teaser ${run}`;
     const teaser = `A photo worth unlocking ${run}`;
 
-    cy.log('1. The creator writes a post with an image and fully locks it');
+    locksStep(1, 'A writes a post with an image and fully locks it');
     writeLockedPost(draftText, 'mustache-you.png');
     turnLockOnAndSetUpLocks();
     applyLockPrice(FIRST_PRICE_SATS);
     fillLockAnnouncement(draftTitle, draftTeaser);
 
-    cy.log('2. The creator edits the locked text, title and teaser, re-confirms the lock and saves');
+    locksStep(2, 'A edits the locked text, title and teaser, re-confirms the lock and saves');
     turnLockOff();
     editLockedPostText(lockedText);
     turnLockOn();
@@ -182,7 +197,7 @@ describe('locks', () => {
     cy.get<string>('@postId').then((postId) => {
       waitForNexusLockPost(creatorPubky(), postId);
 
-      cy.log('3. The owner sees the locked image and text, with the title and teaser');
+      locksStep(3, 'Owner view: A sees the locked image and text, with the title and teaser');
       openPostFromHomeFeed(creatorPubky(), postId, teaser);
       singlePostCard().should('contain.text', teaser).and('not.contain.text', draftTeaser);
       singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
@@ -196,7 +211,7 @@ describe('locks', () => {
         .and(($image) => expect(($image[0] as HTMLImageElement).naturalWidth).to.be.greaterThan(0));
       singlePostCard().find('[data-cy="locked-post-unlock-btn"]').should('be.disabled');
 
-      cy.log('4. Another reader sees only the title and teaser');
+      locksStep(4, 'Locked view: B sees only the title and teaser');
       cy.signOut(HasBackedUp.Yes);
       signInAs(reader);
       openPostFromHomeFeed(creatorPubky(), postId, teaser);
@@ -205,10 +220,10 @@ describe('locks', () => {
       singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('not.exist');
       singlePostCard().find('[data-cy="post-attachment-image"]').should('not.exist');
 
-      cy.log('5. The reader pays in bitcoin through the stubbed wallet');
+      locksStep(5, 'B pays in bitcoin through the stubbed Bitkit wallet');
       payToUnlock();
 
-      cy.log('6. The reader sees the image and the locked text');
+      locksStep(6, 'Unlocked view: B sees the image and the locked text');
       singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'Unlocked');
       singlePostCard()
         .find('[data-cy="locked-post-unlocked-content"]')
@@ -235,13 +250,13 @@ describe('locks', () => {
     const draftTeaser = `Draft teaser ${run}`;
     const teaser = `An essay worth unlocking ${run}`;
 
-    cy.log('1. The creator writes an article and fully locks it');
+    locksStep(1, 'A writes an article and fully locks it');
     writeLockedArticle(articleTitle, draftBody);
     turnLockOnAndSetUpLocks();
     applyLockPrice(FIRST_PRICE_SATS);
     fillLockAnnouncement(draftTitle, draftTeaser);
 
-    cy.log('2. The creator edits the article body, title and teaser, re-confirms the lock and saves');
+    locksStep(2, 'A edits the article body, title and teaser, re-confirms the lock and saves');
     turnLockOff();
     editLockedArticleBody(articleTitle, body);
     turnLockOn();
@@ -261,7 +276,7 @@ describe('locks', () => {
     cy.get<string>('@postId').then((postId) => {
       waitForNexusLockPost(creatorPubky(), postId);
 
-      cy.log('3. The owner sees the locked article body, with the title and teaser');
+      locksStep(3, 'Owner view: A sees the locked article body, with the title and teaser');
       openPostFromHomeFeed(creatorPubky(), postId, teaser);
       singlePostCard().should('contain.text', teaser).and('not.contain.text', draftTeaser);
       singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
@@ -272,7 +287,7 @@ describe('locks', () => {
         .and('contain.text', body)
         .and('not.contain.text', draftBody);
 
-      cy.log('4. Another reader sees only the title and teaser');
+      locksStep(4, 'Locked view: B sees only the title and teaser');
       cy.signOut(HasBackedUp.Yes);
       signInAs(reader);
       openPostFromHomeFeed(creatorPubky(), postId, teaser);
@@ -280,10 +295,10 @@ describe('locks', () => {
       singlePostCard().find('[data-cy="locked-post-title"]').should('have.text', title);
       singlePostCard().find('[data-cy="locked-post-unlocked-content"]').should('not.exist');
 
-      cy.log('5. The reader pays in bitcoin through the stubbed wallet');
+      locksStep(5, 'B pays in bitcoin through the stubbed Bitkit wallet');
       payToUnlock();
 
-      cy.log('6. The reader sees the full article body');
+      locksStep(6, 'Unlocked view: B sees the full article body');
       singlePostCard().find('[data-cy="locked-post-access-label"]').should('have.text', 'Unlocked');
       singlePostCard()
         .find('[data-cy="locked-post-unlocked-content"]')
