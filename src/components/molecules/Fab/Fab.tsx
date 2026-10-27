@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Plus } from 'lucide-react';
-import { APP_ROUTES } from '@/app/routes';
+import { APP_ROUTES, isLegalRoute } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { useFabAction } from '@/hooks/useFabAction/useFabAction';
@@ -36,6 +36,7 @@ import { useContextualBannerStore } from '@/stores/contextualBanner/contextualBa
  *   mid-onboarding is out of flow (reachable once fully authenticated,
  *   e.g. the tags step)
  * - Hidden on Shop routes, which provide their own commerce actions
+ * - Hidden on the Terms of Service and Privacy Policy pages, where it would cover the text
  * - Hidden while a collection is in reorder mode (reorder mode is for
  *   reordering, not adding posts; the flag bridges from the page via the
  *   `collectionReorder` store since the FAB lives outside the page tree)
@@ -61,10 +62,19 @@ export function Fab() {
 
   const isOnboardingRoute = pathname?.startsWith('/onboarding') ?? false;
   const isShopRoute = pathname === APP_ROUTES.SHOP || pathname?.startsWith(`${APP_ROUTES.SHOP}/`);
+  const isLegalPage = isLegalRoute(pathname);
   // Show FAB for authenticated users OR unauthenticated users on public explore routes
   const shouldShow = isFullyAuthenticated || isPublicExploreRoute;
   const isReplacedByGuestBanner = !isFullyAuthenticated && isContextualBannerVisible;
-  if (isLoading || !shouldShow || isReorderActive || isOnboardingRoute || isShopRoute || isReplacedByGuestBanner) {
+  if (
+    isLoading ||
+    !shouldShow ||
+    isReorderActive ||
+    isOnboardingRoute ||
+    isShopRoute ||
+    isLegalPage ||
+    isReplacedByGuestBanner
+  ) {
     return null;
   }
   const buttonClasses = cn(

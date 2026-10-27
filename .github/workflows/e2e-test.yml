@@ -168,6 +168,15 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: pubky-app
+          # Blobless partial clone. The negation drops only VRT baseline PNGs
+          # under src/test/vrt/**/__screenshots__. VRT workflows still fetch them.
+          # git ls-tree (docker-content-tag.sh) still sees every blob id, so the
+          # content tag does not change.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
 
       - name: Resolve the pubky-app image tag
         id: app_tag
