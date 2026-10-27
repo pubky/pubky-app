@@ -1,5 +1,5 @@
 import { backupDownloadFilePath } from './common';
-import type { SeedCreatePostArgs, SeededPost, SeededUser } from './types/seed';
+import type { SeedCreatePostArgs, SeededCollectionLayout, SeededPost, SeededUser } from './types/seed';
 
 // Spec-side helpers for the seed tasks in cypress/plugins/seed.ts.
 //
@@ -97,19 +97,24 @@ export const followUserViaApi = (follower: SeededUser, followee: SeededUser) =>
   cy.task<{ id: string }>('seedFollow', { followerId: follower.id, followeeId: followee.id });
 
 /**
- * Creates a collection holding `items` as `author` (creating one in the UI is covered in
- * collections.cy.ts).
+ * Creates a collection holding `items` as `author`, shown in `layout` by default (creating one in
+ * the UI is covered in collections.cy.ts).
  */
 export const createCollectionViaApi = (
   author: SeededUser,
   name: string,
-  { description = '', items = [] }: { description?: string; items?: SeededPost[] } = {},
+  {
+    description = '',
+    items = [],
+    layout = 'grid',
+  }: { description?: string; items?: SeededPost[]; layout?: SeededCollectionLayout } = {},
 ) =>
   cy.task<SeededPost>('seedCreateCollection', {
     authorId: author.id,
     name,
     description,
     items: items.map((item) => item.uri),
+    layout,
   });
 
 /** Adds `post` to `collection`, rewriting the collection post as saving into it in the app does. */

@@ -38,5 +38,13 @@ export type SeedTagArgs = { taggerId: string; uri: string; label: string };
 export type SeedFollowArgs = { followerId: string; followeeId: string };
 export type SeedBookmarkArgs = { userId: string; uri: string };
 export type SeedMarkNotificationsReadArgs = { userId: string };
-export type SeedCreateCollectionArgs = { authorId: string; name: string; description: string; items: string[] };
+export type SeededCollectionLayout = 'grid' | 'list';
+
+export type SeedCreateCollectionArgs = {
+  authorId: string;
+  name: string;
+  description: string;
+  items: string[];
+  layout: SeededCollectionLayout;
+};
 export type SeedAddToCollectionArgs = { authorId: string; collectionId: string; itemUri: string };

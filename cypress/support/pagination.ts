@@ -1,6 +1,6 @@
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '../../src/config/collections';
 import { DEFAULT_MAX_THREAD_REPLIES } from '../../src/hooks/useThreadReplies/useThreadReplies.constants';
-import { resourceIndexed, streamIndexed, waitForNexus } from './nexus';
+import { streamIndexed, waitForNexus } from './nexus';
 
 // `NEXUS_POSTS_PER_PAGE` and `NEXUS_STREAM_MAX_LIMIT` in src/config/nexus.ts, which the spec bundle
 // cannot import (it pulls in the `@/` runtime config). Every page assertion checks the `limit` the
@@ -22,13 +22,6 @@ export type RecordedStreamPage = {
 const toStreamQuery = (query: Record<string, string | number>): StreamQuery =>
   Object.fromEntries(Object.entries(query).map(([key, value]) => [key, String(value)]));
 
-// Reads the post id from a homeserver post PUT URL (`.../pub/pubky.app/posts/<id>`)
-export const postIdFromWriteUrl = (url: string): string => {
-  const postId = new URL(url).pathname.split('/').pop();
-  expect(postId, `post id in ${url}`).to.be.a('string').and.not.be.empty;
-  return postId as string;
-};
-
 export const keyMatchesPostId = (key: string, postId: string) => key.endsWith(`:${postId}`);
 
 // A `waitForNexus` check that every id in `postIds` is listed by the stream `query`
@@ -48,10 +41,6 @@ export const seededStreamKeys = (body: unknown): string[] => {
 // Waits for every id in `postIds` to be listed by the stream `query`, then yields the stream's keys
 export const waitForNexusStream = (query: StreamQuery, postIds: string[]): Cypress.Chainable<string[]> =>
   waitForNexus(seededStreamIndexed(query, postIds)).then(([body]) => seededStreamKeys(body));
-
-// Waits for a Nexus GET endpoint (e.g. `/v0/post/<author>/<id>`) to answer 200
-export const waitForNexusResource = (path: string) => waitForNexus(resourceIndexed(path));
-
 /**
  * Records every `/v0/stream/posts/keys` response the app receives whose query passes `matches`,
  * in arrival order. Register before the page loads so the first page is captured.

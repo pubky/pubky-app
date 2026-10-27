@@ -22,9 +22,6 @@ export const waitForNexus = (...checks: NexusCheck[]): Cypress.Chainable<unknown
   );
 };
 
-// Any Nexus GET (e.g. `/v0/post/<author>/<id>`) answering 200
-export const resourceIndexed = (path: string): NexusCheck => ({ description: path, path, expect: { kind: 'found' } });
-
 export const userIndexed = (user: SeededUser): NexusCheck => ({
   description: `user '${user.name}'`,
   path: `/v0/user/${user.id}`,

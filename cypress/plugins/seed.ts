@@ -221,10 +221,16 @@ export const createSeedTasks = (config: SeedConfig) => {
         return { timestamp: Number(lastRead.last_read.timestamp) };
       }),
 
-    seedCreateCollection: ({ authorId, name, description, items }: SeedCreateCollectionArgs): Promise<SeededPost> =>
+    seedCreateCollection: ({
+      authorId,
+      name,
+      description,
+      items,
+      layout,
+    }: SeedCreateCollectionArgs): Promise<SeededPost> =>
       step(`create collection '${name}' by '${nameOf(authorId)}'`, async () => {
         const author = sessionFor(authorId);
-        const collection = author.builder.createCollectionPost(name, description, items, null, 'grid');
+        const collection = author.builder.createCollectionPost(name, description, items, null, layout);
         await author.session.storage.putJson(toPath(collection.meta.path), collection.post.toJson());
         return { id: collection.meta.id, authorId, uri: collection.meta.url, kind: 'collection' };
       }),
