@@ -21,10 +21,17 @@ import {
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
 import 'cypress-slow-down/commands';
-import { cannotFindPostInFeed, checkPostIsAtIndexInFeed, countPostsInFeed, waitForFeedToLoad } from '../support/posts';
+import {
+  cannotFindPostInFeed,
+  checkPostIsAtIndexInFeed,
+  countPostsInFeed,
+  createQuickArticle,
+  createQuickPostWithImage,
+  fastTagPostInFeed,
+  waitForFeedToLoad,
+} from '../support/posts';
 import { waitForNexusFollow, waitForNexusPostTags, waitForNexusUserTags } from '../support/nexus';
 import {
-  createArticleViaApi,
   createImagePostViaApi,
   createPostViaApi,
   followUserViaApi,
@@ -516,10 +523,6 @@ describe('feed and filters', () => {
       waitForNexusPostTags(olderPost, [sortTag, 'sorta', 'sortb', 'sortc']);
     });
     createPostViaApi(user3, shortPost, { tags: [kindTag] }).then((post) => waitForNexusPostTags(post, [kindTag]));
-    createArticleViaApi(user3, articleTitle, articleBody, { tags: [kindTag] }).then((post) =>
-      waitForNexusPostTags(post, [kindTag]),
-    );
-    createImagePostViaApi(user3, imagePost, { tags: [kindTag] }).then((post) => waitForNexusPostTags(post, [kindTag]));
     cy.then(() => waitForNexusPostTags(profile4Post, [reachTag]));
 
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
@@ -527,6 +530,15 @@ describe('feed and filters', () => {
     cy.findFirstPostInFeedFiltered(older).within(() => {
       cy.get('[data-cy="post-tag"][data-tag-label="sortc"]').filter(':visible').should('have.length.at.least', 1);
     });
+
+    // Keep these UI-created, not seeded: with the post kind filter test in posts.cy.ts skipped (#2900),
+    // this is the only check that the composer files an article and an image post under their kind.
+    createQuickArticle(articleTitle, articleBody);
+    cy.findFirstPostInFeedFiltered(articleTitle, CheckForNewPosts.No, WaitForNewPosts.Yes);
+    fastTagPostInFeed([kindTag], articleTitle);
+    createQuickPostWithImage(imagePost);
+    cy.findFirstPostInFeedFiltered(imagePost, CheckForNewPosts.No, WaitForNewPosts.Yes);
+    fastTagPostInFeed([kindTag], imagePost);
 
     // Reach: All includes profile 4, Following does not, Following does include profile 2.
     openCreateFeedDialog();

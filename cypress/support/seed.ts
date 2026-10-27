@@ -36,14 +36,6 @@ const createIndexedPost = (args: SeedCreatePostArgs) =>
 export const createPostViaApi = (author: SeededUser, content: string, { tags }: { tags?: string[] } = {}) =>
   createIndexedPost({ authorId: author.id, content, kind: 'short', tags });
 
-/** Publishes an article (a `long` post with the app's `{ title, body }` content) as `author`. */
-export const createArticleViaApi = (
-  author: SeededUser,
-  title: string,
-  body: string,
-  { tags }: { tags?: string[] } = {},
-) => createIndexedPost({ authorId: author.id, content: JSON.stringify({ title, body }), kind: 'long', tags });
-
 /** Uploads a fixture image and publishes an image post attaching it, as the composer's image upload does. */
 export const createImagePostViaApi = (
   author: SeededUser,
