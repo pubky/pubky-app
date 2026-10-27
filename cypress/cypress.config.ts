@@ -2,6 +2,7 @@ import { defineConfig } from 'cypress';
 import { config } from 'dotenv';
 
 import { appendFileSync, existsSync, readdirSync, rename, rm, unlink } from 'fs';
+import { createNexusTasks } from './plugins/nexus';
 import { createSeedTasks } from './plugins/seed';
 import { defaultMs } from './support/slow-down';
 
@@ -151,6 +152,9 @@ export default defineConfig({
           nexusUrl: String(cypressConfig.env['nexusUrl']),
         }),
       );
+
+      // Wait for a phase's seeds to be indexed, all at once (see plugins/nexus.ts)
+      on('task', createNexusTasks(String(cypressConfig.env['nexusUrl'])));
     },
     experimentalModifyObstructiveThirdPartyCode: true,
     chromeWebSecurity: false,

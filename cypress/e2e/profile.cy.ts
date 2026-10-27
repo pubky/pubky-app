@@ -4,7 +4,7 @@ import { BackupType, HasBackedUp } from '../support/types/enums';
 import { backupDownloadFilePath } from '../support/auth';
 import { searchForProfileByName, searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
-import { waitForNexusUser, waitForNexusUserTags } from '../support/nexus';
+import { userIndexed, userTagsIndexed, waitForNexus } from '../support/nexus';
 import { seedUserViaApi } from '../support/seed';
 
 describe('profile', () => {
@@ -140,7 +140,7 @@ describe('profile', () => {
     // the profile to tag only needs to exist, so it is seeded through the API
     seedUserViaApi(`${Cypress._.random(100_000)}-Tag My Button`, { bio: 'Tag me from my profile header' }).then(
       (target) => {
-        waitForNexusUser(target);
+        waitForNexus(userIndexed(target));
         searchForProfileByPubky(target.pubky, target.name);
 
         // the tag button opens their Tagged tab
@@ -152,7 +152,7 @@ describe('profile', () => {
         cy.get('[data-cy="profile-tab-content"]').contains('button-1');
         cy.get('[data-cy="profile-filter-item-posts"]').click();
         cy.get('[data-cy="profile-tagged-section"]').contains('button-1');
-        waitForNexusUserTags(target, ['button-1']);
+        waitForNexus(userTagsIndexed(target, ['button-1']));
       },
     );
   });

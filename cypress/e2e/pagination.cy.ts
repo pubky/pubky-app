@@ -9,9 +9,12 @@ import {
   POSTS_PAGE_SIZE,
   recordStreamPages,
   scrollTimelineToEnd,
+  seededStreamIndexed,
+  seededStreamKeys,
   THREAD_INITIAL_REPLIES,
-  waitForNexusStream,
 } from '../support/pagination';
+import { waitForServiceWorker } from '../support/common';
+import { waitForNexus } from '../support/nexus';
 import { createPostViaApi, replyViaApi, seedUserViaApi } from '../support/seed';
 
 type SeededText = { id: string; text: string };
@@ -42,9 +45,10 @@ let replyKeys: string[] = [];
 
 const pad = (index: number) => String(index + 1).padStart(2, '0');
 
-// Seeded post texts in the order a stream lists their keys
-const seededTextsFor = (keys: string[]) =>
-  keys.flatMap((key) => seededPosts.filter((post) => keyMatchesPostId(key, post.id)).map((post) => post.text));
+// Seeded texts in the order a stream lists their keys
+const textsFor = (seeded: SeededText[], keys: string[]) =>
+  keys.flatMap((key) => seeded.filter((post) => keyMatchesPostId(key, post.id)).map((post) => post.text));
+const seededTextsFor = (keys: string[]) => textsFor(seededPosts, keys);
 
 const isPostTimelineQuery = (query: Record<string, string>) =>
   query['kind'] === undefined && query['sorting'] !== 'total_engagement' && isPagingRequest(query);
@@ -56,8 +60,9 @@ describe('pagination', () => {
   // are covered in posts.cy.ts. Nothing is signed in, so every surface below pages from Nexus.
   before(() => {
     slowCypressDown();
+    // Installs the app while the seeds index, so the first test does not page a stream mid-install
+    cy.visit('/');
 
-    // Nexus indexes the posts in the order they are written, so the streams order them as seeded
     seedUserViaApi(username, { bio: 'I post one page at a time' }).then((author) => {
       authorId = author.id;
 
@@ -79,29 +84,25 @@ describe('pagination', () => {
       });
     });
 
-    // The replies are the last writes: once they are indexed, every earlier post is too
+    // Every surface is checked against the stream Nexus returns, in Nexus's order
     cy.then(() =>
-      waitForNexusStream(
-        { source: 'post_replies', author_id: authorId, post_id: rootId, order: 'ascending' },
-        seededReplies.map((reply) => reply.id),
-      ).then((keys) => {
-        replyKeys = keys;
+      waitForNexus(
+        seededStreamIndexed({ source: 'author', author_id: authorId }, [...seededPosts.map((post) => post.id), rootId]),
+        seededStreamIndexed(
+          { source: 'all', sorting: 'timeline', tags: tag },
+          seededPosts.map((post) => post.id),
+        ),
+        seededStreamIndexed(
+          { source: 'post_replies', author_id: authorId, post_id: rootId, order: 'ascending' },
+          seededReplies.map((reply) => reply.id),
+        ),
+      ).then(([profileStream, searchStream, replyStream]) => {
+        profileKeys = seededStreamKeys(profileStream);
+        searchKeys = seededStreamKeys(searchStream);
+        replyKeys = seededStreamKeys(replyStream);
       }),
     );
-    cy.then(() => {
-      waitForNexusStream({ source: 'author', author_id: authorId }, [
-        ...seededPosts.map((post) => post.id),
-        rootId,
-      ]).then((keys) => {
-        profileKeys = keys;
-      });
-      waitForNexusStream(
-        { source: 'all', sorting: 'timeline', tags: tag },
-        seededPosts.map((post) => post.id),
-      ).then((keys) => {
-        searchKeys = keys;
-      });
-    });
+    waitForServiceWorker();
   });
 
   it('profile posts tab loads every page once and stops at the end', () => {
@@ -145,7 +146,7 @@ describe('pagination', () => {
     );
     const replyTexts = ($replies: JQuery<HTMLElement>) =>
       $replies.toArray().map((reply) => Cypress.$(reply).find('[data-cy="post-text"]').first().text().trim());
-    const chronological = seededReplies.map((reply) => reply.text);
+    const chronological = textsFor(seededReplies, replyKeys);
 
     cy.visit(`/post/${authorId}/${rootId}`);
     cy.get('[data-cy="single-post-card"]:visible')

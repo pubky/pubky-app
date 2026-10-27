@@ -11,7 +11,7 @@ import { HasBackedUp, LatestNotificationReadState } from '../support/types/enums
 import type { SeededUser } from '../support/types/seed';
 import { verifyNotificationCounter } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
-import { waitForNexusNotifications, waitForNexusUser } from '../support/nexus';
+import { bookmarkIndexed, notificationsIndexed, postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import {
   addPostToCollectionViaApi,
   createCollectionViaApi,
@@ -62,7 +62,7 @@ describe('notifications', () => {
     // * a new profile follows the receiver
     seedActorViaApi('Follower').then((follower) => {
       followUserViaApi(follower, receiver);
-      waitForNexusNotifications(receiver, 'follow', { actor: follower });
+      waitForNexus(notificationsIndexed(receiver, 'follow', { actor: follower }));
 
       // * the receiver checks the notification for a new follower
       signInAsReceiver();
@@ -78,14 +78,14 @@ describe('notifications', () => {
 
       // * the receiver follows back, which makes the follower their friend
       clickFollowButton();
-      waitForNexusNotifications(follower, 'new_friend', { actor: receiver });
+      waitForNexus(notificationsIndexed(follower, 'new_friend', { actor: receiver }));
     });
 
     // * a profile the receiver already follows follows them back
     seedActorViaApi('Friend').then((friend) => {
       followUserViaApi(receiver, friend);
       followUserViaApi(friend, receiver);
-      waitForNexusNotifications(receiver, 'new_friend', { actor: friend });
+      waitForNexus(notificationsIndexed(receiver, 'new_friend', { actor: friend }));
 
       // * the receiver, still signed in, checks the notification for a new friend
       verifyNotificationCounter(1);
@@ -126,7 +126,10 @@ describe('notifications', () => {
       seedActorViaApi('PostTagger').then((postTagger) => {
         tagUserViaApi(profileTagger, receiver, [profileTag]);
         createPostViaApi(receiver, postContent).then((post) => tagPostViaApi(postTagger, post, [postTag]));
-        waitForNexusNotifications(receiver, 'tag_post', { actor: postTagger });
+        waitForNexus(
+          notificationsIndexed(receiver, 'tag_profile', { actor: profileTagger }),
+          notificationsIndexed(receiver, 'tag_post', { actor: postTagger }),
+        );
 
         // * the receiver checks both notifications, newest first
         signInAsReceiver();
@@ -165,7 +168,7 @@ describe('notifications', () => {
     // * a profile creates a post mentioning the receiver
     seedActorViaApi('Mentioner').then((mentioner) => {
       createPostViaApi(mentioner, `Hello ${mentionOf(receiver)} ${Date.now()}`);
-      waitForNexusNotifications(receiver, 'mention', { actor: mentioner });
+      waitForNexus(notificationsIndexed(receiver, 'mention', { actor: mentioner }));
 
       // * the receiver checks for notification for being mentioned
       signInAsReceiver();
@@ -184,7 +187,7 @@ describe('notifications', () => {
   it('can disable being notified for profile being mentioned in a post', () => {
     // A separate recipient, so turning mentions off leaves the receiver's settings alone for the other tests
     seedUserViaApi(uniqueName('NotifMuted'), { withRecoveryFile: true }).then((recipient) => {
-      waitForNexusUser(recipient);
+      waitForNexus(userIndexed(recipient));
 
       // * the recipient signs in and disables mention notifications
       cy.signInWithEncryptedFile(backupDownloadFilePath(recipient.name));
@@ -198,7 +201,7 @@ describe('notifications', () => {
       // * a profile creates a post mentioning the recipient
       seedActorViaApi('Mentioner').then((mentioner) => {
         createPostViaApi(mentioner, `Hello ${mentionOf(recipient)} ${Date.now()}`);
-        waitForNexusNotifications(recipient, 'mention', { actor: mentioner });
+        waitForNexus(notificationsIndexed(recipient, 'mention', { actor: mentioner }));
       });
 
       // * the recipient checks for absence of notification for being mentioned
@@ -215,7 +218,7 @@ describe('notifications', () => {
       createPostViaApi(receiver, `I will be notified when this post is replied to! ${Date.now()}`).then((post) =>
         replyViaApi(replier, post, 'I replied to your post!'),
       );
-      waitForNexusNotifications(receiver, 'reply', { actor: replier });
+      waitForNexus(notificationsIndexed(receiver, 'reply', { actor: replier }));
 
       // * the receiver checks for notification for being replied to
       signInAsReceiver();
@@ -237,7 +240,7 @@ describe('notifications', () => {
       createPostViaApi(receiver, `I will be notified when this post is reposted! ${Date.now()}`).then((post) =>
         repostViaApi(reposter, post, 'I reposted your post!'),
       );
-      waitForNexusNotifications(receiver, 'repost', { actor: reposter });
+      waitForNexus(notificationsIndexed(receiver, 'repost', { actor: reposter }));
 
       // * the receiver checks for notification for being reposted
       signInAsReceiver();
@@ -260,10 +263,12 @@ describe('notifications', () => {
         author,
         `The one who replies to this post will be notified when it is deleted! ${Date.now()}`,
       ).then((post) => {
-        replyViaApi(receiver, post, 'I replied to your post!');
+        replyViaApi(receiver, post, 'I replied to your post!').then((reply) => {
+          waitForNexus(postIndexed(post), postIndexed(reply));
+        });
         deletePostViaApi(author, post);
       });
-      waitForNexusNotifications(receiver, 'post_deleted', { actor: author });
+      waitForNexus(notificationsIndexed(receiver, 'post_deleted', { actor: author }));
 
       // * the receiver checks for notification for the post being deleted
       signInAsReceiver();
@@ -288,15 +293,23 @@ describe('notifications', () => {
         (firstPost) => {
           createPostViaApi(author, `Repost this one too and hear about its deletion as well! ${timestamp}`).then(
             (secondPost) => {
-              repostViaApi(receiver, firstPost, 'I reposted your post!');
-              repostViaApi(receiver, secondPost, 'I reposted this one as well!');
+              repostViaApi(receiver, firstPost, 'I reposted your post!').then((firstRepost) => {
+                repostViaApi(receiver, secondPost, 'I reposted this one as well!').then((secondRepost) => {
+                  waitForNexus(
+                    postIndexed(firstPost),
+                    postIndexed(secondPost),
+                    postIndexed(firstRepost),
+                    postIndexed(secondRepost),
+                  );
+                });
+              });
               deletePostViaApi(author, firstPost);
               deletePostViaApi(author, secondPost);
             },
           );
         },
       );
-      waitForNexusNotifications(receiver, 'post_deleted', { actor: author, count: 2 });
+      waitForNexus(notificationsIndexed(receiver, 'post_deleted', { actor: author, count: 2 }));
 
       // * the receiver checks for the grouped deletion notification
       // (see https://github.com/pubky/pubky-app/issues/1570)
@@ -325,10 +338,12 @@ describe('notifications', () => {
         author,
         `The one who replies to this post will be notified when it is edited! ${Date.now()}`,
       ).then((post) => {
-        replyViaApi(receiver, post, 'I replied to your post!');
+        replyViaApi(receiver, post, 'I replied to your post!').then((reply) => {
+          waitForNexus(postIndexed(post), postIndexed(reply));
+        });
         editPostViaApi(author, post, `This post has been edited! ${Date.now()}`);
       });
-      waitForNexusNotifications(receiver, 'post_edited', { actor: author });
+      waitForNexus(notificationsIndexed(receiver, 'post_edited', { actor: author }));
 
       // * the receiver checks for notification for the post being edited
       signInAsReceiver();
@@ -354,15 +369,23 @@ describe('notifications', () => {
         (firstPost) => {
           createPostViaApi(author, `Repost this one too and hear about its edit as well! ${timestamp}`).then(
             (secondPost) => {
-              repostViaApi(receiver, firstPost, 'I reposted your post!');
-              repostViaApi(receiver, secondPost, 'I reposted this one as well!');
+              repostViaApi(receiver, firstPost, 'I reposted your post!').then((firstRepost) => {
+                repostViaApi(receiver, secondPost, 'I reposted this one as well!').then((secondRepost) => {
+                  waitForNexus(
+                    postIndexed(firstPost),
+                    postIndexed(secondPost),
+                    postIndexed(firstRepost),
+                    postIndexed(secondRepost),
+                  );
+                });
+              });
               editPostViaApi(author, firstPost, `This post has been edited! ${timestamp}`);
               editPostViaApi(author, secondPost, `This post has also been edited! ${timestamp}`);
             },
           );
         },
       );
-      waitForNexusNotifications(receiver, 'post_edited', { actor: author, count: 2 });
+      waitForNexus(notificationsIndexed(receiver, 'post_edited', { actor: author, count: 2 }));
 
       // * the receiver checks for the grouped edit notification, which keeps a link to every
       // edited post (see issue #1570)
@@ -407,10 +430,12 @@ describe('notifications', () => {
           items: [seedPost],
         }).then((collection) => {
           followCollectionViaApi(receiver, collection);
-          createPostViaApi(curator, addedPostContent).then((addedPost) =>
-            addPostToCollectionViaApi(curator, collection, addedPost),
-          );
-          waitForNexusNotifications(receiver, 'post_edited', { actor: curator });
+          createPostViaApi(curator, addedPostContent).then((addedPost) => {
+            // Nexus notifies the collection's followers of the edit, so the follow goes in first
+            waitForNexus(postIndexed(collection), bookmarkIndexed(receiver, collection), postIndexed(addedPost));
+            addPostToCollectionViaApi(curator, collection, addedPost);
+          });
+          waitForNexus(notificationsIndexed(receiver, 'post_edited', { actor: curator }));
 
           // * the receiver checks for notification that the collection was updated
           signInAsReceiver();
@@ -427,7 +452,7 @@ describe('notifications', () => {
           // clean up so the collection does not linger in Discover for later runs/retries, and wait for the
           // deletion notice so it cannot arrive unread in the next test
           deletePostViaApi(curator, collection);
-          waitForNexusNotifications(receiver, 'post_deleted', { actor: curator });
+          waitForNexus(notificationsIndexed(receiver, 'post_deleted', { actor: curator }));
         });
       });
     });
@@ -441,7 +466,11 @@ describe('notifications', () => {
         replyViaApi(actor, post, 'Replying for a second notification!');
       });
       createPostViaApi(actor, `Hello ${mentionOf(receiver)} ${Date.now()}`);
-      waitForNexusNotifications(receiver, 'mention', { actor });
+      waitForNexus(
+        notificationsIndexed(receiver, 'tag_post', { actor }),
+        notificationsIndexed(receiver, 'reply', { actor }),
+        notificationsIndexed(receiver, 'mention', { actor }),
+      );
 
       // * the receiver checks the counter shows 3 and all three notifications are listed
       signInAsReceiver();

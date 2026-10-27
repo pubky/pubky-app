@@ -30,7 +30,7 @@ import {
   fastTagPostInFeed,
   waitForFeedToLoad,
 } from '../support/posts';
-import { waitForNexusPost, waitForNexusPostTags, waitForNexusUserTags } from '../support/nexus';
+import { followIndexed, postIndexed, postTagsIndexed, userTagsIndexed, waitForNexus } from '../support/nexus';
 import {
   createImagePostViaApi,
   createPostViaApi,
@@ -87,6 +87,8 @@ describe('feed and filters', () => {
   let user2: SeededUser;
   let user3: SeededUser;
   let user4: SeededUser;
+  // Every post the feed assertions read, oldest first
+  const seededPosts: SeededPost[] = [];
   let profile1Post2: SeededPost;
   let profile2Post: SeededPost;
   let profile3Post: SeededPost;
@@ -111,25 +113,30 @@ describe('feed and filters', () => {
       user4 = user;
     });
 
-    // Posts are created in the order the recency assertions expect, oldest first, and Nexus indexes them in that order
+    // Posts are created in the order the recency assertions expect, oldest first
+    const seedPost = (seeded: Cypress.Chainable<SeededPost>) =>
+      seeded.then((post) => {
+        seededPosts.push(post);
+        return post;
+      });
     cy.then(() => {
-      createPostViaApi(user1, profile1.postText1);
-      createPostViaApi(user1, profile1.postText2).then((post) => {
+      seedPost(createPostViaApi(user1, profile1.postText1));
+      seedPost(createPostViaApi(user1, profile1.postText2)).then((post) => {
         profile1Post2 = post;
       });
-      createPostViaApi(user1, profile1.postText3);
-      createPostViaApi(user1, profile1.postText4);
-      createPostViaApi(user1, profile1.postText5);
-      createPostViaApi(user2, profile2.postText).then((post) => {
+      seedPost(createPostViaApi(user1, profile1.postText3));
+      seedPost(createPostViaApi(user1, profile1.postText4));
+      seedPost(createPostViaApi(user1, profile1.postText5));
+      seedPost(createPostViaApi(user2, profile2.postText)).then((post) => {
         profile2Post = post;
       });
     });
     cy.then(() => {
-      repostViaApi(user2, profile1Post2, profile2.repostText);
-      createPostViaApi(user3, profile3.postText).then((post) => {
+      seedPost(repostViaApi(user2, profile1Post2, profile2.repostText));
+      seedPost(createPostViaApi(user3, profile3.postText)).then((post) => {
         profile3Post = post;
       });
-      createPostViaApi(user4, profile4.postText).then((post) => {
+      seedPost(createPostViaApi(user4, profile4.postText)).then((post) => {
         profile4Post = post;
       });
 
@@ -151,10 +158,23 @@ describe('feed and filters', () => {
       // profile 1 is 2 hops from profile 3, so this tag on profile 4's profile
       // proves 'Tagged as' considers taggers within the viewer's web of trust
       tagUserViaApi(user1, user4, [taggedAsLabelInNetwork]);
-
-      // The final seed: once Nexus has indexed it, every seed above is indexed too
-      waitForNexusUserTags(user4, [taggedAsLabelInNetwork]);
     });
+
+    // Every post, follow and tag the reach, sort and 'Tagged as' assertions read
+    cy.then(() =>
+      waitForNexus(
+        ...seededPosts.map(postIndexed),
+        followIndexed(user2, user1),
+        followIndexed(user3, user2),
+        followIndexed(user1, user2),
+        followIndexed(user1, user3),
+        followIndexed(user1, user4),
+        postTagsIndexed(profile3Post, ['p3tag1', 'p3tag2', 'p3tag3', 'p3tag4', 'p3tag5']),
+        postTagsIndexed(profile2Post, ['p2tag1', 'p2tag2', 'p2tag3', 'p2tag4']),
+        userTagsIndexed(user1, [taggedAsLabelOutsideNetwork]),
+        userTagsIndexed(user4, [taggedAsLabelInNetwork]),
+      ),
+    );
   });
 
   beforeEach(() => {
@@ -436,7 +456,7 @@ describe('feed and filters', () => {
     const tag = `night${String(stamp).slice(-6)}`;
     const postContent = `Custom feed post ${stamp}`;
 
-    createPostViaApi(user1, postContent, { tags: [tag] }).then((post) => waitForNexusPostTags(post, [tag]));
+    createPostViaApi(user1, postContent, { tags: [tag] }).then((post) => waitForNexus(postTagsIndexed(post, [tag])));
 
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     resetHomeFeedToAllRecent();
@@ -509,10 +529,18 @@ describe('feed and filters', () => {
     // Profile 3 follows only profile 2, and is friends with nobody.
     tagPostViaApi(user3, profile4Post, [reachTag]);
     createPostViaApi(user3, older, { tags: [sortTag] }).then((olderPost) => {
-      createPostViaApi(user3, newer, { tags: [sortTag] });
-      tagPostViaApi(user3, olderPost, ['sorta', 'sortb', 'sortc']);
+      createPostViaApi(user3, newer, { tags: [sortTag] }).then((newerPost) => {
+        tagPostViaApi(user3, olderPost, ['sorta', 'sortb', 'sortc']);
+        createPostViaApi(user3, shortPost, { tags: [kindTag] }).then((shortKindPost) =>
+          waitForNexus(
+            postTagsIndexed(profile4Post, [reachTag]),
+            postTagsIndexed(olderPost, [sortTag, 'sorta', 'sortb', 'sortc']),
+            postTagsIndexed(newerPost, [sortTag]),
+            postTagsIndexed(shortKindPost, [kindTag]),
+          ),
+        );
+      });
     });
-    createPostViaApi(user3, shortPost, { tags: [kindTag] }).then((post) => waitForNexusPostTags(post, [kindTag]));
 
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     resetHomeFeedToAllRecent();
@@ -651,16 +679,26 @@ describe('visual layout', () => {
     const photographer = 'Pete the Photographer';
 
     seedUserViaApi(photographer, { bio: 'I post photos', withRecoveryFile: true }).then((user) => {
+      const posts: SeededPost[] = [];
       // create 2 posts with images
       [imagePostContent1, imagePostContent2].forEach((postContent) => {
-        createImagePostViaApi(user, postContent);
+        createImagePostViaApi(user, postContent).then((post) => {
+          posts.push(post);
+        });
       });
 
       // create post with just text
-      createPostViaApi(user, textOnlyPostContent);
+      createPostViaApi(user, textOnlyPostContent).then((post) => {
+        posts.push(post);
+      });
 
       // create another post with image (3 posts with images in total)
-      createImagePostViaApi(user, imagePostContent3).then((post) => waitForNexusPost(post));
+      createImagePostViaApi(user, imagePostContent3).then((post) => {
+        posts.push(post);
+      });
+
+      // the text-only post too, so its absence from the visual layout is the filter's doing
+      cy.then(() => waitForNexus(...posts.map(postIndexed)));
     });
 
     cy.signInWithEncryptedFile(backupDownloadFilePath(photographer));

@@ -3,12 +3,7 @@ import { backupDownloadFilePath } from '../support/auth';
 import { applyContentFilter } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
-import {
-  waitForNexusNotifications,
-  waitForNexusPost,
-  waitForNexusPostTags,
-  waitForNexusUserSearch,
-} from '../support/nexus';
+import { notificationsIndexed, postIndexed, postTagsIndexed, userSearchIndexed, waitForNexus } from '../support/nexus';
 import { createPostViaApi, seedUserViaApi } from '../support/seed';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
@@ -371,7 +366,7 @@ describe('posts', () => {
   it('can mention a profile picked from the @ autocomplete', () => {
     // A name with a space covers multi-word mention lookup (https://github.com/pubky/pubky-app/issues/1638)
     seedUserViaApi(`Mention Me ${String(Date.now()).slice(-6)}`).then((mentioned) => {
-      waitForNexusUserSearch(mentioned);
+      waitForNexus(userSearchIndexed(mentioned));
 
       createQuickPostWithMention(mentioned.name);
 
@@ -512,7 +507,7 @@ describe('posts', () => {
 
     cy.get<Interception>('@putTag').then((interception) => {
       const { authorId, postId } = taggedPostFromInterception(interception);
-      waitForNexusPostTags({ authorId, id: postId }, [tag1, tag2, tag3]);
+      waitForNexus(postTagsIndexed({ authorId, id: postId }, [tag1, tag2, tag3]));
     });
 
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
@@ -553,7 +548,7 @@ describe('posts', () => {
 
     seedUserViaApi(`Tag Target ${String(stamp).slice(-6)}`).then((author) => {
       createPostViaApi(author, postContent).then((post) => {
-        waitForNexusPost(post);
+        waitForNexus(postIndexed(post));
 
         // * tag the post from the home feed. Reach All lists authors the viewer does not follow. The
         // feed loaded before the post existed, so it arrives through 'See new posts' unless the
@@ -572,7 +567,7 @@ describe('posts', () => {
         fastTagPostInFeed([profileTag], postContent);
         expectTagsOnPost([feedTag, profileTag]);
 
-        waitForNexusPostTags(post, [feedTag, profileTag]);
+        waitForNexus(postTagsIndexed(post, [feedTag, profileTag]));
         cy.reload();
         expectTagsOnPost([feedTag, profileTag]);
       });
@@ -589,8 +584,11 @@ describe('posts', () => {
     // * another profile publishes two posts the viewer has never loaded, so neither is in the
     // viewer's local database until the feed brings it in
     seedUserViaApi(`Reply Target ${String(stamp).slice(-6)}`).then((author) => {
-      createPostViaApi(author, postToReplyTo);
-      createPostViaApi(author, postToRepost).then((post) => waitForNexusPost(post));
+      createPostViaApi(author, postToReplyTo).then((replyTarget) => {
+        createPostViaApi(author, postToRepost).then((repostTarget) =>
+          waitForNexus(postIndexed(replyTarget), postIndexed(repostTarget)),
+        );
+      });
 
       resetHomeFeedToAllRecent();
       cy.findFirstPostInFeedFiltered(postToRepost, CheckForNewPosts.Yes);
@@ -606,8 +604,7 @@ describe('posts', () => {
         .should('contain.text', postToRepost);
 
       // * Nexus indexed both as a reply to and a repost of the author's posts
-      waitForNexusNotifications(author, 'reply');
-      waitForNexusNotifications(author, 'repost');
+      waitForNexus(notificationsIndexed(author, 'reply'), notificationsIndexed(author, 'repost'));
     });
   });
 
