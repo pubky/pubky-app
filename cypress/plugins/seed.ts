@@ -218,13 +218,13 @@ export const createSeedTasks = (config: SeedConfig) => {
         return { id: collection.meta.id, authorId, uri: collection.meta.url, kind: 'collection' };
       }),
 
-    // Rewrites the collection post with one more item, as saving a post into a collection does in the app
+    // Rewrites the collection post with the item first, as saving a post into a collection does in the app
     seedAddToCollection: ({ authorId, collectionId, itemUri }: SeedAddToCollectionArgs) =>
       step(`add ${itemUri} to collection ${collectionId} by '${nameOf(authorId)}'`, async () => {
         const author = sessionFor(authorId);
         const current = await readPost(author, collectionId);
         const content = JSON.parse(current.content);
-        const nextContent = JSON.stringify({ ...content, items: [...(content.items ?? []), itemUri] });
+        const nextContent = JSON.stringify({ ...content, items: [itemUri, ...(content.items ?? [])] });
         const edited = author.builder.editPost(current, collectionId, nextContent);
         await author.session.storage.putJson(toPath(edited.meta.path), edited.post.toJson());
         return null;
