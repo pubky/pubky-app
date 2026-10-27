@@ -37,6 +37,9 @@ export type SeedConfig = {
 // The passcode `cy.signInWithEncryptedFile` types by default
 const RECOVERY_FILE_PASSCODE = '123456';
 const SEED_CLIENT_ID = 'e2e-seed.pubky.app';
+// Consecutive seed writes start at least this far apart, so records a test orders by time
+// (timelines, threads, notifications) never share a timestamp
+const SEED_WRITE_SPACING_MS = 5;
 // Matches the `mustache-*.png` fixtures; extend when a spec seeds another image type
 const IMAGE_CONTENT_TYPES: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg' };
 
@@ -57,6 +60,8 @@ const toPath = (path: string): Path => {
 };
 
 const postPath = (postId: string) => toPath(`/pub/pubky.app/posts/${postId}`);
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const preview = (text: string) => (text.length > 48 ? `${text.slice(0, 45)}...` : text);
 
@@ -81,10 +86,14 @@ export const createSeedTasks = (config: SeedConfig) => {
     return seeded;
   };
   const nameOf = (userId: string) => sessions.get(userId)?.name ?? userId;
+  let lastStepAt = 0;
 
   // Runs one seed step, timing it and naming it in any failure so a broken seed points at its step
   const step = async <T>(label: string, run: () => Promise<T>): Promise<T> => {
+    const spacing = lastStepAt + SEED_WRITE_SPACING_MS - Date.now();
+    if (spacing > 0) await sleep(spacing);
     const startedAt = Date.now();
+    lastStepAt = startedAt;
     try {
       const result = await run();
       console.log(`[seed] ${label} (${Date.now() - startedAt}ms)`);
@@ -174,13 +183,13 @@ export const createSeedTasks = (config: SeedConfig) => {
         const author = sessionFor(authorId);
         const edited = author.builder.editPost(await readPost(author, postId), postId, content);
         await author.session.storage.putJson(toPath(edited.meta.path), edited.post.toJson());
-        return null;
+        return { id: postId };
       }),
 
     seedDeletePost: ({ authorId, postId }: SeedDeletePostArgs) =>
       step(`delete post ${postId} by '${nameOf(authorId)}'`, async () => {
         await sessionFor(authorId).session.storage.delete(postPath(postId));
-        return null;
+        return { id: postId };
       }),
 
     seedTag: ({ taggerId, uri, label }: SeedTagArgs) =>
@@ -193,7 +202,7 @@ export const createSeedTasks = (config: SeedConfig) => {
         const follower = sessionFor(followerId);
         const follow = follower.builder.createFollow(followeeId);
         await follower.session.storage.putJson(toPath(follow.meta.path), follow.follow.toJson());
-        return null;
+        return { id: followeeId };
       }),
 
     seedBookmark: ({ userId, uri }: SeedBookmarkArgs) =>
@@ -229,7 +238,7 @@ export const createSeedTasks = (config: SeedConfig) => {
         const nextContent = JSON.stringify({ ...content, items: [itemUri, ...(content.items ?? [])] });
         const edited = author.builder.editPost(current, collectionId, nextContent);
         await author.session.storage.putJson(toPath(edited.meta.path), edited.post.toJson());
-        return null;
+        return { id: collectionId };
       }),
   };
 };
