@@ -5,6 +5,8 @@ const NEXUS_POLL_INTERVAL_MS = 500;
 const NEXUS_POLL_ATTEMPTS = 120;
 // Enough to see every notification a spec gives one receiver
 const NOTIFICATIONS_LIMIT = 100;
+// The most labels a spec puts on one post or profile (feed.cy.ts tags Profile 3's post five times)
+const TAGS_LIMIT = 5;
 
 type NexusResponse = Cypress.Response<unknown>;
 
@@ -83,13 +85,19 @@ const hasTagLabels = (response: NexusResponse, labels: string[]) => {
 };
 
 export const waitForNexusPostTags = (post: Pick<SeededPost, 'id' | 'authorId'>, labels: string[]) =>
-  waitForNexus(`tags ${labels.join(', ')} on post ${post.id}`, `/v0/post/${post.authorId}/${post.id}/tags`, (r) =>
-    hasTagLabels(r, labels),
+  waitForNexus(
+    `tags ${labels.join(', ')} on post ${post.id}`,
+    `/v0/post/${post.authorId}/${post.id}/tags`,
+    (r) => hasTagLabels(r, labels),
+    { limit_tags: String(TAGS_LIMIT) },
   );
 
 export const waitForNexusUserTags = (user: SeededUser, labels: string[]) =>
-  waitForNexus(`tags ${labels.join(', ')} on user '${user.name}'`, `/v0/user/${user.id}/tags`, (r) =>
-    hasTagLabels(r, labels),
+  waitForNexus(
+    `tags ${labels.join(', ')} on user '${user.name}'`,
+    `/v0/user/${user.id}/tags`,
+    (r) => hasTagLabels(r, labels),
+    { limit_tags: String(TAGS_LIMIT) },
   );
 
 // Every notification body names its actor in a `*_by` field (followed_by, tagged_by, replied_by, ...)
