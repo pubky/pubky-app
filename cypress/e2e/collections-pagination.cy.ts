@@ -39,8 +39,9 @@ describe('collections pagination', () => {
   before(() => {
     slowCypressDown();
     cy.deleteDownloadsFolder();
+    // Installs the app while the seeds index; the sign-in below waits for the install to finish
+    cy.visit('/');
 
-    // Nexus indexes the collections in the order they are written, so the stream orders them as seeded
     seedUserViaApi(username, { bio: 'I collect everything', withRecoveryFile: true }).then((author) => {
       authorId = author.id;
       Cypress._.times(COLLECTION_COUNT, (index) => {
@@ -52,6 +53,7 @@ describe('collections pagination', () => {
       });
     });
 
+    // The section is checked against the stream Nexus returns, in Nexus's order
     cy.then(() =>
       waitForNexusStream({ source: 'author', author_id: authorId, kind: 'collection' }, collectionIds).then((keys) => {
         collectionKeys = keys;
