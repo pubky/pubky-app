@@ -45,7 +45,7 @@ import {
   resetHomeFeedToAllRecent,
 } from '../support/feeds';
 import { defaultMs } from '../support/slow-down';
-import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
+import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
 
 const username = 'Poster';
 
@@ -576,6 +576,38 @@ describe('posts', () => {
         cy.reload();
         expectTagsOnPost([feedTag, profileTag]);
       });
+    });
+  });
+
+  it("can reply to and repost another profile's post", () => {
+    const stamp = Date.now();
+    const postToReplyTo = `Reply to my post! ${stamp}`;
+    const postToRepost = `Repost my post! ${stamp}`;
+    const replyContent = `Replying to another profile's post! ${stamp}`;
+    const repostContent = `Reposting another profile's post! ${stamp}`;
+
+    // * another profile publishes two posts the viewer has never loaded, so neither is in the
+    // viewer's local database until the feed brings it in
+    seedUserViaApi(`Reply Target ${String(stamp).slice(-6)}`).then((author) => {
+      createPostViaApi(author, postToReplyTo);
+      createPostViaApi(author, postToRepost).then((post) => waitForNexusPost(post));
+
+      resetHomeFeedToAllRecent();
+      cy.findFirstPostInFeedFiltered(postToRepost, CheckForNewPosts.Yes);
+
+      // * reply to the first post from the home feed
+      replyToPost({ replyContent, filterText: postToReplyTo });
+      cy.findFirstPostInFeedFiltered(replyContent, CheckForNewPosts.No, WaitForNewPosts.Yes).should('be.visible');
+
+      // * repost the second with content: the repost embeds the other profile's post
+      repostPost({ repostContent, filterText: postToRepost });
+      cy.findFirstPostInFeedFilteredByType(repostContent, PostType.Repost, CheckForNewPosts.No, WaitForNewPosts.Yes)
+        .find('[data-cy="post-preview-card"]')
+        .should('contain.text', postToRepost);
+
+      // * Nexus indexed both as a reply to and a repost of the author's posts
+      waitForNexusNotifications(author, 'reply');
+      waitForNexusNotifications(author, 'repost');
     });
   });
 
