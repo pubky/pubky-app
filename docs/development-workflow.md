@@ -102,6 +102,8 @@ Right-sized verification:
 
 Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; assert props, variants, and interactions in unit tests; visual appearance via VRT (`visual-regression-testing.md`); no snapshot tests. For mobile layout branches driven by `useIsMobile`, use `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are ESLint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
 
+Cypress e2e data: seed what a test only observes, drive what it tests. Preconditions a spec only reads (other users, their posts, follows, tags, notifications to receive) may be written through the homeserver API with the helpers in `cypress/support/seed.ts`, but every flow seeded that way keeps a named UI test in the spec that owns it, so seeding never reduces coverage. A spec seeds everything a test needs, then waits once, on its final seed, with a `waitForNexus*` helper from `cypress/support/nexus.ts` before the UI reads it.
+
 Manual checks for UI work: desktop and narrow viewport, loading/empty/error states, hover/focus/disabled states, dark-on-brand contrast, and the mobile path where a Sheet replaces a Popover.
 
 ## Code Quality
