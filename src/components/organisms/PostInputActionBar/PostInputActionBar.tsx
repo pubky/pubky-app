@@ -8,6 +8,7 @@ import { Switch } from '@/atoms/Switch/Switch';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { cn } from '@/libs/utils/utils';
+import { LocksRegionNotice } from '@/molecules/LocksRegionNotice/LocksRegionNotice';
 import type { PostInputActionBarProps } from './PostInputActionBar.types';
 
 const COMMON_BUTTON_PROPS = { variant: 'secondary', size: 'sm' } as const;
@@ -107,6 +108,7 @@ export function PostInputActionBar({
               aria-label="Lock content"
               className="data-[state=unchecked]:bg-accent"
             />
+            {lockSwitch.regionNotice ? <LocksRegionNotice variant="icon" cause={lockSwitch.regionNotice} /> : null}
           </Container>
         ) : null}
       </Container>

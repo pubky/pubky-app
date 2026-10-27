@@ -1,4 +1,5 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
+import { PAYKIT_PAYMENT_IN_HOURS } from '@/config/locks';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -9,6 +10,7 @@ import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { retryHomeserverWriteAfterReread, type THomeserverWriteFence } from '@/services/homeserver/write-retry';
 import { LocalLocksService } from '@/services/local/locks/locks';
 import { LocksService } from '@/services/locks/locks';
 import type {
@@ -31,7 +33,7 @@ import type {
   TUnlockedListItem,
   TVerificationTask,
 } from '@/services/locks/locks.types';
-import { VerifierType } from '@/services/locks/locks.types';
+import { isRegionBlockedLookup, VerifierType } from '@/services/locks/locks.types';
 import type {
   TCreateLockContentParams,
   TFetchOwnContentParams,
@@ -42,8 +44,8 @@ import type {
   TLockContentFile,
   TPaymentBundleParams,
   TPaymentLockParams,
-  TPurchaseBundleIdParams,
   TReplicateUnlockedContentParams,
+  TResolvedPurchase,
   TStartPaymentParams,
   TStartPaymentResult,
 } from './locks.types';
@@ -51,6 +53,26 @@ import type {
 // v1 payment locks must hold exactly one criterion, referenced once by the lock logic.
 const CRITERION_ID = 'criterion-1';
 const CREDENTIAL_TTL_SECONDS = 900;
+
+// Lower wins. A null task beats an ended one because resubmitting it is a safe replay; `failed` beats
+// `expired` because a reported `failed` makes Try again check the wallet.
+// TODO:[Locks] The Lock Server plans to delete ended tasks a few hours after they end (pubky/locks
+// docs/DOMAIN_MODEL.md; not built yet). After that, an ended id also looks up as a null task, so it
+// ranks here as never received and the open path resubmits it without Try again. When the cleanup
+// ships:
+// 1. A null task can be a deleted `completed` one. The entitlement stays on the creator's homeserver
+//    after the cleanup, so request the credential before resubmitting; if it is issued, the reader
+//    has paid.
+// 2. A deleted `failed`/`expired` id gets no credential, so the app cannot tell it from an id the
+//    server never received. The Lock Server must define what a lookup or a resubmit returns for a
+//    deleted task; until then, resubmitting can start a new payment without Try again.
+const purchaseRank = (task: TVerificationTask | null): number => {
+  if (task === null) return 2;
+  if (task.status === 'completed') return 0;
+  if (task.status === 'failed') return 3;
+  if (task.status === 'expired') return 4;
+  return 1;
+};
 
 /**
  * Application layer for the Lock Server: auth (mirrors `AuthApplication`), publishing locked content
@@ -81,25 +103,60 @@ export class LocksApplication {
   }
 
   /**
-   * Reads `/priv/social/purchases/<lockId>.json` from the reader's own homeserver and returns the
-   * bundle id inside, or null when the file does not exist. A file that exists but cannot be parsed
-   * throws: a purchase was made and its id is lost, so the caller must show an error instead of
-   * offering to pay again with a fresh id, which could charge the reader twice.
+   * Ties go to the lowest id so two devices settle on the same one. Ended ids are kept: one may be the
+   * only handle to a late-paid invoice. A file that is not a readable bundle id throws, and so does a
+   * failed lookup unless another id is `completed`: minting beside a lost or unknown id could charge twice.
    */
-  static async fetchPurchaseBundleId({ lockUrl, readerPubky }: TPurchaseBundleIdParams): Promise<string | null> {
-    const lockId = this.requireLockId(lockUrl, 'fetchPurchaseBundleId');
-    const stored = await HomeserverService.getBytesIfExists(GuardedContentParser.purchaseUrl(readerPubky, lockId));
-    if (!stored) return null;
-
-    const bundleId = GuardedContentParser.parsePurchaseFile(stored.bytes);
-    if (!bundleId) {
+  static async fetchResolvedPurchase({
+    lockFile,
+    lockUrl,
+    readerPubky,
+  }: TPaymentLockParams): Promise<TResolvedPurchase | null> {
+    const lockId = this.requireLockId(lockUrl, 'fetchResolvedPurchase');
+    const [files, legacy] = await Promise.all([
+      HomeserverService.listAll({ baseDirectory: GuardedContentParser.purchaseLockRootUrl(readerPubky, lockId) }),
+      HomeserverService.getBytesIfExists(GuardedContentParser.legacyPurchaseUrl(readerPubky, lockId)),
+    ]);
+    const bundleIds = GuardedContentParser.purchaseBundleIds(files);
+    const legacyId = legacy ? GuardedContentParser.parsePurchaseFile(legacy.bytes) : null;
+    if (!bundleIds || (legacy && !legacyId)) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'purchase bundle id file is unreadable', {
         service: ErrorService.Locks,
-        operation: 'fetchPurchaseBundleId',
+        operation: 'fetchResolvedPurchase',
         context: { lockId },
       });
     }
-    return bundleId;
+    if (legacyId && !bundleIds.includes(legacyId)) {
+      bundleIds.push(legacyId);
+      bundleIds.sort();
+    }
+    if (bundleIds.length === 0) return null;
+
+    const outcomes = await Promise.allSettled(
+      bundleIds.map((bundleId) => LocksService.lookupVerificationTask(lockFile.creator, bundleId)),
+    );
+    const tasks = outcomes.map((outcome) =>
+      outcome.status === 'fulfilled' && !isRegionBlockedLookup(outcome.value) ? outcome.value : null,
+    );
+    let best = 0;
+    for (let i = 1; i < tasks.length; i++) {
+      if (purchaseRank(tasks[i]) < purchaseRank(tasks[best])) best = i;
+    }
+    const task = tasks[best];
+    // A refused lookup says nothing about that id, and the refusal covers every id alike. A completed
+    // one still wins, as it does over a failed lookup: nothing outranks it.
+    if (
+      task?.status !== 'completed' &&
+      outcomes.some((o) => o.status === 'fulfilled' && isRegionBlockedLookup(o.value))
+    ) {
+      return { kind: 'region-blocked' };
+    }
+    const failed = outcomes.find((outcome) => outcome.status === 'rejected');
+    if (failed?.status === 'rejected' && task?.status !== 'completed') throw failed.reason;
+    if (task?.status === 'failed' || task?.status === 'expired') {
+      return { kind: 'terminal', bundleId: bundleIds[best], status: task.status };
+    }
+    return { kind: 'reusable', bundleId: bundleIds[best], task };
   }
 
   /** Whether the reader's wallet has published a Paykit receiver. */
@@ -108,34 +165,56 @@ export class LocksApplication {
   }
 
   /**
-   * Starts (or restarts) a payment: reuses the bundle id saved on the reader's homeserver, or mints
-   * and saves a fresh one when there is none or the saved one is `rejectBundleId`. Then submits the
-   * proof to the Lock Server, which creates the verification task (or returns the existing one on a
-   * replay of the same id) and afterwards has Paykit deliver the payment request to the reader's wallet.
+   * Starts (or restarts) a payment: reuses a bundle id saved on the reader's homeserver that can
+   * still pay (`fetchResolvedPurchase`), or mints and saves a fresh one when there is none. Then submits
+   * the proof to the Lock Server, which creates the verification task (or returns the existing one
+   * on a replay of the same id) and afterwards has Paykit deliver the payment request to the
+   * reader's wallet. When every saved id ended and `isRetry` is false, nothing is minted or
+   * submitted: the ended status is returned for the modal to show. A Lock Server that refuses the
+   * submission for the reader's region (HTTP 451) yields `regionBlocked`, not an error.
    */
   static async startPayment({
     lockFile,
     lockUrl,
     readerPubky,
-    rejectBundleId,
+    isRetry,
   }: TStartPaymentParams): Promise<TStartPaymentResult> {
     const lockId = this.requireLockId(lockUrl, 'startPayment');
+    // A purchase-file PUT the homeserver refuses with a retried status starts over from the read:
+    // the reader's purchases may have changed meanwhile, so a saved id may now be reusable.
+    const resolveOrMint = async (fence: THomeserverWriteFence): Promise<TStartPaymentResult | string> => {
+      const resolved = await this.fetchResolvedPurchase({ lockFile, lockUrl, readerPubky });
+      if (resolved?.kind === 'region-blocked') return { regionBlocked: true };
+      if (resolved?.kind === 'terminal' && !isRetry) return { bundleId: resolved.bundleId, status: resolved.status };
+      if (resolved?.kind === 'reusable') return resolved.bundleId;
+      const bundleId = await LocksService.generateBundleId();
+      // Saved BEFORE the proof is submitted: a submission that succeeds while the file is missing
+      // leaves a purchase nobody can reach.
+      await HomeserverService.putBlob({
+        url: GuardedContentParser.purchaseUrl(readerPubky, lockId, bundleId),
+        blob: new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId)),
+        fence,
+      });
+      return bundleId;
+    };
     const run = async (): Promise<TStartPaymentResult> => {
-      let bundleId = await this.fetchPurchaseBundleId({ lockUrl, readerPubky });
-      if (!bundleId || bundleId === rejectBundleId) {
-        bundleId = await LocksService.generateBundleId();
-        // Saved BEFORE the proof is submitted: a submission that succeeds while the file is missing
-        // leaves a purchase nobody can reach.
-        await HomeserverService.putBlob({
-          url: GuardedContentParser.purchaseUrl(readerPubky, lockId),
-          blob: new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId)),
-        });
-      }
+      const fence = HomeserverService.createWriteFence();
+      const resolved = await retryHomeserverWriteAfterReread(fence, () => resolveOrMint(fence));
+      if (typeof resolved !== 'string') return resolved;
+      const bundleId = resolved;
+      // A later pass may have returned a reused id after its asynchronous read, without a fenced
+      // write: the session that started this must still be current before anything is submitted.
+      fence.assertCurrent();
       const bundle = LockProofBundler.buildPayment(lockFile, lockUrl, bundleId, readerPubky);
-      const task = await LocksService.submitProof(bundle);
-      return { bundleId, status: task.status };
+      const outcome = await LocksService.submitProof(bundle);
+      if (outcome.regionBlocked) return { bundleId, regionBlocked: true };
+      return { bundleId, status: outcome.status };
     };
     // Every browser Next.js supports has Web Locks; only an insecure context (plain-http dev) lacks it.
+    // TODO:[Locks] The Web Lock covers one browser, so two devices that open at once can each mint an
+    // id and the reader gets two payment requests. pubky SDK 0.16 has `storage.lock`, a homeserver
+    // write lock (423 while another client holds it). Once the production homeserver fully supports
+    // it, hold that lock around `run` to make the second device reuse the first device's id.
     const lockManager = typeof navigator === 'undefined' ? undefined : navigator.locks;
     if (!lockManager) return run();
 
@@ -159,8 +238,10 @@ export class LocksApplication {
    * One read of where the Lock Server's payment verification stands for a saved bundle id, or null
    * when the server has no task for it (the submission never reached it).
    */
-  static fetchPaymentStatus({ lockFile, bundleId }: TPaymentBundleParams): Promise<TVerificationTask | null> {
-    return LocksService.lookupVerificationTask(lockFile.creator, bundleId);
+  static async fetchPaymentStatus({ lockFile, bundleId }: TPaymentBundleParams): Promise<TVerificationTask | null> {
+    const lookup = await LocksService.lookupVerificationTask(lockFile.creator, bundleId);
+    // Mid-wait a refused lookup is like a failed one: no news, so the wait goes on.
+    return isRegionBlockedLookup(lookup) ? null : lookup;
   }
 
   /**
@@ -186,23 +267,6 @@ export class LocksApplication {
   static async fetchPaidContent({ lockFile, bundleId }: TPaymentBundleParams): Promise<TUnlockedContent> {
     const { credential } = await LocksService.issueAccessCredential(lockFile.creator, bundleId);
     return this.fetchUnlockedContent({ lockFile, credential });
-  }
-
-  /**
-   * `fetchPaidContent` for a caller that knows neither the bundle id nor whether the payment went
-   * through: looks up the saved id, checks the verification status, and downloads only when it is
-   * `completed`; null otherwise. Read-only; never mints an id or submits a proof.
-   */
-  static async fetchPaidContentIfCompleted({
-    lockFile,
-    lockUrl,
-    readerPubky,
-  }: TPaymentLockParams): Promise<TUnlockedContent | null> {
-    const bundleId = await this.fetchPurchaseBundleId({ lockUrl, readerPubky });
-    if (!bundleId) return null;
-    const task = await this.fetchPaymentStatus({ lockFile, bundleId });
-    if (task?.status !== 'completed') return null;
-    return this.fetchPaidContent({ lockFile, bundleId });
   }
 
   /** `pubky://…/<lock_id>.json` → `<lock_id>`, or a typed error for a malformed lock URL. */
@@ -580,7 +644,12 @@ export class LocksApplication {
     const criterion = {
       criterion_id: CRITERION_ID,
       verifier_type: VerifierType.PAYMENT,
-      params: { recipient_pubky: post.creator, amount: lockConfig.amount, asset: lockConfig.asset },
+      params: {
+        recipient_pubky: post.creator,
+        amount: lockConfig.amount,
+        asset: lockConfig.asset,
+        payment_in: PAYKIT_PAYMENT_IN_HOURS,
+      },
     };
 
     const result = await LocksService.createContentLock({

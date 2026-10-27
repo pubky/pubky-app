@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Download, FileText, FileX, type LucideIcon, VideoOff, VolumeX } from 'lucide-react';
+import { Eye, FileText, FileX, type LucideIcon, VideoOff, VolumeX } from 'lucide-react';
 import { Audio } from '@/atoms/Audio/Audio';
 import { Button } from '@/atoms/Button/Button';
 import { Link } from '@/atoms/Link/Link';
@@ -108,7 +108,7 @@ export const ArticleInlineMedia = ({ src, alt, onLinkClick, ...source }: Article
             aria-label="Open PDF"
             onClick={resolved.external && onLinkClick ? (event) => onLinkClick(resolved.url, event) : undefined}
           >
-            <Download className="size-4" />
+            <Eye className="size-4" />
           </Link>
         </Button>
       </span>

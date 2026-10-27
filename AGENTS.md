@@ -50,12 +50,18 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 ## Non-negotiables
 
 - Errors: `Err.*` factories (`src/libs/error/error.factories.ts`), never raw `Error`. Factories log and capture, so never
-  log-then-throw. `docs/error-handling.md`
+  log-then-throw. Only the documented pinned SDK boundary checks may classify by message, including Locks SDK 0.1.0
+  `InvalidInput` + exact viewer HTTP 451; the optional `ClientRegionService.fetchCountry` availability probe uses
+  non-reporting raw `fetch`. Keep these exceptions narrow and contract-tested. `docs/error-handling.md`
 - Local-first reads in hooks: `useLocalFirstQuery` (`@/hooks/useLocalFirstQuery/useLocalFirstQuery`). Never network, TanStack
   or retry logic inside `useLiveQuery`; no hand-rolled `useEffect` + `useLiveQuery`. A cache hit is never refreshed by it,
   a tombstone counts as data, a settled `null` means missing. `docs/local-first.md`
 - Local-first writes: Dexie first, homeserver sync after, roll back on failure, refresh every affected `*_ttl` row, persist
   dependencies before dependents; stream cursors only from Nexus, never `indexed_at`. `docs/local-first.md`, `docs/data-patterns.md`
+- Homeserver writes only through `HomeserverService`, which retries 429/500/503 and the GCS publish-conflict 409 (gate
+  test enforced). A write built from a read of the same data passes the
+  `HomeserverService.createWriteFence()` fence inside `retryHomeserverWriteAfterReread(fence, …)`: it makes one attempt,
+  every retry runs the read again, and no later pass outlives the session. `docs/error-handling.md`
 - Composite post ids `author:postId` via `buildCompositeId` / `parseCompositeId`. `docs/data-patterns.md`
 - Article bodies embed every media kind as `![alt](attachment:{n})`; the kind comes from file metadata, never the
   markdown, and the cover stays image-only. `docs/data-patterns.md`, ADR-0023
@@ -120,6 +126,11 @@ and targeted tests pass; VRT, ADR, `DB_VERSION` and config changes called out; t
 Commits and branches: `type(scope): description` (imperative, lower-case, no period, ≤72 chars); branches
 `<type>/<issue>-<kebab-description>` cut from `dev`; PRs target `dev`, draft unless asked, one change per PR. Cypress specs
 are owned by QA: flag an invalidated spec, do not edit or run e2e yourself. `docs/commit-message.md`
+
+## People and names
+
+Use GitHub handles for real people and fictional names in tests. Do not attribute opinions, decisions or personal matters
+to people. See [People and names](docs/development-workflow.md#people-and-names) for the full policy.
 
 ## Common failure modes
 

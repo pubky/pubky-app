@@ -40,20 +40,17 @@ describe('SidebarButton', () => {
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 
-  it('supports a link with the shared icon and styling without nesting a button', () => {
-    const onClick = vi.fn();
+  it('renders as its child link with asChild, the icon inside the link', () => {
     render(
-      <SidebarButton icon={FileText} asChild>
-        <a href="https://example.com" target="_blank" rel="noopener noreferrer" onClick={onClick}>
-          Example
-        </a>
+      <SidebarButton asChild icon={FileText}>
+        <a href="/terms-of-use">Terms of service</a>
       </SidebarButton>,
     );
-    const link = screen.getByRole('link', { name: 'Example' });
-    expect(link).toHaveAttribute('data-variant', 'dark-outline');
+
+    const link = screen.getByRole('link', { name: 'Terms of service' });
+    expect(link).toHaveAttribute('href', '/terms-of-use');
+    expect(link).toHaveClass('w-full', 'font-bold');
     expect(link.querySelector('svg')).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    fireEvent.click(link);
-    expect(onClick).toHaveBeenCalledOnce();
   });
 });

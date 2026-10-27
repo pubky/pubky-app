@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ElementType } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { APP_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { APP_ROUTES, LEGAL_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { LANDING_NEXT_SECTION_ID } from '@/templates/Public/Landing/Landing.constants';
 import { HomeActions, HomeBrandFooter, HomeFooter, HomePageHeading, HomeSectionTitle } from './Home';
 
@@ -79,18 +79,6 @@ vi.mock('@/organisms/DialogAge/DialogAge', () => {
   };
 });
 
-vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', () => {
-  return {
-    DialogPrivacy: () => <span data-testid="dialog-privacy">Privacy Policy</span>,
-  };
-});
-
-vi.mock('@/organisms/DialogTerms/DialogTerms', () => {
-  return {
-    DialogTerms: () => <span data-testid="dialog-terms">Terms of Service</span>,
-  };
-});
-
 // Mock config
 vi.mock('@/config/externalLinks', () => ({
   PUBKY_CORE_URL: 'https://github.com/pubky/pubky-core',
@@ -122,7 +110,11 @@ vi.mock('@/atoms/Container/Container', () => {
 
 vi.mock('@/atoms/FooterLinks/FooterLinks', () => {
   return {
-    FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
+    FooterLinks: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="footer-links" className={className}>
+        {children}
+      </div>
+    ),
   };
 });
 
@@ -281,14 +273,18 @@ describe('HomeFooter', () => {
   it('renders copyright', () => {
     render(<HomeFooter />);
 
-    expect(screen.getByText(/Synonym Software, S\.A\. DE C\.V\./)).toBeInTheDocument();
+    expect(screen.getByText(/Synonym Software, S\.A\. de C\.V\./)).toBeInTheDocument();
   });
 
-  it('renders terms, privacy and age agreement text', () => {
+  it('links the Terms of Service and Privacy Policy to their pages in the same tab', () => {
     render(<HomeFooter />);
 
-    expect(screen.getByTestId('dialog-terms')).toBeInTheDocument();
-    expect(screen.getByTestId('dialog-privacy')).toBeInTheDocument();
+    const terms = screen.getByRole('link', { name: 'Terms of Service' });
+    expect(terms).toHaveAttribute('href', LEGAL_ROUTES.TERMS_OF_USE);
+    expect(terms).not.toHaveAttribute('target');
+    const privacy = screen.getByRole('link', { name: 'Privacy Policy' });
+    expect(privacy).toHaveAttribute('href', LEGAL_ROUTES.PRIVACY_POLICY);
+    expect(privacy).not.toHaveAttribute('target');
     expect(screen.getByTestId('dialog-age')).toBeInTheDocument();
   });
 
@@ -297,7 +293,9 @@ describe('HomeFooter', () => {
 
     const link = screen.getByRole('link', { name: 'Pubky Protocol' });
     expect(link).toHaveAttribute('href', 'https://github.com/pubky/pubky-core');
+    expect(link).toHaveClass('font-semibold');
     expect(link.closest('[data-testid="footer-links"]')).toBeInTheDocument();
+    expect(screen.getByTestId('footer-links')).toHaveClass('[&_a]:no-underline');
   });
 
   it('renders Synonym and Tether branding below the agreement text', () => {

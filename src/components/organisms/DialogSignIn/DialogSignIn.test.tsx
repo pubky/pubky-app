@@ -11,6 +11,10 @@ const mockShowSignInDialog = vi.hoisted(() => ({ value: false }));
 const mockSetShowSignInDialog = vi.hoisted(() => vi.fn());
 const mockJoinRoute = vi.hoisted(() => ({ value: '/onboarding/human' }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 // Join entry: fair-access step unless Pubky Passport is enabled on this page.
 vi.mock('@/hooks/useJoinRoute/useJoinRoute', () => ({
   useJoinRoute: () => mockJoinRoute.value,

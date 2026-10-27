@@ -15,7 +15,7 @@ vi.mock('@/libs/utils/utils', async (importOriginal) => {
 });
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: (args: unknown) => mocks.toast(args) }));
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
-  useUserProfile: () => ({ profile: { name: 'John Carvalho', avatarUrl: undefined }, isLoading: false }),
+  useUserProfile: () => ({ profile: { name: 'Jane Whitlock', avatarUrl: undefined }, isLoading: false }),
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (s: { currentUserPubky: string | null }) => unknown) =>
@@ -28,6 +28,7 @@ vi.mock('qrcode.react', () => ({
 }));
 
 type DialogOverrides = {
+  open?: boolean;
   price?: React.ComponentProps<typeof DialogPayToUnlock>['price'];
   isSubmitting?: boolean;
   onRetry?: () => void;
@@ -44,7 +45,7 @@ type DialogOverrides = {
 
 const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}) => (
   <DialogPayToUnlock
-    open
+    open={overrides.open ?? true}
     onOpenChange={overrides.onOpenChange ?? vi.fn()}
     lockTitle="My locked post"
     authorId="pubkycreator"
@@ -133,6 +134,27 @@ describe('DialogPayToUnlock', () => {
     renderDialog('retry');
     expect(screen.getByRole('link', { name: 'App Store' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Google Play' })).toBeInTheDocument();
+  });
+
+  // The Lock Server's 451: nothing to retry and nothing to install, so the screen only says why.
+  it('region-blocked: says paid unlocks are not available here, with no retry and no Bitkit', () => {
+    const onOpenChange = vi.fn();
+    renderDialog('region-blocked', { onOpenChange });
+
+    expect(screen.getByRole('status')).toHaveTextContent("Paid unlocks aren't available in your region yet.");
+    expect(screen.getByRole('button', { name: 'About this limit' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pay-to-unlock-retry')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'App Store' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Google Play' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Bitkit/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+    expect(screen.queryByText('PAYMENT RECEIVED')).not.toBeInTheDocument();
+
+    const close = document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement;
+    expect(close).toHaveTextContent('Close');
+    fireEvent.click(close);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it('retry: shows the Bitkit instruction and the Try again button', () => {
@@ -412,6 +434,56 @@ describe('DialogPayToUnlock', () => {
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
+  it('finishing: shows the received payment and loading state without payment instructions or actions', () => {
+    renderDialog('finishing');
+
+    expect(screen.getByText('PAYMENT RECEIVED')).toHaveClass('text-brand');
+    expect(screen.getByText('Opening your content…')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.queryByText(/Check Bitkit|COST TO UNLOCK|Thank you for supporting/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Try again|View Content|Copy creator pubky/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open in Bitkit' })).not.toBeInTheDocument();
+    expect(document.querySelector('[data-cy="pay-to-unlock-cancel"]')).toHaveTextContent('Close');
+  });
+
+  it('finishing: a parked content check offers Check again without sending the reader to Bitkit', () => {
+    const onRecheck = vi.fn();
+    renderDialog('finishing', { isStalled: true, onRecheck });
+
+    expect(screen.getByText('Your payment is complete. Check again to open the content.')).toBeInTheDocument();
+    expect(screen.queryByText(/Check Bitkit|Opening your content/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+    expect(onRecheck).toHaveBeenCalledTimes(1);
+  });
+
+  it('finishing: closing still asks first and acknowledges the completed payment', () => {
+    const onOpenChange = vi.fn();
+    renderDialog('finishing', { onOpenChange });
+
+    fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement);
+    expect(screen.getByRole('heading', { name: 'Payment received' })).toBeInTheDocument();
+    expect(screen.queryByText(/The payment is still running|has not finished yet/)).not.toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Close anyway' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('updates an open close prompt when the payment completes before the content is ready', () => {
+    const overrides = { onViewContent: vi.fn(), onOpenChange: vi.fn() };
+    const { rerender } = renderDialog('waiting', overrides);
+    fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement);
+
+    rerender(dialogElement('finishing', overrides));
+    expect(screen.getByRole('heading', { name: 'Payment received' })).toBeInTheDocument();
+    expect(screen.queryByText(/has not finished yet/)).not.toBeInTheDocument();
+
+    rerender(dialogElement('paid', overrides));
+    fireEvent.click(screen.getByRole('button', { name: 'Close anyway' }));
+    expect(overrides.onViewContent).toHaveBeenCalledTimes(1);
+    expect(overrides.onOpenChange).not.toHaveBeenCalled();
+  });
+
   // A completed purchase must not ask the reader to make another payment.
   it('unopened: says the payment landed and offers the retry, with no cost to pay', () => {
     const onRecheck = vi.fn();
@@ -453,6 +525,19 @@ describe('DialogPayToUnlock', () => {
     fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-keep-waiting"]') as HTMLElement);
     expect(screen.queryByText('The payment is still running')).not.toBeInTheDocument();
     expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  // The parent closes the modal itself on an expired session, past the prompt's own buttons.
+  it('does not bring the close prompt back after the parent closes the modal', () => {
+    const { rerender } = renderDialog('waiting');
+
+    fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement);
+    expect(screen.getByText('The payment is still running')).toBeInTheDocument();
+
+    rerender(dialogElement('waiting', { open: false }));
+    rerender(dialogElement('checking'));
+    expect(screen.getByText('My locked post')).toBeInTheDocument();
+    expect(screen.queryByText('The payment is still running')).not.toBeInTheDocument();
   });
 
   it('waiting: Close anyway closes the modal', () => {

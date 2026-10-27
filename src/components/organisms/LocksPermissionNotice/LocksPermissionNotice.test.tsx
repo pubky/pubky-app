@@ -28,7 +28,7 @@ describe('LocksPermissionNotice', () => {
     render(<LocksPermissionNotice />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Authorize with Pubky Ring' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Authorize with Pubky Ring or Bitkit' }));
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Enable Locks')).toBeInTheDocument();
@@ -45,7 +45,7 @@ describe('LocksPermissionNotice', () => {
       </div>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Authorize with Pubky Ring' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Authorize with Pubky Ring or Bitkit' }));
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(onCardClick).not.toHaveBeenCalled();
@@ -53,7 +53,7 @@ describe('LocksPermissionNotice', () => {
 
   it('closes the approval once the session no longer needs upgrading', async () => {
     render(<LocksPermissionNotice />);
-    fireEvent.click(screen.getByRole('button', { name: 'Authorize with Pubky Ring' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Authorize with Pubky Ring or Bitkit' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
     act(() => useAuthStore.setState({ session: mockSession() }));

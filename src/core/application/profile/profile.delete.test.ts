@@ -64,10 +64,10 @@ describe('ProfileApplication.commitDelete', () => {
     expect(listSpy).toHaveBeenCalledWith({ baseDirectory });
     expect(deleteSpy).toHaveBeenCalledTimes(4);
 
-    expect(deleteSpy).toHaveBeenNthCalledWith(1, `${baseDirectory}tags/tag1`);
-    expect(deleteSpy).toHaveBeenNthCalledWith(2, `${baseDirectory}posts/abc123`);
-    expect(deleteSpy).toHaveBeenNthCalledWith(3, `${baseDirectory}follows/user1`);
-    expect(deleteSpy).toHaveBeenNthCalledWith(4, profileUrl);
+    expect(deleteSpy).toHaveBeenNthCalledWith(1, `${baseDirectory}tags/tag1`, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenNthCalledWith(2, `${baseDirectory}posts/abc123`, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenNthCalledWith(3, `${baseDirectory}follows/user1`, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenNthCalledWith(4, profileUrl, { singleAttempt: true });
   });
 
   it('calls setProgress with correct percentages', async () => {
@@ -108,7 +108,7 @@ describe('ProfileApplication.commitDelete', () => {
 
     expect(listSpy).toHaveBeenCalledWith({ baseDirectory });
     expect(deleteSpy).toHaveBeenCalledTimes(1);
-    expect(deleteSpy).toHaveBeenCalledWith(profileUrl);
+    expect(deleteSpy).toHaveBeenCalledWith(profileUrl, { singleAttempt: true });
   });
 
   it('propagates errors when local delete fails', async () => {
@@ -151,7 +151,7 @@ describe('ProfileApplication.commitDelete', () => {
 
     // All attempts spent on the first file, then the flow aborts
     expect(deleteSpy).toHaveBeenCalledTimes(3);
-    expect(deleteSpy).toHaveBeenCalledWith(`${baseDirectory}file1`);
+    expect(deleteSpy).toHaveBeenCalledWith(`${baseDirectory}file1`, { singleAttempt: true });
   });
 
   it('retries a transient delete failure and completes the deletion', async () => {
@@ -171,7 +171,7 @@ describe('ProfileApplication.commitDelete', () => {
 
     // 3 files + 1 retry for the transient failure
     expect(deleteSpy).toHaveBeenCalledTimes(4);
-    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl);
+    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl, { singleAttempt: true });
   });
 
   it('treats a 404 during delete as already removed and continues', async () => {
@@ -195,7 +195,7 @@ describe('ProfileApplication.commitDelete', () => {
 
     // No retry for the missing file; remaining files still deleted
     expect(deleteSpy).toHaveBeenCalledTimes(3);
-    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl);
+    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl, { singleAttempt: true });
   });
 
   it('sorts files correctly before deletion', async () => {
@@ -212,10 +212,10 @@ describe('ProfileApplication.commitDelete', () => {
 
     await ProfileApplication.commitDelete({ pubky });
 
-    expect(deleteSpy).toHaveBeenNthCalledWith(1, `${baseDirectory}zzz`);
-    expect(deleteSpy).toHaveBeenNthCalledWith(2, `${baseDirectory}mmm`);
-    expect(deleteSpy).toHaveBeenNthCalledWith(3, `${baseDirectory}aaa`);
-    expect(deleteSpy).toHaveBeenNthCalledWith(4, profileUrl);
+    expect(deleteSpy).toHaveBeenNthCalledWith(1, `${baseDirectory}zzz`, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenNthCalledWith(2, `${baseDirectory}mmm`, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenNthCalledWith(3, `${baseDirectory}aaa`, { singleAttempt: true });
+    expect(deleteSpy).toHaveBeenNthCalledWith(4, profileUrl, { singleAttempt: true });
   });
 
   it('deletes every file when the account has more than one listing page', async () => {
@@ -233,6 +233,6 @@ describe('ProfileApplication.commitDelete', () => {
 
     expect(listSpy).toHaveBeenCalledWith({ baseDirectory });
     expect(deleteSpy).toHaveBeenCalledTimes(601);
-    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl);
+    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl, { singleAttempt: true });
   });
 });

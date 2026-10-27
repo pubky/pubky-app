@@ -9,6 +9,7 @@ import {
   getLockSession,
   getPaykitServerOrigin,
   initLockClient,
+  isLockServerRegionBlocked,
   toLocksError,
 } from './locks.utils';
 
@@ -21,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   getPaykitServerUrl: vi.fn((): string | undefined => 'https://paykit.server'),
   init: vi.fn(async () => {}),
   session: null as unknown,
+  creatorPubky: 'account' as string | null,
   currentUserPubky: 'account' as string | null,
 }));
 
@@ -49,7 +51,9 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
-  useLocksAuthStore: { getState: () => ({ selectLocksSession: () => mocks.session }) },
+  useLocksAuthStore: {
+    getState: () => ({ selectLocksSession: () => mocks.session, selectLocksCreatorPubky: () => mocks.creatorPubky }),
+  },
 }));
 
 describe('locks.utils', () => {
@@ -58,7 +62,43 @@ describe('locks.utils', () => {
     mocks.getTestnet.mockReturnValue(true);
     mocks.getLockServer.mockReturnValue('lockserverpubky');
     mocks.session = null;
+    mocks.creatorPubky = 'account';
     mocks.currentUserPubky = 'account';
+  });
+
+  describe('isLockServerRegionBlocked', () => {
+    const sdkError = (message: string) => Object.assign(new Error(message), { name: 'InvalidInput' });
+
+    it('is true for the pinned SDK InvalidInput Error with the exact HTTP 451 message', () => {
+      expect(isLockServerRegionBlocked(sdkError('Lock Server viewer request failed with HTTP 451'))).toBe(true);
+    });
+
+    it('is false for other statuses, other failures and anything that is not a raw SDK failure', () => {
+      expect(isLockServerRegionBlocked(sdkError('Lock Server viewer request failed with HTTP 429'))).toBe(false);
+      expect(isLockServerRegionBlocked(sdkError('Lock Server viewer request failed with HTTP 4510'))).toBe(false);
+      expect(isLockServerRegionBlocked(sdkError('failed to parse JSON response: HTTP 451'))).toBe(false);
+      expect(isLockServerRegionBlocked(sdkError('Lock Server viewer request failed with HTTP 451\n'))).toBe(false);
+      expect(isLockServerRegionBlocked(new Error('Lock Server viewer request failed with HTTP 451'))).toBe(false);
+      expect(isLockServerRegionBlocked('Lock Server viewer request failed with HTTP 451')).toBe(false);
+      expect(
+        isLockServerRegionBlocked({ name: 'InvalidInput', message: 'Lock Server viewer request failed with HTTP 451' }),
+      ).toBe(false);
+      expect(isLockServerRegionBlocked(new Error('network down'))).toBe(false);
+      expect(isLockServerRegionBlocked(undefined)).toBe(false);
+    });
+
+    it('is false for an AppError, which was already reported at its origin', () => {
+      const reported = Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
+        'Lock Server viewer request failed with HTTP 451',
+        {
+          service: ErrorService.Locks,
+          operation: 'op',
+        },
+      );
+      reported.name = 'InvalidInput';
+      expect(isLockServerRegionBlocked(reported)).toBe(false);
+    });
   });
 
   describe('toLocksError', () => {
@@ -126,15 +166,23 @@ describe('locks.utils', () => {
   });
 
   describe('getLockSession', () => {
-    it('returns the live session from the store', () => {
-      const session = { id: 'session-1', creatorPubky: () => 'pubkyaccount' };
+    // A session rebuilt by `restoreSession` has no creator pubky (#2856).
+    it('returns the live session from the store when the stored creator is the app account', () => {
+      const session = { id: 'session-1', creatorPubky: () => undefined };
       mocks.session = session;
       expect(getLockSession()).toBe(session);
     });
 
     it.each([null, 'different-account'])('rejects the old Locks identity for app account %s', (pubky) => {
       mocks.currentUserPubky = pubky;
-      mocks.session = { creatorPubky: () => 'pubkyaccount' };
+      mocks.session = { id: 'session-1' };
+      expect(() => getLockSession()).toThrow(expect.objectContaining({ category: ErrorCategory.Auth }));
+    });
+
+    it.each([null, 'account'])('rejects a session without a stored creator for app account %s', (pubky) => {
+      mocks.currentUserPubky = pubky;
+      mocks.creatorPubky = null;
+      mocks.session = { id: 'session-1' };
       expect(() => getLockSession()).toThrow(expect.objectContaining({ category: ErrorCategory.Auth }));
     });
 

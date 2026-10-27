@@ -2,7 +2,11 @@ import { postUriBuilder, PubkyAppPostKind } from 'pubky-app-specs';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { PostApplication } from '@/application/post/post';
-import type { TGetDetailsByIdsParams, TGetOrFetchPostParams } from '@/application/post/post.types';
+import type {
+  TGetDetailsByIdsParams,
+  TGetOrFetchPostParams,
+  TGetRelationshipsByIdsParams,
+} from '@/application/post/post.types';
 import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
 import { POST_MAX_TAGS } from '@/config/posts';
 import type {
@@ -95,6 +99,18 @@ export class PostController {
   }
 
   /**
+   * Bulk read post relationships for multiple posts from the local database, preserving input order.
+   * @param params - Parameters object
+   * @param params.compositeIds - Composite post IDs in format "authorId:postId"
+   * @returns Array of post relationships aligned to `compositeIds` (undefined for missing posts)
+   */
+  static async getRelationshipsByIds({
+    compositeIds,
+  }: TGetRelationshipsByIdsParams): Promise<(PostRelationshipsModelSchema | undefined)[]> {
+    return await PostApplication.getRelationshipsByIds({ compositeIds });
+  }
+
+  /**
    * Read all posts that are replies to a specific post
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID to read replies for
@@ -171,7 +187,6 @@ export class PostController {
     isArticle,
     tags,
     attachments,
-    attachmentUris,
     parentPostId,
     originalPostId,
     lock,
@@ -187,21 +202,6 @@ export class PostController {
     }
     if (originalPostId) {
       repostedUri = await PostValidators.validatePostId({ postId: originalPostId, message: 'Original post' });
-    }
-
-    // Ownership invariant: pre-uploaded attachment URIs must be homeserver
-    // files owned by the author. These URIs are not uploaded or rolled back
-    // here — the composer session that uploaded them owns their cleanup.
-    if (attachmentUris && !attachmentUris.every((uri) => isAuthorFileUri(uri, authorId))) {
-      throw Err.validation(
-        ValidationErrorCode.INVALID_INPUT,
-        'Attachment URIs must be homeserver files owned by the author',
-        {
-          service: ErrorService.Local,
-          operation: 'commitCreate',
-          context: { authorId },
-        },
-      );
     }
 
     // A `lock` marks this post as the public announcement of locked content, which may never be a
@@ -221,7 +221,6 @@ export class PostController {
         embed: repostedUri,
         attachments: fileAttachments,
         lock,
-        attachmentUris,
       },
       authorId,
     );

@@ -27,6 +27,7 @@ export function ThreadExpandToggle({ expanded, onToggle }: ThreadExpandTogglePro
       }}
       className="size-5 rounded-full bg-background p-0 text-muted-foreground hover:text-foreground"
       aria-label={expanded ? 'Collapse all replies' : 'Expand all replies'}
+      data-cy="thread-expand-toggle"
     >
       <Icon className="size-5" />
     </Button>

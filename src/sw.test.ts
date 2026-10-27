@@ -95,6 +95,16 @@ describe('src/sw.ts', () => {
     expect(route.matcher(navigationContext('https://pubky.app/home', { mode: 'cors' }))).toBe(false);
     expect(route.matcher(navigationContext('https://nexus.pubky.app/v0/stream', { sameOrigin: false }))).toBe(false);
     expect(route.matcher(navigationContext('https://pubky.app/api/feedback'))).toBe(false);
+    for (const path of [
+      '/shop-embed',
+      '/shop-embed/marketplace',
+      '/shop-embed/api/auth/session',
+      '/shop-embed/_next/static/chunk.js',
+    ]) {
+      expect(route.matcher(navigationContext(`https://pubky.app${path}`))).toBe(true);
+      expect(route.matcher(navigationContext(`https://pubky.app${path}`, { mode: 'cors' }))).toBe(false);
+    }
+    expect(route.matcher(navigationContext('https://pubky.app/shop/marketplace'))).toBe(true);
   });
 
   it('serves the static offline page as the navigation fallback', () => {
@@ -102,9 +112,14 @@ describe('src/sw.ts', () => {
     expect(fallbacks?.entries).toHaveLength(1);
     expect(fallbacks!.entries[0].url).toBe('/offline.html');
     // Serwist's fallback plugin passes only { request, event } here, never url/sameOrigin.
-    const fallbackContext = (mode: RequestMode) => ({ request: asOpaque<Request>({ mode }) });
+    const fallbackContext = (mode: RequestMode) => ({
+      request: asOpaque<Request>({ mode, url: 'https://pubky.app/home' }),
+    });
     expect(fallbacks!.entries[0].matcher(asOpaque<FallbackContext>(fallbackContext('navigate')))).toBe(true);
     expect(fallbacks!.entries[0].matcher(asOpaque<FallbackContext>(fallbackContext('cors')))).toBe(false);
+    for (const path of ['/shop-embed', '/shop-embed/marketplace', '/shop-embed/api/auth/session', '/api/feedback']) {
+      expect(fallbacks!.entries[0].matcher(navigationContext(`https://pubky.app${path}`))).toBe(false);
+    }
   });
 
   it('deletes the legacy Nexus runtime cache and its expiration database on activation', async () => {

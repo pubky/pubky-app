@@ -44,6 +44,11 @@ Drop rules implement the `shouldReportToSentry` predicate from ADR-0015 §5.1 Ch
 
 Global-handler noise that is not an `AppError` (extension `inpage.js`, native webview bridge scripts) belongs in `ignoreErrors`, with a pattern specific enough to match only the third-party message.
 
+`BROWSER_INJECTED_ERROR_PATTERNS` is the subset shared by `OBSERVABILITY_IGNORE_ERRORS` and
+`GlobalErrorHandlerProvider`: known wallet/bridge injection errors produce neither an app toast nor an app log.
+The toast handler does not apply the broader telemetry ignore list, so app network, abort and chunk-loading
+failures retain their existing feedback. Empty filenames and third-party source URLs alone do not suppress a toast.
+
 The two route-segment error boundaries (`app/error.tsx`, `app/global-error.tsx`) guard their `Sentry.captureException` and `Pulse.captureException` calls with `if (!(error instanceof AppError))` so an `AppError` thrown during render isn't captured twice (once by the factory, once by the boundary).
 
 ### Stale chunk recovery after a deploy
@@ -74,7 +79,12 @@ For future Server Actions, wrap with `Sentry.withServerActionInstrumentation('ac
 - Security/anomaly cases on the main page fetch path, such as non-HTTP redirects, redirect loops, and parser/runtime
   surprises remain reportable through `Err.*`.
 
-Fallback paths use `Logger.warn`, which is currently platform/server logging. Sentry Logs are disabled in this app, so
+Shop listing previews also return fallback metadata for unavailable pages. Because `safeFetch` creates errors before
+that fallback runs, the `shop-listing-metadata-transport` rule drops only network and timeout errors from
+`Shop/fetchListingMetadata`. Local error logs remain; Shop readiness, cleanup, authentication, and payment operations,
+plus other error categories on the metadata operation, remain reportable.
+
+The `/api/og-metadata` fallback paths use `Logger.warn`, which is currently platform/server logging. Sentry Logs are disabled in this app, so
 these warnings are not Sentry aggregate events unless logging infrastructure is enabled separately.
 
 ### Known quirk: render-time errors emit 2 events in React 19

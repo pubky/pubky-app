@@ -17,6 +17,7 @@ export class PostDetailsModel
   attachments: string[] | null;
   lock?: string | null;
   deleted?: boolean;
+  localUpdatedAt?: number;
 
   constructor(postDetails: PostDetailsModelSchema) {
     super(postDetails);
@@ -27,6 +28,7 @@ export class PostDetailsModel
     this.attachments = postDetails.attachments;
     this.lock = postDetails.lock ?? null;
     this.deleted = postDetails.deleted;
+    this.localUpdatedAt = postDetails.localUpdatedAt;
   }
 
   /**

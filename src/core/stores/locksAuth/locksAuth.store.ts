@@ -6,8 +6,8 @@ import { createLocksAuthSelectors } from './locksAuth.selectors';
 import { locksAuthInitialState, LocksAuthStore } from './locksAuth.types';
 
 /**
- * Persists the Lock Server bearer secret to localStorage; the live session is rebuilt from it on
- * load. Same shape and lifecycle as the homeserver `auth-store`.
+ * Persists the Lock Server bearer secret and its creator pubky to localStorage; the live session is
+ * rebuilt from the secret on load. Same shape and lifecycle as the homeserver `auth-store`.
  *
  * Once private homeserver storage lands (pubky/pubky-core#426), the secret could live in the user's
  * homeserver `/priv` and be fetched on demand instead of localStorage, giving device independence.
@@ -22,9 +22,10 @@ export const useLocksAuthStore = create<LocksAuthStore>()(
       }),
       {
         name: LOCKS_AUTH_PERSIST_KEY,
-        // Only the bearer secret persists; the live session is rebuilt from it on load.
+        // Only the bearer secret and its creator persist; the live session is rebuilt from the secret on load.
         partialize: (state) => ({
           locksSessionSecret: state.locksSessionSecret,
+          creatorPubky: state.creatorPubky,
           hasHydrated: false, // set by the rehydration handler
         }),
         onRehydrateStorage: () => (state) => {

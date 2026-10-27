@@ -72,17 +72,16 @@ article button while the lock switch is on (`PostInputExpandableSection`), and
 (`core/pipes/post/post.kind.ts`), which throws on those two kinds. The guard is the
 backstop for the UI rule, so a UI change can't loosen it silently.
 
-_Article body images._ An article uploads each body image to the creator's public storage the
-moment it is inserted, before anyone knows whether the article will be locked, and the editor
-references the image by its public URI. When the switch goes on, the composer captures the body in
-its published form instead (`serializeArticleForLock` in `usePost`), from the latest title and body
-the inputs reported rather than from the debounced composer state: every image becomes an
-`attachment:{n}` slot, the scheme a normal article already uses, and the files behind the slots join
-the lock's attachments after the cover. The bytes come from the composer's upload session, which
-still holds each file as the author picked it, so nothing is read back from public storage. The
-public copies are deleted once the lock is published or the composer closes (best-effort, #2684). They stay until then,
-so that abandoning the lock puts a working article back into the editor. A locked article's images
-are therefore public between the insert and the publish; that window is accepted (#2655).
+_Article body images._ The article editor stages each body file when it is inserted: the file
+stays in the composer's session and the editor references it by a placeholder file URI of the
+author's, so nothing reaches the creator's public storage before a publish (#2684, #2687). When the
+switch goes on, the composer captures the body in its published form (`serializeArticleForLock` in
+`usePost`), from the latest title and body the inputs reported rather than from the debounced
+composer state: every file becomes an `attachment:{n}` slot, the scheme a normal article already
+uses, and the files behind the slots join the lock's attachments after the cover, as the author
+picked them. The session keeps them while the lock draft exists (`keepInlineMedia`), so abandoning
+the lock puts a working article back into the editor; releasing it only revokes the local previews.
+A locked article's images are therefore never public.
 
 _SVG files._ A locked SVG is stored without its image type, so it does not render after an unlock.
 Until that is fixed the switch refuses a draft that holds one, with a toast (`TODO:[Locks] #2683`).
@@ -108,12 +107,12 @@ everything ever unlocked. The replica also survives the creator revoking the loc
 
 ## Where the data lives
 
-| Where                                              | What                                                                    | Who can read it                                              |
-| -------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------ |
-| creator's HS `/priv/app.locks/content/`            | the locked post + attachments (originals)                               | the creator; readers only via Lock Server proxy + credential |
-| creator's HS `/pub/app.locks/<lockId>.json`        | the public lock contract (`LockFile`)                                   | anyone                                                       |
-| reader's HS `/priv/social/unlocked/<lockId>/`      | the reader's replica, written on unlock                                 | that reader only                                             |
-| reader's HS `/priv/social/purchases/<lockId>.json` | the purchase's bundle id, written BEFORE the proof is submitted (#2297) | that reader only                                             |
+| Where                                                         | What                                                                                                                   | Who can read it                                              |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| creator's HS `/priv/app.locks/content/`                       | the locked post + attachments (originals)                                                                              | the creator; readers only via Lock Server proxy + credential |
+| creator's HS `/pub/app.locks/<lockId>.json`                   | the public lock contract (`LockFile`)                                                                                  | anyone                                                       |
+| reader's HS `/priv/social/unlocked/<lockId>/`                 | the reader's replica, written on unlock                                                                                | that reader only                                             |
+| reader's HS `/priv/social/purchases/<lockId>/<bundleId>.json` | one file per bundle id, written BEFORE the proof is submitted (#2297, #2827); the legacy `<lockId>.json` is still read | that reader only                                             |
 
 ---
 
@@ -221,7 +220,7 @@ image, like any article card.
 | `components/organisms/LockedPostContent/LockedPostContent.tsx` | teaser + lock card + unlock dialog; renders the content once unlocked               |
 | `components/organisms/PostBody/PostBody.tsx`                   | shared text + link-embed + attachment renderer (feed post body **and** lock teaser) |
 | `components/molecules/LockedPostCard/LockedPostCard.tsx`       | lock card: title, shield graphic, Unlock control (also used by the composer)        |
-| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx` | Pay to Unlock modal (checking, retry, install, waiting, paid, unopened, blocked)    |
+| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx` | Pay to Unlock modal, one screen per stage (`TPayToUnlockStage`)                     |
 | `hooks/usePayToUnlock/usePayToUnlock.ts`                       | the payment state machine: bundle-id routing, submit, polling, stall/resume         |
 | `hooks/usePurchasedLocks/usePurchasedLocks.ts`                 | one listing of the reader's purchases, shared by every lock post                    |
 | `hooks/usePurchaseResume/usePurchaseResume.ts`                 | finishes a paid purchase whose content never landed, without interaction            |
@@ -243,7 +242,7 @@ LockedPostContent
   │    ├─ 2) my own post (a == b)         → local post, then fetchOwnContent on a miss
   │    ├─ 3) valid payment price → lock card → DialogPayToUnlock (sign-in required first)
   │    └─ 4) no valid price → masked lock card with Unlock disabled
-  └─ 5) saved purchase, no replica → usePurchaseResume → fetchPaidContentIfCompleted
+  └─ 5) saved purchase, no replica → usePurchaseResume → fetchResolvedPurchase → fetchPaidContent (completed only)
 ```
 
 The no-price state covers legacy or unreadable lock files. Their content remains masked and
@@ -267,10 +266,18 @@ own-content reads rely on it.
 **Payment unlock** (#2368) is split into steps the modal drives because a real payment takes
 minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state machine:
 
-1. On open: `fetchPurchaseBundleId` — the reader's `/priv/social/purchases/<lockId>.json` holds
-   the bundle id of a purchase in flight (#2297). It is the ONLY handle to reach a purchase
-   again (the reader is anonymous to the Lock Server), so it is written **before** the proof
-   is submitted, kept after replication, and a failed read blocks paying (fail closed).
+1. On open: `fetchResolvedPurchase` — the reader's `/priv/social/purchases/<lockId>/` holds one file
+   per bundle id the reader ever started this lock's payment with (#2297, #2827). A bundle id is the
+   ONLY handle to reach a purchase again (the reader is anonymous to the Lock Server), so it is
+   written **before** the proof is submitted, kept after replication, and a failed read or a file
+   that is not a bundle id blocks paying (fail closed). Every saved id is looked up on the Lock
+   Server and the best one continues: `completed` first, then a running task, then one the server
+   never received, else all of them ended and only a fresh id can pay (an ended `failed` is reported
+   over `expired`, so Try again checks the wallet). A failed lookup also blocks, unless another id is
+   `completed`: nothing outranks it. Ties go to the lowest id, so two devices settle on the same one.
+   One file per id, not one per lock, is what stops a second device from overwriting the id the
+   first one is paying with (#2827). Nothing is ever deleted: an ended id is still the only way to
+   trace its invoice.
 2. Opening the modal starts the payment: nothing asks the reader to confirm before the proof is
    submitted (#2574). With no saved id, the app first checks the reader's homeserver for Paykit data
    (`hasPaykitReceiver`). With none it shows the install screen (Bitkit setup steps, store links and
@@ -279,21 +286,36 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    submits. A failed check on open lands on the blocked screen; a failed check from the button, or a
    failed submission after it, shows a toast and returns to the install screen. The check reports
    presence only, so the payment can still end `failed` afterwards (step 4).
-3. A saved id is looked up first (`fetchPaymentStatus`; SDK 404 maps to `null`). `completed` →
-   credential; `failed`/`expired` → **Try again**, which mints a fresh id (those cannot be retried,
-   and doing it automatically could charge twice). After `failed`, **Try again** checks the wallet
-   first and goes to the install screen when there is none. `pending`/`in_progress` → the task is
-   already running, so nothing is submitted and the wait resumes. Only a saved id with **no task**
-   is submitted again: that submission never reached the server.
+3. The id step 1 picks decides the route (each lookup is `fetchPaymentStatus`; SDK 404 maps to
+   `null`). `completed` → credential; `failed`/`expired` → **Try again**, which mints a fresh id
+   unless another device has since saved one that can still pay (an ended id cannot be retried, and
+   doing it automatically could charge twice). After `failed`, **Try again** checks the wallet first
+   and goes to the install screen when there is none. `pending`/`in_progress` → the task is already
+   running, so nothing is submitted and the wait resumes. Only a saved id with **no task** is
+   submitted again: that submission never reached the server.
 4. `startPayment` reuses the saved id or mints and saves a fresh one, then submits the proof (empty
-   payload, reader pubky at the bundle's top level). Replaying the same bundle is safe and creates no
-   second payment request. The Lock Server answers `pending` at once and creates the Paykit invoice
+   payload, reader pubky at the bundle's top level). Only **Try again** (or **I completed the
+   steps**) may replace an ended id: an automatic start that waited behind another submission and
+   finds every saved id ended returns that status for the modal to show, since the reader may have
+   just rejected the request in Bitkit. Replaying the same bundle is safe and creates no second
+   payment request. The Lock Server answers `pending` at once and creates the Paykit invoice
    afterwards, retrying for up to 10 minutes (its `admission_deadline_at`); Paykit then delivers the
    payment request to the reader's wallet, and the app never sees an address or invoice. A reader
    without a usable wallet or a Paykit outage therefore ends the task `failed`, not the submission.
-   While the server waits on the reader's wallet it says so (`status_message`), and the modal shows a
-   setup notice in place of the handoff. A failed submission (network, rate limit) shows
-   **Try again**, which keeps the saved id.
+   While the server waits on the reader's wallet it says so (`status_message`), and the modal shows
+   a setup notice in place of the handoff. A failed submission (network, rate limit) shows **Try
+   again**, which keeps the saved id. A submission the Lock Server refuses with **HTTP 451** (paid
+   unlocks are not offered in the reader's region) is not a failure: `LocksService.submitProof` returns
+   `{ regionBlocked: true }` before any `Err.*` is built, so it is not logged and not sent to Sentry
+   (the factories report on construction). `startPayment` passes it up as `regionBlocked`, and the
+   modal lands on `region-blocked`: "Paid unlocks aren't available in your region yet." with an info
+   icon, no Try again, no Bitkit badges, no toast, and the lock is not marked purchased. The saved
+   bundle id stays, so the next opening replays it, and from a supported region it creates one payment.
+   That next opening first looks the saved id up, and the Lock Server refuses that lookup for the region
+   too (every viewer call is its own POST). `LocksService.lookupVerificationTask` therefore returns
+   `{ regionBlocked: true }` the same way, `fetchResolvedPurchase` resolves to `region-blocked`, and the
+   modal lands on the same `region-blocked` stage instead of "This purchase could not be checked". That
+   screen is left for a lookup that failed for another reason. Mid-wait a refused lookup reads as no news.
 5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
    created; with nothing submitted, the install screen has no link state. Until the first read
    answers, the modal says "Checking your Bitkit connection…". A failed first read keeps it there
@@ -317,25 +339,35 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    **3 seconds**, the link read every **1 second**. Each skips a tick while its own call is still out,
    so a link read that hangs cannot delay a finished payment. The task lookup is the only lifecycle
    truth. `connected` and `blocked` end the link loop; a terminal task status ends both. Visibility
-   return and **Check again** restart the pair, and both park together after 3 wall-clock minutes
-   without failing the purchase. While the invoice does not exist yet, those 3 minutes count from the
-   server's invoice deadline instead; once it exists, they start again.
+   return, window focus while visible and **Check again** restart the pair, and both park together
+   after 3 wall-clock minutes without failing the purchase. While the invoice does not exist yet, those
+   3 minutes count from the server's invoice deadline instead; once it exists, they start again.
    An `expired` task stops waiting and shows "The payment was not completed. You can try again."
    in both the dialog and toast. This covers rejected, canceled and timed-out requests without
-   interpreting `terminal_reason`. **Try again** starts a new payment with a fresh bundle id;
+   interpreting `terminal_reason`. **Try again** starts a new payment as in step 3;
    `failed` keeps its existing wallet-related guidance and retry handling.
-7. Turning a completed payment into content (credential → read) parks the same way when it fails,
-   and **Check again** runs it again. Retrying is free — the entitlement is durable and the
+7. A completed payment enters `finishing` while the credential and content are fetched. The modal
+   shows **PAYMENT RECEIVED**, "Opening your content…" and a spinner, without asking the reader
+   to confirm in Bitkit. A failed content read enters `unopened`, and **Check again** runs it again.
+   Its status lookup stays in `finishing`. If that lookup or the content download itself is still out
+   after 3 wall-clock minutes, a paid-content prompt offers **Check again** without payment
+   instructions; unlike waiting, a returning tab does not re-read the download. A download that
+   **Check again** replaced still counts if its content arrives first, and its failure is ignored.
+   Retrying is free — the entitlement is durable and the
    credential is minted fresh each time, which is also why an expired credential needs no detection.
    Once the content is ready, the modal shows the paid confirmation; **View Content** closes it and
    reveals the guarded post.
 
-Closing during submission or waiting opens a confirmation dialog. Closing only stops this tab's
-polling; the server-side payment continues and reopening resumes it from the saved bundle id.
+Closing during submission, waiting or finishing opens a confirmation dialog. Once payment is complete,
+the confirmation acknowledges receipt. Closing stops this tab's polling and ignores late content reads;
+the server-side purchase remains and reopening resumes it from the saved bundle id. A session the
+homeserver rejects ends the modal at any step: the session-expired toast shows and the modal closes
+without the confirmation, and content already downloaded is shown, not dropped.
 
 `startPayment` holds a Web Lock named `locks-pay:<reader>:<lockId>` (#2468) for its whole run, so
 a quick reopen, a second tab, or React running the effect twice submits one bundle id. Browsers
-without `navigator.locks` run the steps unserialized.
+without `navigator.locks` run the steps unserialized. The lock covers one browser; two devices are
+covered by the per-id files above (#2827).
 
 **Paid but never received.** The payment completes on the server whether or not the browser is
 watching, so a reader who closes the tab mid-wait would come back to a post still offering Unlock
@@ -375,7 +407,7 @@ screen does not re-read every marker.
 Locks has no local-first controller write, so its server actions do not use the `commit*`
 prefix: `hasPaykitReceiver` and `fetchPaykitConnectionState` are server queries, while `startPayment`
 is a server workflow action.
-The purchase bundle id file and the purchases listing are always read from the homeserver and
+The purchase bundle id files and the purchases listing are always read from the homeserver and
 never cached: they decide whether a payment is reused, so a stale copy could cost money.
 
 Notes:
@@ -390,6 +422,17 @@ Notes:
 - **Single error origin.** Validation throws `Err.validation` in the application (the factory
   logs + reports to Sentry once). Hooks catch and degrade to the lock card.
 - **Read path.** This is a read flow; there is no local-first `commit*` write.
+
+## Region check
+
+Paid unlocks are held in some regions (at launch the EU, the UK and the US), and the Lock Server answers HTTP 451 to a proof submission from one. The reader should hear that before the payment step, so `LockedPostContent` asks `usePaidUnlockAvailability`:
+
+- It is off unless `PUBKY_RUNTIME_REGION_MODES` lists a region ([environment.md](environment.md)). Then free content and every other feature never read the viewer's region, and no request is made.
+- With a region listed it reads the viewer's country once per page load from the Shop's same-origin `/shop-embed/api/marketplace/client-region` route (`ClientRegionService`, through the application and controller into `useClientRegionStore`) and evaluates it with the Shop's rules (`@/libs/region/regionModes`, the same `SELECTOR=MODE` grammar).
+- A blocked reader sees "Paid unlocks aren't available in your region yet." with an info icon above the lock card, and Unlock is disabled for a new payment. While the country or a known purchase's task is being read the card shows its spinner. A saved bundle file alone is not an existing payment: a missing task or a failed/expired task stays held. Only a running/completed server task keeps Unlock for recovery. The creator's own lock and content already unlocked are untouched.
+- Purchase ids still come from one shared listing per reader/session. If that listing or a task read fails, Unlock can open the modal to re-read this lock's saved ids and recover a running/completed payment; the region notice remains visible. The modal checks availability again before every new submission or retry, including after its wallet check. A missing/ended task stops at the region notice without submitting or replacing the saved id. Recovery reuses its status lookup for completed-content downloads rather than looking up the same task twice.
+- A creator in a held region cannot switch **Lock content** on: `usePostInputLock` disables the switch and `PostInputActionBar` shows the info icon beside it (the line and the why open from it), so the creator hears it before the setup dialogs rather than after. Only the switch is held: normal posts, a lock already switched on (so it can be switched off) and everything else in the composer stay as they are. This is the one place a creator is restricted, and it follows the Shop's rule that selling paid unlocks is held where buying them is.
+- A country the edge cannot tell is held like the Shop holds it; a Shop route that cannot answer holds nobody. The check is advisory, and the 451 handling above covers whatever it misses.
 
 ## The Unlocked screen
 
@@ -438,6 +481,15 @@ profile/(own)/layout.tsx → ProfilePageContainer
 Locks use one `paykit-payment` criterion holding the recipient (always the lock's creator),
 an atomic amount as a string, and its denomination: `BTC` (sats) or `USD` (cents). The price
 dialog uses exact decimal conversion and clears the amount when the currency changes. Cards and checkout retain the denomination from the lock file.
+
+Locks SDK 0.1.0 requires a numeric `payment_in` in whole hours. The App records `payment_in: 24`
+using `PAYKIT_PAYMENT_IN_HOURS` in `src/config/locks.ts`. This is the payment-window policy stored
+in each new lock; readers use the deadline returned by Paykit.
+
+Locks published without `payment_in` are incompatible with new payment attempts on Locks/Paykit
+0.1.0: backend validation rejects the missing field. This fix covers new publications only;
+legacy locks need a separate compatibility or migration decision. Existing lock files are not
+rewritten, since their contents determine their canonical hash and identity.
 
 Paykit Server creates the immutable request and fixed conversion quote from the creator's
 enabled receiving methods. BTC prices need no conversion for Bitcoin; USD prices include a
@@ -528,8 +580,8 @@ Never commit either.
 - Lock server FE integration: `pubky/locks` → `docs/_front_end_integration.md` — the
   `lock.json` shape and the submit-proof → credential → proxy-read access flow.
 - Creator side: [ADR 0022](adr/0022-locks-creator-publishing.md)
-- Issues: #2297 (bundle-id persistence), #2368 (reader payment), #2369 (payment-only locks),
-  #2468 (multi-tab read-back), #1998 (Phase 1 epic).
+- Issues: #2297 (bundle-id persistence), #2827 (one file per bundle id), #2368 (reader payment),
+  #2369 (payment-only locks), #2468 (multi-tab read-back), #1998 (Phase 1 epic).
 
 ## SDK and server integration
 

@@ -27,6 +27,7 @@ import type {
   THomeserverSignUpParams,
 } from '@/services/homeserver/homeserver.types';
 import { LocalAuthService } from '@/services/local/auth/auth';
+import { ShopEmbedService } from '@/services/shop-embed/shop-embed';
 
 export class AuthApplication {
   private constructor() {} // Prevent instantiation
@@ -111,6 +112,9 @@ export class AuthApplication {
   }
   static commitPersistedAuth(record: PersistedAuth, expectedGeneration: string, isCurrent?: () => boolean) {
     return LocalAuthService.commit(record, expectedGeneration, isCurrent);
+  }
+  static cleanupEmbeddedShop(generation: string, epoch: string) {
+    return ShopEmbedService.cleanupSignedOut(generation, epoch);
   }
   static prepareAccount(generation: string, isCurrent: () => boolean) {
     return LocalAuthService.prepareAccount(generation, isCurrent);

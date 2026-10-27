@@ -22,6 +22,8 @@ import type {
   TMarkUnreadPostsAsReadParams,
   TStreamIdParams,
 } from '@/controllers/stream/posts/posts.types';
+import { ErrorService } from '@/libs/error/error.types';
+import { toAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { isPostDeleted } from '@/libs/utils/utils';
@@ -735,6 +737,7 @@ export class PostStreamApplication {
     viewerId,
     isCurrent,
     force,
+    throwOnFailure = false,
   }: TMissingPostsParams): Promise<boolean> {
     try {
       if (isCurrent && !isCurrent()) return false;
@@ -760,8 +763,12 @@ export class PostStreamApplication {
         .map((post) => post.relationships.reposted)
         .filter((uri): uri is string => uri !== null);
       await this.fetchOriginalPostsByUris({ repostedUris, viewerId, isCurrent });
-      return true;
+      // Authors and repost originals stop early on a session change too.
+      return !isCurrent || isCurrent();
     } catch (error) {
+      if (throwOnFailure) {
+        throw toAppError(error, ErrorService.Local, 'PostStreamApplication.fetchMissingPostsFromNexus');
+      }
       Logger.warn('Failed to fetch missing posts from Nexus', { cacheMissPostIds, viewerId, error });
       return false;
     }

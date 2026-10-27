@@ -12,7 +12,9 @@ const authState = vi.hoisted(() => ({
   session: { pubky: 'reader1' } as { pubky: string } | null,
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
+  useAuthStore: Object.assign((selector: (s: typeof authState) => unknown) => selector(authState), {
+    getState: () => authState,
+  }),
 }));
 const sessionNeedsUpgrade = vi.hoisted(() => ({ value: false }));
 vi.mock('@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade', () => ({
@@ -76,11 +78,11 @@ describe('usePurchasedLocks', () => {
     expect(result.current.hasPurchase('lock-new')).toBe(true);
   });
 
-  it('reports nothing purchased when the listing fails, without throwing', async () => {
+  it('reports a failed listing as unknown, without claiming no purchase exists', async () => {
     vi.mocked(LocksController.fetchPurchasedLockIds).mockRejectedValue(new Error('offline'));
     const { result } = renderHook(() => usePurchasedLocks({ enabled: true }));
 
-    await waitFor(() => expect(LocksController.fetchPurchasedLockIds).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.status).toBe('error'));
     expect(result.current.hasPurchase('lock1')).toBe(false);
   });
 
@@ -178,5 +180,28 @@ describe('usePurchasedLocks', () => {
     await waitFor(() => expect(first.result.current.hasPurchase('lock1')).toBe(true));
     await waitFor(() => expect(second.result.current.hasPurchase('lock1')).toBe(true));
     expect(LocksController.fetchPurchasedLockIds).toHaveBeenCalledTimes(1);
+  });
+  it('hides the previous reader immediately while the next listing is pending', async () => {
+    const { result, rerender } = renderHook(() => usePurchasedLocks({ enabled: true }));
+    await waitFor(() => expect(result.current.hasPurchase('lock1')).toBe(true));
+    authState.currentUserPubky = 'another-reader';
+    authState.session = { pubky: 'another-reader' };
+    vi.mocked(LocksController.fetchPurchasedLockIds).mockReturnValue(new Promise(() => {}));
+    rerender();
+    expect(result.current.hasPurchase('lock1')).toBe(false);
+    expect(result.current.status).toBe('loading');
+  });
+
+  it('hides purchases on logout and ignores a stale mark callback', async () => {
+    const { result, rerender } = renderHook(() => usePurchasedLocks({ enabled: true }));
+    await waitFor(() => expect(result.current.hasPurchase('lock1')).toBe(true));
+    const mark = result.current.markPurchased;
+    authState.currentUserPubky = null;
+    authState.session = null;
+    rerender();
+    act(() => mark('stale-purchase'));
+    expect(result.current.status).toBe('idle');
+    expect(result.current.hasPurchase('lock1')).toBe(false);
+    expect(result.current.hasPurchase('stale-purchase')).toBe(false);
   });
 });

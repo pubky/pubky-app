@@ -81,6 +81,33 @@ Differentiate transient errors (`SERVICE_UNAVAILABLE`, `NETWORK_ERROR`) from fat
 
 Pubky SDK (`@synonymdev/pubky`) errors are mapped by their `name` in `src/core/services/homeserver/error.utils.ts`: `InvalidInput` → Validation, `AuthenticationError` (or HTTP 401) → Auth `SESSION_EXPIRED`, `PkarrError` (PKARR lookup failed, absence not proven) → Network `CONNECTION_FAILED` (retryable). Anything else falls through to `httpStatusCodeToError`.
 
+#### Non-reporting availability probes
+
+`ClientRegionService.fetchCountry` is a narrow exception to `safeFetch`: it reads the optional same-origin
+`/shop-embed/api/marketplace/client-region` route with raw `fetch`. Its advisory contract in
+[Shop embedding](shop-embedding.md#region-check) treats every failure as `{ status: 'unavailable' }`: a missing
+Shop mount, non-2xx response, redirect, non-JSON or invalid body, network failure and timeout never throw, log or
+report. An unavailable probe leaves the decision to the Lock Server. A successful response with a null country
+still follows the configured unknown-country policy. `safeFetch` would construct and report an
+`AppError` on transport failure before this fallback, violating that contract. Keep the existing request timeout
+and response validation. This is an availability boundary, like the existing boolean `LocksService.isServerReady`
+probe; it does not permit raw `fetch` or silent failures in ordinary data reads or writes.
+
+#### Homeserver write retries
+
+Every homeserver PUT and DELETE goes through `HomeserverService` (`request`, `putBlob`, `delete`), which runs it in `retryHomeserverWrite` (`src/core/services/homeserver/write-retry.ts`); `write-call-sites.gate.test.ts` fails on a write that bypasses it. The policy makes up to three attempts with jittered exponential backoff (a 429's `Retry-After` when the response carries one) for:
+
+- 429, 500 and 503;
+- the publish conflict of a homeserver on GCS (0.16.2+): a 409 whose body is exactly `The file changed before the change was published; read it again and retry`. Nothing landed, so the same write is replayed.
+
+Any other 409 (a path collision, an unknown lock token, a 409 without that body), 412 and 423 are real conflicts and are never retried. A retry never runs after logout begins or the session or account changes; it fails with `SESSION_EXPIRED` instead.
+
+A write whose body is built from a read of the same data (a read-check-write) must not replay that body: by the time a retry runs, another client may have changed the data. It takes a fence from `HomeserverService.createWriteFence()`, wraps the read and the write in `retryHomeserverWriteAfterReread(fence, …)`, and passes the `fence` to the write. A fenced write makes one attempt; the loop retries every status the policy retries (429, 500, 503 and the publish conflict) from the read, with the same backoff and cap. Every pass after the first stops with `SESSION_EXPIRED` once logout begins or the session or account changes, before its read and again before its write. In a file that uses the loop, the gate test fails on a write without a fence unless it is listed with its reason. The profile merge, both settings syncs, the missing `last_read` creation, notifications' `last_read` and the lock purchase-file mint do this. A caller with its own retry loop (`deleteIdempotent`, account deletion) passes `singleAttempt` so the attempts don't multiply.
+
+Owned writes to the same file run one after another, retries included, so an older write's retry never lands after a newer one: a tag removed while its add waits out a 429 stays removed. A write with nothing ahead of it starts in the caller's tick; one that waited checks the session it was queued under first and throws `SESSION_EXPIRED` if it ended.
+
+Notifications' `last_read` only moves forward. `NotificationApplication.markAllAsRead` runs one write at a time per account; every pass reads the published value first and keeps it when it is not older, so neither a retry nor a queued mark writes an older timestamp. Its fence is taken when the mark is called with `guardFirstPass`, so a mark still queued or reading when logout begins sends nothing. The controller stores the larger of the published and local values. A lock payment whose retry reuses a saved bundle checks the fence before submitting the proof.
+
 When a specific HTTP status is an expected domain state, handle it before calling `httpResponseToError`.
 For example, a geoblocked availability endpoint can return `{ available: false }` for `403`. Keep these cases
 explicit and narrow:
@@ -227,6 +254,22 @@ SDK 0.16 `Unsupported stored session version.` is terminal for restoration by th
 recognizes the exact `AuthenticationError` message `Authentication error: The provided auth request has expired or
 was cancelled.` from `restoreSession(export)`. This means no live cookie was found; it is not a generic network-error
 exception. Keep both contracts covered by the real-SDK tests in `session-store.contract.test.ts` on SDK updates.
+
+### Locks SDK 0.1.0 region classification exception
+
+`isLockServerRegionBlocked` in `src/core/services/locks/locks.utils.ts` is a second narrow exception to message-free
+classification. The pinned `@synonymdev/locks-sdk` 0.1.0 browser/WASM binding exposes HTTP viewer failures as an
+`Error` named `InvalidInput`, with no structured status field. Only the exact message
+`Lock Server viewer request failed with HTTP 451` identifies the region restriction on proof submission.
+`LocksService.submitProof` converts that raw SDK error to `{ regionBlocked: true }` before constructing any
+`Err.*`, so this expected result produces no logging, Sentry or Pulse capture. Existing `AppError` instances
+remain unchanged, even if their name or message resembles the SDK contract.
+
+Match the error instance, name and full message only at this boundary. Bare strings, other names or statuses,
+transport errors and parsing failures containing `HTTP 451` are not region restrictions; normalize them through
+the ordinary `AppError` path. Retain `locks.region.contract.test.ts` when updating the SDK: it runs the installed
+WASM, signed PKARR resolution and service with stubbed HTTP responses, checking 451, ordinary failures and success
+as well as the observability calls. Replace the message check with a structured discriminator when the SDK provides one.
 
 ### Grant failures during use and sign-in
 

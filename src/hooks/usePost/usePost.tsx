@@ -26,7 +26,6 @@ import type {
   ComposerDraft,
   ExistingAttachment,
   LatestArticle,
-  SerializedArticle,
   UsePostEditOptions,
   UsePostOptions,
   UsePostPostOptions,
@@ -82,17 +81,9 @@ function fileToLocalAttachment(file: File): InlineMediaLocalEntry {
  * const handleSubmit = edit({ editPostId: 'post-123', onSuccess: () => {} });
  * ```
  */
-/**
- * Copy for a write the homeserver rejected as unauthenticated (`UNAUTHORIZED` or
- * `SESSION_EXPIRED`): retrying cannot help until the session is re-established, so
- * the user is asked to sign in instead of retrying a write that keeps failing
- * (issue #2555). Mirrors the profile form's copy.
- */
-const showSessionExpiredToast = () =>
-  toast({
-    variant: 'error',
-    description: 'Session expired. Please sign in.',
-  });
+/** Copy for a body that references a file this composer session does not hold (and, on an edit, the post does not own). */
+const FOREIGN_INLINE_FILES_MESSAGE =
+  'Some attachments reference files from outside this article. Remove them, or insert the files again so they upload fresh.';
 
 export function usePost({ keepInlineMedia = false, active = true }: UsePostOptions = {}): UsePostReturn {
   const [content, setContent] = useState('');
@@ -109,12 +100,11 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
   // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
 
-  // Article inline images: uploaded at insert time, tracked per composer
-  // session for previews and best-effort orphan cleanup. The insert-time
-  // budget counts the cover plus the unique inline images already in the
-  // body; `content` lags the editor by its 500ms debounce and in-flight
-  // uploads aren't in the body yet, so `serializeArticleBody` at publish
-  // remains the authoritative cap enforcement.
+  // Article inline media: staged at insert time and uploaded at publish,
+  // tracked per composer session for previews and best-effort cleanup. The
+  // insert-time budget counts the cover plus the unique inline files already
+  // in the body; `content` lags the editor by its 500ms debounce, so
+  // `serializeArticleBody` at publish remains the authoritative cap enforcement.
   const inlineMediaSession = useInlineMediaUpload({
     enabled: isArticle && active,
     keepSession: keepInlineMedia,
@@ -137,12 +127,13 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       return;
     }
 
-    // A write the homeserver rejected as unauthenticated cannot succeed by retrying:
-    // the session has to be re-established first, so point at sign-in instead of
-    // asking for a retry that keeps failing (issue #2555). Nothing here signs the
-    // user out or retries the write; the caller's draft is left untouched.
+    // A write the homeserver rejected as unauthenticated (`UNAUTHORIZED` or `SESSION_EXPIRED`)
+    // cannot succeed by retrying: the session has to be re-established first, so point at
+    // sign-in instead of asking for a retry that keeps failing (issue #2555; mirrors the profile
+    // form's copy). Nothing here signs the user out or retries the write; the caller's draft is
+    // left untouched.
     if (isAppError(error) && requiresLogin(error)) {
-      showSessionExpiredToast();
+      toast({ variant: 'error', description: 'Session expired. Please sign in.' });
       return;
     }
 
@@ -176,35 +167,42 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
   };
 
   /**
-   * Blocks (with a toast) inline images whose files this article may not
+   * Blocks (with a toast) an edit whose inline files this article may not
    * manage: every attachment slot is subject to hard deletion when a later
    * edit drops it, so a file shared with another post would break that post
-   * permanently. Only files uploaded this composer session — or, for edits,
-   * the post's own original attachments — may become attachment slots.
+   * permanently. Only files staged this composer session, or the post's own
+   * original attachments, may become attachment slots.
    */
-  const rejectForeignInlineUris = (inlineUris: string[], originalUris: readonly string[] = []): boolean => {
+  const rejectForeignInlineUris = (inlineUris: string[], originalUris: readonly string[]): boolean => {
     const originalSet = new Set(originalUris);
     const hasForeign = inlineUris.some(
-      (uri) => inlineMediaSession.getPreviewUrl(uri) === null && !originalSet.has(uri),
+      (uri) => inlineMediaSession.getSessionFile(uri) === null && !originalSet.has(uri),
     );
     if (!hasForeign) return false;
 
-    toast({
-      variant: 'error',
-      description:
-        'Some attachments reference files from outside this article. Remove them, or insert the files again so they upload fresh.',
-    });
+    toast({ variant: 'error', description: FOREIGN_INLINE_FILES_MESSAGE });
     return true;
   };
 
-  const serializeArticleForLock = (body: string): SerializedArticle | null => {
+  /**
+   * An article body in published form with the session files its inline slots
+   * carry, for a create or a lock capture: every file goes up with the post, so
+   * every inline URI must be a file staged this session. Null, after a toast,
+   * when the body cannot be published or references another file — a file from
+   * another post would break that post when a later edit drops its slot, and a
+   * skipped file would shift every slot after it onto the wrong file.
+   */
+  const serializeArticleWithSessionFiles = (
+    body: string,
+  ): { body: string; inlineUris: string[]; inlineFiles: File[] } | null => {
     const serialized = serializeArticleForPublish(attachments.length > 0, body.trim());
-    if (!serialized || rejectForeignInlineUris(serialized.inlineUris)) return null;
+    if (!serialized) return null;
 
     const inlineFiles = serialized.inlineUris.map((uri) => inlineMediaSession.getSessionFile(uri));
-    // A skipped file would shift every slot after it onto the wrong image.
-    if (!inlineFiles.every((file) => file !== null)) return null;
-    return { body: serialized.body, inlineFiles };
+    if (inlineFiles.every((file) => file !== null)) return { ...serialized, inlineFiles };
+
+    toast({ variant: 'error', description: FOREIGN_INLINE_FILES_MESSAGE });
+    return null;
   };
 
   /**
@@ -215,8 +213,8 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
    * session), the entry is cleared and the Dexie/CDN path takes over.
    */
   /**
-   * Completes inline seed entries: URIs uploaded this session keep their
-   * object URLs; URIs kept from previous sessions fall back to locally cached
+   * Completes inline seed entries: this session's files keep their object
+   * URLs; URIs kept from previous sessions fall back to locally cached
    * metadata + CDN URLs (long since generated for old files). Without this,
    * one kept file would void the whole seed — stripping fresh uploads
    * (including a brand-new cover) of their object URLs and exposing them to
@@ -298,7 +296,7 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
 
   // The inputs run ahead of the debounced state: a publish takes what the editor holds, not what
   // the state last caught up with, or an image inserted in the last half second is dropped and its
-  // upload deleted as unreferenced. A plain post has no article and reads the state.
+  // staged file released as unreferenced. A plain post has no article and reads the state.
   const latestOf = (article?: LatestArticle) => ({
     title: article?.title ?? articleTitle,
     body: article?.body ?? content,
@@ -318,33 +316,29 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       if (!(await waitForAuth())) return;
       // Only protect files once the commit can start; closing during restore may discard them.
       inlineMediaSession.setCommitting(true);
-      let articleBody = '';
-      let inlineUris: string[] = [];
-      if (isArticle) {
-        const serialized = serializeArticleForPublish(attachments.length > 0, latestBody.trim());
-        if (!serialized) return;
-        if (rejectForeignInlineUris(serialized.inlineUris)) return;
-        articleBody = serialized.body;
-        inlineUris = serialized.inlineUris;
-      }
+      const article = isArticle ? serializeArticleWithSessionFiles(latestBody) : null;
+      if (isArticle && !article) return;
 
+      // An article's inline files go up with the cover, in slot order (`[cover?, ...inline]`, the
+      // order the serialized body references), through the controller: a failed publish rolls
+      // every upload back, so nothing of an unpublished article ever stays on the homeserver.
+      const uploads = [...attachments, ...(article?.inlineFiles ?? [])];
       const createdPostId = await PostController.commitCreate({
-        content: isArticle ? JSON.stringify({ title: latestTitle.trim(), body: articleBody }) : content.trim(),
+        content: article ? JSON.stringify({ title: latestTitle.trim(), body: article.body }) : content.trim(),
         authorId: currentUserId,
         tags: tags.length > 0 ? tags : undefined,
-        attachments: attachments.length > 0 ? attachments : undefined,
-        attachmentUris: inlineUris.length > 0 ? inlineUris : undefined,
+        attachments: uploads.length > 0 ? uploads : undefined,
         isArticle,
       });
 
-      if (isArticle) {
+      if (article) {
         // Build entries before finalizeSession clears the session map; the
         // referenced object URLs' ownership moves to the store.
         seedArticleLocalFiles(createdPostId, [
           ...attachments.map(fileToLocalAttachment),
-          ...(await completeInlineSeedEntries(inlineUris)),
+          ...(await completeInlineSeedEntries(article.inlineUris)),
         ]);
-        void inlineMediaSession.finalizeSession(inlineUris);
+        void inlineMediaSession.finalizeSession(article.inlineUris);
       }
 
       setContent('');
@@ -450,34 +444,40 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
         const originalSet = new Set(originalUris);
         if (rejectForeignInlineUris(serialized.inlineUris, originalUris)) return;
 
-        let coverUri = keptCover?.uri;
-        if (newCoverFile) {
-          coverUri = await FileController.commitCreate({ file: newCoverFile, pubky: currentUserId });
-          // Joining the session means a failed commit below leaves cleanup to
-          // the session's discard sweep.
-          inlineMediaSession.registerSessionUpload(coverUri, newCoverFile);
-        }
-        const referencedOrder = [...(coverUri ? [coverUri] : []), ...serialized.inlineUris];
         // Original attachments the user was never shown (not the cover, not
         // referenced by the body at open) ride at the tail so an unrelated
         // edit never deletes files the user did not see and remove. Slots of
-        // referenced images are unaffected by the tail.
-        const referencedOrderSet = new Set(referencedOrder);
-        const nextOrder = [
-          ...referencedOrder,
-          ...(preservedAttachmentUris ?? []).filter((uri) => originalSet.has(uri) && !referencedOrderSet.has(uri)),
-        ];
+        // referenced files are unaffected by the tail.
+        const keptCoverUri = newCoverFile ? undefined : keptCover?.uri;
+        const referencedSet = new Set([...(keptCoverUri ? [keptCoverUri] : []), ...serialized.inlineUris]);
+        const preservedTail = (preservedAttachmentUris ?? []).filter(
+          (uri) => originalSet.has(uri) && !referencedSet.has(uri),
+        );
 
         // The serialize cap covers cover + inline only; the preserved tail
         // can push the total past the spec limit, which would otherwise
-        // surface as an opaque spec error from `builder.editPost`
-        if (nextOrder.length > ARTICLE_ATTACHMENT_MAX_FILES) {
+        // surface as an opaque spec error from `builder.editPost`. Checked
+        // before anything goes up, so a blocked save uploads nothing.
+        const coverSlots = newCoverFile || keptCover ? 1 : 0;
+        if (coverSlots + serialized.inlineUris.length + preservedTail.length > ARTICLE_ATTACHMENT_MAX_FILES) {
           toast({
             variant: 'error',
             description: `Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} attachments, including the cover and attachments kept from previous versions. Remove some images to save.`,
           });
           return;
         }
+
+        // Nothing is uploaded before this point. The replacement cover and the files staged this
+        // session go up now, under their homeserver URIs: the slot-ordered `nextOrder` contract
+        // takes URIs only. They stay in the session if the commit fails — reused by a retry,
+        // deleted by the discard sweep.
+        let coverUri = keptCover?.uri;
+        if (newCoverFile) {
+          coverUri = await FileController.commitCreate({ file: newCoverFile, pubky: currentUserId });
+          inlineMediaSession.registerSessionUpload(coverUri, newCoverFile);
+        }
+        const inlineUris = await inlineMediaSession.uploadStaged(serialized.inlineUris);
+        const nextOrder = [...(coverUri ? [coverUri] : []), ...inlineUris, ...preservedTail];
         const kept = [...new Set(nextOrder.filter((uri) => originalSet.has(uri)))];
         const addedUris = [...new Set(nextOrder.filter((uri) => !originalSet.has(uri)))];
         const orderChanged =
@@ -538,18 +538,7 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       onSuccess?.(editPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to edit post:', err);
-
-      // Same session-expiry handling as `showCommitErrorToast`: an unauthenticated
-      // edit cannot succeed by retrying (issue #2555).
-      if (isAppError(err) && requiresLogin(err)) {
-        showSessionExpiredToast();
-        return;
-      }
-
-      toast({
-        variant: 'error',
-        description: getImageUploadSizeLimitToastMessage(err) ?? 'Could not update post. Try again.',
-      });
+      showCommitErrorToast(err, 'Could not update post. Try again.');
     } finally {
       inlineMediaSession.setCommitting(false);
       inFlight.current = false;
@@ -620,12 +609,11 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
     edit,
     isSubmitting,
     inlineMedia: {
-      upload: inlineMediaSession.uploadInlineMedia,
+      upload: inlineMediaSession.stageInlineMedia,
       getPreviewUrl: inlineMediaSession.getPreviewUrl,
       getMediaType: inlineMediaSession.getMediaType,
       getMediaName: inlineMediaSession.getMediaName,
     },
-    uploadingCount: inlineMediaSession.uploadingCount,
-    serializeArticleForLock,
+    serializeArticleForLock: serializeArticleWithSessionFiles,
   };
 }

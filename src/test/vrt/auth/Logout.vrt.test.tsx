@@ -11,6 +11,11 @@ import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { Header } from '@/organisms/Header/Header';
 import { Logout } from '@/templates/Auth/Logout/Logout';
 
+// Passport eligibility and the inert Passport popup come from vrt.setup.ts.
+// 'canceled' is the route's default failure. 'error' is any other logout failure,
+// which this file captures alongside the in-progress screen.
+const logoutFailure = vi.hoisted(() => ({ kind: 'canceled' as 'canceled' | 'error' }));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => '/logout',
@@ -24,6 +29,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
     sessionReference: null,
     restoreStatus: 'idle',
     isLoggingOut: false,
+    generation: '',
   }),
 }));
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
@@ -37,6 +43,7 @@ vi.mock('@/libs/identity/identity', () => ({ Identity: { tryZ32FromSecret: () =>
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     logout: vi.fn(async () => {
+      if (logoutFailure.kind === 'error') throw new Error('vrt logout failed');
       throw createCanceledError();
     }),
   },
@@ -50,9 +57,13 @@ for (const [name, viewport] of [
   ['mobile', VRT_VIEWPORT_MOBILE],
 ] as const) {
   describe(`Logout ${name}`, () => {
-    it.each(['backup', 'canceled', 'success'])('renders %s logout', async (state) => {
+    it.each(['backup', 'canceled', 'success', 'loading', 'error'] as const)('renders %s logout', async (state) => {
+      logoutFailure.kind = state === 'error' ? 'error' : 'canceled';
       Object.assign(useOnboardingStore.getState(), { secretKey: state === 'backup' ? 'fixture-key' : '' });
-      Object.assign(useAuthStore.getState(), { currentUserPubky: state === 'success' ? null : 'vrt-account' });
+      Object.assign(useAuthStore.getState(), {
+        currentUserPubky: state === 'success' ? null : 'vrt-account',
+        isLoggingOut: state === 'loading',
+      });
       await renderForVRT(
         <>
           <Header />
@@ -67,13 +78,21 @@ for (const [name, viewport] of [
       } else if (state === 'canceled') {
         await expect.element(page.getByRole('heading', { name: 'Your account changed' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+      } else if (state === 'loading') {
+        // isLoggingOut holds the route on "Signing you out..." so the effect cannot settle.
+        await expect.element(page.getByRole('heading', { name: 'Signing you out...' })).toBeVisible();
+        await expect.element(page.getByText("We're ending your session securely.")).toBeVisible();
+      } else if (state === 'error') {
+        await expect.element(page.getByRole('heading', { name: "We couldn't sign you out yet" })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Homepage' })).toBeVisible();
       } else await expect.element(page.getByText('You have signed out.')).toBeVisible();
-      if (state !== 'success') {
+      if (state !== 'success' && state !== 'loading') {
         const back = page.getByRole('button', { name: 'Homepage' }).element();
         expect(back.getBoundingClientRect().top).toBeGreaterThanOrEqual(0);
         expect(back.getBoundingClientRect().bottom).toBeLessThanOrEqual(viewport.height);
       }
-      if (name === 'mobile' && state !== 'success') {
+      if (name === 'mobile' && state !== 'success' && state !== 'loading') {
         const navigation = page.getByRole('button', { name: 'Homepage' }).element().closest('.onboarding-nav');
         expect(navigation?.getBoundingClientRect().bottom).toBeGreaterThanOrEqual(viewport.height - 1);
       }

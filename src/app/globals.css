@@ -383,6 +383,24 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  /*
+    Keep keyboard focus and scroll targets clear of the fixed guest contextual banner (WCAG 2.4.11).
+    Below lg it sits on the 72/80px mobile footer: a card up to 144px, or a 72px row on landscape
+    phones. From lg the bar (up to 108px) sits at the viewport bottom under its 112px fading scrim.
+  */
+  html:has([data-slot='contextual-banner']) {
+    scroll-padding-bottom: 15rem;
+  }
+  @media (max-width: 1023.98px) and (orientation: landscape) {
+    html:has([data-slot='contextual-banner']) {
+      scroll-padding-bottom: 10rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    html:has([data-slot='contextual-banner']) {
+      scroll-padding-bottom: 14rem;
+    }
+  }
 }
 
 @layer components {

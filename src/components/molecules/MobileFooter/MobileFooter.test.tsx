@@ -93,6 +93,7 @@ vi.mock('@/app/routes', async () => {
       HOME: '/home',
       SEARCH: '/search',
       HOT: '/hot',
+      SHOP: '/shop',
       COLLECTIONS: '/collections',
       SETTINGS: '/settings',
       PROFILE: '/profile',
@@ -185,20 +186,19 @@ describe('MobileFooter', () => {
     resetRuntimeConfigForTests();
   });
 
-  it.each([true, false])('uses the injected Shop destination (authenticated: %s)', (authenticated) => {
-    mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
-    mockIsCoreExploreRoute = true;
-    window[RUNTIME_CONFIG_WINDOW_KEY] = {
-      ...readServerConfig(),
-      shopUrl: 'https://shop.example.com/marketplace',
-    };
-    render(<MobileFooter />);
-    const link = screen.getByRole('link', { name: 'Shop' });
-    expect(link).toHaveAttribute('href', 'https://shop.example.com/marketplace');
-    expect(link.getAttribute('target')).not.toBe('_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    fireEvent.click(link);
-    expect(collectionsDiscoveryMock.setShowSignInDialog).not.toHaveBeenCalled();
+  describe('default embedded Shop navigation', () => {
+    it.each([true, false])('keeps Shop navigation inside the App (authenticated: %s)', (authenticated) => {
+      mockCurrentUserPubky = authenticated ? 'pk:test-user-pubky' : null;
+      mockIsCoreExploreRoute = true;
+      window[RUNTIME_CONFIG_WINDOW_KEY] = readServerConfig();
+      render(<MobileFooter />);
+      const link = screen.getByRole('link', { name: 'Shop' });
+      expect(link).toHaveAttribute('href', '/shop');
+      expect(link).not.toHaveAttribute('target');
+      expect(link).not.toHaveAttribute('rel');
+      fireEvent.click(link);
+      expect(collectionsDiscoveryMock.setShowSignInDialog).not.toHaveBeenCalled();
+    });
   });
 
   it.each(['reauth-required', 'temporary-error'] as const)(
@@ -587,7 +587,7 @@ describe('MobileFooter', () => {
       '/home',
       '/search',
       '/hot',
-      'https://shop.staging.pubky.app/marketplace',
+      '/shop',
       '/collections',
       '/settings/account',
     ]);

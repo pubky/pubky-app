@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   articleHasInlineSlotZero,
   collectAttachmentRefIndexes,
@@ -79,6 +79,29 @@ describe('parseFileUriOwner / isAuthorFileUri', () => {
     expect(isAuthorFileUri(fileUri('abc'), AUTHOR)).toBe(true);
     expect(isAuthorFileUri(fileUri('abc', OTHER), AUTHOR)).toBe(false);
     expect(isAuthorFileUri('https://example.com/a.png', AUTHOR)).toBe(false);
+  });
+
+  it('accepts a mixed-case scheme and rejects an owner with a port or userinfo', () => {
+    expect(parseFileUriOwner(`PUBKY://${AUTHOR}/pub/pubky.app/files/abc`)).toBe(AUTHOR);
+    expect(parseFileUriOwner(fileUri('abc', `${AUTHOR}:8080`))).toBeNull();
+    expect(parseFileUriOwner(fileUri('abc', `user@${AUTHOR}`))).toBeNull();
+  });
+
+  it('does not rely on URL hostname, which is empty on Chrome before 130', () => {
+    const RealURL = globalThis.URL;
+    vi.stubGlobal(
+      'URL',
+      class extends RealURL {
+        get hostname() {
+          return this.protocol === 'pubky:' ? '' : super.hostname;
+        }
+      },
+    );
+    try {
+      expect(isAuthorFileUri(fileUri('abc'), AUTHOR)).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

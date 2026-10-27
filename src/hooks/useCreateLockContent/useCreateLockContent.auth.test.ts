@@ -73,7 +73,9 @@ describe('useCreateLockContent reauthentication', () => {
       const oldSession = asOpaque<LocksSdkSession>({ creatorPubky: () => `pubky${MOCK_LOCK_AUTHOR_PUBKY}` });
       const newSession = asOpaque<LocksSdkSession>({ creatorPubky: () => `pubky${MOCK_LOCK_AUTHOR_PUBKY}` });
       useAuthStore.setState({ currentUserPubky: MOCK_LOCK_AUTHOR_PUBKY });
-      useLocksAuthStore.getState().init({ session: oldSession, secret: 'old-secret' });
+      useLocksAuthStore
+        .getState()
+        .init({ session: oldSession, secret: 'old-secret', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
       const abandoned = Promise.withResolvers<never>();
       const active = Promise.withResolvers<never>();
       const exchange = Promise.withResolvers<{ session: LocksSdkSession; secret: string }>();

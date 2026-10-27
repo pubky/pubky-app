@@ -33,16 +33,6 @@ on:
       - '.github/workflows/e2e-test.yml'
       - '.github/workflows/build-docker-image.yml'
 
-# Runs group per branch, so one branch's run never cancels another's. A newer
-# dev push supersedes an in-flight dev push: only the latest commit's result
-# matters there. Manual dispatches get a group per run so every requested run
-# executes and none is ever cancelled or replaced. Master pushes are never
-# cancelled either; GitHub keeps the running run plus the newest pending one,
-# so a burst of master pushes attributes coverage to the latest pending commit.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event_name }}
-  cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
-
 jobs:
   rebuild_images:
     name: Getting images to rebuild
@@ -178,6 +168,15 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: pubky-app
+          # Blobless partial clone. The negation drops only VRT baseline PNGs
+          # under src/test/vrt/**/__screenshots__. VRT workflows still fetch them.
+          # git ls-tree (docker-content-tag.sh) still sees every blob id, so the
+          # content tag does not change.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
 
       - name: Resolve the pubky-app image tag
         id: app_tag
@@ -200,7 +199,7 @@ jobs:
           key: e2e-node-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pubky-app/.nvmrc', 'pubky-app/package.json', 'pubky-app/package-lock.json', 'pubky-app/.npmrc', 'pubky-app/patches/*.patch') }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: 'pubky-app/.nvmrc'
           cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}

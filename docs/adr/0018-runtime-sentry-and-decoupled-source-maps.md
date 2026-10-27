@@ -10,13 +10,10 @@ names are removed with the rest of the fallback tier (see the ADR 0017 amendment
 document is also corrected by the same amendment: the config script must be a raw `<script>`
 element, not `next/script` `beforeInteractive`.
 
-Amended — 2026-10-07 (PR #2774): the required public-image contract now includes the
-nine network values and `PUBKY_RUNTIME_SHOP_URL`. Shop is always visible, so its full HTTP(S)
-destination must be configured before upgrading a deployed image; missing, blank, or invalid
-values fail startup. This is a breaking deployment change, documented in the corresponding
-[ADR 0017 amendment](0017-runtime-config-injection.md). Sentry and the other optional tiers are
-unchanged. The immediate rollout is staging; production configuration is required before a later
-production rollout, not before staging can proceed.
+Amended — 2026-10-07 (PR #2774): Shop added a required external destination. This requirement
+is superseded by [ADR 0025](0025-same-origin-shop-session.md): `/shop` is now an App route
+that always embeds the same-origin Shop. No Shop URL or enable flag is required. The required
+tier contains only the nine network values. Sentry and the other optional tiers are unchanged.
 
 ## Context
 
@@ -33,7 +30,7 @@ Direction check: `next-runtime-env` (suggested in the team thread) would introdu
 
 `src/libs/runtime-config/runtime-config.schema.ts` defines:
 
-- **Required tier**: the nine network values and the Shop destination (see the 2026-10-07 amendment). Partial config fails loudly.
+- **Required tier**: the nine network values. Partial config fails loudly.
 - **Optional tier**: `sentryDsn` (absent/empty = Sentry disabled), `sentryEnvironment` (absent = falls back to `NODE_ENV`), and three sample rates with defaults (`SENTRY_RUNTIME_DEFAULTS`: traces `0.1`, replay sessions `0.0`, replays-on-error `1.0`). Optional values never trigger the all-or-nothing rule, but a _malformed_ optional value (bad DSN URL, rate out of `[0,1]`) still throws — misconfiguration must be loud even when the feature is optional.
 
 The resolver exposes five new lazy getters (`getSentryDsn`, …). `JSON.stringify` drops absent optionals from the injected script, so the client sees exactly what the server resolved.

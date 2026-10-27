@@ -24,7 +24,23 @@ public-reference transitions and reject stale callbacks. Services own I/O, Appli
 own store changes. This decision extends ADR 0004's read-only session-store exception: `HomeserverService` may read
 the session's generation, restore status and saved reference to identify terminal failures of the active session.
 `LocksService` may also read `useAuthStore.currentUserPubky` solely to verify that a retained creator session belongs to the active app account
-before I/O. Other auth/UI fields remain outside that exception; controllers retain all store writes. Pending Ring/Passport flows and uncertain signup retain their existing recovery material.
+before I/O. Other auth/UI fields remain outside that exception; controllers retain all store writes. Pending Passport flows and uncertain signup retain their existing recovery material.
+
+For ordinary Ring/Bitkit sign-in, keep delegated pending-flow serialization in a separate App-owned IndexedDB
+store for the existing three-minute recovery window. This supersedes the sessionStorage-only pending-flow
+policy in [#2050](https://github.com/pubky/pubky-app/issues/2050): [#2840](https://github.com/pubky/pubky-app/issues/2840)
+reproduced Safari process termination that loses sessionStorage while the original approval remains on the relay.
+The tab record is a preferred-attempt hint; recovery requires the full original request context and an available
+per-attempt Web Lock. A live tab holds that lock through session adoption. Process termination releases ownership,
+allowing a new page to resume the same channel and delegated key. A concurrent live tab starts its own attempt.
+
+Commit pending serialization before exposing its authorization link. Preserve its original creation time on resume.
+Cancel and completion remove only the owned attempt; a synchronous, short-lived, id-only cancellation marker
+prevents recovery while asynchronous deletion finishes. Expired and canceled records are pruned on the next read.
+An unreadable store is an error, not an empty store. Local-key serialization, Passport callbacks, signup and
+capability upgrades stay tab-scoped. SDK delegated-key storage and the main account database are unchanged.
+Delegated serialization contains relay/HPKE secrets; IndexedDB does not encrypt it. Never log it or include it in
+URLs or telemetry.
 
 Ring and Passport request ordinary app and merged Locks capabilities upfront. Root-key login/signup obtains root grants.
 Older narrow grants can upgrade in the Locks context, preserving the same account and local state. Save the replacement

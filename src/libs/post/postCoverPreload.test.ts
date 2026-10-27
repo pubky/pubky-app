@@ -28,7 +28,7 @@ describe('resolvePostCoverPreloadUrls', () => {
   it('resolves both cover variants of slot 0, the ones the hero renders', () => {
     const urls = resolvePostCoverPreloadUrls({
       kind: 'long',
-      content: article('My name is John Carvalho.'),
+      content: article('My name is Jane Whitlock.'),
       attachments: [ATTACHMENT],
     });
 

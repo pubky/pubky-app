@@ -9,6 +9,7 @@ export interface AuthInitParams {
   hasProfile: boolean | null;
   sessionReference?: SessionReference | null;
   generation?: string;
+  shopCleanupEpoch?: string;
   retiringSession?: SessionReference | null;
   pendingRetirements?: SessionReference[];
   restoreStatus?: SessionRestoreStatus;
@@ -59,6 +60,7 @@ export const authInitialState: AuthState = {
   session: null,
   sessionReference: null,
   generation: '',
+  shopCleanupEpoch: '',
   retiringSession: null,
   pendingRetirements: [],
   restoreStatus: 'idle',

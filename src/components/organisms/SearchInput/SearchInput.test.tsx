@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
+import { isShopHostNavigationPending } from '@/libs/shop-embed/navigation';
 import { toast } from '@/molecules/Toaster/toast';
 import { useSearchStore } from '@/stores/search/search.store';
 import { SearchInput } from './SearchInput';
@@ -146,6 +147,34 @@ describe('SearchInput', () => {
       addQuery: mockAddQuery,
       clearRecentSearches: mockClearRecentSearches,
     });
+  });
+
+  it.each(['content', 'tag'])('guards header %s search before its router call while leaving Shop', async (kind) => {
+    window.history.replaceState(null, '', '/shop');
+    vi.mocked(useSearchInput).mockReturnValue({
+      inputValue: kind === 'content' ? 'bitcoin wallet' : '',
+      isFocused: true,
+      containerRef: { current: null },
+      inputRef: { current: null },
+      handleInputChange: vi.fn(),
+      handleKeyDown: vi.fn(),
+      handleFocus: vi.fn(),
+      clearInputValue: vi.fn(),
+      setInputValue: vi.fn(),
+      setFocus: vi.fn(),
+    });
+    const pendingDuringNavigation: boolean[] = [];
+    (kind === 'content' ? mockPush : mockAddTagToSearch).mockImplementationOnce(() => {
+      pendingDuringNavigation.push(isShopHostNavigationPending());
+    });
+    render(<SearchInput />);
+    await act(async () => {
+      if (kind === 'content') vi.mocked(useSearchInput).mock.calls[0]?.[0]?.onEnter?.('bitcoin wallet');
+      else fireEvent.click(screen.getByRole('button', { name: 'pubky tag' }));
+    });
+    expect(pendingDuringNavigation).toEqual([true]);
+    expect(isShopHostNavigationPending()).toBe(false);
+    window.history.replaceState(null, '', '/');
   });
 
   describe('Rendering', () => {
@@ -491,7 +520,7 @@ describe('SearchInput', () => {
       mockSetActiveTags.mockClear();
 
       const onEnter = vi.mocked(useSearchInput).mock.calls[0]?.[0]?.onEnter;
-      onEnter?.('bitcoin wallet');
+      act(() => onEnter?.('bitcoin wallet'));
       expect(mockPush).toHaveBeenLastCalledWith('/search?q=bitcoin+wallet');
       expect(mockAddQuery).toHaveBeenCalledWith('bitcoin wallet');
       expect(mockSetActiveTags).not.toHaveBeenCalled();

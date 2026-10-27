@@ -1,22 +1,27 @@
 import { LastReadResult } from 'pubky-app-specs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import { TagCacheApplication } from '@/application/tag/tag-cache';
 import { getTtlUserMs } from '@/config/sync';
 import { USER_TAGS_PER_PAGE } from '@/config/tags';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { httpStatusCodeToError } from '@/libs/error/error.http';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { installHomeserverWriteRetryDependenciesForTests } from '@/services/homeserver/write-retry';
 import { LocalNotificationService } from '@/services/local/notification/notification';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
 import { NexusUserService } from '@/services/nexus/user/user';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 import { NotificationApplication } from './notification';
 
@@ -534,42 +539,147 @@ describe('NotificationApplication.markAllAsRead', () => {
   const mockTimestamp = 1234567890;
   const mockLastReadUrl = 'pubky://test-user/pub/pubky.app/last-read';
 
-  beforeEach(() => vi.clearAllMocks());
-
-  it('should send lastRead to homeserver', async () => {
-    const mockLastReadResult = asOpaque<LastReadResult>({
+  const lastReadResult = (timestamp = mockTimestamp) =>
+    asOpaque<LastReadResult>({
       last_read: {
-        timestamp: BigInt(mockTimestamp),
-        toJson: vi.fn().mockReturnValue({ timestamp: mockTimestamp }),
+        timestamp: BigInt(timestamp),
+        toJson: vi.fn().mockReturnValue({ timestamp }),
       },
       meta: { url: mockLastReadUrl },
       free: vi.fn(),
     });
+  const homeserverError = (statusCode: number) =>
+    httpStatusCodeToError(statusCode, `status ${statusCode}`, ErrorService.Homeserver, 'request', mockLastReadUrl);
+  const putBodies = (spy: { mock: { calls: Array<[{ method: HttpMethod; bodyJson?: unknown }]> } }) =>
+    spy.mock.calls.filter(([params]) => params.method === HttpMethod.PUT).map(([params]) => params.bodyJson);
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+    installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {}, random: () => 0 });
+  });
+
+  afterEach(() => {
+    installHomeserverWriteRetryDependenciesForTests(null);
+    useAuthStore.setState({ isLoggingOut: false });
+    vi.restoreAllMocks();
+  });
+
+  it('reads the published lastRead, then sends this one as a single fenced attempt and returns it', async () => {
+    const mockLastReadResult = lastReadResult();
     const homeserverSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
 
-    await NotificationApplication.markAllAsRead(mockLastReadResult);
+    await expect(NotificationApplication.markAllAsRead(mockLastReadResult)).resolves.toBe(mockTimestamp);
 
-    expect(homeserverSpy).toHaveBeenCalledWith({
+    expect(homeserverSpy.mock.calls.map(([params]) => params.method)).toEqual([HttpMethod.GET, HttpMethod.PUT]);
+    expect(homeserverSpy).toHaveBeenLastCalledWith({
       method: HttpMethod.PUT,
       url: mockLastReadUrl,
-      bodyJson: mockLastReadResult.last_read.toJson(),
+      bodyJson: { timestamp: mockTimestamp },
+      fence: expect.objectContaining({ enter: expect.any(Function), assertCurrent: expect.any(Function) }),
     });
   });
 
   it('should propagate homeserver failures to the caller', async () => {
-    const mockLastReadResult = asOpaque<LastReadResult>({
-      last_read: {
-        timestamp: BigInt(mockTimestamp),
-        toJson: vi.fn().mockReturnValue({ timestamp: mockTimestamp }),
-      },
-      meta: { url: mockLastReadUrl },
-      free: vi.fn(),
-    });
-
     vi.spyOn(HomeserverService, 'request').mockRejectedValue(new Error('homeserver-fail'));
 
-    await expect(NotificationApplication.markAllAsRead(mockLastReadResult)).rejects.toThrow('homeserver-fail');
+    await expect(NotificationApplication.markAllAsRead(lastReadResult())).rejects.toThrow('homeserver-fail');
+  });
+
+  it('keeps a newer published lastRead instead of retrying an older one after a 429', async () => {
+    const newer = mockTimestamp + 5_000;
+    let reads = 0;
+    const spy = vi.spyOn(HomeserverService, 'request').mockImplementation(async ({ method }) => {
+      if (method === HttpMethod.GET) return { timestamp: (reads += 1) === 1 ? mockTimestamp - 1 : newer };
+      throw homeserverError(429);
+    });
+
+    await expect(NotificationApplication.markAllAsRead(lastReadResult())).resolves.toBe(newer);
+
+    expect(spy.mock.calls.map(([params]) => params.method)).toEqual([HttpMethod.GET, HttpMethod.PUT, HttpMethod.GET]);
+  });
+
+  it('writes nothing when the published lastRead is already at least as new', async () => {
+    const spy = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ timestamp: mockTimestamp });
+
+    await expect(NotificationApplication.markAllAsRead(lastReadResult())).resolves.toBe(mockTimestamp);
+
+    expect(spy.mock.calls.map(([params]) => params.method)).toEqual([HttpMethod.GET]);
+  });
+
+  it.each([
+    ['an older published value', async () => ({ timestamp: mockTimestamp - 1 })],
+    [
+      'a missing file',
+      async () => {
+        throw homeserverError(404);
+      },
+    ],
+  ])('writes again after a 503 when the read finds %s', async (_name, read) => {
+    let puts = 0;
+    const spy = vi.spyOn(HomeserverService, 'request').mockImplementation(async ({ method }) => {
+      if (method === HttpMethod.GET) return await read();
+      puts += 1;
+      if (puts === 1) throw homeserverError(503);
+      return undefined;
+    });
+
+    await expect(NotificationApplication.markAllAsRead(lastReadResult())).resolves.toBe(mockTimestamp);
+
+    expect(spy.mock.calls.map(([params]) => params.method)).toEqual([
+      HttpMethod.GET,
+      HttpMethod.PUT,
+      HttpMethod.GET,
+      HttpMethod.PUT,
+    ]);
+    expect(putBodies(spy)).toEqual([{ timestamp: mockTimestamp }, { timestamp: mockTimestamp }]);
+  });
+
+  it('runs a later mark only after an earlier one finished retrying, so the newest lands last', async () => {
+    const later = mockTimestamp + 1_000;
+    let published = 0;
+    let puts = 0;
+    let releaseBackoff!: () => void;
+    installHomeserverWriteRetryDependenciesForTests({
+      sleep: () =>
+        new Promise<void>((resolve) => {
+          releaseBackoff = resolve;
+        }),
+      random: () => 0,
+    });
+    const spy = vi.spyOn(HomeserverService, 'request').mockImplementation(async ({ method, bodyJson }) => {
+      if (method === HttpMethod.GET) return { timestamp: published };
+      puts += 1;
+      if (puts === 1) throw homeserverError(429);
+      published = Number((bodyJson as { timestamp: number }).timestamp);
+      return undefined;
+    });
+
+    const first = NotificationApplication.markAllAsRead(lastReadResult());
+    await vi.waitFor(() => expect(puts).toBe(1));
+    const second = NotificationApplication.markAllAsRead(lastReadResult(later));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(puts).toBe(1);
+    releaseBackoff();
+
+    await expect(first).resolves.toBe(mockTimestamp);
+    await expect(second).resolves.toBe(later);
+    expect(putBodies(spy)).toEqual([{ timestamp: mockTimestamp }, { timestamp: mockTimestamp }, { timestamp: later }]);
+    expect(published).toBe(later);
+  });
+
+  it('reads and writes nothing more once logout begins during the backoff', async () => {
+    installHomeserverWriteRetryDependenciesForTests({
+      sleep: async () => {
+        useAuthStore.setState({ isLoggingOut: true });
+      },
+      random: () => 0,
+    });
+    const spy = vi.spyOn(HomeserverService, 'request').mockRejectedValue(homeserverError(503));
+
+    await expect(NotificationApplication.markAllAsRead(lastReadResult())).rejects.toMatchObject({
+      code: AuthErrorCode.SESSION_EXPIRED,
+    });
+    expect(spy).toHaveBeenCalledOnce();
   });
 });
 

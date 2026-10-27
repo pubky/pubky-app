@@ -23,6 +23,11 @@ import {
 const UNLOCKED_PREFIX = '/priv/social/unlocked/';
 /** Where a reader keeps each purchase's bundle id; without it the paid content cannot be fetched again. */
 const PURCHASES_PREFIX = '/priv/social/purchases/';
+/**
+ * `BundleId.generate()`: 16 bytes as uppercase Crockford base32. A pipe cannot load the WASM SDK's
+ * `new BundleId()`, so this is the only check that a file name under the purchases root is an id.
+ */
+const BUNDLE_ID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 /** Uploaded last, so its presence proves every attachment before it succeeded. */
 const UNLOCKED_POST_FILE = 'post.json';
 
@@ -149,11 +154,22 @@ export class GuardedContentParser {
   }
 
   /**
-   * Reader's bundle id file for one lock: `pubky://<reader>/priv/social/purchases/<lockId>.json`.
-   * Beside the replica, not inside it, so deleting the replica keeps the bundle id.
+   * One file per bundle id: `pubky://<reader>/priv/social/purchases/<lockId>/<bundleId>.json`. Beside
+   * the replica, not inside it, so deleting the replica keeps the bundle id. A file per id, not one
+   * per lock: two devices minting at once must not overwrite each other (#2827).
    */
-  static purchaseUrl(readerPubky: string, lockId: string): string {
+  static purchaseUrl(readerPubky: string, lockId: string, bundleId: string): string {
+    return `pubky://${readerPubky}${PURCHASES_PREFIX}${lockId}/${bundleId}.json`;
+  }
+
+  /** Where builds before #2827 kept the one bundle id of a lock. Read, never written. */
+  static legacyPurchaseUrl(readerPubky: string, lockId: string): string {
     return `pubky://${readerPubky}${PURCHASES_PREFIX}${lockId}.json`;
+  }
+
+  /** One lock's purchase files: `pubky://<reader>/priv/social/purchases/<lockId>/`. */
+  static purchaseLockRootUrl(readerPubky: string, lockId: string): string {
+    return `pubky://${readerPubky}${PURCHASES_PREFIX}${lockId}/`;
   }
 
   /** Reader's purchases root: `pubky://<reader>/priv/social/purchases/`. */
@@ -162,28 +178,59 @@ export class GuardedContentParser {
   }
 
   /**
-   * Picks the `<lockId>` out of each purchases-root file URL:
-   * `pubky://<reader>/priv/social/purchases/<lockId>.json` → `<lockId>`.
+   * Picks the `<lockId>` out of each purchases-root file URL, in both layouts:
+   * `…/purchases/<lockId>/<bundleId>.json` and the legacy `…/purchases/<lockId>.json`.
    * Anything else in the directory is ignored rather than guessed at.
    */
   static purchasedLockIds(fileUrls: string[]): string[] {
-    const ids: string[] = [];
+    const ids = new Set<string>();
     for (const url of fileUrls) {
-      const start = url.indexOf(PURCHASES_PREFIX);
-      if (start === -1) continue;
-      if (url.slice(start + PURCHASES_PREFIX.length).includes('/')) continue;
-      const lockId = LockContentParser.lockIdFromUrl(url);
-      if (lockId) ids.push(lockId);
+      const segments = this.purchaseSegments(url);
+      if (!segments) continue;
+      if (segments.length === 1) {
+        const lockId = LockContentParser.lockIdFromUrl(url);
+        if (lockId) ids.add(lockId);
+      } else if (segments.length === 2 && segments[0] && this.bundleIdFromFile(segments[1])) {
+        ids.add(segments[0]);
+      }
     }
-    return ids;
+    return [...ids];
   }
 
-  /** Body of the purchase file (`{"bundle_id":…}`); `parsePurchaseFile` reads it back. */
+  /**
+   * The bundle ids under one lock's purchase root, sorted so every device ranks them the same way.
+   * Null when any file there is not `<bundleId>.json`: it may hold an id in a format this build does
+   * not know (an SDK change), and skipping it could mint and pay a second time.
+   */
+  static purchaseBundleIds(fileUrls: string[]): string[] | null {
+    const ids = new Set<string>();
+    for (const url of fileUrls) {
+      const segments = this.purchaseSegments(url);
+      const bundleId = segments?.length === 2 ? this.bundleIdFromFile(segments[1]) : null;
+      if (!bundleId) return null;
+      ids.add(bundleId);
+    }
+    return [...ids].sort();
+  }
+
+  /** The path segments after the purchases root, or null when the URL is outside it. */
+  private static purchaseSegments(url: string): string[] | null {
+    const start = url.indexOf(PURCHASES_PREFIX);
+    return start === -1 ? null : url.slice(start + PURCHASES_PREFIX.length).split('/');
+  }
+
+  /** `<bundleId>.json` → `<bundleId>`, or null when the name is not a bundle id. */
+  private static bundleIdFromFile(file: string): string | null {
+    const bundleId = LockContentParser.lockIdFromUrl(file);
+    return bundleId && BUNDLE_ID_PATTERN.test(bundleId) ? bundleId : null;
+  }
+
+  /** Body of the purchase file (`{"bundle_id":…}`); `parsePurchaseFile` reads the legacy one back. */
   static buildPurchaseFile(bundleId: string): string {
     return JSON.stringify({ bundle_id: bundleId });
   }
 
-  /** Bundle id inside the purchase file, or null when the bytes are unreadable. */
+  /** Bundle id inside a legacy purchase file, or null when the bytes are unreadable. */
   static parsePurchaseFile(bytes: Uint8Array): string | null {
     return this.parseJsonBytes(bytes, purchaseFileSchema)?.bundle_id ?? null;
   }

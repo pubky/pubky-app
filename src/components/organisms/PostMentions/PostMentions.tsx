@@ -5,6 +5,7 @@ import { Link } from '@/atoms/Link/Link';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { Identity } from '@/libs/identity/identity';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
+import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { RemarkAnchorProps } from '@/molecules/PostText/PostText.types';
 import { extractTextFromChildren } from '@/molecules/PostText/PostText.utils';
 import { UserInfoPopover } from '@/molecules/UserInfoPopover/UserInfoPopover';
@@ -17,6 +18,7 @@ export const PostMentions = (props: RemarkAnchorProps) => {
   const userId = Identity.extractPubkyPublicKey(mentionText);
   const { profile } = useUserProfile(userId ?? '');
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const navigable = useIsPostPreviewNavigable();
   // Resolve self-mentions to the canonical own-profile route instead of /profile/{ownPubky}.
   const profileUrl = getUserProfileUrl(userId ?? '', currentUserPubky);
 
@@ -27,14 +29,20 @@ export const PostMentions = (props: RemarkAnchorProps) => {
   });
   const userName = profile?.name ?? fallbackMention;
   const finalMention = profile?.name ? `@${profile.name}` : fallbackMention;
+  const mentionClassName = cn(className, 'text-base', !profile?.name && 'uppercase');
+
+  // Quoted post in the Reply/Repost dialogs: the mention is text, without the
+  // profile link or the popover, whose links would also land behind the open modal.
+  if (!navigable) {
+    return (
+      <span data-type={rest['data-type']} className={cn(mentionClassName, 'text-brand')}>
+        {finalMention}
+      </span>
+    );
+  }
 
   const linkContent = (
-    <Link
-      {...rest}
-      href={profileUrl}
-      onClick={(e) => e.stopPropagation()}
-      className={cn(className, 'text-base', !profile?.name && 'uppercase')}
-    >
+    <Link {...rest} href={profileUrl} onClick={(e) => e.stopPropagation()} className={mentionClassName}>
       {finalMention}
     </Link>
   );

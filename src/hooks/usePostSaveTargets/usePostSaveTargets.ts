@@ -63,7 +63,14 @@ export function usePostSaveTargets(postId: string, options: UsePostSaveTargetsOp
   const pending = useRef(new Set<string>());
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const bookmark = useBookmark(postId, { active: options.isPickerOpen ?? true });
-  const { collections, isLoading: isCollectionsLoading } = useAuthoredCollections(Boolean(currentUserPubky));
+  // Each completed toggle forces a fresh local read and stays busy until that read lands.
+  // `pendingReads` maps a collection to the read version its last toggle waits for.
+  const [localReads, setLocalReads] = useState({ version: 0, pendingReads: new Map<string, number>() });
+  const {
+    collections,
+    isLoading: isCollectionsLoading,
+    readVersion,
+  } = useAuthoredCollections(Boolean(currentUserPubky), localReads.version);
   // `useAuthoredCollections` reads the whole cached stream, so it already renders
   // every page this driver persists: the picker list grows through the live read
   // rather than through a page-scoped list that would shrink back to one page.
@@ -97,13 +104,17 @@ export function usePostSaveTargets(postId: string, options: UsePostSaveTargetsOp
   const { pubky, id } = parseCompositeId(postId);
   const postUri = postUriBuilder(pubky, id);
 
-  const saveTargets: PostSaveCollectionTarget[] = collections.map((collection) => ({
-    id: collection.details.id,
-    name: collection.content.name,
-    description: collection.content.description ?? '',
-    isSaved: (collection.content.items ?? []).includes(postUri),
-    isUpdating: updatingCollectionIds.has(collection.details.id),
-  }));
+  const saveTargets: PostSaveCollectionTarget[] = collections.map((collection) => {
+    const id = collection.details.id;
+    const isSaved = (collection.content.items ?? []).includes(postUri);
+    return {
+      id,
+      name: collection.content.name,
+      description: collection.content.description ?? '',
+      isSaved,
+      isUpdating: updatingCollectionIds.has(id) || (localReads.pendingReads.get(id) ?? 0) > readVersion,
+    };
+  });
 
   const setCollectionUpdating = (collectionId: string, isUpdating: boolean) => {
     setUpdatingCollectionIds((current) => {
@@ -119,7 +130,7 @@ export function usePostSaveTargets(postId: string, options: UsePostSaveTargetsOp
 
   const toggleCollection = async (collectionId: string) => {
     const target = saveTargets.find((collection) => collection.id === collectionId);
-    if (!target || pending.current.has(collectionId)) return false;
+    if (!target || target.isUpdating || pending.current.has(collectionId)) return false;
     pending.current.add(collectionId);
 
     setCollectionUpdating(collectionId, true);
@@ -143,6 +154,14 @@ export function usePostSaveTargets(postId: string, options: UsePostSaveTargetsOp
       });
       return false;
     } finally {
+      // Observe the current database after success/rollback, including writes
+      // from other pickers. Waiting for an expected boolean can never settle
+      // when another writer has already superseded this operation. Only this
+      // collection waits for the read; the other rows stay interactive.
+      setLocalReads(({ version, pendingReads }) => ({
+        version: version + 1,
+        pendingReads: new Map(pendingReads).set(collectionId, version + 1),
+      }));
       pending.current.delete(collectionId);
       setCollectionUpdating(collectionId, false);
     }
@@ -184,7 +203,7 @@ export function usePostSaveTargets(postId: string, options: UsePostSaveTargetsOp
     isBookmarkLoading: bookmark.isLoading,
     isBookmarkToggling: bookmark.isToggling,
     collections: saveTargets,
-    isCollectionsLoading,
+    isCollectionsLoading: isCollectionsLoading && collections.length === 0,
     isCreatingCollection,
     hasMoreCollections,
     isCollectionsLoadingMore,

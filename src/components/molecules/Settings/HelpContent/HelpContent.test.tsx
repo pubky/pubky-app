@@ -1,23 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { LEGAL_ROUTES } from '@/app/routes';
 import { HelpContent } from './HelpContent';
 
 vi.mock('@/organisms/DialogFeedback/DialogFeedback', () => {
   return {
     DialogFeedback: ({ open }: { open: boolean; onOpenChange: (open: boolean) => void }) =>
       open ? <div data-testid="dialog-feedback" /> : null,
-  };
-});
-
-vi.mock('@/organisms/DialogPrivacy/DialogPrivacy', () => {
-  return {
-    DialogPrivacy: ({ trigger }: { trigger: React.ReactNode }) => <div data-testid="dialog-privacy">{trigger}</div>,
-  };
-});
-
-vi.mock('@/organisms/DialogTerms/DialogTerms', () => {
-  return {
-    DialogTerms: ({ trigger }: { trigger: React.ReactNode }) => <div data-testid="dialog-terms">{trigger}</div>,
   };
 });
 
@@ -76,5 +65,18 @@ describe('HelpContent', () => {
     const button = screen.getByText('Support (Telegram)');
     fireEvent.click(button);
     expect(mockWindowOpen).toHaveBeenCalledWith('https://t.me/pubkychat', '_blank', 'noopener,noreferrer');
+  });
+
+  it('links Terms of service and Privacy policy to their pages in the same tab, styled as buttons', () => {
+    render(<HelpContent />);
+
+    const terms = screen.getByRole('link', { name: 'Terms of service' });
+    expect(terms).toHaveAttribute('href', LEGAL_ROUTES.TERMS_OF_USE);
+    expect(terms).toHaveAttribute('id', 'tos-btn');
+    expect(terms).not.toHaveAttribute('target');
+    const privacy = screen.getByRole('link', { name: 'Privacy policy' });
+    expect(privacy).toHaveAttribute('href', LEGAL_ROUTES.PRIVACY_POLICY);
+    expect(privacy).toHaveAttribute('id', 'privacy-btn');
+    expect(privacy).toHaveAttribute('data-variant', 'secondary');
   });
 });

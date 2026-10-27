@@ -90,6 +90,10 @@ export type TimelineFeedProps =
   HomeTimelineFeedProps | BookmarksTimelineFeedProps | CollectionTimelineFeedProps | StandardTimelineFeedProps;
 
 export interface TimelineFeedContextValue {
+  /** Retain a collection card for an open/pending save session; returns its release handle. */
+  retainPost?: (postId: string) => () => void;
+  /** Local membership observed by the feed, used to acknowledge a picker's completed save. */
+  collectionMembershipPostIds?: string[];
   /**
    * The variant of the feed providing this context. Lets descendants (e.g. the
    * save picker) tailor behavior to the feed they live in; for example,

@@ -5,32 +5,43 @@ import type {
   TLockPrice,
   TUnlockedContent,
   TVerificationStatus,
+  TVerificationTask,
 } from '@/services/locks/locks.types';
 
-/** Params to read or write the bundle id the reader saved for one lock (`/priv/social/purchases/<lockId>.json`). */
-export type TPurchaseBundleIdParams = {
+/** A payment lock as seen by one reader: the lock file, its public URL, and the reader. */
+export type TPaymentLockParams = {
   lockUrl: string;
   readerPubky: string;
-};
-
-/** A payment lock as seen by one reader: the lock file, its public URL, and the reader. */
-export type TPaymentLockParams = TPurchaseBundleIdParams & {
   lockFile: LockFile;
 };
 
 /**
- * Params to start a payment. `rejectBundleId` is a saved id known to have ended `failed`/`expired`;
- * it is never reused, a fresh one is minted instead.
+ * `isRetry`: the reader pressed Try again (or I completed the steps). Only then may an ended id be
+ * replaced by a fresh one: an automatic start that waited behind another submission can find its id
+ * ended (the reader rejected it in Bitkit), and replacing it would send a request nobody asked for.
  */
-export type TStartPaymentParams = TPaymentLockParams & {
-  rejectBundleId: string | null;
-};
+export type TStartPaymentParams = TPaymentLockParams & { isRetry: boolean };
 
-/** The bundle id and lifecycle status returned by proof submission. */
-export type TStartPaymentResult = {
-  bundleId: string;
-  status: TVerificationStatus;
-};
+/**
+ * The saved bundle id a payment continues with, by the Lock Server's view of every id the reader
+ * saved for the lock. `reusable` carries the task (null when the server never received the
+ * submission). `terminal` means every saved id ended `failed`/`expired`, so only a fresh one can pay.
+ * `region-blocked` means the Lock Server refused to look the saved ids up (HTTP 451): their state is
+ * unknown, and so is whether anything can be done from here.
+ */
+export type TResolvedPurchase =
+  | { kind: 'reusable'; bundleId: string; task: TVerificationTask | null }
+  | { kind: 'terminal'; bundleId: string; status: 'failed' | 'expired' }
+  | { kind: 'region-blocked' };
+
+/**
+ * The bundle id and lifecycle status returned by proof submission, or the ended one an automatic start
+ * found. `regionBlocked` means the Lock Server refused the submission (HTTP 451) because paid unlocks are
+ * not available in the reader's region, on the submission or on the lookup of a saved id: no payment was
+ * created, and the saved bundle id stays reusable. The id is absent when the refusal came from the lookup.
+ */
+export type TStartPaymentResult =
+  { bundleId: string; status: TVerificationStatus; regionBlocked?: false } | { bundleId?: string; regionBlocked: true };
 
 /** A submitted payment: the lock file and the bundle id the proof was submitted with. */
 export type TPaymentBundleParams = {

@@ -122,7 +122,7 @@
     },
     {
       "id": "error-handling-conventions",
-      "rule": "Re-throw AppError unchanged and normalize unknowns with toAppError(); use safeFetch + httpResponseToError (or the service's *.utils.ts wrapper) for HTTP instead of raw fetch; branch on error.category / error.code, never on message strings (only the documented pinned SDK 0.16 error-name/message checks in HomeserverService and GrantFlowService are exceptions, with SDK contract and regression tests required); no raw `throw new Error()` in src/core production code. See docs/error-handling.md.",
+      "rule": "Re-throw AppError unchanged and normalize unknowns with toAppError(); use safeFetch + httpResponseToError (or the service's *.utils.ts wrapper) for HTTP instead of raw fetch. Narrow availability exceptions: ClientRegionService.fetchCountry uses raw fetch for the optional Shop region probe, returning unavailable for every failure without throwing, logging or reporting; LocksService.isServerReady similarly returns a boolean. Do not extend these exceptions to ordinary data reads or writes. Branch on error.category / error.code, never on message strings, except the documented pinned Pubky SDK 0.16 checks in HomeserverService/GrantFlowService and Locks SDK 0.1.0 isLockServerRegionBlocked: only a non-AppError Error named InvalidInput with exact message 'Lock Server viewer request failed with HTTP 451' becomes a regionBlocked result before Err.* construction. SDK contract and regression tests are required. No raw `throw new Error()` in src/core production code. See docs/error-handling.md.",
       "scope": ["src/core/**", "src/hooks/**", "src/libs/**"],
       "severity": "medium"
     },
@@ -176,6 +176,12 @@
       "id": "sw-shell-only",
       "rule": "The service worker owns the app shell only: precache, the share target and the static offline fallback. Do not add runtime caching for homeserver, pkarr, httprelay, Nexus, CDN or any data (Dexie is the only data cache; TTL is the only freshness mechanism), no defaultCache, and keep skipWaiting false (updates are user-consented via useServiceWorkerUpdate). Public precache entries are an allow-list in globPublicPatterns. See docs/pwa.md and ADR-0021.",
       "scope": ["src/sw.ts", "next.config.ts", "src/hooks/useServiceWorkerUpdate/**"],
+      "severity": "high"
+    },
+    {
+      "id": "homeserver-write-retry",
+      "rule": "Every homeserver PUT and DELETE goes through HomeserverService (request, putBlob, delete), which retries 429, 500, 503 and the GCS publish-conflict 409 in retryHomeserverWrite. Flag any direct SDK storage write or raw homeserver fetch outside it, and any new retry of another 409, 412 or 423. A write whose body comes from a homeserver read of the same data must pass the fence from HomeserverService.createWriteFence() and wrap the read and the write in retryHomeserverWriteAfterReread(fence, ...): the fenced write makes one attempt, every retried status (429, 500, 503, the publish conflict) runs the read again, and no later pass runs after logout; flag one that replays a read-dependent body or omits the fence. Notifications' last_read must never move backward. See docs/error-handling.md.",
+      "scope": ["src/core/**"],
       "severity": "high"
     }
   ]

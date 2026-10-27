@@ -31,7 +31,7 @@ export function useEntityTags(
   taggedKind: TagKind,
   options: UseEntityTagsOptions = {},
 ): UseEntityTagsResult {
-  const { viewerId: customViewerId, providedTags } = options;
+  const { viewerId: customViewerId, providedTags, mergeEntityId } = options;
 
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (unauthenticated views should still render tags)
@@ -47,6 +47,7 @@ export function useEntityTags(
 
   const postTagsResult = usePostTags(taggedKind === TagKind.POST ? entityId : null, {
     viewerId: customViewerId,
+    mergePostId: taggedKind === TagKind.POST ? mergeEntityId : null,
   });
 
   // Select the active result based on kind

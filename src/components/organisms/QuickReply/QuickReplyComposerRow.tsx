@@ -66,6 +66,7 @@ export function QuickReplyComposerRow({
         disabled={isSubmitting}
         readOnly={!isAuthenticated}
         data-testid="quick-reply-textarea"
+        data-cy="quick-reply-textarea"
         aria-haspopup="listbox"
       />
 

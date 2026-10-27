@@ -206,7 +206,17 @@ export class LocalAuthService {
         // A completed retirement must not be resurrected from the caller's pre-lock snapshot.
         pendingRetirements: pendingRetirements(current ?? record),
       }).filter((ref) => ref.grantId !== record.sessionReference?.grantId);
-      const next = { ...record, retiringSession: null, pendingRetirements: retirements };
+      // Commit the Shop cleanup boundary with identity, under the same cross-tab lock.
+      // A same-account grant refresh must retain service approvals; logout and switching
+      // identity must invalidate them even while the Shop iframe is absent.
+      const identityChanged = (current?.currentUserPubky ?? null) !== record.currentUserPubky;
+      const shopCleanupEpoch = identityChanged ? record.generation : current?.shopCleanupEpoch;
+      const next = {
+        ...record,
+        ...(shopCleanupEpoch !== undefined ? { shopCleanupEpoch } : {}),
+        retiringSession: null,
+        pendingRetirements: retirements,
+      };
       createAuthStorage(localStorage, true).setItem(
         AUTH_PERSIST_KEY,
         JSON.stringify({ state: next, version: AUTH_STORE_VERSION }),

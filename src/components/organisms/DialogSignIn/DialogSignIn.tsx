@@ -14,6 +14,7 @@
  */
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowRight, UserRoundPlus } from 'lucide-react';
 import { AUTH_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
@@ -22,13 +23,22 @@ import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
+import { useShopNavigation } from '@/hooks/useShopNavigation/useShopNavigation';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export function DialogSignIn() {
   const showSignInDialog = useAuthStore((state) => state.showSignInDialog);
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
   const joinRoute = useJoinRoute();
+  const router = useRouter();
+  // The dialog stays mounted after its portaled links close, so it owns the
+  // transition guard until navigation finishes instead of dropping it on click.
+  const navigate = useShopNavigation();
   const handleClose = () => setShowSignInDialog(false);
+  const handleNavigate = (event: { preventDefault: () => void }, href: string) => {
+    event.preventDefault();
+    navigate(() => router.push(href));
+  };
   return (
     <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
       <DialogContent className="w-[576px] gap-6">
@@ -58,7 +68,7 @@ export function DialogSignIn() {
 
             <Container className="px-6">
               <Button asChild className="w-full gap-2 font-bold">
-                <Link href={joinRoute} onClick={handleClose}>
+                <Link href={joinRoute} onClick={handleClose} onNavigate={(event) => handleNavigate(event, joinRoute)}>
                   <UserRoundPlus className="size-4" />
                   {'Join Pubky'}
                 </Link>
@@ -86,7 +96,11 @@ export function DialogSignIn() {
 
             <Container className="px-6">
               <Button asChild variant="secondary" className="w-full gap-2 font-bold">
-                <Link href={AUTH_ROUTES.SIGN_IN} onClick={handleClose}>
+                <Link
+                  href={AUTH_ROUTES.SIGN_IN}
+                  onClick={handleClose}
+                  onNavigate={(event) => handleNavigate(event, AUTH_ROUTES.SIGN_IN)}
+                >
                   <ArrowRight className="size-4" />
                   {'Sign In'}
                 </Link>

@@ -11,6 +11,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
     hasProfile,
     sessionReference = null,
     generation,
+    shopCleanupEpoch,
     retiringSession = null,
     pendingRetirements = [],
     restoreStatus = session ? 'ready' : currentUserPubky && !sessionReference ? 'reauth-required' : 'idle',
@@ -21,6 +22,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
         session,
         sessionReference,
         generation: generation ?? crypto.randomUUID(),
+        shopCleanupEpoch: shopCleanupEpoch ?? state.shopCleanupEpoch,
         retiringSession,
         pendingRetirements,
         restoreStatus,
@@ -39,6 +41,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
       (state) => ({
         ...authInitialState,
         generation: state.generation,
+        shopCleanupEpoch: state.shopCleanupEpoch,
         hasHydrated: state.hasHydrated, // Preserve hydration state
         isLoggingOut: state.isLoggingOut, // Preserve logout state to prevent UI flash
         pendingRetirements: state.pendingRetirements,

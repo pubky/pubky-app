@@ -73,8 +73,8 @@ self.addEventListener('fetch', (event: FetchEvent) => {
 });
 
 // Precached static page served when a navigation cannot reach the network.
-// It is a plain HTML file (not a Next route) so it never boots the app: booting
-// offline would run the session restore, which wipes local state on failure.
+// Plain HTML keeps network-dependent App startup and session restoration out of
+// the offline response. Temporary grant restore failures retain the saved session.
 const OFFLINE_FALLBACK_URL = '/offline.html';
 
 // The previous service worker cached Nexus responses (NetworkFirst + ExpirationPlugin).
@@ -111,7 +111,8 @@ const serwist = new Serwist({
   runtimeCaching: [
     // Same-origin page navigations go straight to the network. `fallbacks` serves the
     // precached offline page only when the fetch itself fails (offline, DNS), never for
-    // an HTTP error response. No other runtime caching on purpose: Dexie is the data
+    // an HTTP error response. Shop documents also consume preload, but have no App fallback.
+    // No other runtime caching on purpose: Dexie is the data
     // cache, and homeserver / pkarr / httprelay / nexus / CDN must never be cached here.
     {
       matcher: ({ request, sameOrigin, url }) =>
@@ -123,7 +124,15 @@ const serwist = new Serwist({
     entries: [
       {
         url: OFFLINE_FALLBACK_URL,
-        matcher: ({ request }) => request.mode === 'navigate',
+        matcher: ({ request }) => {
+          const pathname = new URL(request.url).pathname;
+          return (
+            request.mode === 'navigate' &&
+            !pathname.startsWith('/api/') &&
+            pathname !== '/shop-embed' &&
+            !pathname.startsWith('/shop-embed/')
+          );
+        },
       },
     ],
   },

@@ -33,7 +33,7 @@ const INITIAL_VISIBLE_TAGS = 3;
  * Uses the same TaggedSection pattern as ProfileTagged but adapted for posts.
  */
 export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>(function PostTagsPanel(
-  { postId, widthMode = 'fit', autoFocusInput, enableLoadingSkeleton = true, className },
+  { postId, mergePostId, widthMode = 'fit', autoFocusInput, enableLoadingSkeleton = true, className },
   ref,
 ) {
   const tagInputRef = useRef<TagInputHandle>(null);
@@ -45,7 +45,9 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
     // minimum needed when it is not.
     reveal: () => containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }),
   }));
-  const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } = usePostTags(postId);
+  const { tags, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } = usePostTags(postId, {
+    mergePostId,
+  });
 
   // Enrich tags with user details for proper avatar fallbacks
   const { enrichedTags } = useEnrichedTags(tags);
@@ -104,6 +106,7 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
             <TaggedList
               tags={visibleTags}
               taggedId={postId}
+              mergeTaggedId={mergePostId}
               taggedKind={TagKind.POST}
               hasMore={isCollapsedPreview ? false : hasMore}
               isLoadingMore={isCollapsedPreview ? false : isLoadingMore}

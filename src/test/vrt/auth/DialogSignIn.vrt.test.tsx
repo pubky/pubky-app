@@ -7,6 +7,7 @@ import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.view
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: createZustandLikeHook({
     showSignInDialog: true,

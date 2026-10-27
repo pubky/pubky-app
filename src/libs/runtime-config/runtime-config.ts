@@ -36,7 +36,7 @@ const REQUIRED_NETWORK_ENV_MESSAGE =
   'PUBKY_RUNTIME_NEXUS_URL, PUBKY_RUNTIME_CDN_URL, PUBKY_RUNTIME_HOMESERVER, ' +
   'PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, ' +
   'PUBKY_RUNTIME_PKARR_RELAYS, PUBKY_RUNTIME_TESTNET, and PUBKY_RUNTIME_ENV ' +
-  '("production" or "staging"), plus PUBKY_RUNTIME_SHOP_URL (the full HTTP(S) Shop URL). ' +
+  '("production" or "staging"). ' +
   'Optional/defaulted PUBKY_RUNTIME_* values may be set independently.';
 
 /**
@@ -167,13 +167,14 @@ export const getDefaultHttpRelay = (): string => getRuntimeConfig().defaultHttpR
 export const getPkarrRelays = (): string[] => getRuntimeConfig().pkarrRelays;
 export const getTestnet = (): boolean => getRuntimeConfig().testnet;
 export const getDeployEnv = (): DeployEnv => getRuntimeConfig().deployEnv;
-export const getShopUrl = (): string => getRuntimeConfig().shopUrl;
 
 // Optional Lock Server pubky the composer's lock flow signs into (undefined = Locks disabled).
 export const getLockServer = (): string | undefined => getRuntimeConfig().lockServer;
 
 // Optional Paykit Server address for the creator's payout setup (undefined = Locks disabled).
 export const getPaykitServerUrl = (): string | undefined => getRuntimeConfig().paykitServerUrl;
+/** The `SELECTOR=MODE` list of regions where paid unlocks are held; `undefined` = no region check. */
+export const getRegionModes = (): string | undefined => getRuntimeConfig().regionModes;
 
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
 export const getPulseClientKey = (): string | undefined => getRuntimeConfig().pulseClientKey;

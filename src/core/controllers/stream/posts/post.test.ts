@@ -1,8 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
-import { buildContentSearchStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import {
+  buildCollectionItemsStreamId,
+  buildContentSearchStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
 import { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { StreamPostsController } from './posts';
@@ -117,6 +125,7 @@ describe('StreamPostsController', () => {
         isCurrent: expect.any(Function),
         cacheMissPostIds,
         viewerId,
+        throwOnFailure: false,
       });
       // The post-hydration second pass classifies strictly: ids still lacking a
       // relationships row on author-scoped content search are dropped, not risked.
@@ -148,12 +157,20 @@ describe('StreamPostsController', () => {
           cacheMissPostIds: nextPageIds,
           nextCursor: 2,
         });
-        vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(false);
+        const failure = Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Failed to fetch posts', {
+          service: ErrorService.Nexus,
+          operation: 'fetchByIds',
+        });
+        const fetchMissingPostsSpy = vi
+          .spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus')
+          .mockRejectedValue(failure);
         const filterStreamPostsSpy = vi.spyOn(PostStreamApplication, 'filterStreamPosts');
 
+        // The captured AppError is rethrown unchanged, so error sinks receive it once.
         await expect(
           StreamPostsController.getOrFetchStreamSlice({ streamId: scopedStreamId, streamTail: 0 }),
-        ).rejects.toMatchObject({ category: 'network' });
+        ).rejects.toBe(failure);
+        expect(fetchMissingPostsSpy).toHaveBeenCalledWith(expect.objectContaining({ throwOnFailure: true }));
         expect(filterStreamPostsSpy).not.toHaveBeenCalled();
       });
 
@@ -166,10 +183,12 @@ describe('StreamPostsController', () => {
         });
         vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(false);
         vi.spyOn(PostStreamApplication, 'filterStreamPosts').mockResolvedValue(nextPageIds);
+        const removeQueueSpy = vi.spyOn(postStreamQueue, 'remove');
 
         const result = await StreamPostsController.getOrFetchStreamSlice({ streamId, streamTail: 0 });
 
         expect(result.nextPageIds).toEqual(nextPageIds);
+        expect(removeQueueSpy).not.toHaveBeenCalled();
       });
 
       it('runs the strict pass even when the page reports no cache misses (buffered pages)', async () => {
@@ -200,6 +219,60 @@ describe('StreamPostsController', () => {
         expect(result.nextPageIds).toEqual(['user-1:post-1']);
       });
     });
+
+    it('rejects a collection page when hydration fails, instead of releasing members it could not load', async () => {
+      // A cold collection's feed reveals members once pagination settles without an error.
+      // Reporting this page as loaded would mount cards that fetch one by one against the
+      // same outage and settle as missing posts.
+      const collectionStreamId = buildCollectionItemsStreamId('user-1' as Pubky, 'collection-1');
+      const nextPageIds = ['user-1:post-1', 'user-1:post-2'];
+      vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+        nextPageIds,
+        cacheMissPostIds: nextPageIds,
+        nextCursor: undefined,
+      });
+      const failure = Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Failed to fetch posts', {
+        service: ErrorService.Nexus,
+        operation: 'fetchByIds',
+      });
+      vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockRejectedValue(failure);
+      const filterStreamPostsSpy = vi.spyOn(PostStreamApplication, 'filterStreamPosts');
+      const removeQueueSpy = vi.spyOn(postStreamQueue, 'remove');
+
+      await expect(
+        StreamPostsController.getOrFetchStreamSlice({ streamId: collectionStreamId, streamTail: 0 }),
+      ).rejects.toBe(failure);
+      expect(filterStreamPostsSpy).not.toHaveBeenCalled();
+      // Overflow buffered while collecting the failed page must not be served past it.
+      expect(removeQueueSpy).toHaveBeenCalledWith(collectionStreamId);
+    });
+
+    it.each([
+      ['a collection', buildCollectionItemsStreamId('user-1' as Pubky, 'collection-1')],
+      [
+        'an author-scoped search',
+        buildContentSearchStreamId('bitcoin', 'all', { type: 'author', author: 'user-1' as Pubky }),
+      ],
+    ])(
+      'discards %s page whose hydration a viewer session change cut short, with its overflow',
+      async (_label, pageStreamId) => {
+        // Without a failure, an unhydrated page means a changed session (e.g. a restored
+        // one). It is no outage: reporting one would leave the feed on an error until reload.
+        const nextPageIds = ['user-1:post-1'];
+        vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+          nextPageIds,
+          cacheMissPostIds: nextPageIds,
+          nextCursor: undefined,
+        });
+        vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(false);
+        const removeQueueSpy = vi.spyOn(postStreamQueue, 'remove');
+
+        const result = await StreamPostsController.getOrFetchStreamSlice({ streamId: pageStreamId, streamTail: 0 });
+
+        expect(result).toEqual({ nextPageIds: [], nextCursor: undefined, reachedEnd: false });
+        expect(removeQueueSpy).toHaveBeenCalledWith(pageStreamId);
+      },
+    );
 
     it('preserves lastRawPostId when the second-pass filter empties the page', async () => {
       // A page whose ids were fail-open on missing details, then all dropped after
@@ -445,6 +518,7 @@ describe('StreamPostsController', () => {
         isCurrent: expect.any(Function),
         cacheMissPostIds,
         viewerId,
+        throwOnFailure: false,
       });
     });
 

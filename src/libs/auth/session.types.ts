@@ -24,6 +24,8 @@ export const persistedAuthSchema = z.object({
   sessionReference: sessionReferenceSchema.nullable(),
   hasProfile: z.boolean().nullable(),
   generation: z.string(),
+  /** Public cleanup boundary for Shop credentials; survives logout and same-account reauthorization. */
+  shopCleanupEpoch: z.string().optional(),
   retiringSession: sessionReferenceSchema.nullable().default(null),
   /** All outstanding revocations, including those retained after local sign-out. */
   pendingRetirements: z.array(sessionReferenceSchema).optional(),

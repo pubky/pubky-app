@@ -25,7 +25,15 @@ const DialogClose = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Close>,
   React.ComponentProps<typeof DialogPrimitive.Close>
 >(({ ...props }, ref) => {
-  return <DialogPrimitive.Close ref={ref} data-slot="dialog-close" data-testid="dialog-close" {...props} />;
+  return (
+    <DialogPrimitive.Close
+      ref={ref}
+      data-slot="dialog-close"
+      data-testid="dialog-close"
+      data-cy="dialog-close"
+      {...props}
+    />
+  );
 });
 DialogClose.displayName = 'DialogClose';
 function DialogOverlay({

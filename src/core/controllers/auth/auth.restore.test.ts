@@ -1,5 +1,6 @@
 import type { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
 import { UserApplication } from '@/application/user/user';
 import { SettingsController } from '@/controllers/settings/settings';
@@ -8,6 +9,7 @@ import { AuthErrorCode, ClientErrorCode, ServerErrorCode } from '@/libs/error/er
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { Identity } from '@/libs/identity/identity';
 import * as utils from '@/libs/utils/utils';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -15,9 +17,12 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { notificationInitialState } from '@/stores/notification/notification.types';
+import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultNotificationPreferences, defaultPrivacyPreferences } from '@/stores/settings/settings.types';
+import { useSignInStore } from '@/stores/signIn/signIn.store';
+import { signInInitialState } from '@/stores/signIn/signIn.types';
 import { mockGrantReference, mockPubky, mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { AuthController } from './auth';
@@ -38,6 +43,13 @@ const savedSettings = {
   updatedAt: 10,
   version: 1,
 };
+const completedSignIn = {
+  authUrlResolved: true,
+  profileChecked: true,
+  bootstrapFetched: true,
+  dataPersisted: true,
+  homeserverSynced: true,
+};
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -53,6 +65,12 @@ const profileError = () =>
   Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
     service: ErrorService.Homeserver,
     operation: 'userIsSignedUp',
+  });
+
+const wrongEnvironmentError = () =>
+  Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'Wrong environment', {
+    service: ErrorService.Homeserver,
+    operation: 'guard',
   });
 
 function persistState() {
@@ -80,6 +98,19 @@ async function replaceAccount() {
   persistState();
 }
 
+/** A fresh browser signing in interactively: no saved account, so the sign-in runs the full bootstrap. */
+function startFreshRecoveryLogin() {
+  localStorage.clear();
+  useAuthStore.setState({ ...authInitialState, hasHydrated: true });
+  vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(asOpaque({}));
+  vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: sessionA });
+  vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference());
+  vi.spyOn(HomeserverService, 'request')
+    .mockResolvedValueOnce({ name: 'Account A' })
+    .mockResolvedValueOnce(savedSettings);
+  return AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' });
+}
+
 describe('AuthController restored session lifecycle', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -87,6 +118,8 @@ describe('AuthController restored session lifecycle', () => {
     useAuthStore.setState(authInitialState);
     useSettingsStore.getState().reset();
     useNotificationStore.getState().reset();
+    useSignInStore.getState().reset();
+    useOnboardingStore.getState().reset();
     useAuthStore.setState({
       hasHydrated: true,
       isLoggingOut: false,
@@ -111,34 +144,57 @@ describe('AuthController restored session lifecycle', () => {
 
   afterEach(() => {
     AuthController.cancelModerationFollow();
+    useSignInStore.getState().reset();
+    useOnboardingStore.getState().reset();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
-  it('requires normal sign-in after an active failure without erasing saved account data', () => {
-    useAuthStore.setState({ session: sessionA, restoreStatus: 'ready', hasProfile: true });
-    persistState();
-    const before = useAuthStore.getState();
-    expect(AuthController.requireSessionReauthentication({ session: sessionA, generation: before.generation })).toBe(
-      true,
-    );
-    expect(useAuthStore.getState()).toMatchObject({
-      session: null,
-      restoreStatus: 'reauth-required',
-      currentUserPubky: pubkyA,
-      sessionReference: before.sessionReference,
-      hasProfile: true,
-      generation: before.generation,
-    });
-    expect(databaseHelpers.clearDatabase).not.toHaveBeenCalled();
-    expect(HomeserverService.logout).not.toHaveBeenCalled();
-    expect(AuthController.requireSessionReauthentication({ generation: before.generation })).toBe(false);
-  });
+  it.each(['local', 'broadcast'])(
+    'requires normal sign-in after a %s active failure without erasing saved account data',
+    (source) => {
+      useAuthStore.setState({ session: sessionA, restoreStatus: 'ready', hasProfile: true });
+      useSignInStore.setState(completedSignIn);
+      useOnboardingStore
+        .getState()
+        .setSecrets({ secretKey: 'retained-secret-key', mnemonic: 'retained recovery phrase' });
+      const onboardingBefore = useOnboardingStore.getState();
+      const settingsBefore = useSettingsStore.getState();
+      persistState();
+      const before = useAuthStore.getState();
+      expect(
+        AuthController.requireSessionReauthentication({
+          session: source === 'local' ? sessionA : undefined,
+          generation: before.generation,
+        }),
+      ).toBe(true);
+      expect(useAuthStore.getState()).toMatchObject({
+        session: null,
+        restoreStatus: 'reauth-required',
+        currentUserPubky: pubkyA,
+        sessionReference: before.sessionReference,
+        hasProfile: true,
+        generation: before.generation,
+      });
+      expect(useSignInStore.getState()).toMatchObject(signInInitialState);
+      expect(useOnboardingStore.getState()).toBe(onboardingBefore);
+      expect(useSettingsStore.getState()).toBe(settingsBefore);
+      expect(databaseHelpers.clearDatabase).not.toHaveBeenCalled();
+      expect(HomeserverService.logout).not.toHaveBeenCalled();
+      // A duplicate notification must not reset progress for the next sign-in attempt.
+      useSignInStore.setState({ authUrlResolved: true });
+      const nextSignIn = useSignInStore.getState();
+      expect(AuthController.requireSessionReauthentication({ generation: before.generation })).toBe(false);
+      expect(useSignInStore.getState()).toBe(nextSignIn);
+    },
+  );
 
   it.each(['different-session', 'different-generation', 'newer-durable-login', 'logging-out'])(
     'ignores a stale active failure: %s',
     (condition) => {
       useAuthStore.setState({ session: sessionA, restoreStatus: 'ready', generation: 'current' });
+      useSignInStore.setState(completedSignIn);
+      const signInBefore = useSignInStore.getState();
       persistState();
       if (condition === 'newer-durable-login') {
         const stored = JSON.parse(localStorage.getItem(AUTH_PERSIST_KEY)!);
@@ -153,6 +209,7 @@ describe('AuthController restored session lifecycle', () => {
         }),
       ).toBe(false);
       expect(useAuthStore.getState()).toMatchObject({ session: sessionA, restoreStatus: 'ready' });
+      expect(useSignInStore.getState()).toBe(signInBefore);
     },
   );
 
@@ -273,6 +330,7 @@ describe('AuthController restored session lifecycle', () => {
         notifications: expect.objectContaining({ follow: false }),
         privacy: expect.objectContaining({ hideSearch: true, neverShowPosts: true }),
       }),
+      fence: expect.anything(),
     });
   });
 
@@ -287,29 +345,96 @@ describe('AuthController restored session lifecycle', () => {
 
     await replaceAccount();
     const replacement = useAuthStore.getState();
+    // The newer flow owns the sign-in progress now; the stale restore must not reset it.
+    useSignInStore.setState(completedSignIn);
+    const replacementSignIn = useSignInStore.getState();
     if (result === 'success') bootstrap.resolve({ unread: 5, lastRead: 100, lastPolledTimestamp: undefined });
     else bootstrap.reject(profileError());
 
     await expect(restore).resolves.toBe(false);
     expect(useAuthStore.getState()).toBe(replacement);
+    expect(useSignInStore.getState()).toBe(replacementSignIn);
     expect(useSettingsStore.getState().privacy.neverShowPosts).toBe(false);
     expect(useNotificationStore.getState().unread).toBe(0);
     expect(UserApplication.ensureModerationFollow).not.toHaveBeenCalled();
   });
 
-  it('preserves its session and offers recovery when bootstrap fails', async () => {
+  it.each([
+    { failure: 'temporary', restoreStatus: 'temporary-error' },
+    { failure: 'wrong-environment', restoreStatus: 'reauth-required' },
+  ] as const)(
+    'preserves its session and offers recovery when bootstrap fails: $failure',
+    async ({ failure, restoreStatus }) => {
+      vi.spyOn(HomeserverService, 'request')
+        .mockResolvedValueOnce({ name: 'Account A' })
+        .mockResolvedValueOnce(savedSettings);
+      const error = failure === 'temporary' ? profileError() : wrongEnvironmentError();
+      vi.mocked(BootstrapApplication.initialize).mockRejectedValue(error);
+
+      const restore = AuthController.restorePersistedSession();
+      if (failure === 'temporary') await expect(restore).resolves.toBe(false);
+      else await expect(restore).rejects.toBe(error);
+
+      expect(useAuthStore.getState()).toMatchObject({
+        session: sessionA,
+        hasProfile: null,
+        restoreStatus,
+      });
+      // /sign-in must offer the sign-in choices again, not the primed progress steps.
+      expect(useSignInStore.getState()).toMatchObject(signInInitialState);
+      expect(databaseHelpers.clearDatabase).not.toHaveBeenCalled();
+    },
+  );
+
+  it('offers recovery when the saved session becomes unreadable during bootstrap', async () => {
     vi.spyOn(HomeserverService, 'request')
       .mockResolvedValueOnce({ name: 'Account A' })
       .mockResolvedValueOnce(savedSettings);
-    vi.mocked(BootstrapApplication.initialize).mockRejectedValue(profileError());
+    const generation = useAuthStore.getState().generation;
+    vi.mocked(BootstrapApplication.initialize).mockImplementation(async () => {
+      // The post-restore storage check cannot parse the record and falls back to recovery.
+      localStorage.setItem(AUTH_PERSIST_KEY, '{');
+      return notificationInitialState;
+    });
 
     await expect(AuthController.restorePersistedSession()).resolves.toBe(false);
 
+    expect(useAuthStore.getState()).toMatchObject({ session: sessionA, generation, restoreStatus: 'temporary-error' });
+    expect(useSignInStore.getState()).toMatchObject(signInInitialState);
+  });
+
+  it('offers the sign-in choices again when an interactive sign-in bootstrap fails', async () => {
+    const error = profileError();
+    vi.mocked(BootstrapApplication.initialize).mockRejectedValue(error);
+
+    await expect(startFreshRecoveryLogin()).rejects.toBe(error);
+
     expect(useAuthStore.getState()).toMatchObject({
       session: sessionA,
+      currentUserPubky: pubkyA,
       hasProfile: null,
       restoreStatus: 'temporary-error',
     });
-    expect(databaseHelpers.clearDatabase).not.toHaveBeenCalled();
+    // /sign-in must offer the sign-in choices again, not the primed progress steps.
+    expect(useSignInStore.getState()).toMatchObject(signInInitialState);
+  });
+
+  it('ignores an interactive bootstrap failure after account replacement', async () => {
+    const bootstrap = deferred<typeof notificationInitialState>();
+    vi.mocked(BootstrapApplication.initialize).mockReturnValue(bootstrap.promise);
+    const login = startFreshRecoveryLogin();
+    await vi.waitFor(() => expect(BootstrapApplication.initialize).toHaveBeenCalledOnce());
+
+    await replaceAccount();
+    const replacement = useAuthStore.getState();
+    // The newer flow owns the sign-in progress now; the superseded sign-in must not reset it.
+    useSignInStore.setState(completedSignIn);
+    const replacementSignIn = useSignInStore.getState();
+    const error = profileError();
+    bootstrap.reject(error);
+
+    await expect(login).rejects.toBe(error);
+    expect(useAuthStore.getState()).toBe(replacement);
+    expect(useSignInStore.getState()).toBe(replacementSignIn);
   });
 });

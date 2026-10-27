@@ -3,6 +3,11 @@ import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 export interface UsePostTagsOptions {
   /** Custom viewer ID for relationship data (defaults to current user) */
   viewerId?: string | null;
+  /**
+   * Second post whose cached tags are read and merged into the list (e.g. the contentless
+   * repost when the primary id is its original). Writes always target the primary id.
+   */
+  mergePostId?: string | null;
 }
 
 export interface UsePostTagsResult {

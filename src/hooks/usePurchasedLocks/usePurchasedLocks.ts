@@ -10,27 +10,30 @@ import type { UsePurchasedLocksParams, UsePurchasedLocksResult } from './usePurc
  * One listing per reader per page load, shared by every lock post on screen. Without it each card
  * would ask the homeserver whether it has been paid for, which is a request per post in the feed.
  *
- * Keyed by reader so signing in as someone else cannot inherit the previous reader's answers.
+ * Keyed by reader and session so restoring another session cannot inherit an earlier answer.
  */
-let purchasedIdsByReader: { readerPubky: string; ids: Promise<Set<string>> } | null = null;
+type PurchaseListing = { ids: Set<string>; failed: boolean };
+type ReaderSession = NonNullable<ReturnType<typeof useAuthStore.getState>['session']>;
+let purchasedIdsByReader: { readerPubky: string; session: ReaderSession; listing: Promise<PurchaseListing> } | null =
+  null;
 
-function loadPurchasedIds(readerPubky: string): Promise<Set<string>> {
-  if (purchasedIdsByReader?.readerPubky !== readerPubky) {
-    const ids: Promise<Set<string>> = LocksController.fetchPurchasedLockIds({ readerPubky })
-      .then((loaded) => new Set(loaded))
+function loadPurchasedIds(readerPubky: string, session: ReaderSession): Promise<PurchaseListing> {
+  if (purchasedIdsByReader?.readerPubky !== readerPubky || purchasedIdsByReader.session !== session) {
+    const listing: Promise<PurchaseListing> = LocksController.fetchPurchasedLockIds({ readerPubky })
+      .then((loaded) => ({ ids: new Set(loaded), failed: false }))
       // Already reported by the Err factory. Degrade rather than block rendering: the unlock
       // modal re-reads the saved bundle id itself before it ever offers to pay.
       .catch(() => {
         // Let the next mount try again, unless markPurchased already chained onto this listing.
-        if (purchasedIdsByReader?.ids === ids) purchasedIdsByReader = null;
-        return new Set<string>();
+        if (purchasedIdsByReader?.listing === listing) purchasedIdsByReader = null;
+        return { ids: new Set<string>(), failed: true };
       });
-    purchasedIdsByReader = { readerPubky, ids };
+    purchasedIdsByReader = { readerPubky, session, listing };
   }
-  return purchasedIdsByReader.ids;
+  return purchasedIdsByReader.listing;
 }
 
-/** Which locks the signed-in reader has already paid for. */
+/** Which locks have a saved bundle id; their server tasks can still be absent or ended. */
 export function usePurchasedLocks({ enabled }: UsePurchasedLocksParams): UsePurchasedLocksResult {
   const readerPubky = useAuthStore((state) => state.currentUserPubky);
   // `currentUserPubky` is persisted and rehydrates before the session is rebuilt. Listing without
@@ -39,23 +42,30 @@ export function usePurchasedLocks({ enabled }: UsePurchasedLocksParams): UsePurc
   const session = useAuthStore((state) => state.session);
   // A pre-`/priv` session gets a 403 (an `Err.auth` sent to Sentry) instead of a listing (#2373).
   const needsUpgrade = useSessionNeedsUpgrade();
-  const [ids, setIds] = useState<Set<string> | null>(null);
+  const [loaded, setLoaded] = useState<{
+    readerPubky: string;
+    session: ReaderSession;
+    listing: PurchaseListing;
+  } | null>(null);
+  const canRead = enabled && Boolean(readerPubky && session) && !needsUpgrade;
+  // Hide another session's answer during render, before effect cleanup has had a chance to run.
+  const listing = canRead && loaded?.readerPubky === readerPubky && loaded.session === session ? loaded.listing : null;
 
   useEffect(() => {
     if (!enabled || !readerPubky || !session || needsUpgrade) {
-      setIds(null);
+      setLoaded(null);
       return;
     }
     let cancelled = false;
-    void loadPurchasedIds(readerPubky).then((loaded) => {
-      if (!cancelled) setIds(loaded);
+    void loadPurchasedIds(readerPubky, session).then((listing) => {
+      if (!cancelled) setLoaded({ readerPubky, session, listing });
     });
     return () => {
       cancelled = true;
     };
   }, [enabled, readerPubky, session, needsUpgrade]);
 
-  const hasPurchase = (lockId: string | null) => Boolean(lockId && ids?.has(lockId));
+  const hasPurchase = (lockId: string | null) => Boolean(lockId && listing?.ids.has(lockId));
 
   /**
    * The listing was taken before this purchase existed, so without recording it the reader would
@@ -67,13 +77,27 @@ export function usePurchasedLocks({ enabled }: UsePurchasedLocksParams): UsePurc
   const markPurchased = (lockId: string) => {
     // A null purchasedIdsByReader means the listing failed; the purchase still has to be recorded, or the
     // recovery path cannot pick it up after the modal closes.
-    if (!readerPubky || (purchasedIdsByReader && purchasedIdsByReader.readerPubky !== readerPubky)) return;
-    const merged = (purchasedIdsByReader?.ids ?? Promise.resolve(new Set<string>())).then((loaded) =>
-      new Set(loaded).add(lockId),
-    );
-    purchasedIdsByReader = { readerPubky, ids: merged };
-    void merged.then(setIds);
+    if (!readerPubky || !session) return;
+    const current = useAuthStore.getState();
+    if (current.currentUserPubky !== readerPubky || current.session !== session) return;
+    const cached = purchasedIdsByReader;
+    if (cached && (cached.readerPubky !== readerPubky || cached.session !== session)) return;
+    const merged = (cached?.listing ?? Promise.resolve({ ids: new Set<string>(), failed: true })).then((listing) => ({
+      ...listing,
+      ids: new Set(listing.ids).add(lockId),
+    }));
+    purchasedIdsByReader = { readerPubky, session, listing: merged };
+    void merged.then((listing) => {
+      const current = useAuthStore.getState();
+      if (current.currentUserPubky === readerPubky && current.session === session) {
+        setLoaded({ readerPubky, session, listing });
+      }
+    });
   };
 
-  return { hasPurchase, markPurchased };
+  return {
+    hasPurchase,
+    markPurchased,
+    status: !canRead ? 'idle' : !listing ? 'loading' : listing.failed ? 'error' : 'ready',
+  };
 }

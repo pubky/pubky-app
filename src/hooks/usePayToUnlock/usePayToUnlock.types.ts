@@ -1,3 +1,4 @@
+import type { PaidUnlockAvailability } from '@/libs/region/paidUnlockAvailability';
 import type { LockFile, TPaykitConnectionState, TUnlockedContent } from '@/services/locks/locks.types';
 
 /**
@@ -6,13 +7,27 @@ import type { LockFile, TPaykitConnectionState, TUnlockedContent } from '@/servi
  * can never look payable again, and `blocked` is where an unreadable saved bundle id lands — paying again
  * could mean paying twice, so it is not offered. `unopened` is its own stage because the payment
  * succeeded there and only the content download failed: the reader must never be told to go pay.
+ * `finishing` acknowledges that payment while the credential and content are being fetched.
+ * `region-blocked` is the Lock Server's HTTP 451: paid unlocks are not offered in the reader's region.
+ * Nothing was created and trying again cannot help, so it offers no retry and has nothing to do with Bitkit.
  */
 export type TPayToUnlockStage =
-  'checking' | 'retry' | 'expired' | 'install' | 'waiting' | 'paid' | 'unopened' | 'blocked';
+  | 'checking'
+  | 'retry'
+  | 'expired'
+  | 'install'
+  | 'waiting'
+  | 'finishing'
+  | 'paid'
+  | 'unopened'
+  | 'blocked'
+  | 'region-blocked';
 
 export interface UsePayToUnlockParams {
   /** The modal's open state; closed keeps the hook idle (no requests, no polling). */
   open: boolean;
+  /** Advisory guard for new submissions/retries; existing server tasks can still finish. */
+  paymentAvailability?: PaidUnlockAvailability['status'];
   /** The post's public `lock.json` URL. */
   lockUrl: string;
   /** The fetched lock file; null keeps the hook idle. */
@@ -21,6 +36,8 @@ export interface UsePayToUnlockParams {
   onCompleted: (content: TUnlockedContent) => void;
   /** Called with the lock id as soon as a purchase is stored, so other cards see it this session. */
   onPurchased: (lockId: string) => void;
+  /** Called after the session-expired toast: the homeserver rejected the session, and no step works without one. */
+  onSessionExpired: () => void;
 }
 
 export interface UsePayToUnlockResult {

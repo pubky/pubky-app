@@ -22,8 +22,8 @@ interface LocksPermissionNoticeProps {
 
 /**
  * Shown while the session predates the `/priv` capabilities (#2373): it cannot reach unlocked
- * content or the creator's own originals. Opens the same Ring approval the creator setup uses, and
- * closes itself once the session is replaced. Callers render it only while
+ * content or the creator's own originals. Opens the same Pubky Ring or Bitkit approval the creator
+ * setup uses, and closes itself once the session is replaced. Callers render it only while
  * `useSessionNeedsUpgrade()` is true, so the button always has something to open.
  */
 export function LocksPermissionNotice({ className }: LocksPermissionNoticeProps) {
@@ -43,8 +43,14 @@ export function LocksPermissionNotice({ className }: LocksPermissionNoticeProps)
       <Typography overrideDefaults className="text-base font-medium text-muted-foreground">
         {'Pubky.app needs your permission to read your Locks data on your homeserver.'}
       </Typography>
-      <Button variant={ButtonVariant.OUTLINE} size="lg" className="w-fit" onClick={() => setIsOpen(true)}>
-        {'Authorize with Pubky Ring'}
+      {/* Wraps instead of overflowing in a repost preview, whose column is narrower than the label. */}
+      <Button
+        variant={ButtonVariant.OUTLINE}
+        size="lg"
+        className="w-fit text-center whitespace-normal"
+        onClick={() => setIsOpen(true)}
+      >
+        {'Authorize with Pubky Ring or Bitkit'}
       </Button>
       <Dialog open={isOpen && needsUpgrade} onOpenChange={setIsOpen}>
         <DialogContent

@@ -1729,6 +1729,74 @@ describe('PostStreamApplication', () => {
       expect(hydrated).toBe(false);
     });
 
+    it('rejects with the original AppError when the caller fails on hydration errors', async () => {
+      // The caller chains its own error to this one, so the captured root is not reported twice.
+      const { cacheMissPostIds } = createTestData(2);
+      setupDefaultMocks();
+      const failure = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Post storage unavailable', {
+        service: ErrorService.Local,
+        operation: 'persistPosts',
+      });
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockRejectedValue(failure);
+
+      await expect(
+        PostStreamApplication.fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId, throwOnFailure: true }),
+      ).rejects.toBe(failure);
+    });
+
+    it('normalizes an unknown failure to an AppError when the caller fails on hydration errors', async () => {
+      const { cacheMissPostIds } = createTestData(2);
+      setupDefaultMocks();
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockRejectedValue(new TypeError('network down'));
+
+      await expect(
+        PostStreamApplication.fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId, throwOnFailure: true }),
+      ).rejects.toMatchObject({
+        service: ErrorService.Local,
+        operation: 'PostStreamApplication.fetchMissingPostsFromNexus',
+        message: 'network down',
+      });
+    });
+
+    it('still resolves false for a changed viewer session when the caller fails on hydration errors', async () => {
+      const { cacheMissPostIds } = createTestData(2);
+      setupDefaultMocks();
+      const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds');
+
+      const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
+        cacheMissPostIds,
+        viewerId,
+        isCurrent: () => false,
+        throwOnFailure: true,
+      });
+
+      expect(hydrated).toBe(false);
+      expect(fetchPostsByIdsSpy).not.toHaveBeenCalled();
+    });
+
+    it('reports no hydration when the viewer session changes while authors are fetched', async () => {
+      // The posts persist, but their authors stop early for the old session.
+      const { cacheMissPostIds, mockNexusPosts } = createTestData(1);
+      const mocks = setupDefaultMocks();
+      mocks.getUserDetails.mockResolvedValue([undefined]);
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      let current = true;
+      const fetchUsersByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockImplementation(async () => {
+        current = false;
+        return [];
+      });
+
+      const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
+        cacheMissPostIds,
+        viewerId,
+        isCurrent: () => current,
+        throwOnFailure: true,
+      });
+
+      expect(fetchUsersByIdsSpy).toHaveBeenCalled();
+      expect(hydrated).toBe(false);
+    });
+
     it('should fetch and persist users when cacheMissUserIds exist', async () => {
       const { cacheMissPostIds, mockNexusPosts } = createTestData(1);
       const mockNexusUsers = [createMockNexusUser(DEFAULT_AUTHOR)];

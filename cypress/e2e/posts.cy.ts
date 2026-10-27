@@ -1,4 +1,6 @@
+import type { Interception } from 'cypress/types/net-stubbing';
 import { backupDownloadFilePath } from '../support/auth';
+import { applyContentFilter } from '../support/collections';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
 import 'cypress-slow-down/commands';
@@ -17,13 +19,120 @@ import {
   repostPost,
   MAX_POST_LENGTH,
   createQuickPostWithImage,
+  expectSessionExpiredWithoutRetryLoop,
+  fillArticleFields,
   PostOrReply,
+  restoreSessionByReload,
+  switchToArticleMode,
   waitForFeedToLoad,
 } from '../support/posts';
+import { taggedPostFromInterception, waitForNexusPostTags } from '../support/nexus';
+import { expectTimelineContains, expectTimelineOmits } from '../support/feeds';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 
 const username = 'Poster';
+
+const imageFixturePath = () => `${Cypress.config('fixturesFolder')}/mustache-you.png`;
+
+const pdfAttachment = {
+  contents: Cypress.Buffer.from('e2e file attachment'),
+  fileName: 'notes.pdf',
+  mimeType: 'application/pdf',
+};
+
+const submitHomePost = (postContent: string, files?: Cypress.FileReference | Cypress.FileReference[]) => {
+  // One alias per submit. Reusing `postCreated` makes `cy.wait` return an earlier post's
+  // 201: Cypress keeps every route with that alias and yields the first response not yet waited for.
+  // Not derived from the content: a `.` in it would be read as an alias index.
+  const alias = Cypress._.uniqueId('homePostCreated');
+  const attachments = files === undefined ? [] : Array.isArray(files) ? files : [files];
+
+  cy.get('[data-cy="home-post-input"]:visible')
+    .should('be.visible')
+    .within(() => {
+      cy.get('[data-cy="post-input-textarea"]:visible').click();
+      if (attachments.length > 0) {
+        // The file picker is hidden; the composer takes the same files as a drop.
+        cy.root().selectFile(attachments, { action: 'drag-drop' });
+        cy.get('[data-cy="post-input-attachment-remove"]:visible').should('have.length', attachments.length);
+      }
+      cy.get('[data-cy="post-input-textarea"]:visible').type(postContent).should('have.value', postContent);
+      // `*` stops at `/`, so blob and file uploads under `/blobs/` and `/files/` never match.
+      cy.intercept('PUT', '**/pub/pubky.app/posts/*', (req) => {
+        const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+        if (body.includes(postContent)) req.alias = alias;
+      });
+      cy.get('[data-cy="post-input-action-bar-post"]:visible').should('not.be.disabled').click();
+      cy.wait(`@${alias}`).its('response.statusCode').should('eq', 201);
+      cy.get('[data-cy="post-input-textarea"]:visible').should('have.value', '');
+    });
+};
+
+// A post opened from a feed is an overlay: the feed stays mounted under `display: none`
+// (`(feeds)/layout.tsx`) and its cards carry the same post text. Thread queries take only what is shown.
+const VISIBLE_POST_TEXT = '[data-cy="post-text"]:visible';
+
+const expectPostTextOrder = (ordered: string[]) => {
+  cy.get(VISIBLE_POST_TEXT).should(($texts) => {
+    const values = $texts.toArray().map((el) => el.textContent ?? '');
+    let previous = -1;
+    ordered.forEach((snippet) => {
+      const index = values.findIndex((value) => value.includes(snippet));
+      expect(index, snippet).to.be.greaterThan(previous);
+      previous = index;
+    });
+  });
+};
+
+// A thread reply wraps its nested replies, so a control belongs to the reply whose own text
+// (the first post text under its nearest `thread-reply`) matches.
+const threadReplyControl = (replyText: string, selector: string) =>
+  cy
+    .get(`[data-cy="thread-reply"] ${selector}`)
+    .filter(':visible')
+    .filter((_, el) => {
+      const reply = el.closest('[data-cy="thread-reply"]');
+      return (reply?.querySelector('[data-cy="post-text"]')?.textContent ?? '').includes(replyText);
+    })
+    .should('have.length', 1);
+
+const replyOnThread = (parentText: string, replyContent: string) => {
+  threadReplyControl(parentText, '[data-cy="post-reply-btn"]').click();
+
+  cy.get('[data-cy="reply-post-input"]').should('be.visible');
+  cy.get('[data-cy="reply-post-input"]').within(() => {
+    cy.get('[data-cy="post-input-textarea"]').should('have.value', '').type(replyContent);
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('replyCreated');
+    cy.get('[data-cy="post-input-action-bar-reply"]').click();
+    cy.wait('@replyCreated').its('response.statusCode').should('eq', 201);
+  });
+  cy.get('[data-cy="reply-post-input"]').should('not.exist');
+  cy.contains(VISIBLE_POST_TEXT, replyContent).should('be.visible');
+};
+
+// The app memoizes Nexus GETs per URL for this long (`nexusQueryClient` staleTime). A head poll
+// whose head has not moved repeats its URL, so only the first poll tick after this window reaches
+// the network, and the intercept.
+const NEXUS_STALE_TIME_MS = 20_000;
+
+// Time for the next head poll to reach the network: the first poll tick past the stale window, plus
+// one more interval of slack for the tick's own async work.
+const headPollTimeout = () =>
+  cy
+    .window()
+    .its('__PUBKY_CONFIG__.streamPollIntervalMs')
+    .then((intervalMs: number) => (Math.ceil(NEXUS_STALE_TIME_MS / intervalMs) + 1) * intervalMs);
+
+// Waits through head polls until one offers `postId` as newer than the feed head.
+const waitForHeadPollOffering = (postId: string, timeout: number, polls = 8) => {
+  cy.wait('@streamHeadPoll', { timeout }).then(({ response }) => {
+    const keys: string[] = Array.isArray(response?.body?.post_keys) ? response.body.post_keys : [];
+    if (keys.some((key) => key.endsWith(`:${postId}`))) return;
+    expect(polls, `head polls left before Nexus offers deleted post ${postId}`).to.be.greaterThan(1);
+    waitForHeadPollOffering(postId, timeout, polls - 1);
+  });
+};
 
 describe('posts', () => {
   before(() => {
@@ -351,8 +460,10 @@ describe('posts', () => {
 
     fastTagPostInFeed([tag1, tag2, tag3], postContent);
 
-    // todo: remove wait workaround once bug is fixed, see https://github.com/pubky/pubky-app/issues/805
-    cy.wait(Cypress.expose('ci') ? 3_000 : 500);
+    cy.get<Interception>('@putTag').then((interception) => {
+      const { authorId, postId } = taggedPostFromInterception(interception);
+      waitForNexusPostTags(authorId, postId, [tag1, tag2, tag3]);
+    });
 
     cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
       [tag1, tag2, tag3].forEach((tag) => {
@@ -829,13 +940,345 @@ describe('posts', () => {
     });
   });
 
-  // todo, covers bug https://github.com/pubky/franky/issues/993
-  it('"see new posts" button does not appear after deleting new post that has a reply');
+  it('can view and navigate a reply thread', () => {
+    const stamp = Date.now();
+    const root = `Thread root ${stamp}`;
+    const level1 = `Thread level 1 ${stamp}`;
+    const level2 = `Thread level 2 ${stamp}`;
+    const level3 = `Thread level 3 ${stamp}`;
+    const quickReply = `Thread quick reply ${stamp}`;
 
-  // todo: check if we want this functionality
-  it.skip('signout when 401 response from homeserver when creating new post');
-  it.skip('signout when 401 response from homeserver when creating new article');
-  it.skip('signout when 401 response from homeserver when tagging a post');
+    createQuickPost(root);
+    replyToPost({ replyContent: level1, filterText: root });
+
+    // After the reply, the feed card contains the root text and the reply text.
+    cy.findFirstPostInFeedFiltered(root, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.contains('[data-cy="post-text"]', root).click();
+    });
+    cy.location('pathname').should('include', '/post/');
+    cy.get('[data-cy="single-post-card"]').should('contain.text', root);
+    cy.get('[data-cy="post-page-title"]').should('contain.text', 'Post by').and('contain.text', username);
+
+    replyOnThread(level1, level2);
+    replyOnThread(level2, level3);
+    expectPostTextOrder([root, level1, level2, level3]);
+
+    // One nested reply starts expanded. Collapse hides the chain; expand brings it back.
+    threadReplyControl(level1, '[data-cy="thread-expand-toggle"][aria-label="Collapse all replies"]').click();
+    cy.get(VISIBLE_POST_TEXT).should('not.contain.text', level2).and('not.contain.text', level3);
+    cy.contains(VISIBLE_POST_TEXT, level1).should('be.visible');
+    threadReplyControl(level1, '[data-cy="thread-expand-toggle"][aria-label="Expand all replies"]').click();
+    cy.contains(VISIBLE_POST_TEXT, level2).should('be.visible');
+    cy.contains(VISIBLE_POST_TEXT, level3).should('be.visible');
+
+    cy.contains(VISIBLE_POST_TEXT, level3).click();
+    cy.location('pathname').should('include', '/post/');
+    cy.get('[data-cy="post-page-title"]').should('contain.text', 'Reply by').and('contain.text', username);
+    cy.get('[data-cy="post-breadcrumb"]').should('be.visible');
+    cy.get('[data-cy="breadcrumb-item-0"]').should('contain.text', username);
+    // Root, level 1, level 2 and level 3 is more than three ancestors, so the middle is an ellipsis.
+    cy.get('[data-cy="breadcrumb-ellipsis-trigger"]').should('be.visible').click();
+    // The dropdown holds the ancestors between the root and the last two: here only level 1.
+    cy.get('[data-cy="breadcrumb-dropdown-content"]')
+      .should('be.visible')
+      .find('[data-cy="breadcrumb-dropdown-item"]')
+      .should('have.length', 1)
+      .and('contain.text', username)
+      .click();
+    cy.get('[data-cy="single-post-card"]').should('contain.text', level1);
+
+    cy.get('[data-cy="breadcrumb-item-0"]').click();
+    cy.get('[data-cy="single-post-card"]').should('contain.text', root);
+    cy.get('[data-cy="post-page-title"]').should('contain.text', 'Post by');
+    cy.get('[data-cy="post-breadcrumb"]').should('not.exist');
+
+    // The hidden feed under the post overlay has its own quick reply on the same post.
+    cy.get('[data-cy="quick-reply"]').filter(':visible').should('have.length', 1).as('postQuickReply');
+    cy.get('@postQuickReply')
+      .find('[data-cy="quick-reply-textarea"]')
+      .filter(':visible')
+      .should('have.length', 1)
+      .click()
+      .type(quickReply);
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('quickReplyCreated');
+    cy.get('@postQuickReply')
+      .find('[data-cy="post-input-action-bar-reply"]')
+      .should('be.visible')
+      .and('not.be.disabled')
+      .click();
+    cy.wait('@quickReplyCreated').its('response.statusCode').should('eq', 201);
+    cy.contains(VISIBLE_POST_TEXT, quickReply).should('be.visible');
+    expectPostTextOrder([root, level1, quickReply]);
+
+    // Each page layout also renders a MobileHeader logo (`lg:hidden`), and the feed under the overlay is hidden.
+    cy.get('[data-cy="header-logo"]:visible').should('have.length', 1).click();
+    cy.location('pathname').should('eq', '/home');
+  });
+
+  // Regression for https://github.com/pubky/pubky-app/issues/993
+  it('see new posts button does not appear after deleting new post that has a reply', () => {
+    const postContent = `Delete me after a reply ${Date.now()}`;
+    const replyContent = `Reply that should not resurrect the post ${Date.now()}`;
+
+    createQuickPost(postContent);
+    cy.get('@postCreated')
+      .its('request.url')
+      .then((url: string) => new URL(url).pathname.split('/').pop())
+      .as('deletedPostId', { type: 'static' });
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes);
+    replyToPost({ replyContent, filterText: postContent });
+    deletePost({ filterText: postContent });
+
+    // The feed stays loaded, as in the issue. Deleting drops the post from the local stream, so the
+    // head poll (`end` without `start`; ascending reply pages also send `end`) starts below it and
+    // Nexus, which keeps a post with replies as a deleted entry, offers it as new. That offer is
+    // what surfaced the "see new posts" button and the deleted card with its reply.
+    cy.intercept('GET', '**/v0/stream/posts/keys*', (req) => {
+      const { start, end, source } = req.query;
+      if (end !== undefined && start === undefined && source !== 'post_replies') {
+        req.alias = 'streamHeadPoll';
+      }
+    });
+    headPollTimeout().then((timeout) => {
+      cy.get<string>('@deletedPostId').then((postId) => waitForHeadPollOffering(postId, timeout));
+      // The next poll starts only after the app has handled the offering one.
+      cy.wait('@streamHeadPoll', { timeout });
+    });
+
+    cy.get('[data-cy="new-posts-button"]').should('not.exist');
+    cy.get('[data-cy="timeline-container"]').should('not.contain.text', replyContent);
+  });
+
+  // https://github.com/pubky/pubky-app/issues/416
+  it('can navigate back to feed from post view', () => {
+    cy.viewport(1920, 640);
+
+    const filler = `Scroll anchor ${Date.now()}`;
+    [0, 1, 2, 3].forEach((index) => {
+      createQuickPost(`${filler} ${index}`);
+    });
+    cy.findFirstPostInFeedFiltered(`${filler} 3`, CheckForNewPosts.No, WaitForNewPosts.Yes);
+
+    // Scroll the card below the sticky header ourselves and record where the feed sits, so the
+    // click does not move the page again before the post opens.
+    cy.get('[data-cy="timeline-posts"]')
+      .find('[data-cy="post-card"]')
+      .eq(3)
+      .find('[data-cy="post-text"]')
+      .first()
+      .as('openedPostText')
+      .scrollIntoView({ offset: { top: -250, left: 0 } })
+      .should('be.visible');
+    cy.window().its('scrollY').should('be.greaterThan', 0).as('feedScrollY', { type: 'static' });
+    cy.get('@openedPostText').click({ scrollBehavior: false });
+
+    cy.location('pathname').should('include', '/post/');
+    cy.get('[data-cy="single-post-card"]').should('be.visible');
+
+    cy.go('back');
+    cy.location('pathname').should('eq', '/home');
+    // Within 1px: scrollY can be fractional at some device pixel ratios.
+    cy.get<number>('@feedScrollY').then((feedScrollY) => {
+      cy.window().its('scrollY').should('be.closeTo', feedScrollY, 1);
+    });
+
+    cy.viewport(1920, 1080);
+  });
+
+  // TODO: https://github.com/pubky/pubky-app/issues/2900
+  // The mixed image+file post intermittently fails to create until file IDs are unique.
+  it.skip('can filter the feed by post kind', () => {
+    cy.viewport(1920, 1080);
+    applyContentFilter('All');
+
+    const stamp = Date.now();
+    const shortPost = `Kind short ${stamp}`;
+    const articleTitle = `Kind article ${stamp}`;
+    const articleBody = `Article body mentioning https://example.com/article-${stamp}`;
+    const imagePost = `Kind image ${stamp}`;
+    const videoPost = `Kind video ${stamp}`;
+    const linkPost = `Kind link ${stamp}`;
+    const filePost = `Kind file ${stamp}`;
+    const mixedLinkPost = `Kind mixedlink ${stamp}`;
+    const mixedImagePost = `Kind mixedimage ${stamp}`;
+
+    // A raw URL is shown as its host, so each post is found by a verbatim marker.
+    createQuickPost(shortPost);
+    createQuickArticle(articleTitle, articleBody);
+    createQuickPostWithImage(imagePost);
+    createQuickPost(`${videoPost} https://www.youtube.com/watch?v=dQw4w9WgXcQ`);
+    createQuickPost(`${linkPost} https://example.com/e2e-${stamp}`);
+    submitHomePost(filePost, pdfAttachment);
+    submitHomePost(`${mixedLinkPost} https://example.com/mixed-${stamp}`, imageFixturePath());
+    submitHomePost(mixedImagePost, [imageFixturePath(), pdfAttachment]);
+
+    applyContentFilter('All');
+    [shortPost, articleTitle, imagePost, videoPost, linkPost, filePost, mixedLinkPost, mixedImagePost].forEach(
+      (text) => {
+        expectTimelineContains(text);
+      },
+    );
+
+    applyContentFilter('Posts');
+    expectTimelineContains(shortPost);
+    [articleTitle, imagePost, videoPost, linkPost, filePost, mixedLinkPost, mixedImagePost].forEach((text) => {
+      expectTimelineOmits(text);
+    });
+
+    applyContentFilter('Articles');
+    expectTimelineContains(articleTitle);
+    expectTimelineOmits(shortPost);
+    expectTimelineOmits(linkPost);
+
+    applyContentFilter('Images');
+    expectTimelineContains(imagePost);
+    expectTimelineContains(mixedImagePost);
+    expectTimelineOmits(mixedLinkPost);
+    expectTimelineOmits(filePost);
+    expectTimelineOmits(shortPost);
+
+    applyContentFilter('Videos');
+    expectTimelineContains(videoPost);
+    expectTimelineOmits(linkPost);
+    expectTimelineOmits(imagePost);
+
+    applyContentFilter('Links');
+    expectTimelineContains(linkPost);
+    expectTimelineContains(mixedLinkPost);
+    expectTimelineOmits(videoPost);
+    expectTimelineOmits(articleTitle);
+    expectTimelineOmits(imagePost);
+
+    applyContentFilter('Files');
+    expectTimelineContains(filePost);
+    expectTimelineOmits(mixedImagePost);
+    expectTimelineOmits(imagePost);
+    expectTimelineOmits(shortPost);
+
+    applyContentFilter('All');
+  });
+
+  it('prompts to sign in again when homeserver responds 401 to creating new post', () => {
+    const postContent = `This post is rejected as unauthenticated! ${Date.now()}`;
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 401 }).as('postUnauthorized');
+
+    cy.get('[data-cy="home-post-input"]').within(() => {
+      cy.get('[data-cy="post-input-textarea"]').type(postContent);
+      cy.get('[data-cy="post-input-action-bar-post"]').click();
+    });
+    cy.wait('@postUnauthorized');
+
+    expectSessionExpiredWithoutRetryLoop('@postUnauthorized');
+    cy.get('[data-cy="home-post-input"]').find('[data-cy="post-input-textarea"]').should('have.value', postContent);
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
+
+    restoreSessionByReload();
+  });
+
+  it('prompts to sign in again when homeserver responds 401 to creating new article', () => {
+    const title = `Unauthenticated article ${Date.now()}`;
+    const body = `This article is rejected as unauthenticated! ${Date.now()}`;
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 401 }).as('articleUnauthorized');
+
+    cy.get('[data-cy="home-post-input"]').within(() => {
+      cy.get('[data-cy="post-input-textarea"]').click();
+      switchToArticleMode();
+      fillArticleFields({ title, body });
+      cy.get('[data-cy="post-input-action-bar-publish-article"]').should('not.be.disabled').click();
+    });
+    cy.wait('@articleUnauthorized');
+
+    expectSessionExpiredWithoutRetryLoop('@articleUnauthorized');
+    cy.get('[data-cy="home-post-input"]').within(() => {
+      cy.get('[data-cy="article-title-input"]').should('have.value', title);
+      cy.get('[data-cy="article-markdown-textarea"]').filter(':visible').should('have.value', body);
+    });
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', title);
+
+    restoreSessionByReload();
+  });
+
+  // TODO: https://github.com/pubky/pubky-app/issues/2890
+  // usePostTags still shows the generic 'Could not add tag' toast for a 401, so the session-expired
+  // prompt never appears. Re-enable once tag writes show the session-expired prompt.
+  it.skip('prompts to sign in again when homeserver responds 401 to tagging a post', () => {
+    const postContent = `This post will be tagged while unauthenticated! ${Date.now()}`;
+    const tag = 'unauthed';
+    createQuickPost(postContent);
+
+    cy.intercept('PUT', '**/pub/pubky.app/tags/**', { statusCode: 401 }).as('tagUnauthorized');
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-tag-add-button"]').filter(':visible').click();
+      cy.get('[data-cy="add-tag-input"]').filter(':visible').type(`${tag}{enter}`);
+    });
+    cy.wait('@tagUnauthorized');
+
+    expectSessionExpiredWithoutRetryLoop('@tagUnauthorized');
+    // A failed tag is rolled back from the post; the tag input clears on submit, failed or not.
+    cy.findFirstPostInFeedFiltered(postContent).within(() => {
+      cy.get(`[data-cy="post-tag"][data-tag-label="${tag}"]`).should('not.exist');
+    });
+
+    restoreSessionByReload();
+  });
+
+  it('warns that storage is full and keeps the draft when homeserver responds 507 to a new post', () => {
+    const postContent = `This post does not fit in storage! ${Date.now()}`;
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 507 }).as('postInsufficientStorage');
+
+    cy.get('[data-cy="home-post-input"]').within(() => {
+      cy.get('[data-cy="post-input-textarea"]').type(postContent);
+      cy.get('[data-cy="post-input-action-bar-post"]').click();
+    });
+    cy.wait('@postInsufficientStorage');
+
+    cy.get('[data-cy="toast"]')
+      .filter(':visible')
+      .should('contain.text', 'You have reached your storage limit. Contact support to request more space.');
+    // 507 is not retryable
+    cy.get('@postInsufficientStorage.all').should('have.length', 1);
+    cy.get('[data-cy="home-post-input"]').find('[data-cy="post-input-textarea"]').should('have.value', postContent);
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', postContent);
+  });
+
+  it('keeps the quick reply draft when the reply is rolled back', () => {
+    const postContent = `This post gets a reply that fails! ${Date.now()}`;
+    const replyContent = `This reply never reaches the homeserver! ${Date.now()}`;
+    createQuickPost(postContent);
+
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-text"]').click();
+    });
+    cy.location('pathname').should('contain', '/post/');
+    cy.get('[data-cy="single-post-card"]').should('contain.text', postContent);
+
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**', { statusCode: 500 }).as('replyFailed');
+    // The hidden feed under the post overlay has its own quick reply on the same post.
+    cy.get('[data-cy="quick-reply"]').filter(':visible').should('have.length', 1).as('postQuickReply');
+    cy.get('@postQuickReply')
+      .find('[data-cy="quick-reply-textarea"]')
+      .filter(':visible')
+      .should('have.length', 1)
+      .click()
+      .type(replyContent);
+    cy.get('@postQuickReply')
+      .find('[data-cy="post-input-action-bar-reply"]')
+      .should('be.visible')
+      .and('not.be.disabled')
+      .click();
+
+    cy.get('[data-cy="toast"]').filter(':visible').should('contain.text', 'Could not post reply. Try again.');
+    // homeserver writes retry a 500 twice before giving up
+    cy.get('@replyFailed.all').should('have.length', 3);
+    // the first reply flips the thread's reply list 0 -> 1 -> 0 on rollback; the composer must survive it
+    cy.get('@postQuickReply')
+      .find('[data-cy="quick-reply-textarea"]')
+      .filter(':visible')
+      .should('have.value', replyContent);
+
+    cy.visit('/home');
+    waitForFeedToLoad();
+  });
 
   //todo: implement once retaining scroll position is implemented, see https://github.com/pubky/franky/issues/416
   it.skip('can navigate back to feed from post view');

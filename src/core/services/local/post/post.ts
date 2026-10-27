@@ -207,14 +207,18 @@ export class LocalPostService {
       await db.transaction('rw', [PostDetailsModel.table, PostCountsModel.table, PostTtlModel.table], async () => {
         // Read before the write: the curated-item diff below needs the pre-edit envelope.
         const existing = await PostDetailsModel.findById(compositePostId);
+        const now = Date.now();
+        const nextKind = kind ?? existing?.kind;
+        if (nextKind === 'collection') {
+          changes.localUpdatedAt = now;
+        }
         await PostDetailsModel.update(compositePostId, changes);
         // Touch TTL so the coordinator considers the edited post fresh and
         // doesn't overwrite the local edit with stale (pre-edit) Nexus data
-        await PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() });
+        await PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: now });
 
         // A collection edit (item added/removed, or a kind flip in either direction)
         // moves the curated posts' `collections` count, like Nexus's COLLECTED edges.
-        const nextKind = kind ?? existing?.kind;
         const curated = this.updateCuratedPostCounts(
           this.curatedItemIds(existing?.kind, existing?.content),
           this.curatedItemIds(nextKind, content),
@@ -316,6 +320,9 @@ export class LocalPostService {
         attachments: attachments ?? null,
         lock: lock ?? null,
       };
+      if (normalizedKind === 'collection') {
+        postDetails.localUpdatedAt = postDetails.indexed_at;
+      }
 
       const postRelationships: PostRelationshipsModelSchema = {
         id: compositePostId,
@@ -397,7 +404,9 @@ export class LocalPostService {
           ops.push(...curated.ops);
 
           // Touch TTL for the new post
-          ops.push(PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() }));
+          ops.push(
+            PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: postDetails.localUpdatedAt ?? Date.now() }),
+          );
 
           // Update author's user counts in a single operation.
           // A collection is a collection-kind post, so it bumps both the total

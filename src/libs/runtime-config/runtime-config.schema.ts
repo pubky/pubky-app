@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseRegionModes } from '@/libs/region/regionModes';
 
 /**
  * Shared, zod-only schema for the environment-specific values that must be configurable at
@@ -6,14 +7,14 @@ import { z } from 'zod';
  * third parties against their own infrastructure).
  *
  * The config has multiple tiers:
- *  - REQUIRED network values and Shop destination (nexusUrl, cdnUrl, ..., shopUrl): a deployed container must set all of
+ *  - REQUIRED network values (nexusUrl, cdnUrl, ...): a deployed container must set all of
  *    them; partial config fails loudly instead of silently resolving to staging defaults.
  *  - OPTIONAL observability values (sentry*): absent means the feature is disabled (DSN) or
  *    a documented default applies (sample rates).
  *  - OPTIONAL/DEFAULTED app/deployer values: public operational, moderation, metadata,
  *    analytics, Prelude, and external-link values that deployers may override without rebuilding.
  *
- * This module is a leaf (zod only, no `Env`, no logger) so the runtime-config resolver never
+ * This module is a leaf (zod and the pure region parser only, no `Env`, no logger) so the runtime-config resolver never
  * pulls in the heavy `env -> libs/error -> logger -> env` import cycle.
  *
  * Two schemas are intentionally provided because the two inputs differ in shape:
@@ -28,7 +29,6 @@ import { z } from 'zod';
 // ---------------------------------------------------------------------------
 
 const urlValue = z.url();
-const shopUrlValue = z.url({ protocol: /^https?$/ });
 const homeserverValue = z.string().min(1);
 /**
  * Declared deploy identity. Drives environment-gated behavior (e.g. the staging
@@ -43,6 +43,14 @@ const testnetValue = z.boolean();
 const sampleRateValue = z.number().min(0).max(1);
 const positiveIntValue = z.number().int().positive();
 const nonEmptyStringValue = z.string().min(1);
+/** The `SELECTOR=MODE` region list, validated with the parser the app evaluates it with; a bad list fails loudly. */
+const regionModesValue = z
+  .string()
+  .trim()
+  .superRefine((val, ctx) => {
+    const parsed = parseRegionModes(val);
+    if (!parsed.ok) ctx.addIssue({ code: 'custom', message: `Invalid REGION_MODES value: ${parsed.error}` });
+  });
 const pubkyValue = z
   .string()
   .trim()
@@ -213,7 +221,7 @@ export const PASSPORT_RUNTIME_DEFAULTS = {
 // ---------------------------------------------------------------------------
 
 /**
- * REQUIRED tier: environment-specific network values and Shop destination. A deployed container
+ * REQUIRED tier: environment-specific network values. A deployed container
  * must set all of them (see `runtimeEnvInputSchema`).
  */
 export const networkConfigValueSchema = z.object({
@@ -227,7 +235,6 @@ export const networkConfigValueSchema = z.object({
   pkarrRelays: pkarrRelaysValue,
   testnet: testnetValue,
   deployEnv: deployEnvValue,
-  shopUrl: shopUrlValue,
 });
 
 export type NetworkRuntimeConfig = z.infer<typeof networkConfigValueSchema>;
@@ -295,6 +302,11 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   lockServer: nonEmptyStringValue.optional(),
   /** Paykit Server address, where a creator connects the account that receives payments. Absent = Locks disabled. */
   paykitServerUrl: urlValue.optional(),
+  /**
+   * Regions where paid unlocks are held, as `SELECTOR=MODE` entries (`EU=blocked,GB=blocked,US=blocked`), the
+   * same value the Shop reads as `PUBKY_RUNTIME_REGION_MODES`. Absent = no region check and no request.
+   */
+  regionModes: regionModesValue.optional(),
 });
 
 const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
@@ -323,9 +335,9 @@ export const runtimeEnvInputSchema = z
     testnet: testnetFromString,
     deployEnv: deployEnvValue,
     authClientId: optionalTrimmedString,
-    shopUrl: shopUrlValue,
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
+    regionModes: optionalTrimmedString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -391,7 +403,6 @@ export const NETWORK_RUNTIME_DEFAULTS: NetworkRuntimeConfig = {
   pkarrRelays: ['https://pkarr.pubky.app', 'https://pkarr.pubky.org'],
   testnet: false,
   deployEnv: 'staging',
-  shopUrl: 'https://shop.staging.pubky.app/marketplace',
 };
 
 /**
@@ -410,9 +421,9 @@ export const runtimeEnvInputSchemaWithDefaults = z
     testnet: z.string().default(String(NETWORK_RUNTIME_DEFAULTS.testnet)).pipe(testnetFromString),
     deployEnv: deployEnvValue.default(NETWORK_RUNTIME_DEFAULTS.deployEnv),
     authClientId: optionalTrimmedString,
-    shopUrl: shopUrlValue.default(NETWORK_RUNTIME_DEFAULTS.shopUrl),
     lockServer: optionalTrimmedString,
     paykitServerUrl: optionalUrlFromString,
+    regionModes: optionalTrimmedString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -488,7 +499,6 @@ const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
   pkarrRelays: 'PUBKY_RUNTIME_PKARR_RELAYS',
   testnet: 'PUBKY_RUNTIME_TESTNET',
   deployEnv: 'PUBKY_RUNTIME_ENV',
-  shopUrl: 'PUBKY_RUNTIME_SHOP_URL',
 };
 
 export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
@@ -496,6 +506,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   authClientId: 'PUBKY_RUNTIME_AUTH_CLIENT_ID',
   lockServer: 'PUBKY_RUNTIME_LOCK_SERVER',
   paykitServerUrl: 'PUBKY_RUNTIME_PAYKIT_SERVER_URL',
+  regionModes: 'PUBKY_RUNTIME_REGION_MODES',
   pulseClientKey: 'PUBKY_RUNTIME_PULSE_CLIENT_KEY',
   pulseEndpoint: 'PUBKY_RUNTIME_PULSE_ENDPOINT',
   sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',

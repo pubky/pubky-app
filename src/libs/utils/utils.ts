@@ -683,14 +683,13 @@ export function isValidTagLabel(value: string): boolean {
  * @param isSubmitting - Whether a submission is currently in progress
  * @param isArticle - Whether the post is an article (optional)
  * @param articleTitle - The title of the article (optional)
- * @param hasBlockingUploads - Whether inline image uploads are still in flight (optional)
  * @returns true if the post can be submitted, false otherwise
  *
  * @remarks
  * - Reposts allow empty content
  * - Posts and replies require either content or attachments
  * - Articles require both content and title
- * - Cannot submit if already submitting or while inline image uploads are in flight
+ * - Cannot submit while a submission is in progress
  *
  * @example
  * canSubmitPost('post', 'Hello world', [], false) // true
@@ -707,9 +706,8 @@ export function canSubmitPost(
   isSubmitting: boolean,
   isArticle?: boolean,
   articleTitle?: string,
-  hasBlockingUploads?: boolean,
 ): boolean {
-  if (isSubmitting || hasBlockingUploads) return false;
+  if (isSubmitting) return false;
 
   // Reposts allow empty content, posts and replies require content or attachments
   if (variant === 'repost') return true;

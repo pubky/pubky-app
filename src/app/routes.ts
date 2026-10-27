@@ -30,6 +30,7 @@ export enum APP_ROUTES {
   PROFILE = '/profile',
   WHO_TO_FOLLOW = '/who-to-follow',
   SHARE = '/share',
+  SHOP = '/shop',
 }
 
 /**
@@ -80,6 +81,12 @@ export enum COPYRIGHT_ROUTES {
   COPYRIGHT = '/copyright',
 }
 
+/** Public pages for the legal texts every sign-up, footer and Settings link points to. */
+export enum LEGAL_ROUTES {
+  TERMS_OF_USE = '/terms-of-use',
+  PRIVACY_POLICY = '/privacy-policy',
+}
+
 export enum DEV_ROUTES {
   /** Sentry verification harness — gated to non-production by the page itself. */
   SENTRY_TEST = '/sentry-test',
@@ -100,6 +107,8 @@ export const PUBLIC_ROUTES: string[] = [
   APP_ROUTES.PROFILE,
   // Copyright page should be accessible without authentication
   COPYRIGHT_ROUTES.COPYRIGHT,
+  // The Terms of Service and Privacy Policy must open for anyone, in any auth state (app stores link to them).
+  ...Object.values(LEGAL_ROUTES),
   // Sentry verification harness must be reachable without a session on preview deploys.
   // The page returns 404 in production via isSentryTestHarnessEnabled().
   DEV_ROUTES.SENTRY_TEST,
@@ -171,6 +180,7 @@ export function isDynamicPublicRoute(pathname: string): boolean {
   const segments = pathname.split('/').filter(Boolean);
 
   switch (true) {
+    case segments[0] === 'shop':
     case segments[0] === 'invite' && segments.length === 2:
     case segments[0] === 'post' && segments.length === 3:
     case segments[0] === 'profile' && segments.length === 2 && isPubkyIdentifier(segments[1]):
@@ -225,6 +235,20 @@ export function matchPostRoute(pathname: string): { userId: string; postId: stri
   return { userId, postId };
 }
 
+/**
+ * Matches another user's profile route `/profile/[pubky]` and returns its pubky,
+ * or `null` for any other path: the own `/profile`, profile sub-tabs, and
+ * prefixed (`pk:`) or malformed identifiers. Uses the same raw identifier check
+ * as `isDynamicPublicRoute`, so it only matches profiles a guest can open.
+ */
+export function matchProfileRoute(pathname: string): { pubky: string } | null {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] !== 'profile' || segments.length !== 2 || !isPubkyIdentifier(segments[1])) {
+    return null;
+  }
+  return { pubky: segments[1] };
+}
+
 /** `/post/[userId]/[postId]` — browsable without auth; uses explore header chrome for guests. */
 export function isPostRoute(pathname: string): boolean {
   return matchPostRoute(pathname) !== null;
@@ -249,11 +273,17 @@ export const LOGO_LANDING_ROUTES: readonly string[] = [
   ROOT_ROUTES,
   ...Object.values(AUTH_ROUTES),
   COPYRIGHT_ROUTES.COPYRIGHT,
+  ...Object.values(LEGAL_ROUTES),
   ...Object.values(ONBOARDING_ROUTES),
 ];
 
 export function isLogoLandingRoute(pathname: string | null): boolean {
   return pathname != null && LOGO_LANDING_ROUTES.includes(pathname);
+}
+
+/** `/terms-of-use` or `/privacy-policy`. */
+export function isLegalRoute(pathname: string | null): boolean {
+  return pathname === LEGAL_ROUTES.TERMS_OF_USE || pathname === LEGAL_ROUTES.PRIVACY_POLICY;
 }
 
 // ============================================================================

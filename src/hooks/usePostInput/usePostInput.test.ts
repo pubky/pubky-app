@@ -106,7 +106,6 @@ vi.mock('@/hooks/usePost/usePost', () => ({
       getMediaType: mockGetMediaType,
       getMediaName: mockGetMediaName,
     },
-    uploadingCount: 0,
     serializeArticleForLock: vi.fn(() => null),
   })),
 }));
@@ -3053,12 +3052,15 @@ describe('usePostInput', () => {
         expect(mockSetAttachments).toHaveBeenCalled();
       });
 
-      it('routes a video dropped inside the rich-text editor to inline insertion too', async () => {
-        mockIsArticle = true;
-        mockInlineMediaUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/clip1');
-
-        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
-
+      /**
+       * Drops `files` on a non-editable island inside the rich-text editor root, where Lexical
+       * ignores the drop and the composer's fallback stages and inserts them itself.
+       */
+      const dropOnEditorIsland = (
+        result: { current: ReturnType<typeof usePostInput> },
+        files: File[],
+        islandTag = 'img',
+      ) => {
         const insertMarkdown = vi.fn();
         const focus = vi.fn();
         result.current.markdownEditorRef.current = asOpaque<
@@ -3067,85 +3069,145 @@ describe('usePostInput', () => {
 
         const editorRoot = document.createElement('div');
         editorRoot.className = 'mdxeditor dark-theme';
-        const island = document.createElement('video');
+        const island = document.createElement(islandTag);
         editorRoot.appendChild(island);
         document.body.appendChild(editorRoot);
 
-        const clip = new File(['test'], 'clip.mp4', { type: 'video/mp4' });
         const dropEvent = mockDragEvent({
           preventDefault: vi.fn(),
           stopPropagation: vi.fn(),
           target: island,
-          dataTransfer: asOpaque<DataTransfer>({ items: [{ kind: 'file', getAsFile: () => clip }] }),
+          dataTransfer: asOpaque<DataTransfer>({
+            items: files.map((file) => ({ kind: 'file', getAsFile: () => file })),
+          }),
         });
+        act(() => {
+          result.current.handleDrop(dropEvent);
+        });
+        return { insertMarkdown, focus, cleanup: () => editorRoot.remove() };
+      };
 
+      it('routes a video dropped inside the rich-text editor to inline insertion too', async () => {
+        mockIsArticle = true;
+        mockInlineMediaUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/clip1');
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        const clip = new File(['test'], 'clip.mp4', { type: 'video/mp4' });
+
+        const { insertMarkdown, cleanup } = dropOnEditorIsland(result, [clip], 'video');
         try {
-          act(() => {
-            result.current.handleDrop(dropEvent);
-          });
-
           await waitFor(() => {
             expect(insertMarkdown).toHaveBeenCalledWith('![](pubky://author/pub/pubky.app/files/clip1)');
           });
           expect(mockInlineMediaUpload).toHaveBeenCalledWith(clip);
           expect(mockSetAttachments).not.toHaveBeenCalled();
         } finally {
-          document.body.removeChild(editorRoot);
+          cleanup();
         }
       });
 
       it('routes article drops landing inside the rich-text editor to inline insertion', async () => {
         mockIsArticle = true;
         mockInlineMediaUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/img1');
-
-        const { result } = renderHook(() =>
-          usePostInput({
-            variant: 'post',
-          }),
-        );
-
-        const insertMarkdown = vi.fn();
-        const focus = vi.fn();
-        result.current.markdownEditorRef.current = asOpaque<
-          NonNullable<(typeof result.current.markdownEditorRef)['current']>
-        >({ insertMarkdown, focus });
-
-        // Lexical ignores drops on non-editable islands (already-inserted
-        // images), so the event reaches the container un-prevented with a
-        // target inside the editor root
-        const editorRoot = document.createElement('div');
-        editorRoot.className = 'mdxeditor dark-theme';
-        const droppedOnImage = document.createElement('img');
-        editorRoot.appendChild(droppedOnImage);
-        document.body.appendChild(editorRoot);
-
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        // Lexical ignores drops on non-editable islands (already-inserted images), so the event
+        // reaches the container un-prevented with a target inside the editor root
         const mockFile = new File(['test'], 'pic.png', { type: 'image/png' });
-        const dropEvent = mockDragEvent({
-          preventDefault: vi.fn(),
-          stopPropagation: vi.fn(),
-          target: droppedOnImage,
-          dataTransfer: asOpaque<DataTransfer>({
-            items: [
-              {
-                kind: 'file',
-                getAsFile: () => mockFile,
-              },
-            ],
-          }),
-        });
 
+        const { insertMarkdown, cleanup } = dropOnEditorIsland(result, [mockFile]);
         try {
-          act(() => {
-            result.current.handleDrop(dropEvent);
-          });
-
           await waitFor(() => {
             expect(insertMarkdown).toHaveBeenCalledWith('![](pubky://author/pub/pubky.app/files/img1)');
           });
           expect(mockInlineMediaUpload).toHaveBeenCalledWith(mockFile);
           expect(mockSetAttachments).not.toHaveBeenCalled();
         } finally {
-          editorRoot.remove();
+          cleanup();
+        }
+      });
+
+      it('stages every file of a drop in one tick, so the session budget sees the whole batch', async () => {
+        mockIsArticle = true;
+        const resolvers: ((uri: string) => void)[] = [];
+        mockInlineMediaUpload.mockImplementation(() => new Promise<string>((resolve) => resolvers.push(resolve)));
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        const first = new File(['a'], 'a.png', { type: 'image/png' });
+        const second = new File(['b'], 'b.png', { type: 'image/png' });
+
+        const { insertMarkdown, cleanup } = dropOnEditorIsland(result, [first, second]);
+        try {
+          // Both files reached the session before either resolved
+          expect(mockInlineMediaUpload).toHaveBeenCalledTimes(2);
+          expect(insertMarkdown).not.toHaveBeenCalled();
+
+          resolvers[0]('pubky://author/pub/pubky.app/files/draft-a');
+          resolvers[1]('pubky://author/pub/pubky.app/files/draft-b');
+          await waitFor(() => expect(insertMarkdown).toHaveBeenCalledTimes(2));
+          expect(insertMarkdown).toHaveBeenNthCalledWith(1, '![](pubky://author/pub/pubky.app/files/draft-a)');
+          expect(insertMarkdown).toHaveBeenNthCalledWith(2, '![](pubky://author/pub/pubky.app/files/draft-b)');
+        } finally {
+          cleanup();
+        }
+      });
+
+      it('inserts the files the session accepted when it refuses one of the batch', async () => {
+        mockIsArticle = true;
+        mockInlineMediaUpload
+          .mockRejectedValueOnce(new Error('refused'))
+          .mockResolvedValueOnce('pubky://author/pub/pubky.app/files/draft-b');
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        const { insertMarkdown, cleanup } = dropOnEditorIsland(result, [
+          new File(['a'], 'a.png', { type: 'image/png' }),
+          new File(['b'], 'b.png', { type: 'image/png' }),
+        ]);
+        try {
+          await waitFor(() => expect(insertMarkdown).toHaveBeenCalledTimes(1));
+          expect(insertMarkdown).toHaveBeenCalledWith('![](pubky://author/pub/pubky.app/files/draft-b)');
+        } finally {
+          cleanup();
+        }
+      });
+
+      it('toasts when the editor refuses the insert of a staged file', async () => {
+        mockIsArticle = true;
+        mockInlineMediaUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/draft-a');
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        const { insertMarkdown, cleanup } = dropOnEditorIsland(result, [
+          new File(['a'], 'a.png', { type: 'image/png' }),
+        ]);
+        insertMarkdown.mockImplementation(() => {
+          throw new Error('editor torn down');
+        });
+        try {
+          await waitFor(() => expect(insertMarkdown).toHaveBeenCalledTimes(1));
+          await waitFor(() =>
+            expect(vi.mocked(toast)).toHaveBeenCalledWith({
+              variant: 'error',
+              description: 'Could not insert the file. Try again.',
+            }),
+          );
+        } finally {
+          cleanup();
+        }
+      });
+
+      it('touches the editor not at all when the session refuses the whole batch', async () => {
+        mockIsArticle = true;
+        mockInlineMediaUpload.mockRejectedValue(new Error('over budget'));
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        const { insertMarkdown, focus, cleanup } = dropOnEditorIsland(result, [
+          new File(['a'], 'a.png', { type: 'image/png' }),
+          new File(['b'], 'b.png', { type: 'image/png' }),
+        ]);
+        try {
+          await waitFor(() => expect(mockInlineMediaUpload).toHaveBeenCalledTimes(2));
+          await act(async () => {});
+          expect(insertMarkdown).not.toHaveBeenCalled();
+          expect(focus).not.toHaveBeenCalled();
+        } finally {
+          cleanup();
         }
       });
 

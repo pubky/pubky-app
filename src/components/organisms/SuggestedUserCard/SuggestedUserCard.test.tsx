@@ -13,7 +13,7 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
 function makeUser(overrides: Partial<SuggestedUser> = {}): SuggestedUser {
   return {
     id: 'pubky-abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmn',
-    name: 'John Carvalho',
+    name: 'Jane Whitlock',
     bio: '',
     image: null,
     avatarUrl: null,
@@ -37,7 +37,7 @@ describe('SuggestedUserCard', () => {
     const user = makeUser();
     render(<SuggestedUserCard user={user} onFollowClick={onFollowClick} />);
 
-    expect(screen.getByText('John Carvalho')).toBeInTheDocument();
+    expect(screen.getByText('Jane Whitlock')).toBeInTheDocument();
     expect(screen.getByText(formatPublicKey({ key: user.id }))).toBeInTheDocument();
     expect(screen.getByText('761')).toBeInTheDocument();
     expect(screen.getByText('158')).toBeInTheDocument();
@@ -69,7 +69,7 @@ describe('SuggestedUserCard', () => {
     const user = makeUser();
     render(<SuggestedUserCard user={user} onFollowClick={onFollowClick} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Follow John Carvalho' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Follow Jane Whitlock' }));
 
     expect(onFollowClick).toHaveBeenCalledWith(user.id, false);
   });
@@ -78,7 +78,7 @@ describe('SuggestedUserCard', () => {
     const user = makeUser({ isFollowing: true });
     render(<SuggestedUserCard user={user} onFollowClick={onFollowClick} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Unfollow John Carvalho' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Unfollow Jane Whitlock' }));
 
     expect(onFollowClick).toHaveBeenCalledWith(user.id, true);
   });
@@ -94,7 +94,7 @@ describe('SuggestedUserCard', () => {
   it('disables the follow button while loading', () => {
     render(<SuggestedUserCard user={makeUser()} isLoading onFollowClick={onFollowClick} />);
 
-    expect(screen.getByRole('button', { name: 'Follow John Carvalho' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Follow Jane Whitlock' })).toBeDisabled();
   });
 
   it('renders a skeleton without interactive controls', () => {

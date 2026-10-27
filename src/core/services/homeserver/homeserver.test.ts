@@ -1,6 +1,9 @@
 import { webcrypto } from 'node:crypto';
+import { setImmediate } from 'node:timers';
 import type { Keypair, PublicKey, Session } from '@synonymdev/pubky';
+import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getDefaultHttpRelay } from '@/config/network';
 import { AppError } from '@/libs/error/error';
 import {
   AuthErrorCode,
@@ -19,6 +22,7 @@ import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observabilit
 import { shouldDropAppErrorFromSentry } from '@/libs/observability/sentry.utils';
 import { mockGrantReference } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { createTestWebLocks } from '@/test-utils/web-locks';
 
 // =============================================================================
 // HOISTED MOCKS - Must be hoisted to run before module imports
@@ -240,6 +244,10 @@ describe('HomeserverService', () => {
 
     // Setup default successful behaviors
     vi.stubGlobal('crypto', webcrypto);
+    vi.stubGlobal('setImmediate', setImmediate);
+    vi.stubGlobal('indexedDB', new IDBFactory());
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: createTestWebLocks() });
+    localStorage.clear();
     sessionStorage.clear();
     mockState.signup.mockResolvedValue(undefined);
     mockState.signin.mockResolvedValue(createMockSession());
@@ -274,6 +282,13 @@ describe('HomeserverService', () => {
     // Reset module cache and re-import
     vi.resetModules();
     ({ HomeserverService } = await import('@/services/homeserver/homeserver'));
+  });
+
+  afterEach(async () => {
+    const { GrantFlowService } = await import('./grant-flow');
+    GrantFlowService.clear();
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(navigator, 'locks');
   });
 
   // ===========================================================================
@@ -753,7 +768,7 @@ describe('HomeserverService', () => {
       });
 
       it('should cancel polling before first poll when cancelAuthFlow is called immediately', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         try {
           const tryPollOnce = vi.fn().mockResolvedValue(undefined);
           const free = vi.fn();
@@ -787,7 +802,7 @@ describe('HomeserverService', () => {
       it.each(['local', 'delegated'] as const)(
         'resumes the %s grant on the same relay channel after returning from Ring',
         async (mode) => {
-          vi.useFakeTimers();
+          vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
           const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
           try {
             const session = createMockSession();
@@ -838,7 +853,7 @@ describe('HomeserverService', () => {
       );
 
       it('settles a cancelled approval at once when the relay poll dropped while the page is hidden', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
         try {
           const transportError = new Error('Request failed: HTTP transport error: error sending request');
@@ -880,7 +895,7 @@ describe('HomeserverService', () => {
       });
 
       it('does not resume an abandoned grant when the page becomes visible again', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
         try {
           const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
@@ -915,7 +930,7 @@ describe('HomeserverService', () => {
       it.each(['cancel', 'clear', 'replace'] as const)(
         'frees a delegated resume that finishes after %s without polling or clearing a newer flow',
         async (action) => {
-          vi.useFakeTimers();
+          vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
           try {
             const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
             const deadFlow = {
@@ -977,7 +992,7 @@ describe('HomeserverService', () => {
       );
 
       it('gives up after the resume cap while the page stays visible', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         try {
           const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
           const deadFlow = () => ({ tryPollOnce: vi.fn().mockRejectedValue(transportError), free: vi.fn() });
@@ -1007,7 +1022,7 @@ describe('HomeserverService', () => {
       });
 
       it('rejects with SESSION_EXPIRED when the relay channel cannot be resumed', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         try {
           const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
           const deadFlow = {
@@ -1042,7 +1057,7 @@ describe('HomeserverService', () => {
       });
 
       it('does not resume once the relay no longer holds the approval when the page is visible again', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
         try {
           const transportError = Object.assign(new Error('HTTP transport error'), { name: 'RequestError' });
@@ -1076,8 +1091,404 @@ describe('HomeserverService', () => {
         }
       });
 
+      describe('while the page is hidden', () => {
+        const IPHONE_UA =
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1';
+        let visibility: ReturnType<typeof vi.spyOn>;
+        let userAgent: ReturnType<typeof vi.spyOn>;
+
+        const hide = () => {
+          visibility.mockReturnValue('hidden');
+          document.dispatchEvent(new Event('visibilitychange'));
+        };
+        const show = () => {
+          visibility.mockReturnValue('visible');
+          document.dispatchEvent(new Event('visibilitychange'));
+        };
+        const startSignin = () =>
+          HomeserverService.startGrantFlow({ purpose: 'signin', capabilities: '/pub/pubky.app/:rw', generation: '' });
+
+        beforeEach(() => {
+          vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+          visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+          userAgent = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(IPHONE_UA);
+        });
+
+        afterEach(() => {
+          userAgent.mockRestore();
+          visibility.mockRestore();
+          vi.useRealTimers();
+        });
+
+        it.each(['local', 'delegated'] as const)(
+          'releases the %s flow on iOS and collects the approval on the same channel once visible',
+          async (mode) => {
+            const session = createMockSession();
+            const liveFlow = {
+              saveLocal: () => 'saved-local',
+              saveDelegated: () => {
+                if (mode === 'local') throw new Error('Local flow');
+                return 'saved-delegated';
+              },
+              authorizationUrl: 'https://auth.example.com/authorize',
+              tryPollOnce: vi.fn().mockResolvedValue(undefined),
+              free: vi.fn(),
+            };
+            const resumedFlow = { tryPollOnce: vi.fn().mockResolvedValue(session), free: vi.fn() };
+            mockState.startGrantAuthFlow.mockReturnValue(liveFlow);
+            const resume =
+              mode === 'delegated' ? mockState.resumeDelegatedGrantAuthFlow : mockState.resumeGrantAuthFlow;
+            resume.mockReset().mockReturnValue(resumedFlow);
+
+            const result = await startSignin();
+            await vi.advanceTimersByTimeAsync(250);
+            expect(liveFlow.tryPollOnce).toHaveBeenCalled();
+
+            // Handing off to Bitkit: the SDK listener is dropped so it cannot take the approval off the relay.
+            hide();
+            await vi.advanceTimersByTimeAsync(100);
+            const pollsBeforeHandoff = liveFlow.tryPollOnce.mock.calls.length;
+            expect(liveFlow.free).toHaveBeenCalledOnce();
+            await vi.advanceTimersByTimeAsync(30_000);
+            expect(liveFlow.tryPollOnce).toHaveBeenCalledTimes(pollsBeforeHandoff);
+            expect(resume).not.toHaveBeenCalled();
+
+            show();
+            await vi.advanceTimersByTimeAsync(0);
+
+            await expect(result.awaitApproval).resolves.toBe(session);
+            expect(resume).toHaveBeenCalledExactlyOnceWith(`saved-${mode}`);
+            expect(resumedFlow.free).toHaveBeenCalledOnce();
+          },
+        );
+
+        it('frees the flow on iOS when the page hides, without waiting for the poll timer', async () => {
+          const session = createMockSession();
+          const liveFlow = {
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockResolvedValue(undefined),
+            free: vi.fn(),
+          };
+          const resumedFlow = { tryPollOnce: vi.fn().mockResolvedValue(session), free: vi.fn() };
+          mockState.startGrantAuthFlow.mockReturnValue(liveFlow);
+          mockState.resumeDelegatedGrantAuthFlow.mockReset().mockReturnValue(resumedFlow);
+
+          const result = await startSignin();
+          await vi.advanceTimersByTimeAsync(250);
+          const pollsBeforeHide = liveFlow.tryPollOnce.mock.calls.length;
+
+          // The loop is sleeping between polls; WebKit may hold that timer back for seconds once hidden. The hide
+          // triggers one last poll at once, and the empty result frees the flow without advancing any timer.
+          hide();
+          expect(liveFlow.free).not.toHaveBeenCalled();
+          await vi.advanceTimersByTimeAsync(0);
+          expect(liveFlow.tryPollOnce).toHaveBeenCalledTimes(pollsBeforeHide + 1);
+          expect(liveFlow.free).toHaveBeenCalledOnce();
+
+          // Back before the timer would have fired: the freed handle is never polled again, the channel is resumed.
+          show();
+          await vi.advanceTimersByTimeAsync(100);
+
+          await expect(result.awaitApproval).resolves.toBe(session);
+          expect(liveFlow.tryPollOnce).toHaveBeenCalledTimes(pollsBeforeHide + 1);
+          expect(mockState.resumeDelegatedGrantAuthFlow).toHaveBeenCalledExactlyOnceWith('saved-delegated');
+
+          // The settled approval no longer reacts to visibility changes.
+          hide();
+          show();
+          await vi.advanceTimersByTimeAsync(1_000);
+          expect(mockState.resumeDelegatedGrantAuthFlow).toHaveBeenCalledOnce();
+          expect(resumedFlow.free).toHaveBeenCalledOnce();
+        });
+
+        it('frees the flow on iOS as soon as a poll in flight at hide time returns', async () => {
+          let finishPoll!: (value: undefined) => void;
+          const liveFlow = {
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn(
+              () =>
+                new Promise<undefined>((resolve) => {
+                  finishPoll = resolve;
+                }),
+            ),
+            free: vi.fn(),
+          };
+          mockState.startGrantAuthFlow.mockReturnValue(liveFlow);
+          mockState.resumeDelegatedGrantAuthFlow.mockReset();
+
+          const result = await startSignin();
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
+          await vi.advanceTimersByTimeAsync(0);
+          expect(liveFlow.tryPollOnce).toHaveBeenCalledOnce();
+
+          // The poll still borrows the WASM handle, so it is not freed under it.
+          hide();
+          expect(liveFlow.free).not.toHaveBeenCalled();
+
+          // No poll-interval sleep between the poll returning and the release.
+          finishPoll(undefined);
+          await vi.advanceTimersByTimeAsync(0);
+          expect(liveFlow.free).toHaveBeenCalledOnce();
+
+          await vi.advanceTimersByTimeAsync(30_000);
+          expect(liveFlow.tryPollOnce).toHaveBeenCalledOnce();
+          result.cancelAuthFlow();
+          await rejection;
+          expect(mockState.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+          expect(liveFlow.free).toHaveBeenCalledOnce();
+        });
+
+        it('polls once and then parks on iOS when the page is hidden from the start', async () => {
+          visibility.mockReturnValue('hidden');
+          const liveFlow = {
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockResolvedValue(undefined),
+            free: vi.fn(),
+          };
+          mockState.startGrantAuthFlow.mockReturnValue(liveFlow);
+          mockState.resumeDelegatedGrantAuthFlow.mockReset();
+
+          const result = await startSignin();
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
+          await vi.advanceTimersByTimeAsync(60_000);
+
+          expect(liveFlow.tryPollOnce).toHaveBeenCalledOnce();
+          expect(liveFlow.free).toHaveBeenCalledOnce();
+          result.cancelAuthFlow();
+          await vi.advanceTimersByTimeAsync(0);
+          await rejection;
+          expect(mockState.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+          expect(liveFlow.free).toHaveBeenCalledOnce();
+        });
+
+        it('exchanges an approval the listener queued between polls on iOS instead of freeing it on hide', async () => {
+          const session = createMockSession();
+          const liveFlow = {
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockResolvedValue(undefined),
+            free: vi.fn(),
+          };
+          mockState.startGrantAuthFlow.mockReturnValue(liveFlow);
+          mockState.resumeDelegatedGrantAuthFlow.mockReset();
+
+          const result = await startSignin();
+          await vi.advanceTimersByTimeAsync(250);
+          const pollsBeforeHide = liveFlow.tryPollOnce.mock.calls.length;
+
+          // The listener received and ACKed the approval since the last poll: the live handle holds the only copy.
+          liveFlow.tryPollOnce.mockResolvedValue(session);
+          hide();
+          await vi.advanceTimersByTimeAsync(0);
+
+          await expect(result.awaitApproval).resolves.toBe(session);
+          expect(liveFlow.tryPollOnce).toHaveBeenCalledTimes(pollsBeforeHide + 1);
+          expect(mockState.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+          expect(liveFlow.free).toHaveBeenCalledOnce();
+        });
+
+        it('keeps the flow on iOS when the page hides while the relay ACK is in flight, so the same approval completes', async () => {
+          // The listener has the approval and has sent its DELETE; the relay applied it, the response is held.
+          let releaseAck!: (response: Response) => void;
+          const network = vi.fn(
+            () =>
+              new Promise<Response>((resolve) => {
+                releaseAck = resolve;
+              }),
+          );
+          const originalFetch = globalThis.fetch;
+          globalThis.fetch = network;
+          let result: Awaited<ReturnType<typeof startSignin>> | undefined;
+          try {
+            const session = createMockSession();
+            const liveFlow = {
+              saveDelegated: () => 'saved-delegated',
+              authorizationUrl: 'https://auth.example.com/authorize',
+              tryPollOnce: vi.fn().mockResolvedValue(undefined),
+              free: vi.fn(),
+            };
+            mockState.startGrantAuthFlow.mockReturnValue(liveFlow);
+            mockState.resumeDelegatedGrantAuthFlow.mockReset();
+
+            result = await startSignin();
+            await vi.advanceTimersByTimeAsync(250);
+            void fetch(new Request(`${getDefaultHttpRelay()}/held-channel`, { method: 'DELETE' }));
+            expect(network).toHaveBeenCalledOnce();
+
+            // Not queued yet, so the poll on hide comes back empty, but the relay may no longer hold the approval.
+            hide();
+            await vi.advanceTimersByTimeAsync(30_000);
+            expect(liveFlow.free).not.toHaveBeenCalled();
+            expect(mockState.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+
+            // The ACK settles and the listener queues the approval it already holds.
+            releaseAck(new Response(null, { status: 200 }));
+            liveFlow.tryPollOnce.mockResolvedValue(session);
+            show();
+            await vi.advanceTimersByTimeAsync(100);
+
+            await expect(result.awaitApproval).resolves.toBe(session);
+            expect(mockState.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+            expect(liveFlow.free).toHaveBeenCalledOnce();
+            expect(globalThis.fetch).toBe(network);
+          } finally {
+            result?.cancelAuthFlow();
+            globalThis.fetch = originalFetch;
+          }
+        });
+
+        it('collects an approval published at the end of a long hidden interval on iOS', async () => {
+          const session = createMockSession();
+          const liveFlow = {
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockResolvedValue(undefined),
+            free: vi.fn(),
+          };
+          const resumedFlow = { tryPollOnce: vi.fn().mockResolvedValue(session), free: vi.fn() };
+          mockState.startGrantAuthFlow.mockReturnValue(liveFlow);
+          mockState.resumeDelegatedGrantAuthFlow.mockReset().mockReturnValue(resumedFlow);
+
+          const result = await startSignin();
+          await vi.advanceTimersByTimeAsync(0);
+          hide();
+          // 310 s in the signer, longer than the relay keeps a message; the approval is published at the end.
+          await vi.advanceTimersByTimeAsync(310_000);
+          expect(mockState.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+          show();
+          await vi.advanceTimersByTimeAsync(0);
+
+          await expect(result.awaitApproval).resolves.toBe(session);
+          expect(mockState.resumeDelegatedGrantAuthFlow).toHaveBeenCalledExactlyOnceWith('saved-delegated');
+          expect(liveFlow.free).toHaveBeenCalledOnce();
+          expect(resumedFlow.free).toHaveBeenCalledOnce();
+        });
+
+        it('frees a resume on iOS that finishes after the sign-in was cancelled', async () => {
+          const liveFlow = {
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockResolvedValue(undefined),
+            free: vi.fn(),
+          };
+          const resumedFlow = { tryPollOnce: vi.fn(), free: vi.fn() };
+          let finishResume!: (flow: typeof resumedFlow) => void;
+          mockState.startGrantAuthFlow.mockReturnValue(liveFlow);
+          mockState.resumeDelegatedGrantAuthFlow.mockReset().mockImplementationOnce(
+            () =>
+              new Promise((resolve) => {
+                finishResume = resolve;
+              }),
+          );
+
+          const result = await startSignin();
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
+          await vi.advanceTimersByTimeAsync(0);
+          hide();
+          await vi.advanceTimersByTimeAsync(100);
+          show();
+          await vi.advanceTimersByTimeAsync(0);
+          expect(mockState.resumeDelegatedGrantAuthFlow).toHaveBeenCalledOnce();
+
+          result.cancelAuthFlow();
+          finishResume(resumedFlow);
+          await rejection;
+          expect(resumedFlow.tryPollOnce).not.toHaveBeenCalled();
+          expect(resumedFlow.free).toHaveBeenCalledOnce();
+          expect(liveFlow.free).toHaveBeenCalledOnce();
+        });
+
+        it('rejects with SESSION_EXPIRED on iOS when the channel cannot be resumed once visible', async () => {
+          const liveFlow = {
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce: vi.fn().mockResolvedValue(undefined),
+            free: vi.fn(),
+          };
+          mockState.startGrantAuthFlow.mockReturnValue(liveFlow);
+          mockState.resumeDelegatedGrantAuthFlow
+            .mockReset()
+            .mockRejectedValueOnce(Object.assign(new Error('invalid url'), { name: 'AuthenticationError' }));
+
+          const result = await startSignin();
+          const rejection = expect(result.awaitApproval).rejects.toMatchObject({
+            code: AuthErrorCode.SESSION_EXPIRED,
+            context: { originalError: 'invalid url' },
+          });
+          await vi.advanceTimersByTimeAsync(0);
+          hide();
+          await vi.advanceTimersByTimeAsync(100);
+          show();
+          await vi.advanceTimersByTimeAsync(0);
+
+          await rejection;
+          expect(mockState.resumeDelegatedGrantAuthFlow).toHaveBeenCalledOnce();
+        });
+
+        it('keeps the Passport flow polling on iOS because it has no resumable channel', async () => {
+          const session = createMockSession();
+          const tryPollOnce = vi.fn().mockResolvedValueOnce(undefined).mockResolvedValueOnce(session);
+          const free = vi.fn();
+          mockState.startGrantAuthFlow.mockReturnValue({
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce,
+            free,
+          });
+          mockState.resumeDelegatedGrantAuthFlow.mockReset();
+          visibility.mockReturnValue('hidden');
+
+          const result = await HomeserverService.startGrantFlow({
+            purpose: 'signin',
+            capabilities: '/pub/pubky.app/:rw',
+            generation: '',
+            xCallback: { xSource: 'Pubky', xSuccess: 'https://pubky.app/ok' },
+          });
+          await vi.advanceTimersByTimeAsync(200);
+
+          await expect(result.awaitApproval).resolves.toBe(session);
+          expect(tryPollOnce).toHaveBeenCalledTimes(2);
+          expect(mockState.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+        });
+
+        it('keeps polling the same flow in a hidden tab outside iOS', async () => {
+          userAgent.mockReturnValue(
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+          );
+          const session = createMockSession();
+          const tryPollOnce = vi.fn().mockResolvedValue(undefined);
+          const free = vi.fn();
+          mockState.startGrantAuthFlow.mockReturnValue({
+            saveDelegated: () => 'saved-delegated',
+            authorizationUrl: 'https://auth.example.com/authorize',
+            tryPollOnce,
+            free,
+          });
+          mockState.resumeDelegatedGrantAuthFlow.mockReset();
+
+          const result = await startSignin();
+          await vi.advanceTimersByTimeAsync(0);
+          hide();
+          await vi.advanceTimersByTimeAsync(1_000);
+          expect(free).not.toHaveBeenCalled();
+          const pollsWhileHidden = tryPollOnce.mock.calls.length;
+          expect(pollsWhileHidden).toBeGreaterThan(5);
+
+          // A phone approves the desktop QR while this tab is in the background.
+          tryPollOnce.mockResolvedValue(session);
+          await vi.advanceTimersByTimeAsync(100);
+
+          await expect(result.awaitApproval).resolves.toBe(session);
+          expect(mockState.resumeDelegatedGrantAuthFlow).not.toHaveBeenCalled();
+          expect(free).toHaveBeenCalledOnce();
+        });
+      });
+
       it('preserves a network failure when grant polling fails', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         try {
           const relayError = { name: 'RequestError', message: 'Gateway Timeout', data: { statusCode: 504 } };
           const tryPollOnce = vi.fn().mockRejectedValue(relayError);
@@ -1203,7 +1614,7 @@ describe('HomeserverService', () => {
       });
 
       it('cancels polling when cancelAuthFlow is called', async () => {
-        vi.useFakeTimers();
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
         try {
           const tryPollOnce = vi.fn().mockResolvedValue(undefined);
           const free = vi.fn();
@@ -2662,9 +3073,17 @@ describe('active session failure notifications', () => {
     { name: 'NetworkError', message: 'Offline' },
     { name: 'ClientStateError', message: 'Temporary IndexedDB failure' },
   ])('keeps a nonterminal SDK error out of the auth lifecycle: $message', async (error) => {
-    mockState.sessionStoragePutJson.mockRejectedValueOnce(error);
-    await expect(service.request({ method: HttpMethod.PUT, url: 'pubky://user/pub/test' })).rejects.toThrow();
-    expect(listener).not.toHaveBeenCalled();
+    // A 503 is retried; it must stay out of the lifecycle on every attempt.
+    const { installHomeserverWriteRetryDependenciesForTests } = await import('./write-retry');
+    installHomeserverWriteRetryDependenciesForTests({ sleep: async () => {} });
+    mockState.sessionStoragePutJson.mockRejectedValue(error);
+    try {
+      await expect(service.request({ method: HttpMethod.PUT, url: 'pubky://user/pub/test' })).rejects.toThrow();
+      expect(listener).not.toHaveBeenCalled();
+    } finally {
+      mockState.sessionStoragePutJson.mockReset();
+      installHomeserverWriteRetryDependenciesForTests(null);
+    }
   });
   it('does not invalidate an active account for a public resource or sign-in failure', async () => {
     const error = { name: 'RequestError', message: 'Unauthorized', data: { statusCode: 401 } };

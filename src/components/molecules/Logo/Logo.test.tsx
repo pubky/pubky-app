@@ -1,8 +1,9 @@
 import { usePathname } from 'next/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LOGO_LANDING_ROUTES } from '@/app/routes';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { COPYRIGHT_ROUTES, LEGAL_ROUTES, LOGO_LANDING_ROUTES } from '@/app/routes';
 import { FORCE_FEED_SCROLL_TOP_KEY } from '@/config/feed';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { Logo } from './Logo';
 
 // Mock Next.js Image component
@@ -121,5 +122,39 @@ describe('Logo', () => {
 
     expect(window.scrollTo).not.toHaveBeenCalled();
     expect(setItemSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('Logo on the public documents', () => {
+  const PUBLIC_DOCUMENT_ROUTES = [...Object.values(LEGAL_ROUTES), COPYRIGHT_ROUTES.COPYRIGHT];
+
+  afterEach(() => {
+    useAuthStore.setState({ currentUserPubky: null, restoreStatus: 'idle' });
+  });
+
+  it.each(PUBLIC_DOCUMENT_ROUTES)('takes a member to /home on %s, not to the landing page', (pathname) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+    useAuthStore.setState({ currentUserPubky: 'account', restoreStatus: 'ready' });
+
+    render(<Logo />);
+
+    expect(screen.getByTestId('logo-image').closest('a')).toHaveAttribute('href', '/home');
+  });
+
+  it.each(PUBLIC_DOCUMENT_ROUTES)('takes a guest to the landing page on %s', (pathname) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+
+    render(<Logo />);
+
+    expect(screen.getByTestId('logo-image').closest('a')).toHaveAttribute('href', '/');
+  });
+
+  it('keeps the landing link for a member on the other landing routes', () => {
+    vi.mocked(usePathname).mockReturnValue('/sign-in');
+    useAuthStore.setState({ currentUserPubky: 'account', restoreStatus: 'ready' });
+
+    render(<Logo />);
+
+    expect(screen.getByTestId('logo-image').closest('a')).toHaveAttribute('href', '/');
   });
 });

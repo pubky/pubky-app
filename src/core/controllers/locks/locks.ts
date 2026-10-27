@@ -8,8 +8,8 @@ import type {
   TFetchUnlockedListParams,
   TPaymentBundleParams,
   TPaymentLockParams,
-  TPurchaseBundleIdParams,
   TReplicateUnlockedContentParams,
+  TResolvedPurchase,
   TStartPaymentParams,
   TStartPaymentResult,
 } from '@/application/locks/locks.types';
@@ -123,7 +123,7 @@ export class LocksController {
     }
     // Also invalidate requests that began on the old session while this exchange was in flight.
     this.sessionEpoch++;
-    useLocksAuthStore.getState().init({ session: result.session, secret: result.secret });
+    useLocksAuthStore.getState().init({ session: result.session, secret: result.secret, creatorPubky: creator });
     // Register the creator's default Lock Server pointer in the background on every auth, mirroring
     // the homeserver's post-auth write. Fire-and-forget: a failure (already reported to Sentry by the
     // service Err factory) must not drop the established session — the write is idempotent and
@@ -236,16 +236,17 @@ export class LocksController {
     const { currentUserPubky } = useAuthStore.getState();
     const secret = store.selectLocksSessionSecret();
     if (!currentUserPubky || !secret || store.selectLocksSession() !== null) return;
+    // TODO:[Locks] #2283 — a == b check. Change it together with the a == b check in `completeAuthFromCallback`.
+    if (store.selectLocksCreatorPubky() !== currentUserPubky) {
+      this.clearLocalSession();
+      return;
+    }
     const ownsAccount = this.captureSessionOwner();
     const isCurrent = () => ownsAccount() && useLocksAuthStore.getState().selectLocksSessionSecret() === secret;
 
     try {
       const session = await LocksApplication.restoreSession();
       if (!isCurrent()) return;
-      if (stripPubkyPrefix(session.creatorPubky() ?? '') !== currentUserPubky) {
-        this.clearLocalSession();
-        return;
-      }
       store.setSession(session);
     } catch {
       // Malformed/stale secret — already reported by the service Err factory; clear it so the UI
@@ -321,12 +322,15 @@ export class LocksController {
     return LocksApplication.hasPaykitReceiver(readerPubky);
   }
 
-  /** The bundle id saved on the reader's own homeserver for this lock, or null; an unreadable file throws. */
-  static fetchPurchaseBundleId(params: TPurchaseBundleIdParams): Promise<string | null> {
-    return LocksApplication.fetchPurchaseBundleId(params);
+  /** The saved bundle id to continue this lock's payment with, by the server's view of each; null when none is saved. */
+  static fetchResolvedPurchase(params: TPaymentLockParams): Promise<TResolvedPurchase | null> {
+    return LocksApplication.fetchResolvedPurchase(params);
   }
 
-  /** Saves a bundle id on the reader's homeserver and submits the payment proof to the Lock Server. */
+  /**
+   * Reuses or saves a bundle id on the reader's homeserver and submits the payment proof to the Lock Server;
+   * an automatic start that finds every saved id ended only reports that status.
+   */
   static startPayment(params: TStartPaymentParams): Promise<TStartPaymentResult> {
     return LocksApplication.startPayment(params);
   }
@@ -349,11 +353,6 @@ export class LocksController {
   /** Gets an access credential for a paid bundle id from the Lock Server, then downloads the post + attachments with it. */
   static fetchPaidContent(params: TPaymentBundleParams): Promise<TUnlockedContent> {
     return LocksApplication.fetchPaidContent(params);
-  }
-
-  /** `fetchPaidContent` for the background recovery, which knows neither the bundle id nor the status; null unless `completed`. */
-  static fetchPaidContentIfCompleted(params: TPaymentLockParams): Promise<TUnlockedContent | null> {
-    return LocksApplication.fetchPaidContentIfCompleted(params);
   }
 
   /** Copies unlocked content into the reader's own `/priv`, so later reads need no credential. */

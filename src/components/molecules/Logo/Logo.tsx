@@ -2,10 +2,19 @@
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { APP_ROUTES, isCustomFeedRoute, isLogoLandingRoute, ROOT_ROUTES } from '@/app/routes';
+import {
+  APP_ROUTES,
+  COPYRIGHT_ROUTES,
+  isCustomFeedRoute,
+  isLegalRoute,
+  isLogoLandingRoute,
+  ROOT_ROUTES,
+} from '@/app/routes';
 import { Link } from '@/atoms/Link/Link';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
+import { selectDisplayUserPubky } from '@/stores/auth/auth.selectors';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 interface LogoProps {
   width?: number;
@@ -41,7 +50,11 @@ export function Logo({
   ...props
 }: LogoProps & React.HTMLAttributes<HTMLAnchorElement>) {
   const pathname = usePathname();
-  const isLandingRoute = isLogoLandingRoute(pathname);
+  const isAuthenticated = useAuthStore((state) => Boolean(selectDisplayUserPubky(state)));
+  // Members open the public documents from Settings. For them `/` redirects to `/home`, which leaves `/` in
+  // the history and turns Back into a loop, so their logo goes straight to `/home`.
+  const isPublicDocument = pathname === COPYRIGHT_ROUTES.COPYRIGHT || isLegalRoute(pathname);
+  const isLandingRoute = isLogoLandingRoute(pathname) && !(isAuthenticated && isPublicDocument);
   // A custom feed lives at `/feed/<id>` in the same persistent feed cluster as
   // `/home`. From there the logo is already on the user's feed, so it scrolls to
   // the top instead of navigating away to the default feed.

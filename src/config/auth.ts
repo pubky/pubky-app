@@ -11,3 +11,12 @@ export const LOCKS_CAPABILITIES = [
   '/priv/social/:rw',
   `${LOCKS_GUARDED_CONTENT_PATH}:r`,
 ] as const satisfies readonly Capabilities[];
+
+/** Shared App/Shop storage. Encryption-key permissions are a separate feature. */
+export const SHOP_CAPABILITIES = [
+  APP_CAPABILITIES,
+  '/pub/paykit/:rw',
+  '/priv/pubky.app/:rw',
+  '/pub/chat/v0/:rw',
+  '/priv/chat/v0/:rw',
+] as const satisfies readonly Capabilities[];

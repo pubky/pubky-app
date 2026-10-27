@@ -65,14 +65,21 @@ vi.mock('@/atoms/Link/Link', () => {
       children,
       href,
       overrideDefaults,
+      'aria-label': ariaLabel,
       'data-testid': dataTestId,
     }: {
       children: React.ReactNode;
       href: string;
       overrideDefaults?: boolean;
+      'aria-label'?: string;
       'data-testid'?: string;
     }) => (
-      <a data-testid={dataTestId || 'link'} href={href} data-override-defaults={overrideDefaults}>
+      <a
+        data-testid={dataTestId || 'link'}
+        href={href}
+        data-override-defaults={overrideDefaults}
+        aria-label={ariaLabel}
+      >
         {children}
       </a>
     ),
@@ -206,22 +213,38 @@ describe('PostAttachmentsGenericFiles', () => {
       expect(fileIcons).toHaveLength(2);
     });
 
-    it('renders Download icon for each PDF', () => {
+    it('renders Eye preview icon for each PDF', () => {
       const genericFiles = [createMockFile(), createMockFile({ name: 'second.pdf' })];
       render(<PostAttachmentsGenericFiles genericFiles={genericFiles} />);
 
-      const downloadIcons = document.querySelectorAll('.size-4');
-      expect(downloadIcons).toHaveLength(2);
+      const previewIcons = document.querySelectorAll('.lucide-eye.size-4');
+      expect(previewIcons).toHaveLength(2);
+      expect(document.querySelector('.lucide-download')).not.toBeInTheDocument();
     });
   });
 
-  describe('Download link', () => {
-    it('renders download link with correct href', () => {
+  describe('Preview link', () => {
+    it('renders preview link with correct href', () => {
       const genericFiles = [createMockFile({ urls: { main: 'https://example.com/my-document.pdf' } })];
       render(<PostAttachmentsGenericFiles genericFiles={genericFiles} />);
 
       const link = screen.getByTestId('link');
       expect(link).toHaveAttribute('href', 'https://example.com/my-document.pdf');
+    });
+
+    it('gives the preview link a static accessible name', () => {
+      const genericFiles = [createMockFile({ name: 'report.pdf' })];
+      render(<PostAttachmentsGenericFiles genericFiles={genericFiles} />);
+
+      const link = screen.getByRole('link', { name: 'Preview file' });
+      expect(link).toHaveAttribute('href', 'https://example.com/file.pdf');
+    });
+
+    it('uses the same accessible name for every PDF', () => {
+      const genericFiles = [createMockFile({ name: 'first.pdf' }), createMockFile({ name: 'second.pdf' })];
+      render(<PostAttachmentsGenericFiles genericFiles={genericFiles} />);
+
+      expect(screen.getAllByRole('link', { name: 'Preview file' })).toHaveLength(2);
     });
 
     it('renders correct href for each PDF in multiple files', () => {

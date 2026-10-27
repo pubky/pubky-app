@@ -38,6 +38,31 @@ export const SENSITIVE_CONTEXT_KEYS = new Set([
 ]);
 
 /**
+ * Known injected-script failures shared by the global toast handler and both error sinks.
+ * Keep these specific to scripts outside the app; telemetry-only noise belongs in the list below.
+ * No /g or /y flags: every consumer must get the same result on repeated messages.
+ */
+export const BROWSER_INJECTED_ERROR_PATTERNS: readonly RegExp[] = [
+  // Native webview bridges (pubky-ring iOS/Android hosts) inject scripts that
+  // talk to `window.webkit.messageHandlers` / the Android JavascriptInterface.
+  // When the host tears the bridge down mid-navigation those injected scripts
+  // throw from frames outside our bundle (PUBKY-APP-B6/B7/CJ). Nothing in the
+  // app references the bridge (see rg for `messageHandlers`), so there is no
+  // call site to guard — the patterns are specific to the host's messages.
+  /window\.webkit\.messageHandlers/,
+  /Java object is gone/,
+  /Java exception was raised during method invocation/,
+  // MetaMask (and similar wallets) inject `inpage.js` into every page; it
+  // rejects with "Failed to connect to MetaMask" when the extension is
+  // disabled mid-session (PUBKY-APP-8G). Not our code.
+  /Failed to connect to MetaMask/,
+  // Brave iOS updates these Ethereum provider properties even when no
+  // provider was injected (brave/brave-browser#58670, pubky/pubky-app#2845).
+  // Match the failing assignment, not arbitrary wallet access or app errors.
+  /undefined is not an object \(evaluating ['"]window\.ethereum\.(?:chainId|networkVersion|selectedAddress)\s*=/,
+];
+
+/**
  * Noise neither error sink reports. `getSentryInitBase()` and `initPulse()` both spread this list into
  * their SDK's `ignoreErrors`, so the two sinks cannot drift onto different noise policies; add a pattern
  * here, never in one initializer. Matching differs slightly per SDK (Sentry tests the exception type and
@@ -58,19 +83,7 @@ export const OBSERVABILITY_IGNORE_ERRORS: readonly (string | RegExp)[] = [
   // would report them as unhandled. Genuine upload failures are already
   // captured with full context through the Err.* factory pipeline.
   INLINE_MEDIA_UPLOAD_REJECTION_NAME,
-  // Native webview bridges (pubky-ring iOS/Android hosts) inject scripts that
-  // talk to `window.webkit.messageHandlers` / the Android JavascriptInterface.
-  // When the host tears the bridge down mid-navigation those injected scripts
-  // throw from frames outside our bundle (PUBKY-APP-B6/B7/CJ). Nothing in the
-  // app references the bridge (see rg for `messageHandlers`), so there is no
-  // call site to guard — the patterns are specific to the host's messages.
-  /window\.webkit\.messageHandlers/,
-  /Java object is gone/,
-  /Java exception was raised during method invocation/,
-  // MetaMask (and similar wallets) inject `inpage.js` into every page; it
-  // rejects with "Failed to connect to MetaMask" when the extension is
-  // disabled mid-session (PUBKY-APP-8G). Not our code.
-  /Failed to connect to MetaMask/,
+  ...BROWSER_INJECTED_ERROR_PATTERNS,
 ];
 
 export const PUBKY_IDENTIFIER_KEYS = new Set([

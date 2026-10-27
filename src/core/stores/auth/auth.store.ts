@@ -42,6 +42,7 @@ export const useAuthStore = create<AuthStore>()(
           currentUserPubky: state.currentUserPubky,
           sessionReference: state.sessionReference,
           generation: state.generation,
+          shopCleanupEpoch: state.shopCleanupEpoch,
           retiringSession: state.retiringSession,
           pendingRetirements: state.pendingRetirements,
           hasProfile: state.hasProfile,
