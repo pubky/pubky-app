@@ -66,7 +66,9 @@ const errorMessage = (error: unknown) => {
 };
 
 export const createSeedTasks = (config: SeedConfig) => {
-  // Sessions live for the Cypress run, so a spec can act as any user it seeded earlier
+  // Sessions live in this Node process for the Cypress run, so a spec can act as any user it seeded
+  // earlier. They are not persisted: re-running one test in `cypress open` without the hook that
+  // seeded its users fails with "was not seeded in this Cypress run", so re-run the whole spec.
   const sessions = new Map<string, SeededSession>();
   let sdk: Pubky | undefined;
   const pubky = () => (sdk ??= Pubky.testnet('localhost'));
