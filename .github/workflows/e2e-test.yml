@@ -320,6 +320,9 @@ jobs:
         uses: cypress-io/github-action@v7
         env:
           DEBUG: '@cypress/github-action'
+          # The binary is cached before Cypress verifies it, so every job smoke-tests a cold Electron
+          # launch beside the running stack. That usually takes 2-5s but can pass the 30s default.
+          CYPRESS_VERIFY_TIMEOUT: 120000
         with:
           working-directory: pubky-app/cypress
           config-file: cypress.config.ts
