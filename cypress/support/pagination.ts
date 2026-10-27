@@ -1,16 +1,17 @@
+import { COLLECTIONS_SECTION_PAGE_SIZE } from '../../src/config/collections';
+import { DEFAULT_MAX_THREAD_REPLIES } from '../../src/hooks/useThreadReplies/useThreadReplies.constants';
+
 // Nexus indexes homeserver writes asynchronously (watcher_sleep = 500ms in CI); poll at that pace.
 const NEXUS_POLL_INTERVAL_MS = 500;
 const NEXUS_POLL_ATTEMPTS = 120;
 
-// Matches `NEXUS_POSTS_PER_PAGE` in src/config/nexus.ts
+// `NEXUS_POSTS_PER_PAGE` and `NEXUS_STREAM_MAX_LIMIT` in src/config/nexus.ts, which the spec bundle
+// cannot import (it pulls in the `@/` runtime config). Every page assertion checks the `limit` the
+// app sends against `POSTS_PAGE_SIZE`, so a drift fails on the first request.
 export const POSTS_PAGE_SIZE = 10;
-// Matches `COLLECTIONS_SECTION_PAGE_SIZE` in src/config/collections.ts
-export const COLLECTIONS_PAGE_SIZE = 20;
-// Matches `DEFAULT_MAX_THREAD_REPLIES` in src/hooks/useThreadReplies/useThreadReplies.constants.ts
-export const THREAD_INITIAL_REPLIES = 3;
-
-// Nexus caps a post stream page at 50, enough to read every seeded stream in one request
 const NEXUS_STREAM_MAX_LIMIT = 50;
+export const COLLECTIONS_PAGE_SIZE = COLLECTIONS_SECTION_PAGE_SIZE;
+export const THREAD_INITIAL_REPLIES = DEFAULT_MAX_THREAD_REPLIES;
 
 export type StreamQuery = Record<string, string>;
 
@@ -103,21 +104,20 @@ export const recordStreamPages = (matches: (query: StreamQuery) => boolean): Rec
 // A head poll (`end` without `start`) asks for posts newer than the feed head, not the next page
 export const isPagingRequest = (query: StreamQuery) => query['end'] === undefined || query['start'] !== undefined;
 
-/**
- * Asserts a score-paginated stream was read page by page down to its end: a full first page,
- * each later page resumed from the previous page's Nexus cursor (#2552), and exactly one short
- * page that stopped loading (#2290, #2170). Together the pages reproduce `expectedKeys` in
- * order, so no post is duplicated or skipped.
- */
-export const assertScorePagesReadToEnd = (
+// Where the app resumes a score-paginated stream from the previous page's `last_post_score`
+type PageCursor = { param: 'start' | 'end'; offset: number };
+
+const assertPagesReadToEnd = (
   pages: RecordedStreamPage[],
   expectedKeys: string[],
-  pageSize = POSTS_PAGE_SIZE,
+  pageSize: number,
+  cursor: PageCursor,
 ) => {
   const expectedRequests = Math.floor(expectedKeys.length / pageSize) + 1;
+  expect(expectedRequests, 'seeded stream spans more than one page').to.be.greaterThan(1);
   cy.wrap(pages, { log: false }).should((recorded: RecordedStreamPage[]) => {
     expect(recorded, 'stream page requests').to.have.length(expectedRequests);
-    expect(recorded[0].query['start'], 'first page starts at the stream head').to.equal(undefined);
+    expect(recorded[0].query[cursor.param], 'first page has no cursor').to.equal(undefined);
     recorded.forEach((page, index) => {
       expect(page.query['limit'], `page ${index + 1} limit`).to.equal(String(pageSize));
       const isLast = index === recorded.length - 1;
@@ -129,8 +129,8 @@ export const assertScorePagesReadToEnd = (
       if (index > 0) {
         const previousScore = recorded[index - 1].score;
         expect(previousScore, `page ${index} cursor`).to.be.a('number');
-        expect(page.query['start'], `page ${index + 1} resumes from the Nexus cursor`).to.equal(
-          String((previousScore as number) - 1),
+        expect(page.query[cursor.param], `page ${index + 1} resumes from the Nexus cursor`).to.equal(
+          String((previousScore as number) + cursor.offset),
         );
       }
     });
@@ -139,6 +139,28 @@ export const assertScorePagesReadToEnd = (
     expect(keys, 'pages reproduce the Nexus stream').to.deep.equal(expectedKeys);
   });
 };
+
+/**
+ * Asserts a newest-first stream was read page by page down to its end: a full first page,
+ * each later page resumed from the previous page's Nexus cursor (`start = score - 1`, #2552),
+ * and exactly one short page that stopped loading (#2290, #2170). Together the pages reproduce
+ * `expectedKeys` in order, so no post is duplicated or skipped.
+ */
+export const assertScorePagesReadToEnd = (
+  pages: RecordedStreamPage[],
+  expectedKeys: string[],
+  pageSize = POSTS_PAGE_SIZE,
+) => assertPagesReadToEnd(pages, expectedKeys, pageSize, { param: 'start', offset: -1 });
+
+/**
+ * The oldest-first variant, as a reply thread expands: each later page asks for posts newer than
+ * the previous page (`end = score + 1`), and one short page ends the thread.
+ */
+export const assertAscendingPagesReadToEnd = (
+  pages: RecordedStreamPage[],
+  expectedKeys: string[],
+  pageSize = POSTS_PAGE_SIZE,
+) => assertPagesReadToEnd(pages, expectedKeys, pageSize, { param: 'end', offset: 1 });
 
 // No request URL is fetched twice: a pagination loop re-requests the same cursor
 export const assertNoRepeatedStreamRequests = (pages: RecordedStreamPage[], maxRequests: number) => {

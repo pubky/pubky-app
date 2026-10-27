@@ -1,7 +1,7 @@
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import {
-  assertNoRepeatedStreamRequests,
+  assertAscendingPagesReadToEnd,
   assertScorePagesReadToEnd,
   assertSeededTextsInOrder,
   isPagingRequest,
@@ -23,9 +23,10 @@ const postPrefix = `pagination ${runId} post `;
 const replyPrefix = `pagination ${runId} reply `;
 const rootText = `pagination ${runId} thread root`;
 
-// One page and a half of tagged posts, and a thread whose replies need two expand pages
-const POST_COUNT = POSTS_PAGE_SIZE + 5;
-const REPLY_COUNT = POSTS_PAGE_SIZE + 2;
+// One past a page: a full first page, then a short last page that ends the stream
+const POST_COUNT = POSTS_PAGE_SIZE + 1;
+// The thread opens on its oldest replies; expanding then reads one full and one short page
+const REPLY_COUNT = POSTS_PAGE_SIZE + 1;
 
 const TIMELINE = '[data-cy="timeline-posts"]:visible';
 const SEARCH_TIMELINE = '[data-cy="post-search-results"] [data-cy="timeline-posts"]:visible';
@@ -35,9 +36,9 @@ const seededPosts: SeededText[] = [];
 const seededReplies: SeededText[] = [];
 let authorId = '';
 let rootId = '';
-let homeKeys: string[] = [];
 let profileKeys: string[] = [];
 let searchKeys: string[] = [];
+let replyKeys: string[] = [];
 
 const pad = (index: number) => String(index + 1).padStart(2, '0');
 
@@ -48,6 +49,8 @@ const seededTextsFor = (keys: string[]) =>
 const isPostTimelineQuery = (query: Record<string, string>) =>
   query['kind'] === undefined && query['sorting'] !== 'total_engagement' && isPagingRequest(query);
 
+// Every surface reads a stream only this run writes to (one author, one tag, one thread), so the
+// spec does not depend on what else the stack holds or on which test runs first.
 describe('pagination', () => {
   // Seeded through the API: this spec pages through the streams, and posting and replying in the UI
   // are covered in posts.cy.ts. Nothing is signed in, so every surface below pages from Nexus.
@@ -79,16 +82,17 @@ describe('pagination', () => {
     // The replies are the last writes: once they are indexed, every earlier post is too
     cy.then(() =>
       waitForNexusStream(
-        { source: 'post_replies', author_id: authorId, post_id: rootId },
+        { source: 'post_replies', author_id: authorId, post_id: rootId, order: 'ascending' },
         seededReplies.map((reply) => reply.id),
-      ),
+      ).then((keys) => {
+        replyKeys = keys;
+      }),
     );
     cy.then(() => {
-      const postIds = [...seededPosts.map((post) => post.id), rootId];
-      waitForNexusStream({ source: 'all', sorting: 'timeline' }, postIds).then((keys) => {
-        homeKeys = keys;
-      });
-      waitForNexusStream({ source: 'author', author_id: authorId }, postIds).then((keys) => {
+      waitForNexusStream({ source: 'author', author_id: authorId }, [
+        ...seededPosts.map((post) => post.id),
+        rootId,
+      ]).then((keys) => {
         profileKeys = keys;
       });
       waitForNexusStream(
@@ -98,21 +102,6 @@ describe('pagination', () => {
         searchKeys = keys;
       });
     });
-  });
-
-  it('home timeline loads every page once and stops at the end', () => {
-    const pages = recordStreamPages(
-      (query) =>
-        query['source'] === 'all' &&
-        query['tags'] === undefined &&
-        query['author_id'] === undefined &&
-        isPostTimelineQuery(query),
-    );
-    cy.visit('/home');
-
-    scrollTimelineToEnd(TIMELINE, homeKeys.length);
-    assertScorePagesReadToEnd(pages, homeKeys);
-    assertSeededTextsInOrder(TIMELINE, postPrefix, seededTextsFor(homeKeys));
   });
 
   it('profile posts tab loads every page once and stops at the end', () => {
@@ -132,7 +121,7 @@ describe('pagination', () => {
   });
 
   it('tag search results load every page once and stop at the end', () => {
-    expect(searchKeys, 'tagged posts span more than one page').to.have.length(POST_COUNT);
+    expect(searchKeys, 'tagged posts').to.have.length(POST_COUNT);
     const pages = recordStreamPages(
       (query) => query['source'] === 'all' && query['tags'] === tag && isPostTimelineQuery(query),
     );
@@ -143,8 +132,17 @@ describe('pagination', () => {
     assertSeededTextsInOrder(SEARCH_TIMELINE, postPrefix, seededTextsFor(searchKeys));
   });
 
-  it('post replies expand to the whole thread without repeating a page', () => {
-    const pages = recordStreamPages((query) => query['source'] === 'post_replies' && query['post_id'] === rootId);
+  it('post replies expand to the whole thread, oldest first, page by page', () => {
+    expect(replyKeys, 'thread replies').to.have.length(REPLY_COUNT);
+    // The opening slice may be served from the reply stream another surface cached for this
+    // post; expanding always pages from Nexus, so only those requests are recorded
+    const expandPages = recordStreamPages(
+      (query) =>
+        query['source'] === 'post_replies' &&
+        query['post_id'] === rootId &&
+        query['order'] === 'ascending' &&
+        query['limit'] !== String(THREAD_INITIAL_REPLIES),
+    );
     const replyTexts = ($replies: JQuery<HTMLElement>) =>
       $replies.toArray().map((reply) => Cypress.$(reply).find('[data-cy="post-text"]').first().text().trim());
     const chronological = seededReplies.map((reply) => reply.text);
@@ -156,9 +154,10 @@ describe('pagination', () => {
       .first()
       .should('contain.text', rootText);
 
-    // The thread opens on its oldest replies, then expands in ascending pages
     cy.get(THREAD_REPLY).should(($replies) => {
-      expect(replyTexts($replies)).to.deep.equal(chronological.slice(0, THREAD_INITIAL_REPLIES));
+      expect(replyTexts($replies), 'oldest replies first').to.deep.equal(
+        chronological.slice(0, THREAD_INITIAL_REPLIES),
+      );
     });
     cy.get('[data-cy="show-more-replies-btn"]:visible').should('have.length', 1).click();
 
@@ -166,7 +165,6 @@ describe('pagination', () => {
       expect(replyTexts($replies), 'every reply once, oldest first').to.deep.equal(chronological);
     });
     cy.get('[data-cy="show-more-replies-btn"]:visible').should('not.exist');
-    // The initial slice, then one full and one short expand page
-    assertNoRepeatedStreamRequests(pages, 3);
+    assertAscendingPagesReadToEnd(expandPages, replyKeys);
   });
 });
