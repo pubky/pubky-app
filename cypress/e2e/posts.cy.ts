@@ -369,17 +369,16 @@ describe('posts', () => {
   });
 
   it('can mention a profile picked from the @ autocomplete', () => {
-    // todo: use space in username after bug fixed https://github.com/pubky/pubky-app/issues/1638
-    seedUserViaApi(`Mentionable${String(Date.now()).slice(-6)}`).then((mentioned) => {
+    // A name with a space covers multi-word mention lookup (https://github.com/pubky/pubky-app/issues/1638)
+    seedUserViaApi(`Mention Me ${String(Date.now()).slice(-6)}`).then((mentioned) => {
       waitForNexusUserSearch(mentioned);
 
       createQuickPostWithMention(mentioned.name);
 
+      // The autocomplete inserted a real mention, which links to the profile, not just the name
       cy.findFirstPostInFeed().within(() => {
-        cy.get('[data-cy="post-text"]').should('contain.text', mentioned.name);
+        cy.get(`[data-cy="post-text"] a[href="/profile/${mentioned.id}"]`).should('contain.text', `@${mentioned.name}`);
       });
-      // The autocomplete inserted a real mention, not just the name
-      waitForNexusNotifications(mentioned, 'mention');
     });
   });
 
