@@ -85,6 +85,8 @@ const assertPagesReadToEnd = (
   pageSize: number,
   cursor: PageCursor,
 ) => {
+  // One request per full page, plus exactly one request that ends the stream: a short last
+  // page, or an empty one when `expectedKeys.length` divides evenly by `pageSize`.
   const expectedRequests = Math.floor(expectedKeys.length / pageSize) + 1;
   expect(expectedRequests, 'seeded stream spans more than one page').to.be.greaterThan(1);
   cy.wrap(pages, { log: false }).should((recorded: RecordedStreamPage[]) => {

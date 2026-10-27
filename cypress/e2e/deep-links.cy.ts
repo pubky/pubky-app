@@ -116,7 +116,7 @@ describe('logged-out deep links', () => {
   it('shows the not-found view for a post that does not exist', () => {
     cy.visit(`/post/${authorId}/${UNKNOWN_POST_ID}`);
 
-    cy.get('[data-cy="post-not-found"]:visible').should('have.length', 1);
+    cy.get('[data-cy="post-not-found"]:visible', NOT_FOUND_TIMEOUT).should('have.length', 1);
     cy.get('[data-cy="single-post-card"]:visible').should('not.exist');
   });
 

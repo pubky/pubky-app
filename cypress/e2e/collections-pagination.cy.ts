@@ -64,8 +64,9 @@ describe('collections pagination', () => {
   it('my collections shows one page, then the rest on "Show more", once each', () => {
     expect(collectionKeys, 'authored collections').to.have.length(COLLECTION_COUNT);
     const expectedIds = idsForKeys(collectionKeys);
-    // The section and the save picker share this stream, so the picker's larger first fetch can
-    // serve both section pages from the local cache: up to three requests, never one repeated.
+    // `fetchAuthoredCollections` loads this shared `author:collection` stream at the 50-item
+    // Nexus limit, so that fetch can serve both section pages from the local cache: up to
+    // three requests, never one repeated.
     const pages = recordStreamPages(
       (query) => query['source'] === 'author' && query['author_id'] === authorId && query['kind'] === 'collection',
     );
