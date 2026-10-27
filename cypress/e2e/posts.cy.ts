@@ -38,6 +38,7 @@ import {
   expectVisibleReachSelected,
   expectVisibleSortSelected,
   resetHomeFeedToAllRecent,
+  revealPostInTimeline,
 } from '../support/feeds';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
@@ -400,6 +401,7 @@ describe('posts', () => {
     goToProfilePageFromHeader();
     cy.get('[data-cy="profile-filter-item-posts"]').click();
     cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+    expectTimelineContains(postContent);
 
     editPost({ newPostContent: editedContent, filterText: postContent });
     cy.findFirstPostInFeedFiltered(editedContent).should('be.visible');
@@ -539,6 +541,7 @@ describe('posts', () => {
     const feedTag = `feed${String(stamp).slice(-6)}`;
     const profileTag = `prof${String(stamp).slice(-6)}`;
     const expectTagsOnPost = (tags: string[]) => {
+      expectTimelineContains(postContent);
       cy.findFirstPostInFeedFiltered(postContent).within(() => {
         tags.forEach((tag) => {
           cy.get(`[data-cy="post-tag"][data-tag-label="${tag}"]`).filter(':visible').should('have.length.at.least', 1);
@@ -556,7 +559,7 @@ describe('posts', () => {
         resetHomeFeedToAllRecent();
         expectVisibleReachSelected('all-reach-toggle');
         expectVisibleSortSelected('recent-sort-toggle');
-        cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.Yes);
+        revealPostInTimeline(postContent);
         fastTagPostInFeed([feedTag], postContent);
         expectTagsOnPost([feedTag]);
 
@@ -564,6 +567,7 @@ describe('posts', () => {
         searchForProfileByPubky(author.pubky, author.name);
         cy.get('[data-cy="profile-filter-item-posts"]').click();
         cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
+        expectTimelineContains(postContent);
         fastTagPostInFeed([profileTag], postContent);
         expectTagsOnPost([feedTag, profileTag]);
 
@@ -591,7 +595,8 @@ describe('posts', () => {
       });
 
       resetHomeFeedToAllRecent();
-      cy.findFirstPostInFeedFiltered(postToRepost, CheckForNewPosts.Yes);
+      revealPostInTimeline(postToRepost);
+      expectTimelineContains(postToReplyTo);
 
       // * reply to the first post from the home feed
       replyToPost({ replyContent, filterText: postToReplyTo });
