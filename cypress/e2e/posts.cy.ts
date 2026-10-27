@@ -3,7 +3,12 @@ import { backupDownloadFilePath } from '../support/auth';
 import { applyContentFilter } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
-import { waitForNexusNotifications, waitForNexusPostTags, waitForNexusUserSearch } from '../support/nexus';
+import {
+  waitForNexusNotifications,
+  waitForNexusPost,
+  waitForNexusPostTags,
+  waitForNexusUserSearch,
+} from '../support/nexus';
 import { createPostViaApi, seedUserViaApi } from '../support/seed';
 import { slowCypressDown } from 'cypress-slow-down';
 // registers the cy.slowDown and cy.slowDownEnd commands
@@ -549,6 +554,8 @@ describe('posts', () => {
 
     seedUserViaApi(`Tag Target ${String(stamp).slice(-6)}`).then((author) => {
       createPostViaApi(author, postContent).then((post) => {
+        waitForNexusPost(post);
+
         // * tag the post from the home feed. Reach All lists authors the viewer does not follow. The
         // feed loaded before the post existed, so it arrives through 'See new posts' unless the
         // reach change already refetched it.

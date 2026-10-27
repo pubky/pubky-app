@@ -40,7 +40,7 @@ describe('collections pagination', () => {
     slowCypressDown();
     cy.deleteDownloadsFolder();
 
-    // Each collection is indexed before the next is written, so the stream orders them as seeded
+    // Nexus indexes the collections in the order they are written, so the stream orders them as seeded
     seedUserViaApi(username, { bio: 'I collect everything', withRecoveryFile: true }).then((author) => {
       authorId = author.id;
       Cypress._.times(COLLECTION_COUNT, (index) => {

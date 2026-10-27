@@ -11,7 +11,7 @@ import { HasBackedUp, LatestNotificationReadState } from '../support/types/enums
 import type { SeededUser } from '../support/types/seed';
 import { verifyNotificationCounter } from '../support/common';
 import { goToProfilePageFromHeader } from '../support/header';
-import { waitForNexusBookmark, waitForNexusFollow, waitForNexusNotifications } from '../support/nexus';
+import { waitForNexusNotifications, waitForNexusUser } from '../support/nexus';
 import {
   addPostToCollectionViaApi,
   createCollectionViaApi,
@@ -84,7 +84,6 @@ describe('notifications', () => {
     // * a profile the receiver already follows follows them back
     seedActorViaApi('Friend').then((friend) => {
       followUserViaApi(receiver, friend);
-      waitForNexusFollow(receiver, friend);
       followUserViaApi(friend, receiver);
       waitForNexusNotifications(receiver, 'new_friend', { actor: friend });
 
@@ -126,7 +125,6 @@ describe('notifications', () => {
     seedActorViaApi('ProfileTagger').then((profileTagger) => {
       seedActorViaApi('PostTagger').then((postTagger) => {
         tagUserViaApi(profileTagger, receiver, [profileTag]);
-        waitForNexusNotifications(receiver, 'tag_profile', { actor: profileTagger });
         createPostViaApi(receiver, postContent).then((post) => tagPostViaApi(postTagger, post, [postTag]));
         waitForNexusNotifications(receiver, 'tag_post', { actor: postTagger });
 
@@ -186,6 +184,8 @@ describe('notifications', () => {
   it('can disable being notified for profile being mentioned in a post', () => {
     // A separate recipient, so turning mentions off leaves the receiver's settings alone for the other tests
     seedUserViaApi(uniqueName('NotifMuted'), { withRecoveryFile: true }).then((recipient) => {
+      waitForNexusUser(recipient);
+
       // * the recipient signs in and disables mention notifications
       cy.signInWithEncryptedFile(backupDownloadFilePath(recipient.name));
       cy.get('[data-cy="header-settings-btn"]').click();
@@ -407,7 +407,6 @@ describe('notifications', () => {
           items: [seedPost],
         }).then((collection) => {
           followCollectionViaApi(receiver, collection);
-          waitForNexusBookmark(receiver, collection);
           createPostViaApi(curator, addedPostContent).then((addedPost) =>
             addPostToCollectionViaApi(curator, collection, addedPost),
           );
@@ -439,9 +438,7 @@ describe('notifications', () => {
     seedActorViaApi('Busy').then((actor) => {
       createPostViaApi(receiver, `I will get three notifications about this post! ${Date.now()}`).then((post) => {
         tagPostViaApi(actor, post, ['multi-notif']);
-        waitForNexusNotifications(receiver, 'tag_post', { actor });
         replyViaApi(actor, post, 'Replying for a second notification!');
-        waitForNexusNotifications(receiver, 'reply', { actor });
       });
       createPostViaApi(actor, `Hello ${mentionOf(receiver)} ${Date.now()}`);
       waitForNexusNotifications(receiver, 'mention', { actor });

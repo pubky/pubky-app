@@ -4,7 +4,7 @@ import { BackupType, HasBackedUp } from '../support/types/enums';
 import { backupDownloadFilePath } from '../support/auth';
 import { searchForProfileByName, searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
-import { waitForNexusUserTags } from '../support/nexus';
+import { waitForNexusUser, waitForNexusUserTags } from '../support/nexus';
 import { seedUserViaApi } from '../support/seed';
 
 describe('profile', () => {
@@ -140,6 +140,7 @@ describe('profile', () => {
     // the profile to tag only needs to exist, so it is seeded through the API
     seedUserViaApi(`${Cypress._.random(100_000)}-Tag My Button`, { bio: 'Tag me from my profile header' }).then(
       (target) => {
+        waitForNexusUser(target);
         searchForProfileByPubky(target.pubky, target.name);
 
         // the tag button opens their Tagged tab

@@ -57,7 +57,7 @@ describe('pagination', () => {
   before(() => {
     slowCypressDown();
 
-    // Each post is indexed before the next is written, so the streams order them as seeded
+    // Nexus indexes the posts in the order they are written, so the streams order them as seeded
     seedUserViaApi(username, { bio: 'I post one page at a time' }).then((author) => {
       authorId = author.id;
 

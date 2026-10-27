@@ -30,7 +30,7 @@ import {
   fastTagPostInFeed,
   waitForFeedToLoad,
 } from '../support/posts';
-import { waitForNexusFollow, waitForNexusPostTags, waitForNexusUserTags } from '../support/nexus';
+import { waitForNexusPost, waitForNexusPostTags, waitForNexusUserTags } from '../support/nexus';
 import {
   createImagePostViaApi,
   createPostViaApi,
@@ -111,7 +111,7 @@ describe('feed and filters', () => {
       user4 = user;
     });
 
-    // Posts are created (and indexed) in the order the recency assertions expect, oldest first
+    // Posts are created in the order the recency assertions expect, oldest first, and Nexus indexes them in that order
     cy.then(() => {
       createPostViaApi(user1, profile1.postText1);
       createPostViaApi(user1, profile1.postText2).then((post) => {
@@ -152,14 +152,7 @@ describe('feed and filters', () => {
       // proves 'Tagged as' considers taggers within the viewer's web of trust
       tagUserViaApi(user1, user4, [taggedAsLabelInNetwork]);
 
-      waitForNexusFollow(user2, user1);
-      waitForNexusFollow(user3, user2);
-      waitForNexusFollow(user1, user2);
-      waitForNexusFollow(user1, user3);
-      waitForNexusFollow(user1, user4);
-      waitForNexusPostTags(profile3Post, ['p3tag1', 'p3tag2', 'p3tag3', 'p3tag4', 'p3tag5']);
-      waitForNexusPostTags(profile2Post, ['p2tag1', 'p2tag2', 'p2tag3', 'p2tag4']);
-      waitForNexusUserTags(user1, [taggedAsLabelOutsideNetwork]);
+      // The final seed: once Nexus has indexed it, every seed above is indexed too
       waitForNexusUserTags(user4, [taggedAsLabelInNetwork]);
     });
   });
@@ -516,14 +509,10 @@ describe('feed and filters', () => {
     // Profile 3 follows only profile 2, and is friends with nobody.
     tagPostViaApi(user3, profile4Post, [reachTag]);
     createPostViaApi(user3, older, { tags: [sortTag] }).then((olderPost) => {
-      createPostViaApi(user3, newer, { tags: [sortTag] }).then((newerPost) =>
-        waitForNexusPostTags(newerPost, [sortTag]),
-      );
+      createPostViaApi(user3, newer, { tags: [sortTag] });
       tagPostViaApi(user3, olderPost, ['sorta', 'sortb', 'sortc']);
-      waitForNexusPostTags(olderPost, [sortTag, 'sorta', 'sortb', 'sortc']);
     });
     createPostViaApi(user3, shortPost, { tags: [kindTag] }).then((post) => waitForNexusPostTags(post, [kindTag]));
-    cy.then(() => waitForNexusPostTags(profile4Post, [reachTag]));
 
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     resetHomeFeedToAllRecent();
@@ -671,7 +660,7 @@ describe('visual layout', () => {
       createPostViaApi(user, textOnlyPostContent);
 
       // create another post with image (3 posts with images in total)
-      createImagePostViaApi(user, imagePostContent3);
+      createImagePostViaApi(user, imagePostContent3).then((post) => waitForNexusPost(post));
     });
 
     cy.signInWithEncryptedFile(backupDownloadFilePath(photographer));

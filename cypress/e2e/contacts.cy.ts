@@ -3,7 +3,7 @@ import { BackupType, HasBackedUp } from '../support/types/enums';
 import { goToProfilePageFromHeader } from '../support/header';
 import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
 import { backupDownloadFilePath } from '../support/auth';
-import { waitForNexusFollow } from '../support/nexus';
+import { waitForNexusFollow, waitForNexusUser } from '../support/nexus';
 import { createPostViaApi, seedUserViaApi } from '../support/seed';
 import { clickUnfollowButton, reloadUntilOwnFollowingIsEmpty, unfollowUserByUsername } from '../support/profile';
 
@@ -76,6 +76,7 @@ describe('contacts', () => {
       createPostViaApi(author, postContent);
       seedUserViaApi(`Menu Follower ${stamp}`, { bio: 'I follow from post menus', withRecoveryFile: true }).then(
         (follower) => {
+          waitForNexusUser(follower);
           cy.signInWithEncryptedFile(backupDownloadFilePath(follower.name));
           followFromPostMenu(postContent);
           waitForNexusFollow(follower, author);

@@ -1,5 +1,4 @@
 import { backupDownloadFilePath } from './common';
-import { waitForNexusPost, waitForNexusUser } from './nexus';
 import type { SeedCreatePostArgs, SeededPost, SeededUser } from './types/seed';
 
 // Spec-side helpers for the seed tasks in cypress/plugins/seed.ts.
@@ -8,33 +7,34 @@ import type { SeedCreatePostArgs, SeededPost, SeededUser } from './types/seed';
 // notifications to receive) through the homeserver API instead of driving the UI for every
 // precondition. Each UI flow they replace keeps its own focused test in the spec that owns it,
 // so seeding saves wall-clock time without dropping coverage.
+//
+// Every helper resolves once the homeserver has accepted the write, without waiting for Nexus.
+// Nexus indexes a homeserver's writes in the order they were made, so a spec seeds everything a
+// test needs and then waits once, on its final seed, with a `waitForNexus*` helper from nexus.ts
+// before the UI reads any of it. Seeds written one after another are indexed in that order, so
+// timelines and threads list them as seeded.
 
 /**
  * Signs a new user up on the test homeserver and writes their profile, the API equivalent of UI
- * onboarding (covered by onboarding.cy.ts), then waits until Nexus has indexed them.
+ * onboarding (covered by onboarding.cy.ts).
  * With `withRecoveryFile`, also saves their encrypted recovery file where the UI backup would land,
  * so the spec can sign in as them with `cy.signInWithEncryptedFile(backupDownloadFilePath(name))`.
  */
 export const seedUserViaApi = (name: string, { bio = '', withRecoveryFile = false } = {}) =>
-  cy
-    .task<SeededUser>('seedCreateUser', {
-      name,
-      bio,
-      recoveryFilePath: withRecoveryFile ? backupDownloadFilePath(name) : undefined,
-    })
-    .then((user) => waitForNexusUser(user).then(() => user));
+  cy.task<SeededUser>('seedCreateUser', {
+    name,
+    bio,
+    recoveryFilePath: withRecoveryFile ? backupDownloadFilePath(name) : undefined,
+  });
 
-// Nexus orders timelines and threads by indexing time, so every post-creating helper below waits for
-// its post to be indexed: posts seeded one after another keep that order, with no tied scores.
-const createIndexedPost = (args: SeedCreatePostArgs) =>
-  cy.task<SeededPost>('seedCreatePost', args).then((post) => waitForNexusPost(post).then(() => post));
+const createPost = (args: SeedCreatePostArgs) => cy.task<SeededPost>('seedCreatePost', args);
 
 /**
  * Publishes a short post as `author` (the composer is covered in posts.cy.ts). `tags` are added by
- * the author right after, as tagging in the composer does. Resolves once Nexus has indexed the post.
+ * the author right after, as tagging in the composer does.
  */
 export const createPostViaApi = (author: SeededUser, content: string, { tags }: { tags?: string[] } = {}) =>
-  createIndexedPost({ authorId: author.id, content, kind: 'short', tags });
+  createPost({ authorId: author.id, content, kind: 'short', tags });
 
 /** Uploads a fixture image and publishes an image post attaching it, as the composer's image upload does. */
 export const createImagePostViaApi = (
@@ -42,7 +42,7 @@ export const createImagePostViaApi = (
   content: string,
   { tags, fixture = 'mustache-you.png' }: { tags?: string[]; fixture?: string } = {},
 ) =>
-  createIndexedPost({
+  createPost({
     authorId: author.id,
     content,
     kind: 'image',
@@ -52,16 +52,16 @@ export const createImagePostViaApi = (
 
 /** Replies to `parent` as `author` (the reply dialogs are covered in posts.cy.ts). */
 export const replyViaApi = (author: SeededUser, parent: SeededPost, content: string) =>
-  createIndexedPost({ authorId: author.id, content, kind: 'short', parentUri: parent.uri });
+  createPost({ authorId: author.id, content, kind: 'short', parentUri: parent.uri });
 
 /** Reposts `original` as `author`, with optional quote `content` (the repost dialog is covered in posts.cy.ts). */
 export const repostViaApi = (author: SeededUser, original: SeededPost, content = '') =>
-  createIndexedPost({ authorId: author.id, content, kind: 'short', embed: { uri: original.uri, kind: original.kind } });
+  createPost({ authorId: author.id, content, kind: 'short', embed: { uri: original.uri, kind: original.kind } });
 
 /** The text the @mention autocomplete inserts for `user`; Nexus turns it into a mention of them. */
 export const mentionOf = (user: SeededUser) => user.pubky;
 
-/** Rewrites `post` with new `content`, as editing it in the app does. Wait on the effect you need. */
+/** Rewrites `post` with new `content`, as editing it in the app does. */
 export const editPostViaApi = (author: SeededUser, post: SeededPost, content: string) =>
   cy.task('seedEditPost', { authorId: author.id, postId: post.id, content });
 
@@ -85,21 +85,19 @@ export const followUserViaApi = (follower: SeededUser, followee: SeededUser) =>
 
 /**
  * Creates a collection holding `items` as `author` (creating one in the UI is covered in
- * collections.cy.ts). Resolves once Nexus has indexed it.
+ * collections.cy.ts).
  */
 export const createCollectionViaApi = (
   author: SeededUser,
   name: string,
   { description = '', items = [] }: { description?: string; items?: SeededPost[] } = {},
 ) =>
-  cy
-    .task<SeededPost>('seedCreateCollection', {
-      authorId: author.id,
-      name,
-      description,
-      items: items.map((item) => item.uri),
-    })
-    .then((collection) => waitForNexusPost(collection).then(() => collection));
+  cy.task<SeededPost>('seedCreateCollection', {
+    authorId: author.id,
+    name,
+    description,
+    items: items.map((item) => item.uri),
+  });
 
 /** Adds `post` to `collection`, rewriting the collection post as saving into it in the app does. */
 export const addPostToCollectionViaApi = (author: SeededUser, collection: SeededPost, post: SeededPost) =>
