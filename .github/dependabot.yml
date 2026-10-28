@@ -1,5 +1,12 @@
 version: 2
 updates:
+  # Security updates are event-driven (a new advisory triggers a scan), so no
+  # schedule, cooldown or open-pull-requests-limit here can delay them:
+  # cooldown is version-updates-only, and security PRs neither count towards
+  # nor are capped by the version-update PR limit. What CAN silently block a
+  # security PR is repo settings (Dependabot security updates / grouped
+  # security updates / auto-triage rules) or an `ignore` rule — ignore rules
+  # apply to security updates too, so none may be added for shipped deps.
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -10,36 +17,62 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule:
+      # Version updates only; security fixes do not wait for this schedule.
       interval: monthly
     cooldown:
       default-days: 7
     groups:
+      # One grouped PR for all npm security fixes, so a burst of advisories
+      # (e.g. 2026-10-22: next, @sentry/nextjs, sharp) lands as a single
+      # reviewable change. Exact pins in package.json do not block security
+      # updates: Dependabot bumps the pin to the minimum patched version.
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
       nextjs:
+        applies-to: version-updates
         patterns:
           - next
           - "@next/*"
       react:
+        applies-to: version-updates
         patterns:
           - react
           - react-dom
           - "@types/react"
           - "@types/react-dom"
       vitest:
+        applies-to: version-updates
         patterns:
           - vitest
           - "@vitest/*"
           - vitest-browser-react
       pubky-sdk:
+        applies-to: version-updates
         patterns:
           - "@synonymdev/*"
           - pubky-app-specs
       production-minor-patch:
+        applies-to: version-updates
         dependency-type: production
         update-types:
           - minor
           - patch
       development-minor-patch:
+        applies-to: version-updates
         dependency-type: development
         update-types:
           - minor
           - patch
+
+  # The Dockerfile pins `node:lts-alpine`, a floating tag, so Dependabot has no
+  # version to bump and this entry is inert until the base image is pinned by
+  # version or digest (see the security checklist in docs/development-workflow.md).
+  # Base-image freshness today comes from rebuilding the image.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
