@@ -18,16 +18,24 @@ on:
   workflow_dispatch:
     inputs:
       specs:
-        description: 'Comma-separated spec file names from cypress/e2e (default: the full e2e-test.yml list)'
+        description: 'Comma-separated spec file names from cypress/e2e. Leave empty to run the full E2E_STAGING_SPECS_DEFAULT list.'
         required: false
         type: string
-        default: 'contacts.cy.ts,feed.cy.ts,notifications.cy.ts,onboarding.cy.ts,posts.cy.ts,profile.cy.ts,search.cy.ts,settings.cy.ts,collections.cy.ts,pagination.cy.ts,collections-pagination.cy.ts,deep-links.cy.ts'
+  # TEMP: remove before merge
+  push:
+    branches: [cursor/e2e-staging-workflow-e74d]
 
 # Serialise manual runs: every spec shares the staging backend, so two
 # concurrent runs could interfere with each other. Queue, do not cancel.
 concurrency:
   group: e2e-staging
   cancel-in-progress: false
+
+env:
+  # Default spec list: the full e2e-test.yml matrix. The dispatch input
+  # overrides it; triggers without inputs (the TEMP push trigger, or a blank
+  # dispatch field) fall back to it in the Resolve step below.
+  E2E_STAGING_SPECS_DEFAULT: 'contacts.cy.ts,feed.cy.ts,notifications.cy.ts,onboarding.cy.ts,posts.cy.ts,profile.cy.ts,search.cy.ts,settings.cy.ts,collections.cy.ts,pagination.cy.ts,collections-pagination.cy.ts,deep-links.cy.ts'
 
 jobs:
   e2e-staging:
@@ -108,7 +116,7 @@ jobs:
         id: specs
         env:
           SPECS_INPUT: ${{ inputs.specs }}
-        run: bash .github/scripts/cypress-spec-list.sh "$SPECS_INPUT"
+        run: bash .github/scripts/cypress-spec-list.sh "${SPECS_INPUT:-$E2E_STAGING_SPECS_DEFAULT}"
 
       - name: Build the app
         run: npm run build
