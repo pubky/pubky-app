@@ -23,33 +23,37 @@ afterEach(() => {
 });
 
 // Execute the installed Next history integration unchanged, without importing
-// its bundler-only RSC graph. The route reducer is the controlled boundary here.
+// its bundler-only RSC graph. The navigator module is the controlled boundary here.
 function installNextHistory(child: Window) {
   const require = createRequire(import.meta.url);
   const source = readFileSync(require.resolve('next/dist/client/components/app-router'), 'utf8');
+  const popStateStart = source.indexOf('function hasMissedTraversal(');
+  const popStateEnd = source.indexOf('function HistoryUpdater(', popStateStart);
   const copyStart = source.indexOf('function copyNextJsInternalHistoryState(');
   const copyEnd = source.indexOf('function Head(', copyStart);
   const effectStart = source.indexOf('    (0, _react.useEffect)(()=>{\n        const originalPushState');
   const effectEnd = source.indexOf('    }, []);', effectStart) + '    }, []);'.length;
+  expect(popStateStart).toBeGreaterThan(-1);
+  expect(popStateEnd).toBeGreaterThan(-1);
   expect(copyStart).toBeGreaterThan(-1);
   expect(effectStart).toBeGreaterThan(-1);
   const traverse = vi.fn();
-  const updateUrl = vi.fn();
+  const restore = vi.fn();
   let dispose = () => {};
-  runInNewContext(source.slice(copyStart, copyEnd) + source.slice(effectStart, effectEnd), {
-    window: child,
-    URL,
-    _react: {
-      useEffect: (run: () => () => void) => {
-        dispose = run();
+  runInNewContext(
+    source.slice(popStateStart, popStateEnd) + source.slice(copyStart, copyEnd) + source.slice(effectStart, effectEnd),
+    {
+      window: child,
+      URL,
+      _react: {
+        useEffect: (run: () => () => void) => {
+          dispose = run();
+        },
       },
-      startTransition: (run: () => void) => run(),
+      _navigator: { restore, traverse },
     },
-    _routerreducertypes: { ACTION_RESTORE: 'restore' },
-    _useactionqueue: { dispatchAppRouterAction: updateUrl },
-    _approuterinstance: { dispatchTraverseAction: traverse },
-  });
-  return { dispose: () => dispose(), traverse, updateUrl };
+  );
+  return { dispose: () => dispose(), traverse, restore };
 }
 
 describe('Shop frame history ownership', () => {
@@ -92,7 +96,7 @@ describe('Shop frame history ownership', () => {
         frameWindow.location.href,
         catalogState.__PRIVATE_NEXTJS_INTERNALS_TREE,
       );
-      expect(next.updateUrl).not.toHaveBeenCalled();
+      expect(next.restore).not.toHaveBeenCalled();
       expect(onNavigate).toHaveBeenCalledTimes(navigateCalls);
     },
   );
