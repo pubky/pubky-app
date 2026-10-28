@@ -1,0 +1,69 @@
+name: Security Audit
+
+on:
+  schedule:
+    # Daily at 06:47 UTC. Scheduled runs always execute against the default branch.
+    - cron: '47 6 * * *'
+  # Manual trigger for testing and for re-checking after a fix lands.
+  workflow_dispatch:
+
+concurrency:
+  # One repo-wide group: the job maintains a single tracking issue, so
+  # concurrent runs (schedule + manual dispatch) must not race its updates.
+  group: security-audit
+  cancel-in-progress: false
+
+# Least privilege: checkout needs contents:read, the tracking issue needs
+# issues:write. Nothing else. No secrets beyond GITHUB_TOKEN are used.
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  npm-audit:
+    name: npm audit (critical + high)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        # Pinned by SHA: this workflow is part of the supply-chain security
+        # story, so it follows the hardening guidance the rest of the repo's
+        # workflows (floating major tags) do not yet apply.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Only the lockfile and the audit script are needed — skip the rest.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.nvmrc
+            /package.json
+            /package-lock.json
+            /scripts/security-audit/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      # Both audits read the lockfile only (no npm ci). The --omit=dev pass
+      # identifies what ships in the Docker image; the difference from the full
+      # pass is dev/CI-only. npm exits non-zero when vulnerabilities exist, so
+      # the script validates the JSON shape to distinguish "findings" from
+      # "audit failed".
+      - name: Audit the lockfile
+        run: |
+          npm audit --json > audit-all.json || true
+          npm audit --omit=dev --json > audit-prod.json || true
+
+      # Renders the report into the step summary and creates/updates/closes the
+      # single tracking issue. Exit code stays green when findings exist: the
+      # issue is the visibility channel, a red X on the default branch would
+      # only re-run the same report.
+      - name: Report and sync tracking issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Node 24 runs the .ts script natively (type stripping); the repo is not
+          # "type": "module", so silence the one-time reparse warning in the log.
+          NODE_OPTIONS: '--disable-warning=MODULE_TYPELESS_PACKAGE_JSON'
+        run: node scripts/security-audit/security-audit.ts audit-all.json audit-prod.json audit-report.md
