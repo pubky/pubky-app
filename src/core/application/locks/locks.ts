@@ -3,7 +3,7 @@ import { LOCK_ATTACHMENT_UPLOAD_CONCURRENCY, PAYKIT_PAYMENT_IN_HOURS } from '@/c
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { isAppError, isNotFound, isValidationError, toAppError } from '@/libs/error/error.utils';
+import { isAppError, isAuthError, isNotFound, isValidationError, toAppError } from '@/libs/error/error.utils';
 import {
   getImageUploadSizeLimitKind,
   IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY,
@@ -651,9 +651,12 @@ export class LocksApplication {
    * post has to reference them. Attachments upload a few at a time (`uploadAttachments`); the post and
    * the lock follow once all of them are up.
    *
-   * TODO:[Locks] #2039 — a failure part-way leaves the uploaded resources orphaned on the server (every
-   * attachment that finished, including the ones still in flight when another failed). See the note on
-   * `LocksService.createContentLock` for the cleanup rules.
+   * A failure before the app holds the lock deletes every upload the Lock Server confirmed (#2039).
+   * That includes a `createContentLock` that failed after the Lock Server created the lock (no answer,
+   * or an answer the app could not read): the app never posts an announcement for that lock, so
+   * nothing references it and its files are not worth keeping.
+   * TODO:[Locks] #2039 — closing the tab mid-publish skips this clean-up; server-side reaping is
+   * pubky/locks#107.
    *
    * The composer checks the file count and size against the Lock Server defaults first
    * (`LOCK_ATTACHMENT_*` in `@/config/posts`); the server stays the authority.
@@ -672,35 +675,47 @@ export class LocksApplication {
       files.push(await this.toLockContentFile(file));
     }
 
-    // The guarded bytes land on the Lock-Server-authenticated account, which may differ from the
-    // pubky.app user. Capture that owner from the upload response so `buildPost` can reference the
-    // attachments by their real host. With no attachments the owner stays undefined and no URIs are built.
-    const uploads = await this.uploadAttachments(files);
-    const owner = uploads.at(-1)?.creator;
-    const attachmentResources: TGuardedResource[] = uploads.map((uploaded) => uploaded.resource);
-    const postFile = buildPost(attachmentResources, owner);
-    const post = await this.upload(postFile);
+    const uploadedPaths: string[] = [];
+    let attachmentResources: TGuardedResource[];
+    let postFile: TLockContentFile;
+    let result: TCreateContentLockResult;
+    try {
+      // The guarded bytes land on the Lock-Server-authenticated account, which may differ from the
+      // pubky.app user. Capture that owner from the upload response so `buildPost` can reference the
+      // attachments by their real host. With no attachments the owner stays undefined and no URIs are built.
+      const uploads = await this.uploadAttachments(files, uploadedPaths);
+      const owner = uploads.at(-1)?.creator;
+      attachmentResources = uploads.map((uploaded) => uploaded.resource);
+      postFile = buildPost(attachmentResources, owner);
+      const post = await this.upload(postFile, uploadedPaths);
 
-    // The payout recipient has to equal the lock's creator, and the upload response names that
-    // account — so the criterion can only be built here, once the primary resource is up.
-    const criterion = {
-      criterion_id: CRITERION_ID,
-      verifier_type: VerifierType.PAYMENT,
-      params: {
-        recipient_pubky: post.creator,
-        amount: lockConfig.amount,
-        asset: lockConfig.asset,
-        payment_in: PAYKIT_PAYMENT_IN_HOURS,
-      },
-    };
+      // The payout recipient has to equal the lock's creator, and the upload response names that
+      // account — so the criterion can only be built here, once the primary resource is up.
+      const criterion = {
+        criterion_id: CRITERION_ID,
+        verifier_type: VerifierType.PAYMENT,
+        params: {
+          recipient_pubky: post.creator,
+          amount: lockConfig.amount,
+          asset: lockConfig.asset,
+          payment_in: PAYKIT_PAYMENT_IN_HOURS,
+        },
+      };
 
-    const result = await LocksService.createContentLock({
-      primaryResource: post.resource,
-      secondaryResources: attachmentResources,
-      criteria: [criterion],
-      lockLogic: { type: 'all', criteria: [CRITERION_ID] },
-      accessPolicy: { requested_credential_ttl_seconds: CREDENTIAL_TTL_SECONDS },
-    });
+      result = await LocksService.createContentLock({
+        primaryResource: post.resource,
+        secondaryResources: attachmentResources,
+        criteria: [criterion],
+        lockLogic: { type: 'all', criteria: [CRITERION_ID] },
+        accessPolicy: { requested_credential_ttl_seconds: CREDENTIAL_TTL_SECONDS },
+      });
+    } catch (error) {
+      // A rejected or missing Locks session fails every delete too, and each failure would be reported.
+      if (!(isAppError(error) && isAuthError(error) && error.service === ErrorService.Locks)) {
+        await this.deleteUploads(uploadedPaths);
+      }
+      throw error;
+    }
     const lockUrl = `pubky://${stripPubkyPrefix(result.creator)}${result.content_lock_path}`;
     const parsedPost = GuardedContentParser.parsePost(postFile.bytes);
     if (parsedPost && isCurrent?.() !== false) {
@@ -789,7 +804,10 @@ export class LocksApplication {
    * is thrown only once the uploads already in flight have settled. A retry right after it therefore
    * never overlaps this attempt, at the cost of surfacing the error one upload later.
    */
-  private static async uploadAttachments(files: TLockContentFile[]): Promise<TRegisterGuardedResourceResult[]> {
+  private static async uploadAttachments(
+    files: TLockContentFile[],
+    uploadedPaths: string[],
+  ): Promise<TRegisterGuardedResourceResult[]> {
     const results: TRegisterGuardedResourceResult[] = new Array(files.length);
     let next = 0;
     let failure: { error: unknown } | undefined;
@@ -797,7 +815,7 @@ export class LocksApplication {
       while (!failure && next < files.length) {
         const index = next++;
         try {
-          results[index] = await this.upload(files[index]);
+          results[index] = await this.upload(files[index], uploadedPaths);
         } catch (error) {
           failure ??= { error };
         }
@@ -815,13 +833,27 @@ export class LocksApplication {
    * resolve to the same path and the second upload would silently overwrite the first. This mirrors
    * normal posts, where the blob path comes from a spec-generated id and the filename survives only
    * as display metadata on `PubkyAppFile`.
+   *
+   * The path goes into `uploadedPaths` only once the upload succeeds, so a failed publish never asks
+   * the Lock Server to delete a path it may not hold.
    */
-  private static upload({ contentType, bytes }: TLockContentFile): Promise<TRegisterGuardedResourceResult> {
-    return LocksService.registerGuardedResource({
-      path: crypto.randomUUID(),
-      contentType,
-      bytes,
-    });
+  private static async upload(
+    { contentType, bytes }: TLockContentFile,
+    uploadedPaths: string[],
+  ): Promise<TRegisterGuardedResourceResult> {
+    const path = crypto.randomUUID();
+    const result = await LocksService.registerGuardedResource({ path, contentType, bytes });
+    uploadedPaths.push(path);
+    return result;
+  }
+
+  /**
+   * Best-effort: the service already reported each failed delete, and the publish error must surface unchanged.
+   * Awaited because the creator may close the tab once the error shows, which would cancel the deletes
+   * still running. They run in parallel, so the wait is about one round trip.
+   */
+  private static async deleteUploads(paths: string[]): Promise<void> {
+    await Promise.allSettled(paths.map((path) => LocksService.deleteGuardedResource(path)));
   }
 
   /** Reads the creator's public `lock.json`. Throws for a malformed `lock` URL. */

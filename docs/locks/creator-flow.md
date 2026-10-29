@@ -378,8 +378,8 @@ Expected: publishing works as before and the images show in place.
 ### G. File limits for locked content (#2655)
 
 The Lock Server takes up to 10 files per lock (the locked post is one of them) and up to 10,000,000
-bytes per file. It refuses only after the upload, which would leave orphans, so the app checks when the
-switch goes on: over the limit → a toast and the switch stays off. Someone who is not locking anything
+bytes per file. It refuses only after the upload, so a draft over the limits would upload every file for
+nothing. The app therefore checks when the switch goes on: over the limit → a toast and the switch stays off. Someone who is not locking anything
 never sees these messages.
 
 | #   | Steps                                                                                       | Expected                                                                                                |

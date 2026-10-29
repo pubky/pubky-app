@@ -2,6 +2,7 @@ import {
   BundleId,
   ConnectUrlOptions,
   CreateContentLockRequestBuilder,
+  DeleteGuardedResourceOptions,
   ExchangeFrontendSessionCodeOptions,
   Locks,
   RegisterGuardedResourceOptions,
@@ -384,19 +385,23 @@ export class LocksService {
   }
 
   /**
+   * Takes the same `path` that `registerGuardedResource` was given, not the descriptor's full path.
+   * The Lock Server deletes it even when a content lock still references it.
+   */
+  static async deleteGuardedResource(path: string): Promise<void> {
+    const session = getLockSession();
+    try {
+      await ensureLocksSdkReady();
+      await session.creator.deleteGuardedResource(new DeleteGuardedResourceOptions(path));
+    } catch (error) {
+      throw toLocksError(error, 'LocksService.deleteGuardedResource');
+    }
+  }
+
+  /**
    * Bundles already-uploaded resources into one content lock and returns the lock descriptor
    * (`lock_id`, `content_lock_path`). Validated all-or-nothing: every referenced
    * resource must exist with a matching hash, and size/count limits are enforced here (not at upload).
-   *
-   * TODO:[Locks] #2039 — orphan cleanup. A failure here leaves the resources uploaded by the
-   * preceding `registerGuardedResource` calls on the server, unreferenced.
-   * Scenario: 3 of 4 files upload, then this rejects (size/count limit, hash mismatch, malformed
-   * body) and the 3 blobs linger under `/priv/app.locks/content/`. Harmless — each path is minted
-   * fresh, so no existing lock breaks — but it wastes the creator's private storage. Closing the tab
-   * between the two calls has the same effect and no `catch` can cover it.
-   * When #2039 lands: best-effort `deleteGuardedResource` per path on a deterministic 4xx or a user
-   * cancel. Transient failures (network / 5xx / 401) must retry this call instead of deleting: the
-   * uploaded resources are still valid and their hashes unchanged.
    */
   static async createContentLock({
     primaryResource,
