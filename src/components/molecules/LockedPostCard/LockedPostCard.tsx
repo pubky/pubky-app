@@ -8,6 +8,7 @@ import { Spinner } from '@/atoms/Spinner/Spinner';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
 import { formatLockPrice } from '@/libs/utils/lockPrice';
 import { cn } from '@/libs/utils/utils';
+import { LockTitle } from '@/molecules/LockTitle/LockTitle';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import type { TLockPrice } from '@/services/locks/locks.types';
 
@@ -152,7 +153,7 @@ export function LockedPostCard({
             <>
               <StickyNote className="size-6 shrink-0 text-muted-foreground" aria-hidden />
               <h4 className="line-clamp-2 min-w-0 flex-1 text-xl leading-7 font-bold wrap-anywhere text-foreground">
-                {title?.trim() || DEFAULT_LOCK_TITLE}
+                <LockTitle title={title?.trim() || DEFAULT_LOCK_TITLE} mentionClassName="text-xl" />
               </h4>
             </>
           )}

@@ -18,6 +18,7 @@ import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { DEFAULT_LOCK_TITLE, parseLockTeaserContent } from '@/libs/post/lockTeaser';
 import { cn, formatPublicKey, isPostDeleted, resolveUserDisplayName } from '@/libs/utils/utils';
+import { LockTitle } from '@/molecules/LockTitle/LockTitle';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostListMediaThumbnail } from '@/molecules/PostListMediaThumbnail/PostListMediaThumbnail';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
@@ -38,10 +39,16 @@ const LIST_SNIPPET_MAX_CHARS = 120;
 
 const stopCardPropagation = (event: React.MouseEvent) => event.stopPropagation();
 
-function getListPostSnippet(content: string, kind: string, lock: string | null): string {
+interface ListPostSnippet {
+  text: string;
+  /** The text is a lock title, whose mentions render as display names (#2681). */
+  isLockTitle: boolean;
+}
+
+function getListPostSnippet(content: string, kind: string, lock: string | null): ListPostSnippet {
   const trimmed = content.trim();
   if (!trimmed) {
-    return '';
+    return { text: '', isLockTitle: false };
   }
 
   // A lock announcement's `kind` is the teaser's own, so only the `lock` url identifies the
@@ -49,7 +56,7 @@ function getListPostSnippet(content: string, kind: string, lock: string | null):
   if (lock) {
     const teaser = parseLockTeaserContent(trimmed);
     if (teaser) {
-      return teaser.lock_title.trim() || DEFAULT_LOCK_TITLE;
+      return { text: teaser.lock_title.trim() || DEFAULT_LOCK_TITLE, isLockTitle: true };
     }
   }
 
@@ -58,24 +65,24 @@ function getListPostSnippet(content: string, kind: string, lock: string | null):
       const parsed = JSON.parse(trimmed) as { title?: unknown; body?: unknown };
       const title = typeof parsed.title === 'string' ? parsed.title.trim() : '';
       const body = typeof parsed.body === 'string' ? parsed.body.trim() : '';
-      return title || body;
+      return { text: title || body, isLockTitle: false };
     } catch {
-      return trimmed;
+      return { text: trimmed, isLockTitle: false };
     }
   }
 
   if (kind === 'collection') {
     const collection = parseCollectionContent(trimmed);
     if (!collection) {
-      return trimmed;
+      return { text: trimmed, isLockTitle: false };
     }
 
     const name = collection.name.trim();
     const description = collection.description?.trim() ?? '';
-    return name || description;
+    return { text: name || description, isLockTitle: false };
   }
 
-  return trimmed;
+  return { text: trimmed, isLockTitle: false };
 }
 
 interface PostMainListRowProps {
@@ -103,7 +110,7 @@ export function PostMainListRow({
     postDetails?.content ?? '',
     postDetails?.kind ?? '',
     postDetails?.lock ?? null,
-  );
+  ).text;
   const hasOwnAttachments = (postDetails?.attachments?.length ?? 0) > 0;
   const shouldPreviewOriginal =
     !showFullContent &&
@@ -160,7 +167,10 @@ export function PostMainListRow({
     previewPostDetails.kind,
     previewPostDetails.lock ?? null,
   );
-  const snippet = showFullContent ? '' : truncateAtWordBoundary(contentSnippet, LIST_SNIPPET_MAX_CHARS);
+  const snippet = showFullContent ? '' : truncateAtWordBoundary(contentSnippet.text, LIST_SNIPPET_MAX_CHARS);
+  // A lock title (at most 100 characters, under the snippet cap, so never cut through a key) shows
+  // its mentions as display names, as the lock card does (#2681).
+  const isLockTitleSnippet = contentSnippet.isLockTitle;
   const profileUrl = getUserProfileUrl(displayUserId, currentUserPubky);
   const shouldShowDisplayHeader = shouldShowPostHeader || shouldUseOriginalPost;
   const shouldShowCompactBlur = !showFullContent && (displayPostDetails.is_blurred || previewPostDetails.is_blurred);
@@ -214,7 +224,7 @@ export function PostMainListRow({
                 overrideDefaults
                 data-cy="post-list-snippet"
               >
-                {snippet}
+                {isLockTitleSnippet ? <LockTitle title={snippet} interactive={false} /> : snippet}
               </Typography>
             ) : null}
           </Container>

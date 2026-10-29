@@ -148,8 +148,10 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
         return { success: true };
       } catch (error) {
-        if (viewRevision.current !== revision) return { success: false };
-        showTagWriteErrorToast(error, 'Could not add tag');
+        // Only the prompt for a session the homeserver ended outlives the view (issue #2957, see the helper).
+        const viewClosed = viewRevision.current !== revision;
+        showTagWriteErrorToast(error, 'Could not add tag', { viewClosed });
+        if (viewClosed) return { success: false };
         return { success: false, error: 'Failed to add tag' };
       }
     },
@@ -211,16 +213,16 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           });
         }
       } catch (error) {
-        if (viewRevision.current !== revision) return;
+        const viewClosed = viewRevision.current !== revision;
         // Rollback zero-tagger state on error
-        if (userIsTagger) {
+        if (userIsTagger && !viewClosed) {
           setZeroTaggerTags((prev) => {
             const next = new Map(prev);
             next.delete(labelLower);
             return next;
           });
         }
-        showTagWriteErrorToast(error, userIsTagger ? 'Could not remove tag' : 'Could not add tag');
+        showTagWriteErrorToast(error, userIsTagger ? 'Could not remove tag' : 'Could not add tag', { viewClosed });
       }
     },
     [userId, viewerId, allTags, tagOrder, waitForAuth],

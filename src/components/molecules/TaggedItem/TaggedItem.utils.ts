@@ -3,6 +3,7 @@ import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import type { TagWithAvatars } from './TaggedItem.types';
 
 /**
@@ -11,11 +12,26 @@ import type { TagWithAvatars } from './TaggedItem.types';
  * has to be re-established first, so point at sign-in instead of the generic copy (issue #2890;
  * mirrors `usePost`'s `showCommitErrorToast` from #2555). Nothing here signs the user out or
  * retries the write.
+ *
+ * `viewClosed` says the owning view unmounted or switched entity before the write settled. A
+ * failure then stays silent: the user left that view. The one exception is a session the
+ * homeserver ended, i.e. the auth store reached `reauth-required` before the write settled: on a
+ * guarded route that 401 is what closed the view (the route guard redirects to the landing page),
+ * and the toaster is global, so the session-expired prompt still shows there and explains the
+ * redirect (issue #2957). The same `SESSION_EXPIRED` reaches a closed view after the user's own
+ * logout too, which never sets `reauth-required`, and stays silent.
  */
-export function showTagWriteErrorToast(error: unknown, fallbackDescription: string): void {
+export function showTagWriteErrorToast(
+  error: unknown,
+  fallbackDescription: string,
+  { viewClosed = false }: { viewClosed?: boolean } = {},
+): void {
+  const sessionExpired = isAppError(error) && requiresLogin(error);
+  const endedByHomeserver = sessionExpired && useAuthStore.getState().restoreStatus === 'reauth-required';
+  if (viewClosed && !endedByHomeserver) return;
   toast({
     variant: 'error',
-    description: isAppError(error) && requiresLogin(error) ? 'Session expired. Please sign in.' : fallbackDescription,
+    description: sessionExpired ? 'Session expired. Please sign in.' : fallbackDescription,
   });
 }
 

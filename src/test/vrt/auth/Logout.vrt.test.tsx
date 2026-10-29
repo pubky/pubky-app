@@ -35,6 +35,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: createZustandLikeHook({
     secretKey: '',
+    signupAttempt: null,
     hasHydrated: true,
     clearSecrets: vi.fn(),
   }),

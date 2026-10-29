@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PaidUnlockAvailability } from '@/libs/region/paidUnlockAvailability';
 import { usePostInputLock } from './usePostInputLock';
@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
   publish: vi.fn(),
   toast: vi.fn(),
   prependPosts: vi.fn(),
+  // The timeline the composer sits in; undefined outside a feed.
+  streamId: undefined as string | undefined,
+  getDetails: vi.fn(),
   setPostAttachments: vi.fn(),
   // Last options handed to useCreateLockContent — the locked post the hook would publish.
   lockContentOptions: null as {
@@ -56,15 +59,16 @@ vi.mock('@/hooks/useCreateLockContent/useCreateLockContent', () => ({
   },
 }));
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => mocks.toast(...args) }));
-// The announcement's optimistic commit: no timeline provider in the hook test, so prepend is a no-op
-// path (`streamId` undefined). We only assert the local-blob registration here.
+// The announcement's optimistic commit: `streamId` is undefined (no feed) unless a test sets it.
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
-  useTimelineFeedContext: () => ({ streamId: undefined, prependPosts: mocks.prependPosts }),
+  useTimelineFeedContext: () => ({ streamId: mocks.streamId, prependPosts: mocks.prependPosts }),
 }));
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: { getState: () => ({ setPostAttachments: mocks.setPostAttachments }) },
 }));
-vi.mock('@/controllers/post/post', () => ({ PostController: { getDetails: vi.fn() } }));
+vi.mock('@/controllers/post/post', () => ({
+  PostController: { getDetails: (...args: unknown[]) => mocks.getDetails(...args) },
+}));
 
 const file = new File(['x'], 'secret.png', { type: 'image/png' });
 const draft: TLockDraft = {
@@ -126,6 +130,8 @@ describe('usePostInputLock', () => {
     mocks.toast.mockReset();
     mocks.prependPosts.mockReset();
     mocks.setPostAttachments.mockReset();
+    mocks.streamId = undefined;
+    mocks.getDetails.mockReset();
     mocks.lockContentOptions = null;
   });
 
@@ -596,6 +602,38 @@ describe('usePostInputLock', () => {
 
       expect(onPublished).toHaveBeenCalledWith('alice:POST1');
       expect(result.current.lockSwitch?.checked).toBe(false);
+    });
+
+    // WoT feeds never hold the viewer's own posts, so a prepended announcement would flash and vanish
+    // on the next stream reset; the normal publish path skips them the same way (#2714, #2308).
+    it.each([
+      ['My network', 'timeline:wot:all'],
+      ['Tagged as', 'timeline:wot_domain:2:all:bitcoin'],
+    ])('does not prepend the announcement to a %s feed', async (_label, streamId) => {
+      setUpLocks();
+      mocks.streamId = streamId;
+      mocks.getDetails.mockResolvedValue({ kind: 'short' });
+      mocks.publish.mockResolvedValue({ status: 'published', postId: 'alice:POST1' });
+      const { result, onPublished } = setup();
+
+      configureLock(result);
+      await act(async () => result.current.submitOrPublish());
+
+      expect(onPublished).toHaveBeenCalledWith('alice:POST1'); // published normally
+      expect(mocks.prependPosts).not.toHaveBeenCalled();
+    });
+
+    it('still prepends the announcement to a non-WoT feed whose kind matches', async () => {
+      setUpLocks();
+      mocks.streamId = 'timeline:all:all';
+      mocks.getDetails.mockResolvedValue({ kind: 'short' });
+      mocks.publish.mockResolvedValue({ status: 'published', postId: 'alice:POST1' });
+      const { result } = setup();
+
+      configureLock(result);
+      await act(async () => result.current.submitOrPublish());
+
+      await waitFor(() => expect(mocks.prependPosts).toHaveBeenCalledWith('alice:POST1'));
     });
 
     it('toasts and keeps the composer on a failed publish', async () => {

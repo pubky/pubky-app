@@ -10,6 +10,7 @@ import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessio
 import { Logger } from '@/libs/logger/logger';
 import { buildArticleContent } from '@/libs/post/articleContent';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
+import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { inferPostKindForCreate } from '@/pipes/post/post.kind';
@@ -96,6 +97,10 @@ export function usePostInputLock({
           await timelineFeed?.prependPosts(postId);
           return;
         }
+        // WoT feeds ('My network', 'Tagged as') never contain the viewer's own posts, so a prepend would
+        // flash the announcement and lose it on the next stream reset. Same gate as a normal publish
+        // in `usePostInput` (#2308, #2714).
+        if (isViewerExcludedWotStream(streamId)) return;
         const details = await PostController.getDetails({ compositeId: postId });
         if (!details?.kind || postKindBelongsToStream(details.kind, streamId)) {
           await timelineFeed.prependPosts(postId);

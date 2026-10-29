@@ -40,6 +40,7 @@ type DialogOverrides = {
   onRecheck?: () => void;
   onViewContent?: () => void;
   onOpenChange?: (open: boolean) => void;
+  lockTitle?: string;
   wrapper?: React.JSXElementConstructor<{ children: React.ReactNode }>;
 };
 
@@ -47,7 +48,7 @@ const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}
   <DialogPayToUnlock
     open={overrides.open ?? true}
     onOpenChange={overrides.onOpenChange ?? vi.fn()}
-    lockTitle="My locked post"
+    lockTitle={overrides.lockTitle ?? 'My locked post'}
     authorId="pubkycreator"
     price={overrides.price ?? { amount: '1000', asset: 'BTC' }}
     stage={stage}
@@ -622,5 +623,15 @@ describe('DialogPayToUnlock', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(cardClick).not.toHaveBeenCalled();
+  });
+
+  it('shows a user key in the lock title as @<display name>, as text inside the dialog (#2681)', () => {
+    const key = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+    renderDialog('retry', { lockTitle: `hello pubky${key}` });
+
+    const mention = screen.getByText('@Jane Whitlock');
+    expect(mention.tagName).toBe('SPAN');
+    expect(mention.parentElement).toHaveTextContent('hello @Jane Whitlock');
+    expect(screen.queryByText(new RegExp(key))).not.toBeInTheDocument();
   });
 });

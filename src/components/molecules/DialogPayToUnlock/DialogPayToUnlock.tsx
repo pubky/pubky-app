@@ -17,6 +17,7 @@ import { formatLockPrice } from '@/libs/utils/lockPrice';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
 import { AppDownload } from '@/molecules/AppDownload/AppDownload';
 import { LocksRegionNotice } from '@/molecules/LocksRegionNotice/LocksRegionNotice';
+import { LockTitle } from '@/molecules/LockTitle/LockTitle';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
 import { QR_HOVER_OPACITY } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import type { DialogPayToUnlockProps } from './DialogPayToUnlock.types';
@@ -149,7 +150,7 @@ export function DialogPayToUnlock({
         <Container overrideDefaults className="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6">
           <Newspaper className="size-6 shrink-0 text-muted-foreground" aria-hidden />
           <Typography className="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground">
-            {lockTitle || DEFAULT_LOCK_TITLE}
+            <LockTitle title={lockTitle || DEFAULT_LOCK_TITLE} mentionClassName="text-xl" interactive={false} />
           </Typography>
           <CreatorAvatar authorId={authorId} />
         </Container>

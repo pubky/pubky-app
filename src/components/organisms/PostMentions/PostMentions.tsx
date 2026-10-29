@@ -29,7 +29,8 @@ export const PostMentions = (props: RemarkAnchorProps) => {
   });
   const userName = profile?.name ?? fallbackMention;
   const finalMention = profile?.name ? `@${profile.name}` : fallbackMention;
-  const mentionClassName = cn(className, 'text-base', !profile?.name && 'uppercase');
+  // `text-base` is the default; a caller's size (a lock title's) overrides it.
+  const mentionClassName = cn('text-base', className, !profile?.name && 'uppercase');
 
   // Quoted post in the Reply/Repost dialogs: the mention is text, without the
   // profile link or the popover, whose links would also land behind the open modal.
