@@ -78,6 +78,11 @@ Known limitation on the intermediate branch (after PR-A, before PR-C/PR-D): `hyd
 notification cursor to `/priv/app.pubky/v1/last_read.json`, so a pre-port Ring grant (lacking
 `/priv/app.pubky/v1/:rw`) fails that PUT until the gate signs it out for a new grant. Root sessions are unaffected.
 
+Known limitation on the intermediate branch (after PR-B2, before PR-D): tags, follows and mutes are written to the
+v1 trees and `MuteApplication.fetchMutedUsers` lists `/priv/social/v1/mutes/` only, so an account that has not
+run the migrator sees an empty mute list until the gate migrates it, and a pre-port Ring grant (lacking
+`/pub/social/v1/:rw` or `/priv/social/v1/:rw`) fails those writes and that LIST until the gate signs it out.
+
 ## Compliance gate and dev-sync routine
 
 Two gate tests keep the branch honest while it lives, and ship to `dev` with the final PR:
