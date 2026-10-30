@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { CustomFeedFilters } from './CustomFeedFilters';
@@ -145,10 +144,10 @@ const createMockFeed = (overrides?: Partial<FeedModelSchema>): FeedModelSchema =
   name: 'Test Feed',
   tags: ['tag1', 'tag2'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.All,
-  sort: PubkyAppFeedSort.Recent,
-  content: PubkyAppPostKind.Short,
-  layout: PubkyAppFeedLayout.Columns,
+  reach: 'all',
+  sort: 'recent',
+  content: 'note',
+  layout: 'columns',
   created_at: 1700000000,
   updated_at: 1700000000,
   ...overrides,
@@ -215,27 +214,27 @@ describe('CustomFeedFilters', () => {
   // ── With Custom Feed Data ─────────────────────────────────────────
 
   it('maps customFeed reach to filter selectedTab', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Following }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: 'following' }));
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'following');
   });
 
   it('maps My network and Me reach values and exposes the standalone read-only options', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Wot }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: 'wot' }));
     const { rerender } = render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'network');
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-show-tagged-as', 'true');
 
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Me }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: 'me' }));
     rerender(<CustomFeedFilters variant="sidebar" />);
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'me');
   });
 
   it('renders post and profile tags in separate labeled groups', () => {
     mockUseCustomFeed.mockReturnValue(
-      createMockFeed({ tags: ['bitcoin'], domain_tags: ['bitcoiner', '🔥'], reach: PubkyAppFeedReach.Wot }),
+      createMockFeed({ tags: ['bitcoin'], domain_tags: ['bitcoiner', '🔥'], reach: 'wot' }),
     );
 
     render(<CustomFeedFilters variant="sidebar" />);
@@ -249,9 +248,7 @@ describe('CustomFeedFilters', () => {
   });
 
   it('renders profile tags for a legacy Me feed without reinterpreting its reach', () => {
-    mockUseCustomFeed.mockReturnValue(
-      createMockFeed({ tags: [], domain_tags: ['bitcoiner'], reach: PubkyAppFeedReach.Me }),
-    );
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ tags: [], domain_tags: ['bitcoiner'], reach: 'me' }));
 
     render(<CustomFeedFilters variant="sidebar" />);
 
@@ -260,28 +257,28 @@ describe('CustomFeedFilters', () => {
   });
 
   it('maps customFeed sort to filter selectedTab', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: PubkyAppFeedSort.Popularity }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: 'popularity' }));
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-sort')).toHaveAttribute('data-selected-tab', 'total_engagement');
   });
 
   it('maps customFeed layout to filter selectedTab', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ layout: PubkyAppFeedLayout.Wide }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ layout: 'wide' }));
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'wide');
   });
 
   it.each(['sidebar', 'drawer'] as const)('shows the saved Cards selection in the %s', (variant) => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ layout: PubkyAppFeedLayout.Cards }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ layout: 'cards' }));
     render(<CustomFeedFilters variant={variant} />);
     expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'cards');
     expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-show-cards', 'true');
   });
 
   it('maps customFeed content to filter selectedTab', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: PubkyAppPostKind.Image }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: 'image' }));
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', 'images');
@@ -319,49 +316,49 @@ describe('CustomFeedFilters', () => {
   // ── All Mapper Combinations ────────────────────────────────────────
 
   it('maps all reach values correctly', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Friends }));
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: 'friends' }));
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'friends');
   });
 
-  it('maps PubkyAppFeedReach.All correctly', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.All }));
+  it('maps all correctly', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: 'all' }));
     render(<CustomFeedFilters variant="drawer" />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
   });
 
-  it('maps PubkyAppFeedSort.Recent to timeline', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: PubkyAppFeedSort.Recent }));
+  it('maps recent to timeline', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: 'recent' }));
     render(<CustomFeedFilters variant="drawer" />);
 
     expect(screen.getByTestId('filter-sort')).toHaveAttribute('data-selected-tab', 'timeline');
   });
 
-  it('maps PubkyAppFeedLayout.Visual correctly', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ layout: PubkyAppFeedLayout.Visual }));
+  it('maps visual correctly', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ layout: 'visual' }));
     render(<CustomFeedFilters variant="drawer" />);
 
     expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'visual');
   });
 
-  it('maps PubkyAppPostKind.Video to videos', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: PubkyAppPostKind.Video }));
+  it('maps video to videos', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: 'video' }));
     render(<CustomFeedFilters variant="drawer" />);
 
     expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', 'videos');
   });
 
-  it('maps PubkyAppPostKind.Link to links', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: PubkyAppPostKind.Link }));
+  it('maps link to links', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: 'link' }));
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', 'links');
   });
 
-  it('maps PubkyAppPostKind.Long to long', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: PubkyAppPostKind.Long }));
+  it('maps article to long', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ content: 'article' }));
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-content')).toHaveAttribute('data-selected-tab', 'long');
@@ -371,15 +368,15 @@ describe('CustomFeedFilters', () => {
   // The component uses `!== undefined` checks so enum values equal to 0
   // are correctly passed through to the mapper functions.
 
-  it('correctly maps zero-value enum PubkyAppFeedReach.Following', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Following }));
+  it('correctly maps zero-value enum following', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: 'following' }));
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'following');
   });
 
-  it('correctly maps zero-value enum PubkyAppFeedSort.Recent', () => {
-    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: PubkyAppFeedSort.Recent }));
+  it('correctly maps zero-value enum recent', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ sort: 'recent' }));
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-sort')).toHaveAttribute('data-selected-tab', 'timeline');

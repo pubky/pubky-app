@@ -176,8 +176,9 @@ removed by product decision (D7); the settings and `last_read` paths move to `/p
 
 Reductions (reported, not built around): bookmark-derived notifications ("post you bookmarked was deleted/edited",
 "followed collection updated"); cross-device bookmark changes visible at the next session start only; `/feed/<id>`
-deep links change (feed ids are re-derived); forced sign-out and forced reload on upgrade; migrated articles with
-the rc.1 off-by-one render through the migrated-article reader rule until the migrator fix lands.
+deep links change once (a feed id is the hash of its filter, and the migrator re-derives every id when it copies a
+0.x feed); forced sign-out and forced reload on upgrade; migrated articles with the rc.1 off-by-one render through
+the migrated-article reader rule until the migrator fix lands.
 
 Follow-ups (not in this round): private drafts and `planPublish`, slugs, attachment alt text UI, collection item
 notes UI, published feeds, `createSocialClient`, the 0.x tree sunset (who deletes `/pub/pubky.app/`, when legacy
