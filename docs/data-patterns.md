@@ -301,7 +301,7 @@ tag_streams        — Hot tags in streams
 file_details       — File attachment metadata
 bookmarks          — Bookmarked post references
 hot_tags           — Trending tag snapshots
-feeds              — Custom feed definitions
+feeds              — Custom feed definitions: the owner's private `/priv/social/v1/feeds/{id}.json` objects, id = hash of the filter (reach, layout, sort, content, tags, domain_tags), kinds as the data model spells them (`note`/`article`); hydrated by a LIST at bootstrap, which also deletes rows the listing no longer names
 moderation         — Content moderation state
 locks              — Cached lock descriptors and readable post metadata
 ```
