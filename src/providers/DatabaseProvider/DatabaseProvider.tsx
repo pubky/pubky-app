@@ -30,11 +30,11 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
   // Without this, the close handler would re-trigger initDatabase and cause an infinite loop.
   const isInitializingRef = useRef(false);
 
-  const initDatabase = async () => {
+  const initDatabase = async ({ allowRecreate }: { allowRecreate: boolean }) => {
     isInitializingRef.current = true;
     try {
       setError(null);
-      const { wasDbReset } = await db.initialize();
+      const { wasDbReset } = await db.initialize({ allowRecreate });
       if (wasDbReset) {
         useMigrationStore.getState().setWasDbReset(true);
       }
@@ -58,15 +58,21 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  useEffect(() => {
-    initDatabase();
+  // The user's retry may recreate the database again; see handleUnexpectedClose for the one path that may not.
+  const retry = () => initDatabase({ allowRecreate: true });
 
-    // Re-initialize when the DB is unexpectedly closed (e.g. user deletes IndexedDB via devtools).
-    // Skips expected closes during recreateDatabase() via the isInitializingRef guard.
+  useEffect(() => {
+    initDatabase({ allowRecreate: true });
+
+    // Re-initialize when the DB is unexpectedly closed (e.g. user deletes IndexedDB via devtools, or a
+    // tab running another build recreated it). Skips expected closes during recreateDatabase() via the
+    // isInitializingRef guard. A version mismatch found from here, after this page already recreated the
+    // database once, is that other tab at work: `allowRecreate: false` surfaces it as VERSION_CONFLICT
+    // instead of recreating the database back and forth between the two tabs (ADR-0019).
     const handleUnexpectedClose = () => {
       if (isInitializingRef.current) return;
       setIsReady(false);
-      initDatabase();
+      initDatabase({ allowRecreate: false });
     };
 
     db.on('close', handleUnexpectedClose);
@@ -82,7 +88,14 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
   // - ready: render the app
   let content: ReactNode;
   if (error) {
-    content = <DatabaseErrorScreen onRetry={initDatabase} />;
+    content = (
+      <DatabaseErrorScreen
+        onRetry={retry}
+        description={
+          error.code === DatabaseErrorCode.VERSION_CONFLICT ? 'Close other Pubky tabs, then retry.' : undefined
+        }
+      />
+    );
   } else if (!isReady) {
     content = (
       <Container overrideDefaults className="flex min-h-screen items-center justify-center">
@@ -98,7 +111,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
       value={{
         isReady,
         error,
-        retry: initDatabase,
+        retry,
       }}
     >
       {content}
