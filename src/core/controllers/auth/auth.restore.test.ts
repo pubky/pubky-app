@@ -1,4 +1,3 @@
-import type { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
@@ -13,7 +12,6 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Identity } from '@/libs/identity/identity';
 import * as utils from '@/libs/utils/utils';
-import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
@@ -152,10 +150,6 @@ describe('AuthController restored session lifecycle', () => {
     vi.spyOn(utils, 'sleep').mockResolvedValue(undefined);
     vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notificationInitialState);
     vi.spyOn(UserApplication, 'ensureModerationFollow').mockResolvedValue(undefined);
-    // createLastRead crosses into the WASM SDK; keep settings normalization and stores real.
-    vi.spyOn(NotificationNormalizer, 'to').mockReturnValue(
-      asOpaque<LastReadResult>({ meta: { url: `pubky://${pubkyA}/pub/pubky.app/last_read` } }),
-    );
   });
 
   afterEach(() => {
@@ -328,7 +322,7 @@ describe('AuthController restored session lifecycle', () => {
 
     expect(request).toHaveBeenCalledWith({
       method: HttpMethod.GET,
-      url: `pubky://${pubkyA}/pub/pubky.app/settings.json`,
+      url: `pubky://${pubkyA}/priv/app.pubky/v1/settings.json`,
     });
     expect(useAuthStore.getState()).toMatchObject({ hasProfile: null, isRestoringSession: true });
 
@@ -341,7 +335,7 @@ describe('AuthController restored session lifecycle', () => {
     await SettingsController.setHideSearch(true);
     expect(request).toHaveBeenLastCalledWith({
       method: HttpMethod.PUT,
-      url: `pubky://${pubkyA}/pub/pubky.app/settings.json`,
+      url: `pubky://${pubkyA}/priv/app.pubky/v1/settings.json`,
       bodyJson: expect.objectContaining({
         notifications: expect.objectContaining({ follow: false }),
         privacy: expect.objectContaining({ hideSearch: true, neverShowPosts: true }),

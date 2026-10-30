@@ -1,4 +1,5 @@
 import type { Keypair, Session } from '@synonymdev/pubky';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import type { THomeserverAuthenticateParams } from '@/application/auth/auth.types';
@@ -13,11 +14,6 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { mockGrantReference } from '@/test-utils/pubky';
 import { mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
-
-vi.mock('pubky-app-specs', () => ({
-  default: vi.fn(() => Promise.resolve()),
-  userUriBuilder: (pubky: string) => `pubky://${pubky}/pub/pubky.app/profile.json`,
-}));
 
 const spyOnSleep = async () => vi.spyOn(await import('@/libs/utils/utils'), 'sleep').mockResolvedValue(undefined);
 
@@ -300,7 +296,7 @@ describe('AuthApplication', () => {
   });
 
   describe('resolveUserIsSignedUp', () => {
-    const testPubky = 'test-pubky' as Pubky;
+    const testPubky = fakeOwner(1) as Pubky;
 
     it('should report a terminal profile failure only at its origin', async () => {
       const logSpy = vi.spyOn(Logger, 'error');
@@ -397,18 +393,33 @@ describe('AuthApplication', () => {
   });
 
   describe('userIsSignedUp', () => {
-    const testPubky = 'test-pubky' as Pubky;
+    const testPubky = fakeOwner(1) as Pubky;
 
-    it('should return true when profile.json exists', async () => {
+    it('should return true when the v1 profile.json exists', async () => {
       const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ name: 'Test' });
 
       const result = await AuthApplication.userIsSignedUp({ pubky: testPubky });
 
       expect(result).toBe(true);
-      expect(requestSpy).toHaveBeenCalledWith({
+      expect(requestSpy).toHaveBeenCalledExactlyOnceWith({
         method: HttpMethod.GET,
-        url: `pubky://${testPubky}/pub/pubky.app/profile.json`,
+        url: `pubky://${testPubky}/pub/social/v1/profile.json`,
       });
+    });
+
+    it('never probes the 0.x profile: an account with only that one reads as not signed up', async () => {
+      const notFoundError = Err.client(ClientErrorCode.NOT_FOUND, 'Profile not found', {
+        service: ErrorService.Homeserver,
+        operation: 'userIsSignedUp',
+      });
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockRejectedValue(notFoundError);
+
+      await expect(AuthApplication.userIsSignedUp({ pubky: testPubky })).resolves.toBe(false);
+
+      expect(requestSpy).toHaveBeenCalledOnce();
+      expect(requestSpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({ url: expect.stringContaining('pubky.app') }),
+      );
     });
 
     it('should return false when profile.json is not found (404)', async () => {

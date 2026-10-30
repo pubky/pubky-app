@@ -1,124 +1,11 @@
-import { LastReadResult } from 'pubky-app-specs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppError } from '@/libs/error/error';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { describe, expect, it } from 'vitest';
 import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
 import { defaultNotificationPreferences, type NotificationPreferences } from '@/stores/settings/settings.types';
-import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  buildPubkyUri,
-  INVALID_INPUTS,
-  restoreMocks,
-  setupIntegrationTestMocks,
-  setupUnitTestMocks,
-  TEST_PUBKY,
-} from '../pipes.test-utils';
+import { TEST_PUBKY } from '../pipes.test-utils';
 
 describe('NotificationNormalizer', () => {
-  /**
-   * Tests for `to` method - Creates LastRead result (same as LastReadNormalizer)
-   */
-  describe('to', () => {
-    const createMockBuilder = (overrides?: Partial<{ createLastRead: ReturnType<typeof vi.fn> }>) => ({
-      createLastRead: vi.fn(() => {
-        const mockTimestamp = BigInt(Date.now());
-        return asOpaque<LastReadResult>({
-          last_read: {
-            timestamp: mockTimestamp,
-            toJson: vi.fn(() => ({ timestamp: Number(mockTimestamp) })),
-          },
-          meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, 'last_read') },
-        });
-      }),
-      ...overrides,
-    });
-
-    describe('Unit Tests', () => {
-      let mockBuilder: ReturnType<typeof createMockBuilder>;
-
-      beforeEach(() => {
-        mockBuilder = createMockBuilder();
-        setupUnitTestMocks(mockBuilder);
-      });
-
-      afterEach(restoreMocks);
-
-      it('should create last read with last_read and meta properties', () => {
-        const result = NotificationNormalizer.to(TEST_PUBKY.USER_1);
-
-        expect(result).toHaveProperty('last_read');
-        expect(result).toHaveProperty('meta');
-      });
-
-      it('should call PubkySpecsSingleton.get with pubky and createLastRead without params', () => {
-        NotificationNormalizer.to(TEST_PUBKY.USER_1);
-
-        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-        expect(mockBuilder.createLastRead).toHaveBeenCalledWith();
-      });
-
-      it('should throw AppError with correct properties when createLastRead fails', () => {
-        const errorMessage = 'Invalid last read';
-        mockBuilder.createLastRead.mockImplementation(() => {
-          throw errorMessage;
-        });
-
-        try {
-          NotificationNormalizer.to(TEST_PUBKY.USER_1);
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.SocialSpecs);
-          expect(appError.operation).toBe('createLastRead');
-          expect(appError.context).toEqual({ pubky: TEST_PUBKY.USER_1 });
-          expect(appError.message).toBe(errorMessage);
-        }
-      });
-
-      it('should throw AppError when PubkySpecsSingleton.get fails', () => {
-        vi.spyOn(PubkySpecsSingleton, 'get').mockImplementation(() => {
-          throw 'Singleton error';
-        });
-
-        expect(() => NotificationNormalizer.to(TEST_PUBKY.USER_1)).toThrow(AppError);
-      });
-    });
-
-    describe('Integration Tests', () => {
-      beforeEach(setupIntegrationTestMocks);
-      afterEach(restoreMocks);
-
-      it('should create valid result with correct URL format', () => {
-        const result = NotificationNormalizer.to(TEST_PUBKY.USER_1);
-
-        expect(result.last_read).toBeDefined();
-        expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/last_read$/);
-      });
-
-      it('should have BigInt timestamp', () => {
-        const result = NotificationNormalizer.to(TEST_PUBKY.USER_1);
-        expect(typeof result.last_read.timestamp).toBe('bigint');
-      });
-
-      it.each([
-        ['empty', INVALID_INPUTS.EMPTY],
-        ['null', INVALID_INPUTS.NULL],
-        ['undefined', INVALID_INPUTS.UNDEFINED],
-      ])('should reject a %s pubky identity switch after initialization', (_, invalidPubky) => {
-        NotificationNormalizer.to(TEST_PUBKY.USER_1);
-
-        expect(() => NotificationNormalizer.to(invalidPubky)).toThrow(AppError);
-      });
-    });
-  });
-
   /**
    * Tests for `toFlatNotification` method - Transforms NexusNotification to FlatNotification
    */
@@ -190,6 +77,45 @@ describe('NotificationNormalizer', () => {
         const result = NotificationNormalizer.toFlatNotification(nexusNotification);
 
         expect(result).toHaveProperty('post_kind', 'collection');
+      });
+
+      // Nexus serves the 0.x kind names while it reads both epochs; a stored v1 name passed
+      // through must still render as the local kind.
+      it.each([
+        ['short', 'short'],
+        ['long', 'long'],
+        ['collection', 'collection'],
+        ['image', 'image'],
+        ['note', 'short'],
+        ['article', 'long'],
+        ['Article', 'long'],
+        ['poll', 'poll'],
+      ])('maps a subject post kind of %s to the local %s', (postKind, local) => {
+        const result = NotificationNormalizer.toFlatNotification(
+          createNexusNotification(NotificationType.Mention, {
+            mentioned_by: TEST_PUBKY.USER_2,
+            post_uri: 'pubky://author/pub/social/v1/posts/mention123',
+            post_kind: postKind,
+          }),
+        );
+
+        expect(result).toHaveProperty('post_kind', local);
+      });
+
+      it('leaves a notification without a subject post kind without one', () => {
+        const result = NotificationNormalizer.toFlatNotification(sampleNotifications.follow);
+
+        expect(result).not.toHaveProperty('post_kind');
+      });
+
+      it('keeps the business key independent of the kind spelling', () => {
+        const body = { mentioned_by: TEST_PUBKY.USER_2, post_uri: 'pubky://author/pub/social/v1/posts/m1' };
+        const v1 = createNexusNotification(NotificationType.Mention, { ...body, post_kind: 'note' });
+        const legacy = createNexusNotification(NotificationType.Mention, { ...body, post_kind: 'short' });
+
+        expect(NotificationNormalizer.toFlatNotification(v1).id).toBe(
+          NotificationNormalizer.toFlatNotification(legacy).id,
+        );
       });
 
       it.each([

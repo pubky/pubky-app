@@ -1,5 +1,4 @@
 import type { Session } from '@synonymdev/pubky';
-import type { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksApplication } from '@/application/locks/locks';
 import { ProfileApplication } from '@/application/profile/profile';
@@ -12,7 +11,7 @@ import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
-import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
+import { LastReadNormalizer, type TLastRead } from '@/pipes/lastRead/lastRead.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import {
   HOMESERVER_PUBLISH_CONFLICT_MESSAGE,
@@ -62,8 +61,8 @@ vi.mock('@synonymdev/pubky', () => {
 });
 
 const USER = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-const PROFILE_PATH = '/pub/pubky.app/profile.json';
-const LAST_READ_PATH = '/pub/pubky.app/last_read';
+const PROFILE_PATH = '/pub/social/v1/profile.json';
+const LAST_READ_PATH = '/priv/app.pubky/v1/last_read.json';
 
 function logWrite(op: string, path: string) {
   homeserver.writes.push({ op, path, isLoggingOut: useAuthStore.getState().isLoggingOut });
@@ -146,30 +145,37 @@ afterEach(() => {
 
 const putsTo = (path: string) =>
   homeserver.putJson.mock.calls.filter(([putPath]) => putPath === path).map(([, body]) => body);
+const bytesPutTo = (path: string) =>
+  homeserver.putBytes.mock.calls
+    .filter(([putPath]) => putPath === path)
+    .map(([, bytes]) => JSON.parse(new TextDecoder().decode(bytes)));
 
 describe('a profile edit that the homeserver refuses re-reads before retrying', () => {
   const published = {
     name: 'Alice',
     bio: 'old bio',
-    image: `pubky://${USER}/pub/pubky.app/files/0035S78QPP4S0`,
+    image: `pubky://${USER}/pub/social/v1/files/AKSZ57W2RFKHV1EHK007FQQ8TW.png`,
     links: [{ title: 'WEBSITE', url: 'https://example.com/' }],
     status: 'working',
+    // A member a newer client added, carried through every write
+    pronouns: 'she/her',
   };
 
   it.each([429, 500, 503, 409])('keeps a bio another device saved during the backoff after a %i', async (status) => {
     homeserver.files.set(PROFILE_PATH, JSON.stringify(published));
-    homeserver.putJson.mockRejectedValueOnce(sdkError(status));
+    homeserver.putBytes.mockRejectedValueOnce(sdkError(status));
     onBackoff = () => {
       homeserver.files.set(PROFILE_PATH, JSON.stringify({ ...published, bio: 'new bio from device B' }));
     };
 
     await ProfileApplication.commitUpdateStatus({ pubky: USER, status: 'back' });
 
-    expect(putsTo(PROFILE_PATH)).toEqual([
-      expect.objectContaining({ bio: 'old bio', status: 'back' }),
-      expect.objectContaining({ bio: 'new bio from device B', status: 'back' }),
+    expect(bytesPutTo(PROFILE_PATH)).toEqual([
+      { ...published, status: 'back' },
+      { ...published, bio: 'new bio from device B', status: 'back' },
     ]);
-    expect(JSON.parse(homeserver.files.get(PROFILE_PATH)!)).toMatchObject({
+    expect(JSON.parse(homeserver.files.get(PROFILE_PATH)!)).toEqual({
+      ...published,
       bio: 'new bio from device B',
       status: 'back',
     });
@@ -178,7 +184,7 @@ describe('a profile edit that the homeserver refuses re-reads before retrying', 
 
   it('does not write again once logout begins during the backoff', async () => {
     homeserver.files.set(PROFILE_PATH, JSON.stringify(published));
-    homeserver.putJson.mockRejectedValueOnce(sdkError(503));
+    homeserver.putBytes.mockRejectedValueOnce(sdkError(503));
     onBackoff = () => {
       useAuthStore.setState({ isLoggingOut: true });
     };
@@ -186,7 +192,7 @@ describe('a profile edit that the homeserver refuses re-reads before retrying', 
     await expect(ProfileApplication.commitUpdateStatus({ pubky: USER, status: 'back' })).rejects.toMatchObject({
       code: AuthErrorCode.SESSION_EXPIRED,
     });
-    expect(homeserver.putJson).toHaveBeenCalledOnce();
+    expect(homeserver.putBytes).toHaveBeenCalledOnce();
   });
 });
 
@@ -238,12 +244,10 @@ describe('a settings write that the homeserver refuses with the publish conflict
 describe('marking notifications read never moves last_read backward', () => {
   const T1 = 1_000;
   const T2 = 2_000;
-  const lastRead = (timestamp: number) =>
-    asOpaque<LastReadResult>({
-      last_read: { timestamp: BigInt(timestamp), toJson: () => ({ timestamp }) },
-      meta: { url: `pubky://${USER}${LAST_READ_PATH}` },
-      free: vi.fn(),
-    });
+  const lastRead = (timestamp: number): TLastRead => ({
+    url: `pubky://${USER}${LAST_READ_PATH}`,
+    lastRead: { timestamp },
+  });
 
   beforeEach(() => {
     useNotificationStore.getState().setLastRead(0);

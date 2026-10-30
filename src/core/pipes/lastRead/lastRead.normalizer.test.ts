@@ -1,184 +1,54 @@
-import { LastReadResult } from 'pubky-app-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppError } from '@/libs/error/error';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import type { Pubky } from '@/models/models.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
-import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  buildPubkyUri,
-  INVALID_INPUTS,
-  restoreMocks,
-  setupIntegrationTestMocks,
-  setupUnitTestMocks,
-  TEST_PUBKY,
-} from '../pipes.test-utils';
-
-describe('LastReadNormalizer URLs', () => {
-  const owner = fakeOwner(1);
-
-  it('puts the v1 cursor in the app private namespace', () => {
-    expect(LastReadNormalizer.buildUrl(owner)).toBe(`pubky://${owner}/priv/app.pubky/v1/last_read.json`);
-  });
-
-  it('spells the 0.x cursor where a 0.x client wrote it', () => {
-    expect(LastReadNormalizer.buildLegacyUrl(owner)).toBe(`pubky://${owner}/pub/pubky.app/last_read`);
-  });
-});
 
 describe('LastReadNormalizer', () => {
-  // Mock builder factory
-  const createMockBuilder = (overrides?: Partial<{ createLastRead: ReturnType<typeof vi.fn> }>) => ({
-    createLastRead: vi.fn(() => {
-      const mockTimestamp = BigInt(Date.now());
-      return asOpaque<LastReadResult>({
-        last_read: {
-          timestamp: mockTimestamp,
-          toJson: vi.fn(() => ({ timestamp: Number(mockTimestamp) })),
-        },
-        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, 'last_read') },
-      });
-    }),
-    ...overrides,
+  const owner = fakeOwner(1) as Pubky;
+  const other = fakeOwner(2) as Pubky;
+
+  describe('URLs', () => {
+    it('puts the v1 cursor in the app private namespace', () => {
+      expect(LastReadNormalizer.buildUrl(owner)).toBe(`pubky://${owner}/priv/app.pubky/v1/last_read.json`);
+    });
+
+    it('spells the 0.x cursor where a 0.x client wrote it', () => {
+      expect(LastReadNormalizer.buildLegacyUrl(owner)).toBe(`pubky://${owner}/pub/pubky.app/last_read`);
+    });
+
+    it('builds each owner its own URLs', () => {
+      expect(LastReadNormalizer.buildUrl(other)).toContain(other);
+      expect(LastReadNormalizer.buildUrl(other)).not.toBe(LastReadNormalizer.buildUrl(owner));
+    });
   });
 
-  /**
-   * Unit Tests
-   */
-  describe('Unit Tests', () => {
-    let mockBuilder: ReturnType<typeof createMockBuilder>;
-
+  describe('to', () => {
     beforeEach(() => {
-      mockBuilder = createMockBuilder();
-      setupUnitTestMocks(mockBuilder);
+      vi.useFakeTimers();
+      vi.setSystemTime(1_700_000_000_000);
     });
 
-    afterEach(restoreMocks);
+    afterEach(() => {
+      vi.useRealTimers();
+    });
 
-    describe('to - successful creation', () => {
-      it('should create last read with last_read and meta properties', () => {
-        const result = LastReadNormalizer.to(TEST_PUBKY.USER_1);
-
-        expect(result).toHaveProperty('last_read');
-        expect(result).toHaveProperty('meta');
-      });
-
-      it('should call PubkySpecsSingleton.get with pubky and createLastRead without params', () => {
-        LastReadNormalizer.to(TEST_PUBKY.USER_1);
-
-        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(TEST_PUBKY.USER_1);
-        expect(mockBuilder.createLastRead).toHaveBeenCalledWith();
-      });
-
-      it('should return correct structure with timestamp and URL', () => {
-        const result = LastReadNormalizer.to(TEST_PUBKY.USER_1);
-
-        expect(result.last_read.timestamp).toBeDefined();
-        expect(typeof result.last_read.toJson).toBe('function');
-        expect(result.meta.url).toContain('pubky://');
-        expect(result.meta.url).toContain('/pub/pubky.app/last_read');
+    it('builds a cursor at the current time, in milliseconds, at the v1 URL', () => {
+      expect(LastReadNormalizer.to(owner)).toEqual({
+        url: `pubky://${owner}/priv/app.pubky/v1/last_read.json`,
+        lastRead: { timestamp: 1_700_000_000_000 },
       });
     });
 
-    describe('to - error handling', () => {
-      it('should throw AppError with correct properties when createLastRead fails', () => {
-        const errorMessage = 'Invalid last read';
-        mockBuilder.createLastRead.mockImplementation(() => {
-          throw errorMessage;
-        });
+    it('follows the clock between calls', () => {
+      const first = LastReadNormalizer.to(owner);
+      vi.setSystemTime(1_700_000_000_010);
 
-        try {
-          LastReadNormalizer.to(TEST_PUBKY.USER_1);
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.SocialSpecs);
-          expect(appError.operation).toBe('createLastRead');
-          expect(appError.context).toEqual({ pubky: TEST_PUBKY.USER_1 });
-          expect(appError.message).toBe(errorMessage);
-        }
-      });
-
-      it('should throw AppError when PubkySpecsSingleton.get fails', () => {
-        vi.spyOn(PubkySpecsSingleton, 'get').mockImplementation(() => {
-          throw 'Singleton error';
-        });
-
-        expect(() => LastReadNormalizer.to(TEST_PUBKY.USER_1)).toThrow(AppError);
-      });
+      expect(LastReadNormalizer.to(owner).lastRead.timestamp).toBe(first.lastRead.timestamp + 10);
     });
 
-    describe('to - different inputs', () => {
-      it.each([
-        ['USER_1', TEST_PUBKY.USER_1],
-        ['USER_2', TEST_PUBKY.USER_2],
-      ])('should handle %s pubky', (_, pubky) => {
-        LastReadNormalizer.to(pubky);
-        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(pubky);
-      });
-    });
-  });
-
-  /**
-   * Integration Tests - Real pubky-app-specs library
-   */
-  describe('Integration Tests', () => {
-    beforeEach(setupIntegrationTestMocks);
-    afterEach(restoreMocks);
-
-    describe('successful creation with real library', () => {
-      it('should create valid result with correct URL format', () => {
-        const result = LastReadNormalizer.to(TEST_PUBKY.USER_1);
-
-        expect(result.last_read).toBeDefined();
-        expect(result.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/last_read$/);
-        expect(result.meta.url).toContain(TEST_PUBKY.USER_1);
-      });
-
-      it('should have BigInt timestamp close to current time', () => {
-        const before = BigInt(Date.now());
-        const result = LastReadNormalizer.to(TEST_PUBKY.USER_1);
-        const after = BigInt(Date.now());
-
-        expect(typeof result.last_read.timestamp).toBe('bigint');
-        expect(result.last_read.timestamp).toBeGreaterThanOrEqual(before - BigInt(1000));
-        expect(result.last_read.timestamp).toBeLessThanOrEqual(after + BigInt(1000));
-      });
-
-      it('should produce valid JSON with numeric timestamp', () => {
-        const result = LastReadNormalizer.to(TEST_PUBKY.USER_1);
-        const json = result.last_read.toJson();
-
-        expect(typeof json.timestamp).toBe('number');
-        expect(Number.isFinite(json.timestamp)).toBe(true);
-      });
-    });
-
-    describe('validation behavior after an identity switch', () => {
-      it.each([
-        ['empty', INVALID_INPUTS.EMPTY],
-        ['null', INVALID_INPUTS.NULL],
-        ['undefined', INVALID_INPUTS.UNDEFINED],
-        ['invalid format', INVALID_INPUTS.INVALID_FORMAT],
-      ])('should reject a %s pubky after initialization', (_, invalidPubky) => {
-        LastReadNormalizer.to(TEST_PUBKY.USER_1);
-
-        expect(() => LastReadNormalizer.to(invalidPubky)).toThrow(AppError);
-      });
-    });
-
-    describe('sequential calls', () => {
-      it('should generate different timestamps for sequential calls', async () => {
-        const result1 = LastReadNormalizer.to(TEST_PUBKY.USER_1);
-        await new Promise((r) => setTimeout(r, 10));
-        const result2 = LastReadNormalizer.to(TEST_PUBKY.USER_1);
-
-        expect(result2.last_read.timestamp).toBeGreaterThanOrEqual(result1.last_read.timestamp);
+    it('is the plain JSON document the homeserver stores', () => {
+      expect(JSON.parse(JSON.stringify(LastReadNormalizer.to(owner).lastRead))).toEqual({
+        timestamp: 1_700_000_000_000,
       });
     });
   });

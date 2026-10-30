@@ -1,4 +1,3 @@
-import { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
@@ -84,17 +83,14 @@ const setupNotificationMocks = () => {
     }),
   );
 
-  vi.spyOn(NotificationNormalizer, 'to').mockImplementation(
-    (pubky: string) => ({ meta: { url: getLastReadUrl(pubky) } }) as LastReadResult,
-  );
-
   // Settings sync is now handled in the controller (hydrateMeImAlive)
   vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
   vi.spyOn(NotificationNormalizer, 'toEnabledTypes').mockReturnValue(MOCK_ALLOWED_TYPES);
 };
 
 // Mock pubky-app-specs to avoid WebAssembly issues
-vi.mock('pubky-app-specs', () => ({
+vi.mock('pubky-app-specs', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('pubky-app-specs')>()),
   default: vi.fn(() => Promise.resolve()),
 }));
 

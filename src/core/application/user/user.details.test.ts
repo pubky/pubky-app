@@ -1,4 +1,4 @@
-import type { PubkyAppUser } from 'pubky-app-specs';
+import type { User } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
@@ -7,7 +7,6 @@ import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalUserService } from '@/services/local/user/user';
 import { nexusQueryClient } from '@/services/nexus/nexus.query-client';
 import type { NexusUser, NexusUserDetails } from '@/services/nexus/nexus.types';
-import { asOpaque } from '@/test-utils/type-assertions';
 import { UserApplication } from './user';
 
 const userId = 'pperrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rdo';
@@ -48,12 +47,13 @@ const fullUser = (details: NexusUserDetails): NexusUser => ({
   relationship: { following: false, followed_by: false },
 });
 
-const localEdit = asOpaque<PubkyAppUser>({
+const localEdit: User = {
   name: 'Local edit',
-  bio: '',
+  bio: null,
   image: null,
-  links: [],
-});
+  links: null,
+  status: null,
+};
 
 // Keep the application, Nexus client, and Dexie persistence real; control network responses and time.
 describe('UserApplication concurrent details fetches', () => {

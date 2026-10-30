@@ -1,15 +1,10 @@
-import { BlobResult, FileResult, PubkyAppUser } from 'pubky-app-specs';
+import type { Built, User } from 'pubky-social-specs';
 import type { Pubky } from '@/models/models.types';
 import type { ProfileChanges } from '@/pipes/pipes.types';
 
-export type TUploadAvatarInput = {
-  blobResult: BlobResult;
-  fileResult: FileResult;
-};
-
 export type TCreateProfileInput = {
-  profile: PubkyAppUser;
-  url: string;
+  /** The profile as the data model built it: `body` is what goes to the homeserver, `object` what stays local. */
+  profile: Built<User>;
   pubky: Pubky;
 };
 

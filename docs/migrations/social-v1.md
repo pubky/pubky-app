@@ -74,10 +74,11 @@ File ownership: `homeserver.ts` is PR-A then PR-D only; `controllers/auth/auth.t
 PR-D only; `src/config/*` PR-A only; the lockfile changes only in PR-A and PR-F. Each child session merges
 `feat/social-v1` into its branch before opening the PR.
 
-Known limitation on the intermediate branch (after PR-A, before PR-C): `hydrateMeImAlive` writes the notification
-cursor to `/priv/app.pubky/v1/last_read.json` but `BootstrapApplication.fetchOrPutLastRead` still creates it at the
-legacy URL, so root sessions get a 404 on every bootstrap until PR-C creates the v1 file. The gate (PR-D) signs a
-pre-port Ring grant out before it reaches that PUT.
+Known limitation on the intermediate branch (after PR-A and PR-C, before PR-D): the first bootstrap reads and
+writes the notification cursor and the settings at `/priv/app.pubky/v1/`, so a pre-port Ring grant (lacking
+`/priv/app.pubky/v1/:rw`) fails those requests until the gate signs it out for a new grant. Root sessions are
+unaffected. PR-C also makes `AuthApplication.userIsSignedUp` probe the v1 profile alone: until the gate lands, a
+session restored on an un-migrated account reads as not signed up.
 
 ## The migration gate (PR-D, ADR-0026)
 
