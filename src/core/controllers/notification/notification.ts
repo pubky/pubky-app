@@ -1,11 +1,12 @@
 import { NotificationApplication } from '@/application/notification/notification';
 import type { TGetOrFetchNotificationsResponse } from '@/application/notification/notification.types';
 import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
-import type { TGetNotificationsParams } from '@/controllers/notification/notification.types';
+import type { TGetNotificationsParams, TLastReadEvent } from '@/controllers/notification/notification.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import type { Pubky } from '@/models/models.types';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
@@ -81,6 +82,42 @@ export class NotificationController {
         Logger.warn('Failed to mark notifications as read on homeserver', { error });
       }
     }
+  }
+
+  /**
+   * Reads the published `last_read` from the homeserver and adopts it when another session moved it forward,
+   * recounting the unread badge against the new boundary.
+   *
+   * Only a newer remote value is applied, and it is checked again after the unread count: a local
+   * mark-as-read that lands during the count must not be rolled back.
+   *
+   * @param pubky - The user whose `last_read` changed
+   */
+  static async fetchLastReadFromHomeserver(pubky: Pubky): Promise<void> {
+    const isCurrent = captureViewerSession();
+    const {
+      meta: { url },
+    } = LastReadNormalizer.to(pubky);
+    const remoteLastRead = await NotificationApplication.fetchLastReadFromHomeserver(url);
+    if (remoteLastRead === null || !isCurrent()) return;
+
+    const notificationStore = useNotificationStore.getState();
+    if (remoteLastRead <= notificationStore.selectLastRead()) return;
+
+    const allowedTypes = NotificationNormalizer.toEnabledTypes(useSettingsStore.getState().notifications);
+    const unread = await NotificationApplication.countFilteredUnreadSince(remoteLastRead, allowedTypes);
+
+    if (!isCurrent() || remoteLastRead <= useNotificationStore.getState().selectLastRead()) return;
+    notificationStore.setLastRead(remoteLastRead);
+    notificationStore.setUnread(unread);
+  }
+
+  /**
+   * Homeserver `/events-stream` (live) for the current user's `last_read` file.
+   * @see NotificationApplication.subscribeLastReadEventStream
+   */
+  static subscribeLastReadEventStream(pubky: Pubky, cursor: string | null): Promise<ReadableStream<TLastReadEvent>> {
+    return NotificationApplication.subscribeLastReadEventStream(pubky, cursor);
   }
 
   /**

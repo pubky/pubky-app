@@ -12,8 +12,10 @@ import type {
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import { TagCacheApplication } from '@/application/tag/tag-cache';
+import { NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX } from '@/config/notification-last-read-sync';
 import { getTtlPostMs, getTtlUserMs } from '@/config/sync';
 import { POST_TAGS_PER_PAGE, USER_TAGS_PER_PAGE } from '@/config/tags';
+import type { TLastReadEvent } from '@/controllers/notification/notification.types';
 import { hasHttpStatus, isAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
@@ -121,6 +123,36 @@ export class NotificationApplication {
       if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return null;
       throw error;
     }
+  }
+
+  /**
+   * Reads the published `last_read` timestamp past the browser HTTP cache, so a mark made on another device is
+   * seen even when an earlier copy is still heuristically fresh.
+   *
+   * @param url - The current user's `last_read` URL
+   * @returns The published timestamp, or null when the file is missing or holds no finite timestamp
+   */
+  static async fetchLastReadFromHomeserver(url: string): Promise<number | null> {
+    try {
+      const published = await HomeserverService.getFreshJson<{ timestamp?: unknown }>(url);
+      const value = Number(published?.timestamp);
+      return Number.isFinite(value) ? value : null;
+    } catch (error) {
+      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return null;
+      throw error;
+    }
+  }
+
+  /**
+   * Homeserver `/events-stream` (live) for the current user's `last_read` file only.
+   * @see HomeserverService.subscribeUserEventStreamForPath
+   */
+  static subscribeLastReadEventStream(pubky: Pubky, cursor: string | null): Promise<ReadableStream<TLastReadEvent>> {
+    return HomeserverService.subscribeUserEventStreamForPath({
+      userZ32: pubky,
+      cursor,
+      pathPrefix: NOTIFICATION_LAST_READ_HOMESERVER_EVENTS_PATH_PREFIX,
+    });
   }
 
   /**
