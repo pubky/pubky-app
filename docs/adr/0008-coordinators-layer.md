@@ -72,6 +72,7 @@ Coordinators   Workflows
 - Implemented: Polling lifecycle management (start/stop based on auth, visibility, routes)
 - Integrated: Calls `NotificationController.fetchNotifications()` to fetch notifications
 - Added: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/mute-list-sync.ts`) — homeserver `/events-stream` for `/pub/pubky.app/mutes/` (via `@synonymdev/pubky`), debounced `MuteController.fetchMutedUsers`; same route/visibility/auth guards pattern as notifications
+- Added: `EventStreamSyncCoordinator` (`src/core/coordinators/base/event-stream-sync-coordinator.ts`) — the abstract base for coordinators that follow a homeserver event stream: auth/route/visibility gating, the generation-guarded stream loop, reconnect backoff, the healthy-connection verdict, the one-shot outage report, the debounced refresh and the per-user `sessionStorage` cursor. A subclass supplies its timing config and two controller calls (`subscribe`, `refresh`) and owns its singleton; `MuteListSyncCoordinator` is the first. It is the stream counterpart of the polling base `Coordinator`, not a new layer or rule
 - UI Component: `CoordinatorsManager` manages coordinator lifecycle
 - Consumed via direct alias imports, for example `@/coordinators/notifications/notifications`
 

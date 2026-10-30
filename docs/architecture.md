@@ -63,7 +63,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - Call controllers (like UI does)
 - **NEVER** call application directly
 - **NEVER** call services directly
-- **Mute list (homeserver events stream)**: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/`) refreshes the local mute list when another session changes `/pub/pubky.app/mutes/`; see `docs/adr/0014-muting-system.md`.
+- **Mute list (homeserver events stream)**: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/`) refreshes the local mute list when another session changes `/pub/pubky.app/mutes/`; see `docs/adr/0014-muting-system.md`. The stream loop (gating, backoff, outage report, debounced refresh, cursor) lives in the abstract `EventStreamSyncCoordinator` (`src/core/coordinators/base/event-stream-sync-coordinator.ts`); a new homeserver-stream coordinator extends it instead of copying the loop.
 
 ### Application (`src/core/application/`)
 
