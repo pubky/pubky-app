@@ -94,6 +94,13 @@ describe('useSearchCriteria', () => {
       expect(result.current).toEqual({ mode: 'tags', tags: ['bitcoin', 'nostr'] });
     });
 
+    it('folds ASCII letters only, so a hashtag link names the tag as it is stored', () => {
+      // `#xÄPFEL` is stored as `xÄpfel` (trim + ASCII lowercase); a Unicode lowercase would search `xäpfel`, another tag.
+      mockGet.mockReturnValue('xÄPFEL,İstanbul');
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'tags', tags: ['xÄpfel', 'İstanbul'] });
+    });
+
     it('limits tags to MAX_STREAM_TAGS', () => {
       // Default MAX_STREAM_TAGS is 5
       mockGet.mockReturnValue('tag1,tag2,tag3,tag4,tag5,tag6,tag7');
