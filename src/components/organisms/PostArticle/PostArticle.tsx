@@ -8,6 +8,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { POST_CONTENT_PENDING_PROPS } from '@/hooks/useCardsLayout/useCardsLayout.utils';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
+import { resolveArticleCover } from '@/libs/post/articleCover';
 import { getAttachmentAtSlot } from '@/libs/utils/unlockedMedia';
 import { cn } from '@/libs/utils/utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
@@ -19,7 +20,14 @@ import type { AttachmentConstructed, PendingAttachment } from '../PostAttachment
 interface PostArticleProps {
   content: string;
   attachments: PostDetailsModel['attachments'];
+  /**
+   * The media the reader holds locally, index-aligned with the slots the body references: unlocked
+   * (Locks) content, whose slot 0 is its cover under the slot-0 convention, or the inline entries
+   * this session published.
+   */
   localAttachments: AttachmentConstructed[] | undefined;
+  /** The cover this session published or edited (its own entry: the cover is no slot). */
+  localCover?: AttachmentConstructed;
   className?: string;
   /** 'full' reads the whole article, as the post page does; 'preview' clamps it to a card. */
   variant?: 'preview' | 'full';
@@ -36,12 +44,19 @@ export const PostArticle = ({
   content,
   attachments,
   localAttachments,
+  localCover: localCoverEntry,
   className,
   variant = 'preview',
   presentation = 'default',
   pendingAttachments = [],
 }: PostArticleProps) => {
   const isFull = variant === 'full';
+  // Unlocked content keeps its cover in slot 0 (the slot-0 convention, `GuardedPostBuilder`); a
+  // published article's cover is its own local entry. The slot-0 rule says which applies.
+  const { legacyCoverSlot } = resolveArticleCover({ content, attachments });
+  const slotZeroEntry = legacyCoverSlot
+    ? (getAttachmentAtSlot(localAttachments, 0) ?? getAttachmentAtSlot(pendingAttachments, 0))
+    : undefined;
   const { title, body, coverImage, hasCover, isCoverLoading } = usePostArticle({
     content,
     attachments,
@@ -49,16 +64,14 @@ export const PostArticle = ({
     // While the bytes download the local list is still empty; the pending list says what it will hold.
     localAttachmentCount: pendingAttachments.length || localAttachments?.length,
     // A pending slot 0 already knows its type too: a video there vetoes the cover before its bytes land
-    localCoverType: (getAttachmentAtSlot(localAttachments, 0) ?? getAttachmentAtSlot(pendingAttachments, 0))?.type,
+    localCoverType: (localCoverEntry ?? slotZeroEntry)?.type,
   });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
-  // Local entries are index-aligned with attachments; slot 0 is the cover
-  // only when the slot-0 rule says so (otherwise it's an inline image).
   // TODO:[Locks] #2660 — the other half of the cover rule: the hook says a slot 0 exists, this says
   // whether it is an image, so a video in slot 0 reports a cover that never renders.
-  const localCover = getAttachmentAtSlot(localAttachments, 0);
+  const localCover = localCoverEntry ?? (legacyCoverSlot ? getAttachmentAtSlot(localAttachments, 0) : undefined);
   const localCoverImage =
     hasCover && localCover?.type.startsWith('image')
       ? { src: localCover.urls.main, alt: localCover.name, width: localCover.width, height: localCover.height }

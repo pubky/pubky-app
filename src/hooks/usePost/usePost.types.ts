@@ -61,6 +61,11 @@ export interface UsePostEditOptions {
    */
   originalAttachmentUris?: string[];
   /**
+   * Article-only: the cover the composer was seeded with (the envelope's `cover_image`, or slot 0
+   * of a 0.x article), so a save can tell a kept cover from a replaced or cleared one.
+   */
+  originalCoverUri?: string;
+  /**
    * Article-only: original attachment URIs that were NOT presented to the user
    * at open (not the cover, not referenced by the body — e.g. attachments from
    * other clients or targets of malformed refs). Carried through the edit at
@@ -79,7 +84,7 @@ export interface UsePostEditOptions {
  * (and deletes the file) on submit.
  */
 export type ExistingAttachment = {
-  /** Homeserver file URI (`pubky://…/files/<id>`) — kept on the post when submitted. */
+  /** Homeserver media URI (`pubky://…/files/<hash>.<ext>`) — kept on the post when submitted. */
   uri: string;
   /** MIME content type; placeholder until metadata resolves. */
   type: string;

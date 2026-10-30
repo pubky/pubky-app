@@ -1,222 +1,226 @@
-import { PostResult, PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
+import {
+  type Attachment,
+  buildPost,
+  type BuiltPost,
+  type CollectionContent as StoredCollectionContent,
+  decodeContent,
+  editPost,
+  encodeContent,
+  type NewPost,
+  type Post,
+  tryDecodeContent,
+  type UrlArg,
+} from 'pubky-social-specs';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { Logger } from '@/libs/logger/logger';
-import { isPostDeleted } from '@/libs/utils/utils';
-import { CompositeIdDomain, type Pubky } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import { parseArticleContent } from '@/libs/post/articleContent';
+import type { Pubky } from '@/models/models.types';
 import type { CollectionContentInput } from '@/models/post/collection/collectionPost.types';
-import { PostDetailsModel } from '@/models/post/details/postDetails';
-import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
-import type { PostValidatorData } from '@/pipes/pipes.types';
+import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
+import type { PostValidatorData, TPostEdit } from '@/pipes/pipes.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
+import { toLocalPostKind } from '@/pipes/post/post.kind';
+import { toSpecsValidationError } from '@/pipes/specs.errors';
+
+/** The newest stored version of a post: where it is, and what it holds. */
+export type TPostHead = {
+  url: UrlArg<'post'>;
+  post: Post;
+};
 
 type TToEditParams = {
-  compositePostId: string;
+  owner: Pubky;
+  head: TPostHead;
+  edit: TPostEdit;
+};
+
+type TToLocalEditParams = {
+  /** The cached row the edit starts from. */
+  row: Pick<PostDetailsModelSchema, 'content' | 'attachments' | 'kind'>;
+  edit: TPostEdit;
+};
+
+/** What `LocalPostService.edit` takes: the edit projected onto the cached row. */
+export type TLocalPostEdit = {
   content: string;
-  currentUserPubky: Pubky;
-  /**
-   * Full ordered attachment URI list to persist on the edited post.
-   * `undefined` keeps the stored attachments; `[]` and `null` both clear them.
-   */
+  /** `undefined` leaves the column untouched; `null` clears it. */
   attachments?: string[] | null;
-  /** Kind for the edited post. `undefined` preserves the stored kind. */
-  kind?: PubkyAppPostKind;
+  /** `undefined` leaves the column untouched. */
+  kind?: string;
+};
+
+/** A stored collection envelope with nothing in it, for a cached row whose content is not one. */
+const EMPTY_STORED_COLLECTION: StoredCollectionContent = {
+  name: '',
+  description: null,
+  items: [],
+  cover_image: null,
+  layout: null,
 };
 
 export class PostNormalizer {
   private constructor() {}
 
-  static postKindToLowerCase(kind: string): string {
-    // We will use that one until we fix the pubky-app-specs library
-    return kind.toLowerCase();
+  /** The first version of a collection: `buildPost` spells its envelope. */
+  static toCollection(collection: CollectionContentInput, specsPubky: Pubky): BuiltPost {
+    return this.build(
+      () => buildPost(specsPubky, CollectionPostContent.toNewInput(CollectionPostContent.normalize(collection))),
+      'buildPost',
+      { specsPubky, itemCount: collection.items?.length ?? 0 },
+    );
   }
 
   /**
-   * Maps stored kind string to PubkyAppPostKind enum.
-   * DB stores "short"/"long" strings, but PubkyAppPost expects numeric enum values.
-   *
-   * Fails closed on unrecognized kinds: the stored kind is an open string
-   * (Nexus running a newer spec can serve kinds this client doesn't know, as
-   * happened when `collection` shipped), and a fallback would make every edit
-   * of such a post silently rewrite its kind on the homeserver.
+   * The first version of a note or an article. An article's cover goes in the envelope's
+   * `cover_image` and its attachments hold the body's inline media only, in slot order, so
+   * `attachment:{n}` indexes `attachments` directly (ADR-0023, ADR-0027).
    */
-  static mapKindToEnum(kind: string): PubkyAppPostKind {
-    const normalized = kind.toLowerCase();
-    if (normalized === 'short' || normalized === String(PubkyAppPostKind.Short)) {
-      return PubkyAppPostKind.Short;
+  static to(post: PostValidatorData, specsPubky: Pubky): BuiltPost {
+    const attachments = (post.attachments ?? []).map((attachment) => ({
+      uri: attachment.media.url,
+      name: attachment.name,
+    }));
+    const threaded = {
+      parent: post.parentUri ?? null,
+      embed: post.embed ?? null,
+      attachments,
+      lock: post.lock ?? null,
+    };
+
+    return this.build(
+      () => {
+        if (post.kind === 'article') {
+          const article = this.parseArticle(post.content);
+          return buildPost(specsPubky, {
+            kind: 'article',
+            title: article.title,
+            body: article.body,
+            cover_image: post.coverImage?.media.url ?? null,
+            ...threaded,
+          });
+        }
+        if (post.kind === 'collection') {
+          throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'A collection is created with toCollection', {
+            service: ErrorService.Local,
+            operation: 'buildPost',
+          });
+        }
+        const input: NewPost = { kind: post.kind, content: post.content, ...threaded };
+        return buildPost(specsPubky, input);
+      },
+      'buildPost',
+      { specsPubky, kind: post.kind },
+    );
+  }
+
+  /**
+   * The next version of a post: its newest stored version with `edit` applied. Everything the
+   * edit leaves out is carried over as stored: the lock, the alt text of kept attachments, an
+   * article's cover, a collection's item notes and the members another client added.
+   */
+  static toEdit({ owner, head, edit }: TToEditParams): BuiltPost {
+    return this.build(
+      () => {
+        const post: Post = { ...head.post };
+        if (edit.kind !== undefined) post.kind = edit.kind;
+        if (edit.attachmentUris !== undefined) {
+          post.attachments = this.nextAttachments(
+            head.post.attachments,
+            edit.attachmentUris ?? [],
+            edit.attachmentNames,
+          );
+        }
+        const envelope = decodeContent(head.post);
+        if (edit.collection !== undefined) {
+          if (envelope?.kind !== 'collection') throw this.notKind('collection');
+          post.content = encodeContent(CollectionPostContent.toStored(envelope.content, edit.collection));
+        } else if (envelope?.kind === 'article') {
+          const article = edit.content === undefined ? envelope.content : this.parseArticle(edit.content);
+          post.content = encodeContent({
+            ...envelope.content,
+            title: article.title,
+            body: article.body,
+            cover_image: edit.coverImage === undefined ? envelope.content.cover_image : edit.coverImage,
+          });
+        } else if (edit.content !== undefined) {
+          if (envelope !== null) throw this.notKind('note');
+          post.content = edit.content;
+        }
+        return editPost(owner, head.url, post);
+      },
+      'editPost',
+      { owner, headUrl: head.url },
+    );
+  }
+
+  /**
+   * The edit projected onto the cached row, for the optimistic local write that lands before the
+   * head is read (ADR-0027). Pure and best-effort: the row converges to the version that is PUT.
+   */
+  static toLocalEdit({ row, edit }: TToLocalEditParams): TLocalPostEdit {
+    const local: TLocalPostEdit = { content: row.content };
+    if (edit.kind !== undefined) local.kind = toLocalPostKind(edit.kind);
+    if (edit.attachmentUris !== undefined) {
+      local.attachments = edit.attachmentUris && edit.attachmentUris.length > 0 ? edit.attachmentUris : null;
     }
-    if (normalized === 'long' || normalized === String(PubkyAppPostKind.Long)) {
-      return PubkyAppPostKind.Long;
+    if (edit.collection !== undefined) {
+      const stored = tryDecodeContent({ kind: 'collection', content: row.content });
+      const envelope =
+        stored.ok && stored.value?.kind === 'collection' ? stored.value.content : EMPTY_STORED_COLLECTION;
+      local.content = encodeContent(CollectionPostContent.toStored(envelope, edit.collection));
+    } else if (row.kind === 'long' && (edit.content !== undefined || edit.coverImage !== undefined)) {
+      const stored = parseArticleContent(row.content);
+      const article = edit.content === undefined ? stored : this.parseArticle(edit.content);
+      local.content = encodeContent({
+        title: article?.title ?? '',
+        body: article?.body ?? '',
+        cover_image: edit.coverImage === undefined ? (stored?.cover_image ?? null) : edit.coverImage,
+      });
+    } else if (edit.content !== undefined) {
+      local.content = edit.content;
     }
-    if (normalized === 'collection' || normalized === String(PubkyAppPostKind.Collection)) {
-      return PubkyAppPostKind.Collection;
+    return local;
+  }
+
+  /** The attachments in `uris` order: a kept one keeps its stored object, a new one gets its name. */
+  private static nextAttachments(
+    stored: Attachment[],
+    uris: string[],
+    names: Record<string, string> | undefined,
+  ): Attachment[] {
+    const byUri = new Map(stored.map((attachment) => [attachment.uri, attachment]));
+    return uris.map((uri) => byUri.get(uri) ?? { uri, alt: null, name: names?.[uri] ?? null });
+  }
+
+  private static parseArticle(content: string): { title: string; body: string } {
+    const article = parseArticleContent(content);
+    if (!article) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Article content is not a title and a body', {
+        service: ErrorService.Local,
+        operation: 'parseArticle',
+      });
     }
-    if (normalized === 'image' || normalized === String(PubkyAppPostKind.Image)) {
-      return PubkyAppPostKind.Image;
-    }
-    if (normalized === 'video' || normalized === String(PubkyAppPostKind.Video)) {
-      return PubkyAppPostKind.Video;
-    }
-    if (normalized === 'link' || normalized === String(PubkyAppPostKind.Link)) {
-      return PubkyAppPostKind.Link;
-    }
-    if (normalized === 'file' || normalized === String(PubkyAppPostKind.File)) {
-      return PubkyAppPostKind.File;
-    }
-    throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Unsupported post kind', {
+    return article;
+  }
+
+  private static notKind(kind: string): AppError {
+    return Err.validation(ValidationErrorCode.INVALID_INPUT, `The stored post is not a ${kind}`, {
       service: ErrorService.Local,
-      operation: 'mapKindToEnum',
-      context: { kind },
+      operation: 'toEdit',
     });
   }
 
-  static async toCollection(collection: CollectionContentInput, specsPubky: Pubky): Promise<PostResult> {
+  /**
+   * Runs a package call, turning its refusal into a validation error carrying the package's words
+   * and, for a rule of the data model, its structured `code`, `field` and `limit`.
+   */
+  private static build(run: () => BuiltPost, operation: string, context: Record<string, unknown>): BuiltPost {
     try {
-      const builder = PubkySpecsSingleton.get(specsPubky);
-      const normalized = CollectionPostContent.normalize(collection);
-      return builder.createCollectionPost(
-        normalized.name,
-        normalized.description,
-        normalized.items,
-        normalized.cover_image,
-        normalized.layout,
-      );
+      return run();
     } catch (error) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, message, {
-        service: ErrorService.SocialSpecs,
-        operation: 'createCollectionPost',
-        context: { specsPubky, itemCount: collection.items?.length ?? 0 },
-        cause: error,
-      });
+      throw toSpecsValidationError(error, operation, context);
     }
-  }
-
-  static async to(post: PostValidatorData, specsPubky: Pubky): Promise<PostResult> {
-    try {
-      const builder = PubkySpecsSingleton.get(specsPubky);
-
-      // Create embed object if embed URI is provided
-      let embedObject: PubkyAppPostEmbed | null = null;
-      if (post.embed) {
-        const embeddedPostId = buildCompositeIdFromPubkyUri({
-          uri: post.embed,
-          domain: CompositeIdDomain.POSTS,
-        });
-        if (embeddedPostId) {
-          const embeddedPost = await PostDetailsModel.findById(embeddedPostId);
-          if (embeddedPost) {
-            embedObject = new PubkyAppPostEmbed(post.embed, embeddedPost.kind as unknown as PubkyAppPostKind);
-          }
-        }
-      }
-
-      // The uploads in the order given: an article's cover first, then its body files
-      const attachmentList = (post.attachments ?? []).map((attachment) => attachment.fileResult.meta.url);
-      const attachments = attachmentList.length > 0 ? attachmentList : null;
-
-      return builder.createPost(
-        post.content,
-        post.kind,
-        post.parentUri ?? null,
-        embedObject,
-        attachments,
-        post.lock ?? null,
-      );
-    } catch (error) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, message, {
-        service: ErrorService.SocialSpecs,
-        operation: 'createPost',
-        context: { post, specsPubky },
-        cause: error,
-      });
-    }
-  }
-
-  static async toEdit({
-    compositePostId,
-    content,
-    currentUserPubky,
-    attachments,
-    kind,
-  }: TToEditParams): Promise<PostResult> {
-    const { pubky: authorId, id: postId } = parseCompositeId(compositePostId);
-
-    if (authorId !== currentUserPubky) {
-      throw Err.auth(AuthErrorCode.FORBIDDEN, 'Current user is not the author of this post', {
-        service: ErrorService.Local,
-        operation: 'toEdit',
-        context: { postId, currentUserPubky },
-      });
-    }
-
-    const builder = PubkySpecsSingleton.get(authorId);
-
-    const postDetails = await PostDetailsModel.findById(compositePostId);
-    // Tombstoned posts (the Nexus `deleted` flag, or the legacy `[DELETED]`
-    // content) are treated as not-found here. Pre-tombstone refactor
-    // `!postDetails` caught hard-deleted rows; now they stick around as
-    // tombstones and falling through would build a `PubkyAppPost` from the
-    // tombstone's content.
-    if (!postDetails || isPostDeleted(postDetails)) {
-      throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
-        service: ErrorService.Local,
-        operation: 'toEdit',
-        context: { postId: compositePostId },
-      });
-    }
-
-    const postRelationships = await PostRelationshipsModel.findById(compositePostId);
-
-    // Reconstruct the original PubkyAppPost from stored data
-    let embedObject: PubkyAppPostEmbed | undefined;
-    if (postRelationships?.reposted) {
-      // Get the embedded post's kind if available
-      const embeddedPostId = buildCompositeIdFromPubkyUri({
-        uri: postRelationships.reposted,
-        domain: CompositeIdDomain.POSTS,
-      });
-      if (embeddedPostId) {
-        const embeddedPost = await PostDetailsModel.findById(embeddedPostId);
-        if (embeddedPost) {
-          embedObject = new PubkyAppPostEmbed(postRelationships.reposted, this.mapKindToEnum(embeddedPost.kind));
-        }
-      }
-    }
-
-    // `builder.editPost` swaps content only, so attachment/kind changes ride on
-    // the reconstructed "original" post: it carries the *next* attachments and
-    // kind, and `editPost` validates the result under the existing post id/URL.
-    const nextAttachments =
-      attachments === undefined ? postDetails.attachments : attachments && attachments.length > 0 ? attachments : null;
-
-    // Everything but the content is carried over from this pre-edit post, so `lock` has to be on it —
-    // and `new_with_lock` is the only constructor that accepts one. Omit it and editing an
-    // announcement republishes it with no link to the paid content, unrecoverably.
-    const originalPost = PubkyAppPost.new_with_lock(
-      postDetails.content,
-      kind ?? this.mapKindToEnum(postDetails.kind),
-      postRelationships?.replied ?? null,
-      embedObject ?? null,
-      nextAttachments,
-      postDetails.lock ?? null,
-    );
-
-    const result = builder.editPost(originalPost, postId, content);
-
-    Logger.debug('Post validated', { result });
-
-    return result;
   }
 }

@@ -11,6 +11,7 @@ import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { isAppError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
+import { buildArticleContent } from '@/libs/post/articleContent';
 import {
   countInlineMediaUris,
   serializeArticleBody,
@@ -145,19 +146,21 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
 
   /**
    * Serializes an article body for publishing: rewrites author-owned inline
-   * file URIs to `attachment:{n}` slots. Returns null (after toasting) when
-   * the body contains destinations that block publishing.
+   * file URIs to `attachment:{n}` slots, counted from `slotOffset` (0 for a
+   * published article, whose cover is in the envelope; 1 for a locked article
+   * with a cover in slot 0). Returns null (after toasting) when the body
+   * contains destinations that block publishing.
    */
   const serializeArticleForPublish = (
-    coverPresent: boolean,
+    slotOffset: 0 | 1,
     body = content.trim(),
   ): { body: string; inlineUris: string[] } | null => {
     if (!currentUserId) return null;
     const serialized = serializeArticleBody({
       body,
-      coverPresent,
+      slotOffset,
       authorPubky: currentUserId,
-      maxInlineMedia: ARTICLE_ATTACHMENT_MAX_FILES - (coverPresent ? 1 : 0),
+      maxInlineMedia: ARTICLE_ATTACHMENT_MAX_FILES - slotOffset,
     });
     if (serialized.errors.length > 0) {
       toast({ variant: 'error', description: serializeArticleErrorMessage(serialized.errors[0]) });
@@ -194,8 +197,9 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
    */
   const serializeArticleWithSessionFiles = (
     body: string,
+    slotOffset: 0 | 1,
   ): { body: string; inlineUris: string[]; inlineFiles: File[] } | null => {
-    const serialized = serializeArticleForPublish(attachments.length > 0, body.trim());
+    const serialized = serializeArticleForPublish(slotOffset, body.trim());
     if (!serialized) return null;
 
     const inlineFiles = serialized.inlineUris.map((uri) => inlineMediaSession.getSessionFile(uri));
@@ -205,13 +209,6 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
     return null;
   };
 
-  /**
-   * Seeds the local files store with `[cover?, ...inline]` entries so the
-   * creating session renders instantly (the CDN may not have generated
-   * variants yet). Entries must be complete and index-aligned with the post's
-   * attachments; if any is unknown (e.g. an inline image kept from a previous
-   * session), the entry is cleared and the Dexie/CDN path takes over.
-   */
   /**
    * Completes inline seed entries: this session's files keep their object
    * URLs; URIs kept from previous sessions fall back to locally cached
@@ -255,9 +252,21 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
     }
   };
 
-  const seedArticleLocalFiles = (postId: string, entries: (InlineMediaLocalEntry | null)[]) => {
+  /**
+   * Seeds the local files store so the creating session renders instantly (the CDN may not have
+   * generated variants yet): the inline entries index-aligned with the post's attachments, and the
+   * cover in its own entry (it is no slot). If any inline entry is unknown (e.g. an inline image
+   * kept from a previous session), the list is cleared and the Dexie/CDN path takes over; a cover
+   * without resolved URLs (`null`) likewise.
+   */
+  const seedArticleLocalFiles = (
+    postId: string,
+    entries: (InlineMediaLocalEntry | null)[],
+    cover: InlineMediaLocalEntry | null | undefined,
+  ) => {
     const complete = entries.every((entry) => entry !== null);
     useLocalFilesStore.getState().setPostAttachments(postId, complete ? (entries as InlineMediaLocalEntry[]) : []);
+    useLocalFilesStore.getState().setArticleCover(postId, cover ?? null);
   };
 
   const reply = async ({ postId, onSuccess }: UsePostReplyOptions) => {
@@ -316,28 +325,32 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       if (!(await waitForAuth())) return;
       // Only protect files once the commit can start; closing during restore may discard them.
       inlineMediaSession.setCommitting(true);
-      const article = isArticle ? serializeArticleWithSessionFiles(latestBody) : null;
+      // A published article's cover lives in the envelope, so its inline slots count from 0.
+      const article = isArticle ? serializeArticleWithSessionFiles(latestBody, 0) : null;
       if (isArticle && !article) return;
 
-      // An article's inline files go up with the cover, in slot order (`[cover?, ...inline]`, the
-      // order the serialized body references), through the controller: a failed publish rolls
-      // every upload back, so nothing of an unpublished article ever stays on the homeserver.
-      const uploads = [...attachments, ...(article?.inlineFiles ?? [])];
+      // An article's inline files go up with the cover, in slot order (the order the serialized
+      // body references), through the controller: a failed publish rolls every upload back, so
+      // nothing of an unpublished article ever stays on the homeserver.
+      const coverFile: File | undefined = article ? attachments[0] : undefined;
+      const uploads = article ? article.inlineFiles : attachments;
       const createdPostId = await PostController.commitCreate({
-        content: article ? JSON.stringify({ title: latestTitle.trim(), body: article.body }) : content.trim(),
+        content: article ? buildArticleContent(latestTitle, article.body) : content.trim(),
         authorId: currentUserId,
         tags: tags.length > 0 ? tags : undefined,
         attachments: uploads.length > 0 ? uploads : undefined,
+        coverImage: coverFile,
         isArticle,
       });
 
       if (article) {
         // Build entries before finalizeSession clears the session map; the
         // referenced object URLs' ownership moves to the store.
-        seedArticleLocalFiles(createdPostId, [
-          ...attachments.map(fileToLocalAttachment),
-          ...(await completeInlineSeedEntries(article.inlineUris)),
-        ]);
+        seedArticleLocalFiles(
+          createdPostId,
+          await completeInlineSeedEntries(article.inlineUris),
+          coverFile ? fileToLocalAttachment(coverFile) : undefined,
+        );
         void inlineMediaSession.finalizeSession(article.inlineUris);
       }
 
@@ -399,6 +412,7 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
     editPostId,
     isLockAnnouncement,
     originalAttachmentUris,
+    originalCoverUri,
     preservedAttachmentUris,
     article,
     onSuccess,
@@ -424,45 +438,54 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       inlineMediaSession.setCommitting(true);
       let editContentPayload: string;
       let editAttachments: TEditPostAttachments | undefined;
+      let editCoverImage: string | null | undefined;
       let articleSeedEntries: (InlineMediaLocalEntry | null)[] | undefined;
-      let articleNextOrder: string[] | undefined;
+      let articleCoverEntry: InlineMediaLocalEntry | null | undefined;
+      let articleReferencedUris: string[] | undefined;
 
       if (isArticle) {
-        // Article edits use the slot-ordered `nextOrder` contract: the cover
-        // (kept or freshly uploaded) occupies slot 0, inline body images
-        // follow in first-appearance order.
+        // Article edits use the slot-ordered `nextOrder` contract: inline body media in
+        // first-appearance order, then the originals the user was never shown. The cover (kept or
+        // freshly uploaded) is no slot: it goes in the envelope through `coverImage`, whatever
+        // shape the stored version had (ADR-0023 as amended by ADR-0027).
         const keptCover = existingAttachments[0];
         const newCoverFile: File | undefined = attachments[0];
 
         // Validate the body before uploading a replacement cover, so a blocked
         // publish uploads nothing.
-        const serialized = serializeArticleForPublish(Boolean(newCoverFile ?? keptCover), latestBody.trim());
+        const serialized = serializeArticleForPublish(0, latestBody.trim());
         if (!serialized) return;
 
         // Removal is diffed against the seeded snapshot, never the live row.
         const originalUris = originalAttachmentUris ?? existingAttachments.map((attachment) => attachment.uri);
         const originalSet = new Set(originalUris);
-        if (rejectForeignInlineUris(serialized.inlineUris, originalUris)) return;
+        // The stored cover may be referenced inline too (one file, one URI): it is the post's own.
+        if (
+          rejectForeignInlineUris(serialized.inlineUris, [
+            ...originalUris,
+            ...(originalCoverUri ? [originalCoverUri] : []),
+          ])
+        )
+          return;
 
         // Original attachments the user was never shown (not the cover, not
         // referenced by the body at open) ride at the tail so an unrelated
         // edit never deletes files the user did not see and remove. Slots of
         // referenced files are unaffected by the tail.
         const keptCoverUri = newCoverFile ? undefined : keptCover?.uri;
-        const referencedSet = new Set([...(keptCoverUri ? [keptCoverUri] : []), ...serialized.inlineUris]);
+        const referencedSet = new Set(serialized.inlineUris);
         const preservedTail = (preservedAttachmentUris ?? []).filter(
-          (uri) => originalSet.has(uri) && !referencedSet.has(uri),
+          (uri) => originalSet.has(uri) && !referencedSet.has(uri) && uri !== keptCoverUri,
         );
 
-        // The serialize cap covers cover + inline only; the preserved tail
+        // The serialize cap covers the inline media only; the preserved tail
         // can push the total past the spec limit, which would otherwise
-        // surface as an opaque spec error from `builder.editPost`. Checked
+        // surface as an opaque spec error from `editPost`. Checked
         // before anything goes up, so a blocked save uploads nothing.
-        const coverSlots = newCoverFile || keptCover ? 1 : 0;
-        if (coverSlots + serialized.inlineUris.length + preservedTail.length > ARTICLE_ATTACHMENT_MAX_FILES) {
+        if (serialized.inlineUris.length + preservedTail.length > ARTICLE_ATTACHMENT_MAX_FILES) {
           toast({
             variant: 'error',
-            description: `Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} attachments, including the cover and attachments kept from previous versions. Remove some images to save.`,
+            description: `Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} attachments, including attachments kept from previous versions. Remove some images to save.`,
           });
           return;
         }
@@ -471,24 +494,29 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
         // session go up now, under their homeserver URIs: the slot-ordered `nextOrder` contract
         // takes URIs only. They stay in the session if the commit fails — reused by a retry,
         // deleted by the discard sweep.
-        let coverUri = keptCover?.uri;
+        let coverUri = keptCoverUri;
         if (newCoverFile) {
           coverUri = await FileController.commitCreate({ file: newCoverFile, pubky: currentUserId });
           inlineMediaSession.registerSessionUpload(coverUri, newCoverFile);
         }
         const inlineUris = await inlineMediaSession.uploadStaged(serialized.inlineUris);
-        const nextOrder = [...(coverUri ? [coverUri] : []), ...inlineUris, ...preservedTail];
+        const nextOrder = [...inlineUris, ...preservedTail];
         const kept = [...new Set(nextOrder.filter((uri) => originalSet.has(uri)))];
         const addedUris = [...new Set(nextOrder.filter((uri) => !originalSet.has(uri)))];
         const orderChanged =
           nextOrder.length !== originalUris.length || nextOrder.some((uri, index) => uri !== originalUris[index]);
+        const coverChanged = (coverUri ?? null) !== (originalCoverUri ?? null);
 
-        editContentPayload = JSON.stringify({ title: latestTitle.trim(), body: serialized.body });
-        editAttachments = orderChanged ? { original: originalUris, kept, added: [], addedUris, nextOrder } : undefined;
-        articleNextOrder = nextOrder;
+        editContentPayload = buildArticleContent(latestTitle, serialized.body);
+        // A stored version whose cover still sat in slot 0 (a 0.x article) reads as changed: its
+        // attachments lose that slot and the cover moves into the envelope.
+        editAttachments =
+          orderChanged || coverChanged ? { original: originalUris, kept, added: [], addedUris, nextOrder } : undefined;
+        editCoverImage = orderChanged || coverChanged ? (coverUri ?? null) : undefined;
+        articleReferencedUris = [...nextOrder, ...(coverUri ? [coverUri] : [])];
 
         // undefined = no cover; null = cover exists but has no resolved URLs
-        const coverEntry = newCoverFile
+        articleCoverEntry = newCoverFile
           ? fileToLocalAttachment(newCoverFile)
           : keptCover
             ? keptCover.urls
@@ -497,10 +525,7 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
             : undefined;
         // Seed entries must be index-aligned with the FULL nextOrder,
         // including the preserved tail (metadata completion covers it)
-        articleSeedEntries = [
-          ...(coverEntry === undefined ? [] : [coverEntry]),
-          ...(await completeInlineSeedEntries(nextOrder.slice(coverUri ? 1 : 0))),
-        ];
+        articleSeedEntries = await completeInlineSeedEntries(nextOrder);
       } else {
         // Removal is the only mutation of kept attachments (no reordering), so a
         // count comparison against the seeded snapshot detects any change.
@@ -519,11 +544,12 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
         compositePostId: editPostId,
         content: editContentPayload,
         attachments: editAttachments,
+        coverImage: editCoverImage,
       });
 
-      if (isArticle && articleSeedEntries && articleNextOrder) {
-        seedArticleLocalFiles(editPostId, articleSeedEntries);
-        void inlineMediaSession.finalizeSession(articleNextOrder);
+      if (isArticle && articleSeedEntries && articleReferencedUris) {
+        seedArticleLocalFiles(editPostId, articleSeedEntries, articleCoverEntry);
+        void inlineMediaSession.finalizeSession(articleReferencedUris);
       }
 
       setContent('');
@@ -614,6 +640,7 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       getMediaType: inlineMediaSession.getMediaType,
       getMediaName: inlineMediaSession.getMediaName,
     },
-    serializeArticleForLock: serializeArticleWithSessionFiles,
+    // A locked article keeps its cover in slot 0 inside the lock, so its inline slots count from 1.
+    serializeArticleForLock: (body) => serializeArticleWithSessionFiles(body, attachments.length > 0 ? 1 : 0),
   };
 }
