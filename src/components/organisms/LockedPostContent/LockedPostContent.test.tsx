@@ -153,6 +153,8 @@ afterEach(() => {
 const authState = vi.hoisted(() => ({
   currentUserPubky: 'pubkyreader' as string | null,
   session: {} as object | null,
+  restoreStatus: 'ready' as string,
+  sessionReference: null as object | null,
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
@@ -212,6 +214,13 @@ const mockLockData = ({
 
 const LOCK_URL = 'pubky://hs/pub/app.locks/lock1.json';
 
+/** A payment lock by someone else, so the reader is offered Unlock. */
+const paymentData = () =>
+  mockLockData({
+    lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
+    price: { amount: '1000', asset: 'BTC' as const },
+  });
+
 /** The pill stays busy until a possible earlier unlock is ruled out (#2795); click it once it is live. */
 const liveUnlock = async () => {
   await waitFor(() => expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled());
@@ -243,6 +252,12 @@ describe('LockedPostContent', () => {
     resumeMocks.status = null;
     payMocks.viewContent.mockClear();
     authMocks.isAuthenticated = true;
+    Object.assign(authState, {
+      currentUserPubky: 'pubkyreader',
+      session: {},
+      restoreStatus: 'ready',
+      sessionReference: null,
+    });
     authMocks.waitForAuth.mockImplementation(async () => authMocks.requireAuth(() => true) === true);
     authMocks.requireAuth.mockClear();
     authMocks.setShowSignInDialog.mockClear();
@@ -326,12 +341,6 @@ describe('LockedPostContent', () => {
   });
 
   describe('payment lock', () => {
-    const paymentData = () =>
-      mockLockData({
-        lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
-        price: { amount: '1000', asset: 'BTC' as const },
-      });
-
     it('opens the pay dialog behind the auth gate', async () => {
       paymentData();
       render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
@@ -368,6 +377,8 @@ describe('LockedPostContent', () => {
       const restoreGeometry = useSlideGeometry();
       try {
         authMocks.isAuthenticated = false;
+        authState.currentUserPubky = null;
+        authState.session = null;
         paymentData();
         render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
@@ -495,7 +506,7 @@ describe('LockedPostContent', () => {
       price: { amount: '1000', asset: 'BTC' as const },
     });
     render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
-    expect(await liveUnlock()).toBeEnabled();
+    await liveUnlock();
   });
 
   it('disables Unlock when the lock file fetch failed', () => {
@@ -776,11 +787,6 @@ describe('LockedPostContent', () => {
   });
 
   describe('reader who may already have unlocked it (#2795)', () => {
-    const paymentData = () =>
-      mockLockData({
-        lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
-        price: { amount: '1000', asset: 'BTC' as const },
-      });
     /** Holds the read of the reader's replicated copy open until the test settles it. */
     const holdReplicaRead = () => {
       const read = Promise.withResolvers<Awaited<ReturnType<typeof LocksController.fetchReplicatedContent>>>();
@@ -788,10 +794,31 @@ describe('LockedPostContent', () => {
       return read;
     };
     const unlock = () => screen.getByRole('button', { name: 'Unlock' });
-
-    afterEach(() => {
-      authState.session = {};
-    });
+    /** Records whether an enabled Unlock was ever in the DOM, including between two assertions. */
+    const watchUnlockEnabled = (root: HTMLElement) => {
+      const isEnabledUnlock = (node: Node | null) =>
+        node instanceof HTMLButtonElement && node.textContent?.includes('Unlock') === true && !node.disabled;
+      const enabledNow = () => isEnabledUnlock(screen.queryByRole('button', { name: 'Unlock' }));
+      let wasEnabled = enabledNow();
+      const record = (records: MutationRecord[]) => {
+        wasEnabled ||= records.some(
+          (record) =>
+            isEnabledUnlock(record.target) ||
+            [...record.addedNodes].some(
+              (node) =>
+                isEnabledUnlock(node) ||
+                (node instanceof Element && [...node.querySelectorAll('button')].some(isEnabledUnlock)),
+            ),
+        );
+      };
+      const observer = new MutationObserver(record);
+      observer.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled'] });
+      return () => {
+        record(observer.takeRecords());
+        observer.disconnect();
+        return wasEnabled;
+      };
+    };
 
     it('keeps the pill busy while the copy of a listed purchase is read, then shows the content', async () => {
       const read = holdReplicaRead();
@@ -841,8 +868,11 @@ describe('LockedPostContent', () => {
     });
 
     it('never holds the pill for a signed-out reader, whose replica read never runs', () => {
+      authMocks.isAuthenticated = false;
+      authState.currentUserPubky = null;
       authState.session = null;
       purchasedMocks.status = 'idle';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
       paymentData();
       render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
@@ -850,15 +880,85 @@ describe('LockedPostContent', () => {
       expect(unlock()).toBeEnabled();
       expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
     });
+
+    // After a reload the pubky is back at once, the session only once the restore finishes, and the
+    // purchase list stays 'idle' until then: the reader may still be one who unlocked this post.
+    it.each([
+      ['restoring', null],
+      ['idle', { sessionStoreId: 'saved' }],
+    ])('keeps the pill busy while the session restore is pending (%s)', (restoreStatus, sessionReference) => {
+      Object.assign(authState, { session: null, restoreStatus, sessionReference });
+      purchasedMocks.status = 'idle';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      paymentData();
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+      expect(screen.getByTestId('spinner')).toBeInTheDocument();
+      expect(unlock()).toBeDisabled();
+    });
+
+    it.each(['reauth-required', 'temporary-error'])('releases the pill when the restore ends in %s', (status) => {
+      Object.assign(authState, { session: null, restoreStatus: status, sessionReference: null });
+      purchasedMocks.status = 'idle';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      paymentData();
+      render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+      expect(unlock()).toBeEnabled();
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    it('releases the pill once the list arrives without this lock, with the read still out', async () => {
+      purchasedMocks.status = 'loading';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      holdReplicaRead();
+      paymentData();
+      const { rerender } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+      await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
+      expect(unlock()).toBeDisabled();
+
+      purchasedMocks.status = 'ready';
+      rerender(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+      expect(unlock()).toBeEnabled();
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    // The flash #2795 reports: the restore finishes, the read starts, the copy lands. Unlock stays
+    // busy through every step until the content replaces the card.
+    it('never enables Unlock between a pending restore and the copy it then reads', async () => {
+      Object.assign(authState, { session: null, restoreStatus: 'restoring' });
+      purchasedMocks.status = 'idle';
+      purchasedMocks.hasPurchase.mockReturnValue(false);
+      const read = holdReplicaRead();
+      paymentData();
+      const { container, rerender } = render(
+        <LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />,
+      );
+      const wasEnabled = watchUnlockEnabled(container);
+
+      Object.assign(authState, { session: {}, restoreStatus: 'ready' });
+      purchasedMocks.status = 'ready';
+      purchasedMocks.hasPurchase.mockImplementation((lockId) => lockId === 'lock1');
+      rerender(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+      await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
+      expect(unlock()).toBeDisabled();
+
+      await act(async () =>
+        read.resolve({ post: { content: 'the paid secret', kind: 'short', attachments: null }, attachments: [] }),
+      );
+      expect(await screen.findByText('the paid secret')).toBeInTheDocument();
+      expect(wasEnabled()).toBe(false);
+    });
   });
 
   describe("paid unlocks held for the reader's region", () => {
-    const paymentData = () =>
-      mockLockData({
-        lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
-        price: { amount: '1000', asset: 'BTC' as const },
-      });
     const renderReader = () => render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+    /** The read of a possible earlier unlock holds the pill too; settle it so only the region gates are tested. */
+    const settleReplicaRead = async () => {
+      await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalled());
+      await act(async () => {});
+    };
 
     beforeEach(() => {
       // A reader who has not started this payment: the `lock1` default would count as in flight.
@@ -924,12 +1024,13 @@ describe('LockedPostContent', () => {
       expect(await screen.findByTestId('pay-dialog')).toBeInTheDocument();
     });
 
-    it('holds a saved bundle whose resolved task is absent or ended', () => {
+    it('holds a saved bundle whose resolved task is absent or ended', async () => {
       paidUnlocks.value = { status: 'blocked', cause: 'region' };
       purchasedMocks.hasPurchase.mockReturnValue(true);
       resumeMocks.status = 'none';
       paymentData();
       renderReader();
+      await settleReplicaRead();
       expect(screen.getByTestId('locks-region-notice')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
     });
@@ -949,12 +1050,13 @@ describe('LockedPostContent', () => {
       },
     );
 
-    it.each(['listing', 'task'])('waits for the %s before deciding whether recovery is possible', (pending) => {
+    it.each(['listing', 'task'])('waits for the %s before deciding whether recovery is possible', async (pending) => {
       paidUnlocks.value = { status: 'blocked', cause: 'region' };
       if (pending === 'listing') purchasedMocks.status = 'loading';
       else resumeMocks.status = 'checking';
       paymentData();
       renderReader();
+      await settleReplicaRead();
       expect(screen.getByTestId('spinner')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Unlock', hidden: true })).toBeDisabled();
     });

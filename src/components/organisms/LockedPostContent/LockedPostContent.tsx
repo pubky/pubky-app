@@ -26,7 +26,6 @@ import { LocksPermissionNotice } from '@/organisms/LocksPermissionNotice/LocksPe
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { LockContentParser } from '@/pipes/locks/locks.parser';
 import type { TUnlockedContent } from '@/services/locks/locks.types';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import { PostArticle } from '../PostArticle/PostArticle';
 import { PostBody } from '../PostBody/PostBody';
 import { PostContentBaseSkeleton } from '../PostContentBase/PostContentBase.skeleton';
@@ -124,18 +123,12 @@ export function LockedPostContent({
     paidUnlocks.status !== 'available' &&
     (paidUnlocks.status === 'checking' || isPurchaseChecking);
   // A reader who already unlocked this post is about to see their replicated copy, so the pill must not go
-  // live in between (#2795). The purchase list says who that can be: wait on the replica read while the
-  // list is loading (a fresh page load), when it failed (no way to tell, so wait as for everyone), or when
-  // it names this lock. A reader the list rules out gets the pill as soon as the lock file is in. Only with
-  // a session: without one the replica read never runs and the flag never clears.
-  const session = useAuthStore((state) => state.session);
+  // live in between (#2795). The purchase list says who that can be: wait on the replica read until the
+  // list is in ('idle' while a reload's session restore runs, then 'loading'), when it failed (no way to
+  // tell, so wait as for everyone), or when it names this lock. A reader the list rules out gets the pill
+  // as soon as the lock file is in. `isResolvingReplica` is false when no read will run, and is bounded.
   const isReplicaPending =
-    isPayableReader &&
-    Boolean(session) &&
-    !showPermissionNotice &&
-    !isPayOpen &&
-    isResolvingReplica &&
-    (purchasesStatus === 'loading' || purchasesStatus === 'error' || hasPurchase(lockId));
+    isPayableReader && !isPayOpen && isResolvingReplica && (purchasesStatus !== 'ready' || hasPurchase(lockId));
   const regionBlock =
     isPayableReader && purchaseStatus !== 'recoverable' && !isRegionChecking && paidUnlocks.status === 'blocked'
       ? paidUnlocks
@@ -168,12 +161,7 @@ export function LockedPostContent({
   // reader gets the sign-in dialog instead. Unsupported legacy locks have no unlock handler, and
   // neither does the creator's own lock: it stays inert even if reading the original failed.
   const handleUnlock =
-    price &&
-    !showPermissionNotice &&
-    !isOwnLock &&
-    (!regionBlock || canRecover) &&
-    !isRegionChecking &&
-    !isReplicaPending
+    price && !showPermissionNotice && !isOwnLock && (!regionBlock || canRecover) && !isRegionChecking
       ? async () => {
           if (await waitForAuth()) setIsPayOpen(true);
         }
