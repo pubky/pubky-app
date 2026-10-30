@@ -996,7 +996,8 @@ export class HomeserverService {
    * Bytes of a public resource read past the browser HTTP cache, for a read-modify-write (the
    * head version of a post, a profile edit) where a heuristically fresh cached copy would undo
    * another device's write (see `getFreshJson`). Rejects a missing resource and a failed HTTP
-   * response like `getBytes`.
+   * response like `getBytes`. Public only: the raw fetch carries no session, so an owned `/priv/`
+   * path answers 401; read those through `request` (GET) or `getBytesIfExists`.
    *
    * @param url - Pubky URL to read.
    */
