@@ -330,10 +330,6 @@ jobs:
         uses: cypress-io/github-action@v7
         env:
           DEBUG: '@cypress/github-action'
-          # A restored binary is already verified. This covers a verify that still runs here (a
-          # cache that lost its verified state): beside the running stack, a cold Electron launch
-          # usually takes 2-5s but can pass the 30s default.
-          CYPRESS_VERIFY_TIMEOUT: 120000
         with:
           working-directory: pubky-app/cypress
           config-file: cypress.config.ts
