@@ -1,0 +1,181 @@
+name: e2e-staging
+
+# Manual run of the pubky-app Cypress suite against the STAGING backend
+# (Nexus, homeserver, homegate, relays), to smoke-test staging infrastructure
+# changes. Unlike e2e-test.yml there is no local pubky-stack: the app is built
+# from this checkout and started on localhost:3000 with the staging runtime
+# config, and Cypress drives it there.
+#
+# Standalone on purpose: sharing steps with e2e-test.yml would mean reshaping
+# its matrix and image-build jobs, which risks the dev gate for no behavioural
+# gain. Shared logic lives in .github/scripts/ instead.
+#
+# Requires the STAGING_HOMESERVER_ADMIN_PASSWORD repository secret: the staging
+# homeserver admin password, used by the specs to mint single-use signup
+# tokens (see .agents/skills/pubky-staging-invite).
+
+on:
+  workflow_dispatch:
+    inputs:
+      specs:
+        description: 'Comma-separated spec file names from cypress/e2e. Leave empty to run the full E2E_STAGING_SPECS_DEFAULT list.'
+        required: false
+        type: string
+  # TEMP: remove before merge
+  push:
+    branches: [cursor/e2e-staging-workflow-e74d]
+
+# Serialise manual runs: every spec shares the staging backend, so two
+# concurrent runs could interfere with each other. Queue, do not cancel.
+concurrency:
+  group: e2e-staging
+  cancel-in-progress: false
+
+env:
+  # Default spec list: the full e2e-test.yml matrix. The dispatch input
+  # overrides it; triggers without inputs (the TEMP push trigger, or a blank
+  # dispatch field) fall back to it in the Resolve step below.
+  E2E_STAGING_SPECS_DEFAULT: 'contacts.cy.ts,feed.cy.ts,notifications.cy.ts,onboarding.cy.ts,posts.cy.ts,profile.cy.ts,search.cy.ts,settings.cy.ts,collections.cy.ts,pagination.cy.ts,collections-pagination.cy.ts,deep-links.cy.ts'
+
+jobs:
+  e2e-staging:
+    name: End-to-End Tests (staging backend)
+    runs-on: ubuntu-latest
+    # All specs run sequentially in a single Cypress process, so the whole list
+    # takes far longer than one parallel e2e-test.yml matrix job.
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    env:
+      # Staging homeserver admin API. Auth is the same X-Admin-Password header
+      # the local testnet flow in cypress/support/commands.ts already uses
+      # (confirmed by .agents/skills/pubky-staging-invite/scripts/generate.sh),
+      # so the specs run unmodified; only the URL and password differ.
+      HOMESERVER_ADMIN_URL: 'https://admin.homeserver.staging.pubky.app/generate_signup_token'
+      HOMESERVER_ADMIN_PASSWORD: ${{ secrets.STAGING_HOMESERVER_ADMIN_PASSWORD }}
+      # Cypress env `nexusUrl` (cypress/cypress.config.ts) for the direct Nexus
+      # polls in cypress/support/nexus.ts, cypress/support/pagination.ts and
+      # cypress/e2e/onboarding.cy.ts.
+      PUBKY_RUNTIME_NEXUS_URL: 'https://nexus.staging.pubky.app'
+
+    steps:
+      # Fail in seconds, not after the build, when the secret is not configured.
+      - name: Require the staging admin password secret
+        run: |
+          if [ -z "$HOMESERVER_ADMIN_PASSWORD" ]; then
+            echo "::error::The STAGING_HOMESERVER_ADMIN_PASSWORD repository secret is empty."
+            echo "::error::Set it to the staging homeserver admin password (see .agents/skills/pubky-staging-invite) and re-run."
+            exit 1
+          fi
+
+      - name: Checkout this repository
+        uses: actions/checkout@v7
+        with:
+          # Blobless partial clone. The negation drops only VRT baseline PNGs
+          # under src/test/vrt/**/__screenshots__, which this suite never reads.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
+
+      # Same node_modules + Cypress binary cache strategy as e2e-test.yml, but
+      # with root-relative paths (this workflow checks out at the repository
+      # root, not pubky-app/) and its own key prefix so the two never share an
+      # entry saved with different paths.
+      - name: Restore node_modules cache
+        id: node-modules
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            node_modules
+            ~/.cache/Cypress
+          key: e2e-staging-node-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.nvmrc', 'package.json', 'package-lock.json', '.npmrc', 'patches/*.patch') }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Install dependencies
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Save node_modules cache
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            node_modules
+            ~/.cache/Cypress
+          key: ${{ steps.node-modules.outputs.cache-primary-key }}
+
+      - name: Resolve the spec list
+        id: specs
+        env:
+          SPECS_INPUT: ${{ inputs.specs }}
+        run: bash .github/scripts/cypress-spec-list.sh "${SPECS_INPUT:-$E2E_STAGING_SPECS_DEFAULT}"
+
+      - name: Build the app
+        run: npm run build
+
+      - name: Start the app against the staging backend
+        run: bash .github/scripts/start-app-staging.sh
+
+      # One Cypress run over the whole spec list: specs execute sequentially in
+      # a single process, so concurrent specs cannot race on the shared staging
+      # backend (unlike the parallel matrix in e2e-test.yml).
+      - name: Run e2e tests against staging - Desktop (chrome)
+        id: test-desktop
+        uses: cypress-io/github-action@v7
+        env:
+          DEBUG: '@cypress/github-action'
+        with:
+          working-directory: cypress
+          config-file: cypress.config.ts
+          spec: ${{ steps.specs.outputs.spec }}
+          browser: chrome
+          headed: false
+          summary-title: chrome - Desktop (staging)
+          install: false
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 180
+
+      - name: Upload screenshots - chrome - Desktop
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots-chrome-staging-desktop
+          path: cypress/screenshots
+          if-no-files-found: ignore
+
+      - name: Upload videos - chrome - Desktop
+        if: always() && steps.test-desktop.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: videos-chrome-staging-desktop
+          path: cypress/videos
+          if-no-files-found: ignore
+
+      - name: Upload cypress.log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: cypress-log-chrome-staging
+          path: cypress/cypress.log
+          if-no-files-found: ignore
+
+      # The app server log is the staging equivalent of e2e-test.yml's docker
+      # log dump: it holds the SSR/runtime errors when staging misbehaves.
+      - name: Upload app server log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: app-log-staging
+          path: app.log
+          if-no-files-found: ignore
