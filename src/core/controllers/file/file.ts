@@ -31,17 +31,17 @@ export class FileController {
     const fileAttachment = await FileApplication.toFileAttachment({ file, pubky });
     // 2. Upload to homeserver
     await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
-    return fileAttachment.fileResult.meta.url;
+    return fileAttachment.media.url;
   }
 
   /**
-   * Deletes files (blob first, then record) from the homeserver and the local
-   * cache. Shared blobs and already-deleted resources are handled by the
-   * application layer, so callers may treat this as idempotent best-effort
+   * Deletes media from the homeserver and the local cache. Files another
+   * cached post still references and already-deleted resources are handled by
+   * the application layer, so callers may treat this as idempotent best-effort
    * cleanup (e.g. discarding uploads of an unpublished article draft).
    *
    * @param params - Parameters for file deletion
-   * @param params.fileUris - Homeserver file URIs (`pubky://…/files/{id}`) to delete
+   * @param params.fileUris - Homeserver media URIs (`pubky://…/files/{hash}.{ext}`) to delete
    */
   static async commitDelete({ fileUris }: TDeleteFilesParams): Promise<void> {
     await FileApplication.commitDelete(fileUris);

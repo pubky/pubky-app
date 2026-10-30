@@ -22,11 +22,20 @@ describe('parseArticleContent', () => {
     expect(parseArticleContent(JSON.stringify({ title: 'Title', body: null }))).toBeNull();
   });
 
-  it('parses a valid article envelope', () => {
+  it('parses a valid article envelope, with no cover for a 0.x one', () => {
     expect(parseArticleContent(JSON.stringify({ title: 'Title', body: 'Body', extra: true }))).toEqual({
       title: 'Title',
       body: 'Body',
+      cover_image: null,
     });
+  });
+
+  it('reads the cover of a v1 envelope and treats a null, empty or non-string one as none', () => {
+    const cover = 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/social/v1/files/0ABC.png';
+    expect(parseArticleContent(JSON.stringify({ title: 'T', body: 'B', cover_image: cover }))?.cover_image).toBe(cover);
+    expect(parseArticleContent(JSON.stringify({ title: 'T', body: 'B', cover_image: null }))?.cover_image).toBeNull();
+    expect(parseArticleContent(JSON.stringify({ title: 'T', body: 'B', cover_image: '' }))?.cover_image).toBeNull();
+    expect(parseArticleContent(JSON.stringify({ title: 'T', body: 'B', cover_image: 42 }))?.cover_image).toBeNull();
   });
 });
 
@@ -46,6 +55,7 @@ describe('buildArticleContent', () => {
     expect(parseArticleContent(buildArticleContent('  Title  ', '  Body  '))).toEqual({
       title: 'Title',
       body: 'Body',
+      cover_image: null,
     });
   });
 });

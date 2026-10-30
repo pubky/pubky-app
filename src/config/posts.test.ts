@@ -13,7 +13,7 @@ import {
 describe('post limits sourced from pubky-social-specs', () => {
   it('keeps the 0.x values where the semantics did not change', () => {
     expect(POST_MAX_CHARACTER_LENGTH).toBe(2000);
-    expect(ARTICLE_MAX_CHARACTER_LENGTH).toBe(50_000 - 100 - 22);
+    expect(ARTICLE_MAX_CHARACTER_LENGTH).toBe(50_000);
     expect(LOCK_TEASER_MAX_CHARACTER_LENGTH).toBe(2000 - 100 - 41);
   });
 

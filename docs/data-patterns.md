@@ -10,11 +10,13 @@ Posts use composite key format: `author:postId`
 
 ```typescript
 // Composite IDs are plain strings — no branded type
-const id = 'pk1abc123xyz:0000000123';
-//           ^author^   :^postId^
+const id = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy:0035QZPT4QG00';
+//           ^author (z-base32 key)^                             :^postId (13 Crockford chars)^
 
 const COMPOSITE_ID_DELIMITER = ':' as const;
 ```
+
+A file's composite id is `owner:hash`: v1 media lives at `files/{hash}.{ext}`, and `buildCompositeIdFromPubkyUri` strips the extension for the `files` domain (a 0.x file id has no dot). Every file-keyed table (`file_details`, the local files store) is keyed that way, so a v1 upload and a 0.x row never share a key.
 
 ### Utilities
 
@@ -169,7 +171,7 @@ Pipes normalize external data to domain shapes.
 // Pipes DO:
 // - Transform external shapes → domain shapes
 // - Validate input data
-// - Enforce pubky-app-specs
+// - Enforce pubky-social-specs (the package is the only validator)
 // - Return normalized objects
 
 // Pipes DON'T:
@@ -183,27 +185,25 @@ Pipes normalize external data to domain shapes.
 ```typescript
 // Real: src/core/pipes/post/post.normalizer.ts
 export class PostNormalizer {
-  // Create a new post via pubky-app-specs builder
-  static async to(post: PostValidatorData, specsPubky: Pubky): Promise<PostResult> {
-    try {
-      const builder = PubkySpecsSingleton.get(specsPubky);
-      return builder.createPost(post.content, post.kind, post.parentUri ?? null, embedObject, attachments);
-    } catch (error) {
-      if (error instanceof AppError) throw error;
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.SocialSpecs,
-        operation: 'createPost',
-        context: { post, specsPubky },
-      });
-    }
+  // Create a new post: `buildPost` validates, encodes and names the object (`url`, `body`, `object`).
+  // The kind is the data model's (`note`, `image`, …, `article`); the local row keeps `short`/`long`.
+  static to(post: PostValidatorData, specsPubky: Pubky): BuiltPost {
+    return this.build(() => buildPost(specsPubky, { kind: post.kind, content: post.content, ... }), 'buildPost');
   }
 
-  // Edit an existing post. `builder.editPost` swaps content only, so optional
-  // attachment/kind changes ride on the reconstructed original post.
-  static async toEdit({ compositePostId, content, currentUserPubky, attachments, kind }): Promise<PostResult> {
-    const builder = PubkySpecsSingleton.get(authorId);
-    return builder.editPost(originalPost, postId, content);
+  // Edit an existing post: spread the decoded head version, apply the change, and let `editPost`
+  // name the next version. The application reads the head (`listAll` → `pickHeadVersion` →
+  // `getBytes` → `decodeObject`) inside a write fence; the pipe only transforms it.
+  static toEdit({ owner, head, edit }: TToEditParams): BuiltPost {
+    return this.build(() => editPost(owner, head.url, { ...head.post, ...changes }), 'editPost');
   }
+
+  // The Dexie projection of the same edit, written before the homeserver round trip
+  static toLocalEdit({ row, edit }: TToLocalEditParams): TLocalPostEdit { ... }
+
+  // `ValidationError` / `ArgumentError` become `Err.validation(INVALID_INPUT, …)` with the
+  // package's `code`, `field` and `limit` in the context, and nothing else is caught.
+  private static build<T>(builder: () => T, operation: string): T { ... }
 }
 ```
 
@@ -213,11 +213,12 @@ export class PostNormalizer {
 // Controllers call pipes before delegating to application
 // Real: src/core/controllers/post/post.ts
 class PostController {
-  static async commitCreate({ authorId, content, isArticle, tags, attachments }: TCreatePostParams) {
-    const fileAttachments = attachments ? await FileNormalizer.toFileAttachment({ file, pubky: authorId }) : [];
-    const { post, meta } = await PostNormalizer.to({ content, kind: postKind, ... }, authorId);
+  static async commitCreate({ authorId, content, isArticle, tags, attachments, coverImage }: TCreatePostParams) {
+    // Each file is hashed (`hashMedia`) and named by `buildFile`: the same bytes name one file
+    const fileAttachments = await Promise.all(attachments.map((file) => FileApplication.toFileAttachment({ file, pubky: authorId })));
+    const post = PostNormalizer.to({ content, kind: postKind, attachments: fileAttachments, coverImage: coverAttachment }, authorId);
     const tagList = tags?.map((tag) => TagNormalizer.from({ taggerId: authorId, ... }));
-    await PostApplication.commitCreate({ compositePostId, post, postUrl: meta.url, fileAttachments, tags: tagList });
+    await PostApplication.commitCreate({ compositePostId, post, fileAttachments, tags: tagList });
   }
 }
 
@@ -249,9 +250,9 @@ return SettingsNormalizer.from(settingsJson);
 
 Article bodies (`kind: long`) embed images, videos, audio and PDFs with one markdown form. The media type is never in the body.
 
-- **Composer form** references an author-owned file URI: `![alt](pubky://{author}/pub/pubky.app/files/{id})`. A file inserted this session is staged, not uploaded: `useInlineMediaUpload` keeps it in memory under a placeholder id (`draft-` plus 7 hex chars, the length of a real id) so nothing reaches public storage before the publish (#2687, #2684). A create hands the staged files to `PostController.commitCreate` with the cover (one upload batch, rolled back on failure); an edit uploads them through `uploadStaged` right before `commitEdit`, which takes URIs only, so a save that fails after that upload leaves them for the session's discard sweep (a composer closed during the save keeps them instead, since the client cannot tell a refused write from an unacknowledged one; a page closed in between loses the sweep; making the edit batch controller-owned like the create is the follow-up, #2878). A file kept from the published article keeps its real URI.
-- **Published form** references a slot: `![alt](attachment:{n})`, where `n` indexes `post.attachments = [cover?, ...inline first-appearance, ...unreferenced originals]` (spec cap 10). `serializeArticleBody` / `deserializeArticleBody` in `src/libs/post/articleInlineMedia.ts` convert between the two and block publishing hand-typed refs, blob URIs, author file URIs in raw HTML or reference-style definitions, and over-cap bodies.
-- **Slot-0 cover rule**: `attachments[0]` is the cover unless the body references `attachment:0` (`articleHasInlineSlotZero`), consumed by `usePostArticle`, `usePostAttachmentsMedia`, `useVisualFeedTiles` and `postCoverPreload`. The cover stays image-only.
+- **Composer form** references an author-owned file URI: `![alt](pubky://{author}/pub/social/v1/files/{hash}.{ext})`. A file inserted this session is staged, not uploaded: `useInlineMediaUpload` keeps it in memory under a placeholder media URI built from random bytes (`buildFile`), so nothing reaches public storage before the publish (#2687, #2684). A create hands the staged files to `PostController.commitCreate` with the cover as its own `coverImage` (one upload batch, rolled back on failure); an edit uploads them through `uploadStaged` right before `commitEdit`, which takes URIs only, so a save that fails after that upload leaves them for the session's discard sweep (a composer closed during the save keeps them instead, since the client cannot tell a refused write from an unacknowledged one; a page closed in between loses the sweep; making the edit batch controller-owned like the create is the follow-up, #2878). A file kept from the published article keeps its real URI, v1 or 0.x.
+- **Published form** references a slot: `![alt](attachment:{n})`, where `n` indexes `post.attachments = [...inline first-appearance, ...unreferenced originals]` (spec cap 10) and the cover rides in the envelope as `cover_image` (a media URI or `null`). `serializeArticleBody` / `deserializeArticleBody` in `src/libs/post/articleInlineMedia.ts` convert between the two (`slotOffset` 0 for a published article, 1 for a locked one whose cover keeps slot 0) and block publishing hand-typed refs, blob URIs, author file URIs in raw HTML or reference-style definitions, and over-cap bodies. The envelope's `title` and `body` are the composer's; `ARTICLE_MAX_CHARACTER_LENGTH` is the data model's body cap, counted in code points.
+- **Cover resolution** (`resolveArticleCover`, `src/libs/post/articleCover.ts`, ADR-0023 as amended): rule A, an envelope cover is the cover and the slots are `attachments`; rule A′, a migrated 0.x article (envelope cover, body references none at 0) reads its slots as `['', ...attachments]` so `attachment:1` still finds the first inline file; rule B, no envelope cover means the 0.x slot-0 rule: `attachments[0]` is the cover unless the body references `attachment:0`. Every consumer goes through it (`usePostArticle`, `usePostAttachmentsMedia`, `useVisualFeedTiles`, `postCoverPreload`, `PostArticleDetail`, the edit composer, the OG text); a first edit of a 0.x article moves its slot-0 cover into the envelope. The cover stays image-only. The local files store keeps a same-session cover apart from the inline entries (`articleCovers[postId]`, `setArticleCover`), so `posts[postId]` stays index-aligned with the slots.
 - **Type from metadata**: the reader resolves each inline slot through `useAttachmentsMetadata` and matches rows by `uri` (Dexie returns key order, never request order); a same-session publish uses the local files store entry's `type`; unlocked content uses the bytes the reader holds; an external `https:` URL is typed by its extension (`inferMediaKindFromUrl`). Unknown is rendered as an image.
 - **Ownership invariant**: a ref resolves only when `attachments[n]` is a file URI owned by the author (`isAuthorFileUri`); otherwise an unavailable placeholder renders with no request.
 - Inline slots never leak into post-media surfaces (lightbox, list thumbnails, Visual feed, OG text): those read the cover slot only.
@@ -334,7 +335,7 @@ tag_streams        — Hot tags in streams
 ### Other Tables
 
 ```
-file_details       — File attachment metadata
+file_details       — File attachment metadata, keyed `owner:hash` for v1 media (`owner:id` for 0.x rows)
 bookmarks          — Bookmarked post references
 hot_tags           — Trending tag snapshots
 feeds              — Custom feed definitions

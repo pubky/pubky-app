@@ -68,12 +68,13 @@ const createFileMetadata = (overrides: Partial<NexusFileDetails>): NexusFileDeta
   ...overrides,
 });
 
-const selectLocalFiles = (posts: LocalFilesStore['posts']) => {
+const selectLocalFiles = (posts: LocalFilesStore['posts'], articleCovers: LocalFilesStore['articleCovers'] = {}) => {
   mockUseLocalFilesStore.mockImplementation((selector) =>
     selector(
       mockLocalFilesStore({
         profile: null,
         posts,
+        articleCovers,
         collections: {},
       }),
     ),
@@ -210,10 +211,10 @@ describe('article (kind long) attachments', () => {
   const coverUri = `pubky://${AUTHOR}/pub/pubky.app/files/cover`;
   const inlineUri = `pubky://${AUTHOR}/pub/pubky.app/files/inline`;
 
-  const articleDetails = (body: string, attachments: string[]): EnrichedPostDetails => ({
+  const articleDetails = (body: string, attachments: string[], cover_image?: string): EnrichedPostDetails => ({
     ...createPostDetails(attachments),
     kind: 'long',
-    content: JSON.stringify({ title: 'T', body }),
+    content: JSON.stringify(cover_image ? { title: 'T', body, cover_image } : { title: 'T', body }),
   });
 
   it('resolves only the cover for articles with a cover', async () => {
@@ -249,15 +250,15 @@ describe('article (kind long) attachments', () => {
 
   it('limits local store entries to the cover for articles', async () => {
     mockUsePostDetails.mockReturnValue({
-      postDetails: articleDetails('Text ![a](attachment:1)', [coverUri, inlineUri]),
+      postDetails: articleDetails('Text ![a](attachment:0)', [inlineUri], coverUri),
       isLoading: false,
     });
-    selectLocalFiles({
-      'pk:test:post': [
-        { type: 'image/png', name: 'cover.png', urls: { main: 'blob:cover', feed: 'blob:cover' } },
-        { type: 'image/png', name: 'inline.png', urls: { main: 'blob:inline', feed: 'blob:inline' } },
-      ],
-    });
+    selectLocalFiles(
+      {
+        'pk:test:post': [{ type: 'image/png', name: 'inline.png', urls: { main: 'blob:inline', feed: 'blob:inline' } }],
+      },
+      { 'pk:test:post': { type: 'image/png', name: 'cover.png', urls: { main: 'blob:cover', feed: 'blob:cover' } } },
+    );
 
     const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
 

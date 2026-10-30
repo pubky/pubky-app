@@ -145,4 +145,5 @@ the rc.1 off-by-one render through the migrated-article reader rule until the mi
 
 Follow-ups (not in this round): private drafts and `planPublish`, slugs, attachment alt text UI, collection item
 notes UI, published feeds, `createSocialClient`, the 0.x tree sunset (who deletes `/pub/pubky.app/`, when legacy
-reads stop, the `rescan` schedule), bookmark SSE, the auth-store v4 cut-over (contingency only), 1.1 kinds.
+reads stop, the `rescan` schedule), bookmark SSE, the auth-store v4 cut-over (contingency only), 1.1 kinds; generic
+file card renders only PDFs; CSV/zip/txt uploads show no card (pre-existing).

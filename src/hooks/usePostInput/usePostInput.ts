@@ -28,6 +28,7 @@ import { usePost } from '@/hooks/usePost/usePost';
 import { useUndoRepost } from '@/hooks/useUndoRepost/useUndoRepost';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
+import { resolveArticleCover } from '@/libs/post/articleCover';
 import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineMedia';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
@@ -159,31 +160,35 @@ export function usePostInput({
   const timelineFeed = useTimelineFeedContext();
   const { undoRepost } = useUndoRepost(isCollectionShare, { outlivesOwner: true });
 
-  // Article edits show only the cover in the attachment strip — inline images
-  // live in the body. The cover is attachments[0] unless the published body
-  // references attachment:0 (slot-0 rule: slot 0 is inline, no cover).
-  const articleEditBody =
-    variant === POST_INPUT_VARIANT.EDIT && editIsArticle ? parseArticleContent(editContent)?.body : undefined;
-  const editRefIndexes = articleEditBody === undefined ? undefined : collectAttachmentRefIndexes(articleEditBody);
-  const editDisplayUris =
-    editRefIndexes === undefined ? undefined : editRefIndexes.has(0) ? [] : (editAttachmentUris ?? []).slice(0, 1);
+  // Article edits show only the cover in the attachment strip — inline media
+  // lives in the body. Where the cover is and what each `attachment:{n}` names
+  // depends on the stored shape (the envelope's `cover_image`, or a 0.x
+  // article's slot 0 under the slot-0 rule): `resolveArticleCover` says.
+  const editArticle =
+    variant === POST_INPUT_VARIANT.EDIT && editIsArticle
+      ? resolveArticleCover({ content: editContent ?? '', attachments: editAttachmentUris })
+      : undefined;
+  const editReferencedUris = editArticle
+    ? new Set(
+        [...collectAttachmentRefIndexes(parseArticleContent(editContent)?.body ?? '')]
+          .map((index) => editArticle.slots[index])
+          .filter((uri): uri is string => Boolean(uri)),
+      )
+    : undefined;
+  const editCoverUri = editArticle?.cover ?? undefined;
+  const editDisplayUris = editArticle === undefined ? undefined : editCoverUri ? [editCoverUri] : [];
   // Original attachments the user is never shown (not the cover, not
   // referenced by the body at open) — carried through the edit untouched so
   // saving cannot delete files the user did not see and remove
   const editPreservedUris =
-    editRefIndexes === undefined
+    editArticle === undefined || editReferencedUris === undefined
       ? undefined
-      : (editAttachmentUris ?? []).filter((_uri, index) => {
-          const isCover = index === 0 && !editRefIndexes.has(0);
-          return !isCover && !editRefIndexes.has(index);
-        });
+      : (editAttachmentUris ?? []).filter((uri) => uri !== editArticle.cover && !editReferencedUris.has(uri));
 
   // The inline attachments the body references at open. Their file rows type each one (the
   // markdown never says video or image), and the rich editor imports the body only once, so the
   // editor waits for them: `useEditAttachments` seeds the cover strip alone and never sees these.
-  const editInlineUris = editRefIndexes
-    ? (editAttachmentUris ?? []).filter((_uri, index) => editRefIndexes.has(index))
-    : [];
+  const editInlineUris = editReferencedUris ? [...editReferencedUris] : [];
   const { files: editInlineFiles, isLoading: isEditInlineMetadataLoading } = useAttachmentsMetadata({
     fileUris: editInlineUris,
   });
@@ -402,9 +407,9 @@ export function usePostInput({
     };
 
     // Wrapper that prepends to timeline and calls original onSuccess.
-    // Article store seeding is owned by usePost: the entry must be
-    // index-aligned with the full `[cover?, ...inline]` attachment list,
-    // which only usePost knows. Seeding here would overwrite it.
+    // Article store seeding is owned by usePost: the inline entries must be
+    // index-aligned with the attachment list and the cover gets its own
+    // entry, which only usePost knows. Seeding here would overwrite it.
     const handleSuccess = (createdPostId: string) => {
       if (variant === POST_INPUT_VARIANT.EDIT) {
         if (!isArticle) {
@@ -506,6 +511,7 @@ export function usePostInput({
           editPostId: editPostId!,
           isLockAnnouncement: isLockAnnouncement || undefined,
           originalAttachmentUris: seededAttachmentUris,
+          originalCoverUri: editCoverUri,
           preservedAttachmentUris: editPreservedUris,
           article: latestArticle,
           onSuccess: handleSuccess,
@@ -533,6 +539,7 @@ export function usePostInput({
     editPostId,
     isLockAnnouncement,
     seededAttachmentUris,
+    editCoverUri,
     editPreservedUris,
     isSubmitting,
     setArticleTitle,

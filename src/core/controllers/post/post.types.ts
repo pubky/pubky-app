@@ -8,7 +8,10 @@ export interface TCreatePostParams {
   content: string;
   isArticle?: boolean;
   tags?: string[];
+  /** The post's media; for an article, the inline files its body references, in slot order. */
   attachments?: File[];
+  /** An article's cover, written in the envelope (`cover_image`); ignored for any other post. */
+  coverImage?: File;
   parentPostId?: string;
   originalPostId?: string;
   /**
@@ -91,17 +94,17 @@ export interface TEditPostAttachments {
   /** New files to upload; appended after `kept` in display order. Must be empty when `nextOrder` is set. */
   added: File[];
   /**
-   * Article inline-image path: homeserver file URIs owned by the author that
+   * Article inline-media path: homeserver file URIs owned by the author that
    * the composer uploaded before the commit (the inline files staged this
-   * session, plus a replacement cover). Requires `nextOrder`.
+   * session). Requires `nextOrder`.
    */
   addedUris?: string[];
   /**
-   * Article inline-image path: the full attachment list to persist, in final
-   * slot order (`[cover?, ...inline first-appearance]`). Every entry must come
-   * from `kept` or `addedUris`. Duplicates are allowed — the same URI may
-   * legitimately occupy the cover slot and an inline slot. When set, `added`
-   * must be empty and the envelope attachments are exactly this list.
+   * Article inline-media path: the full attachment list to persist, in final
+   * slot order (`[...inline first-appearance, ...unreferenced originals]`; the
+   * cover is no slot, it goes in `coverImage`). Every entry must come from
+   * `kept` or `addedUris`. When set, `added` must be empty and the envelope
+   * attachments are exactly this list.
    */
   nextOrder?: string[];
 }
@@ -116,6 +119,12 @@ export interface TEditPostParams {
    * (best-effort) after a successful edit.
    */
   attachments?: TEditPostAttachments;
+  /**
+   * An article's cover decision: a homeserver file URI of the author's to set, `null` to clear,
+   * `undefined` to keep the stored one. The cover it replaces or clears is deleted (best-effort)
+   * after a successful edit, unless `nextOrder` still references it.
+   */
+  coverImage?: string | null;
 }
 
 export interface TFileAttachmentsParams {

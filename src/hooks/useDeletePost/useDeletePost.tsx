@@ -96,6 +96,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
       // Clear the optimistic attachment cache so its blob URLs are revoked and
       // don't shadow the tombstone for the rest of the session
       useLocalFilesStore.getState().setPostAttachments(postId, []);
+      useLocalFilesStore.getState().setArticleCover(postId, null);
       removal?.commit();
       Logger.info('[useDeletePost] Post deleted successfully', { postId });
       toast({
@@ -150,6 +151,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
         // homeserver retry can resync later. Clear the optimistic attachment cache
         // too, because the post renders as deleted and its blob URLs are dead weight.
         useLocalFilesStore.getState().setPostAttachments(postId, []);
+        useLocalFilesStore.getState().setArticleCover(postId, null);
         removal?.commit();
         Logger.warn('[useDeletePost] Local write committed; not restoring to timeline', {
           postId,

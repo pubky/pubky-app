@@ -140,8 +140,8 @@ honoring the specs contract and returning this field.
 Lock announcements use the existing `DialogEditPost` composer. The dialog detects the top-level
 `lock`, parses the public envelope with the reader's parse, and exposes only the teaser
 description and editable lock title. Saving rebuilds the envelope with
-`buildLockTeaserContent`; `PostNormalizer.toEdit` reconstructs the original post with
-`PubkyAppPost.new_with_lock` so the stored lock URL survives content, kind, and attachment edits.
+`buildLockTeaserContent`; `PostNormalizer.toEdit` spreads the stored head version and changes only
+the content, so the stored lock URL survives content, kind, and attachment edits.
 The price is read-only from the existing `lock.json`; the edit composer cannot change lock criteria
 or guarded content.
 
@@ -196,13 +196,13 @@ deleted-post fallback once Nexus drops it.
 | `content` (string)       | **FE-owned**    | stringified teaser JSON, Zod-validated: `lock_title`, `teaser_description`        |
 | `lock.json` → `LockFile` | **Lock server** | the public content-lock contract (see below)                                      |
 
-- `content` is FE-owned (pubky-app-specs does not manage it) and validated at runtime
+- `content` is FE-owned (pubky-social-specs does not manage it) and validated at runtime
   with Zod (`lockPostContentSchema`, `core/services/locks/locks.types.ts`). Bad / missing
   fields degrade to empty strings so the teaser still renders. The edit composer reads it with
   the same parse, so what the creator edits is what the reader sees (see
   [Editing an announcement](#editing-an-announcement)).
 - The reader's replica marker (`/priv/social/unlocked/<lockId>/post.json`, `replicatedPostSchema`) is
-  not a `PubkyAppPost`: each attachment carries its `content_type` inline so the copy renders without
+  not a v1 post object: each attachment carries its `content_type` inline so the copy renders without
   the creator's lock file, and `announcement` holds the `pubky://…/posts/<id>` URI of the post the
   content was unlocked from. Nexus cannot look a post up by its lock URL, so without that URI the
   Unlocked screen has no way back to the announcement. The field is optional, and a value that is not

@@ -236,12 +236,17 @@ const defaultProps = {
   isBlurred: false,
 };
 
-const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[] | undefined> = {}) => ({
+const createMockLocalFilesStore = (
+  posts: Record<string, AttachmentConstructed[] | undefined> = {},
+  articleCovers: Record<string, AttachmentConstructed | undefined> = {},
+) => ({
   profile: null,
   posts,
+  articleCovers,
   collections: {},
   setProfile: vi.fn(),
   setPostAttachments: vi.fn(),
+  setArticleCover: vi.fn(),
   setCollectionCover: vi.fn(),
   reset: vi.fn(),
 });
@@ -401,22 +406,24 @@ describe('PostArticleDetail', () => {
     });
   });
 
-  it('vetoes the cover from the local slot 0 type only while the store matches the attachment list', () => {
-    const attachments = ['pubky://user123/pub/pubky.app/files/cover', 'pubky://user123/pub/pubky.app/files/clip'];
-    const aligned = [
-      { type: 'video/mp4', name: 'clip.mp4', urls: { main: 'blob:clip' } },
-      { type: 'image/png', name: 'cover.png', urls: { main: 'blob:cover' } },
-    ];
+  it('takes the local cover type from the cover entry alone, never from the inline entries', () => {
+    const attachments = ['pubky://user123/pub/pubky.app/files/clip'];
+    const inline = [{ type: 'video/mp4', name: 'clip.mp4', urls: { main: 'blob:clip' } }];
     mockUseLocalFilesStore.mockImplementation((selector) =>
-      selector(createMockLocalFilesStore({ [defaultProps.postId]: aligned })),
+      selector(
+        createMockLocalFilesStore(
+          { [defaultProps.postId]: inline },
+          { [defaultProps.postId]: { type: 'image/png', name: 'cover.png', urls: { main: 'blob:cover' } } },
+        ),
+      ),
     );
 
     const { rerender } = render(<PostArticleDetail {...defaultProps} attachments={attachments} />);
-    expect(mockUsePostArticle).toHaveBeenLastCalledWith(expect.objectContaining({ localCoverType: 'video/mp4' }));
+    expect(mockUsePostArticle).toHaveBeenLastCalledWith(expect.objectContaining({ localCoverType: 'image/png' }));
 
-    // The store already holds a reordered edit while the post row still describes the old one
+    // Inline entries alone say nothing about the cover
     mockUseLocalFilesStore.mockImplementation((selector) =>
-      selector(createMockLocalFilesStore({ [defaultProps.postId]: aligned.slice(0, 1) })),
+      selector(createMockLocalFilesStore({ [defaultProps.postId]: inline })),
     );
     rerender(<PostArticleDetail {...defaultProps} attachments={attachments} />);
     expect(mockUsePostArticle).toHaveBeenLastCalledWith(expect.objectContaining({ localCoverType: undefined }));
@@ -631,7 +638,7 @@ describe('PostArticleDetail', () => {
     const renderLocalCover = (urls: AttachmentConstructed['urls']) => {
       mockUseLocalFilesStore.mockImplementation((selector) =>
         selector(
-          createMockLocalFilesStore({ [defaultProps.postId]: [{ type: 'image/png', name: 'cover.png', urls }] }),
+          createMockLocalFilesStore({}, { [defaultProps.postId]: { type: 'image/png', name: 'cover.png', urls } }),
         ),
       );
       const { unmount } = render(<PostArticleDetail {...defaultProps} />);
@@ -716,15 +723,16 @@ describe('PostArticleDetail', () => {
   it('renders local cover image when available', () => {
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
-        createMockLocalFilesStore({
-          'user123:post456': [
-            {
+        createMockLocalFilesStore(
+          {},
+          {
+            'user123:post456': {
               type: 'image/jpeg',
               name: 'local-cover.jpg',
               urls: { main: 'blob:http://localhost/local-cover' },
             },
-          ],
-        }),
+          },
+        ),
       ),
     );
 
@@ -747,15 +755,16 @@ describe('PostArticleDetail', () => {
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
-        createMockLocalFilesStore({
-          'user123:post456': [
-            {
+        createMockLocalFilesStore(
+          {},
+          {
+            'user123:post456': {
               type: 'image/png',
               name: 'local-priority.png',
               urls: { main: 'blob:http://localhost/local-priority' },
             },
-          ],
-        }),
+          },
+        ),
       ),
     );
 
@@ -780,15 +789,16 @@ describe('PostArticleDetail', () => {
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
-        createMockLocalFilesStore({
-          'user123:post456': [
-            {
+        createMockLocalFilesStore(
+          {},
+          {
+            'user123:post456': {
               type: 'image/png',
               name: 'kept-cover.png',
               urls: { main: 'https://cdn.example/cover-main.png', feed: 'https://cdn.example/cover-feed.webp' },
             },
-          ],
-        }),
+          },
+        ),
       ),
     );
 
@@ -811,15 +821,16 @@ describe('PostArticleDetail', () => {
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
-        createMockLocalFilesStore({
-          'user123:post456': [
-            {
+        createMockLocalFilesStore(
+          {},
+          {
+            'user123:post456': {
               type: 'image/png',
               name: 'kept-cover.png',
               urls: { main: 'https://cdn.example/cover-main.png', feed: 'https://cdn.example/cover-feed.webp' },
             },
-          ],
-        }),
+          },
+        ),
       ),
     );
 
@@ -864,15 +875,16 @@ describe('PostArticleDetail', () => {
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
-        createMockLocalFilesStore({
-          'user123:post456': [
-            {
+        createMockLocalFilesStore(
+          {},
+          {
+            'user123:post456': {
               type: 'image/png',
               name: 'new-cover.png',
               urls: { main: 'blob:http://localhost/new-cover', feed: 'blob:http://localhost/new-cover' },
             },
-          ],
-        }),
+          },
+        ),
       ),
     );
 
@@ -887,15 +899,16 @@ describe('PostArticleDetail', () => {
   it('renders a kept CDN cover while the remote cover has not resolved', () => {
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
-        createMockLocalFilesStore({
-          'user123:post456': [
-            {
+        createMockLocalFilesStore(
+          {},
+          {
+            'user123:post456': {
               type: 'image/png',
               name: 'kept-cover.png',
               urls: { main: 'https://cdn.example/cover-main.png', feed: 'https://cdn.example/cover-feed.webp' },
             },
-          ],
-        }),
+          },
+        ),
       ),
     );
 
@@ -910,15 +923,16 @@ describe('PostArticleDetail', () => {
   it('ignores local cover image when first attachment is not an image', () => {
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
-        createMockLocalFilesStore({
-          'user123:post456': [
-            {
+        createMockLocalFilesStore(
+          {},
+          {
+            'user123:post456': {
               type: 'video/mp4',
               name: 'video.mp4',
               urls: { main: 'blob:http://localhost/video' },
             },
-          ],
-        }),
+          },
+        ),
       ),
     );
 
@@ -940,15 +954,16 @@ describe('PostArticleDetail', () => {
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
-        createMockLocalFilesStore({
-          'user123:post456': [
-            {
+        createMockLocalFilesStore(
+          {},
+          {
+            'user123:post456': {
               type: 'application/pdf',
               name: 'document.pdf',
               urls: { main: 'blob:http://localhost/document' },
             },
-          ],
-        }),
+          },
+        ),
       ),
     );
 
@@ -961,15 +976,16 @@ describe('PostArticleDetail', () => {
   it('does not render local cover image when content is blurred', () => {
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
-        createMockLocalFilesStore({
-          'user123:post456': [
-            {
+        createMockLocalFilesStore(
+          {},
+          {
+            'user123:post456': {
               type: 'image/jpeg',
               name: 'local.jpg',
               urls: { main: 'blob:http://localhost/local' },
             },
-          ],
-        }),
+          },
+        ),
       ),
     );
 
