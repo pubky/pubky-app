@@ -51,12 +51,17 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   })),
 }));
 
-vi.mock('@/hooks/useTagged/useTagged', () => ({
-  useTagged: vi.fn(() => ({
+const { mockUseTagged } = vi.hoisted(() => ({
+  mockUseTagged: vi.fn((_pubky?: string | null, _options?: Record<string, unknown>) => ({
     tags: [],
+    count: 0,
     isLoading: false,
     handleTagToggle: vi.fn(),
   })),
+}));
+
+vi.mock('@/hooks/useTagged/useTagged', () => ({
+  useTagged: (pubky: string | null, options?: Record<string, unknown>) => mockUseTagged(pubky, options),
 }));
 
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
@@ -82,6 +87,7 @@ describe('ProfilePageSidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseSocialGraphStatus.mockReturnValue({ status: null, isLoading: false });
+    mockUseTagged.mockReturnValue({ tags: [], count: 0, isLoading: false, handleTagToggle: vi.fn() });
   });
 
   it('hides the social graph section when no tier is known', () => {
@@ -103,6 +109,14 @@ describe('ProfilePageSidebar', () => {
   it('renders ProfilePageTaggedAs component', () => {
     render(<ProfilePageSidebar />);
     expect(screen.getByText('Tagged as')).toBeInTheDocument();
+  });
+
+  it('shows See all with the unique tag count from the profile stats', () => {
+    mockUseTagged.mockReturnValue({ tags: [], count: 7, isLoading: false, handleTagToggle: vi.fn() });
+    render(<ProfilePageSidebar />);
+    expect(mockUseTagged).toHaveBeenCalledWith('test-pubky-123', expect.objectContaining({ enableStats: true }));
+    expect(screen.getByRole('button', { name: 'See all (7)' })).toBeInTheDocument();
+    expect(screen.queryByText('Add Tag')).not.toBeInTheDocument();
   });
 
   it('renders ProfilePageLinks component', () => {

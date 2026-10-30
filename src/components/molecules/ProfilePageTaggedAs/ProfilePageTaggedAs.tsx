@@ -8,7 +8,6 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { TaggedItem } from '../TaggedItem/TaggedItem';
 import { TaggedList } from '../TaggedList/TaggedList';
@@ -27,19 +26,12 @@ export function ProfilePageTaggedAs({
   allTags,
 }: ProfilePageTaggedAsProps) {
   const router = useRouter();
-  const { requireAuth } = useRequireAuth();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const taggedId = pubky || currentUserPubky || undefined;
   const isMobile = variant === 'mobile';
   const inputTags = allTags ?? tags;
 
-  // Sidebar keeps the previous behaviour: the action that navigates to the
-  // tagged list is gated behind auth because it is the entry point to tagging.
-  const handleAddTagClick = () => {
-    requireAuth(() => router.push(getProfileRoute(PROFILE_ROUTES.UNIQUE_TAGS, pubky)));
-  };
-
-  // Mobile "See All" is a read-only navigation, so it is not auth-gated.
+  // "See all" is a read-only navigation to the tagged list, so it is not auth-gated.
   const handleSeeAllClick = () => {
     router.push(getProfileRoute(PROFILE_ROUTES.UNIQUE_TAGS, pubky));
   };
@@ -91,11 +83,11 @@ export function ProfilePageTaggedAs({
         variant="outline"
         size="sm"
         className="border border-border bg-foreground/5"
-        onClick={isMobile ? handleSeeAllClick : handleAddTagClick}
+        onClick={handleSeeAllClick}
       >
         <Tag size={16} className="text-foreground" />
         <Typography as="span" className="text-sm font-bold">
-          {isMobile ? 'See All' : 'Add Tag'}
+          {isMobile ? 'See All' : `See all (${count})`}
         </Typography>
       </Button>
     </Container>
