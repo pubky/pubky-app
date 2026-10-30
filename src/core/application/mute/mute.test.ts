@@ -186,7 +186,7 @@ describe('MuteApplication against the in-memory homeserver', () => {
     await expect(homeserver.session.storage.list('/priv/social/v1/mutes/')).resolves.toEqual(
       [MUTEE, OTHER].sort().map((key) => buildUri(MUTER, 'mute', key)),
     );
-    expect(homeserver.spies.list).toHaveBeenCalledExactlyOnceWith({ baseDirectory: PRIVATE_MUTES });
+    expect(homeserver.spies.listAll).toHaveBeenCalledExactlyOnceWith({ baseDirectory: PRIVATE_MUTES });
   });
 
   it('unmute deletes the private v1 file and the 0.x copy a migration left behind', async () => {
@@ -209,7 +209,7 @@ describe('MuteApplication against the in-memory homeserver', () => {
     await commit(HttpMethod.PUT, MUTEE);
 
     await expect(MuteApplication.fetchMutedUsers(MUTER)).resolves.toEqual([MUTEE]);
-    expect(homeserver.spies.list).toHaveBeenCalledExactlyOnceWith({ baseDirectory: PRIVATE_MUTES });
+    expect(homeserver.spies.listAll).toHaveBeenCalledExactlyOnceWith({ baseDirectory: PRIVATE_MUTES });
   });
 });
 
@@ -224,9 +224,9 @@ describe('MuteApplication.fetchMutedUsers', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists only the private v1 mutes directory and reads the muted key from each file name', async () => {
+  it('lists the whole private v1 mutes directory, nothing else, and reads the muted key from each file name', async () => {
     const listSpy = vi
-      .spyOn(HomeserverService, 'list')
+      .spyOn(HomeserverService, 'listAll')
       .mockResolvedValue([buildUri(MUTER, 'mute', MUTEE), buildUri(MUTER, 'mute', OTHER)]);
 
     const result = await MuteApplication.fetchMutedUsers(MUTER);
@@ -238,7 +238,7 @@ describe('MuteApplication.fetchMutedUsers', () => {
   });
 
   it('skips a listed name that is no v1 mute', async () => {
-    vi.spyOn(HomeserverService, 'list').mockResolvedValue([
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([
       buildUri(MUTER, 'mute', MUTEE),
       `${PRIVATE_MUTES}junk.json`,
       `${PRIVATE_MUTES}${OTHER}`,
@@ -250,7 +250,7 @@ describe('MuteApplication.fetchMutedUsers', () => {
   });
 
   it('returns and persists an empty list when nobody is muted (a missing directory is an empty list at the service)', async () => {
-    vi.spyOn(HomeserverService, 'list').mockResolvedValue([]);
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([]);
 
     await expect(MuteApplication.fetchMutedUsers(MUTER)).resolves.toEqual([]);
     await expect(mutedStream()).resolves.toEqual([]);
@@ -265,13 +265,13 @@ describe('MuteApplication.fetchMutedUsers', () => {
       operation: 'list',
       context: { statusCode: 500 },
     });
-    vi.spyOn(HomeserverService, 'list').mockRejectedValue(serverError);
+    vi.spyOn(HomeserverService, 'listAll').mockRejectedValue(serverError);
 
     await expect(MuteApplication.fetchMutedUsers(MUTER)).rejects.toBe(serverError);
   });
 
   it('propagates a non-AppError failure', async () => {
-    vi.spyOn(HomeserverService, 'list').mockRejectedValue(new Error('network-fail'));
+    vi.spyOn(HomeserverService, 'listAll').mockRejectedValue(new Error('network-fail'));
 
     await expect(MuteApplication.fetchMutedUsers(MUTER)).rejects.toThrow('network-fail');
   });

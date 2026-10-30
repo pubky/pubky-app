@@ -40,7 +40,7 @@ export class MuteApplication {
    * @returns Array of muted user pubkeys
    */
   static async fetchMutedUsers(pubky: Pubky): Promise<Pubky[]> {
-    const muteUris = await HomeserverService.list({ baseDirectory: `${listPrefix(pubky, 'private')}mutes/` });
+    const muteUris = await HomeserverService.listAll({ baseDirectory: `${listPrefix(pubky, 'private')}mutes/` });
     const stream = muteUris.map(mutedKey).filter((id): id is Pubky => id !== null);
 
     await LocalStreamUsersService.upsert({
