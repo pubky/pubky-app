@@ -13,3 +13,10 @@ export type TFeedRollbackParams = {
   /** The row as it was before the write, or `null` when the write created it. */
   priorFeed: FeedModelSchema | null;
 };
+
+export type TFeedDeleteMissingParams = {
+  /** The ids the homeserver listing names; every other row older than the listing goes. */
+  keepIds: ReadonlySet<string>;
+  /** When the listing was taken (ms): a row updated at or after it is an in-flight write and stays. */
+  listedAt: number;
+};

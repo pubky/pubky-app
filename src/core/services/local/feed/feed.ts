@@ -2,7 +2,7 @@ import type { TFeedIdParam } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
 import { FeedModel } from '@/models/feed/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
-import type { TFeedRollbackParams, TFeedWriteResult } from './feed.types';
+import type { TFeedDeleteMissingParams, TFeedRollbackParams, TFeedWriteResult } from './feed.types';
 
 const FEED_TABLES = [FeedModel.table];
 
@@ -51,11 +51,14 @@ export class LocalFeedService {
    * Deletes every feed whose id is not in `keepIds` and returns the rows it removed, so the caller
    * can drop their stream caches. The homeserver listing is the source of truth for which feeds
    * exist: a row the listing no longer names was deleted elsewhere, or carries a 0.x id from
-   * before the account was migrated.
+   * before the account was migrated. A row written at or after `listedAt` (the moment the listing
+   * was taken) is a write still on its way to the homeserver, not a stale one, and stays.
    */
-  static async deleteMissing(keepIds: ReadonlySet<string>): Promise<FeedModelSchema[]> {
+  static async deleteMissing({ keepIds, listedAt }: TFeedDeleteMissingParams): Promise<FeedModelSchema[]> {
     return await db.transaction('rw', FEED_TABLES, async () => {
-      const stale = (await FeedModel.table.toArray()).filter((feed) => !keepIds.has(feed.id));
+      const stale = (await FeedModel.table.toArray()).filter(
+        (feed) => !keepIds.has(feed.id) && feed.updated_at < listedAt,
+      );
       if (stale.length > 0) await FeedModel.table.bulkDelete(stale.map((feed) => feed.id));
       return stale.map((feed) => this.normalize(feed));
     });

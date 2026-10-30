@@ -16,7 +16,7 @@ import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/appli
 import { isProfileTagReachSupported } from '@/config/feed';
 import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
-import { DatabaseErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
@@ -28,6 +28,7 @@ import type { Pubky } from '@/models/models.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { FeedValidators } from '@/pipes/feed/feed.validators';
+import { toSpecsValidationError } from '@/pipes/specs.errors';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
 import { LocalFeedService } from '@/services/local/feed/feed';
@@ -36,6 +37,7 @@ import type {
   FeedDeleteParams,
   FeedPutParams,
   LocalFeedMigrationParams,
+  LocalFeedReconcileParams,
   LocalFeedRowParams,
   PersistAndSyncParams,
   StoredFeedWriteParams,
@@ -44,6 +46,8 @@ import type {
 export class FeedApplication {
   private constructor() {}
   private static readonly FETCH_FEEDS_BATCH_SIZE = 10;
+  /** Ids whose PUT is in flight in this tab: a listing taken meanwhile does not name them yet. */
+  private static readonly syncingIds = new Set<string>();
 
   static async getList(): Promise<FeedModelSchema[]> {
     return LocalFeedService.readAll();
@@ -88,7 +92,7 @@ export class FeedApplication {
       // Model errors are already logged; migration can proceed without the old stream cache.
       const oldFeed = await LocalFeedService.read({ feedId: existingId }).catch(() => null);
 
-      await this.putStoredFeed({ storedUrl, feedUrl, feed: builtFeed.object });
+      await this.putStoredFeed({ id: newId, storedUrl, feedUrl, feed: builtFeed.object });
 
       const persistedNewFeed = await this.migrateLocalFeedAtomically({ userId, existingId, feedSchema, oldFeed });
 
@@ -104,7 +108,7 @@ export class FeedApplication {
       return persistedNewFeed;
     }
 
-    return this.commit({ feedSchema, storedUrl, feedUrl, feed: builtFeed.object });
+    return this.commit({ feedSchema, id: newId, storedUrl, feedUrl, feed: builtFeed.object });
   }
 
   static async commitDelete({ userId, params }: FeedDeleteParams): Promise<void> {
@@ -174,6 +178,8 @@ export class FeedApplication {
    */
   static async fetchFeeds(userId: Pubky): Promise<FeedModelSchema[]> {
     const feedsDirectory = `${listPrefix(userId, 'private')}feeds/`;
+    // Taken before the listing: a row written from here on is a create whose PUT may still be in flight.
+    const listedAt = Date.now();
     const feedUris = await HomeserverService.listAll({ baseDirectory: feedsDirectory });
     const listedIds = new Set(feedUris.flatMap((feedUri) => this.feedIdOfUri(feedUri) ?? []));
 
@@ -205,7 +211,7 @@ export class FeedApplication {
     }
 
     const persisted = validFeeds.length > 0 ? await LocalFeedService.createOrUpdateMany(validFeeds) : [];
-    await this.reconcileLocalFeeds(userId, listedIds);
+    await this.reconcileLocalFeeds({ userId, listedIds, listedAt });
     return persisted;
   }
 
@@ -221,23 +227,27 @@ export class FeedApplication {
 
   /**
    * Removes the local feeds the listing no longer names, with the stream caches keyed on them, so
-   * their tabs and cached pages do not outlive the stored object.
+   * their tabs and cached pages do not outlive the stored object. A feed whose PUT is in flight in
+   * this tab, or a row written since the listing was taken (another tab's), is a create still
+   * syncing and is left alone.
    */
-  private static async reconcileLocalFeeds(userId: Pubky, listedIds: ReadonlySet<string>): Promise<void> {
-    const removed = await LocalFeedService.deleteMissing(listedIds);
-    for (const feed of removed) {
-      let streamId: ReturnType<typeof buildFeedStreamId> | null = null;
+  private static async reconcileLocalFeeds({ userId, listedIds, listedAt }: LocalFeedReconcileParams): Promise<void> {
+    const keepIds = new Set([...listedIds, ...this.syncingIds]);
+    const removed = await LocalFeedService.deleteMissing({ keepIds, listedAt });
+    const streamIds = removed.flatMap((feed) => {
       try {
-        streamId = buildFeedStreamId(feed, userId);
+        return [buildFeedStreamId(feed, userId)];
       } catch {
         // Cache cleanup is ancillary; a malformed row leaves no cache to clear.
+        return [];
       }
-      if (!streamId) continue;
-      await Promise.all([
+    });
+    await Promise.all(
+      streamIds.flatMap((streamId) => [
         LocalStreamPostsService.deleteById({ streamId }),
         LocalStreamPostsService.clearUnreadStream({ streamId }),
-      ]);
-    }
+      ]),
+    );
   }
 
   /**
@@ -298,13 +308,18 @@ export class FeedApplication {
    * a fence: a PUT the homeserver refuses with a retried status (429, 500, 503 or the publish
    * conflict) runs again from the read, and no later pass outlives the session.
    */
-  private static async putStoredFeed({ storedUrl, feedUrl, feed }: StoredFeedWriteParams): Promise<void> {
+  private static async putStoredFeed({ id, storedUrl, feedUrl, feed }: StoredFeedWriteParams): Promise<void> {
     const fence = HomeserverService.createWriteFence();
-    await retryHomeserverWriteAfterReread(fence, async () => {
-      const stored = await this.readStoredFeed(storedUrl);
-      const merged = stored ? this.carryStoredMembers(feed, stored) : feed;
-      await HomeserverService.putBlob({ url: feedUrl, blob: encodeObject(feedUrl, merged), fence });
-    });
+    this.syncingIds.add(id);
+    try {
+      await retryHomeserverWriteAfterReread(fence, async () => {
+        const stored = await this.readStoredFeed(storedUrl);
+        const merged = stored ? this.carryStoredMembers(feed, stored) : feed;
+        await HomeserverService.putBlob({ url: feedUrl, blob: encodeObject(feedUrl, merged), fence });
+      });
+    } finally {
+      this.syncingIds.delete(id);
+    }
   }
 
   /** The feed stored at `url`, or null when there is none or its bytes do not decode (then the write starts fresh). */
@@ -335,12 +350,7 @@ export class FeedApplication {
     try {
       paths = deletionPaths({ kind: 'feed', id });
     } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error instanceof Error ? error.message : String(error), {
-        service: ErrorService.SocialSpecs,
-        operation: 'deletionPaths',
-        context: { feedId: id },
-        cause: error,
-      });
+      throw toSpecsValidationError(error, 'deletionPaths', { feedId: id });
     }
     for (const path of paths) {
       await HomeserverService.deleteIdempotent(toUrl(userId, path));
@@ -361,6 +371,7 @@ export class FeedApplication {
    */
   private static async commit({
     feedSchema,
+    id,
     storedUrl,
     feedUrl,
     feed,
@@ -368,7 +379,7 @@ export class FeedApplication {
     const { persisted: persistedFeed, prior: priorFeed } = await LocalFeedService.createOrUpdate(feedSchema);
 
     try {
-      await this.putStoredFeed({ storedUrl, feedUrl, feed });
+      await this.putStoredFeed({ id, storedUrl, feedUrl, feed });
     } catch (error) {
       try {
         await LocalFeedService.rollback({

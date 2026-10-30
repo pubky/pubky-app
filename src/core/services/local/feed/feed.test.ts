@@ -303,7 +303,10 @@ describe('LocalFeedService.deleteMissing', () => {
   it('deletes every row outside the kept ids and returns the rows it removed', async () => {
     await FeedModel.bulkSave([createFeedSchema('keep-1'), createFeedSchema('drop-1'), createFeedSchema('keep-2')]);
 
-    const removed = await LocalFeedService.deleteMissing(new Set(['keep-1', 'keep-2', 'never-stored']));
+    const removed = await LocalFeedService.deleteMissing({
+      keepIds: new Set(['keep-1', 'keep-2', 'never-stored']),
+      listedAt: 2,
+    });
 
     expect(removed).toEqual([createFeedSchema('drop-1')]);
     expect((await FeedModel.table.toArray()).map((feed) => feed.id).sort()).toEqual(['keep-1', 'keep-2']);
@@ -312,11 +315,24 @@ describe('LocalFeedService.deleteMissing', () => {
   it('removes nothing when every row is kept, and everything when none is', async () => {
     await FeedModel.bulkSave([createFeedSchema('a'), createFeedSchema('b')]);
 
-    await expect(LocalFeedService.deleteMissing(new Set(['a', 'b']))).resolves.toEqual([]);
+    await expect(LocalFeedService.deleteMissing({ keepIds: new Set(['a', 'b']), listedAt: 2 })).resolves.toEqual([]);
     expect(await FeedModel.table.count()).toBe(2);
 
-    const removed = await LocalFeedService.deleteMissing(new Set());
+    const removed = await LocalFeedService.deleteMissing({ keepIds: new Set(), listedAt: 2 });
     expect(removed.map((feed) => feed.id).sort()).toEqual(['a', 'b']);
     expect(await FeedModel.table.count()).toBe(0);
+  });
+
+  it('keeps a row written at or after the listing was taken: a create whose sync is still in flight', async () => {
+    await FeedModel.bulkSave([
+      createFeedSchema('older'),
+      { ...createFeedSchema('same-tick'), updated_at: 10 },
+      { ...createFeedSchema('newer'), updated_at: 11 },
+    ]);
+
+    const removed = await LocalFeedService.deleteMissing({ keepIds: new Set(), listedAt: 10 });
+
+    expect(removed.map((feed) => feed.id)).toEqual(['older']);
+    expect((await FeedModel.table.toArray()).map((feed) => feed.id).sort()).toEqual(['newer', 'same-tick']);
   });
 });

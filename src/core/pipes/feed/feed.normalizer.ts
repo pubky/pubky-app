@@ -5,6 +5,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { toStoredPostKind } from '@/pipes/post/post.kind';
+import { toSpecsValidationError } from '@/pipes/specs.errors';
 import { normalizeTagList } from './feed.utils';
 import { FeedValidators } from './feed.validators';
 
@@ -49,12 +50,7 @@ export class FeedNormalizer {
         domain_tags: domainTags.length > 0 ? domainTags : null,
       });
     } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error instanceof Error ? error.message : String(error), {
-        service: ErrorService.SocialSpecs,
-        operation: 'buildFeed',
-        context: { params, userId },
-        cause: error,
-      });
+      throw toSpecsValidationError(error, 'buildFeed', { params, userId });
     }
   }
 }

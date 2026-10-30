@@ -21,6 +21,8 @@ export interface FeedPutParams {
 
 /** One stored-feed write: the object to store at `feedUrl`, merged over what `storedUrl` holds. */
 export interface StoredFeedWriteParams {
+  /** The id being written. */
+  id: string;
   /** Where the copy the write starts from lives: the feed being edited, or the new id itself on a create. */
   storedUrl: string;
   /** The private path of the feed being written. */
@@ -40,6 +42,14 @@ export interface LocalFeedRowParams {
   content: KnownPostKind | null;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface LocalFeedReconcileParams {
+  userId: Pubky;
+  /** The feed ids the homeserver listing names. */
+  listedIds: ReadonlySet<string>;
+  /** When the listing was taken (ms). */
+  listedAt: number;
 }
 
 export interface LocalFeedMigrationParams {

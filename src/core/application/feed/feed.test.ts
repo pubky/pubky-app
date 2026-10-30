@@ -451,6 +451,7 @@ describe('FeedApplication', () => {
         code: ValidationErrorCode.INVALID_INPUT,
         service: ErrorService.SocialSpecs,
         operation: 'deletionPaths',
+        context: { feedId: 'feed123', code: 'format' },
       });
       expect(homeserver.spies.deleteIdempotent).not.toHaveBeenCalled();
     });
@@ -573,6 +574,25 @@ describe('FeedApplication', () => {
       expect(await UnreadPostStreamModel.findById(goneStreamId)).toBeNull();
       expect(await PostStreamModel.findById(legacyStreamId)).toBeNull();
       expect(await UnreadPostStreamModel.findById(legacyStreamId)).toBeNull();
+    });
+
+    it('leaves a feed whose create is still syncing alone', async () => {
+      const inFlight = built({ tags: ['syncing'] });
+      const putBlob = homeserver.spies.putBlob.getMockImplementation()!;
+      const landed = Promise.withResolvers<void>();
+      homeserver.spies.putBlob.mockImplementationOnce(async (params) => {
+        await landed.promise;
+        return putBlob(params);
+      });
+      const creating = FeedApplication.persist({ userId: owner, params: { feed: inFlight } });
+      await vi.waitFor(async () => expect(await FeedModel.table.get(inFlight.id)).toBeDefined());
+
+      await expect(FeedApplication.fetchFeeds(owner)).resolves.toEqual([]);
+      landed.resolve();
+      await creating;
+
+      expect((await FeedModel.table.toArray()).map((feed) => feed.id)).toEqual([inFlight.id]);
+      expect(await storedExists(inFlight.path)).toBe(true);
     });
 
     it('returns no feeds and clears every row for an empty directory', async () => {

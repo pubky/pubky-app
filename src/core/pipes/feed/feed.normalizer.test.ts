@@ -138,7 +138,7 @@ describe('FeedNormalizer', () => {
         expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
         expect(appError.service).toBe(ErrorService.SocialSpecs);
         expect(appError.operation).toBe('buildFeed');
-        expect(appError.context).toEqual({ params, userId });
+        expect(appError.context).toEqual({ params, userId, code: 'blank', field: 'name', limit: undefined });
         expect(appError.message).toMatch(/name/i);
         expect(appError.cause).toBeInstanceOf(Error);
       }
