@@ -11,7 +11,10 @@ import type { SettingsState } from '@/stores/settings/settings.types';
  * Settings application service.
  *
  * Handles synchronization of user settings between the local store and homeserver.
- * Settings are stored at: pubky://{pubky}/pub/pubky.app/settings.json
+ * Settings are stored at: pubky://{pubky}/priv/app.pubky/v1/settings.json. An account whose only
+ * settings are the 0.x ones (`/pub/pubky.app/settings.json`, which the migrator does not copy)
+ * reads those until its first write to the v1 file; the first `initializeSettings` after the
+ * migration gate writes it, and the public 0.x file is left in place (D15).
  */
 export class SettingsApplication {
   private static pendingCommits = new Map<Pubky, Promise<void>>();
@@ -98,15 +101,29 @@ export class SettingsApplication {
   }
 
   /**
-   * Fetches settings from the homeserver.
+   * Fetches settings from the homeserver: the v1 file, else the 0.x one.
    * Returns null if settings don't exist on homeserver (404).
    *
    * @param pubky, The user's public key
    * @returns The settings state from homeserver, or null if not found
    */
   static async fetchFromHomeserver(pubky: Pubky): Promise<SettingsState | null> {
-    const url = SettingsNormalizer.buildUrl(pubky);
+    return (await this.fetchRemote(pubky))?.settings ?? null;
+  }
 
+  /**
+   * The stored settings and where they were read. The 0.x file is read only while the v1 one is
+   * absent, so once the v1 file exists a newer 0.x write (a stale 0.x tab) is never adopted.
+   */
+  private static async fetchRemote(pubky: Pubky): Promise<{ settings: SettingsState; legacy: boolean } | null> {
+    const settings = await this.fetchSettingsAt(SettingsNormalizer.buildUrl(pubky));
+    if (settings) return { settings, legacy: false };
+
+    const legacySettings = await this.fetchSettingsAt(SettingsNormalizer.buildLegacyUrl(pubky));
+    return legacySettings ? { settings: legacySettings, legacy: true } : null;
+  }
+
+  private static async fetchSettingsAt(url: string): Promise<SettingsState | null> {
     Logger.info('[Settings] Pulling from homeserver', { url });
 
     try {
@@ -136,6 +153,8 @@ export class SettingsApplication {
    * Uses version and timestamp for conflict resolution (newer wins).
    * A push the homeserver refuses with a retried status starts over from the read: the remote
    * document may have changed after the comparison and may now be the newer one.
+   * Whichever side wins is written to the v1 file when the remote came from the 0.x file, so
+   * the first sync after the migration gate copies the settings into the app's namespace.
    *
    * @param pubky, The user's public key
    * @returns The settings the store should adopt: remote when newer, or local enriched with
@@ -153,9 +172,9 @@ export class SettingsApplication {
     localSettings: SettingsState,
     fence: THomeserverWriteFence,
   ): Promise<SettingsState | null> {
-    const remoteSettings = await this.fetchFromHomeserver(pubky);
+    const remote = await this.fetchRemote(pubky);
 
-    if (!remoteSettings) {
+    if (!remote) {
       Logger.info('[Settings] No remote settings, pushing local to homeserver');
       // Stamp a real timestamp if updatedAt is 0 (initial default), so homeserver has a valid timestamp for future conflict resolution
       const settingsWithTimestamp = { ...localSettings, updatedAt: localSettings.updatedAt || Date.now() };
@@ -163,6 +182,7 @@ export class SettingsApplication {
       return settingsWithTimestamp;
     }
 
+    const remoteSettings = remote.settings;
     // Check if remote settings are newer (higher version or same version with newer timestamp)
     const isRemoteNewer =
       remoteSettings.version > localSettings.version ||
@@ -176,6 +196,12 @@ export class SettingsApplication {
 
     if (isRemoteNewer) {
       Logger.info('[Settings] Using remote settings (newer)');
+      if (remote.legacy) {
+        // The 0.x file is the only copy: write it to the v1 file. A retried status re-runs the read
+        // above, so a v1 file another client wrote meanwhile is adopted instead of overwritten.
+        Logger.info('[Settings] Copying the 0.x settings to the app namespace');
+        await this.enqueueWrite(pubky, () => this.push(remoteSettings, pubky, fence));
+      }
       return remoteSettings;
     }
 

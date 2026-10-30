@@ -1,4 +1,3 @@
-import { LastReadResult } from 'pubky-app-specs';
 import type {
   TFetchMissingEntitiesParams,
   TFetchNotificationsResult,
@@ -21,6 +20,7 @@ import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { getTagCursor } from '@/models/shared/tag/tag.utils';
+import type { TLastRead } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { retryHomeserverWriteAfterReread, type THomeserverWriteFence } from '@/services/homeserver/write-retry';
@@ -71,13 +71,12 @@ export class NotificationApplication {
    * writing an older timestamp. The session fence is taken when this is called, so a mark still
    * queued or reading when logout begins sends nothing.
    *
-   * @param lastRead - The lastRead result (target URL + payload) built for the current user
+   * @param lastRead - The cursor (target URL + payload) built for the current user
    * @returns The timestamp now published: this one, or a newer one already there
    */
-  static async markAllAsRead({ meta, last_read }: LastReadResult): Promise<number> {
-    const url = meta.url;
-    const timestamp = Number(last_read.timestamp);
-    const bodyJson = last_read.toJson();
+  static async markAllAsRead({ url, lastRead }: TLastRead): Promise<number> {
+    const timestamp = lastRead.timestamp;
+    const bodyJson = lastRead;
     const fence = HomeserverService.createWriteFence({ guardFirstPass: true });
     const previous = this.lastReadWrites.get(url) ?? Promise.resolve();
     const write = previous.catch(() => {}).then(() => this.writeLastReadForward(fence, url, timestamp, bodyJson));

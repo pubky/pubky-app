@@ -184,6 +184,8 @@ Nexus data requested after the local edit can confirm it early; expiry alone doe
 
 Cross-session mute alignment uses the `@synonymdev/pubky` homeserver **event stream** (SSE). Debouncing uses a fixed delay in [`src/config/mute-sync.ts`](../src/config/mute-sync.ts) (`MUTE_SYNC_DEBOUNCE_MS`), not an environment variable.
 
+Where the app keeps its own files on the homeserver (`/priv/app.pubky/v1/settings.json`, `last_read.json`, and the 0.x `settings.json` it still reads as a fallback) is product policy in [`src/config/app-files.ts`](../src/config/app-files.ts), not an environment variable: every deployment of one version writes the same paths, and a deployment-specific namespace would split one account's settings across versions (`docs/data-patterns.md`, _Homeserver Trees and App Files_).
+
 ## Setting Variables
 
 1. **Development**: Create a `.env.local` file in the project root (both `Env` and `PUBKY_RUNTIME_*` values are honored)
