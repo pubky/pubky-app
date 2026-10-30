@@ -105,6 +105,30 @@ describe('TagCollection local intent', () => {
   });
 });
 
+describe('TagCollection tag address', () => {
+  it('records the address a create wrote, and none for a delete', () => {
+    const row = new TestTagCollection({ id: 'profile', tags: [] });
+    row.recordMutation('bitcoin', 'viewer', true, 'a', false, 'pubky://viewer/pub/pubky.app/tags/TAG01');
+    expect(row.mutations?.['viewer:bitcoin']?.uri).toBe('pubky://viewer/pub/pubky.app/tags/TAG01');
+    row.recordMutation('bitcoin', 'viewer', false, 'b', false);
+    expect(row.mutations?.['viewer:bitcoin']).not.toHaveProperty('uri');
+  });
+
+  it('keeps the Nexus tag_uri through a local write, and adds none to rows cached without it', () => {
+    const tagUri = 'pubky://viewer/pub/mapky/tags/MAPKY01';
+    const row = new TestTagCollection({
+      id: 'profile',
+      tags: [
+        { label: 'bitcoin', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: tagUri },
+        { label: 'legacy', taggers: [], taggers_count: 1, relationship: false },
+      ],
+    });
+    row.addTagger('pubky', 'viewer');
+    expect(row.tags[0].tag_uri).toBe(tagUri);
+    expect(row.tags[1]).not.toHaveProperty('tag_uri');
+  });
+});
+
 describe('TagCollection mutation ownership', () => {
   it('keeps operations from different viewers on the same label independently', () => {
     const row = new TestTagCollection({ id: 'profile', tags: [] });

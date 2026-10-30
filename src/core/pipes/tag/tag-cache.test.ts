@@ -63,6 +63,33 @@ describe('retained optimistic tags', () => {
   });
 });
 
+describe('viewer tag address', () => {
+  const tagUri = 'pubky://alice/pub/mapky/tags/MAPKY01';
+  const existing = (viewerId: string): TagCollectionModelSchema<string> => ({
+    id: 'post',
+    tags: [{ ...tag(1, true), taggers: ['alice'], tag_uri: tagUri }],
+    cache: { viewerId, cursor: 1, exhausted: true, fetchedAt: 0, revision: 1 },
+  });
+
+  it('keeps the stored tag_uri when a response for the same viewer omits it', () => {
+    const result = reconcileTagWindow([{ ...tag(1, true), taggers: ['alice'] }], existing('alice'), 100, 'alice');
+    expect(result.tags[0].tag_uri).toBe(tagUri);
+  });
+
+  it('takes the tag_uri a response reports, including null', () => {
+    const incoming = { ...tag(1, true), taggers: ['alice'], tag_uri: null };
+    expect(reconcileTagWindow([incoming], existing('alice'), 100, 'alice').tags[0].tag_uri).toBeNull();
+  });
+
+  it.each([
+    ['another viewer', existing('bob'), true],
+    ['a label the viewer no longer tags', existing('alice'), false],
+  ])('does not carry the stored tag_uri to %s', (_case, row, relationship) => {
+    const result = reconcileTagWindow([{ ...tag(1, relationship), taggers: ['bob'] }], row, 100, 'alice');
+    expect(result.tags[0]).not.toHaveProperty('tag_uri');
+  });
+});
+
 describe('tag count reconciliation', () => {
   it.each([true, false])(
     'retires an expired pending mutation when a fresh window replaces it (intent=%s)',

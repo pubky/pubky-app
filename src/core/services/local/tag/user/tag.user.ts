@@ -21,6 +21,7 @@ export class LocalUserTagService {
     expectedMutationId,
     synced = false,
     isCurrent,
+    tagUri,
   }: TLocalTagParams): Promise<boolean> {
     try {
       const didCreate = await db.transaction('rw', this.TAG_TABLES, async () => {
@@ -33,7 +34,7 @@ export class LocalUserTagService {
         if (tagExists === null && expectedMutationId === undefined) {
           return false;
         }
-        userTagsModel.recordMutation(label, taggerId, true, mutationId, synced);
+        userTagsModel.recordMutation(label, taggerId, true, mutationId, synced, tagUri);
         if (tagExists === null) {
           await this.saveUserTagsModel(taggedId, userTagsModel);
           return true;
