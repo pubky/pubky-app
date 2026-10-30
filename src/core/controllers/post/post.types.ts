@@ -16,6 +16,8 @@ export interface TCreatePostParams {
    * content; the locked content itself never goes through this controller.
    */
   lock?: string;
+  /** Runs once the post is on the homeserver; a later failure (its tags) still throws but leaves the post live. */
+  onPostSynced?: () => void;
 }
 
 export interface TCreateCollectionParams {

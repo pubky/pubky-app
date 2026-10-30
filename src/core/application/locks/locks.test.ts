@@ -530,29 +530,15 @@ describe('LocksApplication (content)', () => {
     });
   });
 
-  it('keeps a successful publication successful if the immediate descriptor read fails', async () => {
-    mocks.creatorCreateContentLock.mockResolvedValue({
-      lock_id: 'LOCK1',
-      content_lock_path: '/pub/locks.app/LOCK1.json',
-      content_lock: { creator: CREATOR_PUBKY },
-    });
-    mocks.readContentLock.mockRejectedValue(new Error('homeserver not ready'));
-    await expect(LocksApplication.createLockContent({ buildPost, lockConfig: paymentConfig })).resolves.toMatchObject({
-      lock_id: 'LOCK1',
-    });
-    expect(mocks.creatorCreateContentLock).toHaveBeenCalledOnce();
-    await vi.waitFor(() => expect(mocks.readContentLock).toHaveBeenCalledOnce());
-  });
-
-  it('caches the published descriptor and post without re-reading the guarded original', async () => {
+  // The announcement card reads lock.json itself; a read here could cache a lock that a failed
+  // announcement has just deleted (#2039).
+  it('caches the published post without reading the lock file or the guarded original', async () => {
     const creator = `pubky${MOCK_LOCK_AUTHOR_PUBKY}`;
-    const publicFile = mockLockFile({ creator });
     mocks.creatorCreateContentLock.mockResolvedValue({
       lock_id: 'LOCK1',
       content_lock_path: '/pub/locks.app/LOCK1.json',
       content_lock: { creator },
     });
-    mocks.readContentLock.mockResolvedValue(publicFile);
     const buildPost = () => ({
       contentType: 'application/json',
       bytes: new TextEncoder().encode(JSON.stringify({ content: 'my secret', kind: 'short', attachments: null })),
@@ -560,9 +546,8 @@ describe('LocksApplication (content)', () => {
 
     await LocksApplication.createLockContent({ buildPost, lockConfig: paymentConfig });
 
-    await vi.waitFor(() =>
-      expect(mocks.cacheDescriptor).toHaveBeenCalledWith({ lockId: 'LOCK1', descriptor: publicFile }),
-    );
+    expect(mocks.readContentLock).not.toHaveBeenCalled();
+    expect(mocks.cacheDescriptor).not.toHaveBeenCalled();
     expect(mocks.cachePost).toHaveBeenCalledWith({
       lockId: 'LOCK1',
       creator,
@@ -664,29 +649,6 @@ describe('LocksApplication (content)', () => {
 
       expect(mocks.registerGuardedResource).not.toHaveBeenCalled();
     });
-  });
-
-  it('does not wait for the descriptor read before finishing publication', async () => {
-    const creator = `pubky${MOCK_LOCK_AUTHOR_PUBKY}`;
-    mocks.creatorCreateContentLock.mockResolvedValue({
-      lock_id: 'LOCK1',
-      content_lock_path: '/pub/locks.app/LOCK1.json',
-      content_lock: { creator },
-    });
-    let resolveRead: (value: LockFile) => void = () => undefined;
-    mocks.readContentLock.mockReturnValue(
-      new Promise<LockFile>((resolve) => {
-        resolveRead = resolve;
-      }),
-    );
-
-    await expect(LocksApplication.createLockContent({ buildPost, lockConfig: paymentConfig })).resolves.toMatchObject({
-      lock_id: 'LOCK1',
-    });
-    expect(mocks.cacheDescriptor).not.toHaveBeenCalled();
-
-    resolveRead(mockLockFile({ creator }));
-    await vi.waitFor(() => expect(mocks.cacheDescriptor).toHaveBeenCalledOnce());
   });
 });
 const VALID_LOCK_HOST = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';

@@ -95,6 +95,14 @@ over them gets a toast and the switch stays off. The check waits for the switch 
 who is not locking anything never hears about lock limits. The values are the server's defaults: it
 offers no way to read them.
 
+_Failed publish (#2039)._ Before the lock exists, a failed publish deletes every upload the Lock
+Server confirmed. After it exists, a failed announcement queues the lock's deletion, and the Lock
+Server removes its files in the background. An announcement already on the homeserver keeps its lock,
+even when its tags then fail. If the announcement landed and only its answer was lost, it now points
+at a deleted lock that the creator can see and delete. Files or the lock still stay behind when an
+upload's answer was lost, when a delete request fails (a rejected Locks session, a network or server
+error), and when the tab closes mid-publish (server-side reaping, pubky/locks#107).
+
 **2. Unlock (reader).** The lock card opens Pay to Unlock. The FE submits a **proof** to the
 Lock Server, waits until the reader has paid in Bitkit, gets a short-lived credential,
 proxy-reads the guarded bytes with it — and then **replicates** them into the reader's own
