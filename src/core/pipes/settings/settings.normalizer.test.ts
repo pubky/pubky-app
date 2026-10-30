@@ -7,7 +7,7 @@ import {
   defaultPrivacyPreferences,
   type SettingsState,
 } from '@/stores/settings/settings.types';
-import { buildPubkyUri, restoreMocks, TEST_PUBKY } from '../pipes.test-utils';
+import { restoreMocks, TEST_PUBKY } from '../pipes.test-utils';
 
 describe('SettingsNormalizer', () => {
   beforeEach(() => {
@@ -69,10 +69,10 @@ describe('SettingsNormalizer', () => {
   });
 
   describe('buildUrl', () => {
-    it('should generate correct URL format', () => {
+    it('should put the settings in the app private namespace', () => {
       const result = SettingsNormalizer.buildUrl(TEST_PUBKY.USER_1);
 
-      expect(result).toBe(buildPubkyUri(TEST_PUBKY.USER_1, 'settings.json'));
+      expect(result).toBe(`pubky://${TEST_PUBKY.USER_1}/priv/app.pubky/v1/settings.json`);
     });
 
     it('should include pubky in URL', () => {
@@ -94,6 +94,14 @@ describe('SettingsNormalizer', () => {
       expect(result1).toContain(TEST_PUBKY.USER_1);
       expect(result2).toContain(TEST_PUBKY.USER_2);
       expect(result1).not.toBe(result2);
+    });
+  });
+
+  describe('buildLegacyUrl', () => {
+    it('should spell the 0.x settings where a 0.x client wrote them', () => {
+      expect(SettingsNormalizer.buildLegacyUrl(TEST_PUBKY.USER_1)).toBe(
+        `pubky://${TEST_PUBKY.USER_1}/pub/pubky.app/settings.json`,
+      );
     });
   });
 
@@ -123,7 +131,7 @@ describe('SettingsNormalizer', () => {
 
       const result = SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
 
-      expect(result.meta.url).toBe(buildPubkyUri(TEST_PUBKY.USER_1, 'settings.json'));
+      expect(result.meta.url).toBe(`pubky://${TEST_PUBKY.USER_1}/priv/app.pubky/v1/settings.json`);
     });
 
     it('should include correct meta path', () => {
@@ -131,7 +139,7 @@ describe('SettingsNormalizer', () => {
 
       const result = SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
 
-      expect(result.meta.path).toBe('pub/pubky.app/settings.json');
+      expect(result.meta.path).toBe('/priv/app.pubky/v1/settings.json');
     });
 
     it('should log debug message', () => {

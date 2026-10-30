@@ -126,42 +126,56 @@ export class BootstrapApplication {
   }
 
   /**
-   * Retrieves user's last read timestamp from homeserver, fetches notification data from Nexus
-   * and persists the notifications to the cache.
+   * Retrieves the user's last read timestamp from the homeserver: the v1 file, else the 0.x one
+   * (which the migrator does not copy), else a cursor at the current time. When the v1 file is
+   * missing it is created with the value returned, so the first bootstrap after the migration
+   * gate carries the 0.x cursor over; the 0.x file is left in place.
    *
    * @private
    * @param params, Bootstrap parameters
    * @param params.pubky, The user's public key identifier
-   * @param params.lastReadUrl, URL to fetch user's last read timestamp from homeserver
-   * @returns Promise resolving to notification list and last read timestamp
+   * @param params.lastReadUrl, URL of the user's v1 last read file on the homeserver
+   * @returns Promise resolving to the last read timestamp
    */
   private static async fetchOrPutLastRead({ pubky, lastReadUrl }: TBootstrapParams): Promise<number> {
+    const stored = await this.fetchLastReadAt(lastReadUrl);
+    if (stored !== null) return stored;
+
+    const legacy = await this.fetchLastReadAt(LastReadNormalizer.buildLegacyUrl(pubky));
+    if (legacy !== null) {
+      Logger.info('Last read file found at its 0.x path only, copying it...', { pubky });
+      void this.createMissingLastRead(lastReadUrl, { timestamp: legacy });
+      return legacy;
+    }
+
+    Logger.info('Last read file not found, creating new one...', { pubky });
+    const { lastRead } = LastReadNormalizer.to(pubky);
+    void this.createMissingLastRead(lastReadUrl, lastRead);
+    return lastRead.timestamp;
+  }
+
+  /** The cursor stored at `url`, or null when the file is absent. Any other failure rejects. */
+  private static async fetchLastReadAt(url: string): Promise<number | null> {
     try {
-      const { timestamp } = await HomeserverService.request<{ timestamp: number }>({
+      const stored = await HomeserverService.request<{ timestamp?: unknown } | undefined>({
         method: HttpMethod.GET,
-        url: lastReadUrl,
+        url,
       });
-      return timestamp;
+      return typeof stored?.timestamp === 'number' ? stored.timestamp : null;
     } catch (error) {
-      // Only handle 404 errors (resource not found), rethrow everything else
-      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) {
-        Logger.info('Last read file not found, creating new one...', { pubky });
-        const lastRead = LastReadNormalizer.to(pubky);
-        void this.createMissingLastRead(lastRead.meta.url, lastRead.last_read.toJson());
-        return Number(lastRead.last_read.timestamp);
-      } else {
-        // Network errors, timeouts, server errors, etc. should bubble up
-        Logger.error('Failed to fetch last read timestamp', error);
-        // TODO: TO harsh, we should handle this error better
-        throw error;
-      }
+      // Only a 404 (resource not found) means absent
+      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return null;
+      // Network errors, timeouts, server errors, etc. should bubble up
+      Logger.error('Failed to fetch last read timestamp', error);
+      // TODO: TO harsh, we should handle this error better
+      throw error;
     }
   }
 
   /**
-   * Creates the last-read file a read just found missing. Before a retry (429, 500, 503 or the
-   * publish conflict) it is checked again, and a file another client created meanwhile is kept
-   * rather than overwritten.
+   * Creates the last-read file a read just found missing, from the 0.x cursor or a fresh one.
+   * Before a retry (429, 500, 503 or the publish conflict) it is checked again, and a file
+   * another client created meanwhile is kept rather than overwritten.
    */
   private static async createMissingLastRead(url: string, bodyJson: Record<string, unknown>): Promise<void> {
     const fence = HomeserverService.createWriteFence();

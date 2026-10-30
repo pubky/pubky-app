@@ -14,7 +14,7 @@ const LIST_PAGE = 500;
 
 /**
  * Backs `HomeserverService` with an in-memory homeserver (`pubky-social-specs/testing`) signed in
- * as `owner`: `putBlob` stores the exact bytes, reads and listings answer from the same store, so
+ * as `owner`: `putBlob` stores the exact bytes, reads (`getFreshBytes` included) and listings answer from the same store, so
  * a test exercises the real pipes and applications against the real data model instead of
  * asserting on spy arguments. Writes to another owner's tree are refused like the real service
  * refuses them; reads of anyone's public tree work. Errors reach the caller as the `AppError`
@@ -84,6 +84,13 @@ export function stubMemoryHomeserver(owner: string) {
   const getBytes = vi
     .spyOn(HomeserverService, 'getBytes')
     .mockImplementation(async (url) => readBytes(url, 'getBytes').catch(asAppError(url, HttpMethod.GET, 'getBytes')));
+
+  // Public only, as the real one: a raw fetch that carries no session.
+  const getFreshBytes = vi
+    .spyOn(HomeserverService, 'getFreshBytes')
+    .mockImplementation(async (url) =>
+      publicStorage.getBytes(url).catch(asAppError(url, HttpMethod.GET, 'getFreshBytes')),
+    );
 
   const request = vi.spyOn(HomeserverService, 'request').mockImplementation(async ({ method, url, bodyJson }) => {
     switch (method) {
@@ -162,6 +169,17 @@ export function stubMemoryHomeserver(owner: string) {
     friend,
     friendSession,
     publicStorage,
-    spies: { putBlob, request, delete: remove, deleteIdempotent, list, listAll, getBytes, getBytesIfExists, exists },
+    spies: {
+      putBlob,
+      request,
+      delete: remove,
+      deleteIdempotent,
+      list,
+      listAll,
+      getBytes,
+      getFreshBytes,
+      getBytesIfExists,
+      exists,
+    },
   };
 }

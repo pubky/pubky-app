@@ -115,6 +115,12 @@ everything ever unlocked. The replica also survives the creator revoking the loc
 | reader's HS `/priv/social/unlocked/<lockId>/`                 | the reader's replica, written on unlock                                                                                | that reader only                                             |
 | reader's HS `/priv/social/purchases/<lockId>/<bundleId>.json` | one file per bundle id, written BEFORE the proof is submitted (#2297, #2827); the legacy `<lockId>.json` is still read | that reader only                                             |
 
+Account deletion and export (`ProfileApplication.commitDelete` / `downloadData`, `docs/data-patterns.md`) sweep the
+whole `/priv/social/` of the signed-in account, so a reader's `unlocked/` replicas and `purchases/` files go with
+the account. The creator's `/pub/app.locks/<lockId>.json` and `/priv/app.locks/content/` are Lock Server contracts
+under a read-only grant (`/priv/app.locks/content/:r`) and are left alone: deleting a lock is the Lock Server's job
+([Deleting an announcement](#deleting-an-announcement)).
+
 ---
 
 ## Detecting a lock post

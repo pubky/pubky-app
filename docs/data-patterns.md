@@ -256,6 +256,42 @@ Article bodies (`kind: long`) embed images, videos, audio and PDFs with one mark
 - **Ownership invariant**: a ref resolves only when `attachments[n]` is a file URI owned by the author (`isAuthorFileUri`); otherwise an unavailable placeholder renders with no request.
 - Inline slots never leak into post-media surfaces (lightbox, list thumbnails, Visual feed, OG text): those read the cover slot only.
 
+## Homeserver Trees and App Files
+
+The app reads and writes five trees of the signed-in account on its homeserver. Objects of the social data model
+(`pubky-social-specs`) are built, decoded and encoded by the package; the two files the app owns outside that model
+are plain JSON under the app's private namespace (`src/config/app-files.ts`).
+
+| Tree                    | Holds                                                                                  | After the migration gate                                                                         |
+| ----------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `/pub/social/v1/`       | `profile.json`, posts, follows, tags, files                                            | the public tree; `listPrefix(pubky, 'public')`                                                   |
+| `/priv/social/v1/`      | bookmarks, mutes, feeds, private post versions, the migration flag `_migrated.json`    | the private tree; `listPrefix(pubky, 'private')`                                                 |
+| `/priv/social/` (rest)  | the Locks reader directories `unlocked/` and `purchases/` (`docs/locks.md`)            | not social objects; covered by the same `/priv/social/:rw` grant                                 |
+| `/priv/app.pubky/v1/`   | `settings.json` and the notification read cursor `last_read.json` (`APP_PRIVATE_PATH`) | app-private files, read by this app only                                                         |
+| `/pub/pubky.app/` (0.x) | what a 0.x client wrote; the migrator copies the social objects, not the app files     | read only as a fallback (`listPrefix(pubky, 'legacy')`); never written; deleted with the account |
+
+**Profile.** `ProfileController.commitCreate` builds the profile with `UserNormalizer.to` (`buildUser`) and PUTs
+`built.body` with `putBlob`. An edit (`ProfileApplication.commitUpdate` / `commitUpdateStatus`) is a fenced
+read-modify-write of the stored object: `getFreshBytes(buildUri(pubky, 'user'))` → `decodeObject` →
+`UserNormalizer.applyChanges` (a spread, so `$unknown`, the members a newer client added, survive) → `encodeObject`
+(every profile rule re-checked) → `putBlob({ fence })`. A missing v1 profile is a deleted account (`GONE`); there is
+no fallback to the 0.x profile, which only an un-migrated account has, and `AuthApplication.userIsSignedUp` probes
+the v1 profile alone.
+
+**App files.** Settings and `last_read` are read v1 → 0.x → create: the v1 file when it exists, else the 0.x file,
+else defaults (settings) or a cursor at the current time (`last_read`). The first `SettingsApplication.initializeSettings`
+and the first `BootstrapApplication.initialize` after the gate write the v1 file from the 0.x one (fenced; the
+absent check runs again on every retry pass, so a v1 file another client wrote meanwhile is kept). The copy is
+forward only: once the v1 file exists the 0.x one is never read again, and it is never deleted (D15). Every write
+goes to the v1 URL (`SettingsNormalizer.buildUrl`, `LastReadNormalizer.buildUrl`).
+
+**Account delete and export** (`ProfileApplication.commitDelete` / `downloadData`) walk all five trees:
+`listPrefix(pubky, 'legacy')`, `listPrefix(pubky, 'public')`, the whole `/priv/social/` (the v1 tree, the flag and
+the Locks reader directories) and `/priv/app.pubky/v1/`. The export names every file by its path under the account.
+The deletion removes every other file first, deepest first, then the profiles in the order `deletionPaths({ kind:
+'user' })` gives: the 0.x `profile.json`, then the v1 one. `/pub/app.locks/` and `/priv/app.locks/content/` are
+Lock Server contracts under a read-only grant and are left alone.
+
 ## Data Model Reference
 
 All tables defined in `src/core/database/franky/franky.ts`.
@@ -316,3 +352,5 @@ When working with data:
 - [ ] External data normalized through pipes?
 - [ ] Pipes are pure (no IO)?
 - [ ] Article body media referenced by `attachment:{n}` slot, type from file metadata?
+- [ ] Homeserver paths from the data model (`buildUri`, `listPrefix`, `deletionPaths`) or `src/config/app-files.ts`, never spelled by hand?
+- [ ] A stored-object edit spreads the decoded object so `$unknown` survives?

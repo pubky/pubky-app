@@ -1,5 +1,5 @@
 import type { Session } from '@synonymdev/pubky';
-import { userUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import type {
   TKeypairParams,
   TRestoreSessionParams,
@@ -230,11 +230,12 @@ export class AuthApplication {
    *
    * @param params - Parameters containing the user's public key
    * @param params.pubky - The user's public key identifier
-   * @returns Promise resolving to the user profile or undefined if not found
+   * @returns Promise resolving to whether the v1 profile exists; an account still on the 0.x
+   * profile alone has not passed the migration gate and reads as not signed up
    */
   static async userIsSignedUp({ pubky }: { pubky: Pubky }): Promise<boolean> {
     try {
-      await HomeserverService.request({ method: HttpMethod.GET, url: userUriBuilder(pubky) });
+      await HomeserverService.request({ method: HttpMethod.GET, url: buildUri(pubky, 'user') });
       return true;
     } catch (error) {
       const appError = isAppError(error) ? error : toAppError(error, ErrorService.Homeserver, 'userIsSignedUp');
