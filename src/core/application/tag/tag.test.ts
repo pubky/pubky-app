@@ -7,6 +7,7 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
 import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
+import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
 import { NexusUserService } from '@/services/nexus/user/user';
 import { TagApplication } from './tag';
@@ -16,7 +17,12 @@ vi.mock('@/services/homeserver/homeserver', () => ({ HomeserverService: { reques
 vi.mock('@/services/local/tag/post/tag.post', () => ({ LocalPostTagService: { create: vi.fn(), delete: vi.fn() } }));
 vi.mock('@/services/local/tag/user/tag.user', () => ({ LocalUserTagService: { create: vi.fn(), delete: vi.fn() } }));
 vi.mock('@/services/local/tag/tag-cache', () => ({
-  LocalTagCacheService: { completeMutation: vi.fn(), getViewerMutations: vi.fn(), getViewerTagUri: vi.fn() },
+  LocalTagCacheService: {
+    completeMutation: vi.fn(),
+    getViewerMutations: vi.fn(),
+    getViewerTagUri: vi.fn(),
+    ownsMutation: vi.fn(),
+  },
 }));
 vi.mock('@/services/nexus/post/post', () => ({ NexusPostService: { getPostTaggers: vi.fn() } }));
 vi.mock('@/services/nexus/user/user', () => ({ NexusUserService: { taggers: vi.fn() } }));
@@ -38,6 +44,7 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     vi.mocked(HomeserverService.request).mockResolvedValue(undefined);
     vi.mocked(LocalTagCacheService.completeMutation).mockResolvedValue(undefined);
     vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(data.tagUrl);
+    vi.mocked(LocalTagCacheService.ownsMutation).mockResolvedValue(true);
   });
 
   const fetchTaggers = () =>
@@ -265,6 +272,40 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
       expect.objectContaining({ expectedMutationId: original.mutationId, synced: true, tagUri }),
     );
     expect(LocalTagCacheService.completeMutation).not.toHaveBeenCalled();
+  });
+
+  it('sends no delayed DELETE for a label the viewer re-added while Nexus was asked', async () => {
+    vi.mocked(LocalTagCacheService.getViewerTagUri).mockResolvedValue(undefined);
+    const lookup = Promise.withResolvers<NexusTaggers>();
+    fetchTaggers().mockReturnValue(lookup.promise);
+    // The re-add replaces the delete's mutation on the row; its PUT is queued before the lookup answers.
+    vi.mocked(LocalTagCacheService.ownsMutation).mockImplementation(
+      async () => vi.mocked(local.create).mock.calls.length === 0,
+    );
+    const deletion = TagApplication.commitDelete(data);
+    await vi.waitFor(() => expect(fetchTaggers()).toHaveBeenCalledOnce());
+    await TagApplication.commitCreate({ tagList: [data] });
+    lookup.resolve({ users: ['viewer'], relationship: true, tag_uri: data.tagUrl });
+    await deletion;
+    const deleteMutation = vi.mocked(local.delete).mock.calls[0][0];
+    expect(LocalTagCacheService.ownsMutation).toHaveBeenCalledWith(
+      { kind: taggedKind, id: data.taggedId },
+      data.label,
+      data.taggerId,
+      deleteMutation.mutationId,
+    );
+    expect(deleteRequest()).toBeUndefined();
+    expect(local.create).toHaveBeenCalledOnce();
+    expect(LocalTagCacheService.completeMutation).not.toHaveBeenCalledWith(expect.anything(), {
+      mutationId: deleteMutation.mutationId,
+      isCurrent: undefined,
+    });
+  });
+
+  it('does not re-read ownership when the address was already stored', async () => {
+    await TagApplication.commitDelete(data);
+    expect(LocalTagCacheService.ownsMutation).not.toHaveBeenCalled();
+    expect(deleteRequest()?.url).toBe(data.tagUrl);
   });
 
   it('treats a Nexus 404 as a failure, not as an already deleted tag file', async () => {

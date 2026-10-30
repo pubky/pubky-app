@@ -7,7 +7,7 @@ import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
-import { getTagCursor, getTagMutationEntries, getViewerTagUri } from '@/models/shared/tag/tag.utils';
+import { findTagMutation, getTagCursor, getTagMutationEntries, getViewerTagUri } from '@/models/shared/tag/tag.utils';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { reconcileTagCounts, reconcileTagWindow } from '@/pipes/tag/tag-cache';
@@ -53,6 +53,11 @@ export class LocalTagCacheService {
 
   static async getViewerTagUri(entity: TagEntity, label: string, viewerId: string): Promise<string | undefined> {
     return getViewerTagUri(await this.read(entity), label, viewerId);
+  }
+
+  /** Whether the viewer's latest write for the label is still this operation, or a newer one replaced it. */
+  static async ownsMutation(entity: TagEntity, label: string, viewerId: string, mutationId: string) {
+    return findTagMutation(await this.read(entity), label, viewerId)?.id === mutationId;
   }
 
   /** A completed request may settle only the operation it originally wrote. */

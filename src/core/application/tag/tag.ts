@@ -69,10 +69,15 @@ export class TagApplication {
       return;
     }
     try {
-      tagUri ??= await this.fetchViewerTagUri({ taggerId, taggedId, label, taggedKind });
-      if (isCurrent && !isCurrent()) {
-        await this.undo(local, 'delete', { ...write, tagUri });
-        return;
+      if (!tagUri) {
+        tagUri = await this.fetchViewerTagUri({ taggerId, taggedId, label, taggedKind });
+        if (isCurrent && !isCurrent()) {
+          await this.undo(local, 'delete', { ...write, tagUri });
+          return;
+        }
+        // A re-add that landed while Nexus was asked owns the label now, and its PUT is already queued ahead
+        // of this request: a DELETE sent after it would remove the tag the viewer just put back.
+        if (!(await LocalTagCacheService.ownsMutation(entity, label, taggerId, write.mutationId))) return;
       }
       // Nexus reporting no tag, like an already absent homeserver record, agrees with the optimistic deletion.
       if (tagUri) {
