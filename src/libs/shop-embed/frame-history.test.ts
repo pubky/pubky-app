@@ -473,7 +473,10 @@ describe('Shop frame history ownership', () => {
     const proxy = new Proxy(frameWindow, {
       get(target, key) {
         if (key === 'document' && documentChanged) return document;
-        return Reflect.get(target, key, target);
+        const value = Reflect.get(target, key, target);
+        // jsdom 30.1 brand-checks EventTarget methods, so window methods must run
+        // with the real window as receiver (a browser WindowProxy does this natively).
+        return typeof value === 'function' ? value.bind(target) : value;
       },
     });
     const onNavigate = vi.fn();

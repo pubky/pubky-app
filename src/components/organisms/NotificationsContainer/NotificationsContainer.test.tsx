@@ -125,7 +125,7 @@ describe('NotificationsContainer', () => {
     render(<NotificationsContainer />);
     const heading = screen.getByTestId('heading-5');
     expect(heading).toBeInTheDocument();
-    expect(heading).toHaveTextContent(/Notifications/);
+    expect(heading).toHaveTextContent('Notifications');
   });
 
   it('displays notifications list when notifications exist', () => {

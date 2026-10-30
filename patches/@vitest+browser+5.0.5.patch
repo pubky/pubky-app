@@ -1,8 +1,8 @@
 diff --git a/node_modules/@vitest/browser/dist/index.js b/node_modules/@vitest/browser/dist/index.js
-index 4044a74..4ee3d9d 100644
+index d3cdc28..29c12d2 100644
 --- a/node_modules/@vitest/browser/dist/index.js
 +++ b/node_modules/@vitest/browser/dist/index.js
-@@ -2431,8 +2431,18 @@ function buildOutput(outcome, timeout) {
+@@ -2088,8 +2088,18 @@ function buildOutput(outcome, timeout) {
  async function waitForStableScreenshot(options, timeout) {
  	const abortController = new AbortController();
  	const stableScreenshot = getStableScreenshot(options, abortController.signal);

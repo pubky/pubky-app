@@ -153,7 +153,7 @@ Third-party deployers get unsymbolicated events unless they obtain the maps for 
 
 Pubky App is decentralized social — strict defaults:
 
-- `sendDefaultPii: false` (no IP, no headers)
+- No client PII by default (SDK v11 removed `sendDefaultPii`; the SDK never attaches IP/headers itself)
 - Replay: `maskAllText: true`, `maskAllInputs: true`, `blockAllMedia: true`, `networkCaptureBodies: false`
 - `beforeSend` defensively redacts user identifiers and user-provided data from app-controlled payloads:
   `email`, `phone` / `phoneNumber`, `name`, `firstName`, `lastName`, `displayName`, `username`, `bio`, `file`,
@@ -166,6 +166,10 @@ Pubky App is decentralized social — strict defaults:
 Never call `Sentry.setUser({ email, ... })` or `Pulse.setUser(...)`. If user attribution is ever needed, use the user's Pubky public key as `id` only.
 
 ### Tracing scrubbing (`beforeSendTransaction`, `beforeSendSpan`)
+
+`getSentryInitBase()` pins `traceLifecycle: 'static'` (SDK v11 defaults to streamed spans, which
+ignores `beforeSendTransaction` and changes the `beforeSendSpan` payload to `StreamedSpanJSON`), so
+`beforeSendSpan` is wrapped in `withStaticSpan` and keeps the `SpanJSON` contract below.
 
 Tracing payloads carry user-controlled URL strings (route names, fetch URLs, root-span data) that
 the error-only `beforeSend` does not see. Two additional hooks in `src/libs/observability/sentry.ts`

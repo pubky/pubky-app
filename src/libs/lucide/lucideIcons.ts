@@ -82,7 +82,7 @@ export function getLucideIconState(name: IconName): LucideIconState | undefined 
 
 /**
  * Own-property check only: `'constructor' in dynamicIconImports` is true and
- * resolves to `Object`, whose "module" has no `__iconNode` — rendering that
+ * resolves to `Object`, whose "module" has no `__iconData` — rendering that
  * would throw. Feed icons are peer-controlled, so this is reachable input.
  */
 function hasCatalogEntry(catalog: LucideCatalog, name: IconName): boolean {
@@ -119,13 +119,16 @@ export function requestLucideIcon(name: IconName): void {
       if (getLucideIconState(name)?.status === 'loaded') return;
 
       const iconModule = await catalog.dynamicIconImports[name]();
-      if (!iconModule?.__iconNode) {
+      // lucide-react 1.65 chunks export `__iconData` ({ name, node }); the old
+      // flat `__iconNode` export is gone at runtime though the types still declare it.
+      const node = iconModule?.__iconData?.node;
+      if (!node) {
         iconStates.delete(name);
         notifyIconStateChange();
         return;
       }
 
-      iconStates.set(name, { status: 'loaded', node: iconModule.__iconNode });
+      iconStates.set(name, { status: 'loaded', node });
       notifyIconStateChange();
     } catch (error: unknown) {
       Logger.warn('Failed to load Lucide icon chunk', { name, error });

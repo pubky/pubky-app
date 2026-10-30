@@ -65,7 +65,7 @@ describe('SearchUserSuggestion', () => {
     // Real formatPublicKey implementation formats differently than mock
     // pk:abc123def456 with length 8 should format as abc1...f456
     const pubkyElement = screen.getByTestId('user-pubky');
-    expect(pubkyElement).not.toHaveTextContent(/pubky/);
+    expect(pubkyElement).not.toHaveTextContent('pubky');
     expect(pubkyElement.textContent).toMatch(/[a-z0-9]+\.\.\.[a-z0-9]+/);
   });
 

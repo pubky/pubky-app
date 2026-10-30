@@ -258,7 +258,7 @@ function deepScrubTelemetryStrings<T>(value: T, seen: WeakSet<object>): T {
  * Defensive PII filter — redacts user-provided identifiers across application-owned
  * event surfaces (messages, exception values, breadcrumb data, extras, and AppError context).
  *
- * The browser/server initializers also set sendDefaultPii: false; this hook is a
+ * SDK v11 removed `sendDefaultPii` and never attaches client PII on its own; this hook is a
  * second line of defense for application payloads we attach ourselves.
  */
 export function scrubSensitiveData(event: Sentry.ErrorEvent): Sentry.ErrorEvent | null {
