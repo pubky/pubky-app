@@ -79,7 +79,7 @@ export function isTransientIndexedDbError(error: unknown): boolean {
   return false;
 }
 
-export interface InitializeOptions {
+interface InitializeOptions {
   /**
    * Whether a stored-version mismatch may delete and recreate the database once this page has
    * already done so. `true` for the page's own start-up and the user's retry (default); `false`
