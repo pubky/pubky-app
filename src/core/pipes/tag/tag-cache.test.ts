@@ -90,6 +90,26 @@ describe('viewer tag address', () => {
   });
 });
 
+describe('label fold', () => {
+  it('keeps labels that differ outside ASCII as two tags, and folds ASCII case into one', () => {
+    const existing: TagCollectionModelSchema<string> = {
+      id: 'post',
+      tags: [{ ...tag(1, true), label: 'Bitcoin', taggers: ['alice'] }],
+      cache: { viewerId: 'alice', cursor: 1, exhausted: true, fetchedAt: 0, revision: 1 },
+    };
+    const incoming = [
+      { ...tag(1, true), label: 'bitcoin', taggers: ['alice'] },
+      { ...tag(1, true), label: 'xÄpfel', taggers: ['alice'] },
+      { ...tag(1, true), label: 'xäpfel', taggers: ['alice'] },
+    ];
+    expect(reconcileTagWindow(incoming, existing, 100, 'alice', { append: true }).tags.map((t) => t.label)).toEqual([
+      'bitcoin',
+      'xÄpfel',
+      'xäpfel',
+    ]);
+  });
+});
+
 describe('tag count reconciliation', () => {
   it.each([true, false])(
     'retires an expired pending mutation when a fresh window replaces it (intent=%s)',

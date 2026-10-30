@@ -3,6 +3,7 @@ import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
@@ -45,7 +46,7 @@ export class LocalTagCacheService {
             id: mutation.id,
             relationship: mutation.relationship,
             expiresAt: mutation.expiresAt,
-            taggersCount: record?.tags.find((tag) => tag.label.toLowerCase() === label)?.taggers_count ?? 0,
+            taggersCount: record?.tags.find((tag) => canonicalizeTagLabel(tag.label) === label)?.taggers_count ?? 0,
           },
         ]),
     );
