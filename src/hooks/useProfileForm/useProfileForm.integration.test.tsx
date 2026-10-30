@@ -1,8 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { HttpMethod } from '@/libs/http/http.types';
+import { fakeOwner } from 'pubky-social-specs/testing';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
-import { HomeserverService } from '@/services/homeserver/homeserver';
+import { stubMemoryHomeserver } from '@/test-utils/homeserver';
 import { useProfileForm } from './useProfileForm';
 
 vi.mock('next/navigation', () => ({
@@ -12,25 +13,36 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/controllers/auth/auth', () => ({ AuthController: { bootstrapWithDelay: vi.fn() } }));
 vi.mock('@/controllers/file/file', () => ({ FileController: { getAvatarUrl: vi.fn() } }));
 vi.mock('@/molecules/Toaster/toast');
-vi.mock('@/services/homeserver/homeserver', () => ({
-  HomeserverService: {
-    getFreshJson: vi.fn(),
-    request: vi.fn(),
-    createWriteFence: () => ({ enter: () => {}, assertCurrent: () => {} }),
-  },
-}));
 vi.mock('@/services/nexus/bootstrap/bootstrap', () => ({ NexusBootstrapService: { ingest: vi.fn() } }));
 
-const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
-const profile = { name: 'Alice', bio: 'Bio', image: null, status: 'working', links: [] };
+const pubky = fakeOwner(1) as Pubky;
+const PROFILE_PATH = '/pub/social/v1/profile.json';
+const profile = { name: 'Alice', bio: 'Bio', image: null, status: 'working', links: null };
 
+// The form, the controller, the application, the data model and IndexedDB are real; the
+// homeserver is the in-memory one.
 describe('useProfileForm published links integration', () => {
-  beforeEach(() => vi.clearAllMocks());
+  let homeserver: ReturnType<typeof stubMemoryHomeserver>;
+  const stored = async () =>
+    JSON.parse(new TextDecoder().decode(await homeserver.session.storage.getBytes(PROFILE_PATH)));
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    homeserver = stubMemoryHomeserver(pubky);
+    await UserDetailsModel.table.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it('preserves a link added on another device when an empty cached placeholder is removed', async () => {
     const publishedLinks = [{ title: 'WEBSITE', url: 'https://example.com/' }];
-    vi.mocked(HomeserverService.getFreshJson).mockResolvedValue({ ...profile, links: publishedLinks });
-    const cached = { ...profile, id: pubky, indexed_at: 1 };
+    await homeserver.session.storage.putBytes(
+      PROFILE_PATH,
+      new TextEncoder().encode(JSON.stringify({ ...profile, links: publishedLinks, theme: 'dark' })),
+    );
+    const cached = { ...profile, links: [], id: pubky, indexed_at: 1 };
     await UserDetailsModel.upsert(cached);
     const { result } = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails: cached }));
     await waitFor(() => expect(result.current.state.isLoading).toBe(false));
@@ -42,18 +54,14 @@ describe('useProfileForm published links integration', () => {
       await result.current.handlers.handleSubmit();
     });
 
-    expect(HomeserverService.request).toHaveBeenCalledExactlyOnceWith({
-      method: HttpMethod.PUT,
-      url: `pubky://${pubky}/pub/pubky.app/profile.json`,
-      bodyJson: { ...profile, image: undefined, bio: 'New bio', links: publishedLinks },
-      fence: expect.anything(),
-    });
+    expect(homeserver.spies.putBlob).toHaveBeenCalledOnce();
+    expect(await stored()).toEqual({ ...profile, bio: 'New bio', links: publishedLinks, theme: 'dark' });
     expect(await UserDetailsModel.findById(pubky)).toMatchObject({ bio: 'New bio', links: publishedLinks });
   });
 
-  it('repairs a published bare X handle through the form, merge and SDK validation', async () => {
-    const published = { ...profile, links: [{ title: 'X (TWITTER)', url: '@alice' }] };
-    vi.mocked(HomeserverService.getFreshJson).mockResolvedValue(published);
+  it('replaces the published links with the ones edited in the form', async () => {
+    const published = { ...profile, links: [{ title: 'X (TWITTER)', url: 'https://x.com/alice-old' }] };
+    await homeserver.session.storage.putBytes(PROFILE_PATH, new TextEncoder().encode(JSON.stringify(published)));
     const cached = { ...published, id: pubky, indexed_at: 1 };
     const { result } = renderHook(() => useProfileForm({ mode: 'edit', pubky, userDetails: cached }));
     await waitFor(() => expect(result.current.state.isLoading).toBe(false));
@@ -62,14 +70,10 @@ describe('useProfileForm published links integration', () => {
       await result.current.handlers.handleSubmit();
     });
 
-    const repairedLinks = [{ title: 'X (TWITTER)', url: 'https://x.com/alice' }];
-    expect(HomeserverService.request).toHaveBeenCalledExactlyOnceWith({
-      method: HttpMethod.PUT,
-      url: `pubky://${pubky}/pub/pubky.app/profile.json`,
-      bodyJson: { ...published, image: undefined, links: repairedLinks },
-      fence: expect.anything(),
-    });
-    expect(await UserDetailsModel.findById(pubky)).toMatchObject({ links: repairedLinks });
+    const editedLinks = [{ title: 'X (TWITTER)', url: 'https://x.com/alice' }];
+    expect(homeserver.spies.putBlob).toHaveBeenCalledOnce();
+    expect(await stored()).toEqual({ ...published, links: editedLinks });
+    expect(await UserDetailsModel.findById(pubky)).toMatchObject({ links: editedLinks });
   });
 });
 
