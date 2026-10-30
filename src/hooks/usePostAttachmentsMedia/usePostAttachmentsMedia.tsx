@@ -2,8 +2,7 @@
 
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
-import { parseArticleContent } from '@/libs/post/articleContent';
-import { articleHasInlineSlotZero } from '@/libs/post/articleInlineMedia';
+import { resolveArticleCover } from '@/libs/post/articleCover';
 import {
   categorizeAttachments,
   splitAttachmentsByMediaType,
@@ -32,24 +31,23 @@ interface UsePostAttachmentsMediaResult {
 export function usePostAttachmentsMedia(postId: string): UsePostAttachmentsMediaResult {
   const { postDetails } = usePostDetails(postId);
   const localAttachments = useLocalFilesStore((state) => state.posts[postId]);
+  const localArticleCover = useLocalFilesStore((state) => state.articleCovers[postId]);
 
-  // Articles carry inline body images in `attachments`, but only the cover
-  // (slot-0 rule) is post-level media — inline images render inside the
-  // article body, never as thumbnails or gallery items.
+  // Articles carry inline body media in `attachments`, but only the cover is
+  // post-level media — inline media renders inside the article body, never as
+  // thumbnails or gallery items. `resolveArticleCover` says where the cover is
+  // (the envelope, or slot 0 of a 0.x article under the slot-0 rule).
   const isArticle = postDetails?.kind === 'long';
-  const articleHasCover =
-    isArticle &&
-    Boolean(postDetails.attachments?.length) &&
-    !articleHasInlineSlotZero(parseArticleContent(postDetails.content)?.body ?? '');
-  const mediaSlotCount = articleHasCover ? 1 : 0;
+  const articleCover = isArticle
+    ? resolveArticleCover({ content: postDetails.content, attachments: postDetails.attachments }).cover
+    : null;
 
-  const remoteAttachmentUris = isArticle
-    ? (postDetails?.attachments ?? []).slice(0, mediaSlotCount)
-    : (postDetails?.attachments ?? []);
+  const remoteAttachmentUris = isArticle ? (articleCover ? [articleCover] : []) : (postDetails?.attachments ?? []);
+  const hasLocalMedia = isArticle ? Boolean(localArticleCover) : Boolean(localAttachments);
 
   const { files } = useAttachmentsMetadata({
     fileUris: remoteAttachmentUris,
-    enabled: Boolean(postDetails) && !localAttachments,
+    enabled: Boolean(postDetails) && !hasLocalMedia,
   });
 
   // Wait for the details row before resolving anything: right after a publish
@@ -58,8 +56,15 @@ export function usePostAttachmentsMedia(postId: string): UsePostAttachmentsMedia
   // media for that interim render.
   if (!postDetails) return { mediaItems: [] };
 
+  if (isArticle) {
+    const mediaItems = localArticleCover
+      ? categorizeAttachments([localArticleCover]).imagesAndVideos
+      : splitAttachmentsByMediaType(files).imagesAndVideos;
+    return { mediaItems };
+  }
+
   const mediaItems = localAttachments
-    ? categorizeAttachments(isArticle ? localAttachments.slice(0, mediaSlotCount) : localAttachments).imagesAndVideos
+    ? categorizeAttachments(localAttachments).imagesAndVideos
     : splitAttachmentsByMediaType(files).imagesAndVideos;
 
   return { mediaItems };

@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
@@ -39,8 +40,9 @@ vi.mock('@/molecules/Toaster/toast');
 
 describe('useRemoveDeletedPost', () => {
   const currentUserPubky = 'current-user' as Pubky;
-  const postId = 'post-author:deleted-post';
-  const postUri = 'pubky://post-author/pub/pubky.app/posts/deleted-post';
+  const postAuthor = fakeOwner(5);
+  const postId = `${postAuthor}:0035QZPT4QG00`;
+  const postUri = `pubky://${postAuthor}/pub/pubky.app/posts/0035QZPT4QG00`;
   const collectionId = `${currentUserPubky}:collection-id`;
   const commitRemoval = vi.fn();
   const rollbackRemoval = vi.fn();

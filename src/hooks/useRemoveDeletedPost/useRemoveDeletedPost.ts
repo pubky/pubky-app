@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { postUriBuilder } from 'pubky-app-specs';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
@@ -14,6 +13,7 @@ import { toast } from '@/molecules/Toaster/toast';
 import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
+import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 interface UseRemoveDeletedPostResult {
@@ -58,7 +58,8 @@ async function isPostStillInCollection(collectionId: string, postId: string): Pr
   if (!content) return null;
 
   const { pubky, id } = parseCompositeId(postId);
-  return (content.items ?? []).includes(postUriBuilder(pubky, id));
+  const spellings = postReferenceSpellings(pubky, id);
+  return (content.items ?? []).some((item) => spellings.includes(item));
 }
 
 export function useRemoveDeletedPost(postId: string): UseRemoveDeletedPostResult {

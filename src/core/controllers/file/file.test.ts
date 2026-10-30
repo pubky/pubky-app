@@ -1,6 +1,8 @@
+import { buildFile } from 'pubky-social-specs';
 import { TextEncoder } from 'util';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { FileVariant } from '@/services/nexus/file/file.types';
 
 const mockFileApplication = {
@@ -39,14 +41,12 @@ let FileController: typeof import('./file').FileController;
 // Helper functions
 const createMockFile = () => new MockFile(['file content'], 'image.png', { type: 'image/png' });
 
-const createMockBlobResult = () => ({
-  blob: { data: new Uint8Array([1, 2, 3]) },
-  meta: { url: 'blob-url' },
-});
-
-const createMockFileResult = () => ({
-  file: { toJson: vi.fn() },
-  meta: { url: 'file-url' },
+/** The attachment the application prepares: the built media plus the bytes it names. */
+const createMockFileAttachment = (): TFileAttachmentResult => ({
+  media: buildFile(testPubky, { bytes: new Uint8Array([1, 2, 3]), type: 'image/png' }),
+  bytes: new Uint8Array([1, 2, 3]),
+  name: 'image.png',
+  contentType: 'image/png',
 });
 
 const createMockMetadata = () => ({
@@ -81,9 +81,7 @@ describe('FileController', () => {
   describe('commitCreate', () => {
     it('normalizes file and uploads it', async () => {
       const file = createMockFile();
-      const blobResult = createMockBlobResult();
-      const fileResult = createMockFileResult();
-      const fileAttachment = { blobResult, fileResult };
+      const fileAttachment = createMockFileAttachment();
 
       mockFileApplication.toFileAttachment.mockResolvedValue(fileAttachment);
       mockFileApplication.commitCreate.mockResolvedValue(undefined);
@@ -92,7 +90,7 @@ describe('FileController', () => {
 
       expect(mockFileApplication.toFileAttachment).toHaveBeenCalledWith({ file, pubky: testPubky });
       expect(mockFileApplication.commitCreate).toHaveBeenCalledWith({ fileAttachments: [fileAttachment] });
-      expect(result).toBe(fileResult.meta.url);
+      expect(result).toBe(fileAttachment.media.url);
     });
 
     it('propagates errors when file attachment preparation fails', async () => {
@@ -113,9 +111,7 @@ describe('FileController', () => {
 
     it('propagates errors when homeserver upload fails', async () => {
       const file = createMockFile();
-      const blobResult = createMockBlobResult();
-      const fileResult = createMockFileResult();
-      mockFileApplication.toFileAttachment.mockResolvedValue({ blobResult, fileResult });
+      mockFileApplication.toFileAttachment.mockResolvedValue(createMockFileAttachment());
       mockFileApplication.commitCreate.mockRejectedValue(new Error('upload failed'));
 
       await expect(FileController.commitCreate({ file, pubky: testPubky })).rejects.toThrow('upload failed');

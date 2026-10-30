@@ -16,7 +16,7 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
   useTimelineFeedContext: () => undefined,
 }));
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
-  useLocalFilesStore: { getState: () => ({ setPostAttachments: vi.fn() }) },
+  useLocalFilesStore: { getState: () => ({ setPostAttachments: vi.fn(), setArticleCover: vi.fn() }) },
 }));
 
 describe('useUndoRepost', () => {

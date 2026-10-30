@@ -6,8 +6,8 @@ import { FileVariant } from '@/services/nexus/file/file.types';
 
 /**
  * Resolves a post attachment reference into an absolute CDN URL. Only
- * `pubky://<user>/pub/pubky.app/files/<fileId>` URIs are accepted — they resolve
- * to our own CDN. Anything else (including absolute `http(s)` URLs) is rejected,
+ * homeserver media URIs (`pubky://<user>/pub/social/v1/files/<hash>.<ext>`, or
+ * a 0.x `files/<fileId>`) are accepted — they resolve to our own CDN. Anything else (including absolute `http(s)` URLs) is rejected,
  * so a server-side consumer can never be pointed at an arbitrary/internal host
  * (SSRF). In practice every post attachment is a homeserver file URI, so this
  * reflects reality rather than restricting it.

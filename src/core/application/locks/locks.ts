@@ -14,6 +14,7 @@ import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { LockModelSchema } from '@/models/locks/locks.schema';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { GuardedPostBuilder } from '@/pipes/locks/guardedPost.builder';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { retryHomeserverWriteAfterReread, type THomeserverWriteFence } from '@/services/homeserver/write-retry';
@@ -660,7 +661,7 @@ export class LocksApplication {
    */
   static async createLockContent({
     attachments = [],
-    buildPost,
+    post: lockedPost,
     lockConfig,
     isCurrent,
   }: TCreateLockContentParams & TViewerScope): Promise<TCreateContentLockResult> {
@@ -673,12 +674,25 @@ export class LocksApplication {
     }
 
     // The guarded bytes land on the Lock-Server-authenticated account, which may differ from the
-    // pubky.app user. Capture that owner from the upload response so `buildPost` can reference the
-    // attachments by their real host. With no attachments the owner stays undefined and no URIs are built.
+    // pubky.app user. Capture that owner from the upload response so the guarded post references
+    // the attachments by their real host (`pubky` prefix stripped to the raw z32 host the `pubky://`
+    // scheme expects). With no attachments there is no owner and no URI to build.
     const uploads = await this.uploadAttachments(files);
     const owner = uploads.at(-1)?.creator;
     const attachmentResources: TGuardedResource[] = uploads.map((uploaded) => uploaded.resource);
-    const postFile = buildPost(attachmentResources, owner);
+    // Never substitute the pubky.app account: the two can differ, and a wrong host here writes
+    // unreachable attachment URIs into the locked post.
+    if (attachmentResources.length > 0 && !owner) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Guarded attachments without an owner pubky', {
+        service: ErrorService.Locks,
+        operation: 'createLockContent',
+      });
+    }
+    const host = owner ? stripPubkyPrefix(owner) : '';
+    const postFile = GuardedPostBuilder.toPrimary({
+      ...lockedPost,
+      attachmentUris: attachmentResources.map((resource) => `pubky://${host}${resource.path}`),
+    });
     const post = await this.upload(postFile);
 
     // The payout recipient has to equal the lock's creator, and the upload response names that
