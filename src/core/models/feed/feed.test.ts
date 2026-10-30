@@ -1,4 +1,3 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { FeedModel } from '@/models/feed/feed';
@@ -11,10 +10,10 @@ describe('FeedModel', () => {
     icon: 'activity',
     tags: ['bitcoin', 'lightning'],
     domain_tags: [],
-    reach: PubkyAppFeedReach.All,
-    sort: PubkyAppFeedSort.Recent,
+    reach: 'all',
+    sort: 'recent',
     content: null,
-    layout: PubkyAppFeedLayout.Columns,
+    layout: 'columns',
     created_at: Date.now(),
     updated_at: Date.now(),
     ...overrides,
@@ -139,10 +138,10 @@ describe('FeedModel', () => {
         name: 'Complete Feed',
         tags: ['tag1', 'tag2', 'tag3'],
         domain_tags: ['bitcoiner', '🔥'],
-        reach: PubkyAppFeedReach.Following,
-        sort: PubkyAppFeedSort.Popularity,
-        content: PubkyAppPostKind.Image,
-        layout: PubkyAppFeedLayout.Visual,
+        reach: 'following',
+        sort: 'popularity',
+        content: 'image',
+        layout: 'visual',
       });
 
       await FeedModel.upsert(feed);
@@ -152,10 +151,10 @@ describe('FeedModel', () => {
       expect(saved!.icon).toBe('activity');
       expect(saved!.tags).toEqual(['tag1', 'tag2', 'tag3']);
       expect(saved!.domain_tags).toEqual(['bitcoiner', '🔥']);
-      expect(saved!.reach).toBe(PubkyAppFeedReach.Following);
-      expect(saved!.sort).toBe(PubkyAppFeedSort.Popularity);
-      expect(saved!.content).toBe(PubkyAppPostKind.Image);
-      expect(saved!.layout).toBe(PubkyAppFeedLayout.Visual);
+      expect(saved!.reach).toBe('following');
+      expect(saved!.sort).toBe('popularity');
+      expect(saved!.content).toBe('image');
+      expect(saved!.layout).toBe('visual');
     });
 
     it('should handle null content (All content types)', async () => {

@@ -1,4 +1,3 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { FeedModel } from '@/models/feed/feed';
@@ -12,10 +11,10 @@ describe('LocalFeedService', () => {
     icon: 'activity',
     tags: ['bitcoin', 'lightning'],
     domain_tags: [],
-    reach: PubkyAppFeedReach.All,
-    sort: PubkyAppFeedSort.Recent,
+    reach: 'all',
+    sort: 'recent',
     content: null,
-    layout: PubkyAppFeedLayout.Columns,
+    layout: 'columns',
     created_at: Date.now(),
     updated_at: Date.now(),
     ...overrides,
@@ -278,5 +277,46 @@ describe('LocalFeedService', () => {
       const saved = await LocalFeedService.readAll();
       expect(saved).toHaveLength(5);
     });
+  });
+});
+
+describe('LocalFeedService.deleteMissing', () => {
+  const createFeedSchema = (id: string): FeedModelSchema => ({
+    id,
+    name: id,
+    icon: 'activity',
+    tags: ['bitcoin'],
+    domain_tags: [],
+    reach: 'all',
+    sort: 'recent',
+    content: null,
+    layout: 'columns',
+    created_at: 1,
+    updated_at: 1,
+  });
+
+  beforeEach(async () => {
+    await db.initialize();
+    await FeedModel.table.clear();
+  });
+
+  it('deletes every row outside the kept ids and returns the rows it removed', async () => {
+    await FeedModel.bulkSave([createFeedSchema('keep-1'), createFeedSchema('drop-1'), createFeedSchema('keep-2')]);
+
+    const removed = await LocalFeedService.deleteMissing(new Set(['keep-1', 'keep-2', 'never-stored']));
+
+    expect(removed).toEqual([createFeedSchema('drop-1')]);
+    expect((await FeedModel.table.toArray()).map((feed) => feed.id).sort()).toEqual(['keep-1', 'keep-2']);
+  });
+
+  it('removes nothing when every row is kept, and everything when none is', async () => {
+    await FeedModel.bulkSave([createFeedSchema('a'), createFeedSchema('b')]);
+
+    await expect(LocalFeedService.deleteMissing(new Set(['a', 'b']))).resolves.toEqual([]);
+    expect(await FeedModel.table.count()).toBe(2);
+
+    const removed = await LocalFeedService.deleteMissing(new Set());
+    expect(removed.map((feed) => feed.id).sort()).toEqual(['a', 'b']);
+    expect(await FeedModel.table.count()).toBe(0);
   });
 });

@@ -1,5 +1,4 @@
 import { act, renderHook } from '@testing-library/react';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import type { UseFormReturn } from 'react-hook-form';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES } from '@/app/routes';
@@ -42,9 +41,9 @@ const createFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSchema =
   icon: 'mountain',
   tags: ['bitcoin'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.All,
-  sort: PubkyAppFeedSort.Recent,
-  layout: PubkyAppFeedLayout.Columns,
+  reach: 'all',
+  sort: 'recent',
+  layout: 'columns',
   content: null,
   created_at: Date.now(),
   updated_at: Date.now(),
@@ -95,9 +94,9 @@ describe('useCustomFeedForm', () => {
       expect(result.current.form.getValues()).toEqual({
         [CUSTOM_FEED_FORM_FIELDS.NAME]: '',
         [CUSTOM_FEED_FORM_FIELDS.ICON]: DEFAULT_CUSTOM_FEED_ICON,
-        [CUSTOM_FEED_FORM_FIELDS.REACH]: PubkyAppFeedReach.All,
-        [CUSTOM_FEED_FORM_FIELDS.SORT]: PubkyAppFeedSort.Recent,
-        [CUSTOM_FEED_FORM_FIELDS.LAYOUT]: PubkyAppFeedLayout.Columns,
+        [CUSTOM_FEED_FORM_FIELDS.REACH]: 'all',
+        [CUSTOM_FEED_FORM_FIELDS.SORT]: 'recent',
+        [CUSTOM_FEED_FORM_FIELDS.LAYOUT]: 'columns',
         [CUSTOM_FEED_FORM_FIELDS.CONTENT]: CUSTOM_FEED_CONTENT_ALL,
         [CUSTOM_FEED_FORM_FIELDS.TAGS]: [],
         [CUSTOM_FEED_FORM_FIELDS.DOMAIN_TAGS]: [],
@@ -218,14 +217,14 @@ describe('useCustomFeedForm', () => {
       const { result } = renderHook(() => useCustomFeedForm({ mode: 'create', open: true }));
       await fillValidForm(result.current.form);
       await act(async () => {
-        result.current.form.setValue(CUSTOM_FEED_FORM_FIELDS.CONTENT, PubkyAppPostKind.Image);
+        result.current.form.setValue(CUSTOM_FEED_FORM_FIELDS.CONTENT, 'image');
       });
 
       await act(async () => {
         await result.current.submit();
       });
 
-      expect(mocks.commitCreate).toHaveBeenCalledWith(expect.objectContaining({ content: PubkyAppPostKind.Image }));
+      expect(mocks.commitCreate).toHaveBeenCalledWith(expect.objectContaining({ content: 'image' }));
     });
 
     it('reports failure and toasts an error when the controller throws', async () => {
