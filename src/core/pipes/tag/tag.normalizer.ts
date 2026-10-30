@@ -32,7 +32,7 @@ export class TagNormalizer {
       };
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createTagFromParams',
         context: { taggedKind, taggedId, label, taggerId },
       });
@@ -45,7 +45,7 @@ export class TagNormalizer {
       return builder.createTag(uri, label);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createTag',
         context: { uri, label, pubky },
       });

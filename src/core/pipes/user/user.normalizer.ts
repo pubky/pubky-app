@@ -47,7 +47,7 @@ export class UserNormalizer {
       };
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Published profile is not a valid profile.json', {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'fromPublished',
         cause: error,
       });
@@ -74,7 +74,7 @@ export class UserNormalizer {
       return builder.createUser(user.name, user.bio, user.image, user.links, user.status || undefined);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createUser',
         context: { user, pubky },
       });

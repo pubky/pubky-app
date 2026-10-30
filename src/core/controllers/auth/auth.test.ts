@@ -41,7 +41,7 @@ const MODERATION_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' 
 const MOCK_ALLOWED_TYPES = [NotificationType.Follow, NotificationType.Reply];
 
 const spyOnSleep = async () => vi.spyOn(await import('@/libs/utils/utils'), 'sleep').mockResolvedValue(undefined);
-const getLastReadUrl = (pubky: string) => `pubky://${pubky}/pub/pubky.app/last_read`;
+const getLastReadUrl = (pubky: string) => `pubky://${pubky}/priv/app.pubky/v1/last_read.json`;
 
 const createMockSettingsState = (overrides?: Partial<SettingsState>): SettingsState => ({
   notifications: defaultNotificationPreferences,

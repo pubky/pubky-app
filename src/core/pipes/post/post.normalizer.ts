@@ -91,7 +91,7 @@ export class PostNormalizer {
       }
       const message = error instanceof Error ? error.message : String(error);
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, message, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createCollectionPost',
         context: { specsPubky, itemCount: collection.items?.length ?? 0 },
         cause: error,
@@ -136,7 +136,7 @@ export class PostNormalizer {
       }
       const message = error instanceof Error ? error.message : String(error);
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, message, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createPost',
         context: { post, specsPubky },
         cause: error,

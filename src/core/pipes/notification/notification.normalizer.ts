@@ -19,7 +19,7 @@ export class NotificationNormalizer {
       return builder.createLastRead();
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createLastRead',
         context: { pubky },
       });

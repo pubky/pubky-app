@@ -380,7 +380,7 @@ export class UserApplication {
     const expectedFollowUrl = followUriBuilder(follower, moderationId);
     if (meta.url !== expectedFollowUrl) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Follow resource belongs to an unexpected account', {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'ensureModerationFollow',
         context: { follower, moderationId, followUrl: meta.url },
       });

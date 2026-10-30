@@ -1,12 +1,13 @@
 import type { Session as LocksSession } from '@synonymdev/locks-sdk';
 import type { Keypair, Session } from '@synonymdev/pubky';
+import { validateCapabilities } from '@synonymdev/pubky';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
 import { LocksApplication } from '@/application/locks/locks';
 import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
-import { APP_CAPABILITIES, getAuthClientId, LOCKS_CAPABILITIES } from '@/config/auth';
+import { APP_CAPABILITIES, getAuthClientId, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getHomeserverCapabilities, HOMESERVER_CAPABILITIES } from '@/config/network';
 import { LocksController } from '@/controllers/locks/locks';
 import { ProfileController } from '@/controllers/profile/profile';
@@ -367,7 +368,8 @@ describe('grant-only session lifecycle', () => {
           purpose: 'upgrade',
           fresh: true,
           expectedPubky: PUBKY,
-          capabilities: HOMESERVER_CAPABILITIES,
+          // The SDK canonicalizes the merged list: `/priv/social/:rw` already covers `/priv/social/v1/:rw`.
+          capabilities: validateCapabilities(HOMESERVER_CAPABILITIES),
         }),
       );
     } finally {
@@ -444,7 +446,7 @@ describe('grant-only session lifecycle', () => {
   });
   it('saves a same-account grant before retiring the previous grant, preserving profile and cache', async () => {
     const flow = startFlow();
-    const next = grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]);
+    const next = grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]);
     const result = await AuthController.requestCapabilities();
     vi.mocked(AuthApplication.logout).mockImplementation(async ({ session }) => {
       expect(session).toBe(narrowGrant);
@@ -465,7 +467,9 @@ describe('grant-only session lifecycle', () => {
   it('rejects a different account during permission upgrade without touching the old session', async () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();
-    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES], 'another-user'));
+    flow.approval.resolve(
+      grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES], 'another-user'),
+    );
     await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthApprovalMismatch' });
     expect(useAuthStore.getState().session).toBe(narrowGrant);
     expect(AuthApplication.saveSession).not.toHaveBeenCalled();
@@ -482,7 +486,7 @@ describe('grant-only session lifecycle', () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();
     result!.cancelAuthFlow();
-    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
+    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
     await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
     expect(useAuthStore.getState().session).toBe(narrowGrant);
     expect(AuthApplication.saveSession).not.toHaveBeenCalled();
@@ -493,7 +497,7 @@ describe('grant-only session lifecycle', () => {
     const result = await AuthController.requestCapabilities();
     if (stage === 'sdk') vi.mocked(AuthApplication.saveSession).mockRejectedValue(offline());
     else vi.spyOn(AuthApplication, 'commitPersistedAuth').mockRejectedValue(offline());
-    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
+    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
     await expect(result!.awaitApproval).rejects.toThrow();
     expect(useAuthStore.getState().session).toBe(narrowGrant);
     expect(AuthApplication.logout).not.toHaveBeenCalled();
@@ -503,7 +507,7 @@ describe('grant-only session lifecycle', () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();
     vi.mocked(AuthApplication.logout).mockRejectedValueOnce(offline());
-    const next = grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]);
+    const next = grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]);
     flow.approval.resolve(next);
     await expect(result!.awaitApproval).resolves.toBe(next);
     expect(useAuthStore.getState()).toMatchObject({
@@ -521,7 +525,7 @@ describe('grant-only session lifecycle', () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();
     vi.mocked(AuthApplication.logout).mockRejectedValue(expired());
-    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
+    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
     await expect(result!.awaitApproval).resolves.toBeDefined();
     expect(useAuthStore.getState().retiringSession).toBeNull();
     expect(warn).not.toHaveBeenCalled();
@@ -707,7 +711,7 @@ describe('grant-only session lifecycle', () => {
     const result = await AuthController.requestCapabilities();
     const save = deferred<SessionReference>();
     vi.mocked(AuthApplication.saveSession).mockReturnValue(save.promise);
-    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
+    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
     await vi.waitFor(() => expect(AuthApplication.saveSession).toHaveBeenCalled());
     await AuthApplication.commitPersistedAuth(
       {

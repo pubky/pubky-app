@@ -1,8 +1,9 @@
 /**
- * Homeserver event-stream filter for mute JSON entries under `pubky.app`.
- * Passed to `@synonymdev/pubky` `eventStreamForUser(...).path(...)`.
+ * Homeserver event-stream filter for the social v1 mute entries, in the owner's private tree.
+ * Passed to `@synonymdev/pubky` `eventStreamForUser(...).path(...)`; a `/priv/` filter needs the
+ * owner's session attached, which `HomeserverService.subscribeUserEventStreamForPath` does.
  */
-export const MUTE_HOMESERVER_EVENTS_PATH_PREFIX = '/pub/pubky.app/mutes/';
+export const MUTE_HOMESERVER_EVENTS_PATH_PREFIX = '/priv/social/v1/mutes/';
 
 /**
  * Delay before calling `MuteController.fetchMutedUsers` after mute-directory SSE events.

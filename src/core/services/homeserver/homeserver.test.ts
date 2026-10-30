@@ -2347,6 +2347,49 @@ describe('HomeserverService', () => {
       });
     });
 
+    describe('getFreshBytes', () => {
+      const testUrl = 'pubky://user/pub/social/v1/posts/0032PARTQP4G0/0032PARTQP4G1.json';
+
+      it('reads past the browser HTTP cache and returns the body bytes', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
+
+        await expect(HomeserverService.getFreshBytes(testUrl)).resolves.toEqual(new Uint8Array([1, 2, 3]));
+
+        expect(mockState.clientFetch).toHaveBeenCalledWith(
+          'https://user/pub/social/v1/posts/0032PARTQP4G0/0032PARTQP4G1.json',
+          expect.objectContaining({ method: HttpMethod.GET, cache: 'no-store', credentials: 'omit' }),
+        );
+        expect(mockState.publicStorageGet).not.toHaveBeenCalled();
+        expect(mockState.sessionStorageGet).not.toHaveBeenCalled();
+      });
+
+      it('rejects a missing resource with an AppError carrying the HTTP status, like getBytes', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response('', { status: 404 }));
+
+        await expect(HomeserverService.getFreshBytes(testUrl)).rejects.toMatchObject({
+          context: expect.objectContaining({ statusCode: 404 }),
+        });
+      });
+
+      it('normalizes a body that breaks off mid-read into an AppError', async () => {
+        const readError = new TypeError('terminated');
+        const body = new ReadableStream({
+          start(controller) {
+            controller.error(readError);
+          },
+        });
+        mockState.clientFetch.mockResolvedValue(new Response(body, { status: 200 }));
+
+        await expect(HomeserverService.getFreshBytes(testUrl)).rejects.toMatchObject({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.UNKNOWN_ERROR,
+          service: ErrorService.Homeserver,
+          operation: 'getFreshBytes',
+          cause: readError,
+        });
+      });
+    });
+
     describe('getBytesIfExists', () => {
       const OWNED_URL = 'pubky://user/pub/marker.json';
 
@@ -2690,6 +2733,91 @@ describe('HomeserverService', () => {
         expect(result.value).toEqual({ cursor: 'cursor-1', eventType: 'PUT' });
         expect(result.value).not.toHaveProperty('free');
         expect(free).toHaveBeenCalledTimes(1);
+      });
+
+      it('never attaches a session to a public prefix, so the subscription stays anonymous', async () => {
+        mockState.currentSession = createMockSession();
+        const session = vi.fn().mockReturnThis();
+        const path = vi.fn().mockReturnThis();
+        const live = vi.fn().mockReturnThis();
+        const subscribe = vi.fn().mockResolvedValue(new ReadableStream());
+        mockState.eventStreamForUser.mockReturnValue({ session, path, live, subscribe });
+
+        await HomeserverService.subscribeUserEventStreamForPath({
+          userZ32: 'user',
+          cursor: null,
+          pathPrefix: '/pub/pubky.app/mutes/',
+        });
+
+        expect(session).not.toHaveBeenCalled();
+        expect(path).toHaveBeenCalledWith('/pub/pubky.app/mutes/');
+      });
+
+      it('attaches the owner session to a private prefix, which the homeserver serves only to its owner', async () => {
+        mockState.currentSession = createMockSession();
+        const session = vi.fn().mockReturnThis();
+        const path = vi.fn().mockReturnThis();
+        const live = vi.fn().mockReturnThis();
+        const subscribe = vi.fn().mockResolvedValue(new ReadableStream());
+        mockState.eventStreamForUser.mockReturnValue({ session, path, live, subscribe });
+
+        await HomeserverService.subscribeUserEventStreamForPath({
+          userZ32: 'user',
+          cursor: 'cursor-0',
+          pathPrefix: '/priv/social/v1/mutes/',
+        });
+
+        expect(session).toHaveBeenCalledWith(mockState.currentSession);
+        expect(session.mock.invocationCallOrder[0]).toBeLessThan(path.mock.invocationCallOrder[0]);
+        expect(path).toHaveBeenCalledWith('/priv/social/v1/mutes/');
+        expect(subscribe).toHaveBeenCalled();
+      });
+
+      it('fails a private prefix as SESSION_EXPIRED without a session, before any request', async () => {
+        mockState.currentSession = null;
+        const subscribe = vi.fn();
+        mockState.eventStreamForUser.mockReturnValue({ path: vi.fn().mockReturnThis(), live: vi.fn(), subscribe });
+
+        const error = (await HomeserverService.subscribeUserEventStreamForPath({
+          userZ32: 'user',
+          cursor: null,
+          pathPrefix: '/priv/social/v1/mutes/',
+        }).catch((caught: unknown) => caught)) as AppError;
+
+        expect(error).toMatchObject({
+          category: ErrorCategory.Auth,
+          code: AuthErrorCode.SESSION_EXPIRED,
+          service: ErrorService.Homeserver,
+          operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+        });
+        expect(subscribe).not.toHaveBeenCalled();
+        expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+      });
+
+      it("refuses a private prefix of another user's tree as UNAUTHORIZED instead of sending the session", async () => {
+        mockState.currentSession = createMockSession();
+        const session = vi.fn().mockReturnThis();
+        const subscribe = vi.fn();
+        mockState.eventStreamForUser.mockReturnValue({
+          session,
+          path: vi.fn().mockReturnThis(),
+          live: vi.fn(),
+          subscribe,
+        });
+
+        const error = (await HomeserverService.subscribeUserEventStreamForPath({
+          userZ32: 'someone-else',
+          cursor: null,
+          pathPrefix: '/priv/social/v1/mutes/',
+        }).catch((caught: unknown) => caught)) as AppError;
+
+        expect(error).toMatchObject({
+          category: ErrorCategory.Auth,
+          code: AuthErrorCode.UNAUTHORIZED,
+          operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+        });
+        expect(session).not.toHaveBeenCalled();
+        expect(subscribe).not.toHaveBeenCalled();
       });
 
       it('maps SDK connect failures to a Server AppError tagged with the subscribe operation and drops it from Sentry', async () => {

@@ -20,7 +20,7 @@ export class FileNormalizer {
       return { blobResult, fileResult };
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'toFileAttachment',
         context: { file, pubky },
       });
@@ -33,7 +33,7 @@ export class FileNormalizer {
       return builder.createBlob(blobData);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createBlob',
         context: { pubky },
       });
@@ -46,7 +46,7 @@ export class FileNormalizer {
       return builder.createFile(file.name, url, file.type, file.size);
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.PubkyAppSpecs,
+        service: ErrorService.SocialSpecs,
         operation: 'createFile',
         context: { file, url, pubky },
       });

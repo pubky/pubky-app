@@ -1,4 +1,5 @@
 import { LastReadResult } from 'pubky-app-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
@@ -14,6 +15,18 @@ import {
   setupUnitTestMocks,
   TEST_PUBKY,
 } from '../pipes.test-utils';
+
+describe('LastReadNormalizer URLs', () => {
+  const owner = fakeOwner(1);
+
+  it('puts the v1 cursor in the app private namespace', () => {
+    expect(LastReadNormalizer.buildUrl(owner)).toBe(`pubky://${owner}/priv/app.pubky/v1/last_read.json`);
+  });
+
+  it('spells the 0.x cursor where a 0.x client wrote it', () => {
+    expect(LastReadNormalizer.buildLegacyUrl(owner)).toBe(`pubky://${owner}/pub/pubky.app/last_read`);
+  });
+});
 
 describe('LastReadNormalizer', () => {
   // Mock builder factory
@@ -84,7 +97,7 @@ describe('LastReadNormalizer', () => {
           const appError = error as AppError;
           expect(appError.category).toBe(ErrorCategory.Validation);
           expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.PubkyAppSpecs);
+          expect(appError.service).toBe(ErrorService.SocialSpecs);
           expect(appError.operation).toBe('createLastRead');
           expect(appError.context).toEqual({ pubky: TEST_PUBKY.USER_1 });
           expect(appError.message).toBe(errorMessage);

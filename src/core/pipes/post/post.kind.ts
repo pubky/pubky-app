@@ -1,9 +1,11 @@
 import { PubkyAppPostKind } from 'pubky-app-specs';
+import { isOneOf, type KnownPostKind, postKinds } from 'pubky-social-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
 import { isVideoUrl } from '@/libs/utils/videoUrl';
+import type { PostKind } from '@/models/models.types';
 
 type TInferPostKindParams = {
   content: string;
@@ -139,4 +141,23 @@ export const resolveTagTargetCompositeIdForPostCreate = ({
   }
 
   return newCompositeId;
+};
+
+/**
+ * Nexus serves the 0.x kind names (`short`, `long`) for every post while it reads both epochs, and
+ * the local tables keep what Nexus serves. A stored v1 post uses `note` and `article`. These two
+ * functions are the only crossing between the vocabularies.
+ */
+export const toLocalPostKind = (kind: KnownPostKind): PostKind =>
+  kind === 'note' ? 'short' : kind === 'article' ? 'long' : kind;
+
+/**
+ * The stored v1 kind of a local kind. Fails closed: `null` for a kind this client cannot write
+ * back (`unknown`, or a name neither vocabulary has), so a caller never stores a guess.
+ */
+export const toStoredPostKind = (kind: string): KnownPostKind | null => {
+  const normalized = kind.toLowerCase();
+  if (normalized === 'short' || normalized === 'note') return 'note';
+  if (normalized === 'long' || normalized === 'article') return 'article';
+  return isOneOf(postKinds, normalized) ? normalized : null;
 };

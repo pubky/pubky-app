@@ -143,7 +143,7 @@ These apply to every diff and are what a reviewer (human or Greptile) checks fir
 - Editing generated files, `package-lock.json`, or CI workflows outside a CI task.
 - Coercing types in tests with `as any` / `as unknown as T` instead of the `src/test-utils` helpers.
 - Treating a local cache hit as proof the data is current, or writing a new freshness mechanism beside TTL (`local-first.md`, _Read pitfalls_).
-- Adding a dependency for something already in the tree: `dexie`, `zustand`, `@tanstack/react-query`, `react-hook-form` + `zod`, `radix-ui`, `@dnd-kit/*`, `motion`, `lucide-react`, `lodash-es`, `usehooks-ts`, `react-error-boundary`, `embla-carousel-react`, `react-easy-crop`, `libphonenumber-js`, `qrcode.react`, `jszip`, `@synonymdev/pubky`, `pubky-app-specs`, and `cn`.
+- Adding a dependency for something already in the tree: `dexie`, `zustand`, `@tanstack/react-query`, `react-hook-form` + `zod`, `radix-ui`, `@dnd-kit/*`, `motion`, `lucide-react`, `lodash-es`, `usehooks-ts`, `react-error-boundary`, `embla-carousel-react`, `react-easy-crop`, `libphonenumber-js`, `qrcode.react`, `jszip`, `@synonymdev/pubky`, `pubky-social-specs`, `pubky-social-migrator` (beside the deprecated `pubky-app-specs` until the social v1 port lands, `docs/migrations/social-v1.md`), and `cn`.
 - Turning a feature task into a refactor: renaming shared symbols, converting one pattern to another, reformatting untouched files, "fixing" duplication whose two copies serve different features.
 - Ignoring composite ids, TTL updates or persistence order, producing local data that looks right and never refreshes.
 - Rewriting a route's page file with a whole new layout instead of composing the existing template.

@@ -1,10 +1,14 @@
 import { PubkyAppPostKind } from 'pubky-app-specs';
+import { postKinds } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
+import { POST_KINDS } from '@/models/models.types';
 import {
   inferAnnouncementKind,
   inferPostKindForCreate,
   inferPostKindForEdit,
   resolveTagTargetCompositeIdForPostCreate,
+  toLocalPostKind,
+  toStoredPostKind,
 } from '@/pipes/post/post.kind';
 
 describe('inferPostKindForCreate', () => {
@@ -293,5 +297,56 @@ describe('inferAnnouncementKind', () => {
   it('allows the kinds a teaser can take', () => {
     expect(inferAnnouncementKind({ content: 'hello' })).toBe(PubkyAppPostKind.Short);
     expect(inferAnnouncementKind({ content: 'see https://pubky.app' })).toBe(PubkyAppPostKind.Link);
+  });
+});
+
+describe('toLocalPostKind', () => {
+  it.each([
+    ['note', 'short'],
+    ['article', 'long'],
+    ['image', 'image'],
+    ['video', 'video'],
+    ['link', 'link'],
+    ['file', 'file'],
+    ['collection', 'collection'],
+  ] as const)('maps the stored kind %s to the local kind %s', (stored, local) => {
+    expect(toLocalPostKind(stored)).toBe(local);
+  });
+
+  it('lands every stored kind in the local vocabulary', () => {
+    for (const kind of postKinds) {
+      expect(POST_KINDS).toContain(toLocalPostKind(kind));
+    }
+  });
+});
+
+describe('toStoredPostKind', () => {
+  it.each([
+    ['short', 'note'],
+    ['long', 'article'],
+    ['note', 'note'],
+    ['article', 'article'],
+    ['Short', 'note'],
+    ['LONG', 'article'],
+    ['image', 'image'],
+    ['video', 'video'],
+    ['link', 'link'],
+    ['file', 'file'],
+    ['collection', 'collection'],
+  ])('maps the local kind %s to the stored kind %s', (local, stored) => {
+    expect(toStoredPostKind(local)).toBe(stored);
+  });
+
+  it.each(['unknown', '', 'poll', 'notes'])('fails closed on %j, which no v1 post can carry', (kind) => {
+    expect(toStoredPostKind(kind)).toBeNull();
+  });
+
+  it('round-trips every local kind this client writes', () => {
+    for (const kind of POST_KINDS) {
+      if (kind === 'unknown') continue;
+      const stored = toStoredPostKind(kind);
+      expect(stored).not.toBeNull();
+      expect(toLocalPostKind(stored!)).toBe(kind);
+    }
   });
 });
