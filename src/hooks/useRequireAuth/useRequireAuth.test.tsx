@@ -55,6 +55,17 @@ describe('useRequireAuth', () => {
     expect(useAuthStore.getState().showSignInDialog).toBe(false);
   });
 
+  it('blocks synchronous controls behind the migration gate without opening sign-in', () => {
+    restoring();
+    useAuthStore.setState({ restoreStatus: 'social-migration' });
+    const { result } = renderHook(() => useRequireAuth());
+    const action = vi.fn();
+    act(() => result.current.requireAuth(action));
+    expect(action).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().showSignInDialog).toBe(false);
+    expect(toast).not.toHaveBeenCalled();
+  });
+
   it('waits for the existing restore without starting a new one', async () => {
     restoring();
     const restore = vi.spyOn(AuthController, 'restorePersistedSession');

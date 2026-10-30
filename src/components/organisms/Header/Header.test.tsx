@@ -79,7 +79,7 @@ vi.mock('@/app/routes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/routes')>();
   return {
     ...actual,
-    AUTH_ROUTES: { SIGN_IN: '/sign-in', LOGOUT: '/logout' },
+    AUTH_ROUTES: { SIGN_IN: '/sign-in', LOGOUT: '/logout', MIGRATION: '/migration' },
     HOME_ROUTES: { HOME: '/home' },
     ROOT_ROUTES: '/',
     ONBOARDING_ROUTES: {
@@ -522,6 +522,34 @@ describe('Header', () => {
       // Since logout is not an onboarding path, it should show HomeHeader
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
       expect(screen.queryByTestId('onboarding-header')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Migration gate path (ADR-0026)', () => {
+    it('shows only the logo while the account is held behind the gate, mounting no account chrome', () => {
+      mockCurrentUserPubky = 'held-account';
+      mockSessionReference = mockGrantReference();
+      mockRestoreStatus = 'social-migration';
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.MIGRATION);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('logo')).toBeInTheDocument();
+      expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
+      expect(screen.getByTestId('header-container')).not.toHaveAttribute(
+        'data-class-name',
+        expect.stringContaining('hidden'),
+      );
+    });
+
+    it('shows only the logo on the gate page after the forced sign-out too', () => {
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.MIGRATION);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('logo')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /sign in/i })).not.toBeInTheDocument();
     });
   });
 

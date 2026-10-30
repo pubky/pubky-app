@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
-import { isLegalRoute, ONBOARDING_ROUTES } from '@/app/routes';
+import { AUTH_ROUTES, isLegalRoute, ONBOARDING_ROUTES } from '@/app/routes';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
 import {
@@ -26,6 +26,8 @@ export function Header() {
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
   const isLandingPage = pathname === '/';
   const isCopyrightPage = pathname === '/copyright';
+  // The migration gate holds the account out of the store: no account chrome, no own-profile query.
+  const isMigrationPage = pathname === AUTH_ROUTES.MIGRATION;
   const isLegalPage = isLegalRoute(pathname);
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
@@ -70,8 +72,8 @@ export function Header() {
     return <HeaderHome />;
   };
 
-  // Copyright page shows only logo (minimal header).
-  if (isCopyrightPage) {
+  // Copyright and the migration gate show only the logo (minimal header).
+  if (isCopyrightPage || isMigrationPage) {
     return (
       <HeaderContainer>
         <Logo />

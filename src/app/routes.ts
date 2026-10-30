@@ -18,6 +18,8 @@ export enum ONBOARDING_ROUTES {
 export enum AUTH_ROUTES {
   SIGN_IN = '/sign-in',
   LOGOUT = '/logout',
+  /** The social v1 migration gate: progress, outcome and the signed-out explanation (ADR-0026). */
+  MIGRATION = '/migration',
 }
 
 export enum APP_ROUTES {
@@ -144,9 +146,20 @@ export const UNAUTHENTICATED_ROUTES = {
     ONBOARDING_ROUTES.JOIN,
     ...EXPLORE_ROUTES,
     AUTH_ROUTES.LOGOUT,
+    // The signed-out explanation of the migration gate, after its forced logout.
+    AUTH_ROUTES.MIGRATION,
     COPYRIGHT_ROUTES.COPYRIGHT,
   ],
   redirectTo: ROOT_ROUTES,
+};
+
+/**
+ * An account held behind the social v1 migration gate reaches only the gate, logout and the
+ * legal pages; `RouteGuardProvider` sends every other route there, the public ones included.
+ */
+export const NEEDS_SOCIAL_MIGRATION_ROUTES = {
+  allowedRoutes: [AUTH_ROUTES.MIGRATION, AUTH_ROUTES.LOGOUT, ...Object.values(LEGAL_ROUTES)],
+  redirectTo: AUTH_ROUTES.MIGRATION,
 };
 
 export const NEEDS_PROFILE_CREATION_ROUTES = {

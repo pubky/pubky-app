@@ -59,7 +59,8 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - Local-first writes: Dexie first, homeserver sync after, roll back on failure, refresh every affected `*_ttl` row, persist
   dependencies before dependents; stream cursors only from Nexus, never `indexed_at`. `docs/local-first.md`, `docs/data-patterns.md`
 - Homeserver writes only through `HomeserverService`, which retries 429/500/503 and the GCS publish-conflict 409 (gate
-  test enforced). A write built from a read of the same data passes the
+  test enforced); the social v1 migrator port (`migrateToSocialV1`) owns its own transport retries and is the one
+  documented second retry policy (ADR-0026). A write built from a read of the same data passes the
   `HomeserverService.createWriteFence()` fence inside `retryHomeserverWriteAfterReread(fence, …)`: it makes one attempt,
   every retry runs the read again, and no later pass outlives the session. `docs/error-handling.md`
 - Composite post ids `author:postId` via `buildCompositeId` / `parseCompositeId`. `docs/data-patterns.md`

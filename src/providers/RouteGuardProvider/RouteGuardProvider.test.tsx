@@ -80,6 +80,10 @@ vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider.constants', () => ({
       redirectTo: '/login',
     },
     NEEDS_PROFILE_CREATION: { allowedRoutes: ['/create-profile'], redirectTo: '/create-profile' },
+    NEEDS_SOCIAL_MIGRATION: {
+      allowedRoutes: ['/migration', '/logout', '/terms-of-use'],
+      redirectTo: '/migration',
+    },
   },
 }));
 
@@ -611,6 +615,63 @@ describe('RouteGuardProvider — migration resync', () => {
     expect(screen.getByText('Redirecting...')).toBeInTheDocument();
     expect(screen.queryByText('Explore Content')).not.toBeInTheDocument();
     expect(mocks.mockRouterPush).toHaveBeenCalledWith('/create-profile');
+  });
+});
+
+describe('RouteGuardProvider — social v1 migration gate (ADR-0026)', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.hasHydrated = true;
+    mocks.session = null;
+    mocks.sessionReference = { kind: 'grant', sessionStoreId: 'grant' };
+    mocks.restoreStatus = 'social-migration';
+    mocks.currentUserPubky = 'test-pubky-z32';
+    mocks.wasDbReset = false;
+    mocks.status = 'NEEDS_SOCIAL_MIGRATION';
+    mocks.isLoading = false;
+  });
+
+  it.each(['/feed', '/home', '/landing', `/post/${pubky}/0034BBBDFK83G`, `/profile/${pubky}`, '/shop/marketplace'])(
+    'sends a held account from %s to the gate, the public pages included',
+    (pathname) => {
+      mocks.pathname = pathname;
+      render(
+        <RouteGuardProvider>
+          <div>Page Content</div>
+        </RouteGuardProvider>,
+      );
+      expect(screen.queryByText('Page Content')).not.toBeInTheDocument();
+      expect(screen.getByText('Redirecting...')).toBeInTheDocument();
+      expect(mocks.mockRouterPush).toHaveBeenCalledWith('/migration');
+    },
+  );
+
+  it.each(['/migration', '/logout', '/terms-of-use'])('renders %s for a held account', (pathname) => {
+    mocks.pathname = pathname;
+    render(
+      <RouteGuardProvider>
+        <div>Page Content</div>
+      </RouteGuardProvider>,
+    );
+    expect(screen.getByText('Page Content')).toBeInTheDocument();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('lets a signed-out visitor read the gate explanation', () => {
+    mocks.status = 'UNAUTHENTICATED';
+    mocks.restoreStatus = 'idle';
+    mocks.sessionReference = null;
+    mocks.currentUserPubky = null;
+    mocks.pathname = '/migration';
+    vi.mocked(mocks.mockRouterPush).mockClear();
+    render(
+      <RouteGuardProvider>
+        <div>Explanation</div>
+      </RouteGuardProvider>,
+    );
+    // The mocked map keeps the signed-out routes of the real one apart; the real map allows /migration (routes.test)
+    expect(mocks.mockRouterPush).not.toHaveBeenCalledWith('/migration');
   });
 });
 

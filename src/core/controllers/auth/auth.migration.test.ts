@@ -11,6 +11,7 @@ import { APP_CAPABILITIES, getAuthClientId, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CA
 import { getHomeserverCapabilities, HOMESERVER_CAPABILITIES } from '@/config/network';
 import { LocksController } from '@/controllers/locks/locks';
 import { ProfileController } from '@/controllers/profile/profile';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { pendingRetirements, type SessionReference } from '@/libs/auth/session.types';
 import { resetSavedSessionLossReports } from '@/libs/auth/session-loss';
@@ -128,6 +129,9 @@ function startFlow() {
 }
 
 beforeEach(() => {
+  // These suites cover the auth lifecycle of a migrated account; the gate has its own suite.
+  vi.spyOn(SocialMigrationController, 'ensureMigrated').mockResolvedValue('passed');
+  vi.spyOn(SocialMigrationController, 'hasPassedLocally').mockReturnValue(true);
   Object.defineProperty(navigator, 'locks', {
     configurable: true,
     value: { request: async (_name: string, callback: () => void) => callback() },
