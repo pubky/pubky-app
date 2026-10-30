@@ -163,11 +163,10 @@ export class BootstrapApplication {
       });
       return typeof stored?.timestamp === 'number' ? stored.timestamp : null;
     } catch (error) {
-      // Only a 404 (resource not found) means absent
-      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return null;
-      // Network errors, timeouts, server errors, etc. should bubble up
-      Logger.error('Failed to fetch last read timestamp', error);
+      // Only a 404 (resource not found) means absent; network errors, timeouts, server errors,
+      // etc. bubble up (already reported by the homeserver service)
       // TODO: TO harsh, we should handle this error better
+      if (hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) return null;
       throw error;
     }
   }

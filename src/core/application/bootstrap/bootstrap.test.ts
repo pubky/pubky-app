@@ -553,14 +553,8 @@ describe('BootstrapApplication', () => {
         message: 'Internal server error',
       });
 
-      expect(loggerErrorSpy).toHaveBeenCalledWith(
-        'Failed to fetch last read timestamp',
-        expect.objectContaining({
-          category: ErrorCategory.Server,
-          code: ServerErrorCode.INTERNAL_ERROR,
-          message: 'Internal server error',
-        }),
-      );
+      // The error factory already reported the failure; bootstrap does not log it again
+      expect(loggerErrorSpy).not.toHaveBeenCalledWith('Failed to fetch last read timestamp', expect.anything());
       expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
       expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
 
@@ -584,10 +578,7 @@ describe('BootstrapApplication', () => {
 
       await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow('Network timeout');
 
-      expect(loggerErrorSpy).toHaveBeenCalledWith(
-        'Failed to fetch last read timestamp',
-        expect.objectContaining({ message: 'Network timeout' }),
-      );
+      expect(loggerErrorSpy).not.toHaveBeenCalledWith('Failed to fetch last read timestamp', expect.anything());
       expect(homeserverRequestSpy).toHaveBeenCalledTimes(1);
       expect(homeserverRequestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
 
