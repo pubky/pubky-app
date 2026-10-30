@@ -38,16 +38,23 @@ export class MuteApplication {
   }
 
   private static async syncMute(params: TMuteApplicationCommitParams): Promise<void> {
-    const { muter, mutee } = params;
+    const { muter, mutee, isCurrent } = params;
+    // A commit that waited in the queue may start after a logout cleared the database: the shared
+    // MUTED stream then belongs to the next account, so a stale session writes nothing.
+    if (isCurrent && !isCurrent()) return;
     if (params.eventType === HttpMethod.PUT) {
       await LocalMuteService.create({ muter, mutee });
+      if (isCurrent && !isCurrent()) return;
       await HomeserverService.putBlob({ url: params.muteUrl, blob: params.muteBody });
       return;
     }
 
     await LocalMuteService.delete({ muter, mutee });
     // Both copies, the 0.x one first: `deleteIdempotent` absorbs the 404 of a copy that was never there.
-    for (const url of params.deleteUrls) await HomeserverService.deleteIdempotent(url);
+    for (const url of params.deleteUrls) {
+      if (isCurrent && !isCurrent()) return;
+      await HomeserverService.deleteIdempotent(url);
+    }
   }
 
   /**

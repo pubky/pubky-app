@@ -172,6 +172,32 @@ describe('MuteApplication.commitMute', () => {
     await expect(mutedStream()).resolves.toEqual([MUTEE]);
   });
 
+  it('writes nothing for a queued commit whose session ended while it waited', async () => {
+    let current = true;
+    const createSpy = vi.spyOn(LocalMuteService, 'create');
+    const pendingDelete = Promise.withResolvers<void>();
+    const deleteIdempotent = vi
+      .spyOn(HomeserverService, 'deleteIdempotent')
+      .mockImplementationOnce(() => pendingDelete.promise)
+      .mockResolvedValue(undefined);
+    const putBlob = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);
+
+    const unmuteCommit = MuteApplication.commitMute({ ...unmute, isCurrent: () => current });
+    const muteCommit = MuteApplication.commitMute({ ...mute, isCurrent: () => current });
+    await vi.waitFor(() => expect(deleteIdempotent).toHaveBeenCalledOnce());
+
+    // Logout while the mute is queued: the database now belongs to whoever signs in next.
+    current = false;
+    pendingDelete.resolve();
+    await expect(unmuteCommit).resolves.toBeUndefined();
+    await expect(muteCommit).resolves.toBeUndefined();
+
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(putBlob).not.toHaveBeenCalled();
+    // The unmute stopped after its first copy too: no second DELETE for a session that is gone.
+    expect(deleteIdempotent).toHaveBeenCalledOnce();
+  });
+
   it('lets a failed commit release the pair queue for the next one', async () => {
     vi.spyOn(HomeserverService, 'deleteIdempotent').mockRejectedValueOnce(new Error('offline'));
     const putBlob = vi.spyOn(HomeserverService, 'putBlob').mockResolvedValue(undefined);

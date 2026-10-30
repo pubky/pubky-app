@@ -1,5 +1,6 @@
 import { MuteApplication } from '@/application/mute/mute';
 import type { TMuteDirectoryEvent, TMuteParams } from '@/controllers/mute/mute.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -15,7 +16,7 @@ export class MuteController {
    * @param mutee - The mutee user ID
    */
   static async commitMute(eventType: HttpMethod.PUT | HttpMethod.DELETE, { muter, mutee }: TMuteParams) {
-    const params = { muter, mutee: stripPubkyPrefix(mutee) as Pubky };
+    const params = { muter, mutee: stripPubkyPrefix(mutee) as Pubky, isCurrent: captureViewerSession() };
     if (eventType === HttpMethod.DELETE) {
       await MuteApplication.commitMute({ ...params, eventType, deleteUrls: MuteNormalizer.toDeleteUrls(params) });
       return;

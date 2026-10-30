@@ -4,6 +4,8 @@ import { MuteApplication } from '@/application/mute/mute';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { MuteNormalizer } from '@/pipes/mute/mute.normalizer';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockSession } from '@/test-utils/pubky';
 import { withFrozenSpecClock } from '@/test-utils/spec-clock';
 import { MuteController } from './mute';
 
@@ -29,13 +31,14 @@ describe('MuteController', () => {
 
       await MuteController.commitMute(HttpMethod.PUT, { muter: MUTER, mutee: MUTEE });
 
-      expect(toSpy).toHaveBeenCalledWith({ muter: MUTER, mutee: MUTEE });
+      expect(toSpy).toHaveBeenCalledWith(expect.objectContaining({ muter: MUTER, mutee: MUTEE }));
       expect(commitMuteSpy).toHaveBeenCalledWith({
         eventType: HttpMethod.PUT,
         muteUrl: built.url,
         muteBody: built.body,
         muter: MUTER,
         mutee: MUTEE,
+        isCurrent: expect.any(Function),
       });
     });
 
@@ -51,7 +54,22 @@ describe('MuteController', () => {
         deleteUrls: MuteNormalizer.toDeleteUrls({ muter: MUTER, mutee: MUTEE }),
         muter: MUTER,
         mutee: MUTEE,
+        isCurrent: expect.any(Function),
       });
+    });
+
+    it('hands the application a session guard that expires on logout and same-account re-login', async () => {
+      useAuthStore.setState({ currentUserPubky: MUTER, session: mockSession() });
+      const commitMuteSpy = vi.spyOn(MuteApplication, 'commitMute').mockResolvedValue(undefined);
+
+      await MuteController.commitMute(HttpMethod.PUT, { muter: MUTER, mutee: MUTEE });
+
+      const isCurrent = commitMuteSpy.mock.calls[0][0].isCurrent!;
+      expect(isCurrent()).toBe(true);
+      useAuthStore.setState({ currentUserPubky: null, session: null });
+      expect(isCurrent()).toBe(false);
+      useAuthStore.setState({ currentUserPubky: MUTER, session: mockSession() });
+      expect(isCurrent()).toBe(false);
     });
 
     it.each([HttpMethod.PUT, HttpMethod.DELETE] as const)(
@@ -64,7 +82,7 @@ describe('MuteController', () => {
         await MuteController.commitMute(eventType, { muter: MUTER, mutee: `pubky${MUTEE}` as Pubky });
 
         const normalize = eventType === HttpMethod.PUT ? toSpy : deleteUrlsSpy;
-        expect(normalize).toHaveBeenCalledWith({ muter: MUTER, mutee: MUTEE });
+        expect(normalize).toHaveBeenCalledWith(expect.objectContaining({ muter: MUTER, mutee: MUTEE }));
         expect(commitMuteSpy).toHaveBeenCalledWith(expect.objectContaining({ eventType, mutee: MUTEE }));
       },
     );
