@@ -32,6 +32,56 @@ describe('DatabaseProvider', () => {
 
     expect(screen.getByText('Test Content')).toBeInTheDocument();
     expect(db.initialize).toHaveBeenCalledTimes(1);
+    expect(db.initialize).toHaveBeenCalledWith({ allowRecreate: true });
+  });
+
+  it('unexpected close followed by a mismatch shows the recovery screen', async () => {
+    const conflict = Err.database(
+      DatabaseErrorCode.VERSION_CONFLICT,
+      'Another tab is running a different app version',
+      {
+        service: ErrorService.Local,
+        operation: 'initialize',
+        context: { currentVersion: 3, expectedVersion: 4 },
+      },
+    );
+    const initializeMock = vi.spyOn(db, 'initialize');
+    initializeMock.mockResolvedValueOnce({ wasDbReset: true }).mockRejectedValueOnce(conflict);
+
+    render(
+      <DatabaseProvider>
+        <div>Test Content</div>
+      </DatabaseProvider>,
+    );
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(screen.getByText('Test Content')).toBeInTheDocument();
+
+    // A tab running another build recreated the database: Dexie closes this connection.
+    await act(async () => {
+      db.on.close.fire(new Event('close'));
+      await vi.runAllTimersAsync();
+    });
+
+    // The re-initialization may not recreate the database back, and the conflict blocks the app.
+    expect(initializeMock).toHaveBeenCalledTimes(2);
+    expect(initializeMock).toHaveBeenLastCalledWith({ allowRecreate: false });
+    expect(screen.queryByText('Test Content')).not.toBeInTheDocument();
+    expect(screen.getByTestId('database-error-screen')).toBeInTheDocument();
+    expect(screen.getByText('Close other Pubky tabs, then retry.')).toBeInTheDocument();
+
+    // The user's retry is an explicit request and may recreate again.
+    initializeMock.mockResolvedValueOnce({ wasDbReset: true });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      await vi.runAllTimersAsync();
+    });
+
+    expect(initializeMock).toHaveBeenLastCalledWith({ allowRecreate: true });
+    expect(screen.getByText('Test Content')).toBeInTheDocument();
   });
 
   it('blocks children and renders the recovery screen when initialization fails', async () => {

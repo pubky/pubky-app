@@ -4,21 +4,22 @@ How the installed-app layer works, what the service worker is allowed to do, and
 
 ## Files
 
-| Path                                                        | Role                                                                                                 |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `src/sw.ts`                                                 | Service worker source: share target, navigation route with offline fallback, precache.               |
-| `public/sw.js`                                              | Generated from `src/sw.ts` by `npm run build`. Gitignored, never edited.                             |
-| `next.config.ts` (`withSerwistInit`)                        | Build options: precache allow-list, `register: false`, `reloadOnOnline: false`, dev flag.            |
-| `src/providers/ServiceWorkerRegistrationProvider/`          | Registers the worker from app code so a rejected registration is logged, not reported (#2556).       |
-| `public/manifest.json`                                      | Web app manifest (colours, icons, shortcuts, screenshots, share target, protocol handler).           |
-| `public/offline.html`                                       | Static page served when a navigation cannot reach the network.                                       |
-| `src/components/organisms/PwaManager/PwaManager.tsx`        | No-UI organism in the root layout that mounts the lifecycle hooks below.                             |
-| `src/hooks/useServiceWorkerUpdate/`                         | Runs the user-consented "Update available" flow; does not register the worker.                       |
-| `src/hooks/useNetworkStatus/`, `useNetworkStatusToasts/`    | Offline / online signal and toasts.                                                                  |
-| `src/hooks/useAppBadge/`                                    | Mirrors the unread notification count onto the app icon (Badging API).                               |
-| `src/hooks/useInstallPrompt/`, `useInstallPromptLifecycle/` | "Install Pubky" banner eligibility and actions; `beforeinstallprompt` capture.                       |
-| `src/libs/pwa/`                                             | Pure helpers: platform detection, install-prompt capture, install-banner snooze, browser type shims. |
-| `src/config/pwa.ts`                                         | Banner kill switch, snooze schedule, standalone media query, update-check interval.                  |
+| Path                                                        | Role                                                                                                       |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `src/sw.ts`                                                 | Service worker source: share target, navigation route with offline fallback, precache.                     |
+| `public/sw.js`                                              | Generated from `src/sw.ts` by `npm run build`. Gitignored, never edited.                                   |
+| `next.config.ts` (`withSerwistInit`)                        | Build options: precache allow-list, chunk `exclude`, `register: false`, `reloadOnOnline: false`, dev flag. |
+| `src/providers/ServiceWorkerRegistrationProvider/`          | Registers the worker from app code so a rejected registration is logged, not reported (#2556).             |
+| `public/manifest.json`                                      | Web app manifest (colours, icons, shortcuts, screenshots, share target, protocol handler).                 |
+| `public/offline.html`                                       | Static page served when a navigation cannot reach the network.                                             |
+| `src/components/organisms/PwaManager/PwaManager.tsx`        | No-UI organism in the root layout that mounts the lifecycle hooks below.                                   |
+| `src/hooks/useServiceWorkerUpdate/`                         | Runs the user-consented "Update available" flow; does not register the worker.                             |
+| `src/hooks/useNetworkStatus/`, `useNetworkStatusToasts/`    | Offline / online signal and toasts.                                                                        |
+| `src/hooks/useAppBadge/`                                    | Mirrors the unread notification count onto the app icon (Badging API).                                     |
+| `src/hooks/useInstallPrompt/`, `useInstallPromptLifecycle/` | "Install Pubky" banner eligibility and actions; `beforeinstallprompt` capture.                             |
+| `src/libs/pwa/`                                             | Pure helpers: platform detection, install-prompt capture, install-banner snooze, browser type shims.       |
+| `src/libs/pwa/precacheExclude.ts`                           | Build-time (Node only) Serwist `exclude` predicate: drops the chunks that carry a given package.           |
+| `src/config/pwa.ts`                                         | Banner kill switch, snooze schedule, standalone media query, update-check interval.                        |
 
 ## What the service worker does
 
@@ -30,18 +31,22 @@ How the installed-app layer works, what the service worker is allowed to do, and
 
 - **Cache data.** Dexie is the app's only data cache and the TTL layer is its only freshness mechanism (`docs/local-first.md`, `docs/data-patterns.md`). A runtime cache in the worker would hand the app a stale response it then stamps as fresh. There is no `defaultCache`, and no `runtimeCaching` entry other than the navigation route.
 - **Touch cross-origin traffic.** Homeserver, pkarr relays, httprelay, Nexus and the CDN are excluded from the worker's runtime handlers. Homeserver writes use the WASM SDK's grant authorization; they do not depend on cross-origin session cookies. PR #1384 removed `defaultCache` after concurrent pkarr lookups cancelled each other through the cache.
-- **Take over open tabs on its own.** `skipWaiting` is off; see _Update flow_.
+- **Take over open tabs on its own.** `skipWaiting` is off; see _Update flow_. The social v1 cut-over release is the one recorded exception (_Rollout note_, ADR-0021 amendment).
 - **Boot the app when offline.** The fallback is a static file, not a Next route: it keeps startup, session restore and other network-dependent initialization out of the offline response. Grant restore now retains its reference on temporary network failure; the static fallback does not depend on that recovery path.
 
 ## Update flow
 
 1. `@serwist/next` injects `window.serwist` into the client bundle but does not register it (`register: false`). `ServiceWorkerRegistrationProvider` wraps the whole tree and calls `window.serwist.register()` in its own effect; a rejected registration is logged with `Logger.warn`, never thrown (#2556).
 2. `useServiceWorkerUpdate` (mounted by `PwaManager`) works off the browser's registration, not the Serwist window client: it waits for `navigator.serviceWorker.ready`, listens for `updatefound` and `controllerchange`, and re-reads `registration.waiting` whenever the tab becomes visible. (The Serwist client stops reporting updates found more than a minute after registration and freezes its `isUpdate` flag at register time, so it cannot drive a long-lived tab.)
-3. A new build installs and waits (`skipWaiting: false`). The hook shows one persistent, dismissible "Update available" toast per waiting worker. Persistent toasts do not count toward the toast limit, so later transient toasts stack next to it instead of evicting it. Dismissing it means "later": the same worker is not re-prompted in this page lifetime, a newer one is.
+3. A new build installs and waits (`skipWaiting: false`; the social v1 cut-over release is the exception, see _Rollout note_). The hook shows one persistent, dismissible "Update available" toast per waiting worker. Persistent toasts do not count toward the toast limit, so later transient toasts stack next to it instead of evicting it. Dismissing it means "later": the same worker is not re-prompted in this page lifetime, a newer one is.
 4. Reload posts `SKIP_WAITING`; the worker calls `self.skipWaiting()`, activates, and `clientsClaim` makes it the controller of every open tab. Only the tab that accepted reloads. Other tabs keep their in-progress state and get an "Update installed" toast with a Reload action; until they reload they may fail to lazy-load chunks the new precache dropped. If a chunk-load failure reaches either Next.js error boundary, it attempts one automatic reload per running build per tab session (#2548). The version guard is written to `sessionStorage` before reloading; a repeated failure for that build, or unavailable storage, keeps the terminal error UI. Event-handler and background-promise failures that never reach a boundary are outside this recovery path. See [stale chunk recovery](sentry.md#stale-chunk-recovery-after-a-deploy).
 5. `registration.update()` is requested at most once per `SW_UPDATE_CHECK_MIN_INTERVAL_MS`, on a tab return.
 
-The first install claims open tabs without a reload or a toast. Rollout note: `skipWaiting` is decided by the installing worker's own script, so on the first deploy of this change the new worker simply waits; pages still running the old bundle have no update hook yet and see no toast, and the new worker activates once every tab of that client closes. Consented, toast-driven updates start with the deploy after this one.
+The first install claims open tabs without a reload or a toast.
+
+Rollout note (social v1 cut-over, one release): the release that moves writes to `/pub/social/v1/` ships the worker with `skipWaiting: true` and an `activate` listener that, when the worker replaces an earlier one, claims every window client and navigates each one to its own URL (`src/sw.ts`, ADR-0021 amendment). A first install still claims silently, so a first-time visitor is not reloaded mid-onboarding. A page still running the previous bundle would otherwise keep writing the retired `/pub/pubky.app/` tree until the user reloaded it, and nothing server-side reaches an open page. So on that deploy every open tab and installed-app window reloads without the toast as soon as the new worker has installed; the "Update installed" toast may flash first, and in-progress composition in an old tab is lost. `useServiceWorkerUpdate` is unchanged. The release after it restores `skipWaiting: false` and removes the listener (PR-E2), and the consented flow above resumes. `skipWaiting` is always decided by the installing worker's own script: on the consent flow's own first deploy, pages running a bundle without the update hook saw no toast and the worker activated once every tab of that client had closed, and the same rule is what makes the one-release takeover reach old tabs.
+
+The rollout note's residual risks: discovery still depends on the browser's `sw.js` check (immediate on any navigation, within `SW_UPDATE_CHECK_MIN_INTERVAL_MS` of a tab becoming visible, at most 24 h), `WindowClient.navigate` on WebKit is unverified, and a page without a worker (dev without `SERWIST_DEV`, a rejected registration) is not reached. The Dexie recreate loop-breaker (ADR-0019) covers the two-builds-in-one-profile case independently of the worker.
 
 ## Offline fallback
 
@@ -56,6 +61,16 @@ Do not replace it with a Next route: `/offline` under the root layout would rend
 Read the `(serwist)` line in the build output: it lists how many URLs are precached and their total size. A jump in either is the signal that a new large `public/` file matched the allow-list, or that `exclude` was set without keeping `/\.map$/` (source maps are ~30 MB).
 
 `maximumFileSizeToCacheInBytes` is 3 MiB for webpack assets: an over-limit chunk is dropped with only a build warning and would break offline boot.
+
+Webpack chunks are filtered by `exclude` in `next.config.ts`. Setting it replaces Serwist's default list, so `/\.map$/` (source maps, ~30 MB) and `/^manifest.*\.js$/` are repeated there. The third entry, `excludeChunksCarrying('pubky-social-migrator')` from `src/libs/pwa/precacheExclude.ts`, drops the social v1 migrator (~800 KB, its wasm inlined as base64): the migration gate loads it once per account through a dynamic `import()` and a migrated user never loads it again, so a precache install should not pay for it. The predicate matches a chunk by the modules it carries (`compilation.chunkGraph`), not by file name, because Next names a chunk that holds a node_modules module over 160 KB by a hash of the module path (its `lib` cache group), so neither the package name nor a `webpackChunkName` comment reaches the asset name. It only excludes correctly while the migrator is reached through `import()`: a dynamic-import chunk carries nothing its parents already have. A static import would put the migrator into a shell chunk, and that whole chunk would leave the precache, which shows on the `(serwist)` line as a drop far larger than 800 KB.
+
+Verifying the exclusion after `npm run build` (the package must be installed and imported for there to be anything to exclude):
+
+```bash
+comm -13 <(grep -o 'static/chunks/[^"]*\.js' public/sw.js | sort -u) <(cd .next && ls static/chunks/*.js | sort)
+```
+
+The output must be exactly the migrator's chunk(s): one ~800 KB file (`ls -l` it) and, when the package entry is split from its wasm glue, a small companion. The `(serwist)` line itself is the summary: it should read ~800 KB less than the same build with the predicate removed, and the URL count one or two lower.
 
 ## Manifest
 

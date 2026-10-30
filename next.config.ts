@@ -3,6 +3,7 @@ import { z } from 'zod';
 import withSerwistInit from '@serwist/next';
 import { withSentryConfig } from '@sentry/nextjs';
 import packageJson from './package.json';
+import { excludeChunksCarrying } from './src/libs/pwa/precacheExclude';
 
 const nextConfig: NextConfig = {
   env: {
@@ -110,6 +111,12 @@ const withSerwist = withSerwistInit({
   // The largest chunk is ~1.75 MB; an over-limit chunk is dropped with only a build warning
   // and would break offline boot, so keep headroom above the 2 MiB default.
   maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+  // Webpack-asset exclusions. Setting this replaces Serwist's default list, so its two entries
+  // (source maps are ~30 MB) stay first. The social v1 migrator (~800 KB, wasm inlined as base64)
+  // is loaded once per account by the migration gate and never again, so its chunk is left to the
+  // network. It is matched by the module it carries, not by file name: Next names a chunk holding
+  // a >160 KB node_modules module by a hash of the module path (docs/pwa.md, "Precache diet").
+  exclude: [/\.map$/, /^manifest.*\.js$/, excludeChunksCarrying('pubky-social-migrator')],
 });
 
 const composedConfig = withSerwist(nextConfig);
