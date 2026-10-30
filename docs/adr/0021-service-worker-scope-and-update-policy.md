@@ -36,10 +36,12 @@ For that one release, `src/sw.ts` ships with:
   available" toast.
 - an `activate` listener that, when the worker replaces an earlier one (`self.registration.active` was set
   during `install`), awaits `self.clients.claim()` (best effort), then
-  `self.clients.matchAll({ type: 'window', includeUncontrolled: true })`, and `Promise.allSettled`s
-  `client.navigate(client.url)` for every window client. `navigate` rejects for a client the worker does not
-  control or that is mid-navigation; one rejection must not stop the others. A first install (no earlier
-  worker) keeps the silent `clientsClaim` behaviour, so a first-time visitor is not reloaded mid-onboarding.
+  `self.clients.matchAll({ type: 'window', includeUncontrolled: true })`, and calls `client.navigate(client.url)`
+  for every window client without awaiting the navigations: each one is a fetch this worker now serves, and
+  the browser holds fetch events until activation has finished, so awaiting them would deadlock activation
+  until the event timeout. `navigate` rejects for a client the worker does not control or that is
+  mid-navigation; one rejection must not stop the others. A first install (no earlier worker) keeps the silent
+  `clientsClaim` behaviour, so a first-time visitor is not reloaded mid-onboarding.
 
 `useServiceWorkerUpdate` is unchanged: its "Update installed" toast may show for an instant before the forced
 navigation lands. The guards that benefit from this reload (the Dexie recreate loop-breaker of ADR-0019, the
