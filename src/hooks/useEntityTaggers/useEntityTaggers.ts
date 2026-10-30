@@ -8,6 +8,7 @@ import { TagController } from '@/controllers/tag/tag';
 import { UserController } from '@/controllers/user/user';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -138,7 +139,7 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
     setCache(cacheRef.current);
   };
   const readMutation = (label: string) => {
-    const mutation = mutations?.get(label.toLowerCase());
+    const mutation = mutations?.get(canonicalizeTagLabel(label));
     const active = mutation && mutation.expiresAt > Date.now() ? mutation : undefined;
     return { mutationKey: active?.id, isViewerTagger: active?.relationship };
   };
@@ -147,7 +148,7 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
     if (!taggedId || !taggedKind) return;
     const version = versionRef.current;
     const requestId = ++requestIdRef.current;
-    const labelKey = label.toLowerCase();
+    const labelKey = canonicalizeTagLabel(label);
     const isCurrent = () => version === versionRef.current && statesFor(key).get(labelKey)?.requestId === requestId;
     commit(key, labelKey, { ...base, requestId, refreshTarget, isLoading: true, hasError: false });
 
@@ -203,7 +204,7 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
 
   const loadTaggers = async (label: string, totalCount?: number, mutationCount?: number) => {
     if (!entityKey || waitingForMutations) return;
-    const existing = statesFor(entityKey).get(label.toLowerCase());
+    const existing = statesFor(entityKey).get(canonicalizeTagLabel(label));
     const mutation = readMutation(label);
     if (existing && existing.totalCount === totalCount && existing.mutationKey === mutation.mutationKey) return;
     if (
@@ -214,7 +215,7 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
     ) {
       // The local write already started this refresh. Its matching count is
       // bookkeeping, while unrelated count changes still replace the request.
-      commit(entityKey, label.toLowerCase(), { ...existing, totalCount, pendingMutationCount: undefined });
+      commit(entityKey, canonicalizeTagLabel(label), { ...existing, totalCount, pendingMutationCount: undefined });
       return;
     }
     const base: CachedTaggersState = {
@@ -238,7 +239,7 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
 
   const loadMoreTaggers = async (label: string) => {
     if (!entityKey || waitingForMutations) return;
-    const existing = statesFor(entityKey).get(label.toLowerCase());
+    const existing = statesFor(entityKey).get(canonicalizeTagLabel(label));
     if (!existing || existing.isLoading) return;
     const mutation = readMutation(label);
     const changed = existing.mutationKey !== mutation.mutationKey;
