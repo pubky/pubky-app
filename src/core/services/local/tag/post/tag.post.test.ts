@@ -33,7 +33,13 @@ vi.mock('@/models/post/counts/postCounts', () => ({ PostCountsModel: { table: {}
 vi.mock('@/models/post/ttl/postTtl', () => ({ PostTtlModel: { table: {}, upsert: vi.fn() } }));
 
 describe('LocalPostTagService', () => {
-  const params = { taggedId: 'author:post', taggerId: 'viewer', label: 'bitcoin', mutationId: 'operation' };
+  const params = {
+    taggedId: 'author:post',
+    taggerId: 'viewer',
+    label: 'bitcoin',
+    mutationId: 'operation',
+    tagUri: 'pubky://viewer/pub/pubky.app/tags/tag',
+  };
   beforeEach(() => {
     vi.resetAllMocks();
     read.mockResolvedValue(collection);
@@ -92,6 +98,8 @@ describe('LocalPostTagService', () => {
         action === 'create',
         'operation',
         true,
+        // A create keeps the address it wrote; a delete has none to keep.
+        ...(action === 'create' ? [params.tagUri] : []),
       );
       expect(saved).toHaveBeenCalledOnce();
       expect(UserCountsModel.updateCounts).not.toHaveBeenCalled();
@@ -107,6 +115,7 @@ describe('LocalPostTagService', () => {
       action === 'create',
       'operation',
       false,
+      ...(action === 'create' ? [params.tagUri] : []),
     );
     expect(PostCountsModel.updateCounts).toHaveBeenCalledWith({
       postCompositeId: params.taggedId,

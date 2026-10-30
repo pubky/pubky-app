@@ -60,6 +60,33 @@ describe('LocalTagCacheService', () => {
     });
   });
 
+  it('reads the viewer tag address from the stored row', async () => {
+    const tagUri = 'pubky://viewer/pub/mapky/tags/MAPKY01';
+    tagTable.get.mockResolvedValue({
+      ...record(),
+      tags: [{ label: 'bitcoin', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: tagUri }],
+    });
+    await expect(LocalTagCacheService.getViewerTagUri(entity, 'Bitcoin', 'viewer')).resolves.toBe(tagUri);
+    await expect(LocalTagCacheService.getViewerTagUri(entity, 'bitcoin', 'other')).resolves.toBeUndefined();
+  });
+
+  it('reports whether an operation is still the viewer latest write for a label', async () => {
+    const mutation = {
+      id: 'op',
+      label: 'Bitcoin',
+      viewerId: 'viewer',
+      relationship: false,
+      synced: false,
+      expiresAt: 9,
+    };
+    tagTable.get.mockResolvedValue({ ...record(), mutations: { 'viewer:bitcoin': mutation } });
+    await expect(LocalTagCacheService.ownsMutation(entity, 'bitcoin', 'viewer', 'op')).resolves.toBe(true);
+    await expect(LocalTagCacheService.ownsMutation(entity, 'bitcoin', 'viewer', 'newer')).resolves.toBe(false);
+    await expect(LocalTagCacheService.ownsMutation(entity, 'bitcoin', 'other', 'op')).resolves.toBe(false);
+    tagTable.get.mockResolvedValue(null);
+    await expect(LocalTagCacheService.ownsMutation(entity, 'bitcoin', 'viewer', 'op')).resolves.toBe(false);
+  });
+
   it('records cooldown when an invalidation supersedes a failing refresh', async () => {
     tagTable.get.mockResolvedValue({ ...record(), cache: { ...record().cache!, fetchedAt: 0, revision: 3 } });
     await LocalTagCacheService.deferRefresh(entity, { revision: 2, retryAt: 30_000 });
