@@ -48,6 +48,20 @@ export class LocalFeedService {
   }
 
   /**
+   * Deletes every feed whose id is not in `keepIds` and returns the rows it removed, so the caller
+   * can drop their stream caches. The homeserver listing is the source of truth for which feeds
+   * exist: a row the listing no longer names was deleted elsewhere, or carries a 0.x id from
+   * before the account was migrated.
+   */
+  static async deleteMissing(keepIds: ReadonlySet<string>): Promise<FeedModelSchema[]> {
+    return await db.transaction('rw', FEED_TABLES, async () => {
+      const stale = (await FeedModel.table.toArray()).filter((feed) => !keepIds.has(feed.id));
+      if (stale.length > 0) await FeedModel.table.bulkDelete(stale.map((feed) => feed.id));
+      return stale.map((feed) => this.normalize(feed));
+    });
+  }
+
+  /**
    * Undo a local write that failed to sync. Restores `priorFeed` (or deletes the row when the
    * write created it) only while the row still carries the write's own `updated_at`: a newer
    * write to the same id (another tab, a bootstrap fetch landing mid-sync) is left alone, so a

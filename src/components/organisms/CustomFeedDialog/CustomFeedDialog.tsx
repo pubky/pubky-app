@@ -21,7 +21,7 @@ import {
   StickyNote,
   Trash2,
 } from 'lucide-react';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import type { KnownFeedLayout, KnownFeedReach, KnownFeedSort, KnownPostKind } from 'pubky-social-specs';
 import { Controller, useWatch } from 'react-hook-form';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -69,13 +69,11 @@ type CustomFeedDialogProps =
     });
 
 function isVisualCustomFeedContentSupported(content?: CustomFeedFormContent): boolean {
-  return (
-    content === CUSTOM_FEED_CONTENT_ALL || content === PubkyAppPostKind.Image || content === PubkyAppPostKind.Video
-  );
+  return content === CUSTOM_FEED_CONTENT_ALL || content === 'image' || content === 'video';
 }
 
 function parseReachValue(value: string): CustomFeedFormReach {
-  return value === TAGGED_AS_FILTER_KEY ? TAGGED_AS_FILTER_KEY : (Number(value) as PubkyAppFeedReach);
+  return value === TAGGED_AS_FILTER_KEY ? TAGGED_AS_FILTER_KEY : (value as KnownFeedReach);
 }
 
 /** Shown for a stored reach/content this dialog cannot offer as a choice. */
@@ -83,14 +81,7 @@ const UNSUPPORTED_OPTION_LABEL = 'Unsupported (set elsewhere)';
 
 const LAYOUT_HINT = 'Cards also applies on mobile. Other layouts use a single column on mobile.';
 
-const REACH_OPTION_VALUES: CustomFeedFormReach[] = [
-  PubkyAppFeedReach.Wot,
-  TAGGED_AS_FILTER_KEY,
-  PubkyAppFeedReach.Following,
-  PubkyAppFeedReach.Friends,
-  PubkyAppFeedReach.Me,
-  PubkyAppFeedReach.All,
-];
+const REACH_OPTION_VALUES: CustomFeedFormReach[] = ['wot', TAGGED_AS_FILTER_KEY, 'following', 'friends', 'me', 'all'];
 
 export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   const { mode, children } = props;
@@ -127,39 +118,39 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   });
   const sortFilters = [
     {
-      value: PubkyAppFeedSort.Recent,
+      value: 'recent',
       label: 'Recent',
       icon: SquareAsterisk,
     },
     {
-      value: PubkyAppFeedSort.Popularity,
+      value: 'popularity',
       label: 'Popularity',
       icon: Flame,
     },
   ];
   const layoutFilters = [
     {
-      value: PubkyAppFeedLayout.Columns,
+      value: 'columns',
       label: 'Columns',
       icon: Columns3,
     },
     {
-      value: PubkyAppFeedLayout.Wide,
+      value: 'wide',
       label: 'Wide',
       icon: Rows2,
     },
     {
-      value: PubkyAppFeedLayout.Visual,
+      value: 'visual',
       label: 'Visual',
       icon: Grid2X2,
     },
     {
-      value: PubkyAppFeedLayout.List,
+      value: 'list',
       label: 'List',
       icon: Rows4,
     },
     {
-      value: PubkyAppFeedLayout.Cards,
+      value: 'cards',
       label: 'Cards',
       icon: LayoutDashboard,
     },
@@ -175,50 +166,50 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
       icon: Layers,
     },
     {
-      value: PubkyAppPostKind.Short,
+      value: 'note',
       label: 'Posts',
       icon: StickyNote,
     },
     {
-      value: PubkyAppPostKind.Long,
+      value: 'article',
       label: 'Articles',
       icon: Newspaper,
     },
     {
-      value: PubkyAppPostKind.Collection,
+      value: 'collection',
       label: 'Collections',
       icon: Library,
     },
     {
-      value: PubkyAppPostKind.Image,
+      value: 'image',
       label: 'Images',
       icon: Image,
     },
     {
-      value: PubkyAppPostKind.Video,
+      value: 'video',
       label: 'Videos',
       icon: CirclePlay,
     },
     {
-      value: PubkyAppPostKind.Link,
+      value: 'link',
       label: 'Links',
       icon: Link,
     },
     {
-      value: PubkyAppPostKind.File,
+      value: 'file',
       label: 'Files',
       icon: Download,
     },
   ];
   const contentFilters =
-    layout === PubkyAppFeedLayout.Visual
+    layout === 'visual'
       ? allContentFilters.filter((filter) => isVisualCustomFeedContentSupported(filter.value))
       : allContentFilters;
 
-  // A feed authored elsewhere can hold a reach or content this dialog has no
-  // option for (PubkyAppFeedReach.Followers, PubkyAppPostKind.Unknown). Show
-  // the value as a disabled entry so the Select reflects what is stored rather
-  // than falling back to its placeholder and reading as "nothing selected".
+  // A feed authored elsewhere can hold a reach this dialog has no option for
+  // (`followers`). Show the value as a disabled entry so the Select reflects
+  // what is stored rather than falling back to its placeholder and reading as
+  // "nothing selected".
   const unsupportedReach = reachFilters.some((filter) => filter.value === reach) ? null : reach;
   const unsupportedContent = contentFilters.some((filter) => filter.value === content) ? null : content;
 
@@ -226,15 +217,15 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   // combination this dialog cannot represent; user-driven layout changes are
   // corrected up-front in `handleLayoutChange`.
   useEffect(() => {
-    if (layout !== PubkyAppFeedLayout.Visual) return;
+    if (layout !== 'visual') return;
     if (isVisualCustomFeedContentSupported(content)) return;
     form.setValue(CUSTOM_FEED_FORM_FIELDS.CONTENT, CUSTOM_FEED_CONTENT_ALL, { shouldValidate: true });
   }, [content, layout, form]);
 
-  const handleLayoutChange = (value: string, onChange: (next: PubkyAppFeedLayout) => void) => {
-    const nextLayout = Number(value) as PubkyAppFeedLayout;
+  const handleLayoutChange = (value: string, onChange: (next: KnownFeedLayout) => void) => {
+    const nextLayout = value as KnownFeedLayout;
     onChange(nextLayout);
-    if (nextLayout === PubkyAppFeedLayout.Visual && !isVisualCustomFeedContentSupported(content)) {
+    if (nextLayout === 'visual' && !isVisualCustomFeedContentSupported(content)) {
       form.setValue(CUSTOM_FEED_FORM_FIELDS.CONTENT, CUSTOM_FEED_CONTENT_ALL, { shouldValidate: true });
     }
   };
@@ -406,7 +397,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
               render={({ field }) => (
                 <Select
                   value={String(field.value)}
-                  onValueChange={(v) => field.onChange(Number(v))}
+                  onValueChange={(v) => field.onChange(v as KnownFeedSort)}
                   disabled={loading}
                   data-testid="sort-select"
                 >
@@ -499,7 +490,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
               render={({ field }) => (
                 <Select
                   value={String(field.value)}
-                  onValueChange={(v) => field.onChange(v === CUSTOM_FEED_CONTENT_ALL ? v : Number(v))}
+                  onValueChange={(v) => field.onChange(v === CUSTOM_FEED_CONTENT_ALL ? v : (v as KnownPostKind))}
                   disabled={loading}
                   data-testid="content-select"
                 >

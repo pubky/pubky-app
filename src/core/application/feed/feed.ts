@@ -1,32 +1,44 @@
-import { baseUriBuilder, feedUriBuilder } from 'pubky-app-specs';
+import {
+  buildUri,
+  decodeObject,
+  deletionPaths,
+  encodeObject,
+  type Feed,
+  feedId,
+  isOneOf,
+  listPrefix,
+  parseUri,
+  postKinds,
+  toUrl,
+  tryDecodeObject,
+} from 'pubky-social-specs';
 import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/application/feed/feed.types';
-import { DEFAULT_CUSTOM_FEED_ICON, isProfileTagReachSupported } from '@/config/feed';
+import { isProfileTagReachSupported } from '@/config/feed';
 import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
-import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { FeedModel } from '@/models/feed/feed';
-import { buildFeedStreamId, reachToString } from '@/models/feed/feed.helpers';
+import { buildFeedStreamId } from '@/models/feed/feed.helpers';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { FeedValidators } from '@/pipes/feed/feed.validators';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
 import { LocalFeedService } from '@/services/local/feed/feed';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type {
   FeedDeleteParams,
   FeedPutParams,
-  HomeserverFeedJson,
   LocalFeedMigrationParams,
+  LocalFeedRowParams,
   PersistAndSyncParams,
-  RemoteFeedParams,
+  StoredFeedWriteParams,
 } from './feed.types';
 
 export class FeedApplication {
@@ -42,9 +54,10 @@ export class FeedApplication {
   }
 
   static async persist({ userId, params }: FeedPutParams): Promise<FeedModelSchema> {
-    const { feed: normalizedFeed, existingId } = params as TFeedPersistCreateParams;
-    const { feed, meta } = normalizedFeed;
-    const newId = meta.id;
+    const { feed: builtFeed, existingId } = params as TFeedPersistCreateParams;
+    // The id is the filter's hash, computed by the builder from this client's input alone, so it
+    // is known before any homeserver round trip and never changes once the stored copy is merged in.
+    const newId = builtFeed.id;
     const idChanged = existingId != null && existingId !== newId;
 
     const now = Date.now();
@@ -53,39 +66,34 @@ export class FeedApplication {
       ? ((await LocalFeedService.read({ feedId: existingId }).catch(() => null)) ?? { created_at: now }).created_at
       : now;
 
-    const { tags, domain_tags, reach, sort, content, layout } = feed.feed;
-
-    const feedSchema: FeedModelSchema = {
+    const { content } = builtFeed.object.feed;
+    const feedSchema = this.toLocalFeed({
       id: newId,
-      name: feed.name,
-      icon: feed.icon ?? DEFAULT_CUSTOM_FEED_ICON,
-      tags: tags ?? [],
-      domain_tags: domain_tags ?? [],
-      reach,
-      sort,
-      content: content ?? null,
-      layout,
-      created_at: createdAt,
-      updated_at: now,
-    };
+      feed: builtFeed.object,
+      // Built from this client's input, so always a kind it knows; the type stays open for reads.
+      content: isOneOf(postKinds, content) ? content : null,
+      createdAt,
+      updatedAt: now,
+    });
+    const feedUrl = buildUri(userId, 'feed', newId);
+    // The copy the write starts from: the feed being edited, or, for a create, a feed with this
+    // very filter another client may already have stored at the same id.
+    const storedUrl = buildUri(userId, 'feed', existingId ?? newId);
 
-    // When config fields (tags, domain_tags, reach, layout, sort, content) change, the HashId-derived
-    // ID changes too. Migration flow is:
+    // When config fields (tags, domain_tags, reach, layout, sort, content) change, the id changes
+    // too. Migration flow is:
     // 1) create new homeserver resource, 2) atomically swap local feed records,
     // 3) best-effort delete old homeserver resource.
     if (idChanged) {
       // Model errors are already logged; migration can proceed without the old stream cache.
       const oldFeed = await LocalFeedService.read({ feedId: existingId }).catch(() => null);
-      const newFeedUrl = feedUriBuilder(userId, newId);
-      const newFeedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
 
-      await HomeserverService.request({ method: HttpMethod.PUT, url: newFeedUrl, bodyJson: newFeedJson });
+      await this.putStoredFeed({ storedUrl, feedUrl, feed: builtFeed.object });
 
       const persistedNewFeed = await this.migrateLocalFeedAtomically({ userId, existingId, feedSchema, oldFeed });
 
       // Best-effort cleanup of old homeserver feed. Keep local new feed as source of truth if cleanup fails.
-      const oldFeedUrl = feedUriBuilder(userId, existingId);
-      await HomeserverService.request({ method: HttpMethod.DELETE, url: oldFeedUrl }).catch((cleanupError) => {
+      await this.deleteStoredFeed(userId, existingId).catch((cleanupError) => {
         Logger.warn('Failed to cleanup old homeserver feed after successful migration to new feed ID', {
           oldFeedId: existingId,
           newFeedId: newId,
@@ -96,12 +104,11 @@ export class FeedApplication {
       return persistedNewFeed;
     }
 
-    return this.commit({ userId, feedSchema, normalizedFeed });
+    return this.commit({ feedSchema, storedUrl, feedUrl, feed: builtFeed.object });
   }
 
   static async commitDelete({ userId, params }: FeedDeleteParams): Promise<void> {
     const feedId = (params as TFeedPersistDeleteParams).feedId;
-    const feedUrl = feedUriBuilder(userId, feedId);
 
     // Model errors are already logged; cache cleanup must not block the delete itself.
     const feed = await LocalFeedService.read({ feedId }).catch(() => null);
@@ -116,7 +123,7 @@ export class FeedApplication {
 
     await Promise.all([
       LocalFeedService.delete({ feedId }),
-      HomeserverService.request({ method: HttpMethod.DELETE, url: feedUrl }),
+      this.deleteStoredFeed(userId, feedId),
       ...(streamId
         ? [LocalStreamPostsService.deleteById({ streamId }), LocalStreamPostsService.clearUnreadStream({ streamId })]
         : []),
@@ -126,7 +133,7 @@ export class FeedApplication {
   /**
    * Merges partial update changes with the existing feed to produce a full TFeedCreateParams.
    * Fields present in `changes` override the existing values; omitted fields keep their current value.
-   * The result is passed to FeedNormalizer which recomputes the HashId — if any config field
+   * The result is passed to FeedNormalizer which recomputes the id — if any config field
    * (tags, domain_tags, reach, sort, content, layout) changed, the feed will get a new ID.
    * Presentation fields (`name` and `icon`) do not affect the ID.
    */
@@ -159,10 +166,16 @@ export class FeedApplication {
   /**
    * Fetch all feeds from the homeserver and persist them locally.
    * Used during bootstrap to hydrate the local feed cache.
+   *
+   * Feeds live under the private root only; the listing is the whole truth about which feeds
+   * exist, so every local row it does not name (a feed deleted on another device, a row carrying
+   * a 0.x id from before the account was migrated) is removed with its stream cache. The whole
+   * directory is listed for that reason: a truncated listing would delete feeds that exist.
    */
   static async fetchFeeds(userId: Pubky): Promise<FeedModelSchema[]> {
-    const feedsDirectory = `${baseUriBuilder(userId)}feeds/`;
-    const feedUris = await HomeserverService.list({ baseDirectory: feedsDirectory });
+    const feedsDirectory = `${listPrefix(userId, 'private')}feeds/`;
+    const feedUris = await HomeserverService.listAll({ baseDirectory: feedsDirectory });
+    const listedIds = new Set(feedUris.flatMap((feedUri) => this.feedIdOfUri(feedUri) ?? []));
 
     const validFeeds: FeedModelSchema[] = [];
 
@@ -170,12 +183,8 @@ export class FeedApplication {
       const batch = feedUris.slice(index, index + this.FETCH_FEEDS_BATCH_SIZE);
       const batchResults = await Promise.allSettled(
         batch.map(async (feedUri) => {
-          const remoteFeed = await HomeserverService.request<HomeserverFeedJson>({
-            method: HttpMethod.GET,
-            url: feedUri,
-          });
-
-          return this.normalizeRemoteFeed({ userId, remoteFeed });
+          const bytes = await HomeserverService.getBytes(feedUri);
+          return this.normalizeRemoteFeed(feedUri, bytes);
         }),
       );
 
@@ -195,76 +204,147 @@ export class FeedApplication {
       });
     }
 
-    if (validFeeds.length === 0) return [];
-    return LocalFeedService.createOrUpdateMany(validFeeds);
+    const persisted = validFeeds.length > 0 ? await LocalFeedService.createOrUpdateMany(validFeeds) : [];
+    await this.reconcileLocalFeeds(userId, listedIds);
+    return persisted;
+  }
+
+  /** The feed id a listing entry names, or null for a file in the directory that is no feed. */
+  private static feedIdOfUri(feedUri: string): string | null {
+    try {
+      const parsed = parseUri(feedUri);
+      return parsed.kind === 'feed' ? parsed.id : null;
+    } catch {
+      return null;
+    }
   }
 
   /**
-   * Validates and transforms a single remote feed into a FeedModelSchema.
+   * Removes the local feeds the listing no longer names, with the stream caches keyed on them, so
+   * their tabs and cached pages do not outlive the stored object.
+   */
+  private static async reconcileLocalFeeds(userId: Pubky, listedIds: ReadonlySet<string>): Promise<void> {
+    const removed = await LocalFeedService.deleteMissing(listedIds);
+    for (const feed of removed) {
+      let streamId: ReturnType<typeof buildFeedStreamId> | null = null;
+      try {
+        streamId = buildFeedStreamId(feed, userId);
+      } catch {
+        // Cache cleanup is ancillary; a malformed row leaves no cache to clear.
+      }
+      if (!streamId) continue;
+      await Promise.all([
+        LocalStreamPostsService.deleteById({ streamId }),
+        LocalStreamPostsService.clearUnreadStream({ streamId }),
+      ]);
+    }
+  }
+
+  /**
+   * Decodes one stored feed into a FeedModelSchema.
    * Returns null if the feed is invalid, logging a warning instead of throwing.
    */
-  private static normalizeRemoteFeed({ userId, remoteFeed }: RemoteFeedParams): FeedModelSchema | null {
+  private static normalizeRemoteFeed(feedUri: string, bytes: Uint8Array): FeedModelSchema | null {
     try {
-      const { feed, meta: feedMeta } = this.validateRemoteFeedWithSpecs({ userId, remoteFeed });
-      const { tags, domain_tags, reach, sort, layout, content } = feed.feed;
+      const feed = decodeObject(feedUri, bytes, 'feed');
+      const { domain_tags, reach, content } = feed.feed;
 
-      if (domain_tags && domain_tags.length > 0 && !isProfileTagReachSupported(reachToString(reach))) {
+      // A content kind from a newer data model has no stream here.
+      if (content !== null && !isOneOf(postKinds, content)) {
+        Logger.warn('Skipping feed with an unknown content kind during bootstrap fetch', { content });
+        return null;
+      }
+
+      if (domain_tags && domain_tags.length > 0 && !isProfileTagReachSupported(reach)) {
         Logger.warn('Skipping unsupported profile-tag feed during bootstrap fetch', {
-          reach: reachToString(reach),
+          reach,
           domainTags: domain_tags,
         });
         return null;
       }
 
-      return {
-        id: feedMeta.id,
-        name: feed.name,
-        icon: feed.icon ?? DEFAULT_CUSTOM_FEED_ICON,
-        tags: tags ?? [],
-        domain_tags: domain_tags ?? [],
-        reach,
-        sort,
-        content: content ?? null,
-        layout,
-        created_at: Number(remoteFeed.created_at),
-        updated_at: Number(remoteFeed.created_at),
-      };
+      // `created_at` is microseconds; the local row keeps milliseconds.
+      const createdAt = Math.floor(feed.created_at / 1000);
+      return this.toLocalFeed({ id: feedId(feed), feed, content, createdAt, updatedAt: createdAt });
     } catch (error) {
       Logger.warn('Skipping invalid feed during bootstrap fetch', error);
       return null;
     }
   }
 
+  /** The local row of a stored feed; `content` is the known kind the caller checked. */
+  private static toLocalFeed({ id, feed, content, createdAt, updatedAt }: LocalFeedRowParams): FeedModelSchema {
+    const { tags, domain_tags, reach, sort, layout } = feed.feed;
+    return {
+      id,
+      name: feed.name,
+      icon: FeedValidators.sanitizeIcon(feed.icon),
+      tags: tags ?? [],
+      domain_tags: domain_tags ?? [],
+      reach,
+      sort,
+      content,
+      layout,
+      created_at: createdAt,
+      updated_at: updatedAt,
+    };
+  }
+
   /**
-   * Guards required fields on a remote feed payload and delegates to
-   * PubkySpecsBuilder.createFeed to produce a validated FeedResult
-   * with the correct HashId.
+   * PUTs `feed` at `feedUrl` on top of what the homeserver holds at `storedUrl`: the members this
+   * client does not know (`$unknown`, on the object and on its filter) and the creation time are
+   * carried over, so an edit never drops what another client wrote. The filter members are this
+   * client's, so the id computed by the builder stands after the merge. One read-merge-write under
+   * a fence: a PUT the homeserver refuses with a retried status (429, 500, 503 or the publish
+   * conflict) runs again from the read, and no later pass outlives the session.
    */
-  private static validateRemoteFeedWithSpecs({ userId, remoteFeed }: RemoteFeedParams) {
-    if (!remoteFeed?.name || !remoteFeed?.feed) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid remote feed payload', {
-        service: ErrorService.Homeserver,
-        operation: 'validateRemoteFeedWithSpecs',
-        context: { userId, remoteFeed },
+  private static async putStoredFeed({ storedUrl, feedUrl, feed }: StoredFeedWriteParams): Promise<void> {
+    const fence = HomeserverService.createWriteFence();
+    await retryHomeserverWriteAfterReread(fence, async () => {
+      const stored = await this.readStoredFeed(storedUrl);
+      const merged = stored ? this.carryStoredMembers(feed, stored) : feed;
+      await HomeserverService.putBlob({ url: feedUrl, blob: encodeObject(feedUrl, merged), fence });
+    });
+  }
+
+  /** The feed stored at `url`, or null when there is none or its bytes do not decode (then the write starts fresh). */
+  private static async readStoredFeed(url: string): Promise<Feed | null> {
+    const stored = await HomeserverService.getBytesIfExists(url);
+    if (!stored) return null;
+    const read = tryDecodeObject(url, stored.bytes, 'feed');
+    if (read.ok) return read.value;
+    Logger.warn('Stored feed does not decode; writing the feed from local state', { url, error: read.error.message });
+    return null;
+  }
+
+  private static carryStoredMembers(feed: Feed, stored: Feed): Feed {
+    return {
+      ...feed,
+      ...(stored.$unknown === undefined ? {} : { $unknown: stored.$unknown }),
+      feed: { ...feed.feed, ...(stored.feed.$unknown === undefined ? {} : { $unknown: stored.feed.$unknown }) },
+      created_at: stored.created_at,
+    };
+  }
+
+  /**
+   * Deletes both addresses of the feed `id`: the published copy first (this client never writes
+   * one, so a 404 is the usual answer and `deleteIdempotent` absorbs it), then the private object.
+   */
+  private static async deleteStoredFeed(userId: Pubky, id: string): Promise<void> {
+    let paths: string[];
+    try {
+      paths = deletionPaths({ kind: 'feed', id });
+    } catch (error) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error instanceof Error ? error.message : String(error), {
+        service: ErrorService.SocialSpecs,
+        operation: 'deletionPaths',
+        context: { feedId: id },
+        cause: error,
       });
     }
-
-    const builder = PubkySpecsSingleton.get(userId);
-
-    const { tags, domain_tags, reach, layout, sort, content } = remoteFeed.feed;
-    // Replay absent tags as `undefined` (not `[]`) so foreign HashIds stay stable.
-    const normalizedTags = Array.isArray(tags) ? tags : undefined;
-    const normalizedDomainTags = Array.isArray(domain_tags) ? domain_tags : undefined;
-    return builder.createFeed({
-      tags: normalizedTags,
-      reach,
-      layout,
-      sort,
-      content: content ?? undefined,
-      name: remoteFeed.name,
-      domainTags: normalizedDomainTags,
-      icon: FeedValidators.sanitizeIcon(remoteFeed.icon),
-    });
+    for (const path of paths) {
+      await HomeserverService.deleteIdempotent(toUrl(userId, path));
+    }
   }
 
   /**
@@ -279,14 +359,16 @@ export class FeedApplication {
    * undoes this commit's own write (matched by `updated_at`), never a newer one that landed
    * while the PUT was in flight.
    */
-  private static async commit({ userId, feedSchema, normalizedFeed }: PersistAndSyncParams): Promise<FeedModelSchema> {
+  private static async commit({
+    feedSchema,
+    storedUrl,
+    feedUrl,
+    feed,
+  }: PersistAndSyncParams): Promise<FeedModelSchema> {
     const { persisted: persistedFeed, prior: priorFeed } = await LocalFeedService.createOrUpdate(feedSchema);
 
-    const feedUrl = feedUriBuilder(userId, persistedFeed.id);
-    const feedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
-
     try {
-      await HomeserverService.request({ method: HttpMethod.PUT, url: feedUrl, bodyJson: feedJson });
+      await this.putStoredFeed({ storedUrl, feedUrl, feed });
     } catch (error) {
       try {
         await LocalFeedService.rollback({
