@@ -71,23 +71,13 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
  * it ports; the cleanup PR empties the list.
  */
 const LEGACY_RATCHET: readonly string[] = [
-  'src/components/organisms/CustomFeedDialog/CustomFeedDialog.tsx',
-  'src/components/organisms/CustomFeedFilters/CustomFeedFilters.tsx',
   'src/core/application/auth/auth.ts',
-  'src/core/application/feed/feed.ts',
-  'src/core/application/feed/feed.types.ts',
   'src/core/application/notification/notification.ts',
   'src/core/application/profile/profile.ts',
   'src/core/application/profile/profile.types.ts',
   'src/core/controllers/auth/auth.ts',
   'src/core/controllers/bookmark/bookmark.ts',
-  'src/core/controllers/feed/feed.types.ts',
-  'src/core/models/feed/feed.helpers.ts',
-  'src/core/models/feed/feed.schema.ts',
-  'src/core/models/feed/feed.ts',
   'src/core/pipes/bookmark/bookmark.normalizer.ts',
-  'src/core/pipes/feed/feed.normalizer.ts',
-  'src/core/pipes/feed/feed.validators.ts',
   'src/core/pipes/lastRead/lastRead.normalizer.ts',
   'src/core/pipes/notification/notification.normalizer.ts',
   'src/core/pipes/pipes.builder.ts',
@@ -96,11 +86,6 @@ const LEGACY_RATCHET: readonly string[] = [
   'src/core/pipes/user/user.normalizer.ts',
   'src/core/services/local/profile/profile.ts',
   'src/core/services/local/stream/posts/posts.ts',
-  'src/core/utils/pubky-app-spec-feed-mappers.ts',
-  'src/hooks/useCreateInterestsFeed/useCreateInterestsFeed.utils.ts',
-  'src/hooks/useCustomFeedForm/useCustomFeedForm.ts',
-  'src/hooks/useCustomFeedForm/useCustomFeedForm.types.ts',
-  'src/hooks/useCustomStreamId/useCustomStreamId.ts',
 ];
 
 function sourceFiles(dir: string): string[] {

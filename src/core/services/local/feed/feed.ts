@@ -1,8 +1,12 @@
 import type { TFeedIdParam } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { isAppError } from '@/libs/error/error.utils';
 import { FeedModel } from '@/models/feed/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
-import type { TFeedRollbackParams, TFeedWriteResult } from './feed.types';
+import type { TFeedReconcileParams, TFeedReconcileResult, TFeedRollbackParams, TFeedWriteResult } from './feed.types';
 
 const FEED_TABLES = [FeedModel.table];
 
@@ -30,21 +34,46 @@ export class LocalFeedService {
     });
   }
 
-  /**
-   * Persist multiple feeds in a single transaction.
-   * Uses bulkPut semantics: inserts new feeds and replaces existing ones by ID.
-   */
-  static async createOrUpdateMany(feeds: FeedModelSchema[]): Promise<FeedModelSchema[]> {
-    return await db.transaction('rw', FEED_TABLES, async () => {
-      await FeedModel.bulkSave(feeds);
-      return feeds.map((feed) => this.normalize(feed));
-    });
-  }
-
   static async delete({ feedId }: TFeedIdParam) {
     await db.transaction('rw', FEED_TABLES, async () => {
       await FeedModel.deleteById(feedId);
     });
+  }
+
+  /**
+   * Replaces the local feeds with what the homeserver listing holds, in one transaction: upserts
+   * `feeds`, deletes every row whose id is not in `keepIds`, and returns the rows removed so the
+   * caller can drop their stream caches. The listing is the source of truth for which feeds exist:
+   * a row it no longer names was deleted elsewhere, or carries a 0.x id from before the account was
+   * migrated. `isCurrent` is checked inside the transaction, so a listing that finished after an
+   * account switch writes nothing for the next account (`applied: false`).
+   */
+  static async reconcile({ feeds, keepIds, isCurrent }: TFeedReconcileParams): Promise<TFeedReconcileResult> {
+    try {
+      return await db.transaction('rw', FEED_TABLES, async () => {
+        if (isCurrent && !isCurrent()) return { applied: false, persisted: [], removed: [] };
+        if (feeds.length > 0) await FeedModel.bulkSave(feeds);
+        const stale = (await FeedModel.table.toArray()).filter((feed) => !keepIds.has(feed.id));
+        if (stale.length > 0) await FeedModel.table.bulkDelete(stale.map((feed) => feed.id));
+        return {
+          applied: true,
+          persisted: feeds.map((feed) => this.normalize(feed)),
+          removed: stale.map((feed) => this.normalize(feed)),
+        };
+      });
+    } catch (error) {
+      if (isAppError(error)) throw error;
+      throw Err.database(
+        DatabaseErrorCode.TRANSACTION_FAILED,
+        'Failed to reconcile feeds with the homeserver listing',
+        {
+          service: ErrorService.Local,
+          operation: 'reconcile',
+          context: { table: FeedModel.table.name, count: feeds.length },
+          cause: error,
+        },
+      );
+    }
   }
 
   /**
