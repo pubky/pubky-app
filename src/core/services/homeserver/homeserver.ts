@@ -53,7 +53,8 @@ import {
 } from './homeserver.utils';
 import { retryHomeserverWrite, type THomeserverWriteFence } from './write-retry';
 
-const STORAGE_PATH_PREFIXES = ['/pub/', '/priv/'] as const;
+const PRIVATE_STORAGE_PREFIX = '/priv/';
+const STORAGE_PATH_PREFIXES = ['/pub/', PRIVATE_STORAGE_PREFIX] as const;
 const DELETE_IDEMPOTENT_MAX_ATTEMPTS = 3;
 const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
 /** Default limit for list operations */
@@ -992,6 +993,24 @@ export class HomeserverService {
   }
 
   /**
+   * Bytes of a public resource read past the browser HTTP cache, for a read-modify-write (the
+   * head version of a post, a profile edit) where a heuristically fresh cached copy would undo
+   * another device's write (see `getFreshJson`). Rejects a missing resource and a failed HTTP
+   * response like `getBytes`.
+   *
+   * @param url - Pubky URL to read.
+   */
+  static async getFreshBytes(url: string): Promise<Uint8Array> {
+    try {
+      const response = await this.fetch({ url, options: { method: HttpMethod.GET, cache: 'no-store' } });
+      await assertOk({ response, url, operation: 'getFreshBytes' });
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      throw toAppError(error, ErrorService.Homeserver, 'getFreshBytes');
+    }
+  }
+
+  /**
    * Checks whether a homeserver resource exists without treating an expected 404 as an error.
    * Storage SDK probes return a boolean; plain HTTP URLs retain explicit response handling.
    */
@@ -1062,8 +1081,12 @@ export class HomeserverService {
   }
 
   /**
-   * Subscribe to homeserver `/events-stream` for a user's pub directory subtree (SDK SSE wrapper).
+   * Subscribe to homeserver `/events-stream` for a user's directory subtree (SDK SSE wrapper).
    * Used for mute-list sync; callers own {@link ReadableStreamDefaultReader} lifecycle.
+   *
+   * A `/priv/` prefix is served only to a session of the tree's owner (SDK 0.16.2 `path()`), so
+   * the signed-in session is attached when it is that owner's, and the call fails as an auth
+   * error otherwise instead of letting the homeserver answer 401.
    */
   static async subscribeUserEventStreamForPath(params: {
     userZ32: TPubkyModel;
@@ -1073,8 +1096,26 @@ export class HomeserverService {
     try {
       const pubkySdk = this.getPubkySdk();
       const pk = PublicKey.from(params.userZ32);
-      const stream = (await pubkySdk
-        .eventStreamForUser(pk, params.cursor)
+      let builder = pubkySdk.eventStreamForUser(pk, params.cursor);
+      if (params.pathPrefix.startsWith(PRIVATE_STORAGE_PREFIX)) {
+        const session = useAuthStore.getState().selectSession();
+        if (!session) {
+          throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'A private event stream needs a signed-in session.', {
+            service: ErrorService.Homeserver,
+            operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+            context: { pathPrefix: params.pathPrefix },
+          });
+        }
+        if (session.info.publicKey.z32() !== params.userZ32) {
+          throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'A private event stream is served only to its owner.', {
+            service: ErrorService.Homeserver,
+            operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+            context: { pathPrefix: params.pathPrefix },
+          });
+        }
+        builder = builder.session(session);
+      }
+      const stream = (await builder
         .path(params.pathPrefix)
         .live()
         .subscribe()) as ReadableStream<HomeserverSdkUserEvent>;
