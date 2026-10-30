@@ -17,11 +17,11 @@ export const POST_MAX_CHARACTER_LENGTH = limits.postNoteContentMaxLength;
 export const ARTICLE_TITLE_MAX_CHARACTER_LENGTH = limits.articleTitleMaxLength;
 
 /**
- * Maximum character length for article content (22 characters reserved for JSON string).
- * Still the 0.x whole-content budget; the v1 body-only cap (`limits.articleBodyMaxLength`) lands
- * with the article envelope port.
+ * Maximum character length for an article body, the body alone: the title has its own cap above
+ * and the envelope is the data model's to spell. Code points, as the data model counts (the
+ * composer counts UTF-16 units, which is never more permissive).
  */
-export const ARTICLE_MAX_CHARACTER_LENGTH = limits.articleBodyMaxLength - ARTICLE_TITLE_MAX_CHARACTER_LENGTH - 22;
+export const ARTICLE_MAX_CHARACTER_LENGTH = limits.articleBodyMaxLength;
 
 /** Maximum character length for a lock announcement title */
 export const LOCK_TITLE_MAX_CHARACTER_LENGTH = 100;

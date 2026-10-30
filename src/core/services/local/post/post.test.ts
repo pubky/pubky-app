@@ -1,4 +1,4 @@
-import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
+import type { BuiltPost, KnownPostKind, Post } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
@@ -31,26 +31,42 @@ import type { TLocalSavePostParams } from '@/services/local/post/post.types';
 import { recentCollectionCounts, recentCollectionEnvelopes } from '@/services/local/post/recentCollectionCounts';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 // Test data
 const testData = {
   authorPubky: 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky,
-  postId1: 'abc123xyz',
+  postId1: '0035QZPT4QG00',
   get fullPostId1() {
     return buildCompositeId({ pubky: this.authorPubky, id: this.postId1 });
   },
+};
+
+/**
+ * A built first version as `buildPost` returns it, assembled by hand: the fixtures reference
+ * parents and originals under keys the data model would refuse, and what this service reads is
+ * the stored object, never the bytes.
+ */
+const builtPost = (object: Partial<Post> & { content: string }, compositePostId: string): BuiltPost => {
+  const { pubky, id } = parseCompositeId(compositePostId);
+  return asOpaque<BuiltPost>({
+    id,
+    editId: id,
+    path: `/pub/social/v1/posts/${id}/${id}.json`,
+    url: `pubky://${pubky}/pub/social/v1/posts/${id}/${id}.json`,
+    object: { kind: 'note', parent: null, embed: null, attachments: [], lock: null, ...object },
+    body: new Uint8Array(),
+  });
 };
 
 // Helper functions
 const createSaveParams = (
   content: string,
   compositePostId?: string,
-  kind: PubkyAppPostKind = PubkyAppPostKind.Short,
+  kind: KnownPostKind = 'note',
 ): TLocalSavePostParams => {
-  return {
-    compositePostId: compositePostId || testData.fullPostId1,
-    post: new PubkyAppPost(content, kind, undefined, undefined, undefined),
-  };
+  const id = compositePostId || testData.fullPostId1;
+  return { compositePostId: id, post: builtPost({ content, kind }, id) };
 };
 
 const getSavedPost = async (postId: string) => {
@@ -245,7 +261,7 @@ describe('LocalPostService', () => {
       const baseParams = createSaveParams('This is a reply', testData.fullPostId1);
       const saveParams: TLocalSavePostParams = {
         ...baseParams,
-        post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Short, parentUri, undefined, undefined),
+        post: builtPost({ content: baseParams.post.object.content, parent: parentUri }, baseParams.compositePostId),
       };
 
       await LocalPostService.create(saveParams);
@@ -269,7 +285,7 @@ describe('LocalPostService', () => {
       const baseParams = createSaveParams('My collection');
       const saveParams: TLocalSavePostParams = {
         ...baseParams,
-        post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Collection, undefined, undefined, undefined),
+        post: builtPost({ content: baseParams.post.object.content, kind: 'collection' }, baseParams.compositePostId),
       };
 
       await LocalPostService.create(saveParams);
@@ -288,7 +304,7 @@ describe('LocalPostService', () => {
       await setupUserCounts(testData.authorPubky);
       const before = Date.now();
 
-      await LocalPostService.create(createSaveParams('My collection', undefined, PubkyAppPostKind.Collection));
+      await LocalPostService.create(createSaveParams('My collection', undefined, 'collection'));
 
       const details = await LocalPostService.readDetails({ postId: testData.fullPostId1 });
       const ttl = await getPostTtl(testData.fullPostId1);
@@ -302,7 +318,7 @@ describe('LocalPostService', () => {
       const baseParams = createSaveParams('Reply to missing parent', testData.fullPostId1);
       const saveParams: TLocalSavePostParams = {
         ...baseParams,
-        post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Short, parentUri, undefined, undefined),
+        post: builtPost({ content: baseParams.post.object.content, parent: parentUri }, baseParams.compositePostId),
       };
 
       // Should not throw - just silently skips incrementing non-existent parent
@@ -314,11 +330,7 @@ describe('LocalPostService', () => {
     });
 
     it('should handle long-form posts', async () => {
-      const saveParams = createSaveParams(
-        'This is a long-form post with more content',
-        undefined,
-        PubkyAppPostKind.Long,
-      );
+      const saveParams = createSaveParams('This is a long-form post with more content', undefined, 'article');
 
       await LocalPostService.create(saveParams);
 
@@ -406,7 +418,7 @@ describe('LocalPostService', () => {
       const baseParams = createSaveParams('This is a reply', testData.fullPostId1);
       const saveParams: TLocalSavePostParams = {
         ...baseParams,
-        post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Short, parentUri, undefined, undefined),
+        post: builtPost({ content: baseParams.post.object.content, parent: parentUri }, baseParams.compositePostId),
       };
 
       const beforeTimestamp = Date.now();
@@ -439,13 +451,7 @@ describe('LocalPostService', () => {
       // Create repost
       const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
-        post: new PubkyAppPost(
-          '',
-          PubkyAppPostKind.Short,
-          undefined,
-          new PubkyAppPostEmbed(originalUri, PubkyAppPostKind.Short),
-          undefined,
-        ),
+        post: builtPost({ content: '', embed: originalUri }, testData.fullPostId1),
       };
 
       await LocalPostService.create(saveParams);
@@ -464,13 +470,7 @@ describe('LocalPostService', () => {
       // Create repost
       const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
-        post: new PubkyAppPost(
-          '',
-          PubkyAppPostKind.Short,
-          undefined,
-          new PubkyAppPostEmbed(originalUri, PubkyAppPostKind.Short),
-          undefined,
-        ),
+        post: builtPost({ content: '', embed: originalUri }, testData.fullPostId1),
       };
 
       await LocalPostService.create(saveParams);
@@ -488,13 +488,7 @@ describe('LocalPostService', () => {
 
       const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
-        post: new PubkyAppPost(
-          '',
-          PubkyAppPostKind.Short,
-          undefined,
-          new PubkyAppPostEmbed(originalUri, PubkyAppPostKind.Short),
-          undefined,
-        ),
+        post: builtPost({ content: '', embed: originalUri }, testData.fullPostId1),
       };
 
       const beforeTimestamp = Date.now();
@@ -526,13 +520,7 @@ describe('LocalPostService', () => {
       // Create quote repost
       const saveParams: TLocalSavePostParams = {
         compositePostId: testData.fullPostId1,
-        post: new PubkyAppPost(
-          quoteContent,
-          PubkyAppPostKind.Short,
-          undefined,
-          new PubkyAppPostEmbed(originalUri, PubkyAppPostKind.Short),
-          undefined,
-        ),
+        post: builtPost({ content: quoteContent, embed: originalUri }, testData.fullPostId1),
       };
 
       await LocalPostService.create(saveParams);
@@ -967,7 +955,7 @@ describe('LocalPostService', () => {
       id: 'item-b',
     });
     const itemC = buildCompositeId({ pubky: testData.authorPubky, id: 'item-c' });
-    const collectionId = buildCompositeId({ pubky: testData.authorPubky, id: 'collection-1' });
+    const collectionId = buildCompositeId({ pubky: testData.authorPubky, id: '0035QZPT4QG0G' });
 
     const collectionsCount = async (postId: string) => (await getSavedCounts(postId))?.collections;
 
@@ -1030,7 +1018,7 @@ describe('LocalPostService', () => {
       const baseParams = createSaveParams(collectionEnvelope([itemA, itemB, itemB]), collectionId);
       await LocalPostService.create({
         ...baseParams,
-        post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Collection, undefined, undefined, undefined),
+        post: builtPost({ content: baseParams.post.object.content, kind: 'collection' }, baseParams.compositePostId),
       });
 
       // The duplicate item counts once; an uncurated post is untouched.
@@ -1585,7 +1573,7 @@ describe('LocalPostService', () => {
         const postId = testData.fullPostId1;
         await setupUserCounts(testData.authorPubky);
 
-        await LocalPostService.create(createSaveParams('Long post', undefined, PubkyAppPostKind.Long));
+        await LocalPostService.create(createSaveParams('Long post', undefined, 'article'));
 
         // Verify post was added to long-form streams
         const timelineAllLong = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_LONG);
@@ -1605,7 +1593,7 @@ describe('LocalPostService', () => {
         const postId = testData.fullPostId1;
         await setupUserCounts(testData.authorPubky);
 
-        await LocalPostService.create(createSaveParams('Collection content', undefined, PubkyAppPostKind.Collection));
+        await LocalPostService.create(createSaveParams('Collection content', undefined, 'collection'));
 
         const authorCollections = await PostStreamModel.table.get(buildAuthorCollectionsStreamId(testData.authorPubky));
         const timelineAllCollection = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_COLLECTION);
@@ -1637,7 +1625,7 @@ describe('LocalPostService', () => {
         const baseParams = createSaveParams('This is a reply', replyId);
         const saveParams: TLocalSavePostParams = {
           ...baseParams,
-          post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Short, parentUri, undefined, undefined),
+          post: builtPost({ content: baseParams.post.object.content, parent: parentUri }, baseParams.compositePostId),
         };
 
         await LocalPostService.create(saveParams);
@@ -1658,7 +1646,7 @@ describe('LocalPostService', () => {
 
       it('should prepend posts to beginning of stream (most recent first)', async () => {
         const postId1 = testData.fullPostId1;
-        const postId2 = buildCompositeId({ pubky: testData.authorPubky, id: 'xyz789' });
+        const postId2 = buildCompositeId({ pubky: testData.authorPubky, id: '0035QZPT4QG0G' });
 
         await setupUserCounts(testData.authorPubky);
 

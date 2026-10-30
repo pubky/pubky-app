@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { resolveArticleCover } from '@/libs/post/articleCover';
 import { collectAttachmentRefIndexes, isAuthorFileUri } from '@/libs/post/articleInlineMedia';
 import {
   POST_COVER_DESKTOP_FALLBACK_VARIANT,
@@ -63,7 +64,9 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     desktopTagsPanelRef.current?.focus();
   };
 
-  const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
+  // The cover this session published or edited, if any: its own store entry, since the cover is no
+  // attachment slot (ADR-0023 as amended by ADR-0027)
+  const localCoverEntry = useLocalFilesStore((s) => s.articleCovers[postId]);
 
   const { title, body, coverImage, hasCover, isCoverLoading } = usePostArticle({
     content,
@@ -73,19 +76,18 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     coverImageVariant: POST_COVER_MOBILE_VARIANT,
     coverImageDesktopVariant: POST_COVER_DESKTOP_VARIANT,
     coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
-    // Read only while the store is index-aligned with the attachments: right after an edit it already
-    // holds the new order while this render still shows the old post, and a non-image in the new
-    // slot 0 must not veto the cover the old post still has
-    localCoverType:
-      localAttachments && localAttachments.length === (attachments?.length ?? 0)
-        ? localAttachments[0]?.type
-        : undefined,
+    localCoverType: localCoverEntry?.type,
   });
+
+  // What each `attachment:{n}` of the body names depends on the stored shape (the envelope's cover,
+  // a migrated article's shifted slots, or a 0.x article's slot 0): the resolved slots stand in
+  // for the raw attachments wherever a slot is read, and local entries are index-aligned with them.
+  const { slots } = resolveArticleCover({ content, attachments });
 
   // Inline slots are typed from their file rows (the markdown never says video or image). Only the
   // slots the body references and the author owns are read: anything else never renders, and a row
-  // request for it would only add a fetch and hold the loading state. The cover slot is
-  // `usePostArticle`'s; a body that references slot 0 has no cover, so it is included exactly then.
+  // request for it would only add a fetch and hold the loading state. The cover is
+  // `usePostArticle`'s.
   const articleAuthorId = (() => {
     try {
       return parseCompositeId(postId).pubky;
@@ -94,16 +96,14 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     }
   })();
   const inlineSlotIndexes = collectAttachmentRefIndexes(body);
-  const inlineSlotUris = (attachments ?? []).filter(
+  const inlineSlotUris = slots.filter(
     (uri, index) => inlineSlotIndexes.has(index) && isAuthorFileUri(uri, articleAuthorId),
   );
   const { files: inlineFiles, isLoading: inlineFilesLoading } = useAttachmentsMetadata({ fileUris: inlineSlotUris });
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
-  // Local entries are index-aligned with attachments; slot 0 is the cover
-  // only when the slot-0 rule says so (otherwise it's an inline image).
-  const localCover = hasCover && localAttachments?.[0]?.type.startsWith('image') ? localAttachments[0] : null;
+  const localCover = hasCover && localCoverEntry?.type.startsWith('image') ? localCoverEntry : null;
 
   // A `blob:` entry is a file this session uploaded: served from memory, with no variant Nexus
   // derives from it, so it owns the desktop slot and has nothing to degrade to.
@@ -214,7 +214,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
         isArticle
         fullArticle
         articleMedia={{
-          attachments: attachments ?? [],
+          attachments: [...slots],
           authorId: articleAuthorId,
           postId,
           files: inlineFiles,

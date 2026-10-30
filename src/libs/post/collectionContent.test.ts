@@ -80,6 +80,25 @@ describe('parseCollectionContent', () => {
       });
     });
 
+    it('reads v1 items by uri, dropping their notes, and skips malformed entries', () => {
+      const raw = JSON.stringify({
+        name: 'Mixed',
+        items: [
+          { uri: 'pubky://author/pub/social/v1/posts/abc', note: 'start here' },
+          { uri: 'pubky://author/pub/social/v1/posts/def', note: null },
+          'pubky://author/pub/pubky.app/posts/ghi',
+          { note: 'no uri' },
+          42,
+        ],
+      });
+
+      expect(parseCollectionContent(raw)?.items).toEqual([
+        'pubky://author/pub/social/v1/posts/abc',
+        'pubky://author/pub/social/v1/posts/def',
+        'pubky://author/pub/pubky.app/posts/ghi',
+      ]);
+    });
+
     it('normalizes missing optional fields to undefined', () => {
       const raw = JSON.stringify({ name: 'Partial', items: ['a'] });
 

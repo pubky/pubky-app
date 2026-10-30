@@ -1,55 +1,32 @@
-import { BlobResult, FileResult } from 'pubky-app-specs';
+import { buildFile, limits } from 'pubky-social-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type {
-  TCreateBlobParams,
-  TFileAttachmentResult,
-  TFileAttachmentWithDataParams,
-  TToFileParams,
-} from '@/pipes/file/file.types';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
+import type { TFileAttachmentResult, TFileAttachmentWithDataParams } from '@/pipes/file/file.types';
+import { toSpecsValidationError } from '@/pipes/specs.errors';
 
 export class FileNormalizer {
   private constructor() {}
 
-  static toFileAttachment({ file, blobData, pubky }: TFileAttachmentWithDataParams): TFileAttachmentResult {
-    try {
-      const blobResult = this.toBlob({ blobData, pubky });
-      const fileResult = this.toFile({ file, url: blobResult.meta.url, pubky });
-      return { blobResult, fileResult };
-    } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
+  /**
+   * Where the media goes: `files/{hash}.{ext}` under the author's public tree, the hash being the
+   * id `hashMedia` computed from the bytes and the extension picked by the declared type. The
+   * bytes themselves are the body to PUT; nothing else is stored for a file.
+   */
+  static toFileAttachment({ file, mediaId, blobData, pubky }: TFileAttachmentWithDataParams): TFileAttachmentResult {
+    // With an id the builder never sees the bytes, so the size cap is checked here.
+    if (blobData.length === 0 || blobData.length > limits.maxFileSizeBytes) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'File is empty or over the size limit', {
         service: ErrorService.SocialSpecs,
         operation: 'toFileAttachment',
-        context: { file, pubky },
+        context: { size: blobData.length, limit: limits.maxFileSizeBytes, pubky },
       });
     }
-  }
-
-  private static toBlob({ blobData, pubky }: TCreateBlobParams): BlobResult {
     try {
-      const builder = PubkySpecsSingleton.get(pubky);
-      return builder.createBlob(blobData);
+      const media = buildFile(pubky, { id: mediaId, type: file.type });
+      return { media, bytes: blobData, name: file.name, contentType: file.type };
     } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.SocialSpecs,
-        operation: 'createBlob',
-        context: { pubky },
-      });
-    }
-  }
-
-  private static toFile({ file, url, pubky }: TToFileParams): FileResult {
-    try {
-      const builder = PubkySpecsSingleton.get(pubky);
-      return builder.createFile(file.name, url, file.type, file.size);
-    } catch (error) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
-        service: ErrorService.SocialSpecs,
-        operation: 'createFile',
-        context: { file, url, pubky },
-      });
+      throw toSpecsValidationError(error, 'buildFile', { name: file.name, type: file.type, pubky });
     }
   }
 }

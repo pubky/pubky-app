@@ -26,6 +26,7 @@ import type { PostContentBaseProps } from './PostContentBase.types';
  */
 export function PostContentBase({ postId, className, textClassName, mediaVariant = 'default' }: PostContentBaseProps) {
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
+  const localArticleCover = useLocalFilesStore((s) => s.articleCovers[postId]);
 
   // Fetch post details for content
   const { postDetails, isLoading } = usePostDetails(postId);
@@ -40,7 +41,8 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
   const hasContent = postDetails.content.trim().length > 0;
   const isBlurred = postDetails.is_blurred;
   const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
-  const hasAttachments = (postDetails.attachments?.length ?? 0) > 0 || (localAttachments?.length ?? 0) > 0;
+  const hasAttachments =
+    (postDetails.attachments?.length ?? 0) > 0 || (localAttachments?.length ?? 0) > 0 || Boolean(localArticleCover);
   const isCollection = postDetails.kind === 'collection';
   // Lock detection is by the top-level `lock` URL (points at the public lock.json), not by `kind`
   // (which now holds the teaser's real type). Nexus delivers `lock` (see NexusPostDetails.lock).
@@ -70,6 +72,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
         content={postDetails.content}
         attachments={postDetails.attachments}
         localAttachments={localAttachments}
+        localCover={localArticleCover}
         {...(mediaVariant === 'cards' ? { presentation: 'cards' as const } : {})}
         className={className}
       />

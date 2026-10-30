@@ -1,4 +1,5 @@
-import type { BlobResult, FileResult } from 'pubky-app-specs';
+import { buildFile } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetDatabase } from '@/database/franky/franky.helpers';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
@@ -7,13 +8,13 @@ import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { FileDetailsModel } from '@/models/file/fileDetails';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
+import { PostDetailsModel } from '@/models/post/details/postDetails';
 import { buildUrls } from '@/services/local/file/file.utils';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
-import { asOpaque } from '@/test-utils/type-assertions';
 import { LocalFileService } from './file';
 
 describe('LocalFileService', () => {
-  const testPubky: Pubky = 'operrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rd0';
+  const testPubky: Pubky = fakeOwner(1);
   const testFileId1 = 'file-test-1';
   const testFileId2 = 'file-test-2';
   const compositeId1 = buildCompositeId({ pubky: testPubky, id: testFileId1 });
@@ -203,195 +204,93 @@ describe('LocalFileService', () => {
   });
 
   describe('create', () => {
-    const createMockBlobResult = (url: string): BlobResult =>
-      asOpaque<BlobResult>({
-        blob: { data: new Uint8Array([1, 2, 3]) },
-        meta: { url },
-      });
+    const bytes = new Uint8Array([1, 2, 3]);
+    const upload = (name = 'test-file.jpg', contentType = 'image/jpeg', data = bytes) => ({
+      media: buildFile(testPubky, { bytes: data, type: contentType }),
+      bytes: data,
+      name,
+      contentType,
+    });
 
-    const createMockFileResult = (
-      fileId: string,
-      overrides?: Partial<{ name: string; content_type: string; size: number; created_at: string }>,
-    ): FileResult => {
-      const uri = `pubky://${testPubky}/pub/pubky.app/files/${fileId}`;
-      return asOpaque<FileResult>({
-        file: {
-          name: overrides?.name || `test-file-${fileId}.jpg`,
-          content_type: overrides?.content_type || 'image/jpeg',
-          size: overrides?.size || 102400,
-          created_at: overrides?.created_at || '1234567890',
-        },
-        meta: { url: uri },
-      });
-    };
+    it('creates a file record keyed owner:hash from the upload, with the urls hardcoded', async () => {
+      const attachment = upload();
+      const compositeId = buildCompositeId({ pubky: testPubky, id: attachment.media.id });
+      const before = Date.now();
 
-    it('creates a file record with correct properties', async () => {
-      const blobResult = createMockBlobResult(`pubky://${testPubky}/pub/pubky.app/blobs/blob-123`);
-      const fileResult = createMockFileResult(testFileId1);
+      await LocalFileService.create(attachment);
 
-      await LocalFileService.create({ blobResult, fileResult });
-
-      const saved = await FileDetailsModel.findById(compositeId1);
+      const saved = await FileDetailsModel.findById(compositeId);
       expect(saved).toBeDefined();
-      expect(saved?.name).toBe(fileResult.file.name);
-      expect(saved?.src).toBe(blobResult.meta.url);
-      expect(saved?.uri).toBe(fileResult.meta.url);
-      expect(saved?.content_type).toBe(fileResult.file.content_type);
-      expect(saved?.size).toBe(fileResult.file.size);
-      expect(saved?.created_at).toBe(Number(fileResult.file.created_at));
-      expect(saved?.indexed_at).toBe(Number(fileResult.file.created_at));
+      expect(saved?.name).toBe('test-file.jpg');
+      expect(saved?.src).toBe(attachment.media.url);
+      expect(saved?.uri).toBe(attachment.media.url);
+      expect(saved?.content_type).toBe('image/jpeg');
+      expect(saved?.size).toBe(3);
+      expect(saved?.created_at).toBeGreaterThanOrEqual(before);
+      expect(saved?.indexed_at).toBe(saved?.created_at);
       expect(saved?.metadata).toEqual({});
       expect(saved?.owner_id).toBe(testPubky);
-      expect(saved?.urls).toEqual(buildUrls(compositeId1));
+      expect(saved?.urls).toEqual(buildUrls(compositeId));
     });
 
-    it('creates file with all provided properties', async () => {
-      const blobResult = createMockBlobResult(`pubky://${testPubky}/blobs/blob-456`);
-      const fileResult = createMockFileResult(testFileId1, {
-        name: 'custom-image.png',
-        content_type: 'image/png',
-        size: 204800,
-        created_at: '9876543210',
-      });
+    it('replaces the row of the same bytes uploaded again: media is content addressed', async () => {
+      await LocalFileService.create(upload('first.jpg'));
+      await LocalFileService.create(upload('second.jpg'));
 
-      await LocalFileService.create({ blobResult, fileResult });
-
-      const saved = await FileDetailsModel.findById(compositeId1);
-      expect(saved?.name).toBe('custom-image.png');
-      expect(saved?.content_type).toBe('image/png');
-      expect(saved?.size).toBe(204800);
-      expect(saved?.created_at).toBe(9876543210);
-      expect(saved?.indexed_at).toBe(9876543210);
+      const rows = await FileDetailsModel.table.toArray();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].name).toBe('second.jpg');
     });
 
-    it('builds correct URLs from composite ID', async () => {
-      const blobResult = createMockBlobResult(`pubky://${testPubky}/blobs/blob-789`);
-      const fileResult = createMockFileResult(testFileId1);
-
-      await LocalFileService.create({ blobResult, fileResult });
-
-      const saved = await FileDetailsModel.findById(compositeId1);
-      const expectedUrls = buildUrls(compositeId1);
-      expect(saved?.urls).toEqual(expectedUrls);
-      expect(saved?.urls.feed).toContain('/feed');
-      expect(saved?.urls.main).toContain('/main');
-      expect(saved?.urls.small).toContain('/small');
-    });
-
-    it('does not create file when URI is invalid', async () => {
-      const blobResult = createMockBlobResult(`pubky://${testPubky}/blobs/blob-invalid`);
-      const fileResult = asOpaque<FileResult>({
-        file: {
-          name: 'test.jpg',
-          content_type: 'image/jpeg',
-          size: 102400,
-          created_at: '1234567890',
-        },
-        meta: { url: 'invalid-uri' },
-      });
-
-      await LocalFileService.create({ blobResult, fileResult });
-
-      // Should not create any file since buildCompositeIdFromPubkyUri returns null
-      const allFiles = await FileDetailsModel.table.toArray();
-      expect(allFiles).toHaveLength(0);
-    });
-
-    it('propagates database error when create fails', async () => {
-      const blobResult = createMockBlobResult(`pubky://${testPubky}/blobs/blob-error`);
-      const fileResult = createMockFileResult(testFileId1);
-      const databaseError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to create record in file_details', {
+    it('propagates database error when the write fails', async () => {
+      const dbError = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Database write failed', {
         service: ErrorService.Local,
-        operation: 'create',
-        context: { error: 'Database constraint violation' },
+        operation: 'upsert',
       });
+      vi.spyOn(FileDetailsModel, 'upsert').mockRejectedValueOnce(dbError);
 
-      vi.spyOn(FileDetailsModel, 'create').mockRejectedValueOnce(databaseError);
-
-      await expect(LocalFileService.create({ blobResult, fileResult })).rejects.toMatchObject({
+      await expect(LocalFileService.create(upload())).rejects.toMatchObject({
         category: ErrorCategory.Database,
         code: DatabaseErrorCode.WRITE_FAILED,
-        message: 'Failed to create record in file_details',
       });
-    });
-
-    it('propagates generic error when create throws', async () => {
-      const blobResult = createMockBlobResult(`pubky://${testPubky}/blobs/blob-generic-error`);
-      const fileResult = createMockFileResult(testFileId1);
-      const error = new Error('Unexpected database error');
-
-      vi.spyOn(FileDetailsModel, 'create').mockRejectedValueOnce(error);
-
-      await expect(LocalFileService.create({ blobResult, fileResult })).rejects.toThrow('Unexpected database error');
-    });
-
-    it('extracts owner_id from composite ID', async () => {
-      const blobResult = createMockBlobResult(`pubky://${testPubky}/blobs/blob-owner`);
-      const fileResult = createMockFileResult(testFileId1);
-
-      await LocalFileService.create({ blobResult, fileResult });
-
-      const saved = await FileDetailsModel.findById(compositeId1);
-      expect(saved?.owner_id).toBe(testPubky);
+      vi.restoreAllMocks();
     });
   });
 
-  describe('hasOtherBlobReference', () => {
-    const sharedBlobSrc = `pubky://${testPubky}/pub/pubky.app/blobs/shared-blob`;
-
-    it('returns true when a cached record outside the exclude set points at the blob', async () => {
-      await LocalFileService.createMany({
-        files: [
-          createMockFile(testFileId1, { src: sharedBlobSrc }),
-          createMockFile(testFileId2, { src: sharedBlobSrc }),
-        ],
-      });
-
-      // Deleting file1 only: file2 still references the blob
-      const result = await LocalFileService.hasOtherBlobReference({
-        blobSrc: sharedBlobSrc,
-        excludeFileIds: new Set([compositeId1]),
-      });
-
-      expect(result).toBe(true);
+  describe('isReferencedElsewhere', () => {
+    const mediaUri = buildFile(testPubky, { bytes: new Uint8Array([9]), type: 'image/png' }).url;
+    const post = (id: string, attachments: string[] | null, content = 'text') => ({
+      id,
+      content,
+      kind: 'image',
+      uri: `pubky://${testPubky}/pub/social/v1/posts/${id.split(':')[1]}`,
+      indexed_at: 1,
+      attachments,
     });
 
-    it('returns false when every record referencing the blob is in the exclude set', async () => {
-      await LocalFileService.createMany({
-        files: [
-          createMockFile(testFileId1, { src: sharedBlobSrc }),
-          createMockFile(testFileId2, { src: sharedBlobSrc }),
-        ],
-      });
+    it('is true when another cached post attaches the media', async () => {
+      await PostDetailsModel.table.bulkPut([post(`${testPubky}:A`, [mediaUri]), post(`${testPubky}:B`, [mediaUri])]);
 
-      const result = await LocalFileService.hasOtherBlobReference({
-        blobSrc: sharedBlobSrc,
-        excludeFileIds: new Set([compositeId1, compositeId2]),
-      });
-
-      expect(result).toBe(false);
+      expect(await LocalFileService.isReferencedElsewhere({ uri: mediaUri, excludePostId: `${testPubky}:A` })).toBe(
+        true,
+      );
     });
 
-    it('returns false when no cached record points at the blob', async () => {
-      const result = await LocalFileService.hasOtherBlobReference({
-        blobSrc: sharedBlobSrc,
-        excludeFileIds: new Set<string>(),
-      });
+    it('is false when only the excluded post references it, or no post does', async () => {
+      await PostDetailsModel.table.put(post(`${testPubky}:A`, [mediaUri]));
 
-      expect(result).toBe(false);
+      expect(await LocalFileService.isReferencedElsewhere({ uri: mediaUri, excludePostId: `${testPubky}:A` })).toBe(
+        false,
+      );
+      expect(await LocalFileService.isReferencedElsewhere({ uri: 'pubky://nobody/x.png' })).toBe(false);
     });
 
-    it('ignores records that reference a different blob', async () => {
-      await LocalFileService.createMany({
-        files: [createMockFile(testFileId2, { src: `pubky://${testPubky}/pub/pubky.app/blobs/other-blob` })],
-      });
+    it('counts a reference inside the content: a collection or article cover', async () => {
+      await PostDetailsModel.table.put(
+        post(`${testPubky}:C`, null, JSON.stringify({ name: 'c', cover_image: mediaUri })),
+      );
 
-      const result = await LocalFileService.hasOtherBlobReference({
-        blobSrc: sharedBlobSrc,
-        excludeFileIds: new Set([compositeId1]),
-      });
-
-      expect(result).toBe(false);
+      expect(await LocalFileService.isReferencedElsewhere({ uri: mediaUri })).toBe(true);
     });
   });
 });

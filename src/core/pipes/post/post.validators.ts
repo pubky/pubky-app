@@ -1,8 +1,10 @@
+import { buildUri } from 'pubky-social-specs';
 import { PostController } from '@/controllers/post/post';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isPostDeleted } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 
 export type TValidatePostIdParams = {
   postId: string;
@@ -12,6 +14,11 @@ export type TValidatePostIdParams = {
 export class PostValidators {
   constructor() {}
 
+  /**
+   * The v1 reference of a post that exists locally and is not tombstoned, rebuilt from its
+   * composite id: never the cached row's `uri`, which Nexus may still spell the 0.x way for an
+   * author who has not migrated. Nexus resolves either spelling to the one post.
+   */
   static async validatePostId({ postId, message }: TValidatePostIdParams): Promise<string> {
     const parentPost = await PostController.getDetails({ compositeId: postId });
     // Treat tombstones (the Nexus `deleted` flag, or the legacy `[DELETED]`
@@ -26,6 +33,7 @@ export class PostValidators {
         context: { postId },
       });
     }
-    return parentPost.uri;
+    const { pubky, id } = parseCompositeId(postId);
+    return buildUri(pubky, 'post', id);
   }
 }

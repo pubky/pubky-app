@@ -260,24 +260,29 @@ describe('PostInput - editing while the post row changes under the dialog (integ
     expect(mocks.editor?.markdown).toBe(EDITOR_BODY);
     expect(mocks.useAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [CLIP_URI] });
 
-    // The insert stages the file under a draft URI of the author's; nothing is uploaded yet
+    // The insert stages the file under a media URI of the author's; nothing is uploaded yet
     let stagedUri = '';
     await act(async () => {
       stagedUri = (await mocks.editor?.upload(image)) ?? '';
     });
-    expect(stagedUri).toMatch(/\/pub\/pubky\.app\/files\/draft-[0-9a-f]{7}$/);
+    expect(stagedUri).toMatch(/\/pub\/social\/v1\/files\/[0-9A-HJKMNP-TV-Z]{26}\.png$/);
     expect(mocks.commitCreateFile).not.toHaveBeenCalled();
     const editedBody = `${EDITOR_BODY}\n\n![new](${stagedUri})`;
     act(() => mocks.editor?.change(editedBody));
     settle();
 
     // The save uploads the staged file first; the refused post write leaves it in the session. Its local
-    // write carries the new slot and file, then the rollback takes them back, both while the save runs
-    const writtenArticle = JSON.stringify({ title: 'Essay', body: `${PUBLISHED_BODY}\n\n![new](attachment:2)` });
+    // write carries the new slot and file, then the rollback takes them back, both while the save runs.
+    // The 0.x slot-0 cover moves into the envelope on this first edit, so the inline slots count from 0
+    const writtenArticle = JSON.stringify({
+      title: 'Essay',
+      body: 'Intro\n\n![shot](attachment:0)\n\nOutro\n\n![new](attachment:1)',
+      cover_image: COVER_URI,
+    });
     mocks.commitCreateFile.mockResolvedValueOnce(NEW_URI);
     refuseNextSave(
       rerender,
-      editArticle(writtenArticle, [COVER_URI, CLIP_URI, NEW_URI]),
+      editArticle(writtenArticle, [CLIP_URI, NEW_URI]),
       editArticle(PUBLISHED_ARTICLE, [COVER_URI, CLIP_URI]),
     );
     await save(1);
@@ -296,8 +301,12 @@ describe('PostInput - editing while the post row changes under the dialog (integ
     expect(mocks.commitEdit).toHaveBeenLastCalledWith(
       expect.objectContaining({
         compositePostId: POST_ID,
-        content: writtenArticle,
-        attachments: expect.objectContaining({ nextOrder: [COVER_URI, CLIP_URI, NEW_URI] }),
+        content: JSON.stringify({
+          title: 'Essay',
+          body: 'Intro\n\n![shot](attachment:0)\n\nOutro\n\n![new](attachment:1)',
+        }),
+        attachments: expect.objectContaining({ nextOrder: [CLIP_URI, NEW_URI] }),
+        coverImage: COVER_URI,
       }),
     );
     // The retry reuses the upload of the refused save instead of sending the file again

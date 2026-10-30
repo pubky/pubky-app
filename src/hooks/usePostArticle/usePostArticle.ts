@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAttachmentsMetadata } from '@/hooks/useAttachmentsMetadata/useAttachmentsMetadata';
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { articleHasInlineSlotZero } from '@/libs/post/articleInlineMedia';
+import { resolveArticleCover } from '@/libs/post/articleCover';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { toast } from '@/molecules/Toaster/toast';
 import type { FileVariant } from '@/services/nexus/file/file.types';
@@ -59,9 +59,9 @@ interface UsePostArticleResult {
   body: string;
   coverImage: CoverImage | null;
   /**
-   * Slot-0 cover rule: attachments[0] is the cover unless the body references
-   * `attachment:0` (then slot 0 is an inline image and the article has no
-   * cover). Callers must gate any locally sourced cover on this too.
+   * Whether the article has a cover: the envelope's `cover_image`, or slot 0 of a 0.x article
+   * unless the body references `attachment:0` (`resolveArticleCover`). Callers must gate any
+   * locally sourced cover on this too.
    */
   hasCover: boolean;
   isCoverLoading: boolean;
@@ -70,7 +70,7 @@ interface UsePostArticleResult {
 /**
  * Custom hook to extract article data from post content and attachments
  *
- * The cover URL is a pure function of the attachment URI and the variant, so it
+ * The cover URL is a pure function of the cover URI and the variant, so it
  * exists on the first render that has post details: no file-metadata round trip
  * stands in front of the hero. The metadata row is a progressive refinement (alt
  * text, intrinsic size) and stays authoritative once the lookup settles: a row
@@ -78,7 +78,7 @@ interface UsePostArticleResult {
  * as it did when the cover waited for the row. A row persisted after the post
  * row still renders, because the lookup is live.
  *
- * @param params.content - The JSON stringified article content containing title and body
+ * @param params.content - The article envelope: title, body and, for a v1 article, its cover
  * @param params.attachments - The file attachment URIs for the post
  * @param params.coverImageVariant - The variant to use when generating the cover image URL
  * @returns Object containing title, body, and coverImage
@@ -87,7 +87,7 @@ interface UsePostArticleResult {
  * ```tsx
  * const { title, body, coverImage } = usePostArticle({
  *   content: '{"title":"My Article","body":"Article content..."}',
- *   attachments: ['pubky://user/pub/pubky.app/files/file-123'],
+ *   attachments: ['pubky://user/pub/social/v1/files/0ABC…/image.png'],
  *   coverImageVariant: FileVariant.FEED,
  * });
  * ```
@@ -120,15 +120,17 @@ export function usePostArticle({
     }
   }, [content]);
 
-  // Slot-0 cover rule, computed synchronously from the published body so the
-  // cover never flashes for articles whose slot 0 is an inline image.
-  const hasInlineSlotZero = articleHasInlineSlotZero(parseArticleContent(content)?.body ?? '');
-  const hasCover = Boolean(attachments?.length || localAttachmentCount) && !hasInlineSlotZero;
+  // Where the cover is, computed synchronously from the envelope and the published body so the
+  // cover never flashes for articles whose slot 0 is an inline image. Unlocked (Locks) content has
+  // no Nexus attachments at all, its files are the reader's own: it keeps the slot-0 convention,
+  // so a local slot 0 is its cover exactly when the slot-0 rule says so.
+  const resolved = resolveArticleCover({ content, attachments });
+  const hasCover = resolved.cover !== null || (Boolean(localAttachmentCount) && resolved.legacyCoverSlot);
 
-  // Only the cover slot is relevant; inline attachments render inside the
+  // Only the cover is relevant; inline attachments render inside the
   // article body and are never resolved here. An edit that replaces or removes
   // the cover derives a new result, so no stale cover can linger.
-  const coverFileUri = hasCover ? attachments?.[0] : undefined;
+  const coverFileUri = resolved.cover ?? undefined;
   const { files, isLoading: isCoverLoading } = useAttachmentsMetadata({
     fileUris: coverFileUri ? [coverFileUri] : [],
     onError: () => toast({ variant: 'error', description: 'Could not load cover image' }),

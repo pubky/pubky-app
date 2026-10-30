@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
 import type { Pubky } from '@/models/models.types';
 import type { CollectionPost } from '@/models/post/collection/collectionPost.types';
-import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { stubMemoryHomeserver } from '@/test-utils/homeserver';
 import { useAuthoredCollections } from './useAuthoredCollections';
 
 const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
@@ -13,7 +13,7 @@ const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
 describe('useAuthoredCollections forced local reads', () => {
   beforeEach(() => {
     useAuthStore.setState({ currentUserPubky: AUTHOR });
-    vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    stubMemoryHomeserver(AUTHOR);
   });
 
   afterEach(() => vi.restoreAllMocks());

@@ -69,14 +69,16 @@ export function useEditAttachments({
 
     // The create flow writes the store entry in attachment order, so zipping by
     // index is safe; on a length mismatch the store entry is ignored entirely.
-    // `displayUris` is always a leading slice of `uris` (the article cover), so
-    // indexing by strip position stays aligned with the store entry.
-    const storeAttachments = useLocalFilesStore.getState().posts[postId];
+    // An article's strip holds its cover alone, which is no attachment slot: its
+    // entry is the store's cover entry for the post, not one of the list.
+    const store = useLocalFilesStore.getState();
+    const storeAttachments = store.posts[postId];
     const storeByIndex = storeAttachments?.length === uris.length ? storeAttachments : undefined;
+    const storeCover = displayUris ? store.articleCovers[postId] : undefined;
 
     setExistingAttachments(
       stripUris.map((uri, index) => {
-        const stored = storeByIndex?.[index];
+        const stored = displayUris ? storeCover : storeByIndex?.[index];
         return stored
           ? { uri, type: stored.type, name: stored.name, urls: stored.urls }
           : { uri, type: PLACEHOLDER_TYPE, name: placeholderName(uri), urls: null };

@@ -21,6 +21,10 @@ All write operations must follow this pattern:
 4. Reconcile conflicts asynchronously
 ```
 
+A post edit is a read-check-write (ADR-0027): the Dexie row takes the projection first (`PostNormalizer.toLocalEdit`), then the application reads the published head version inside a write fence (`listAll` the post's directory, `pickHeadVersion`, `getBytes`, `decodeObject`), rebuilds the next version from it (`PostNormalizer.toEdit`) and writes it with `putBlob`; a retried status re-runs the read, and a failure rolls the row back. The 0.x copy of a migrated post is never rewritten.
+
+A post has two spellings while the 0.x tree exists: `pubky://{owner}/pub/social/v1/posts/{id}` and `pubky://{owner}/pub/pubky.app/posts/{id}`. Every lookup by reference (replies of a parent, collection membership, a save target) matches both through `postReferenceSpellings`; every new reference is written in the v1 spelling.
+
 ## Controller Method Naming
 
 Controller method names encode IO behavior and delivery guarantees:
@@ -86,27 +90,27 @@ class PostController {
     // 1. Normalize file attachments via pipes
     const fileAttachments = attachments ? await this.normalizeFileAttachments({ attachments, pubky: authorId }) : [];
 
-    // 2. Validate/normalize post via pipes (pubky-app-specs)
-    const { post, meta } = await PostNormalizer.to({ content, kind: postKind, attachments: fileAttachments }, authorId);
+    // 2. Validate/normalize post via pipes (pubky-social-specs): `buildPost` names and encodes it
+    const post = PostNormalizer.to({ content, kind: postKind, attachments: fileAttachments }, authorId);
 
     // 3. Normalize tags via pipes
     const tagList = tags ? tags.map((tag) => TagNormalizer.from({ taggerId: authorId, ... })) : [];
 
     // 4. Delegate to application (local write + homeserver sync)
-    await PostApplication.commitCreate({ compositePostId, post, postUrl: meta.url, fileAttachments, tags: tagList });
+    await PostApplication.commitCreate({ compositePostId, post, fileAttachments, tags: tagList });
   }
 }
 
 class PostApplication {
-  static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags }: TCreatePostInput) {
-    // 1. Upload files first (dependency)
+  static async commitCreate({ compositePostId, post, fileAttachments, tags }: TCreatePostInput) {
+    // 1. Upload files first (dependency); a file whose hash already exists is not sent again
     if (fileAttachments?.length > 0) await FileApplication.commitCreate({ fileAttachments });
 
     // 2. Write to IndexedDB
     await LocalPostService.create({ compositePostId, post });
 
-    // 3. Sync to homeserver
-    await HomeserverService.request({ method: HttpMethod.PUT, url: postUrl, bodyJson: post.toJson() });
+    // 3. Sync to homeserver: the built object's bytes, at the URL the data model named
+    await HomeserverService.putBlob({ url: post.url, blob: post.body });
 
     // 4. Create tags
     if (tags?.length > 0) await TagApplication.commitCreate({ tagList: tags });

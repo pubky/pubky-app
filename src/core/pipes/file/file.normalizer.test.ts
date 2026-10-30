@@ -1,356 +1,110 @@
-import { BlobResult, FileResult } from 'pubky-app-specs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildFile, limits } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
+import { describe, expect, it } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { FileNormalizer } from '@/pipes/file/file.normalizer';
-import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
-import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  buildPubkyUri,
-  restoreMocks,
-  setupIntegrationTestMocks,
-  setupUnitTestMocks,
-  TEST_PUBKY,
-} from '../pipes.test-utils';
 
-// File-specific test data
-const FILE_TEST_DATA = {
-  name: 'test-image.png',
-  type: 'image/png',
-  size: 1024,
-  content: new Uint8Array([1, 2, 3, 4, 5]),
-  blobUrl: buildPubkyUri(TEST_PUBKY.USER_1, 'blobs/0032BLOBID123'),
-};
+const OWNER = fakeOwner(1);
+const BYTES = new Uint8Array([1, 2, 3, 4, 5]);
+const file = (name = 'test-image.png', type = 'image/png') => new File([BYTES], name, { type });
 
-// Helper to create mock File objects
-const createMockFile = (
-  name = FILE_TEST_DATA.name,
-  type = FILE_TEST_DATA.type,
-  size = FILE_TEST_DATA.size,
-  content = FILE_TEST_DATA.content,
-): File =>
-  asOpaque<File>({
-    name,
-    type,
-    size,
-    arrayBuffer: vi.fn().mockResolvedValue(content.buffer),
+describe('FileNormalizer.toFileAttachment', () => {
+  it('names the media by its hash and the extension of its type, and keeps the bytes and the picked name', () => {
+    const media = buildFile(OWNER, { bytes: BYTES, type: 'image/png' });
+
+    const result = FileNormalizer.toFileAttachment({ file: file(), mediaId: media.id, blobData: BYTES, pubky: OWNER });
+
+    expect(result.media).toEqual(media);
+    expect(result.media.url).toBe(`pubky://${OWNER}/pub/social/v1/files/${media.id}.png`);
+    expect(result.bytes).toBe(BYTES);
+    expect(result.name).toBe('test-image.png');
+    expect(result.contentType).toBe('image/png');
+    expect(result.preexisting).toBeUndefined();
   });
 
-describe('FileNormalizer', () => {
-  const createMockBuilder = (
-    overrides?: Partial<{
-      createBlob: ReturnType<typeof vi.fn>;
-      createFile: ReturnType<typeof vi.fn>;
-    }>,
-  ) => ({
-    createBlob: vi.fn((blobData: Uint8Array) =>
-      asOpaque<BlobResult>({
-        blob: { data: blobData, toJson: vi.fn(() => ({ data: Array.from(blobData) })) },
-        meta: { url: FILE_TEST_DATA.blobUrl },
-      }),
-    ),
-    createFile: vi.fn((name: string, src: string, contentType: string, size: number) =>
-      asOpaque<FileResult>({
-        file: {
-          name,
-          src,
-          content_type: contentType,
-          size,
-          toJson: vi.fn(() => ({ name, src, content_type: contentType, size })),
-        },
-        meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `files/${Date.now()}`) },
-      }),
-    ),
-    ...overrides,
+  it("names a CSV upload with its own extension: text/csv is in the data model's list", () => {
+    const media = buildFile(OWNER, { bytes: BYTES, type: 'text/csv' });
+
+    const result = FileNormalizer.toFileAttachment({
+      file: file('table.csv', 'text/csv'),
+      mediaId: media.id,
+      blobData: BYTES,
+      pubky: OWNER,
+    });
+
+    expect(result.media.url).toBe(`pubky://${OWNER}/pub/social/v1/files/${media.id}.csv`);
+    expect(result.contentType).toBe('text/csv');
   });
 
-  /**
-   * Unit Tests
-   */
-  describe('Unit Tests', () => {
-    let mockBuilder: ReturnType<typeof createMockBuilder>;
+  it('names the same bytes the same whatever the file is called: media is content addressed', () => {
+    const { id } = buildFile(OWNER, { bytes: BYTES, type: 'image/png' });
 
-    beforeEach(() => {
-      mockBuilder = createMockBuilder();
-      setupUnitTestMocks(mockBuilder);
+    const a = FileNormalizer.toFileAttachment({ file: file('a.png'), mediaId: id, blobData: BYTES, pubky: OWNER });
+    const b = FileNormalizer.toFileAttachment({ file: file('b.png'), mediaId: id, blobData: BYTES, pubky: OWNER });
+
+    expect(a.media.url).toBe(b.media.url);
+  });
+
+  it.each([
+    ['application/pdf', 'pdf'],
+    ['video/mp4', 'mp4'],
+    ['audio/mpeg', 'mp3'],
+    ['image/svg+xml', 'svg'],
+    ['application/octet-stream', 'bin'],
+    ['', 'bin'],
+  ])('picks the extension of the declared type %s (%s)', (type, extension) => {
+    const { id } = buildFile(OWNER, { bytes: BYTES, type });
+
+    const result = FileNormalizer.toFileAttachment({
+      file: file('x', type),
+      mediaId: id,
+      blobData: BYTES,
+      pubky: OWNER,
     });
 
-    afterEach(restoreMocks);
+    expect(result.media.path).toBe(`/pub/social/v1/files/${id}.${extension}`);
+  });
 
-    describe('toFileAttachment - successful creation', () => {
-      it('should create file attachment with blobResult and fileResult', () => {
-        const file = createMockFile();
-        const result = FileNormalizer.toFileAttachment({
-          file,
-          blobData: FILE_TEST_DATA.content,
-          pubky: TEST_PUBKY.USER_1,
-        });
+  it('refuses empty bytes and bytes over the size limit, which the builder never sees with an id', () => {
+    const { id } = buildFile(OWNER, { bytes: BYTES, type: 'image/png' });
+    const refuse = (blobData: Uint8Array) =>
+      FileNormalizer.toFileAttachment({ file: file(), mediaId: id, blobData, pubky: OWNER });
 
-        expect(result).toHaveProperty('blobResult');
-        expect(result).toHaveProperty('fileResult');
-      });
-
-      it('should call createBlob with the provided blobData', () => {
-        const file = createMockFile();
-        FileNormalizer.toFileAttachment({ file, blobData: FILE_TEST_DATA.content, pubky: TEST_PUBKY.USER_1 });
-
-        expect(mockBuilder.createBlob).toHaveBeenCalledWith(FILE_TEST_DATA.content);
-      });
-
-      it('should call createFile with correct parameters using blob URL', () => {
-        const file = createMockFile();
-        FileNormalizer.toFileAttachment({ file, blobData: FILE_TEST_DATA.content, pubky: TEST_PUBKY.USER_1 });
-
-        expect(mockBuilder.createFile).toHaveBeenCalledWith(
-          FILE_TEST_DATA.name,
-          FILE_TEST_DATA.blobUrl,
-          FILE_TEST_DATA.type,
-          FILE_TEST_DATA.size,
-        );
-      });
-
-      it('should return correct structure with blobResult and fileResult', () => {
-        const file = createMockFile();
-        const result = FileNormalizer.toFileAttachment({
-          file,
-          blobData: FILE_TEST_DATA.content,
-          pubky: TEST_PUBKY.USER_1,
-        });
-
-        expect(result.blobResult.blob).toBeDefined();
-        expect(result.blobResult.meta.url).toBeDefined();
-        expect(result.fileResult.file).toBeDefined();
-        expect(result.fileResult.meta.url).toBeDefined();
-      });
-
-      it('should keep original filename for uploads', () => {
-        const file = createMockFile('document.pdf', 'application/pdf', 2048);
-
-        FileNormalizer.toFileAttachment({ file, blobData: FILE_TEST_DATA.content, pubky: TEST_PUBKY.USER_1 });
-
-        expect(mockBuilder.createFile).toHaveBeenCalledWith(
-          'document.pdf',
-          FILE_TEST_DATA.blobUrl,
-          'application/pdf',
-          2048,
-        );
-      });
-    });
-
-    describe('toFileAttachment - different inputs', () => {
-      it.each([
-        ['different name/type', 'doc.pdf', 'application/pdf', 2048],
-        ['image/jpeg', 'photo.jpg', 'image/jpeg', 5000],
-        ['binary', 'data.bin', 'application/octet-stream', 10_000_000],
-      ])('should handle %s', (_, name, type, size) => {
-        const file = createMockFile(name, type, size);
-        FileNormalizer.toFileAttachment({ file, blobData: FILE_TEST_DATA.content, pubky: TEST_PUBKY.USER_1 });
-
-        expect(mockBuilder.createFile).toHaveBeenCalledWith(name, expect.any(String), type, size);
-      });
-
-      it.each([
-        ['USER_1', TEST_PUBKY.USER_1],
-        ['USER_2', TEST_PUBKY.USER_2],
-      ])('should handle pubky: %s', (_, pubky) => {
-        const file = createMockFile();
-        FileNormalizer.toFileAttachment({ file, blobData: FILE_TEST_DATA.content, pubky });
-
-        expect(PubkySpecsSingleton.get).toHaveBeenCalledWith(pubky);
-      });
-    });
-
-    describe('toFileAttachment - error handling', () => {
-      it('should throw AppError with correct properties when createBlob fails', () => {
-        const errorMessage = 'Invalid blob data';
-        mockBuilder.createBlob.mockImplementation(() => {
-          throw errorMessage;
-        });
-        const file = createMockFile();
-
-        try {
-          FileNormalizer.toFileAttachment({ file, blobData: FILE_TEST_DATA.content, pubky: TEST_PUBKY.USER_1 });
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.SocialSpecs);
-          expect(appError.operation).toBe('toFileAttachment');
-        }
-      });
-
-      it('should throw AppError with correct properties when createFile fails', () => {
-        const errorMessage = 'Invalid file metadata';
-        mockBuilder.createFile.mockImplementation(() => {
-          throw errorMessage;
-        });
-        const file = createMockFile();
-
-        try {
-          FileNormalizer.toFileAttachment({ file, blobData: FILE_TEST_DATA.content, pubky: TEST_PUBKY.USER_1 });
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.SocialSpecs);
-          expect(appError.operation).toBe('toFileAttachment');
-        }
-      });
-
-      it('should not call createFile when createBlob throws', () => {
-        mockBuilder.createBlob.mockImplementation(() => {
-          throw 'Blob error';
-        });
-        const file = createMockFile();
-
-        expect(() =>
-          FileNormalizer.toFileAttachment({ file, blobData: FILE_TEST_DATA.content, pubky: TEST_PUBKY.USER_1 }),
-        ).toThrow(AppError);
-        expect(mockBuilder.createFile).not.toHaveBeenCalled();
-      });
-    });
-
-    describe('toFileAttachment - edge cases', () => {
-      it.each([
-        ['empty name', '', 'image/png', 100],
-        ['empty type', 'file.bin', '', 100],
-        ['special chars', 'test file (1) [copy].png', 'image/png', 100],
-        ['unicode', '图片-测试-🎉.png', 'image/png', 100],
-      ])('should handle %s in file metadata', (_, name, type, size) => {
-        const file = createMockFile(name, type, size);
-        FileNormalizer.toFileAttachment({ file, blobData: FILE_TEST_DATA.content, pubky: TEST_PUBKY.USER_1 });
-
-        expect(mockBuilder.createFile).toHaveBeenCalledWith(name, expect.any(String), type, size);
-      });
+    expect(() => refuse(new Uint8Array())).toThrow(AppError);
+    let caught: unknown;
+    try {
+      refuse(new Uint8Array(limits.maxFileSizeBytes + 1));
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toMatchObject({
+      category: ErrorCategory.Validation,
+      code: ValidationErrorCode.INVALID_INPUT,
+      service: ErrorService.SocialSpecs,
+      operation: 'toFileAttachment',
+      context: expect.objectContaining({ limit: limits.maxFileSizeBytes }),
     });
   });
 
-  /**
-   * Integration Tests - Real pubky-app-specs library
-   */
-  describe('Integration Tests', () => {
-    beforeEach(() => {
-      setupIntegrationTestMocks();
-    });
-    afterEach(restoreMocks);
-
-    describe('successful creation with real library', () => {
-      it('should create valid result with correct URL formats', () => {
-        const file = createMockFile();
-        const result = FileNormalizer.toFileAttachment({
-          file,
-          blobData: FILE_TEST_DATA.content,
-          pubky: TEST_PUBKY.USER_1,
-        });
-
-        expect(result.blobResult.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/blobs\/.+/);
-        expect(result.fileResult.meta.url).toMatch(/^pubky:\/\/.+\/pub\/pubky\.app\/files\/.+/);
-      });
-
-      it('should link file to blob via src property', () => {
-        const file = createMockFile();
-        const result = FileNormalizer.toFileAttachment({
-          file,
-          blobData: FILE_TEST_DATA.content,
-          pubky: TEST_PUBKY.USER_1,
-        });
-
-        expect(result.fileResult.file.toJson().src).toBe(result.blobResult.meta.url);
-      });
-
-      it('should store correct file metadata', () => {
-        const file = createMockFile('my-image.png', 'image/png', 2048);
-        const result = FileNormalizer.toFileAttachment({
-          file,
-          blobData: FILE_TEST_DATA.content,
-          pubky: TEST_PUBKY.USER_1,
-        });
-
-        const fileJson = result.fileResult.file.toJson();
-        expect(fileJson.name).toBe('my-image.png');
-        expect(fileJson.content_type).toBe('image/png');
-        expect(fileJson.size).toBe(2048);
-      });
-
-      it('should create unique URLs for files with different content (content-addressed)', () => {
-        const content1 = new Uint8Array([1, 2, 3, 4, 5]);
-        const content2 = new Uint8Array([6, 7, 8, 9, 10]);
-        const file1 = createMockFile('f1.png', 'image/png', 5, content1);
-        const file2 = createMockFile('f2.png', 'image/png', 5, content2);
-
-        const result1 = FileNormalizer.toFileAttachment({ file: file1, blobData: content1, pubky: TEST_PUBKY.USER_1 });
-        const result2 = FileNormalizer.toFileAttachment({ file: file2, blobData: content2, pubky: TEST_PUBKY.USER_1 });
-
-        expect(result1.blobResult.meta.url).not.toBe(result2.blobResult.meta.url);
-      });
+  it("wraps the data model's refusal of a bad id or owner with its code and field", () => {
+    let caught: unknown;
+    try {
+      FileNormalizer.toFileAttachment({ file: file(), mediaId: 'not-a-hash', blobData: BYTES, pubky: OWNER });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(AppError);
+    expect(caught).toMatchObject({
+      service: ErrorService.SocialSpecs,
+      operation: 'buildFile',
+      context: expect.objectContaining({ code: 'format', name: 'test-image.png', type: 'image/png' }),
     });
 
-    describe('validation with real library', () => {
-      /**
-       * Note: The pubky-app-specs library validates that file size must be > 0.
-       */
-      it('should throw AppError for empty file content (size validation)', () => {
-        const emptyContent = new Uint8Array([]);
-        const emptyFile = createMockFile('empty.txt', 'text/plain', 0, emptyContent);
-
-        try {
-          FileNormalizer.toFileAttachment({ file: emptyFile, blobData: emptyContent, pubky: TEST_PUBKY.USER_1 });
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(AppError);
-          const appError = error as AppError;
-          expect(appError.category).toBe(ErrorCategory.Validation);
-          expect(appError.code).toBe(ValidationErrorCode.INVALID_INPUT);
-          expect(appError.service).toBe(ErrorService.SocialSpecs);
-        }
-      });
-
-      it('should handle minimum valid file size', () => {
-        const tinyContent = new Uint8Array([1]);
-        const tinyFile = createMockFile('tiny.bin', 'application/octet-stream', 1, tinyContent);
-        const result = FileNormalizer.toFileAttachment({
-          file: tinyFile,
-          blobData: tinyContent,
-          pubky: TEST_PUBKY.USER_1,
-        });
-
-        expect(result.fileResult.file.toJson().size).toBe(1);
-      });
-
-      it('should handle moderate file content (10KB)', () => {
-        const moderateContent = new Uint8Array(10000).fill(255);
-        const moderateFile = createMockFile(
-          'moderate.bin',
-          'application/octet-stream',
-          moderateContent.length,
-          moderateContent,
-        );
-        const result = FileNormalizer.toFileAttachment({
-          file: moderateFile,
-          blobData: moderateContent,
-          pubky: TEST_PUBKY.USER_1,
-        });
-
-        expect(result.fileResult.file.toJson().size).toBe(moderateContent.length);
-      });
-
-      it('should handle large file size (10MB)', () => {
-        const tenMB = 10 * 1024 * 1024;
-        const largeContent = new Uint8Array(tenMB).fill(255);
-        const largeFile = createMockFile('large.bin', 'application/octet-stream', largeContent.length, largeContent);
-        const result = FileNormalizer.toFileAttachment({
-          file: largeFile,
-          blobData: largeContent,
-          pubky: TEST_PUBKY.USER_1,
-        });
-
-        expect(result.fileResult.file.toJson().size).toBe(largeContent.length);
-      }, 20000);
-    });
+    const { id } = buildFile(OWNER, { bytes: BYTES, type: 'image/png' });
+    expect(() =>
+      FileNormalizer.toFileAttachment({ file: file(), mediaId: id, blobData: BYTES, pubky: 'invalid-pubky' }),
+    ).toThrow(AppError);
   });
 });

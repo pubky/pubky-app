@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import type { ClipboardEvent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from '@/molecules/Toaster/toast';
@@ -9,7 +10,7 @@ import { asInvalid } from '@/test-utils/type-assertions';
 import { useAddContentForm } from './useAddContentForm';
 import { ADD_CONTENT_FORM_FIELDS } from './useAddContentForm.types';
 
-const AUTHOR = 'a'.repeat(52);
+const AUTHOR = fakeOwner(1);
 const VIEWER = 'v'.repeat(52);
 const POST_ID = '00357R34CQ8Q0';
 const COMPOSITE_ID = `${AUTHOR}:${POST_ID}`;
