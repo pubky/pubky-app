@@ -4,7 +4,7 @@
 /* eslint-disable simple-import-sort/imports */
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import {
   matchVrtFrameScreenshot,
   preloadImages,
@@ -639,6 +639,9 @@ vi.mock('@/controllers/search/search', () => ({
     fetchUsersById: async () => [],
     getUsersByName: async () => [],
     getTagsByPrefix: async () => [],
+    // Tag chips in the composer dialogs query this. An empty list keeps the
+    // suggestion popover closed so the filled captures stay deterministic.
+    fetchTagsByPrefix: async () => [],
   },
 }));
 
@@ -961,6 +964,165 @@ describe('New article dialog — visual regression', () => {
     await selectArticleComposerTab('Title');
     await expect.element(page.getByPlaceholder('Title')).toBeVisible();
     await matchVrtFrameScreenshot('dialog-new-article-title-mobile');
+  });
+});
+
+// Short-post composer dialogs. The new-article dialog above already covers
+// article mode of this same shell. These open the way a person does, over home
+// chrome: the FAB for a new post, and the first feed post's reply and repost
+// actions. Reply and repost quote that post.
+const COMPOSER_VIEWPORTS = [
+  ['desktop', VRT_VIEWPORT_DESKTOP],
+  ['mobile', VRT_VIEWPORT_MOBILE],
+] as const;
+
+const COMPOSER_TAGS = ['composer', 'pubky'] as const;
+
+const NEW_POST_PLACEHOLDER = "What's on your mind?";
+const REPLY_PLACEHOLDER = 'Write a reply...';
+const REPOST_PLACEHOLDER = 'Optional comment';
+
+async function featuredFeedPost() {
+  const f = await fixtures;
+  const post = f.postsByCompositeId.get(f.orderedCompositeIds[0]);
+  if (!post || !('details' in post) || !('counts' in post)) {
+    throw new Error('VRT home feed is missing its first post');
+  }
+  return {
+    content: post.details.content,
+    replies: post.counts.replies,
+    reposts: post.counts.reposts,
+  };
+}
+
+type ComposerDialog = ReturnType<typeof page.getByTestId>;
+
+// The field is focused on purpose. Product CSS hides the placeholder while it
+// is focused, and the harness makes the caret transparent, so every browser
+// captures the same blank field instead of a UA focus ring on the avatar link
+// Radix would otherwise focus. Pointer parking does not move focus.
+async function focusComposerField(dialog: ComposerDialog, placeholder: string) {
+  const field = dialog.getByPlaceholder(placeholder);
+  await field.click();
+  await expect.element(field).toHaveFocus();
+  return field;
+}
+
+async function fillComposerField(dialog: ComposerDialog, placeholder: string, text: string) {
+  const field = await focusComposerField(dialog, placeholder);
+  await field.fill(text);
+  await expect.element(field).toHaveValue(text);
+
+  await dialog.getByRole('button', { name: 'Add new tag' }).click();
+  const tagInput = dialog.getByPlaceholder('add tag');
+  await expect.element(tagInput).toBeVisible();
+  for (const tag of COMPOSER_TAGS) {
+    await tagInput.fill(tag);
+    await expect.element(tagInput).toHaveValue(tag);
+    await expect.element(tagInput).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+    await expect.element(dialog.getByRole('button', { name: `${tag} tag`, exact: true })).toBeVisible();
+  }
+  await dialog.getByRole('button', { name: 'Close tag input' }).click();
+  await expect.element(tagInput).not.toBeInTheDocument();
+
+  await field.click();
+  await expect.element(field).toHaveFocus();
+  await expect.element(field).toHaveValue(text);
+}
+
+function showDialogFromTheTop() {
+  const content = document.querySelector('[data-testid="dialog-content"]');
+  if (!(content instanceof HTMLElement)) return;
+  content.scrollTop = 0;
+  for (const node of content.querySelectorAll('*')) {
+    if (node instanceof HTMLElement && node.scrollTop > 0) node.scrollTop = 0;
+  }
+}
+
+async function openNewPostDialog(viewport: { width: number; height: number }) {
+  await renderForVRT(<HomeWithFab />, { viewport });
+  await page.getByTestId('new-post-cta').click();
+  const dialog = page.getByTestId('dialog-content');
+  await expect.element(dialog).toBeVisible();
+  await expect.element(dialog.getByTestId('dialog-title')).toHaveTextContent('New Post');
+  await expect.element(dialog.getByRole('button', { name: 'Add article' })).toBeVisible();
+  return dialog;
+}
+
+async function openReplyDialog(viewport: { width: number; height: number }) {
+  const post = await featuredFeedPost();
+  await renderForVRT(<HomeWithFab />, { viewport });
+  await page.getByRole('button', { name: `Reply to post (${post.replies})` }).click();
+  const dialog = page.getByTestId('dialog-content');
+  await expect.element(dialog).toBeVisible();
+  await expect.element(dialog.getByTestId('dialog-title')).toHaveTextContent('Reply');
+  await expect.element(dialog.getByText(post.content)).toBeVisible();
+  await expect.element(dialog.getByRole('button', { name: 'Add article' })).not.toBeInTheDocument();
+  return dialog;
+}
+
+async function openRepostDialog(viewport: { width: number; height: number }) {
+  const post = await featuredFeedPost();
+  await renderForVRT(<HomeWithFab />, { viewport });
+  await page.getByRole('button', { name: `Repost (${post.reposts})` }).click();
+  const dialog = page.getByTestId('dialog-content');
+  await expect.element(dialog).toBeVisible();
+  await expect.element(dialog.getByTestId('dialog-title')).toHaveTextContent('Repost');
+  await expect.element(dialog.getByText(post.content)).toBeVisible();
+  await expect.element(dialog.getByRole('button', { name: 'Add article' })).not.toBeInTheDocument();
+  return dialog;
+}
+
+describe('Post composer dialogs — visual regression', () => {
+  beforeEach(() => {
+    feedState.mode = 'default';
+    feedState.keyboardVisible = false;
+  });
+
+  it.each(COMPOSER_VIEWPORTS)('renders an empty new post dialog at %s viewport', async (name, viewport) => {
+    const dialog = await openNewPostDialog(viewport);
+    await focusComposerField(dialog, NEW_POST_PLACEHOLDER);
+    await expect.element(dialog.getByRole('button', { name: 'Post', exact: true })).toBeVisible();
+    showDialogFromTheTop();
+    await matchVrtFrameScreenshot(`dialog-new-post-empty-${name}`);
+  });
+
+  it.each(COMPOSER_VIEWPORTS)('renders a new post dialog with text and tags at %s viewport', async (name, viewport) => {
+    const dialog = await openNewPostDialog(viewport);
+    await fillComposerField(dialog, NEW_POST_PLACEHOLDER, 'A quieter composer for the local-first feed.');
+    showDialogFromTheTop();
+    await matchVrtFrameScreenshot(`dialog-new-post-filled-${name}`);
+  });
+
+  it.each(COMPOSER_VIEWPORTS)('renders an empty reply dialog at %s viewport', async (name, viewport) => {
+    const dialog = await openReplyDialog(viewport);
+    await focusComposerField(dialog, REPLY_PLACEHOLDER);
+    await expect.element(dialog.getByRole('button', { name: 'Reply', exact: true })).toBeVisible();
+    showDialogFromTheTop();
+    await matchVrtFrameScreenshot(`dialog-reply-empty-${name}`);
+  });
+
+  it.each(COMPOSER_VIEWPORTS)('renders a reply dialog with text and tags at %s viewport', async (name, viewport) => {
+    const dialog = await openReplyDialog(viewport);
+    await fillComposerField(dialog, REPLY_PLACEHOLDER, 'The corner timestamp reads cleaner on a phone.');
+    showDialogFromTheTop();
+    await matchVrtFrameScreenshot(`dialog-reply-filled-${name}`);
+  });
+
+  it.each(COMPOSER_VIEWPORTS)('renders an empty repost dialog at %s viewport', async (name, viewport) => {
+    const dialog = await openRepostDialog(viewport);
+    await focusComposerField(dialog, REPOST_PLACEHOLDER);
+    await expect.element(dialog.getByRole('button', { name: 'Repost', exact: true })).toBeVisible();
+    showDialogFromTheTop();
+    await matchVrtFrameScreenshot(`dialog-repost-empty-${name}`);
+  });
+
+  it.each(COMPOSER_VIEWPORTS)('renders a repost dialog with text and tags at %s viewport', async (name, viewport) => {
+    const dialog = await openRepostDialog(viewport);
+    await fillComposerField(dialog, REPOST_PLACEHOLDER, 'Worth a second look.');
+    showDialogFromTheTop();
+    await matchVrtFrameScreenshot(`dialog-repost-filled-${name}`);
   });
 });
 
