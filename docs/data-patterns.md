@@ -273,7 +273,7 @@ are plain JSON under the app's private namespace (`src/config/app-files.ts`).
 **Profile.** `ProfileController.commitCreate` builds the profile with `UserNormalizer.to` (`buildUser`) and PUTs
 `built.body` with `putBlob`. An edit (`ProfileApplication.commitUpdate` / `commitUpdateStatus`) is a fenced
 read-modify-write of the stored object: `getFreshBytes(buildUri(pubky, 'user'))` → `decodeObject` →
-`UserNormalizer.applyChanges` (a spread, so `$unknown`, the members a newer client added, survive) → `encodeObject`
+`UserNormalizer.applyChanges` (a spread, so `$unknown`, the members a newer client added, survive on the profile and, matched by URL, on every link the edit keeps) → `encodeObject`
 (every profile rule re-checked) → `putBlob({ fence })`. A missing v1 profile is a deleted account (`GONE`); there is
 no fallback to the 0.x profile, which only an un-migrated account has, and `AuthApplication.userIsSignedUp` probes
 the v1 profile alone.

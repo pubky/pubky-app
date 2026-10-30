@@ -388,6 +388,18 @@ describe('ProfileApplication', () => {
         expect(await stored()).toEqual({ ...published, links });
       });
 
+      it('keeps what another client stored on a link when the user adds a second one', async () => {
+        const added = { title: 'X (TWITTER)', url: 'https://x.com/alice' };
+
+        await ProfileApplication.commitUpdate({
+          pubky: owner,
+          changes: { links: [{ title: 'WEBSITE', url: 'https://example.com/' }, added] },
+        });
+
+        expect(await stored()).toEqual({ ...published, links: [...published.links, added] });
+        expect(await UserDetailsModel.findById(owner)).toMatchObject({ links: [...publishedFields.links, added] });
+      });
+
       it('refuses an edit outside the profile rules and names the member', async () => {
         await expect(
           ProfileApplication.commitUpdate({ pubky: owner, changes: { links: [{ title: 'FTP', url: 'ftp://x.y' }] } }),

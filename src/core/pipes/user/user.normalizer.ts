@@ -1,4 +1,4 @@
-import { buildUser, type Built, type User, ValidationError } from 'pubky-social-specs';
+import { buildUser, type Built, type User, type UserLink, ValidationError } from 'pubky-social-specs';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -48,8 +48,10 @@ export class UserNormalizer {
   /**
    * Applies `changes` onto a stored profile. A member left out of `changes` keeps its stored
    * value, and the spread keeps `$unknown`, the members a newer writer added, so an edit from
-   * this client never drops them. Display text is trimmed and a blank value clears the member,
-   * as `buildUser` does; `encodeObject` re-checks every profile rule on the result.
+   * this client never drops them: on the profile, and on every link the edit keeps (the form
+   * sends the whole list, so each edited link is matched to the stored one with the same URL).
+   * Display text is trimmed and a blank value clears the member, as `buildUser` does;
+   * `encodeObject` re-checks every profile rule on the result.
    */
   static applyChanges(stored: User, changes: ProfileChanges): User {
     const text = (value: string | null | undefined) => value?.trim() || null;
@@ -59,11 +61,14 @@ export class UserNormalizer {
       ...(changes.bio !== undefined && { bio: text(changes.bio) }),
       ...(changes.image !== undefined && { image: text(changes.image) }),
       ...(changes.status !== undefined && { status: text(changes.status) }),
-      ...(changes.links !== undefined && {
-        links: changes.links?.length
-          ? changes.links.map((link) => ({ title: link.title.trim(), url: link.url }))
-          : null,
-      }),
+      ...(changes.links !== undefined && { links: this.applyLinks(stored.links, changes.links) }),
     };
+  }
+
+  /** The edited link list, each link spread over the stored link with the same URL, if any. */
+  private static applyLinks(stored: UserLink[] | null, links: NexusUserLink[] | null): UserLink[] | null {
+    if (!links?.length) return null;
+    const storedByUrl = new Map((stored ?? []).map((link) => [link.url, link]));
+    return links.map((link) => ({ ...storedByUrl.get(link.url), title: link.title.trim(), url: link.url }));
   }
 }

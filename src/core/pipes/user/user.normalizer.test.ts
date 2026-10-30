@@ -219,6 +219,35 @@ describe('UserNormalizer.applyChanges', () => {
     });
   });
 
+  it('keeps the members a newer writer stored on a link the edit keeps, matched by URL', () => {
+    const bytes = new TextEncoder().encode(
+      JSON.stringify({
+        ...stored,
+        links: [
+          { title: 'WEBSITE', url: 'https://example.com/', icon: 'globe' },
+          { title: 'OLD', url: 'https://old.example.com/', icon: 'archive' },
+        ],
+      }),
+    );
+    const decoded = decodeObject(profileUrl, bytes, 'user');
+
+    const edited = UserNormalizer.applyChanges(decoded, {
+      links: [
+        { title: 'X (TWITTER)', url: 'https://x.com/alice' },
+        { title: 'HOMEPAGE', url: 'https://example.com/' },
+      ],
+    });
+
+    expect(edited.links).toEqual([
+      { title: 'X (TWITTER)', url: 'https://x.com/alice' },
+      { title: 'HOMEPAGE', url: 'https://example.com/', $unknown: JSON.stringify({ icon: 'globe' }) },
+    ]);
+    expect(bodyOf(encodeObject(profileUrl, edited)).links).toEqual([
+      { title: 'X (TWITTER)', url: 'https://x.com/alice' },
+      { title: 'HOMEPAGE', url: 'https://example.com/', icon: 'globe' },
+    ]);
+  });
+
   it('replaces the whole link list when links change', () => {
     const links = [{ title: 'GITHUB', url: 'https://github.com/example' }];
 
