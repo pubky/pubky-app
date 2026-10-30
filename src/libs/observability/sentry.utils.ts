@@ -109,6 +109,20 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       error.context?.reportSuppressed === true,
   },
   {
+    name: 'locks-unlock-poll-repeat-reports',
+    reason:
+      'While a reader waits in the Pay to Unlock modal, usePayToUnlock polls the verification task every 3 s and the ' +
+      'Paykit link every 1 s, so a Lock Server outage built one AppError per tick, ~180 events per 3-minute wait (issue ' +
+      '#2641). The loops back off and tag every failure after the first of a streak with context.reportSuppressed, ' +
+      'so the first failure of each outage stays reportable; untagged reads (the open-time lookup, the purchase ' +
+      'resume) and other Locks operations are untouched.',
+    matches: (error) =>
+      error.service === ErrorService.Locks &&
+      (error.context?.callSite === 'payToUnlockPaymentPoll' ||
+        error.context?.callSite === 'payToUnlockConnectionPoll') &&
+      error.context?.reportSuppressed === true,
+  },
+  {
     name: 'aborted-requests',
     reason:
       'REQUEST_ABORTED is only produced by safeFetch when fetch rejects with an AbortError DOMException. When the ' +

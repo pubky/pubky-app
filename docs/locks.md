@@ -386,6 +386,13 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    in both the dialog and toast. This covers rejected, canceled and timed-out requests without
    interpreting `terminal_reason`. **Try again** starts a new payment as in step 3;
    `failed` keeps its existing wallet-related guidance and retry handling.
+   A read that rejects backs its own loop off: each consecutive failure doubles that loop's
+   interval up to `POLL_BACKOFF_MAX_MS` (15 s), so the link read goes 1, 2, 4, 8, 15 s and the task
+   lookup 3, 6, 12, 15 s. Any answer (a null task included) and a return to the tab restore full
+   speed. Each loop passes its `callSite` down to `LocksService`, which tags the AppError at
+   construction; every failure after the first of a streak also carries `reportSuppressed`, and the
+   `locks-unlock-poll-repeat-reports` drop rule keeps those out of Sentry (#2641). The first failure
+   of each outage, the open-time lookup and the purchase-resume read stay reportable.
 7. A completed payment enters `finishing` while the credential and content are fetched. The modal
    shows **PAYMENT RECEIVED**, "Opening your content…" and a spinner, without asking the reader
    to confirm in Bitkit. A failed content read enters `unopened`, and **Check again** runs it again.

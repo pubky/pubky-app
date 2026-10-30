@@ -30,6 +30,7 @@ import type {
   TGeneratePaykitSetupUrlParams,
   TGuardedResource,
   TLockPriceAsset,
+  TLocksPollReport,
   TLocksSessionResult,
   TPaykitConnectionState,
   TPaykitSetupStatus,
@@ -238,16 +239,22 @@ export class LocksApplication {
    * One read of the Paykit link for a submitted payment. Read-only: it creates no invoice and never
    * advances the handshake, and it needs the task the proof submission created.
    */
-  static fetchPaykitConnectionState({ lockFile, bundleId }: TPaymentBundleParams): Promise<TPaykitConnectionState> {
-    return LocksService.lookupPaykitConnectionState(lockFile.creator, bundleId);
+  static fetchPaykitConnectionState(
+    { lockFile, bundleId }: TPaymentBundleParams,
+    report?: TLocksPollReport,
+  ): Promise<TPaykitConnectionState> {
+    return LocksService.lookupPaykitConnectionState(lockFile.creator, bundleId, report);
   }
 
   /**
    * One read of where the Lock Server's payment verification stands for a saved bundle id, or null
    * when the server has no task for it (the submission never reached it).
    */
-  static async fetchPaymentStatus({ lockFile, bundleId }: TPaymentBundleParams): Promise<TVerificationTask | null> {
-    const lookup = await LocksService.lookupVerificationTask(lockFile.creator, bundleId);
+  static async fetchPaymentStatus(
+    { lockFile, bundleId }: TPaymentBundleParams,
+    report?: TLocksPollReport,
+  ): Promise<TVerificationTask | null> {
+    const lookup = await LocksService.lookupVerificationTask(lockFile.creator, bundleId, report);
     // Mid-wait a refused lookup is like a failed one: no news, so the wait goes on.
     return isRegionBlockedLookup(lookup) ? null : lookup;
   }

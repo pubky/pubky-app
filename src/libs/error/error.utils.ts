@@ -117,6 +117,7 @@ export const getRetryAfter = (error: AppError): number | undefined => {
  * @param service - Which service produced the error
  * @param operation - Which operation failed
  * @param traceId - Optional trace ID for correlation
+ * @param context - Optional context set at construction (e.g. tags a drop rule matches on)
  * @returns AppError (either the original if already AppError, or a new wrapped one)
  *
  * @example
@@ -128,7 +129,13 @@ export const getRetryAfter = (error: AppError): number | undefined => {
  * }
  * ```
  */
-export const toAppError = (error: unknown, service: ErrorService, operation: string, traceId?: string): AppError => {
+export const toAppError = (
+  error: unknown,
+  service: ErrorService,
+  operation: string,
+  traceId?: string,
+  context?: Record<string, unknown>,
+): AppError => {
   // Preserve existing AppError as-is; traceId should be set at origin
   if (isAppError(error)) {
     return error;
@@ -141,6 +148,7 @@ export const toAppError = (error: unknown, service: ErrorService, operation: str
     operation,
     cause: error,
     traceId,
+    context,
   });
 };
 
