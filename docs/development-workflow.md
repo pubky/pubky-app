@@ -106,6 +106,15 @@ Cypress e2e data: seed what a test only observes, drive what it tests. Precondit
 
 Manual checks for UI work: desktop and narrow viewport, loading/empty/error states, hover/focus/disabled states, dark-on-brand contrast, and the mobile path where a Sheet replaces a Popover.
 
+## Dependency Security
+
+Two automated layers cover vulnerable npm dependencies:
+
+- **Dependabot security updates** (`.github/dependabot.yml`) are event-driven — a new advisory triggers a scan, not the monthly version-update schedule — and neither `cooldown` nor `open-pull-requests-limit` can delay them. All security fixes for npm arrive as one grouped PR (`applies-to: security-updates`). Exact pins in `package.json` do not block these bumps. Never add an `ignore` rule for a shipped dependency: ignore rules suppress security updates too. The feature must stay enabled in repo settings (Settings → Advanced Security → Dependabot), along with Dependabot alerts and the dependency graph.
+- **Daily audit** (`.github/workflows/security-audit.yml`, also `workflow_dispatch`) runs `npm audit` on the lockfile for critical and high severities and maintains a single tracking issue (`scripts/security-audit/security-audit.ts`): created when findings appear, updated as they evolve, closed when resolved. Findings reachable from `dependencies` (`npm audit --omit=dev`) ship in the Docker image and are flagged as likely exposures for triage first — reachability still needs a human or agent, e.g. `sharp` transcodes remote images on the unauthenticated OG image routes (`src/libs/og/ogData.ts`). Run it locally with `npm audit --json > /tmp/all.json; npm audit --omit=dev --json > /tmp/prod.json; node scripts/security-audit/security-audit.ts /tmp/all.json /tmp/prod.json report.md`.
+
+Triage order for a new finding: production direct pins first (bump to the Fix version), then transitive production (lockfile refresh or an `overrides` entry), then dev-only. The `node:lts-alpine` base image in the Dockerfile is a floating tag, so base-image fixes arrive by rebuilding the image; GitHub Actions versions are covered by Dependabot's `github-actions` ecosystem.
+
 ## Code Quality
 
 These apply to every diff and are what a reviewer (human or Greptile) checks first.
