@@ -8,6 +8,7 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { TaggedItem } from '../TaggedItem/TaggedItem';
 import { TaggedList } from '../TaggedList/TaggedList';
@@ -26,14 +27,16 @@ export function ProfilePageTaggedAs({
   allTags,
 }: ProfilePageTaggedAsProps) {
   const router = useRouter();
+  const { requireAuth } = useRequireAuth();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const taggedId = pubky || currentUserPubky || undefined;
   const isMobile = variant === 'mobile';
   const inputTags = allTags ?? tags;
 
-  // "See all" is a read-only navigation to the tagged list, so it is not auth-gated.
+  // Profile sub-tabs are not public routes, so a guest would be redirected away:
+  // gate the navigation like the other sub-tab entries (filter bar, mobile menu).
   const handleSeeAllClick = () => {
-    router.push(getProfileRoute(PROFILE_ROUTES.UNIQUE_TAGS, pubky));
+    requireAuth(() => router.push(getProfileRoute(PROFILE_ROUTES.UNIQUE_TAGS, pubky)));
   };
 
   return (

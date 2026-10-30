@@ -81,12 +81,24 @@ describe('ProfilePageTaggedAs', () => {
     expect(screen.getByRole('button', { name: 'See all (12)' })).toBeInTheDocument();
   });
 
-  it('navigates to the viewed profile tagged page without an auth gate', () => {
+  it('navigates a signed-in viewer to the viewed profile tagged page through the auth gate', () => {
     mockRequireAuth.mockClear();
+    mockPush.mockClear();
     render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} count={7} pubky="pk:abc123" />);
     fireEvent.click(screen.getByRole('button', { name: 'See all (7)' }));
+    expect(mockRequireAuth).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith('/profile/pk:abc123/tagged');
-    expect(mockRequireAuth).not.toHaveBeenCalled();
+  });
+
+  it('does not navigate a guest to the tagged sub-route, which the route guard would redirect', () => {
+    // A guest's requireAuth opens the sign-in dialog and never runs the action.
+    mockRequireAuth.mockClear();
+    mockRequireAuth.mockImplementationOnce(() => undefined);
+    mockPush.mockClear();
+    render(<ProfilePageTaggedAs tags={defaultTags} onTagClick={mockOnTagClick} count={7} pubky="pk:abc123" />);
+    fireEvent.click(screen.getByRole('button', { name: 'See all (7)' }));
+    expect(mockRequireAuth).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('See all button has correct styling', () => {
