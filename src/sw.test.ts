@@ -1,11 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { asOpaque } from '@/test-utils/type-assertions';
 
 /**
  * `src/sw.ts` runs inside a service worker; here it is evaluated in jsdom with the
  * `serwist` runtime mocked so the test can assert the configuration that matters:
- * no data caching, a NetworkOnly navigation route with the static offline fallback,
- * user-consented updates, and the share-target / legacy-cache listeners.
+ * no data caching, a NetworkOnly navigation route with the static offline fallback, the
+ * one-release forced takeover of the social v1 cut-over (ADR-0021 amendment), and the
+ * share-target / legacy-cache listeners.
  */
 
 type Matcher = (context: { request: Request; sameOrigin: boolean; url: URL; event?: unknown }) => boolean;
@@ -74,9 +75,14 @@ describe('src/sw.ts', () => {
     await import('./sw');
   });
 
-  it('builds a worker that waits for user consent before taking over', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, 'clients');
+    Reflect.deleteProperty(globalThis, 'registration');
+  });
+
+  it('builds a worker that activates as soon as it installs (social v1 cut-over, one release)', () => {
     expect(mocks.options).toMatchObject({
-      skipWaiting: false,
+      skipWaiting: true,
       clientsClaim: true,
       navigationPreload: true,
       precacheOptions: { cleanupOutdatedCaches: true },
@@ -140,6 +146,78 @@ describe('src/sw.ts', () => {
 
     expect(caches.delete).toHaveBeenCalledWith('api-cache');
     expect(deleteDatabase).toHaveBeenCalledWith('serwist-expiration');
+  });
+
+  describe('social v1 cut-over takeover', () => {
+    const order: string[] = [];
+    const windowClient = (url: string, outcome: 'ok' | 'rejected') => ({
+      url,
+      navigate: vi.fn(async (target: string) => {
+        order.push(`navigate:${target}`);
+        if (outcome === 'rejected') throw new TypeError('The client is not controlled by this worker');
+        return null;
+      }),
+    });
+    const claim = vi.fn(async () => {
+      order.push('claim');
+    });
+    let windows: ReturnType<typeof windowClient>[];
+    let matchAll: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      order.length = 0;
+      claim.mockClear();
+      windows = [
+        windowClient('https://pubky.app/home', 'ok'),
+        windowClient('https://pubky.app/settings', 'rejected'),
+        windowClient('https://pubky.app/post/alice:0123', 'ok'),
+      ];
+      matchAll = vi.fn().mockResolvedValue(windows);
+      Object.defineProperty(globalThis, 'clients', { configurable: true, value: { claim, matchAll } });
+    });
+
+    // Runs the worker's own install then activate listeners (Serwist's are mocked away) the way the
+    // browser would: `registration.active` is the worker being replaced, or null on a first install.
+    const installThenActivate = async (active: object | null) => {
+      Object.defineProperty(globalThis, 'registration', { configurable: true, value: { active } });
+      for (const onInstall of listeners.get('install') ?? []) onInstall({ waitUntil: vi.fn() });
+      // The takeover listener is registered after the legacy-cache one.
+      const [, onTakeover] = listeners.get('activate') ?? [];
+      expect(onTakeover).toBeDefined();
+      const waitUntil = vi.fn();
+      onTakeover({ waitUntil });
+      // A rejected navigate or claim must not reject the activation itself.
+      await expect(waitUntil.mock.calls[0][0]).resolves.toBeUndefined();
+    };
+
+    it('claims then navigates every window client, tolerating a rejected navigate', async () => {
+      await installThenActivate({ scriptURL: 'https://pubky.app/sw.js' });
+
+      expect(claim).toHaveBeenCalledTimes(1);
+      expect(matchAll).toHaveBeenCalledWith({ type: 'window', includeUncontrolled: true });
+      expect(order[0]).toBe('claim');
+      for (const client of windows) {
+        expect(client.navigate).toHaveBeenCalledWith(client.url);
+      }
+    });
+
+    it('still navigates when claiming fails', async () => {
+      claim.mockRejectedValueOnce(new DOMException('claim failed', 'InvalidStateError'));
+
+      await installThenActivate({ scriptURL: 'https://pubky.app/sw.js' });
+
+      expect(windows.map((client) => client.navigate.mock.calls.length)).toEqual([1, 1, 1]);
+    });
+
+    it('leaves a first install to clientsClaim: no reload of a first-time visitor', async () => {
+      await installThenActivate(null);
+
+      expect(claim).not.toHaveBeenCalled();
+      expect(matchAll).not.toHaveBeenCalled();
+      for (const client of windows) {
+        expect(client.navigate).not.toHaveBeenCalled();
+      }
+    });
   });
 
   it('turns a share-target POST into a redirect to /share and stashes the files', async () => {
