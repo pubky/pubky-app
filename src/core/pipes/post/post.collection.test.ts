@@ -2,6 +2,7 @@ import { type CollectionContent as StoredCollectionContent, decodeContent, encod
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { COLLECTION_LAYOUT } from '@/config/collections';
+import { COLLECTION_COVER_IMAGE_URL_MAX_LENGTH } from '@/config/posts';
 import {
   COLLECTION_CONTENT_MAX_LENGTH,
   COLLECTION_ITEM_URI_MAX_LENGTH,
@@ -39,6 +40,19 @@ describe('CollectionPostContent', () => {
       ).toMatchObject({
         cover_image: 'https://cdn.example.com/cover.png',
       });
+    });
+
+    it("accepts a cover URL up to the data model's cap and refuses one over it", () => {
+      const prefix = 'https://cdn.example.com/';
+      const atCap = `${prefix}${'a'.repeat(COLLECTION_COVER_IMAGE_URL_MAX_LENGTH - prefix.length)}`;
+
+      expect(atCap).toHaveLength(300);
+      expect(CollectionPostContent.normalize({ name: 'Cover', coverImage: atCap })).toMatchObject({
+        cover_image: atCap,
+      });
+      expect(() => CollectionPostContent.normalize({ name: 'Cover', coverImage: `${atCap}b` })).toThrow(
+        'Collection cover image URL is too long',
+      );
     });
 
     it('rejects cover images with unsupported protocols', () => {

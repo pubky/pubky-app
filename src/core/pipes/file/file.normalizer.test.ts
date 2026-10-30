@@ -24,6 +24,20 @@ describe('FileNormalizer.toFileAttachment', () => {
     expect(result.preexisting).toBeUndefined();
   });
 
+  it("names a CSV upload with its own extension: text/csv is in the data model's list", () => {
+    const media = buildFile(OWNER, { bytes: BYTES, type: 'text/csv' });
+
+    const result = FileNormalizer.toFileAttachment({
+      file: file('table.csv', 'text/csv'),
+      mediaId: media.id,
+      blobData: BYTES,
+      pubky: OWNER,
+    });
+
+    expect(result.media.url).toBe(`pubky://${OWNER}/pub/social/v1/files/${media.id}.csv`);
+    expect(result.contentType).toBe('text/csv');
+  });
+
   it('names the same bytes the same whatever the file is called: media is content addressed', () => {
     const { id } = buildFile(OWNER, { bytes: BYTES, type: 'image/png' });
 

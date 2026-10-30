@@ -170,6 +170,15 @@ describe('PostNormalizer', () => {
     it('validates the envelope before the data model sees it', () => {
       expect(() => PostNormalizer.toCollection({ name: '   ' }, OWNER)).toThrow('Collection name is required');
     });
+
+    it('writes a cover URL of 300 characters, the cap the data model and src/config share', () => {
+      const prefix = 'https://cdn.example.com/';
+      const cover = `${prefix}${'a'.repeat(300 - prefix.length)}`;
+
+      const built = PostNormalizer.toCollection({ name: 'Cover', coverImage: cover }, OWNER);
+
+      expect(decodeContent(built.object)).toMatchObject({ kind: 'collection', content: { cover_image: cover } });
+    });
   });
 
   describe('toEdit', () => {
@@ -307,6 +316,20 @@ describe('PostNormalizer', () => {
           ],
         },
       });
+    });
+
+    it('writes a 300-character cover URL into the next version of a collection', () => {
+      const prefix = 'https://cdn.example.com/';
+      const cover = `${prefix}${'a'.repeat(300 - prefix.length)}`;
+      const stored = head({ kind: 'collection', name: 'Reading' });
+
+      const next = PostNormalizer.toEdit({
+        owner: OWNER,
+        head: stored,
+        edit: { collection: { name: 'Reading', cover_image: cover, layout: 'list' } },
+      });
+
+      expect(decodeContent(next.object)).toMatchObject({ kind: 'collection', content: { cover_image: cover } });
     });
 
     it('refuses a collection edit of a note and a text edit of a collection', () => {

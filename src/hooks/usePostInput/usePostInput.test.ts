@@ -2613,6 +2613,23 @@ describe('usePostInput', () => {
       expect(mockSetAttachments).toHaveBeenCalled();
     });
 
+    it("adds a CSV file: text/csv is in the data model's list, and the picker follows it", () => {
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+
+      const file = new File(['a,b\n1,2'], 'table.csv', { type: 'text/csv' });
+
+      act(() => {
+        result.current.handleFilesAdded([file]);
+      });
+
+      expect(mockSetAttachments).toHaveBeenCalled();
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    });
+
     it('rejects files with invalid types and shows toast', () => {
       const { result } = renderHook(() =>
         usePostInput({
