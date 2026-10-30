@@ -340,6 +340,7 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0023 | Article inline media as attachment slots                                  |
 | 0024 | Grant-only authentication                                                 |
 | 0025 | App-owned grant for same-origin Shop                                      |
+| 0026 | Social v1 migration gate                                                  |
 
 ## Quick Checklist
 

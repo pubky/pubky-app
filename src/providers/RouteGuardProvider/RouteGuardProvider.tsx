@@ -26,6 +26,7 @@ import { toast } from '@/molecules/Toaster/toast';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
+import { useSocialMigrationStore } from '@/stores/socialMigration/socialMigration.store';
 
 // Migration resync timeout in milliseconds
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
@@ -48,6 +49,7 @@ interface RouteGuardProviderProps {
  * - UNAUTHENTICATED users → onboarding/auth routes
  * - AUTHENTICATED users → app routes (feed, profile, etc.)
  * - NEEDS_PROFILE_CREATION users → profile creation route
+ * - NEEDS_SOCIAL_MIGRATION users → the migration gate, the public routes included (ADR-0026)
  */
 export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const router = useRouter();
@@ -63,6 +65,8 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const wasDbReset = useMigrationStore((state) => state.wasDbReset);
   const isPublic = PUBLIC_ROUTES.includes(pathname) || isDynamicPublicRoute(pathname);
+  // The migration gate holds the account; a public page could act as it through a mounted hook.
+  const isGated = status === AuthStatus.NEEDS_SOCIAL_MIGRATION;
   const [lastReadyPage, setLastReadyPage] = useState<{ pubky: string; pathname: string } | null>(null);
   useEffect(() => {
     if (!currentUserPubky) setLastReadyPage(null);
@@ -71,8 +75,10 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   }, [currentUserPubky, pathname, restoreStatus, session, wasDbReset, isLoading]);
   const preserveMountedPage =
     currentUserPubky !== null && lastReadyPage?.pubky === currentUserPubky && lastReadyPage.pathname === pathname;
+  // A signup's migration run is inline (ADR-0026): the session is not in the store yet, the onboarding page stays.
+  const inlineGateRun = useSocialMigrationStore((state) => state.stage === 'running');
   const interactiveAuth = Boolean(
-    session &&
+    (session || inlineGateRun) &&
     restoreStatus === 'restoring' &&
     (pathname === AUTH_ROUTES.SIGN_IN ||
       Object.values(ONBOARDING_ROUTES).some((route) => matchesAllowedRoute(pathname, route))),
@@ -150,6 +156,9 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
 
   // Determine if the current route is accessible based on authentication status
   const isRouteAccessible = (() => {
+    // Behind the gate only its own page, logout and the legal pages render (public or not)
+    if (isGated) return ROUTE_ACCESS_MAP[status].allowedRoutes.some((route) => matchesAllowedRoute(pathname, route));
+
     // Static public routes are ALWAYS accessible, even during loading
     if (PUBLIC_ROUTES.includes(pathname)) return true;
 
@@ -184,11 +193,11 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
 
   // Handle automatic redirects when user tries to access unauthorized routes
   useEffect(() => {
-    // Static public routes never redirect
-    if (PUBLIC_ROUTES.includes(pathname)) return;
+    // Static public routes never redirect, except away from an account held behind the gate
+    if (!isGated && PUBLIC_ROUTES.includes(pathname)) return;
 
-    // Dynamic public routes never redirect
-    if (isDynamicPublicRoute(pathname)) return;
+    // Dynamic public routes never redirect, with the same exception
+    if (!isGated && isDynamicPublicRoute(pathname)) return;
 
     // Wait for authentication status to be determined for protected routes
     if (isLoading) return;
@@ -222,7 +231,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (redirectTo && pathname !== redirectTo) {
       router.push(redirectTo);
     }
-  }, [status, pathname, search, router, isLoading, isRouteAccessible]);
+  }, [status, pathname, search, router, isLoading, isRouteAccessible, isGated]);
 
   // Restore the Locks session alongside the homeserver one (no-op while Locks is unconfigured).
   useRestoreLocksAuth();
@@ -230,10 +239,11 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // Show loading spinner while:
   // 1. Authentication status is being determined (isLoading = true)
   // 2. Route access check has completed but user doesn't have access (will trigger redirect)
-  // 3. Migration re-sync is in progress (wasDbReset = true)
+  // 3. Migration re-sync is in progress (wasDbReset = true), unless the account is held behind the social
+  //    migration gate: the resync waits for a ready session, which the gate's screen has to produce first
   if (
     !isRouteAccessible ||
-    (wasDbReset && !needsSignIn && !canBrowseWithoutSession && !preserveMountedPage && !interactiveAuth)
+    (wasDbReset && !isGated && !needsSignIn && !canBrowseWithoutSession && !preserveMountedPage && !interactiveAuth)
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center">

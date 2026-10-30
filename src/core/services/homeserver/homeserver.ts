@@ -1,4 +1,5 @@
 import { Address, Client, Keypair, Pubky, PublicKey, resolvePubky, Session, Signer } from '@synonymdev/pubky';
+import type { MigrationLock, MigrationReport, ProgressEvent } from 'pubky-social-migrator';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { getAuthClientId } from '@/config/auth';
 import {
@@ -868,6 +869,59 @@ export class HomeserverService {
   }
 
   /**
+   * Copies `session`'s 0.x tree to social v1 with `pubky-social-migrator`, which resolves with a
+   * report whatever the outcome (its own transport retries are the documented second retry
+   * policy, `docs/error-handling.md`). The session is passed explicitly: the gate runs before
+   * the session enters the auth store (ADR-0026), so nothing here reads the store. One run per
+   * account across tabs: a tab that finds the Web Lock taken waits for it (`onLockWait` fires
+   * once when another tab holds it) and then reads the flag the first tab wrote. Without
+   * `navigator.locks` the run is unlocked. The migrator loads a wasm, so it is imported only
+   * here and only when a run starts, which keeps its chunk out of the main bundle and out of
+   * the service-worker precache (`docs/pwa.md`).
+   */
+  static async migrateToSocialV1({
+    session,
+    signal,
+    onProgress,
+    onLockWait,
+  }: {
+    session: Session;
+    signal?: AbortSignal;
+    onProgress?: (event: ProgressEvent) => void;
+    onLockWait?: () => void;
+  }): Promise<MigrationReport> {
+    const [{ runMigration }, { sdkPort }] = await Promise.all([
+      import('pubky-social-migrator'),
+      import('pubky-social-migrator/pubky-sdk'),
+    ]);
+    const locks = globalThis.navigator?.locks;
+    const lock: MigrationLock | undefined = locks
+      ? async (name, fn) => {
+          if (onLockWait) {
+            const { held = [] } = await locks.query().catch(() => ({ held: [] }));
+            if (held.some((entry) => entry.name === name)) onLockWait();
+          }
+          try {
+            return await locks.request(name, { signal }, fn);
+          } catch (error) {
+            // The wait itself was aborted: run unlocked (`null` would mean "another tab holds
+            // it"), the engine stops at once with `ABORTED` and nothing is written.
+            if (signal?.aborted) return await fn({});
+            throw error;
+          }
+        }
+      : undefined;
+    return await runMigration({
+      owner: session.info.publicKey.z32(),
+      port: sdkPort(session),
+      caps: session.info.capabilities,
+      lock,
+      signal,
+      onProgress,
+    });
+  }
+
+  /**
    * Deletes a file from the homeserver.
    *
    * @param {string} url - Pubky URL of the file to delete.
@@ -944,9 +998,15 @@ export class HomeserverService {
   /**
    * Read an owned resource with its server modification time. Only a 404 means absence;
    * missing authentication, insufficient permissions and transport failures reject.
+   *
+   * `session` reads through a session that is not (yet) in the auth store: the social
+   * migration gate checks the done flag before the session enters the store (ADR-0026).
+   * Without it the active session resolves the owned path as every other read does.
    */
-  static async getBytesIfExists(url: string): Promise<THomeserverBytesResult | null> {
-    const owned = this.resolveOwnedSessionPath(url);
+  static async getBytesIfExists(url: string, session?: Session): Promise<THomeserverBytesResult | null> {
+    const owned = session
+      ? resolveOwnedSessionPath({ url, session, allowedPrefixes: STORAGE_PATH_PREFIXES })
+      : this.resolveOwnedSessionPath(url);
     if (!owned) {
       throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Reading owned storage requires a session for the resource owner.', {
         service: ErrorService.Homeserver,

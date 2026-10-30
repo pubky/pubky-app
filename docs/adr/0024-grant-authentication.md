@@ -58,6 +58,10 @@ remain available for retry; generic auth errors do not prove revocation succeede
 - Cross-tab account changes bootstrap the incoming account and isolate account-specific memory. Same-account upgrades
   preserve the profile and mounted public/explore composer; protected settings remain mounted during healthy same-account restoration but redirect to the landing page after a failure. Accounts, published content and the Dexie version are unchanged.
 - SDK/HS ambient-cookie fallback is an accepted transport limitation, separate from app cookie authentication support.
+- Amended by [ADR-0026](0026-social-v1-migration-gate.md): a restored or adopted session is placed in the store only
+  after the social v1 migration gate passes (`restoreStatus` `social-migration` meanwhile, with the committed identity
+  and no session); the migrator and the flag read take the session explicitly instead of reading the store. A grant from
+  before the gate is retired through the ordinary logout; a grant this build admitted resumes an interrupted run.
   Strict isolation is not a release blocker for #2600. App-owned raw public requests omit cookies.
 - SDK removal still lacks delegated-key ownership checks for duplicated pending approvals. Completed candidates rejected after approval (including scope/account mismatches and losing races)
   remain saved but inactive until safe cleanup can be established. Permission upgrades stay bound to the current account; normal sign-in may select another account.

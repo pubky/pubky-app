@@ -99,6 +99,13 @@ describe('Shop session bridge', () => {
       });
     },
   );
+  it('reports an account held behind the social v1 migration gate as restoring, never ready or signed out', () => {
+    expect(getShopSessionSnapshot({ ...ready, session: null, restoreStatus: 'social-migration' })).toMatchObject({
+      status: 'restoring',
+      pubky: 'account',
+      sessionStoreId: 'test-grant',
+    });
+  });
   it('does not expose readiness before hydration, during account preparation, or during logout', () => {
     for (const changes of [
       { hasHydrated: false },

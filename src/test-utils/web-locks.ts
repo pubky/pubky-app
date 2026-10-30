@@ -1,6 +1,6 @@
 import { asOpaque } from './type-assertions';
 
-/** Exclusive Web Locks fixture: a callback owns its name until its promise settles. */
+/** Exclusive Web Locks fixture: a callback owns its name until its promise settles; `query` lists the held names. */
 export function createTestWebLocks(): LockManager {
   const held = new Map<string, Promise<void>>();
   const request = async <T>(
@@ -27,5 +27,9 @@ export function createTestWebLocks(): LockManager {
       release();
     }
   };
-  return asOpaque<LockManager>({ request });
+  const query = async (): Promise<LockManagerSnapshot> => ({
+    held: [...held.keys()].map((name) => ({ name, mode: 'exclusive' as const, clientId: 'test' })),
+    pending: [],
+  });
+  return asOpaque<LockManager>({ request, query });
 }
