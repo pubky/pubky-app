@@ -442,6 +442,41 @@ describe('Database Initialization', () => {
     }
   });
 
+  it('refuses a second recreate in one page lifetime unless allowed', async () => {
+    const testDb = new AppDatabase(`${DB_NAME}-recreate-loop-breaker`);
+    const internal = asOpaque<InternalAppDatabase>(testDb);
+
+    const existsSpy = vi.spyOn(Dexie, 'exists').mockResolvedValue(true);
+    const recreateSpy = vi.spyOn(internal, 'recreateDatabase').mockResolvedValue();
+    // Every probe reports another build's version: a tab of that build keeps recreating the database.
+    const otherBuildVersion = DB_VERSION + 1;
+    const versionSpy = vi.spyOn(internal, 'getExistingDbVersion').mockResolvedValue(otherBuildVersion * 10);
+
+    try {
+      // Page start-up: the first mismatch recreates as usual.
+      await expect(testDb.initialize({ allowRecreate: true })).resolves.toEqual({ wasDbReset: true });
+      expect(recreateSpy).toHaveBeenCalledTimes(1);
+
+      // Re-initialization after the other tab closed our connection: refuse, do not recreate again.
+      await expect(testDb.initialize({ allowRecreate: false })).rejects.toMatchObject({
+        name: 'AppError',
+        code: 'VERSION_CONFLICT',
+        context: { currentVersion: otherBuildVersion, expectedVersion: DB_VERSION },
+      });
+      expect(recreateSpy).toHaveBeenCalledTimes(1);
+
+      // The user's explicit retry (and the default) may recreate once more.
+      await expect(testDb.initialize({ allowRecreate: true })).resolves.toEqual({ wasDbReset: true });
+      await expect(testDb.initialize()).resolves.toEqual({ wasDbReset: true });
+      expect(recreateSpy).toHaveBeenCalledTimes(3);
+    } finally {
+      existsSpy.mockRestore();
+      recreateSpy.mockRestore();
+      versionSpy.mockRestore();
+      await testDb.delete();
+    }
+  });
+
   it('still recreates the database when the version probe fails non-transiently', async () => {
     const testDb = new AppDatabase(`${DB_NAME}-probe-nontransient-recreate`);
     const internal = asOpaque<InternalAppDatabase>(testDb);

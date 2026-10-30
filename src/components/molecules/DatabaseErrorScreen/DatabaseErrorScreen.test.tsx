@@ -21,6 +21,14 @@ describe('DatabaseErrorScreen', () => {
     expect(screen.getByRole('button', { name: 'Reload page' })).toBeInTheDocument();
   });
 
+  it('renders a known cause in place of the generic description', () => {
+    render(<DatabaseErrorScreen onRetry={vi.fn()} description="Close other Pubky tabs, then retry." />);
+
+    expect(screen.getByText('Storage unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Close other Pubky tabs, then retry.')).toBeInTheDocument();
+    expect(screen.queryByText(/We couldn't access your device's local storage/)).not.toBeInTheDocument();
+  });
+
   it('calls onRetry when the Try again button is clicked', async () => {
     const onRetry = vi.fn().mockResolvedValue(undefined);
     render(<DatabaseErrorScreen onRetry={onRetry} />);
